@@ -6,7 +6,7 @@ vcov_ml_drf_0 = np.array([0.001317148]).reshape(1,1, order='F')
 
 cov_re_ml_drf_0 = np.array([0.2522485]).reshape(1,1, order='F')
 
-scale2_ml_drf_0 = np.array([0.2718486])
+scale_ml_drf_0 = np.array([0.2718486])
 
 loglike_ml_drf_0 = np.array([-240.1254])
 
@@ -20,7 +20,7 @@ vcov_reml_drf_0 = np.array([0.001323559]).reshape(1,1, order='F')
 
 cov_re_reml_drf_0 = np.array([0.2524129]).reshape(1,1, order='F')
 
-scale2_reml_drf_0 = np.array([0.2733467])
+scale_reml_drf_0 = np.array([0.2733467])
 
 loglike_reml_drf_0 = np.array([-242.5214])
 
@@ -34,7 +34,7 @@ vcov_ml_drf_1 = np.array([0.01340632]).reshape(1,1, order='F')
 
 cov_re_ml_drf_1 = np.array([0]).reshape(1,1, order='F')
 
-scale2_ml_drf_1 = np.array([4.050921])
+scale_ml_drf_1 = np.array([4.050921])
 
 loglike_ml_drf_1 = np.array([-538.0763])
 
@@ -48,7 +48,7 @@ vcov_reml_drf_1 = np.array([0.01345931]).reshape(1,1, order='F')
 
 cov_re_reml_drf_1 = np.array([2.839777e-14]).reshape(1,1, order='F')
 
-scale2_reml_drf_1 = np.array([4.066932])
+scale_reml_drf_1 = np.array([4.066932])
 
 loglike_reml_drf_1 = np.array([-539.3124])
 
@@ -62,7 +62,7 @@ vcov_ml_drf_2 = np.array([0.00117849,1.458744e-05,1.458744e-05,0.001054926]).res
 
 cov_re_ml_drf_2 = np.array([0.1596058]).reshape(1,1, order='F')
 
-scale2_ml_drf_2 = np.array([0.2129146])
+scale_ml_drf_2 = np.array([0.2129146])
 
 loglike_ml_drf_2 = np.array([-200.319])
 
@@ -76,7 +76,7 @@ vcov_reml_drf_2 = np.array([0.001190455,1.482666e-05,1.482666e-05,0.001066002]).
 
 cov_re_reml_drf_2 = np.array([0.1595015]).reshape(1,1, order='F')
 
-scale2_reml_drf_2 = np.array([0.2154276])
+scale_reml_drf_2 = np.array([0.2154276])
 
 loglike_reml_drf_2 = np.array([-205.275])
 
@@ -90,7 +90,7 @@ vcov_ml_drf_3 = np.array([0.01398831,0.001592619,0.001592619,0.01602274]).reshap
 
 cov_re_ml_drf_3 = np.array([0.8130996]).reshape(1,1, order='F')
 
-scale2_ml_drf_3 = np.array([3.100447])
+scale_ml_drf_3 = np.array([3.100447])
 
 loglike_ml_drf_3 = np.array([-477.1707])
 
@@ -104,7 +104,7 @@ vcov_reml_drf_3 = np.array([0.01411922,0.001607343,0.001607343,0.01617574]).resh
 
 cov_re_reml_drf_3 = np.array([0.8117898]).reshape(1,1, order='F')
 
-scale2_reml_drf_3 = np.array([3.13369])
+scale_reml_drf_3 = np.array([3.13369])
 
 loglike_reml_drf_3 = np.array([-479.5354])
 
@@ -118,7 +118,7 @@ vcov_ml_drf_4 = np.array([0.001190639,-5.327162e-05,5.992985e-05,-5.327162e-05,0
 
 cov_re_ml_drf_4 = np.array([0.1703249]).reshape(1,1, order='F')
 
-scale2_ml_drf_4 = np.array([0.251763])
+scale_ml_drf_4 = np.array([0.251763])
 
 loglike_ml_drf_4 = np.array([-231.6389])
 
@@ -132,7 +132,7 @@ vcov_reml_drf_4 = np.array([0.001206925,-5.4182e-05,6.073475e-05,-5.4182e-05,0.0
 
 cov_re_reml_drf_4 = np.array([0.1705659]).reshape(1,1, order='F')
 
-scale2_reml_drf_4 = np.array([0.2556394])
+scale_reml_drf_4 = np.array([0.2556394])
 
 loglike_reml_drf_4 = np.array([-238.761])
 
@@ -146,7 +146,7 @@ vcov_ml_drf_5 = np.array([0.01677563,0.0008077524,-0.001255011,0.0008077524,0.01
 
 cov_re_ml_drf_5 = np.array([0.3444677]).reshape(1,1, order='F')
 
-scale2_ml_drf_5 = np.array([4.103944])
+scale_ml_drf_5 = np.array([4.103944])
 
 loglike_ml_drf_5 = np.array([-579.4568])
 
@@ -160,7 +160,7 @@ vcov_reml_drf_5 = np.array([0.0169698,0.0008162714,-0.001268635,0.0008162714,0.0
 
 cov_re_reml_drf_5 = np.array([0.3420993]).reshape(1,1, order='F')
 
-scale2_reml_drf_5 = np.array([4.155737])
+scale_reml_drf_5 = np.array([4.155737])
 
 loglike_reml_drf_5 = np.array([-582.8377])
 
@@ -174,7 +174,7 @@ vcov_ml_drf_6 = np.array([0.002443738]).reshape(1,1, order='F')
 
 cov_re_ml_drf_6 = np.array([0.2595201,0.04591071,0.04591071,2.204612]).reshape(2,2, order='F')
 
-scale2_ml_drf_6 = np.array([0.243133])
+scale_ml_drf_6 = np.array([0.243133])
 
 loglike_ml_drf_6 = np.array([-382.551])
 
@@ -188,7 +188,7 @@ vcov_reml_drf_6 = np.array([0.002461581]).reshape(1,1, order='F')
 
 cov_re_reml_drf_6 = np.array([0.2595767,0.04590012,0.04590012,2.204822]).reshape(2,2, order='F')
 
-scale2_reml_drf_6 = np.array([0.2453537])
+scale_reml_drf_6 = np.array([0.2453537])
 
 loglike_reml_drf_6 = np.array([-384.6373])
 
@@ -202,7 +202,7 @@ vcov_ml_irf_6 = np.array([0.002445505]).reshape(1,1, order='F')
 
 cov_re_ml_irf_6 = np.array([0.2587624,0,0,2.188653]).reshape(2,2, order='F')
 
-scale2_ml_irf_6 = np.array([0.2432694])
+scale_ml_irf_6 = np.array([0.2432694])
 
 loglike_ml_irf_6 = np.array([-382.6581])
 
@@ -212,7 +212,7 @@ vcov_reml_irf_6 = np.array([0.002463375]).reshape(1,1, order='F')
 
 cov_re_reml_irf_6 = np.array([0.2588157,0,0,2.188876]).reshape(2,2, order='F')
 
-scale2_reml_irf_6 = np.array([0.2454935])
+scale_reml_irf_6 = np.array([0.2454935])
 
 loglike_reml_irf_6 = np.array([-384.7441])
 
@@ -222,7 +222,7 @@ vcov_ml_drf_7 = np.array([0.01994]).reshape(1,1, order='F')
 
 cov_re_ml_drf_7 = np.array([0.2051329,0.0734377,0.0734377,3.285381]).reshape(2,2, order='F')
 
-scale2_ml_drf_7 = np.array([3.423247])
+scale_ml_drf_7 = np.array([3.423247])
 
 loglike_ml_drf_7 = np.array([-587.7101])
 
@@ -236,7 +236,7 @@ vcov_reml_drf_7 = np.array([0.02002546]).reshape(1,1, order='F')
 
 cov_re_reml_drf_7 = np.array([0.2056226,0.0726139,0.0726139,3.2876]).reshape(2,2, order='F')
 
-scale2_reml_drf_7 = np.array([3.440244])
+scale_reml_drf_7 = np.array([3.440244])
 
 loglike_reml_drf_7 = np.array([-588.7476])
 
@@ -250,7 +250,7 @@ vcov_ml_irf_7 = np.array([0.01998144]).reshape(1,1, order='F')
 
 cov_re_ml_irf_7 = np.array([0.2021561,0,0,3.270735]).reshape(2,2, order='F')
 
-scale2_ml_irf_7 = np.array([3.423186])
+scale_ml_irf_7 = np.array([3.423186])
 
 loglike_ml_irf_7 = np.array([-587.7456])
 
@@ -260,7 +260,7 @@ vcov_reml_irf_7 = np.array([0.02006657]).reshape(1,1, order='F')
 
 cov_re_reml_irf_7 = np.array([0.2026938,0,0,3.273129]).reshape(2,2, order='F')
 
-scale2_reml_irf_7 = np.array([3.440197])
+scale_reml_irf_7 = np.array([3.440197])
 
 loglike_reml_irf_7 = np.array([-588.782])
 
@@ -270,7 +270,7 @@ vcov_ml_drf_8 = np.array([0.002491643,0.0001693531,0.0001693531,0.00253309]).res
 
 cov_re_ml_drf_8 = np.array([0.1506188,0.126091,0.126091,2.485462]).reshape(2,2, order='F')
 
-scale2_ml_drf_8 = np.array([0.2586519])
+scale_ml_drf_8 = np.array([0.2586519])
 
 loglike_ml_drf_8 = np.array([-363.6234])
 
@@ -284,7 +284,7 @@ vcov_reml_drf_8 = np.array([0.002528969,0.0001712206,0.0001712206,0.002573335]).
 
 cov_re_reml_drf_8 = np.array([0.1505098,0.1256311,0.1256311,2.484219]).reshape(2,2, order='F')
 
-scale2_reml_drf_8 = np.array([0.2635901])
+scale_reml_drf_8 = np.array([0.2635901])
 
 loglike_reml_drf_8 = np.array([-367.7667])
 
@@ -298,7 +298,7 @@ vcov_ml_irf_8 = np.array([0.002511536,0.0001812511,0.0001812511,0.002573405]).re
 
 cov_re_ml_irf_8 = np.array([0.1498568,0,0,2.403849]).reshape(2,2, order='F')
 
-scale2_ml_irf_8 = np.array([0.2605245])
+scale_ml_irf_8 = np.array([0.2605245])
 
 loglike_ml_irf_8 = np.array([-364.4824])
 
@@ -308,7 +308,7 @@ vcov_reml_irf_8 = np.array([0.002549354,0.0001833386,0.0001833386,0.002614672]).
 
 cov_re_reml_irf_8 = np.array([0.1497193,0,0,2.403076]).reshape(2,2, order='F')
 
-scale2_reml_irf_8 = np.array([0.2655558])
+scale_reml_irf_8 = np.array([0.2655558])
 
 loglike_reml_irf_8 = np.array([-368.6141])
 
@@ -318,7 +318,7 @@ vcov_ml_drf_9 = np.array([0.02208544,0.001527479,0.001527479,0.02597528]).reshap
 
 cov_re_ml_drf_9 = np.array([0.510175,0.08826114,0.08826114,3.342888]).reshape(2,2, order='F')
 
-scale2_ml_drf_9 = np.array([3.722112])
+scale_ml_drf_9 = np.array([3.722112])
 
 loglike_ml_drf_9 = np.array([-589.8274])
 
@@ -332,7 +332,7 @@ vcov_reml_drf_9 = np.array([0.02228589,0.001535598,0.001535598,0.0262125]).resha
 
 cov_re_reml_drf_9 = np.array([0.5123204,0.08897376,0.08897376,3.341722]).reshape(2,2, order='F')
 
-scale2_reml_drf_9 = np.array([3.764058])
+scale_reml_drf_9 = np.array([3.764058])
 
 loglike_reml_drf_9 = np.array([-591.7188])
 
@@ -346,7 +346,7 @@ vcov_ml_irf_9 = np.array([0.02205706,0.001509887,0.001509887,0.02599941]).reshap
 
 cov_re_ml_irf_9 = np.array([0.5086816,0,0,3.312757]).reshape(2,2, order='F')
 
-scale2_ml_irf_9 = np.array([3.72105])
+scale_ml_irf_9 = np.array([3.72105])
 
 loglike_ml_irf_9 = np.array([-589.8628])
 
@@ -356,7 +356,7 @@ vcov_reml_irf_9 = np.array([0.02225705,0.001517774,0.001517774,0.02623682]).resh
 
 cov_re_reml_irf_9 = np.array([0.5107725,0,0,3.31152]).reshape(2,2, order='F')
 
-scale2_reml_irf_9 = np.array([3.762967])
+scale_reml_irf_9 = np.array([3.762967])
 
 loglike_reml_irf_9 = np.array([-591.7543])
 
@@ -366,7 +366,7 @@ vcov_ml_drf_10 = np.array([0.001963536,-0.0003221793,0.0001950186,-0.0003221793,
 
 cov_re_ml_drf_10 = np.array([0.2040541,0.09038325,0.09038325,2.218903]).reshape(2,2, order='F')
 
-scale2_ml_drf_10 = np.array([0.2558286])
+scale_ml_drf_10 = np.array([0.2558286])
 
 loglike_ml_drf_10 = np.array([-379.6591])
 
@@ -380,7 +380,7 @@ vcov_reml_drf_10 = np.array([0.002011348,-0.0003300612,0.0002002948,-0.000330061
 
 cov_re_reml_drf_10 = np.array([0.2034827,0.09063836,0.09063836,2.219191]).reshape(2,2, order='F')
 
-scale2_reml_drf_10 = np.array([0.2630213])
+scale_reml_drf_10 = np.array([0.2630213])
 
 loglike_reml_drf_10 = np.array([-386.0008])
 
@@ -394,7 +394,7 @@ vcov_ml_irf_10 = np.array([0.001960114,-0.0003215658,0.0001944005,-0.0003215658,
 
 cov_re_ml_irf_10 = np.array([0.2032228,0,0,2.192893]).reshape(2,2, order='F')
 
-scale2_ml_irf_10 = np.array([0.2553399])
+scale_ml_irf_10 = np.array([0.2553399])
 
 loglike_ml_irf_10 = np.array([-380.162])
 
@@ -404,7 +404,7 @@ vcov_reml_irf_10 = np.array([0.00200783,-0.0003294349,0.0001996613,-0.0003294349
 
 cov_re_reml_irf_10 = np.array([0.2026653,0,0,2.193124]).reshape(2,2, order='F')
 
-scale2_reml_irf_10 = np.array([0.2625147])
+scale_reml_irf_10 = np.array([0.2625147])
 
 loglike_reml_irf_10 = np.array([-386.5024])
 
@@ -414,7 +414,7 @@ vcov_ml_drf_11 = np.array([0.0232326,0.00172214,0.002275343,0.00172214,0.0231894
 
 cov_re_ml_drf_11 = np.array([0.3719096,0.332198,0.332198,1.120588]).reshape(2,2, order='F')
 
-scale2_ml_drf_11 = np.array([4.849781])
+scale_ml_drf_11 = np.array([4.849781])
 
 loglike_ml_drf_11 = np.array([-601.6432])
 
@@ -428,7 +428,7 @@ vcov_reml_drf_11 = np.array([0.02351795,0.001749756,0.002301599,0.001749756,0.02
 
 cov_re_reml_drf_11 = np.array([0.3680346,0.3324419,0.3324419,1.118623]).reshape(2,2, order='F')
 
-scale2_reml_drf_11 = np.array([4.922222])
+scale_reml_drf_11 = np.array([4.922222])
 
 loglike_reml_drf_11 = np.array([-604.5746])
 
@@ -442,7 +442,7 @@ vcov_ml_irf_11 = np.array([0.02319951,0.001705996,0.002265252,0.001705996,0.0234
 
 cov_re_ml_irf_11 = np.array([0.4004789,0,0,1.108087]).reshape(2,2, order='F')
 
-scale2_ml_irf_11 = np.array([4.78776])
+scale_ml_irf_11 = np.array([4.78776])
 
 loglike_ml_irf_11 = np.array([-602.308])
 
@@ -452,7 +452,7 @@ vcov_reml_irf_11 = np.array([0.02348548,0.001734072,0.002291519,0.001734072,0.02
 
 cov_re_reml_irf_11 = np.array([0.3966454,0,0,1.106551]).reshape(2,2, order='F')
 
-scale2_reml_irf_11 = np.array([4.860342])
+scale_reml_irf_11 = np.array([4.860342])
 
 loglike_reml_irf_11 = np.array([-605.2274])
 
