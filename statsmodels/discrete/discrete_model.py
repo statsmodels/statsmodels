@@ -411,7 +411,10 @@ class BinaryModel(DiscreteModel):
         if exog is None:
             exog = self.model.exog
         mean = self.predict(params=params, exog=exog)
-        return stats.bernoulli(mean)
+        rnum = []
+        for m in mean:
+            rnum.append(stats.bernoulli.rvs(m))        
+        return rnum
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,

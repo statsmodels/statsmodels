@@ -15,14 +15,14 @@ Created on Wed May 07 15:10:00 2014
 import sys
 import pandas as pd
 import numpy as np
-sys.path.insert(0,"C:\Users\Frank\Documents\GitHub\statsmodels\statsmodels")
+sys.path.insert(0,"C:/Users/Frank/Dropbox/statsmodels/")
 #sys.path.insert(0,"C:/Users/Frank/statsmodels/statsmodels/")
 from statsmodels.sandbox.mice import mice
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 #print statsmodels.__file__
 #data = pd.DataFrame.from_csv('missingdata.csv')
-data = pd.read_csv('C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
+data = pd.read_csv("C:/Users/Frank/Dropbox/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv")
 #data = pd.read_csv('C:/Users/Frank/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
 #data = np.genfromtxt('missingdata.csv',delimiter = ',')
 data.columns = ['x1','x2','x3']
@@ -48,7 +48,9 @@ impdata = mice.ImputedData(data)
 
 impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
 
-p1 = impcomb.combine(20,10)
+implist = impcomb.run(iternum=20,skipnum=10)
+
+p1 = impcomb.combine(implist)
 
 #impdata = mice.ImputedData(data)
 #

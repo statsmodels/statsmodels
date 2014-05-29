@@ -92,8 +92,6 @@ class ImputedData(object):
             model_class = sm.OLS
         if formula is None:
             formula = endog_name + " ~ " + " + ".join([x for x in self.data.columns if x != endog_name])
-#        else:
-#            formula = endog_name + " ~ " + formula
         return Imputer(formula, model_class, self, init_args=init_args, fit_args=fit_args, scale=scale_method,scale_value=scale_value)
 
     def store_changes(self, vals, col=None):
@@ -153,61 +151,85 @@ class Imputer(object):
         self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
         self.scale = scale
         self.scale_value = scale_value
-    
-    def get_scale(self, mdf):
+        self.imiss = self.data.columns[self.endog_name].ix_miss
+
+#    def get_scale(self, mdf):
+#        if self.scale == "fix":
+#            if self.scale_value is None:
+#                scale = 1.
+#            else:
+#                scale = self.scale_value
+#        elif self.scale == "perturb_chi2":
+#            u = np.random.chisquare(mdf.df_resid)
+#            scale = mdf.df_resid/u
+#        elif self.scale == "perturb_boot":
+#            pass
+#        return scale
+
+    def perturb_param(self, mdf):
+        """
+        Perturbs the model's scale and fit parameters.
+
+        Parameters
+        ----------
+
+        mdf : statsmodels fitted model
+            Passed from Imputer object.
+
+        Returns
+        -------
+
+        params : array
+            Perturbed model parameters.
+        scale_per : float
+            Perturbed nuisance parameter.
+        """
+        params = mdf.params.copy()
+        covmat = mdf.cov_params()
+        covmat_sqrt = np.linalg.cholesky(covmat)
         if self.scale == "fix":
             if self.scale_value is None:
-                scale = 1.
+                scale_per = 1
             else:
-                scale = self.scale_value
+                scale_per = self.scale_value
         elif self.scale == "perturb_chi2":
             u = np.random.chisquare(mdf.df_resid)
-            scale = mdf.df_resid/u
+            scale_per = mdf.df_resid/u
         elif self.scale == "perturb_boot":
-            pass     
-        return scale           
-    
+            pass
+        p = len(params)
+        params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
+        return params, scale_per
+
     def impute_asymptotic_bayes(self):
         """
-        Use Gaussian approximation to posterior distribution to simulate data.
+        Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
         """
         io = self.data.columns[self.endog_name].ix_obs
         md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params = mdf.params.copy()
-        covmat = mdf.cov_params()
-        covmat_sqrt = np.linalg.cholesky(covmat)
-        scale_per = self.get_scale(mdf)
-#        if self.scale == "fix":
-#            if self.scale_value is None:
-#                scale_per = 1.
-#            else:
-#                scale_per = self.scale_value
-#        elif self.scale == "perturb_chi2":
-#            u = np.random.chisquare(mdf.df_resid)
-#            scale_per = mdf.df_resid/u
-#        elif self.scale == "perturb_boot":
-#            pass
-        p = len(params)
-        params += np.dot(covmat_sqrt, np.random.normal(0, scale_per * mdf.scale, p))
-        imiss = self.data.columns[self.endog_name].ix_miss
+        params, scale_per = self.perturb_param(mdf)
         #TODO: find a better way to determine if first column is intercept
         exog_name = md.exog_names[:]
+        exog = self.check_intercept(exog_name).iloc[self.imiss,:]
+
+        new_endog = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
+        self.data.store_changes(new_endog, self.endog_name)
+
+    def check_intercept(self, exog_name):
         if 'Intercept' in exog_name:
             inter = 1
             exog_name.remove('Intercept')
         else:
             inter = 0
-        exog = self.data.data[exog_name].iloc[imiss,:]
+        exog = self.data.data[exog_name]
         if inter:
             exog.insert(0, 'Intercept', 1)
-        endog_obj = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
-        new_endog = endog_obj.rvs()
-        self.data.store_changes(new_endog, self.endog_name)
+        return exog
 
-    def impute_pmm(self, k0=1):
+    def impute_pmm(self, k0):
         """
-        Use predictive mean matching to simulate data.
+        Use predictive mean matching to simulate data. Fills in values of input data.
 
         Parameters
         ----------
@@ -218,34 +240,16 @@ class Imputer(object):
         io = self.data.columns[self.endog_name].ix_obs
         md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params = mdf.params.copy()
-        covmat = mdf.cov_params()
-        covmat_sqrt = np.linalg.cholesky(covmat)
-        scale_per = self.get_scale(mdf)
-#        if self.scale == "fix":
-#            if self.scale_value is None:
-#                scale_per = 1
-#            else:
-#                scale_per = self.scale_value
-#        elif self.scale == "perturb_chi2":
-#            u = np.random.chisquare(mdf.df_resid)
-#            scale_per = scale_per = mdf.df_resid/u
-#        elif self.scale == "perturb_boot":
-#            pass
-        p = len(params)
-        params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
+        params, scale_per = self.perturb_param(mdf)
         #find a better way to determine if first column is intercept
-        exog_name = md.exog_names[1:]
-        exog = self.data.data[exog_name]
-        exog.insert(0, 'Intercept', 1)
+        exog_name = md.exog_names[:]
+        exog = self.check_intercept(exog_name)
         endog_all = md.predict(params,exog)
         endog_matched = []
-        imiss = self.data.columns[self.endog_name].ix_miss
         #look into memory-computation tradeoff
-        for mval in endog_all[imiss]:
+        for mval in endog_all[self.imiss]:
             dist = np.abs(endog_all[io] - mval)
             dist_ind = np.argsort(dist)
-#            dist = sorted(range(len(dist)), key=lambda k: dist[k])
             endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist_ind[0:k0]])))
         new_endog = endog_matched
         self.data.store_changes(new_endog, self.endog_name)
@@ -253,7 +257,6 @@ class Imputer(object):
     def impute_bootstrap(self):
         pass
 
-#TODO: put imputer type, optional params into this class
 class ImputerChain(object):
     __doc__= """
     Manage a collection of imputers for variables in a common dataframe.
@@ -264,6 +267,10 @@ class ImputerChain(object):
 
     imputer_list : list
         List of Imputer objects, one for each variable to be imputed.
+    imputer_method : string
+        Method used for simulation. See MICE.run.
+    k : int
+        Number of neighbors for pmm. See MICE.run.
 
     **Attributes**
 
@@ -272,13 +279,14 @@ class ImputerChain(object):
 
     Note: All imputers must refer to the same data object
     """
-    def __init__(self, imputer_list):
+    def __init__(self, imputer_list, imputer_method, k):
         self.imputer_list = imputer_list
         #Impute variable with least missing observations first
         self.imputer_list.sort(key=operator.attrgetter('num_missing'))
         #All imputers must refer to the same data object
         self.data = imputer_list[0].data.data
-
+        self.method = imputer_method
+        self.k = k
 
     def __iter__(self):
         return self
@@ -296,8 +304,15 @@ class ImputerChain(object):
             Dataset with imputed values saved after invoking each Imputer
             object in imputer_list.
         """
-        for im in self.imputer_list:
-            im.impute_pmm()
+        if self.method == "gaussian":
+            for im in self.imputer_list:
+                im.impute_asymptotic_bayes()
+        elif self.method == "pmm":
+            for im in self.imputer_list:
+                im.impute_pmm(self.k)
+        elif self.method == "bootstrap":
+            for im in self.imputer_list:
+                im.impute_bootstrap()
         return self.data
 
 class AnalysisChain(object):
@@ -340,6 +355,9 @@ class AnalysisChain(object):
         mdf : statsmodels fitted model
             Fitted model of interest on imputed dataset that has passed all
             skip and burnin criteria
+
+        Note: If save option is True, imputed datasets are saved in the format
+        "mice_'iteration number'.csv"
         """
         scount = 0
         while scount < self.skipnum:
@@ -361,16 +379,6 @@ class AnalysisChain(object):
             data.to_csv(fname, index=False)
             self.iter += 1
         return mdf
-
-    # Impute data sets and save them to disk, keep this around for now
-#    def generate_data(self, num, skip, base_name):
-#        for k in range(num):
-#            for j in range(skip):
-#                self.next()
-#            fname = "%s_%d.csv" % (base_name, k)
-#            self.imputer_list[0].data.data.to_csv(fname, index=False)
-#            self.values.append(copy.deepcopy(self.imputer_list[self.implength - 1].data.values))
-#            #self.imputer_list[0].data.mean_fill()
 
 class MICE(object):
     __doc__= """
@@ -418,10 +426,9 @@ class MICE(object):
         self.init_args = init_args
         self.fit_args = fit_args
 
-    def combine(self, iternum, skipnum, burnin=5, save=False):
+    def run(self, iternum, skipnum, burnin=5, save=False, method="gaussian", k=1):
         """
-        Combines model results and returns the model of interest with
-        pooled estimates/covariance matrix.
+        Generates analysis model results.
 
         Parameters
         ----------
@@ -438,34 +445,61 @@ class MICE(object):
             datasets count.
         save : boolean
             Whether to save the imputed datasets chosen for analysis.
+        method : string
+            Simulation method to use. May take on values "gaussian", "pmm",
+            or "bootstrap".
+        k : int
+            Number of neighbors to use for predictive mean matching (pmm).
+
+        Returns
+        -------
+        md_list : list
+            List of length iternum of fitted analysis models.
+        """
+        self.iternum = iternum
+        imp_chain = ImputerChain(self.imputer_list, method, k)
+        analysis_chain = AnalysisChain(imp_chain, self.analysis_formula, self.analysis_class, skipnum, burnin,
+                                       save, self.init_args, self.fit_args)
+        md_list = []
+        current_iter = 0
+        while current_iter < iternum:
+            model = analysis_chain.next()
+            md_list.append(model)
+            current_iter += 1
+            print current_iter
+        return md_list
+
+    def combine(self, md_list):
+        """
+        Pools estimated parameters and covariance matrices of generated
+        analysis models according to Rubin's Rule.
+
+        Parameters
+        ----------
+        md_list : list
+            Generated by MICE.run.
 
         Returns
         -------
         md : statsmodels fitted model
             Altered cov_params and params to be the MICE combined quantities.
         """
-        imp_chain = ImputerChain(self.imputer_list)
-        analysis_chain = AnalysisChain(imp_chain, self.analysis_formula, self.analysis_class, skipnum, burnin,
-                                       save, self.init_args, self.fit_args)
+
         params_list = []
         cov_list = []
         scale_list = []
-        current_iter = 0
-        while current_iter < iternum:
-            model = analysis_chain.next()
-            params_list.append(model.params)
-            cov_list.append(np.array(model.normalized_cov_params))
-            scale_list.append(model.scale)
-            current_iter += 1
-            if current_iter == iternum:
-                md = model
-            print current_iter
+        for md in md_list:
+            params_list.append(md.params)
+            cov_list.append(np.array(md.normalized_cov_params))
+            scale_list.append(md.scale)
+        #Just chose last analysis model instance as a place to store results
+        md = md_list[len(md_list) - 1]
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
         within_g = np.mean(cov_list, axis=0)
         #Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g + (1 + 1/float(iternum)) * between_g
+        cov_params = within_g + (1 + 1/float(self.iternum)) * between_g
         md._results.params = params
         md._results.scale = scale
         md._results.normalized_cov_params = cov_params

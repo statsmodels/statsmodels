@@ -284,7 +284,10 @@ class RegressionModel(base.LikelihoodModel):
         if scale is None:
             scale = self.scale
         mean = self.predict(params=params, exog=exog)
-        return stats.norm(loc=mean, scale=scale)
+        rnum = []
+        for m in mean:
+            rnum.append(stats.norm.rvs(m,scale))
+        return rnum
 
 class GLS(RegressionModel):
     __doc__ = """
