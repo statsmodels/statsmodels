@@ -71,7 +71,7 @@ for (file in files) {
                 rslt[[sprintf("cov_re_%s_%s_%d", meth, rf, ds_ix)]] = array(as.numeric(VarCorr(md)$groups),
                         c(pr, pr))
             }
-            rslt[[sprintf("sig2_%s_%s_%d", meth, rf, ds_ix)]] = attr(VarCorr(md), "sc")^2
+            rslt[[sprintf("scale_%s_%s_%d", meth, rf, ds_ix)]] = attr(VarCorr(md), "sc")^2
             rslt[[sprintf("loglike_%s_%s_%d", meth, rf, ds_ix)]] = as.numeric(logLik(md))
 
             # Apparently lmer does not support these things when the random effects

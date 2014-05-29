@@ -53,8 +53,8 @@ http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf
 Notation:
 
 * `cov_re` is the random effects covariance matrix (referred to above
-  as Psi) and `sig2` is the (scalar) error variance.  For a single
-  group, the marginal covariance matrix of endog given exog is sig2*I
+  as Psi) and `scale` is the (scalar) error variance.  For a single
+  group, the marginal covariance matrix of endog given exog is scale*I
   + Z * cov_re * Z', where Z is the design matrix for the random
   effects in one group.
 
@@ -65,7 +65,7 @@ places.  The regression slopes (usually called `fe_params`) are
 identical in all three parameterizations, but the variance parameters
 differ.  The parameterizations are:
 
-* The "natural parameterization" in which cov(endog) = sig2*I + Z *
+* The "natural parameterization" in which cov(endog) = scale*I + Z *
   cov_re * Z', as described above.  This is the main parameterization
   visible to the user.
 
@@ -73,7 +73,7 @@ differ.  The parameterizations are:
   Z * cov_re1 * Z'.  This is the parameterization of the profile
   likelihood that is maximized to produce parameter estimates.
   (see Lindstrom and Bates for details).  The "natural" cov_re is
-  equal to the "profile" cov_re1 times sig2.
+  equal to the "profile" cov_re1 times scale.
 
 * The "square root parameterization" in which we work with the
   Cholesky factor of cov_re1 instead of cov_re1 directly.
@@ -438,7 +438,7 @@ class MixedLM(base.LikelihoodModel):
         mdf = self.fit(**fit_args)
         fe_params = mdf.fe_params
         cov_re = mdf.cov_re
-        sig2 = mdf.sig2
+        scale = mdf.scale
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
@@ -467,7 +467,7 @@ class MixedLM(base.LikelihoodModel):
                     resid = resid_all[self.row_indices[lab]]
 
                     x = exog[:,j]
-                    u = _smw_solve(sig2, ex_r, cov_re, cov_re_inv, x)
+                    u = _smw_solve(scale, ex_r, cov_re, cov_re_inv, x)
                     a += np.dot(u, x)
                     b -= 2*np.dot(u, resid)
 
@@ -486,6 +486,8 @@ class MixedLM(base.LikelihoodModel):
         params_prof = mdf.params.copy()
         params_prof[0:self.k_fe] = fe_params
 
+        scale = self.get_scale(fe_params, mdf.cov_re_unscaled)
+
         # Get the Hessian including only the nonzero fixed effects,
         # then blow back up to the full size after inverting.
         hess = self.hessian(params_prof)
@@ -496,10 +498,10 @@ class MixedLM(base.LikelihoodModel):
         hess1 = hess[ii,:][:,ii]
         pcov[np.ix_(ii,ii)] = np.linalg.inv(-hess1)
 
-        results = MixedLMResults(self, params_prof, pcov)
+        results = MixedLMResults(self, params_prof, pcov / scale)
         results.fe_params = fe_params
         results.cov_re = cov_re
-        results.sig2 = sig2
+        results.scale = scale
         results.cov_re_unscaled = mdf.cov_re_unscaled
         results.method = mdf.method
         results.converged = True
@@ -604,7 +606,7 @@ class MixedLM(base.LikelihoodModel):
         effects model, using a parameterization in which the random
         effects covariance matrix is represented by its lower
         triangle.  Note that this is the profile likelihood in which
-        the scale parameter sig2 has been profiled out.
+        the scale parameter scale has been profiled out.
 
         Arguments
         ---------
@@ -626,7 +628,7 @@ class MixedLM(base.LikelihoodModel):
         matrix V = I + Z * Psi * Z', where Z is the design matrix for
         the random effects structure.  To convert this to the full
         likelihood (not profiled) parameterization, calculate the
-        error variance sig2, and divide Psi by sig2.
+        error variance scale, and divide Psi by scale.
         """
 
         fe_params, cov_re = self._unpack(params)
@@ -691,7 +693,7 @@ class MixedLM(base.LikelihoodModel):
         """
         Evaluate the (profile) log-likelihood of the linear mixed
         effects model.  Note that this is the profile likelihood in
-        which the scale parameter sig2 has been profiled out.
+        which the scale parameter scale has been profiled out.
 
         Arguments
         ---------
@@ -740,7 +742,7 @@ class MixedLM(base.LikelihoodModel):
         a parameterization in which the random effects covariance
         matrix is represented by its lower triangle.  Note that this
         is the score for the profile likelihood in which the scale
-        parameter sig2 has been profiled out.
+        parameter scale has been profiled out.
 
         Parameters
         ----------
@@ -841,7 +843,7 @@ class MixedLM(base.LikelihoodModel):
         """
         Calculates the score vector for the mixed effects model.  Note
         that this is the score vector for the profile likelihood in
-        which the scale parameter sig2 has been profiled out.
+        which the scale parameter scale has been profiled out.
 
         Parameters
         ----------
@@ -934,7 +936,7 @@ class MixedLM(base.LikelihoodModel):
         """
         Calculates the Hessian matrix for the mixed effects model.
         Specifically, this is the Hessian matrix for the profile
-        likelihood in which the scale parameter sig2 has been profiled
+        likelihood in which the scale parameter scale has been profiled
         out.  The parameters are passed in packed form, with only the
         lower triangle of the covariance passed.
 
@@ -1040,7 +1042,7 @@ class MixedLM(base.LikelihoodModel):
         return hess
 
 
-    def Estep(self, fe_params, cov_re, sig2):
+    def Estep(self, fe_params, cov_re, scale):
         """
         The E-step of the EM algorithm.  This is for ML (not REML),
         but it seems to be good enough to use for REML starting
@@ -1053,7 +1055,7 @@ class MixedLM(base.LikelihoodModel):
         cov_re : 2d ndarray
             The current value of the covariance matrix of random
             effects
-        sig2 : positive scalar
+        scale : positive scalar
             The current value of the error variance
 
         Returns
@@ -1085,11 +1087,11 @@ class MixedLM(base.LikelihoodModel):
             # Contruct the marginal covariance matrix for this group
             ex_r = self.exog_re_li[k]
 
-            vr1 = _smw_solve(sig2, ex_r, cov_re, cov_re_inv, resid)
+            vr1 = _smw_solve(scale, ex_r, cov_re, cov_re_inv, resid)
             vr1 = np.dot(ex_r.T, vr1)
             vr1 = np.dot(cov_re, vr1)
 
-            vr2 = _smw_solve(sig2, ex_r, cov_re, cov_re_inv,
+            vr2 = _smw_solve(scale, ex_r, cov_re, cov_re_inv,
                             self.exog_re_li[k])
             vr2 = np.dot(vr2, cov_re)
             vr2 = np.dot(ex_r.T, vr2)
@@ -1105,7 +1107,7 @@ class MixedLM(base.LikelihoodModel):
         return m1x, m1y, m2, m2xx
 
 
-    def EM(self, fe_params, cov_re, sig2, niter_em=10,
+    def EM(self, fe_params, cov_re, scale, niter_em=10,
            hist=None):
         """
         Run the EM algorithm from a given starting point.  This is for
@@ -1119,12 +1121,12 @@ class MixedLM(base.LikelihoodModel):
         cov_re : 2d ndarray
             The final value of the random effects covariance
             matrix
-        sig2 : float
+        scale : float
             The final value of the error variance
 
         Notes
         -----
-        This uses the parameterization of the likelihood sig2*I +
+        This uses the parameterization of the likelihood scale*I +
         Z'*V*Z, note that this differs from the profile likelihood
         used in the gradient calculations.
         """
@@ -1140,26 +1142,26 @@ class MixedLM(base.LikelihoodModel):
         pp = []
         for itr in range(niter_em):
 
-            m1x, m1y, m2, m2xx = self.Estep(fe_params, cov_re, sig2)
+            m1x, m1y, m2, m2xx = self.Estep(fe_params, cov_re, scale)
 
             fe_params = np.linalg.solve(xxtot, xytot - m1x)
             cov_re = m2 / self.n_groups
 
-            sig2 = 0.
+            scale = 0.
             for x,y in zip(self.exog_li, self.endog_li):
-                sig2 += np.sum((y - np.dot(x, fe_params))**2)
-            sig2 -= 2*m1y
-            sig2 += 2*np.dot(fe_params, m1x)
-            sig2 += np.trace(m2xx)
-            sig2 /= self.n_totobs
+                scale += np.sum((y - np.dot(x, fe_params))**2)
+            scale -= 2*m1y
+            scale += 2*np.dot(fe_params, m1x)
+            scale += np.trace(m2xx)
+            scale /= self.n_totobs
 
             if hist is not None:
-                hist.append(["EM", fe_params, cov_re, sig2])
+                hist.append(["EM", fe_params, cov_re, scale])
 
-        return fe_params, cov_re, sig2
+        return fe_params, cov_re, scale
 
 
-    def get_sig2(self, fe_params, cov_re):
+    def get_scale(self, fe_params, cov_re):
         """
         Returns the estimated error variance based on given estimates
         of the slopes and random effects covariance matrix.
@@ -1173,7 +1175,7 @@ class MixedLM(base.LikelihoodModel):
 
         Returns:
         --------
-        sig2 : float
+        scale : float
             The estimated error variance.
         """
 
@@ -1276,12 +1278,12 @@ class MixedLM(base.LikelihoodModel):
             effects regression slopes.  `start["cov_re"]` contains
             the covariance matrix of random effects as found
             in the `cov_re` component of MixedLMResults.  If
-            `start["cov_re"]` is provided, then `start["sig2"]` must
+            `start["cov_re"]` is provided, then `start["scale"]` must
             also be provided (this is the error variance).
             Alternatively, the random effects may be specified as
             `start["cov_re_sqrt_unscaled"]`, which is the packed lower
             triangle of the covariance matrix in the
-            profile parameterization (in this case sig2 is not used).
+            profile parameterization (in this case scale is not used).
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
@@ -1352,7 +1354,7 @@ class MixedLM(base.LikelihoodModel):
                 mat = np.dot(mat, mat.T)
                 re_params = mat[ix]
         elif "cov_re" in start:
-            cov_re_unscaled = start["cov_re"] / start["sig2"]
+            cov_re_unscaled = start["cov_re"] / start["scale"]
             if self.use_sqrt:
                 cov_re_sqrt_unscaled = np.linalg.cholesky(cov_re_unscaled)
                 re_params = cov_re_sqrt_unscaled[ix]
@@ -1366,17 +1368,17 @@ class MixedLM(base.LikelihoodModel):
 
         # EM iterations
         if niter_em > 0:
-            sig2 = 1.
+            scale = 1.
             cov_re = np.eye(self.k_re)
-            fe_params, cov_re, sig2 = self.EM(fe_params, cov_re, sig2,
+            fe_params, cov_re, scale = self.EM(fe_params, cov_re, scale,
                                              niter_em, hist)
 
             # Gradient algorithms use a different parameterization
             # that profiles out sigma^2.
             if self.use_sqrt:
-                params_prof = self._pack(fe_params, cov_re / sig2)
+                params_prof = self._pack(fe_params, cov_re / scale)
             else:
-                cov_re_rt = np.linalg.cholesky(cov_re / sig2)
+                cov_re_rt = np.linalg.cholesky(cov_re / scale)
                 params_prof = self._pack(fe_params, cov_re_rt)
 
         # Try up to 10 times to make the optimization work, using
@@ -1423,8 +1425,8 @@ class MixedLM(base.LikelihoodModel):
             cov_re_unscaled = np.dot(cov_re_ltri, cov_re_ltri.T)
         else:
             cov_re_unscaled = cov_re_ltri
-        sig2 = self.get_sig2(fe_params, cov_re_unscaled)
-        cov_re = sig2 * cov_re_unscaled
+        scale = self.get_scale(fe_params, cov_re_unscaled)
+        cov_re = scale * cov_re_unscaled
 
         if np.min(np.abs(np.diag(cov_re))) < 0.01:
             msg = "The MLE may be on the boundary of the parameter space."
@@ -1445,10 +1447,10 @@ class MixedLM(base.LikelihoodModel):
             pcov = np.linalg.inv(-hess)
 
         # Prepare a results class instance
-        results = MixedLMResults(self, params_prof, pcov)
+        results = MixedLMResults(self, params_prof, pcov / scale)
         results.fe_params = fe_params
         results.cov_re = cov_re
-        results.sig2 = sig2
+        results.scale = scale
         results.cov_re_unscaled = cov_re_unscaled
         results.method = "REML" if self.reml else "ML"
         results.converged = success
@@ -1507,7 +1509,6 @@ class MixedLMResults(base.LikelihoodModelResults):
     statsmodels.LikelihoodModelResults
     '''
 
-
     def __init__(self, model, params, cov_params):
 
         super(MixedLMResults, self).__init__(model, params,
@@ -1530,7 +1531,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         of p-values if used in the usual way.
         """
         p = self.model.exog.shape[1]
-        return np.sqrt(self.sig2 * np.diag(self.cov_params())[p:])
+        return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
 
 
     def ranef(self):
@@ -1562,7 +1563,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             expval = np.dot(exog, self.fe_params)
             resid = endog - expval
 
-            vresid = _smw_solve(self.sig2, ex_r, self.cov_re,
+            vresid = _smw_solve(self.scale, ex_r, self.cov_re,
                                 cov_re_inv, resid)
 
             ranef_dict[label] = np.dot(self.cov_re,
@@ -1598,7 +1599,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             label = self.model.group_labels[k]
 
             mat1 = np.dot(ex_r, self.cov_re)
-            mat2 = _smw_solve(self.sig2, ex_r, self.cov_re, cov_re_inv,
+            mat2 = _smw_solve(self.scale, ex_r, self.cov_re, cov_re_inv,
                              mat1)
             mat2 = np.dot(mat1.T, mat2)
 
@@ -1645,14 +1646,21 @@ class MixedLMResults(base.LikelihoodModelResults):
         info["Model:"] = "MixedLM"
         if yname is None:
             yname = self.model.endog_names
-        info["Dependent Variable:"] = yname
-        info["No. Groups:"] = str(self.model.n_groups)
         info["No. Observations:"] = str(self.model.n_totobs)
+        info["No. Groups:"] = str(self.model.n_groups)
+
+        gs = np.array([len(x) for x in self.model.endog_li])
+        info["Min. group size:"] = "%.0f" % min(gs)
+        info["Max. group size:"] = "%.0f" % max(gs)
+        info["Mean group size:"] = "%.1f" % np.mean(gs)
+
+        info["Dependent Variable:"] = yname
         info["Method:"] = self.method
-        info["Res. Var.:"] = self.sig2
+        info["Scale:"] = self.scale
         info["Likelihood:"] = self.likeval
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
+        smry.add_title("Mixed Linear Model Regression Results")
 
         float_fmt = "%.3f"
 
@@ -1688,7 +1696,7 @@ class MixedLMResults(base.LikelihoodModelResults):
                     names.append(self.model.exog_re_names[j] + " x " +
                                  self.model.exog_re_names[i] + " RE")
                 sdf[jj, 0] = self.cov_re[i, j]
-                sdf[jj, 1] = np.sqrt(self.sig2) * self.bse[jj]
+                sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
                 jj += 1
 
         sdf = pd.DataFrame(index=names, data=sdf)
