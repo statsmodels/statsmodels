@@ -331,7 +331,9 @@ ext_data = dict(
         kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
                   "depends" : ["statsmodels/tsa/kalmanf/capsule.h"],
                   "sources" : []},
-
+        kalman_filter = {"name" : "statsmodels/tsa/statespace/kalman_filter.c",
+                  "depends" : ["statsmodels/tsa/statespace/capsule.h"],
+                  "sources" : []},
         linbin = {"name" : "statsmodels/nonparametric/linbin.c",
                  "depends" : [],
                  "sources" : []},
