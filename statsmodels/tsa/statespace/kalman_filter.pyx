@@ -6,16 +6,14 @@ License: Simplified-BSD
 
 """
 
+# Typical imports
 import numpy as np
 cimport numpy as np
-from numpy cimport npy_cdouble
 cimport cython
 
-import scipy
-__import__('scipy.linalg.blas')
-__import__('scipy.linalg.lapack')
-
+# Real and complex log and abs functions
 from libc.math cimport log as dlog, abs as dabs
+from numpy cimport npy_cdouble
 
 cdef extern from "numpy/npy_math.h":
     double npy_cabs(npy_cdouble z)
@@ -32,45 +30,47 @@ cdef inline complex zlog(complex z):
 cdef extern from "capsule.h":
     void *Capsule_AsVoidPtr(object ptr)
 
+# BLAS / LAPACK functions
 from blas_lapack cimport *
+from scipy.linalg import blas, lapack
 
-#cdef ssymm_t *ssymm = <ssymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.ssymm._cpointer)
-cdef sgemm_t *sgemm = <sgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.sgemm._cpointer)
-cdef sgemv_t *sgemv = <sgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.sgemv._cpointer)
-cdef scopy_t *scopy = <scopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.scopy._cpointer)
-cdef saxpy_t *saxpy = <saxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.saxpy._cpointer)
-cdef sdot_t *sdot = <sdot_t*>Capsule_AsVoidPtr(scipy.linalg.blas.sdot._cpointer)
-cdef sgetrf_t *sgetrf = <sgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.sgetrf._cpointer)
-cdef sgetri_t *sgetri = <sgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.sgetri._cpointer)
-cdef spotrf_t *spotrf = <spotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.spotrf._cpointer)
+#cdef ssymm_t *ssymm = <ssymm_t*>Capsule_AsVoidPtr(blas.ssymm._cpointer)
+cdef sgemm_t *sgemm = <sgemm_t*>Capsule_AsVoidPtr(blas.sgemm._cpointer)
+cdef sgemv_t *sgemv = <sgemv_t*>Capsule_AsVoidPtr(blas.sgemv._cpointer)
+cdef scopy_t *scopy = <scopy_t*>Capsule_AsVoidPtr(blas.scopy._cpointer)
+cdef saxpy_t *saxpy = <saxpy_t*>Capsule_AsVoidPtr(blas.saxpy._cpointer)
+cdef sdot_t *sdot = <sdot_t*>Capsule_AsVoidPtr(blas.sdot._cpointer)
+cdef sgetrf_t *sgetrf = <sgetrf_t*>Capsule_AsVoidPtr(lapack.sgetrf._cpointer)
+cdef sgetri_t *sgetri = <sgetri_t*>Capsule_AsVoidPtr(lapack.sgetri._cpointer)
+cdef spotrf_t *spotrf = <spotrf_t*>Capsule_AsVoidPtr(lapack.spotrf._cpointer)
 
-#cdef dsymm_t *dsymm = <dsymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dsymm._cpointer)
-cdef dgemm_t *dgemm = <dgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dgemm._cpointer)
-cdef dgemv_t *dgemv = <dgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dgemv._cpointer)
-cdef dcopy_t *dcopy = <dcopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dcopy._cpointer)
-cdef daxpy_t *daxpy = <daxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.daxpy._cpointer)
-cdef ddot_t *ddot = <ddot_t*>Capsule_AsVoidPtr(scipy.linalg.blas.ddot._cpointer)
-cdef dgetrf_t *dgetrf = <dgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.dgetrf._cpointer)
-cdef dgetri_t *dgetri = <dgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.dgetri._cpointer)
-cdef dpotrf_t *dpotrf = <dpotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.dpotrf._cpointer)
+#cdef dsymm_t *dsymm = <dsymm_t*>Capsule_AsVoidPtr(blas.dsymm._cpointer)
+cdef dgemm_t *dgemm = <dgemm_t*>Capsule_AsVoidPtr(blas.dgemm._cpointer)
+cdef dgemv_t *dgemv = <dgemv_t*>Capsule_AsVoidPtr(blas.dgemv._cpointer)
+cdef dcopy_t *dcopy = <dcopy_t*>Capsule_AsVoidPtr(blas.dcopy._cpointer)
+cdef daxpy_t *daxpy = <daxpy_t*>Capsule_AsVoidPtr(blas.daxpy._cpointer)
+cdef ddot_t *ddot = <ddot_t*>Capsule_AsVoidPtr(blas.ddot._cpointer)
+cdef dgetrf_t *dgetrf = <dgetrf_t*>Capsule_AsVoidPtr(lapack.dgetrf._cpointer)
+cdef dgetri_t *dgetri = <dgetri_t*>Capsule_AsVoidPtr(lapack.dgetri._cpointer)
+cdef dpotrf_t *dpotrf = <dpotrf_t*>Capsule_AsVoidPtr(lapack.dpotrf._cpointer)
 
-#cdef csymm_t *csymm = <csymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.csymm._cpointer)
-cdef cgemm_t *cgemm = <cgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.cgemm._cpointer)
-cdef cgemv_t *cgemv = <cgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.cgemv._cpointer)
-cdef ccopy_t *ccopy = <ccopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.ccopy._cpointer)
-cdef caxpy_t *caxpy = <caxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.caxpy._cpointer)
-cdef cgetrf_t *cgetrf = <cgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.cgetrf._cpointer)
-cdef cgetri_t *cgetri = <cgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.cgetri._cpointer)
-cdef cpotrf_t *cpotrf = <cpotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.cpotrf._cpointer)
+#cdef csymm_t *csymm = <csymm_t*>Capsule_AsVoidPtr(blas.csymm._cpointer)
+cdef cgemm_t *cgemm = <cgemm_t*>Capsule_AsVoidPtr(blas.cgemm._cpointer)
+cdef cgemv_t *cgemv = <cgemv_t*>Capsule_AsVoidPtr(blas.cgemv._cpointer)
+cdef ccopy_t *ccopy = <ccopy_t*>Capsule_AsVoidPtr(blas.ccopy._cpointer)
+cdef caxpy_t *caxpy = <caxpy_t*>Capsule_AsVoidPtr(blas.caxpy._cpointer)
+cdef cgetrf_t *cgetrf = <cgetrf_t*>Capsule_AsVoidPtr(lapack.cgetrf._cpointer)
+cdef cgetri_t *cgetri = <cgetri_t*>Capsule_AsVoidPtr(lapack.cgetri._cpointer)
+cdef cpotrf_t *cpotrf = <cpotrf_t*>Capsule_AsVoidPtr(lapack.cpotrf._cpointer)
 
-#cdef zsymm_t *zsymm = <zsymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zsymm._cpointer)
-cdef zgemm_t *zgemm = <zgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zgemm._cpointer)
-cdef zgemv_t *zgemv = <zgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zgemv._cpointer)
-cdef zcopy_t *zcopy = <zcopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zcopy._cpointer)
-cdef zaxpy_t *zaxpy = <zaxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zaxpy._cpointer)
-cdef zgetrf_t *zgetrf = <zgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.zgetrf._cpointer)
-cdef zgetri_t *zgetri = <zgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.zgetri._cpointer)
-cdef zpotrf_t *zpotrf = <zpotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.zpotrf._cpointer)
+#cdef zsymm_t *zsymm = <zsymm_t*>Capsule_AsVoidPtr(blas.zsymm._cpointer)
+cdef zgemm_t *zgemm = <zgemm_t*>Capsule_AsVoidPtr(blas.zgemm._cpointer)
+cdef zgemv_t *zgemv = <zgemv_t*>Capsule_AsVoidPtr(blas.zgemv._cpointer)
+cdef zcopy_t *zcopy = <zcopy_t*>Capsule_AsVoidPtr(blas.zcopy._cpointer)
+cdef zaxpy_t *zaxpy = <zaxpy_t*>Capsule_AsVoidPtr(blas.zaxpy._cpointer)
+cdef zgetrf_t *zgetrf = <zgetrf_t*>Capsule_AsVoidPtr(lapack.zgetrf._cpointer)
+cdef zgetri_t *zgetri = <zgetri_t*>Capsule_AsVoidPtr(lapack.zgetri._cpointer)
+cdef zpotrf_t *zpotrf = <zpotrf_t*>Capsule_AsVoidPtr(lapack.zpotrf._cpointer)
 
 # Kalman Filter: Single Precision
 @cython.boundscheck(False)
