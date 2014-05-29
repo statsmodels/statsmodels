@@ -31,7 +31,7 @@ cdef extern from "capsule.h":
     void *Capsule_AsVoidPtr(object ptr)
 
 # BLAS / LAPACK functions
-from blas_lapack cimport *
+from statsmodels.src.blas_lapack cimport *
 from scipy.linalg import blas, lapack
 
 #cdef ssymm_t *ssymm = <ssymm_t*>Capsule_AsVoidPtr(blas.ssymm._cpointer)

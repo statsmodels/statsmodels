@@ -400,3 +400,12 @@ ctypedef int zpotrf_t(
     int *lda,      # The size of the first dimension of A (in memory)
     int *info      # 0 if success, otherwise an error code (integer)
 )
+
+ctypedef complex zdotu_t(
+    # Compute ZDOT := x.T * y
+    int *n,        # Length of vectors
+    complex *x,     # Vector x, min(len(x)) = n
+    int *incx,     # The increment between elements of x (usually 1)
+    complex *y,     # Vector y, min(len(y)) = m
+    int *incy      # The increment between elements of y (usually 1)
+)
