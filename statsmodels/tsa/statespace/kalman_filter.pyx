@@ -8,6 +8,7 @@ License: Simplified-BSD
 
 import numpy as np
 cimport numpy as np
+from numpy cimport npy_cdouble
 cimport cython
 
 import scipy
@@ -15,11 +16,18 @@ __import__('scipy.linalg.blas')
 __import__('scipy.linalg.lapack')
 
 from libc.math cimport log as dlog, abs as dabs
-cdef extern from "complex.h":
-    complex clog(complex x)
-    np.complex64_t clogf(np.complex64_t x)
-    complex cabs(complex x)
-    np.complex64_t cabsf(np.complex64_t x)
+
+cdef extern from "numpy/npy_math.h":
+    double npy_cabs(npy_cdouble z)
+    npy_cdouble npy_clog(npy_cdouble z)
+
+cdef inline double zabs(complex z):
+    return npy_cabs((<npy_cdouble *> &z)[0])
+
+cdef inline complex zlog(complex z):
+    cdef npy_cdouble x
+    x = npy_clog((<npy_cdouble*> &z)[0])
+    return (<complex *> &x)[0]
 
 cdef extern from "capsule.h":
     void *Capsule_AsVoidPtr(object ptr)
@@ -589,7 +597,7 @@ cpdef ckalman_filter(
             #f_inv = np.linalg.inv(f_tt1[t])
             #f_inv[::1,:] = f_tt1[::1,:,t]
             if n == 1:
-                det = cabsf(f_tt1[0,0,t])
+                det = zabs(f_tt1[0,0,t])
                 f_inv[0,0,t] = 1/f_tt1[0,0,t]
             else:
                 ccopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0,t], &inc)
@@ -606,12 +614,12 @@ cpdef ckalman_filter(
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
         # ^ this doesn't work, crashes for some reason; probably related to taking .T as it did above
-        ll[t] = -0.5*clogf(2*np.pi*det)
+        ll[t] = -0.5*zlog(2*np.pi*det)
         cgemv("N",&n,&n,&alpha,&f_inv[0,0,t],&n,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
         # ll[t] += -0.5*zdotu(&n, &eta_tt1[0,t], &inc, &tmp[0,0], &inc)
         # ^ zdotu, cdotu don't work, give a segfault 11, not sure why
         cgemv("N",&inc,&n,&alpha,&eta_tt1[0,t],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
-        ll[t] += -0.5*work[0,0]
+        ll[t] = ll[t]-0.5*work[0,0]
 
         # Updating
         #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
@@ -639,7 +647,7 @@ cpdef ckalman_filter(
             ccopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
             caxpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
             cgemv("N",&inc,&k2,&alpha,&tmp[0,0],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
-            if <float> cabs(work[0,0]) < tol:
+            if zabs(work[0,0]) < tol:
                 converged = 1
 
     return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, f_inv, gain, ll
@@ -784,7 +792,7 @@ cpdef zkalman_filter(
             #f_inv = np.linalg.inv(f_tt1[t])
             #f_inv[::1,:] = f_tt1[::1,:,t]
             if n == 1:
-                det = cabs(f_tt1[0,0,t])
+                det = zabs(f_tt1[0,0,t])
                 f_inv[0,0,t] = 1/f_tt1[0,0,t]
             else:
                 zcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0,t], &inc)
@@ -801,12 +809,12 @@ cpdef zkalman_filter(
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
         # ^ this doesn't work, crashes for some reason; probably related to taking .T as it did above
-        ll[t] = -0.5*clog(2*np.pi*det)
+        ll[t] = -0.5*zlog(2*np.pi*det)
         zgemv("N",&n,&n,&alpha,&f_inv[0,0,t],&n,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
         # ll[t] += -0.5*zdotu(&n, &eta_tt1[0,t], &inc, &tmp[0,0], &inc)
         # ^ zdotu, cdotu don't work, give a segfault 11, not sure why
         zgemv("N",&inc,&n,&alpha,&eta_tt1[0,t],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
-        ll[t] += -0.5*work[0,0]
+        ll[t] = ll[t]-0.5*work[0,0]
 
         # Updating
         #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
@@ -834,7 +842,7 @@ cpdef zkalman_filter(
             zcopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
             zaxpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
             zgemv("N",&inc,&k2,&alpha,&tmp[0,0],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
-            if <float> cabs(work[0,0]) < tol:
+            if zabs(work[0,0]) < tol:
                 converged = 1
 
     return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, f_inv, gain, ll
