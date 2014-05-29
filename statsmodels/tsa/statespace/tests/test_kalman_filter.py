@@ -20,12 +20,21 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
-from statsmodels.tsa.statespace.kalman_filter import dkalman_filter
+from scipy.linalg.blas import find_best_blas_type
+from statsmodels.tsa.statespace.kalman_filter import (
+    skalman_filter, dkalman_filter, ckalman_filter, zkalman_filter
+)
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal
+from nose.exc import SkipTest
+
+prefix_kalman_filter_map = {
+    's': skalman_filter, 'd': dkalman_filter,
+    'c': ckalman_filter, 'z': zkalman_filter
+}
 
 
-class TestClark1987(object):
+class Clark1987(object):
     """
     Clark's (1987) univariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)
@@ -35,7 +44,7 @@ class TestClark1987(object):
 
     See `results.results_kalman` for more information.
     """
-    def __init__(self):
+    def __init__(self, dtype=float):
         self.true = results_kalman_filter.uc_uni
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -48,40 +57,46 @@ class TestClark1987(object):
         data['lgdp'] = np.log(data['GDP'])
 
         # Observed data
-        y = np.array(data['lgdp'], ndmin=2, dtype=float, order="F")
+        y = np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F")
 
         # Measurement equation
         n = 1  # dimension of observed data
-        H = np.zeros((n, 4, 1), dtype=float, order="F")
+        H = np.zeros((n, 4, 1), dtype=dtype, order="F")
         H[:, :, 0] = [1, 1, 0, 0]  # link state to observations
-        R = np.zeros((n, n), dtype=float, order="F")  # var/cov matrix
+        R = np.zeros((n, n), dtype=dtype, order="F")  # var/cov matrix
 
         # Transition equation
         k = 4  # dimension of state space
-        mu = np.zeros((k,), dtype=float)  # state mean
-        F = np.zeros((k, k), dtype=float, order="F")  # state AR matrix
+        mu = np.zeros((k,), dtype=dtype)  # state mean
+        F = np.zeros((k, k), dtype=dtype, order="F")  # state AR matrix
         F[([0, 0, 1, 1, 2, 3], [0, 3, 1, 2, 1, 3])] = [1, 1, 0, 0, 1, 1]
         # optional matrix so that Q_star is always positive definite
-        G = np.asfortranarray(np.eye(k), dtype=float)
-        Q_star = np.zeros((k, k), dtype=float, order="F")
+        G = np.asfortranarray(np.eye(k), dtype=dtype)
+        Q_star = np.zeros((k, k), dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
-        initial_state = np.zeros((k,), dtype=float)
-        initial_state_cov = np.asfortranarray(np.eye(k)*100, dtype=float)
+        initial_state = np.zeros((k,), dtype=dtype)
+        initial_state_cov = np.asfortranarray(np.eye(k)*100, dtype=dtype)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = self.true['parameters']
+        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
+            self.true['parameters'], dtype=dtype
+        )
         F[([1, 1], [1, 2])] = [phi_1, phi_2]
         Q_star[np.diag_indices(k)] = [
             sigma_v**2, sigma_e**2, 0, sigma_w**2
         ]
+
+        # Use the appropriate Kalman filter
+        prefix = find_best_blas_type((y,))
+        kalman_filter = prefix_kalman_filter_map[prefix[0]]
 
         # Filter the data
         args = (y, H, mu, F, R, G, Q_star,
                 None, None, initial_state, initial_state_cov)
         (state, state_cov, est_state, est_state_cov, forecast,
          prediction_error, prediction_error_cov, inverse_prediction_error_cov,
-         gain, loglikelihood) = dkalman_filter(*args)
+         gain, loglikelihood) = kalman_filter(*args)
 
         # Save the output
         self.state = np.asarray(state[:, 1:])
@@ -121,3 +136,29 @@ class TestClark1987(object):
             self.result['state'][3][self.true['start']:],
             self.true_states.iloc[:, 2], 4
         )
+
+
+class TestClark1987Single(Clark1987):
+
+    def __init__(self):
+        raise SkipTest('Not implemented')
+        super(TestClark1987Single, self).__init__(dtype=np.float32)
+
+
+class TestClark1987Double(Clark1987):
+
+    def __init__(self):
+        super(TestClark1987Double, self).__init__(dtype=float)
+
+
+class TestClark1987SingleComplex(Clark1987):
+
+    def __init__(self):
+        raise SkipTest('Not implemented')
+        super(TestClark1987SingleComplex, self).__init__(dtype=np.complex64)
+
+
+class TestClark1987DoubleComplex(Clark1987):
+
+    def __init__(self):
+        super(TestClark1987DoubleComplex, self).__init__(dtype=complex)
