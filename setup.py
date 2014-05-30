@@ -332,15 +332,12 @@ ext_data = dict(
 
 extensions = []
 for name, data in ext_data.items():
-    sources = [data['name']]
+    data['sources'] = data.get('sources', []) + [data['name']]
+
     destdir = ".".join(os.path.dirname(data["name"]).split("/"))
+    data.pop('name')
 
-    sources.extend(data.get('sources', []))
-
-    obj = Extension('%s.%s' % (destdir, name),
-                    sources=sources,
-                    depends=data.get('depends', []),
-                    include_dirs=data.get('include', []))
+    obj = Extension('%s.%s' % (destdir, name), **data)
 
     extensions.append(obj)
 
