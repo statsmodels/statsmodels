@@ -192,7 +192,7 @@ class Independence(CovStruct):
     covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
 
     def summary(self):
-        return "Observations within a cluster are independent."
+        return "Observations within a cluster are modeled as being independent."
 
 
 class Exchangeable(CovStruct):
