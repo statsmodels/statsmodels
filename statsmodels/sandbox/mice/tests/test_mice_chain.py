@@ -48,7 +48,7 @@ impdata = mice.ImputedData(data)
 
 impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
 
-implist = impcomb.run(iternum=20,skipnum=10)
+implist = impcomb.run(method="pmm")
 
 p1 = impcomb.combine(implist)
 

@@ -33,6 +33,7 @@ import random
 import operator
 import pandas as pd
 import numpy as np
+import patsy as pats
 import sys
 #run from local directory
 sys.path.insert(0, "C:/Users/Frank/Documents/GitHub/statsmodels/")
@@ -92,9 +93,9 @@ class ImputedData(object):
             model_class = sm.OLS
         if formula is None:
             formula = endog_name + " ~ " + " + ".join([x for x in self.data.columns if x != endog_name])
-        return Imputer(formula, model_class, self, init_args=init_args, fit_args=fit_args, scale=scale_method,scale_value=scale_value)
+        return Imputer(formula, model_class, self, init_args=init_args, fit_args=fit_args, scale_method=scale_method,scale_value=scale_value)
 
-    def store_changes(self, vals, col=None):
+    def store_changes(self, vals, col):
         """
         Fill in dataset with imputed values
 
@@ -105,13 +106,17 @@ class ImputedData(object):
         col : string
             Name of variable to be filled in.
         """
-        if col==None:
-            for c in self.columns.keys():
-                ix = self.columns[c].ix_miss
-                self.data[c].iloc[ix] = vals
-        else:
-            ix = self.columns[col].ix_miss
-            self.data[col].iloc[ix] = vals
+
+        ix = self.columns[col].ix_miss
+        self.data[col].iloc[ix] = vals
+
+    def get_missing(self, col, data):
+        ix = self.columns[col].ix_miss
+        return data.iloc[ix,:]
+
+    def get_obs(self, col, data):
+        ix = self.columns[col].ix_obs
+        return data.iloc[ix,:]
 
 class Imputer(object):
 
@@ -141,7 +146,7 @@ class Imputer(object):
         Number of missing values.
     """
     def __init__(self, formula, model_class, data, init_args={}, fit_args={},
-                 scale="fix", scale_value=None):
+                 scale_method="fix", scale_value=None):
         self.data = data
         self.formula = formula
         self.model_class = model_class
@@ -149,22 +154,8 @@ class Imputer(object):
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
         self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
-        self.scale = scale
+        self.scale_method = scale_method
         self.scale_value = scale_value
-        self.imiss = self.data.columns[self.endog_name].ix_miss
-
-#    def get_scale(self, mdf):
-#        if self.scale == "fix":
-#            if self.scale_value is None:
-#                scale = 1.
-#            else:
-#                scale = self.scale_value
-#        elif self.scale == "perturb_chi2":
-#            u = np.random.chisquare(mdf.df_resid)
-#            scale = mdf.df_resid/u
-#        elif self.scale == "perturb_boot":
-#            pass
-#        return scale
 
     def perturb_param(self, mdf):
         """
@@ -187,15 +178,15 @@ class Imputer(object):
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
-        if self.scale == "fix":
+        if self.scale_method == "fix":
             if self.scale_value is None:
                 scale_per = 1
             else:
                 scale_per = self.scale_value
-        elif self.scale == "perturb_chi2":
+        elif self.scale_method == "perturb_chi2":
             u = np.random.chisquare(mdf.df_resid)
             scale_per = mdf.df_resid/u
-        elif self.scale == "perturb_boot":
+        elif self.scale_method == "perturb_boot":
             pass
         p = len(params)
         params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
@@ -205,27 +196,13 @@ class Imputer(object):
         """
         Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
         """
-        io = self.data.columns[self.endog_name].ix_obs
-        md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
+        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name, self.data.data), **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        #TODO: find a better way to determine if first column is intercept
-        exog_name = md.exog_names[:]
-        exog = self.check_intercept(exog_name).iloc[self.imiss,:]
-
+        exog_data = pats.dmatrices(self.formula,self.data.data,return_type="dataframe")[1]
+        exog = self.data.get_missing(self.endog_name, exog_data)
         new_endog = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
         self.data.store_changes(new_endog, self.endog_name)
-
-    def check_intercept(self, exog_name):
-        if 'Intercept' in exog_name:
-            inter = 1
-            exog_name.remove('Intercept')
-        else:
-            inter = 0
-        exog = self.data.data[exog_name]
-        if inter:
-            exog.insert(0, 'Intercept', 1)
-        return exog
 
     def impute_pmm(self, k0):
         """
@@ -237,20 +214,20 @@ class Imputer(object):
         k0 : int
             Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
         """
-        io = self.data.columns[self.endog_name].ix_obs
-        md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
+        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name, self.data.data), **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        #find a better way to determine if first column is intercept
-        exog_name = md.exog_names[:]
-        exog = self.check_intercept(exog_name)
-        endog_all = md.predict(params,exog)
+        exog = pats.dmatrices(self.formula,self.data.data,return_type="dataframe")[1]
+        predicted = pd.DataFrame(md.predict(params,exog))
+        predicted.columns = [self.endog_name]
         endog_matched = []
+        endog_miss = np.array(self.data.get_missing(self.endog_name, predicted))
+        endog_obs = np.array(self.data.get_obs(self.endog_name, predicted))
         #look into memory-computation tradeoff
-        for mval in endog_all[self.imiss]:
-            dist = np.abs(endog_all[io] - mval)
-            dist_ind = np.argsort(dist)
-            endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist_ind[0:k0]])))
+        for mval in endog_miss:
+            dist = np.abs(endog_obs - mval)
+            dist_ind = np.argsort(dist,axis=0)
+            endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist_ind[0:k0][0]])))
         new_endog = endog_matched
         self.data.store_changes(new_endog, self.endog_name)
 
@@ -279,7 +256,7 @@ class ImputerChain(object):
 
     Note: All imputers must refer to the same data object
     """
-    def __init__(self, imputer_list, imputer_method, k):
+    def __init__(self, imputer_list, imputer_method="gaussian", k=1):
         self.imputer_list = imputer_list
         #Impute variable with least missing observations first
         self.imputer_list.sort(key=operator.attrgetter('num_missing'))
@@ -326,8 +303,8 @@ class AnalysisChain(object):
     Note: See mice.MICE and mice.MICE.combine
     """
 
-    def __init__(self, imputer_chain, analysis_formula, analysis_class, skipnum,
-                 burnin, save=False, init_args={}, fit_args={}):
+    def __init__(self, imputer_chain, analysis_formula, analysis_class, skipnum=10,
+                 burnin=5, save=False, init_args={}, fit_args={}):
         self.imputer_chain = imputer_chain
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class
@@ -426,7 +403,7 @@ class MICE(object):
         self.init_args = init_args
         self.fit_args = fit_args
 
-    def run(self, iternum, skipnum, burnin=5, save=False, method="gaussian", k=1):
+    def run(self, iternum=20, skipnum=10, burnin=5, save=False, method="gaussian", k=1):
         """
         Generates analysis model results.
 
