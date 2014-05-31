@@ -934,6 +934,30 @@ class Poisson(CountModel):
                     "argument method == %s, which is not handled" % method)
         return L1PoissonResultsWrapper(discretefit)
 
+
+    def fit_constrained(self, constraints, **fit_kwds):
+    #def fit_constrained(self, R, q, **fit_kwds):
+        #constraints = (R, q)
+        # TODO: temporary trailing underscore to not overwrite the monkey
+        #       patched version
+        # TODO: decide whether to move the imports
+        from patsy import DesignInfo
+        from statsmodels.base._constraints import fit_constrained
+
+        # same pattern as in base.LikelihoodModel.t_test
+        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
+        R, q = lc.coefs, lc.constants
+
+        # TODO: add start_params option, need access to tranformation
+        #       fit_constrained needs to do the transformation
+        params, cov = fit_constrained(self, R, q, fit_kwds, return_cov=True)
+        #create dummy results Instance, TODO: wire up properly
+        res = self.fit(maxiter=0, method='nm') # we get a wrapper back
+        res._results.params = params
+        res._results.normalized_cov_params = cov
+        return res
+
+
     def score(self, params):
         """
         Poisson model score (gradient) vector of the log-likelihood

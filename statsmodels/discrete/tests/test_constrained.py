@@ -11,6 +11,8 @@ import StringIO
 
 import numpy as np
 from numpy.testing import assert_allclose
+from nose import SkipTest
+
 import pandas as pd
 import patsy
 
@@ -44,6 +46,15 @@ class CheckPoissonConstrainedMixin(object):
         assert_allclose(res1[0], res2.params[self.idx], rtol=1e-6)
         assert_allclose(res1[1], res2.bse[self.idx], rtol=1e-6)
 
+    def test_basic_method(self):
+        if hasattr(self, 'res1m'):
+            res1 = self.res1m
+            res2 = self.res2
+            assert_allclose(res1.params, res2.params[self.idx], rtol=1e-6)
+            assert_allclose(res1.bse, res2.bse[self.idx], rtol=1e-6)
+        else:
+            raise SkipTest("not available yet")
+
 
 class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
 
@@ -57,10 +68,15 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data)
         #res1a = mod1a.fit()
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint('C(agecat)[T.4] = C(agecat)[T.5]')
-        cls.res1 = mod.fit_constrained(lc.coefs, lc.constants,
+        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
+        cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
                                        fit_kwds={'method':'bfgs'})
         # TODO: Newton fails
+
+        # test method of Poisson, not monkey patched
+        cls.res1m = mod.fit_constrained(constr, method='bfgs')
+
 
 class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
@@ -77,11 +93,15 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
                                    exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
         #res1a = mod1a.fit()
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint('C(agecat)[T.4] = C(agecat)[T.5]')
-        cls.res1 = mod.fit_constrained(lc.coefs, lc.constants,
+        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
+        cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
                                        fit_kwds={'method':'newton'})
         cls.constraints = lc
         # TODO: bfgs fails
+        # test method of Poisson, not monkey patched
+        cls.res1m = mod.fit_constrained(constr, method='newton')
+
 
 class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
 
@@ -97,11 +117,15 @@ class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    offset=np.log(data['pyears'].values))
         #res1a = mod1a.fit()
-        lc = patsy.DesignInfo(mod.exog_names).linear_constraint('C(agecat)[T.4] = C(agecat)[T.5]')
-        cls.res1 = mod.fit_constrained(lc.coefs, lc.constants,
+        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
+        cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
                                        fit_kwds={'method':'newton'})
         cls.constraints = lc
         # TODO: bfgs fails
+
+        # test method of Poisson, not monkey patched
+        cls.res1m = mod.fit_constrained(constr, method='newton')
 
 
 class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
@@ -117,8 +141,9 @@ class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    #exposure=data['pyears'].values)
                                    offset=np.log(data['pyears'].values))
-        res1a = mod.fit()._results
-        cls.res1 = (res1a.params, res1a.bse)
+        res1 = mod.fit()._results
+        cls.res1 = (res1.params, res1.bse)
+        #cls.res1m = res1
 
 
 class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
@@ -135,9 +160,13 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = mod.fit_constrained(lc.coefs, lc.constants,
+        cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
                                        fit_kwds={'method':'bfgs'})
         # TODO: Newton fails
+
+        # test method of Poisson, not monkey patched
+        cls.res1m = mod.fit_constrained(constr, method='bfgs')
+
 
 class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
 
@@ -156,10 +185,15 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = mod.fit_constrained(lc.coefs, lc.constants,
+        cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
                                        fit_kwds={'method':'newton'})
         cls.constraints = lc
         # TODO: bfgs fails
+
+        # test method of Poisson, not monkey patched
+        cls.res1m = mod.fit_constrained(constr,
+                                        fit_kwds={'method':'bfgs'})
+
 
 class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
 
@@ -177,10 +211,14 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = mod.fit_constrained(lc.coefs, lc.constants,
+        cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
                                        fit_kwds={'method':'newton'})
         cls.constraints = lc
         # TODO: bfgs fails
+
+        # test method of Poisson, not monkey patched
+        cls.res1m = mod.fit_constrained(constr,
+                                        fit_kwds={'method':'bfgs'})
 
 
 def junk():

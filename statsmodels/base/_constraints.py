@@ -169,7 +169,8 @@ def transform_params_constraint(params, Sinv, R, q):
     return params - reduction
 
 
-def fit_constrained(self, constraint_matrix, constraint_values, fit_kwds=None):
+def fit_constrained(self, constraint_matrix, constraint_values, fit_kwds=None,
+                    return_cov=False):
     # note: self is model instance
     """fit model subject to linear equality constraints
 
@@ -203,9 +204,12 @@ def fit_constrained(self, constraint_matrix, constraint_values, fit_kwds=None):
     cov_params = transf.transf_mat.dot(res_constr.cov_params()).dot(transf.transf_mat.T)
     bse = np.sqrt(np.diag(cov_params))
 
-    return params_orig, bse, res_constr
+    if return_cov:
+        return params_orig, cov_params
+    else:
+        return params_orig, bse, res_constr
 
 
 from statsmodels.discrete.discrete_model import Poisson
-Poisson.fit_constrained = fit_constrained
+Poisson.fit_constrained_ = fit_constrained
 
