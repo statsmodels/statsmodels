@@ -953,9 +953,12 @@ class Poisson(CountModel):
         params, cov = fit_constrained(self, R, q, start_params=start_params,
                                       fit_kwds=fit_kwds, return_cov=True)
         #create dummy results Instance, TODO: wire up properly
-        res = self.fit(maxiter=0, method='nm') # we get a wrapper back
+        res = self.fit(maxiter=0, method='nm', disp=0) # we get a wrapper back
         res._results.params = params
         res._results.normalized_cov_params = cov
+        k_constr = len(q)
+        res._results.df_resid += k_constr
+        res._results.df_model -= k_constr
         return res
 
 
