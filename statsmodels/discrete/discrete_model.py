@@ -935,7 +935,7 @@ class Poisson(CountModel):
         return L1PoissonResultsWrapper(discretefit)
 
 
-    def fit_constrained(self, constraints, **fit_kwds):
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
     #def fit_constrained(self, R, q, **fit_kwds):
         #constraints = (R, q)
         # TODO: temporary trailing underscore to not overwrite the monkey
@@ -950,7 +950,8 @@ class Poisson(CountModel):
 
         # TODO: add start_params option, need access to tranformation
         #       fit_constrained needs to do the transformation
-        params, cov = fit_constrained(self, R, q, fit_kwds, return_cov=True)
+        params, cov = fit_constrained(self, R, q, start_params=start_params,
+                                      fit_kwds=fit_kwds, return_cov=True)
         #create dummy results Instance, TODO: wire up properly
         res = self.fit(maxiter=0, method='nm') # we get a wrapper back
         res._results.params = params

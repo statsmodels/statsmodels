@@ -169,8 +169,8 @@ def transform_params_constraint(params, Sinv, R, q):
     return params - reduction
 
 
-def fit_constrained(self, constraint_matrix, constraint_values, fit_kwds=None,
-                    return_cov=False):
+def fit_constrained(self, constraint_matrix, constraint_values,
+                    start_params=None, fit_kwds=None, return_cov=False):
     # note: self is model instance
     """fit model subject to linear equality constraints
 
@@ -192,6 +192,9 @@ def fit_constrained(self, constraint_matrix, constraint_values, fit_kwds=None,
     if hasattr(self, 'offset'):
         offset += self.offset
 
+    if start_params is not None:
+        start_params =  transf.reduce(start_params)
+
     #need copy, because we don't want to change it, we don't need deepcopy
     import copy
     init_kwds = copy.copy(self._get_init_kwds())
@@ -199,7 +202,7 @@ def fit_constrained(self, constraint_matrix, constraint_values, fit_kwds=None,
 
     # using offset as keywords is not supported in all modules
     mod_constr = self.__class__(endog, exogp_st, offset=offset, **init_kwds)
-    res_constr = mod_constr.fit(**fit_kwds)
+    res_constr = mod_constr.fit(start_params=start_params, **fit_kwds)
     params_orig = transf.expand(res_constr.params).squeeze()
     cov_params = transf.transf_mat.dot(res_constr.cov_params()).dot(transf.transf_mat.T)
     bse = np.sqrt(np.diag(cov_params))

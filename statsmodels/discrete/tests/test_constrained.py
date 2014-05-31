@@ -102,14 +102,24 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data)
         #res1a = mod1a.fit()
+        # get start_params, example fails to converge on one py TravisCI
+        k_vars = len(mod.exog_names)
+        start_params = np.zeros(k_vars)
+        start_params[0] = np.log(mod.endog.mean())
+        # if we need it, this is desired params
+        p = np.array([-3.93478643,  1.37276214,  2.33077032,  2.71338891,
+                      2.71338891, 0.57966535,  0.97254074])
+
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
-                                       fit_kwds={'method':'bfgs'})
+                                        start_params=start_params,
+                                        fit_kwds={'method':'bfgs'})
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='bfgs')
+        cls.res1m = mod.fit_constrained(constr, start_params=start_params,
+                                        method='bfgs')
 
 
 class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -191,6 +201,10 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data)
+
+        # if we need it, this is desired params
+        p = np.array([-9.43762015,  1.52762442,  2.74155711,  3.58730007,
+                      4.08730007,  1.15987869,  0.12111539])
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
