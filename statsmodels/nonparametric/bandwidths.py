@@ -170,6 +170,11 @@ def select_bandwidth(x, bw, kernel):
         raise ValueError("Bandwidth %s not understood" % bw)
 #TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
 #    if kernel == "gauss":
-    return bandwidth_funcs[bw](x, kernel)
+    bandwidth = bandwidth_funcs[bw](x, kernel)
+    if bandwidth == 0:
+        # eventually this can fall back on another selection criterion.
+        raise  RuntimeError("KDE bandwidth computed as 0. Cannot build density estimate.")
+    else: 
+        return bandwidth
 #    else:
 #        raise ValueError("Only Gaussian Kernels are currently supported")
