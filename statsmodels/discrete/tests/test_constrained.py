@@ -48,10 +48,44 @@ class CheckPoissonConstrainedMixin(object):
 
     def test_basic_method(self):
         if hasattr(self, 'res1m'):
-            res1 = self.res1m
+            res1 = (self.res1m if not hasattr(self.res1m, '_results')
+                               else self.res1m._results)
             res2 = self.res2
             assert_allclose(res1.params, res2.params[self.idx], rtol=1e-6)
             assert_allclose(res1.bse, res2.bse[self.idx], rtol=1e-6)
+
+            tvalues = res2.params_table[self.idx, 2]
+            assert_allclose(res1.tvalues, tvalues, rtol=1e-6)
+            pvalues = res2.params_table[self.idx, 3]
+            # note most pvalues are very small
+            # examples so far agree at 8 or more decimal, but rtol is stricter
+            assert_allclose(res1.pvalues, pvalues, rtol=5e-5)
+
+            ci_low = res2.params_table[self.idx, 4]
+            ci_upp = res2.params_table[self.idx, 5]
+            ci = np.column_stack((ci_low, ci_upp))
+            # note most pvalues are very small
+            # examples so far agree at 8 or more decimal, but rtol is stricter
+            assert_allclose(res1.conf_int(), ci, rtol=5e-5)
+
+            #other
+            assert_allclose(res1.llf, res2.ll, rtol=1e-6)
+        else:
+            raise SkipTest("not available yet")
+
+    def test_other(self):
+        # some results may not be valid or available for all models
+        if hasattr(self, 'res1m'):
+            res1 = self.res1m
+            res2 = self.res2
+
+            if hasattr(res2, 'll_0'):
+                assert_allclose(res1.llnull, res2.ll_0, rtol=1e-6)
+            else:
+                import warnings
+                message = 'test: ll_0 not available, llnull=%6.4F' % res1.llnull
+                warnings.warn(message)
+
         else:
             raise SkipTest("not available yet")
 
@@ -143,7 +177,7 @@ class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
                                    offset=np.log(data['pyears'].values))
         res1 = mod.fit()._results
         cls.res1 = (res1.params, res1.bse)
-        #cls.res1m = res1
+        cls.res1m = res1
 
 
 class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
@@ -243,10 +277,10 @@ def junk():
     # example without offset
     formula1a = 'deaths ~ logpyears + smokes + C(agecat)'
     mod1a = Poisson.from_formula(formula1a, data=data)
-    print mod1a.exog.shape
+    print(mod1a.exog.shape)
 
     res1a = mod1a.fit()
     lc_1a = patsy.DesignInfo(mod1a.exog_names).linear_constraint('C(agecat)[T.4] = C(agecat)[T.5]')
     resc1a = mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants, fit_kwds={'method':'newton'})
-    print resc1a[0]
-    print resc1a[1]
+    print(resc1a[0])
+    print(resc1a[1])
