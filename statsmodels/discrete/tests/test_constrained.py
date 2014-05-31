@@ -7,7 +7,7 @@ License: BSD-3
 
 """
 
-import StringIO
+from statsmodels.compat.python import StringIO
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -34,7 +34,7 @@ agecat	smokes	deaths	pyears
 4	0	28	2585
 5	0	31	1462'''
 
-data = pd.read_csv(StringIO.StringIO(ss), delimiter='\t')
+data = pd.read_csv(StringIO(ss), delimiter='\t')
 data['logpyears'] = np.log(data['pyears'])
 
 
@@ -202,6 +202,10 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data)
 
+        # get start_params, example fails to converge on one py TravisCI
+        k_vars = len(mod.exog_names)
+        start_params = np.zeros(k_vars)
+        start_params[0] = np.log(mod.endog.mean())
         # if we need it, this is desired params
         p = np.array([-9.43762015,  1.52762442,  2.74155711,  3.58730007,
                       4.08730007,  1.15987869,  0.12111539])
@@ -209,11 +213,13 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = mod.fit_constrained_(lc.coefs, lc.constants,
-                                       fit_kwds={'method':'bfgs'})
+                                        start_params=start_params,
+                                        fit_kwds={'method':'bfgs'})
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='bfgs')
+        cls.res1m = mod.fit_constrained(constr, start_params=start_params,
+                                        method='bfgs')
 
 
 class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
