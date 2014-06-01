@@ -72,7 +72,7 @@ class CheckPoissonConstrainedMixin(object):
             assert_allclose(res1.llf, res2.ll, rtol=1e-6)
             assert_equal(res1.df_model, res2.df_m)
             # Stata doesn't have df_resid
-            df_r = res2.N - res2.df_m + 1
+            df_r = res2.N - res2.df_m - 1
             assert_equal(res1.df_resid, df_r)
         else:
             raise SkipTest("not available yet")
