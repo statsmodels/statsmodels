@@ -558,3 +558,92 @@ results_exposure_constraint2 = Bunch(
                 **est
                 )
 
+
+est = dict(
+           rank = 5,
+           N = 10,
+           ic = 3,
+           k = 7,
+           k_eq = 1,
+           k_dv = 1,
+           converged = 1,
+           rc = 0,
+           k_autoCns = 1,
+           ll = -34.5367006700131,
+           k_eq_model = 1,
+           df_m = 4,
+           chi2 = 582.5215805315736,
+           p = 9.3932644024e-125,
+           r2_p = np.nan,
+           cmdline = "poisson deaths smokes i.agecat, exposure(pyears) constraints(2) vce(robust)",
+           cmd = "poisson",
+           predict = "poisso_p",
+           estat_cmd = "poisson_estat",
+           offset = "ln(pyears)",
+           gof = "poiss_g",
+           chi2type = "Wald",
+           opt = "moptimize",
+           vcetype = "Robust",
+           vce = "robust",
+           title = "Poisson regression",
+           user = "poiss_lf",
+           crittype = "log pseudolikelihood",
+           ml_method = "e2",
+           singularHmethod = "m-marquardt",
+           technique = "nr",
+           which = "max",
+           depvar = "deaths",
+           properties = "b V",
+          )
+
+params_table = np.array([
+     .35978347114582,   .1172393358046,  3.0687948603312,  .00214924117257,
+      .1299985953974,  .58956834689424, np.nan,  1.9599639845401,
+                   0,                0, np.nan, np.nan,
+    np.nan, np.nan, np.nan, np.nan,
+     1.9599639845401,                0,  1.4837272702102,  .21969092615175,
+     6.7537030145039,  1.441186055e-11,  1.0531409672225,  1.9143135731979,
+    np.nan,  1.9599639845401,                0,  2.6270956495127,
+     .20894895542061,  12.572906355164,  2.975796525e-36,   2.217563222281,
+     3.0366280767443, np.nan,  1.9599639845401,                0,
+     3.2898291023835,   .2211846822073,  14.873675109654,  4.885611722e-50,
+     2.8563150913252,  3.7233431134417, np.nan,  1.9599639845401,
+                   0,  3.7898291023835,   .2211846822073,  17.134229479922,
+     8.243780087e-66,  3.3563150913252,  4.2233431134417, np.nan,
+     1.9599639845401,                0, -7.9235211042587,   .2479876721169,
+    -31.951270144281,  5.18748229e-224, -8.4095680102177, -7.4374741982996,
+    np.nan,  1.9599639845401,                0]).reshape(7,9)
+
+params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+
+params_table_rownames = 'smokes 1b.agecat 2.agecat 3.agecat 4.agecat 5.agecat _cons'.split()
+
+cov = np.array([
+      .0137450618599,                0,  .00249770233028,  .00412347653263,
+     .00486142402447,  .00486142402447, -.01620342093134,                0,
+                   0,                0,                0,                0,
+                   0,                0,  .00249770233028,                0,
+     .04826410303341,  .04389964215014,  .04391744129373,  .04391744129373,
+    -.04609122424924,  .00412347653263,                0,  .04389964215014,
+     .04365966597136,  .04367917402468,  .04367917402468, -.04726310745444,
+     .00486142402447,                0,  .04391744129373,  .04367917402468,
+     .04892266364314,  .04892266364314, -.04794543190806,  .00486142402447,
+                   0,  .04391744129373,  .04367917402468,  .04892266364314,
+     .04892266364314, -.04794543190806, -.01620342093134,                0,
+    -.04609122424924, -.04726310745444, -.04794543190806, -.04794543190806,
+     .06149788552196]).reshape(7,7)
+
+cov_colnames = 'smokes 1b.agecat 2.agecat 3.agecat 4.agecat 5.agecat _cons'.split()
+
+cov_rownames = 'smokes 1b.agecat 2.agecat 3.agecat 4.agecat 5.agecat _cons'.split()
+
+
+results_exposure_constraint2_robust = Bunch(
+                params_table=params_table,
+                params_table_colnames=params_table_colnames,
+                params_table_rownames=params_table_rownames,
+                cov=cov,
+                cov_colnames=cov_colnames,
+                cov_rownames=cov_rownames,
+                **est
+                )
