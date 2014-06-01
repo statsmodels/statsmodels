@@ -279,6 +279,53 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
                                         fit_kwds={'method':'bfgs'})
 
 
+class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.genmod.generalized_linear_model import GLM
+        from statsmodels.genmod import families
+        from statsmodels.base._constraints import fit_constrained
+
+        cls.res2 = results.results_noexposure_constraint
+        cls.idx = [7, 3, 4, 5, 6, 0, 1]  # 2 is dropped baseline for categorical
+
+        # example without offset
+        formula = 'deaths ~ logpyears + smokes + C(agecat)'
+        mod = GLM.from_formula(formula, data=data,
+                                    family=families.Poisson())
+        mod._init_keys.append('family')
+
+        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
+        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
+        cls.constraints = lc
+
+
+class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.genmod.generalized_linear_model import GLM
+        from statsmodels.genmod import families
+        from statsmodels.base._constraints import fit_constrained
+
+        cls.res2 = results.results_exposure_constraint
+        cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
+
+        # example with offset
+        formula = 'deaths ~ smokes + C(agecat)'
+        mod = GLM.from_formula(formula, data=data,
+                                    family=families.Poisson(),
+                                    offset=np.log(data['pyears'].values))
+        mod._init_keys.append('family')
+
+        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
+        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
+        cls.constraints = lc
+
+
 def junk():
     # Singular Matrix in mod1a.fit()
 
