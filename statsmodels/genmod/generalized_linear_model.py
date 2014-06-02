@@ -471,6 +471,35 @@ class GLM(base.LikelihoodModel):
         return GLMResultsWrapper(glm_results)
 
 
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+
+        from patsy import DesignInfo
+        from statsmodels.base._constraints import fit_constrained
+
+        # same pattern as in base.LikelihoodModel.t_test
+        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
+        R, q = lc.coefs, lc.constants
+
+        # TODO: add start_params option, need access to tranformation
+        #       fit_constrained needs to do the transformation
+        params, cov, res_constr = fit_constrained(self, R, q,
+                                                  start_params=start_params,
+                                                  fit_kwds=fit_kwds,
+                                                  return_cov=True)
+        #create dummy results Instance, TODO: wire up properly
+        res = self.fit(start_params=params, maxiter=0) # we get a wrapper back
+        res._results.params = params
+        res._results.normalized_cov_params = cov
+        k_constr = len(q)
+        res._results.df_resid += k_constr
+        res._results.df_model -= k_constr
+        res._results.constraints = lc
+        res._results.k_constr = k_constr
+        res._results.res_constr = res_constr
+        res._results.mu = res_constr.mu
+        return res
+
+
 class GLMResults(base.LikelihoodModelResults):
     """
     Class to contain GLM results.
