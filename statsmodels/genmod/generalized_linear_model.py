@@ -427,9 +427,9 @@ class GLM(base.LikelihoodModel):
         # exposure has already been logged if present.
         offset = 0.
         if hasattr(self, 'offset'):
-            offset = self.offset.copy()
+            offset = self.offset
         if hasattr(self, 'exposure'):
-            offset += self.exposure
+            offset = offset + self.exposure
 
         wlsexog = self.exog
         if start_params is None:
