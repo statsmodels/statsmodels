@@ -22,14 +22,17 @@ def get_lagged_y(y, lags, trend='c'):
     Ref: Lutkepohl p.70 (transposed)
     """
     nobs = len(y)
+    # pad with zeros so trend is correct
+    y = np.r_[np.zeros((lags, y.shape[1])), y]
     # Ravel C order, need to put in descending order
-    X = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
+    X = np.array([y[t-lags : t][::-1].ravel() for t in range(lags,
+                                                             nobs + lags)])
 
     # Add constant, trend, etc.
     if trend != 'nc':
         X = tsa.add_trend(X, prepend=True, trend=trend)
 
-    return X
+    return X[lags:]
 
 def get_trendorder(trend='c'):
     # Handle constant, etc.
