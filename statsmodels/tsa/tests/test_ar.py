@@ -114,6 +114,8 @@ class TestAROLSNoConstant(CheckARMixin):
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
         #class TestARMLEConstant(CheckAR):
+
+
 class TestARMLEConstant(object):
     @classmethod
     def setupClass(cls):
@@ -123,7 +125,12 @@ class TestARMLEConstant(object):
 
     def test_predict(self):
         model = self.res1.model
-        params = self.res1.params
+        # for some reason convergence is off in 1 out of 10 runs on
+        # some platforms. i've never been able to replicate. see #910
+        params = np.array([ 5.66817602,  1.16071069, -0.39538222,
+                           -0.16634055,  0.15044614, -0.09439266,
+                           0.00906289,  0.05205291, -0.08584362,
+                           0.25239198])
         assert_almost_equal(model.predict(params), self.res2.FVMLEdefault,
                 DECIMAL_4)
         assert_almost_equal(model.predict(params, start=9, end=308),
@@ -149,6 +156,12 @@ class TestARMLEConstant(object):
                 self.res2.FVMLEstart2end7, DECIMAL_4)
 
     def test_dynamic_predict(self):
+        # for some reason convergence is off in 1 out of 10 runs on
+        # some platforms. i've never been able to replicate. see #910
+        params = np.array([ 5.66817602,  1.16071069, -0.39538222,
+                           -0.16634055,  0.15044614, -0.09439266,
+                           0.00906289,  0.05205291, -0.08584362,
+                           0.25239198])
         res1 = self.res1
         res2 = self.res2
 
@@ -157,52 +170,52 @@ class TestARMLEConstant(object):
 
         # 9, 51
         start, end = 9, 51
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 9, 308
         start, end = 9, 308
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 9, 333
         start, end = 9, 333
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 100, 151
         start, end = 100, 151
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 100, 308
         start, end = 100, 308
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 100, 333
         start, end = 100, 333
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 308, 308
         start, end = 308, 308
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn3[start:end+1], rtol=rtol)
 
         # 308, 333
         start, end = 308, 333
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn3[start:end+1], rtol=rtol)
 
         # 309, 333
         start, end = 309, 333
-        fv = res1.predict(start, end, dynamic=True)
+        fv = res1.model.predict(params, start, end, dynamic=True)
         assert_allclose(fv, res2.fcdyn4[start:end+1], rtol=rtol)
 
         # None, None
         start, end = None, None
-        fv = res1.predict(dynamic=True)
+        fv = res1.model.predict(params, dynamic=True)
         assert_allclose(fv, res2.fcdyn[9:309], rtol=rtol)
 
 
@@ -220,7 +233,6 @@ class TestAutolagAR(object):
             k_ar = r.k_ar
             k_trend = r.k_trend
             log_sigma2 = np.log(r.sigma2)
-            #import ipdb; ipdb.set_trace()
             aic = r.aic
             aic = (aic - log_sigma2) * (1 + k_ar)/(1 + k_ar + k_trend)
             aic += log_sigma2
