@@ -65,12 +65,12 @@ def make_lag_names(names, lag_order, trendorder=1):
             lag_names.append('L'+str(i)+'.'+name)
 
     # handle the constant name
-    if trendorder != 0:
-        lag_names.insert(0, 'const')
-    if trendorder > 1:
-        lag_names.insert(0, 'trend')
     if trendorder > 2:
         lag_names.insert(0, 'trend**2')
+    if trendorder > 1:
+        lag_names.insert(0, 'trend')
+    if trendorder != 0:
+        lag_names.insert(0, 'const')
 
     return lag_names
 
