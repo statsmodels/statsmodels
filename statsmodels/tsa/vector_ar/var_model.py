@@ -2153,7 +2153,7 @@ class FEVD(object):
         irfs = (self.orth_irfs[:periods] ** 2).cumsum(axis=0)
 
         rng = lrange(self.neqs)
-        mse = self.model.mse(periods)[:, rng, rng]
+        mse = results.mse(periods)[:, rng, rng]
 
         # lag x equation x component
         fevd = np.empty_like(irfs)
