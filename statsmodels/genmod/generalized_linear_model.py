@@ -158,7 +158,7 @@ class GLM(base.LikelihoodModel):
         statsmodels.families.  Default is Gaussian.
     mu : array
         The mean response of the transformed variable.  `mu` is the value of
-        the inverse of the link function at eta, where eta is the linear
+        the inverse of the link function at lin_pred, where lin_pred is the linear
         predicted value of the WLS fit of the transformed variable.  `mu` is
         only available after fit is called.  See
         statsmodels.families.family.fitted of the distribution family for more
@@ -435,7 +435,7 @@ class GLM(base.LikelihoodModel):
             mu = self.family.starting_mu(self.endog)
         else:
             mu = self.family.fitted(np.dot(wlsexog, start_params) + offset)
-        eta = self.family.predict(mu)
+        lin_pred = self.family.predict(mu)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
             raise ValueError("The first guess on the deviance function "
@@ -450,11 +450,11 @@ class GLM(base.LikelihoodModel):
         criterion = history['deviance']
         while not converged:
             self.weights = data_weights*self.family.weights(mu)
-            wlsendog = (eta + self.family.link.deriv(mu) * (self.endog-mu)
+            wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
                         - offset)
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
-            eta = np.dot(self.exog, wls_results.params) + offset
-            mu = self.family.fitted(eta)
+            lin_pred = np.dot(self.exog, wls_results.params) + offset
+            mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
             iteration += 1

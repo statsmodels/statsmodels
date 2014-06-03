@@ -169,13 +169,13 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def fitted(self, eta):
+    def fitted(self, lin_pred):
         """
-        Fitted values based on linear predictors eta.
+        Fitted values based on linear predictors lin_pred.
 
         Parameters
         -----------
-        eta : array
+        lin_pred : array
             Values of the linear predictor of the model.
             dot(X,beta) in a classical linear model.
 
@@ -185,7 +185,7 @@ class Family(object):
             The mean response variables given by the inverse of the link
             function.
         """
-        return self.link.inverse(eta)
+        return self.link.inverse(lin_pred)
 
     def predict(self, mu):
         """
@@ -198,7 +198,7 @@ class Family(object):
 
         Returns
         -------
-        eta : array
+        lin_pred : array
             Linear predictors based on the mean response variables.  The value
             of the link function at the given mu.
         """
