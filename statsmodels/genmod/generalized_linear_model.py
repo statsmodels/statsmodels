@@ -434,7 +434,7 @@ class GLM(base.LikelihoodModel):
         if start_params is None:
             mu = self.family.starting_mu(self.endog)
         else:
-            mu = self.family.fitted(np.dot(wlsexog, start_params))
+            mu = self.predict(start_params)
         eta = self.family.predict(mu)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
@@ -661,6 +661,10 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def null_deviance(self):
         return self.family.deviance(self._endog, self.null)
+
+    @cache_readonly
+    def llnull(self):
+        return self.family.loglike(self._endog, self.null, scale=self.scale)
 
     @cache_readonly
     def llf(self):
