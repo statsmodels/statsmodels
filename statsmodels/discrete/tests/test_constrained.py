@@ -294,7 +294,6 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = GLM.from_formula(formula, data=data,
                                     family=families.Poisson())
-        mod._init_keys.append('family')
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -319,7 +318,6 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         mod = GLM.from_formula(formula, data=data,
                                     family=families.Poisson(),
                                     offset=np.log(data['pyears'].values))
-        mod._init_keys.append('family')
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
