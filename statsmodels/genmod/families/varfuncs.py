@@ -47,7 +47,7 @@ class VarianceFunction(object):
 
 constant = VarianceFunction()
 constant.__doc__ = """
-The call method of constnat returns a constant variance, ie., a vector of ones.
+The call method of constant returns a constant variance, i.e., a vector of ones.
 
 constant is an alias of VarianceFunction()
 """
