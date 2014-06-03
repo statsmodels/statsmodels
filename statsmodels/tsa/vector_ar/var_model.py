@@ -9,6 +9,7 @@ Hamilton, J. D. 1994. *Time Series Analysis*. Princeton Press.
 """
 
 from __future__ import division, print_function
+from warnings import warn
 from statsmodels.compat.python import (range, lrange, string_types, StringIO, iteritems,
                                 cStringIO)
 
@@ -464,6 +465,7 @@ class VAR(tsbase.TimeSeriesModel):
     def __init__(self, Y, nlags=None, dates=None, names=None, freq=None,
                  missing='none'):
         if nlags is None:
+            from warnings import warn
             warn("In the 0.6.0 release nlags will not be optional in the "
                  "model constructor.", FutureWarning)
         else:
