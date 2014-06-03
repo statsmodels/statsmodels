@@ -52,7 +52,8 @@ class GLM(base.LikelihoodModel):
     exog : array-like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
-        and should be added by the user. See `statsmodels.tools.add_constant`.
+        and should be added by the user (models specified using a formula
+        include an intercept by default). See `statsmodels.tools.add_constant`.
     family : family class instance
         The default is Gaussian.  To specify the binomial distribution
         family = sm.family.Binomial()
