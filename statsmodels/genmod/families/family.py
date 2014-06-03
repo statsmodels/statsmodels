@@ -1077,7 +1077,7 @@ class NegativeBinomial(Family):
 
     Notes
     -----
-    Support for Power link functions is not yet supported.
+    Power link functions are not yet supported.
     """
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
 #TODO: add the ability to use the power links with an if test
@@ -1104,13 +1104,13 @@ class NegativeBinomial(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         """
         Returns the value of the deviance function.
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -1136,23 +1136,23 @@ class NegativeBinomial(Family):
 
         piecewise_i = :math:`2 Y \\log(Y/\\mu)-2/\\alpha(1+\\alpha Y)*\\log((1+\\alpha Y)/(1+\\alpha\\mu))`
         """
-        iszero = np.equal(Y,0)
+        iszero = np.equal(endog,0)
         notzero = 1 - iszero
-        tmp = np.zeros(len(Y))
-        Y_mu = self._clean(Y/mu)
+        tmp = np.zeros(len(endog))
+        endog_mu = self._clean(endog/mu)
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
-        tmp += notzero*(2*Y*np.log(Y_mu)-2/self.alpha*(1+self.alpha*Y)*\
-                np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
+        tmp += notzero*(2*endog*np.log(endog_mu)-2/self.alpha*(1+self.alpha*endog)*\
+                np.log((1+self.alpha*endog)/(1+self.alpha*mu)))
         return np.sum(tmp)/scale
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         '''
         Negative Binomial Deviance Residual
 
         Parameters
         ----------
-        Y : array-like
-            `Y` is the response variable
+        endog : array-like
+            `endog` is the response variable
         mu : array-like
             `mu` is the fitted value of the model
         scale : float, optional
@@ -1165,7 +1165,7 @@ class NegativeBinomial(Family):
 
         Notes
         -----
-        `resid_dev` = sign(Y-mu) * sqrt(piecewise)
+        `resid_dev` = sign(endog-mu) * sqrt(piecewise)
 
         where piecewise is defined as
         if :math:`Y_i = 0`:
@@ -1174,58 +1174,60 @@ class NegativeBinomial(Family):
         if :math:`Y_i > 0`:
         :math:`piecewise_i = 2*Y*log(Y/\\mu)-2/\\alpha*(1+\\alpha*Y)*log((1+\\alpha*Y)/(1+\\alpha*\\mu))`
         '''
-        iszero = np.equal(Y,0)
+        iszero = np.equal(endog,0)
         notzero = 1 - iszero
-        tmp=np.zeros(len(Y))
+        tmp=np.zeros(len(endog))
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
-        tmp += notzero*(2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
-                np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
-        return np.sign(Y-mu)*np.sqrt(tmp)/scale
+        tmp += notzero*(2*endog*np.log(endog/mu)-2/self.alpha*(1+self.alpha*endog)*\
+                np.log((1+self.alpha*endog)/(1+self.alpha*mu)))
+        return np.sign(endog-mu)*np.sqrt(tmp)/scale
 
-    def loglike(self, Y, fittedvalues=None):
+    def loglike(self, endog, lin_pred=None):
         """
         The loglikelihood function for the negative binomial family.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
-        fittedvalues : array-like
-            The linear fitted values of the model.  This is dot(exog,params).
+        lin_pred : array-like
+            The linear predictor of the model.  This is dot(exog,params),
+            plus the offset if present.
 
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
         -----
-        sum(Y*log(alpha*exp(fittedvalues)/(1+alpha*exp(fittedvalues))) -\
-                log(1+alpha*exp(fittedvalues))/alpha + constant)
+        sum(endog*log(alpha*exp(lin_pred)/(1+alpha*exp(lin_pred))) -\
+                log(1+alpha*exp(lin_pred))/alpha + constant)
 
         where constant is defined as
-        constant = gammaln(Y + 1/alpha) - gammaln(Y + 1) - gammaln(1/alpha)
+        constant = gammaln(endog + 1/alpha) - gammaln(endog + 1) - gammaln(1/alpha)
         """
         # don't need to specify mu
-        if fittedvalues is None:
+        if lin_pred is None:
             raise AttributeError('The loglikelihood for the negative binomial \
-requires that the fitted values be provided via the `fittedvalues` keyword \
+requires that the fitted values be provided via the `lin_pred` keyword \
 argument.')
-        constant = special.gammaln(Y + 1/self.alpha) - special.gammaln(Y+1)\
+        constant = special.gammaln(endog + 1/self.alpha) - special.gammaln(endog+1)\
                     -special.gammaln(1/self.alpha)
-        return np.sum(Y*np.log(self.alpha*np.exp(fittedvalues)/\
-            (1 + self.alpha*np.exp(fittedvalues))) - \
-            np.log(1+self.alpha*np.exp(fittedvalues))/self.alpha\
+        exp_lin_pred = np.exp(lin_pred)
+        return np.sum(endog*np.log(self.alpha*exp_lin_pred/\
+            (1 + self.alpha*exp_lin_pred)) - \
+            np.log(1+self.alpha*exp_lin_pred)/self.alpha\
             + constant)
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         The Anscombe residuals for the negative binomial family
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -1237,13 +1239,13 @@ argument.')
 
         Notes
         -----
-        `resid_anscombe` = (hyp2f1(-alpha*Y)-hyp2f1(-alpha*mu)+\
-                1.5*(Y**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
+        `resid_anscombe` = (hyp2f1(-alpha*endog)-hyp2f1(-alpha*mu)+\
+                1.5*(endog**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
 
         where hyp2f1 is the hypergeometric 2f1 function parameterized as
         hyp2f1(x) = hyp2f1(2/3.,1/3.,5/3.,x)
         """
 
         hyp2f1 = lambda x : special.hyp2f1(2/3.,1/3.,5/3.,x)
-        return (hyp2f1(-self.alpha*Y)-hyp2f1(-self.alpha*mu)+1.5*(Y**(2/3.)-\
+        return (hyp2f1(-self.alpha*endog)-hyp2f1(-self.alpha*mu)+1.5*(endog**(2/3.)-\
                 mu**(2/3.)))/(mu+self.alpha*mu**2)**(1/6.)
