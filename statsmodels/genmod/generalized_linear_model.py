@@ -429,17 +429,18 @@ class GLM(base.LikelihoodModel):
 
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
-        offset = 0.
+        offset_exposure = 0.
         if hasattr(self, 'offset'):
-            offset = self.offset
+            offset_exposure = self.offset
         if hasattr(self, 'exposure'):
-            offset = offset + self.exposure
+            offset_exposure = offset_exposure + self.exposure
+        self._offset_exposure = offset_exposure
 
         wlsexog = self.exog
         if start_params is None:
             mu = self.family.starting_mu(self.endog)
         else:
-            mu = self.family.fitted(np.dot(wlsexog, start_params) + offset)
+            mu = self.family.fitted(np.dot(wlsexog, start_params) + offset_exposure)
         lin_pred = self.family.predict(mu)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
@@ -456,9 +457,9 @@ class GLM(base.LikelihoodModel):
         while not converged:
             self.weights = data_weights*self.family.weights(mu)
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
-                        - offset)
+                        - offset_exposure)
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
-            lin_pred = np.dot(self.exog, wls_results.params) + offset
+            lin_pred = np.dot(self.exog, wls_results.params) + offset_exposure
             mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
@@ -711,8 +712,10 @@ class GLMResults(base.LikelihoodModelResults):
     def llf(self):
         _modelfamily = self.family
         if isinstance(_modelfamily, families.NegativeBinomial):
-            XB = np.dot(self.model.exog, self.params)
-            val = _modelfamily.loglike(self.model.endog, fittedvalues=XB)
+            lin_pred = np.dot(self.model.exog, self.params) +\
+                       self.model._offset_exposure
+            val = _modelfamily.loglike(self.model.endog,
+                                       lin_pred=lin_pred)
         else:
             val = _modelfamily.loglike(self._endog, self.mu, scale=self.scale)
         return val
