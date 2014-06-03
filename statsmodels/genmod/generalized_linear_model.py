@@ -438,7 +438,7 @@ class GLM(base.LikelihoodModel):
         if start_params is None:
             mu = self.family.starting_mu(self.endog)
         else:
-            mu = self.predict(start_params)
+            mu = self.family.fitted(np.dot(wlsexog, start_params) + offset)
         eta = self.family.predict(mu)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
