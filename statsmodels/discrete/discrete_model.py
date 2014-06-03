@@ -950,10 +950,16 @@ class Poisson(CountModel):
 
         # TODO: add start_params option, need access to tranformation
         #       fit_constrained needs to do the transformation
-        params, cov = fit_constrained(self, R, q, start_params=start_params,
-                                      fit_kwds=fit_kwds, return_cov=True)
+        params, cov, res_constr = fit_constrained(self, R, q,
+                                                  start_params=start_params,
+                                                  fit_kwds=fit_kwds,
+                                                  return_cov=True)
         #create dummy results Instance, TODO: wire up properly
         res = self.fit(maxiter=0, method='nm', disp=0) # we get a wrapper back
+        res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
+        res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
+                                                        'iterations', np.nan)
+        res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
         res._results.params = params
         res._results.normalized_cov_params = cov
         k_constr = len(q)

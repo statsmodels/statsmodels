@@ -300,6 +300,7 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
         cls.constraints = lc
+        cls.res1m = mod.fit_constrained(constr)
 
 
 class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -324,6 +325,35 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
         cls.constraints = lc
+        cls.res1m = mod.fit_constrained(constr)._results
+
+    def test_compare_glm_poisson(self):
+        res1 = self.res1m
+        res2 = self.res2
+
+        formula = 'deaths ~ smokes + C(agecat)'
+        mod = Poisson.from_formula(formula, data=data,
+                                   exposure=data['pyears'].values)
+                                   #offset=np.log(data['pyears'].values))
+
+        constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
+        res2 = mod.fit_constrained(constr, start_params=self.res1m.params,
+                                        method='newton')
+
+        # we get high precision because we use the params as start_params
+
+        # basic, just as check that we have the same model
+        assert_allclose(res1.params, res2.params, rtol=1e-12)
+        assert_allclose(res1.bse, res2.bse, rtol=1e-12)
+
+        # check predict, fitted, ...
+
+        predicted = res1.predict()
+        assert_allclose(predicted, res2.predict(), rtol=1e-10)
+        assert_allclose(res1.mu, predicted, rtol=1e-10)
+        assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
+        assert_allclose(res2.predict(linear=True), res2.predict(linear=True),
+                        rtol=1e-10)
 
 
 def junk():

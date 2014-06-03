@@ -208,7 +208,7 @@ def fit_constrained(self, constraint_matrix, constraint_values,
     bse = np.sqrt(np.diag(cov_params))
 
     if return_cov:
-        return params_orig, cov_params
+        return params_orig, cov_params, res_constr
     else:
         return params_orig, bse, res_constr
 
