@@ -169,7 +169,7 @@ def _var_acf(coefs, sig_u):
 
     return acf
 
-def forecast(y, coefs, trend_coefs, steps):
+def forecast(y, coefs, trend_coefs, steps, exog=None):
     """
     Produce linear MSE forecast
 
@@ -186,6 +186,9 @@ def forecast(y, coefs, trend_coefs, steps):
         a vector of constants. If 2d should be of shape k_trend x neqs.
     steps : int
         Number of steps ahead to forecast
+    exog : array-like
+        The exogenous variables. Should include constant, trend, etc. as
+        needed, including extrapolating out of sample.
 
     Returns
     -------
@@ -197,12 +200,11 @@ def forecast(y, coefs, trend_coefs, steps):
     """
     #TODO: give math not a page in a book
     # Lutkepohl p. 37
-    y = np.asarray(y) # handle pandas but not structured arrays, oh well.
+    y = np.asarray(y)  # handle pandas but not structured arrays, oh well.
     p = len(coefs)
     k = len(coefs[0])
     # initial value
-    #TODO: This is now wrong for trend_coefs != intercept
-    forcs = np.zeros((steps, k)) + trend_coefs
+    forcs = np.zeros((steps, k))
 
     # h=0 forecast should be latest observation
     # forcs[0] = y[-1]
@@ -210,7 +212,7 @@ def forecast(y, coefs, trend_coefs, steps):
     # make indices easier to think about
     for h in range(1, steps + 1):
         # y_t(h) = intercept + sum_1^p A_i y_t_(h-i)
-        f = forcs[h - 1]
+        f = forcs[h - 1] + np.dot(exog[h -1], trend_coefs)
         for i in range(1, p + 1):
             # slightly hackish
             if h - i <= 0:
@@ -982,14 +984,19 @@ class VARProcess(object):
         """
         #TODO: give the math instead the reference in Notes
         # Lutkepohl pp 37-38
+        k_ar = self.k_ar
 
         if y is not None:
             warn("The use of y is deprecated and will be removed in 0.6.0. "
                  "If you want to give initial values use "
                  "statsmodels.tsa.var.forecast.")
         else:
-            y = self.model.Y[-self.k_ar:]
-        return forecast(y, self.coefs, self.trend_coefs, steps)
+            y = self.model.Y[-k_ar:]
+
+        exog = util.get_forecast_X(self.nobs + k_ar, self.model.trend,
+                                   self.k_ar, steps)
+
+        return forecast(y, self.coefs, self.trend_coefs, steps, exog)
 
     def mse(self, steps):
         """
@@ -1010,14 +1017,14 @@ class VARProcess(object):
         """
         ma_coefs = self.ma_rep(steps)
 
-        k = len(self.cov_resid)
+        k = len(self.cov_resid_mle)
         forc_covs = np.zeros((steps, k, k))
 
         prior = np.zeros((k, k))
         for h in range(steps):
             # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
             phi = ma_coefs[h]
-            var = chain_dot(phi, self.cov_resid, phi.T)
+            var = chain_dot(phi, self.cov_resid_mle, phi.T)
             forc_covs[h] = prior = prior + var
 
         return forc_covs
@@ -1647,13 +1654,14 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
 
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
-        G = self._XTX
+        G = self._XTX/self.nobs
         Ginv = L.inv(G)
 
         # memoize powers of B for speedup
         # TODO: see if can memoize better
         B = self._bmat_forc_cov()
         _B = {}
+
         def bpow(i):
             if i not in _B:
                 _B[i] = np.linalg.matrix_power(B, i)
@@ -1661,12 +1669,12 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
             return _B[i]
 
         phis = self.ma_rep(steps)
-        sig_u = self.cov_resid
+        sig_u = self.cov_resid_mle  # use asymptotic covariance
 
         omegas = np.zeros((steps, self.neqs, self.neqs))
         for h in range(1, steps + 1):
             if h == 1:
-                omegas[h-1] = self.df_model * self.cov_resid
+                omegas[h-1] = self.df_model * sig_u
                 continue
 
             om = omegas[h-1]
@@ -1683,9 +1691,10 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
     def _bmat_forc_cov(self):
         # B as defined on p. 96 of Lut
         upper = np.zeros((1, self.df_model))
-        upper[0,0] = 1
+        upper[0, 0] = 1
 
-        lower_dim = self.neqs * (self.k_ar - 1)
+        # - 1 from trend bc of the leading zero
+        lower_dim = self.neqs * (self.k_ar - 1) + (self.k_trend - 1)
         I = np.eye(lower_dim)
         lower = np.column_stack((np.zeros((lower_dim, 1)), I,
                                  np.zeros((lower_dim, self.neqs))))

@@ -8,8 +8,37 @@ import scipy.linalg.decomp as decomp
 
 import statsmodels.tsa.tsatools as tsa
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Auxiliary functions for estimation
+
+def get_forecast_X(nobs, trend, lags, steps):
+    """
+    Returns X for forecasting steps forecasts from nobs.
+
+    Parameters
+    ----------
+    nobs : int
+        Starting value for forecasts
+    trend : str ('nc', 'c', 'ct', 'ctt')
+        Trend
+    steps : int
+        Number of forecasts produced
+
+    Examples
+    --------
+    >>> get_forecast_X(200, 'ctt', 4, 4)
+    array([[     1.,    201.,  40000.],
+           [     1.,    202.,  40401.],
+           [     1.,    203.,  40804.],
+           [     1.,    204.,  41616.]])
+    """
+    trendorder = get_trendorder(trend)
+    if trendorder == 0:
+        return
+    return np.fliplr(np.vander(np.arange(nobs + 1,
+                                         nobs + steps + 1,
+                                         dtype=float), trendorder))
+
 
 def get_lagged_y(y, lags, trend='c', has_constant='skip'):
     """
