@@ -495,7 +495,7 @@ class GLM(base.LikelihoodModel):
         res._results.df_model -= k_constr
         res._results.constraints = lc
         res._results.k_constr = k_constr
-        res._results.res_constr = res_constr
+        res._results.results_constrained = res_constr
         res._results.mu = res_constr.mu
         return res
 
@@ -603,6 +603,11 @@ class GLMResults(base.LikelihoodModelResults):
         self._cache = resettable_cache()
         # are these intermediate results needed or can we just
         # call the model's attributes?
+
+        # for remove data and pickle without large arrays
+        self._data_attr.extend(['results_constrained'])
+        self.data_in_cache = getattr(self, 'data_in_cache', [])
+        self.data_in_cache.extend(['null'])
 
     @cache_readonly
     def resid_response(self):
