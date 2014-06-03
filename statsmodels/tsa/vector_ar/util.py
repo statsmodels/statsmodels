@@ -23,8 +23,11 @@ def get_lagged_y(y, lags, trend='c', has_constant='skip'):
     has_constant can be 'raise', 'add', or 'skip'. See add_constant.
     """
     nobs = len(y)
+    # pad with zeros so trend is correct
+    y = np.r_[np.zeros((lags, y.shape[1])), y]
     # Ravel C order, need to put in descending order
-    X = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
+    X = np.array([y[t-lags : t][::-1].ravel() for t in range(lags,
+                                                             nobs + lags)])
 
     # Add constant, trend, etc.
     if trend != 'nc':
@@ -32,7 +35,7 @@ def get_lagged_y(y, lags, trend='c', has_constant='skip'):
                           has_constant=has_constant)
 
 
-    return X
+    return X[lags:]
 
 def get_trendorder(trend='c'):
     # Handle constant, etc.
