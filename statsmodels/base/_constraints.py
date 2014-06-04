@@ -265,7 +265,3 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     else:
         return params_orig, bse, res_constr
 
-
-from statsmodels.discrete.discrete_model import Poisson
-Poisson.fit_constrained_ = fit_constrained
-
