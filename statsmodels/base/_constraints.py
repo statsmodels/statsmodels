@@ -169,7 +169,7 @@ def transform_params_constraint(params, Sinv, R, q):
     return params - reduction
 
 
-def fit_constrained(self, constraint_matrix, constraint_values,
+def fit_constrained(model, constraint_matrix, constraint_values,
                     start_params=None, fit_kwds=None, return_cov=False):
     # note: self is model instance
     """fit model subject to linear equality constraints
@@ -177,7 +177,60 @@ def fit_constrained(self, constraint_matrix, constraint_values,
     The constraints are of the form   `R params = q`
     where R is the constraint_matrix and q is the vector of constraint_values.
 
+    The estimation creates a new model with transformed design matrix,
+    exog, and converts the results back to the original parameterization.
+
+
+    Parameters
+    ----------
+    model: model instance
+        An instance of a model, see limitations in Notes section
+    constraint_matrix : array_like, 2D
+        This is R in the linear equality constraint `R params = q`.
+        The number of columns needs to be the same as the number of columns
+        in exog.
+    constraint_values :
+        This is `q` in the linear equality constraint `R params = q`
+        If it is a tuple, then the constraint needs to be given by two
+        arrays (constraint_matrix, constraint_value), i.e. (R, q).
+        Otherwise, the constraints can be given as strings or list of
+        strings.
+        see t_test for details
+    start_params : None or array_like
+        starting values for the optimization. `start_params` needs to be
+        given in the original parameter space and are internally
+        transformed.
+    **fit_kwds : keyword arguments
+        fit_kwds are used in the optimization of the transformed model.
+
+    Returns
+    -------
+    params : ndarray ?
+        estimated parameters (in the original parameterization
+    cov_params : ndarray
+        # TODO: this should be the only choice, drop `return_cov`
+        covariance matrix of the parameter estimates. This is a reverse
+        transformation of the covariance matrix of the transformed model given
+        by `cov_params()`
+        Note: `fit_kwds` can affect the choice of covariance, e.g. by
+        specifying `cov_type`, which will be reflected in the returned
+        covariance.
+    res_constr : results instance
+        This is the results instance for the created transformed model.
+
+
+    Notes
+    -----
+    Limitations:
+
+    Models where the number of parameters is different from the number of
+    columns of exog are not yet supported.
+
+    Requires a model that implement an offset option.
+
+
     """
+    self = model   # internal alias, used for methods
     if fit_kwds is None:
         fit_kwds = {}
 
