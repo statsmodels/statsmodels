@@ -603,6 +603,24 @@ def test_glm_start_params():
     res = mod.fit(start_params=[-4, -5])
     np.testing.assert_almost_equal(res.params, [-4.60305022, -5.29634545], 6)
 
+
+def test_loglike_no_opt():
+    # see 1728
+
+    y = np.asarray([0, 1, 0, 0, 1, 1, 0, 1, 1, 1])
+    x = np.arange(10, dtype=np.float64)
+
+    def llf(params):
+        lin_pred = params[0] + params[1]*x
+        pr = 1 / (1 + np.exp(-lin_pred))
+        return np.sum(y*np.log(pr) + (1-y)*np.log(1-pr))
+
+    for params in [0,0], [0,1], [0.5,0.5]:
+        mod = sm.GLM(y, sm.add_constant(x), family=sm.families.Binomial())
+        res = mod.fit(start_params=params, maxiter=0)
+        like = llf(params)
+        assert_almost_equal(like, res.llf)
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:
