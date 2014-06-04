@@ -397,7 +397,7 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
         #assert_allclose(res1.pearson_chi2, res2.chi2, rtol=1e-10)
 
 
-class TestGLMLogitConstrained(CheckGLMConstrainedMixin):
+class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
 
     @classmethod
     def setup_class(cls):
@@ -418,7 +418,7 @@ class TestGLMLogitConstrained(CheckGLMConstrainedMixin):
         cls.res1 = fit_constrained(mod1, R, q)
 
 
-class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
+class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
 
     @classmethod
     def setup_class(cls):
@@ -434,6 +434,17 @@ class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
 
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
         cls.res1 = fit_constrained(mod1, R, q)
+
+
+    def test_predict(self):
+        # results only available for this case
+        res2 = self.res2  # reference results
+        res1 = self.res1m
+
+        predicted = res1.predict()
+        assert_allclose(predicted, res2.predict_mu, atol=1e-7)
+        assert_allclose(res1.mu, predicted, rtol=1e-10)
+        assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
 
 
 def junk():
