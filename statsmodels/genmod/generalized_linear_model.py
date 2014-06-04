@@ -527,6 +527,8 @@ class GLM(base.LikelihoodModel):
         res._results.constraints = lc
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
+        # TODO: the next is not the best. history should bin in results
+        res._results.model.history = res_constr.model.history
         res._results.mu = res_constr.mu
         return res
 

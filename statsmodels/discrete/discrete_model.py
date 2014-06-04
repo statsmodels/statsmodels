@@ -995,6 +995,7 @@ class Poisson(CountModel):
         res._results.df_model -= k_constr
         res._results.constraints = lc
         res._results.k_constr = k_constr
+        res._results.results_constrained = res_constr
         return res
 
 
