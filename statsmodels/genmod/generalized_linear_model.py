@@ -199,7 +199,7 @@ class GLM(base.LikelihoodModel):
             delattr(self, 'exposure')
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',
-                                ])
+                                '_offset_exposure'])
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
