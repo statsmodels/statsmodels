@@ -440,6 +440,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
 
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
         cls.res1 = fit_constrained(mod1, R, q)
+        cls.constraints_rq = (R, q)
 
 
     def test_predict(self):
@@ -451,6 +452,16 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_allclose(predicted, res2.predict_mu, atol=1e-7)
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
+
+
+    def test_fit_constrained_wrap(self):
+        # minimal test
+        res2 = self.res2  # reference results
+
+        from statsmodels.base._constraints import fit_constrained_wrap
+        res_wrap = fit_constrained_wrap(self.res1m.model, self.constraints_rq)
+        assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
+        assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
 
 
 def junk():

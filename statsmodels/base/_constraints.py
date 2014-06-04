@@ -260,3 +260,49 @@ def fit_constrained(model, constraint_matrix, constraint_values,
 
     return params_orig, cov_params, res_constr
 
+
+def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
+    """fit_constraint that returns a results instance
+
+    This is a development version for fit_constrained methods or
+    fit_constrained as standalone function.
+
+    It will not work correctly for all models because creating a new
+    results instance is not standardized for use outside the `fit` methods,
+    and might need adjustements for this.
+
+    This is the prototype for the fit_constrained method that has been added
+    to Poisson and GLM.
+
+    """
+
+    self = model  # alias for use as method
+
+    #constraints = (R, q)
+    # TODO: temporary trailing underscore to not overwrite the monkey
+    #       patched version
+    # TODO: decide whether to move the imports
+    from patsy import DesignInfo
+    # we need this import if we copy it to a different module
+    #from statsmodels.base._constraints import fit_constrained
+
+    # same pattern as in base.LikelihoodModel.t_test
+    lc = DesignInfo(self.exog_names).linear_constraint(constraints)
+    R, q = lc.coefs, lc.constants
+
+    # TODO: add start_params option, need access to tranformation
+    #       fit_constrained needs to do the transformation
+    params, cov, res_constr = fit_constrained(self, R, q,
+                                              start_params=start_params,
+                                              fit_kwds=fit_kwds)
+    #create dummy results Instance, TODO: wire up properly
+    res = self.fit(start_params=params, maxiter=0) # we get a wrapper back
+    res._results.params = params
+    res._results.normalized_cov_params = cov
+    k_constr = len(q)
+    res._results.df_resid += k_constr
+    res._results.df_model -= k_constr
+    res._results.constraints = lc
+    res._results.k_constr = k_constr
+    res._results.results_constrained = res_constr
+    return res
