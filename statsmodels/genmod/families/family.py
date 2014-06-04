@@ -118,15 +118,15 @@ class Family(object):
         """
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         """
-        Deviance of (Y,mu) pair.
+        Deviance of (endog,mu) pair.
 
         Deviance is usually defined as twice the loglikelihood ratio.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             The endogenous response variable
         mu : array-like
             The inverse of the link function at the linear predicted values.
@@ -140,19 +140,19 @@ class Family(object):
 
         Notes
         -----
-        DEV = (sum_i(2*loglike(Y_i,Y_i) - 2*loglike(Y_i,mu_i)) / scale
+        DEV = (sum_i(2*loglike(endog_i,endog_i) - 2*loglike(endog_i,mu_i)) / scale
 
         The deviance functions are analytically defined for each family.
         """
         raise NotImplementedError
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         """
         The deviance residuals
 
         Parameters
         ----------
-        Y : array
+        endog : array
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
@@ -169,13 +169,13 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def fitted(self, eta):
+    def fitted(self, lin_pred):
         """
-        Fitted values based on linear predictors eta.
+        Fitted values based on linear predictors lin_pred.
 
         Parameters
         -----------
-        eta : array
+        lin_pred : array
             Values of the linear predictor of the model.
             dot(X,beta) in a classical linear model.
 
@@ -185,7 +185,7 @@ class Family(object):
             The mean response variables given by the inverse of the link
             function.
         """
-        return self.link.inverse(eta)
+        return self.link.inverse(lin_pred)
 
     def predict(self, mu):
         """
@@ -198,19 +198,19 @@ class Family(object):
 
         Returns
         -------
-        eta : array
+        lin_pred : array
             Linear predictors based on the mean response variables.  The value
             of the link function at the given mu.
         """
         return self.link(mu)
 
-    def loglike(self, Y, mu, scale=1.):
+    def loglike(self, endog, mu, scale=1.):
         """
         The loglikelihood function.
 
         Parameters
         ----------
-        `Y` : array
+        `endog` : array
             Usually the endogenous response variable.
         `mu` : array
             Usually but not always the fitted mean response variable.
@@ -218,16 +218,16 @@ class Family(object):
         Returns
         -------
         llf : float
-            The value of the loglikelihood evaluated at (Y,mu).
+            The value of the loglikelihood evaluated at (endog,mu).
         Notes
         -----
-        This is defined for each family.  Y and mu are not restricted to
-        `Y` and `mu` respectively.  For instance, the deviance function calls
-        both loglike(Y,Y) and loglike(Y,mu) to get the likelihood ratio.
+        This is defined for each family.  endog and mu are not restricted to
+        `endog` and `mu` respectively.  For instance, the deviance function calls
+        both loglike(endog,endog) and loglike(endog,mu) to get the likelihood ratio.
         """
         raise NotImplementedError
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         The Anscome residuals.
 
@@ -270,12 +270,12 @@ class Poisson(Family):
         self.variance = Poisson.variance
         self.link = link()
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         """Poisson deviance residual
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -289,17 +289,17 @@ class Poisson(Family):
 
         Notes
         -----
-        resid_dev = sign(Y-mu)*sqrt(2*Y*log(Y/mu)-2*(Y-mu))
+        resid_dev = sign(endog-mu)*sqrt(2*endog*log(endog/mu)-2*(endog-mu))
         """
-        return np.sign(Y-mu) * np.sqrt(2*Y*np.log(Y/mu)-2*(Y-mu))/scale
+        return np.sign(endog-mu) * np.sqrt(2*endog*np.log(endog/mu)-2*(endog-mu))/scale
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         '''
         Poisson deviance function
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -309,7 +309,7 @@ class Poisson(Family):
         Returns
         -------
         deviance : float
-            The deviance function at (Y,mu) as defined below.
+            The deviance function at (endog,mu) as defined below.
 
         Notes
         -----
@@ -317,24 +317,24 @@ class Poisson(Family):
 
         :math:`deviance = 2*\\sum_{i}(Y*\\log(Y/\\mu))`
         '''
-        if np.any(Y==0):
-            retarr = np.zeros(Y.shape)
-            Ymu = Y/mu
-            mask = Ymu != 0
-            YmuMasked = Ymu[mask]
-            Ymasked = Y[mask]
-            np.putmask(retarr, mask, Ymasked*np.log(YmuMasked)/scale)
+        if np.any(endog==0):
+            retarr = np.zeros(endog.shape)
+            endog_mu = endog/mu
+            mask = endog_mu != 0
+            endog_mu_Masked = endog_mu[mask]
+            endog_masked = endog[mask]
+            np.putmask(retarr, mask, endog_masked*np.log(endog_mu_Masked)/scale)
             return 2*np.sum(retarr)
         else:
-            return 2*np.sum(Y*np.log(Y/mu))/scale
+            return 2*np.sum(endog*np.log(endog/mu))/scale
 
-    def loglike(self, Y, mu, scale=1.):
+    def loglike(self, endog, mu, scale=1.):
         """
         Loglikelihood function for Poisson exponential family distribution.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -344,23 +344,23 @@ class Poisson(Family):
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
         -----
-        llf = scale * sum(-mu + Y*log(mu) - gammaln(Y+1))
+        llf = scale * sum(-mu + endog*log(mu) - gammaln(endog+1))
         where gammaln is the log gamma function
         """
-        return scale * np.sum(-mu + Y*np.log(mu)-special.gammaln(Y+1))
+        return scale * np.sum(-mu + endog*np.log(mu)-special.gammaln(endog+1))
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         Anscombe residuals for the Poisson exponential family distribution
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -372,9 +372,9 @@ class Poisson(Family):
 
         Notes
         -----
-        resid_anscombe = :math:`(3/2.)*(Y^{2/3.} - \\mu**(2/3.))/\\mu^{1/6.}`
+        resid_anscombe = :math:`(3/2.)*(endog^{2/3.} - \\mu**(2/3.))/\\mu^{1/6.}`
         """
-        return (3/2.)*(Y**(2/3.)-mu**(2/3.))/mu**(1/6.)
+        return (3/2.)*(endog**(2/3.)-mu**(2/3.))/mu**(1/6.)
 
 class Gaussian(Family):
 
@@ -407,13 +407,13 @@ class Gaussian(Family):
         self.variance = Gaussian.variance
         self.link = link()
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         """
         Gaussian deviance residuals
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -427,18 +427,18 @@ class Gaussian(Family):
 
         Notes
         --------
-        `resid_dev` = (`Y` - `mu`)/sqrt(variance(`mu`))
+        `resid_dev` = (`endog` - `mu`)/sqrt(variance(`mu`))
         """
 
-        return (Y - mu) / np.sqrt(self.variance(mu))/scale
+        return (endog - mu) / np.sqrt(self.variance(mu))/scale
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         """
         Gaussian deviance function
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -448,21 +448,21 @@ class Gaussian(Family):
         Returns
         -------
         deviance : float
-            The deviance function at (Y,mu) as defined below.
+            The deviance function at (endog,mu) as defined below.
 
         Notes
         --------
-        `deviance` = sum((Y-mu)**2)
+        `deviance` = sum((endog-mu)**2)
         """
-        return np.sum((Y-mu)**2)/scale
+        return np.sum((endog-mu)**2)/scale
 
-    def loglike(self, Y, mu, scale=1.):
+    def loglike(self, endog, mu, scale=1.):
         """
         Loglikelihood function for Gaussian exponential family distribution.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -472,7 +472,7 @@ class Gaussian(Family):
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
@@ -480,32 +480,32 @@ class Gaussian(Family):
         If the link is the identity link function then the
         loglikelihood function is the same as the classical OLS model.
         llf = -(nobs/2)*(log(SSR) + (1 + log(2*pi/nobs)))
-        where SSR = sum((Y-link^(-1)(mu))**2)
+        where SSR = sum((endog-link^(-1)(mu))**2)
 
         If the links is not the identity link then the loglikelihood
         function is defined as
-        llf = sum((`Y`*`mu`-`mu`**2/2)/`scale` - `Y`**2/(2*`scale`) - \
+        llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
             (1/2.)*log(2*pi*`scale`))
         """
         if isinstance(self.link, L.Power) and self.link.power == 1:
         # This is just the loglikelihood for classical OLS
-            nobs2 = Y.shape[0]/2.
-            SSR = ss(Y-self.fitted(mu))
+            nobs2 = endog.shape[0]/2.
+            SSR = ss(endog-self.fitted(mu))
             llf = -np.log(SSR) * nobs2
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
         # Return the loglikelihood for Gaussian GLM
-            return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-\
+            return np.sum((endog*mu-mu**2/2)/scale-endog**2/(2*scale)-\
                     .5*np.log(2*np.pi*scale))
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         The Anscombe residuals for the Gaussian exponential family distribution
 
         Parameters
         ----------
-        Y : array
+        endog : array
             Endogenous response variable
         mu : array
             Fitted mean response variable
@@ -517,9 +517,9 @@ class Gaussian(Family):
 
         Notes
         --------
-        `resid_anscombe` = `Y` - `mu`
+        `resid_anscombe` = `endog` - `mu`
         """
-        return Y-mu
+        return endog-mu
 
 class Gamma(Family):
 
@@ -565,13 +565,13 @@ class Gamma(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         """
         Gamma deviance function
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -585,18 +585,18 @@ class Gamma(Family):
 
         Notes
         -----
-        `deviance` = 2*sum((Y - mu)/mu - log(Y/mu))
+        `deviance` = 2*sum((endog - mu)/mu - log(endog/mu))
         """
-        Y_mu = self._clean(Y/mu)
-        return 2 * np.sum((Y - mu)/mu - np.log(Y_mu))
+        endog_mu = self._clean(endog/mu)
+        return 2 * np.sum((endog - mu)/mu - np.log(endog_mu))
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         """
         Gamma deviance residuals
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -610,18 +610,18 @@ class Gamma(Family):
 
         Notes
         -----
-        `resid_dev` = sign(Y - mu) * sqrt(-2*(-(Y-mu)/mu + log(Y/mu)))
+        `resid_dev` = sign(endog - mu) * sqrt(-2*(-(endog-mu)/mu + log(endog/mu)))
         """
-        Y_mu = self._clean(Y/mu)
-        return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y_mu)))
+        endog_mu = self._clean(endog/mu)
+        return np.sign(endog-mu) * np.sqrt(-2*(-(endog-mu)/mu + np.log(endog_mu)))
 
-    def loglike(self, Y, mu, scale=1.):
+    def loglike(self, endog, mu, scale=1.):
         """
         Loglikelihood function for Gamma exponential family distribution.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -631,28 +631,28 @@ class Gamma(Family):
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
         --------
-        llf = -1/scale * sum(Y/mu + log(mu) + (scale-1)*log(Y) + log(scale) +\
+        llf = -1/scale * sum(endog/mu + log(mu) + (scale-1)*log(endog) + log(scale) +\
             scale*gammaln(1/scale))
         where gammaln is the log gamma function.
         """
-        return - 1./scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
+        return - 1./scale * np.sum(endog/mu+np.log(mu)+(scale-1)*np.log(endog)\
                 +np.log(scale)+scale*special.gammaln(1./scale))
 # in Stata scale is set to equal 1 for reporting llf
 # in R it's the dispersion, though there is a loss of precision vs. our
 # results due to an assumed difference in implementation
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         The Anscombe residuals for Gamma exponential family distribution
 
         Parameters
         ----------
-        Y : array
+        endog : array
             Endogenous response variable
         mu : array
             Fitted mean response variable
@@ -664,9 +664,9 @@ class Gamma(Family):
 
         Notes
         -----
-        resid_anscombe = 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
+        resid_anscombe = 3*(endog**(1/3.)-mu**(1/3.))/mu**(1/3.)
         """
-        return 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
+        return 3*(endog**(1/3.)-mu**(1/3.))/mu**(1/3.)
 
 class Binomial(Family):
 
@@ -704,7 +704,7 @@ class Binomial(Family):
 # equal to n
         self.n = 1 # overwritten by initialize if needed but
                    # always used to initialize variance
-                   # since Y is assumed/forced to be (0,1)
+                   # since endog is assumed/forced to be (0,1)
         self.variance = V.Binomial(n=self.n)
         self.link = link()
 
@@ -718,38 +718,38 @@ class Binomial(Family):
         """
         return (y + .5)/2
 
-    def initialize(self, Y):
+    def initialize(self, endog):
         '''
         Initialize the response variable.
 
         Parameters
         ----------
-        Y : array
+        endog : array
             Endogenous response variable
 
         Returns
         --------
-        If `Y` is binary, returns `Y`
+        If `endog` is binary, returns `endog`
 
-        If `Y` is a 2d array, then the input is assumed to be in the format
+        If `endog` is a 2d array, then the input is assumed to be in the format
         (successes, failures) and
         successes/(success + failures) is returned.  And n is set to
         successes + failures.
         '''
-        if (Y.ndim > 1 and Y.shape[1] > 1):
-            y = Y[:,0]
-            self.n = Y.sum(1) # overwrite self.n for deviance below
+        if (endog.ndim > 1 and endog.shape[1] > 1):
+            y = endog[:,0]
+            self.n = endog.sum(1) # overwrite self.n for deviance below
             return y*1./self.n
         else:
-            return Y
+            return endog
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         '''
         Deviance function for either Bernoulli or Binomial data.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable (already transformed to a probability
             if appropriate).
         mu : array
@@ -768,28 +768,28 @@ class Binomial(Family):
 
         `deviance` = -2*sum(I_one * log(mu) + (I_zero)*log(1-mu))
 
-        where I_one is an indicator function that evalueates to 1 if Y_i == 1.
-        and I_zero is an indicator function that evaluates to 1 if Y_i == 0.
+        where I_one is an indicator function that evalueates to 1 if endog_i == 1.
+        and I_zero is an indicator function that evaluates to 1 if endog_i == 0.
 
         If the model is ninomial:
 
-        `deviance` = 2*sum(log(Y/mu) + (n-Y)*log((n-Y)/(n-mu)))
-        where Y and n are as defined in Binomial.initialize.
+        `deviance` = 2*sum(log(endog/mu) + (n-endog)*log((n-endog)/(n-mu)))
+        where endog and n are as defined in Binomial.initialize.
         '''
         if np.shape(self.n) == () and self.n == 1:
-            one = np.equal(Y,1)
+            one = np.equal(endog,1)
             return -2 * np.sum(one * np.log(mu+1e-200) + (1-one) * np.log(1-mu+1e-200))
 
         else:
-            return 2*np.sum(self.n*(Y*np.log(Y/mu+1e-200)+(1-Y)*np.log((1-Y)/(1-mu)+1e-200)))
+            return 2*np.sum(self.n*(endog*np.log(endog/mu+1e-200)+(1-endog)*np.log((1-endog)/(1-mu)+1e-200)))
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         """
         Binomial deviance residuals
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -803,36 +803,36 @@ class Binomial(Family):
 
         Notes
         -----
-        If `Y` is binary:
+        If `endog` is binary:
 
-        resid_dev = sign(Y-mu)*sqrt(-2*log(I_one*mu + I_zero*(1-mu)))
+        resid_dev = sign(endog-mu)*sqrt(-2*log(I_one*mu + I_zero*(1-mu)))
 
-        where I_one is an indicator function that evaluates as 1 if Y == 1
-        and I_zero is an indicator function that evaluates as 1 if Y == 0.
+        where I_one is an indicator function that evaluates as 1 if endog == 1
+        and I_zero is an indicator function that evaluates as 1 if endog == 0.
 
-        If `Y` is binomial:
+        If `endog` is binomial:
 
-        resid_dev = sign(Y-mu)*sqrt(2*n*(Y*log(Y/mu)+(1-Y)*log((1-Y)/(1-mu))))
+        resid_dev = sign(endog-mu)*sqrt(2*n*(endog*log(endog/mu)+(1-endog)*log((1-endog)/(1-mu))))
 
-        where Y and n are as defined in Binomial.initialize.
+        where endog and n are as defined in Binomial.initialize.
         """
 
         mu = self.link._clean(mu)
         if np.shape(self.n) == () and self.n == 1:
-            one = np.equal(Y,1)
-            return np.sign(Y-mu)*np.sqrt(-2*np.log(one*mu+(1-one)*(1-mu)))\
+            one = np.equal(endog,1)
+            return np.sign(endog-mu)*np.sqrt(-2*np.log(one*mu+(1-one)*(1-mu)))\
                     /scale
         else:
-            return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu+1e-200)+(1-Y)*\
-                        np.log((1-Y)/(1-mu)+1e-200)))/scale
+            return np.sign(endog-mu) * np.sqrt(2*self.n*(endog*np.log(endog/mu+1e-200)+(1-endog)*\
+                        np.log((1-endog)/(1-mu)+1e-200)))/scale
 
-    def loglike(self, Y, mu, scale=1.):
+    def loglike(self, endog, mu, scale=1.):
         """
         Loglikelihood function for Binomial exponential family distribution.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -842,38 +842,38 @@ class Binomial(Family):
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
         --------
-        If `Y` is binary:
-        `llf` = scale*sum(Y*log(mu/(1-mu))+log(1-mu))
+        If `endog` is binary:
+        `llf` = scale*sum(endog*log(mu/(1-mu))+log(1-mu))
 
-        If `Y` is binomial:
+        If `endog` is binomial:
         `llf` = scale*sum(gammaln(n+1) - gammaln(y+1) - gammaln(n-y+1) +\
                 y*log(mu/(1-mu)) + n*log(1-mu)
 
-        where gammaln is the log gamma function and y = Y*n with Y and n
+        where gammaln is the log gamma function and y = endog*n with endog and n
         as defined in Binomial initialize.  This simply makes y the original
         number of successes.
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale*np.sum(Y*np.log(mu/(1-mu)+1e-200)+np.log(1-mu))
+            return scale*np.sum(endog*np.log(mu/(1-mu)+1e-200)+np.log(1-mu))
         else:
-            y=Y*self.n  #convert back to successes
+            y=endog*self.n  #convert back to successes
             return scale * np.sum(special.gammaln(self.n+1)-\
                 special.gammaln(y+1)-special.gammaln(self.n-y+1)\
                 +y*np.log(mu/(1-mu))+self.n*np.log(1-mu))
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         '''
         The Anscombe residuals
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -885,7 +885,7 @@ class Binomial(Family):
 
         Notes
         -----
-        sqrt(n)*(cox_snell(Y)-cox_snell(mu))/(mu**(1/6.)*(1-mu)**(1/6.))
+        sqrt(n)*(cox_snell(endog)-cox_snell(mu))/(mu**(1/6.)*(1-mu)**(1/6.))
 
         where cox_snell is defined as
         cox_snell(x) = betainc(2/3., 2/3., x)*betainc(2/3.,2/3.)
@@ -910,7 +910,7 @@ class Binomial(Family):
         '''
         cox_snell = lambda x: special.betainc(2/3., 2/3., x)\
                             *special.beta(2/3.,2/3.)
-        return np.sqrt(self.n)*(cox_snell(Y)-cox_snell(mu))/\
+        return np.sqrt(self.n)*(cox_snell(endog)-cox_snell(mu))/\
                         (mu**(1/6.)*(1-mu)**(1/6.))
 
 class InverseGaussian(Family):
@@ -950,13 +950,13 @@ class InverseGaussian(Family):
         self.variance = InverseGaussian.variance
         self.link = link()
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         """
         Returns the deviance residuals for the inverse Gaussian family.
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -970,17 +970,17 @@ class InverseGaussian(Family):
 
         Notes
         -----
-        `dev_resid` = sign(Y-mu)*sqrt((Y-mu)**2/(Y*mu**2))
+        `dev_resid` = sign(endog-mu)*sqrt((endog-mu)**2/(endog*mu**2))
         """
-        return np.sign(Y-mu) * np.sqrt((Y-mu)**2/(Y*mu**2))/scale
+        return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2))/scale
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         """
         Inverse Gaussian deviance function
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -994,17 +994,17 @@ class InverseGaussian(Family):
 
         Notes
         -----
-        `deviance` = sum((Y=mu)**2/(Y*mu**2))
+        `deviance` = sum((endog=mu)**2/(endog*mu**2))
         """
-        return np.sum((Y-mu)**2/(Y*mu**2))/scale
+        return np.sum((endog-mu)**2/(endog*mu**2))/scale
 
-    def loglike(self, Y, mu, scale=1.):
+    def loglike(self, endog, mu, scale=1.):
         """
         Loglikelihood function for inverse Gaussian distribution.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -1014,24 +1014,24 @@ class InverseGaussian(Family):
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
         -----
-        `llf` = -(1/2.)*sum((Y-mu)**2/(Y*mu**2*scale) + log(scale*Y**3)\
+        `llf` = -(1/2.)*sum((endog-mu)**2/(endog*mu**2*scale) + log(scale*endog**3)\
                  + log(2*pi))
         """
-        return -.5 * np.sum((Y-mu)**2/(Y*mu**2*scale)\
-                + np.log(scale*Y**3) + np.log(2*np.pi))
+        return -.5 * np.sum((endog-mu)**2/(endog*mu**2*scale)\
+                + np.log(scale*endog**3) + np.log(2*np.pi))
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         The Anscombe residuals for the inverse Gaussian distribution
 
         Parameters
         ----------
-        Y : array
+        endog : array
             Endogenous response variable
         mu : array
             Fitted mean response variable
@@ -1044,9 +1044,9 @@ class InverseGaussian(Family):
 
         Notes
         -----
-        `resid_anscombe` =  log(Y/mu)/sqrt(mu)
+        `resid_anscombe` =  log(endog/mu)/sqrt(mu)
         """
-        return np.log(Y/mu)/np.sqrt(mu)
+        return np.log(endog/mu)/np.sqrt(mu)
 
 class NegativeBinomial(Family):
     """
@@ -1077,7 +1077,7 @@ class NegativeBinomial(Family):
 
     Notes
     -----
-    Support for Power link functions is not yet supported.
+    Power link functions are not yet supported.
     """
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
 #TODO: add the ability to use the power links with an if test
@@ -1104,13 +1104,13 @@ class NegativeBinomial(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, endog, mu, scale=1.):
         """
         Returns the value of the deviance function.
 
         Parameters
         -----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -1136,23 +1136,23 @@ class NegativeBinomial(Family):
 
         piecewise_i = :math:`2 Y \\log(Y/\\mu)-2/\\alpha(1+\\alpha Y)*\\log((1+\\alpha Y)/(1+\\alpha\\mu))`
         """
-        iszero = np.equal(Y,0)
+        iszero = np.equal(endog,0)
         notzero = 1 - iszero
-        tmp = np.zeros(len(Y))
-        Y_mu = self._clean(Y/mu)
+        tmp = np.zeros(len(endog))
+        endog_mu = self._clean(endog/mu)
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
-        tmp += notzero*(2*Y*np.log(Y_mu)-2/self.alpha*(1+self.alpha*Y)*\
-                np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
+        tmp += notzero*(2*endog*np.log(endog_mu)-2/self.alpha*(1+self.alpha*endog)*\
+                np.log((1+self.alpha*endog)/(1+self.alpha*mu)))
         return np.sum(tmp)/scale
 
-    def resid_dev(self, Y, mu, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         '''
         Negative Binomial Deviance Residual
 
         Parameters
         ----------
-        Y : array-like
-            `Y` is the response variable
+        endog : array-like
+            `endog` is the response variable
         mu : array-like
             `mu` is the fitted value of the model
         scale : float, optional
@@ -1165,7 +1165,7 @@ class NegativeBinomial(Family):
 
         Notes
         -----
-        `resid_dev` = sign(Y-mu) * sqrt(piecewise)
+        `resid_dev` = sign(endog-mu) * sqrt(piecewise)
 
         where piecewise is defined as
         if :math:`Y_i = 0`:
@@ -1174,58 +1174,60 @@ class NegativeBinomial(Family):
         if :math:`Y_i > 0`:
         :math:`piecewise_i = 2*Y*log(Y/\\mu)-2/\\alpha*(1+\\alpha*Y)*log((1+\\alpha*Y)/(1+\\alpha*\\mu))`
         '''
-        iszero = np.equal(Y,0)
+        iszero = np.equal(endog,0)
         notzero = 1 - iszero
-        tmp=np.zeros(len(Y))
+        tmp=np.zeros(len(endog))
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
-        tmp += notzero*(2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
-                np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
-        return np.sign(Y-mu)*np.sqrt(tmp)/scale
+        tmp += notzero*(2*endog*np.log(endog/mu)-2/self.alpha*(1+self.alpha*endog)*\
+                np.log((1+self.alpha*endog)/(1+self.alpha*mu)))
+        return np.sign(endog-mu)*np.sqrt(tmp)/scale
 
-    def loglike(self, Y, fittedvalues=None):
+    def loglike(self, endog, lin_pred=None):
         """
         The loglikelihood function for the negative binomial family.
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
-        fittedvalues : array-like
-            The linear fitted values of the model.  This is dot(exog,params).
+        lin_pred : array-like
+            The linear predictor of the model.  This is dot(exog,params),
+            plus the offset if present.
 
         Returns
         -------
         llf : float
-            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            The value of the loglikelihood function evaluated at (endog,mu,scale)
             as defined below.
 
         Notes
         -----
-        sum(Y*log(alpha*exp(fittedvalues)/(1+alpha*exp(fittedvalues))) -\
-                log(1+alpha*exp(fittedvalues))/alpha + constant)
+        sum(endog*log(alpha*exp(lin_pred)/(1+alpha*exp(lin_pred))) -\
+                log(1+alpha*exp(lin_pred))/alpha + constant)
 
         where constant is defined as
-        constant = gammaln(Y + 1/alpha) - gammaln(Y + 1) - gammaln(1/alpha)
+        constant = gammaln(endog + 1/alpha) - gammaln(endog + 1) - gammaln(1/alpha)
         """
         # don't need to specify mu
-        if fittedvalues is None:
+        if lin_pred is None:
             raise AttributeError('The loglikelihood for the negative binomial \
-requires that the fitted values be provided via the `fittedvalues` keyword \
+requires that the fitted values be provided via the `lin_pred` keyword \
 argument.')
-        constant = special.gammaln(Y + 1/self.alpha) - special.gammaln(Y+1)\
+        constant = special.gammaln(endog + 1/self.alpha) - special.gammaln(endog+1)\
                     -special.gammaln(1/self.alpha)
-        return np.sum(Y*np.log(self.alpha*np.exp(fittedvalues)/\
-            (1 + self.alpha*np.exp(fittedvalues))) - \
-            np.log(1+self.alpha*np.exp(fittedvalues))/self.alpha\
+        exp_lin_pred = np.exp(lin_pred)
+        return np.sum(endog*np.log(self.alpha*exp_lin_pred/\
+            (1 + self.alpha*exp_lin_pred)) - \
+            np.log(1+self.alpha*exp_lin_pred)/self.alpha\
             + constant)
 
-    def resid_anscombe(self, Y, mu):
+    def resid_anscombe(self, endog, mu):
         """
         The Anscombe residuals for the negative binomial family
 
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
@@ -1237,13 +1239,13 @@ argument.')
 
         Notes
         -----
-        `resid_anscombe` = (hyp2f1(-alpha*Y)-hyp2f1(-alpha*mu)+\
-                1.5*(Y**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
+        `resid_anscombe` = (hyp2f1(-alpha*endog)-hyp2f1(-alpha*mu)+\
+                1.5*(endog**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
 
         where hyp2f1 is the hypergeometric 2f1 function parameterized as
         hyp2f1(x) = hyp2f1(2/3.,1/3.,5/3.,x)
         """
 
         hyp2f1 = lambda x : special.hyp2f1(2/3.,1/3.,5/3.,x)
-        return (hyp2f1(-self.alpha*Y)-hyp2f1(-self.alpha*mu)+1.5*(Y**(2/3.)-\
+        return (hyp2f1(-self.alpha*endog)-hyp2f1(-self.alpha*mu)+1.5*(endog**(2/3.)-\
                 mu**(2/3.)))/(mu+self.alpha*mu**2)**(1/6.)
