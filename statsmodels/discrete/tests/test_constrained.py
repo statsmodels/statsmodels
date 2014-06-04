@@ -32,6 +32,8 @@ spector_data.exog = add_constant(spector_data.exog, prepend=False)
 from .results import results_poisson_constrained as results
 from .results import results_glm_logit_constrained as reslogit
 
+DEBUG = False
+
 ss='''\
 agecat	smokes	deaths	pyears
 1	1	32	52407
@@ -56,8 +58,9 @@ class CheckPoissonConstrainedMixin(object):
         res2 = self.res2
         assert_allclose(res1[0], res2.params[self.idx], rtol=1e-6)
         # see below Stata has nan, we have zero
-        mask = (res1[1] == 0) & np.isnan(res2.bse[self.idx])
-        assert_allclose(res1[1][~mask], res2.bse[self.idx][~mask], rtol=1e-6)
+        bse1 = np.sqrt(np.diag(res1[1]))
+        mask = (bse1 == 0) & np.isnan(res2.bse[self.idx])
+        assert_allclose(bse1[~mask], res2.bse[self.idx][~mask], rtol=1e-6)
 
 
     def test_basic_method(self):
@@ -108,9 +111,11 @@ class CheckPoissonConstrainedMixin(object):
             if hasattr(res2, 'll_0'):
                 assert_allclose(res1.llnull, res2.ll_0, rtol=1e-6)
             else:
-                import warnings
-                message = 'test: ll_0 not available, llnull=%6.4F' % res1.llnull
-                warnings.warn(message)
+                if DEBUG:
+                    import warnings
+                    message = ('test: ll_0 not available, llnull=%6.4F'
+                                                                % res1.llnull)
+                    warnings.warn(message)
 
         else:
             raise SkipTest("not available yet")
@@ -212,7 +217,8 @@ class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
                                    #exposure=data['pyears'].values)
                                    offset=np.log(data['pyears'].values))
         res1 = mod.fit()._results
-        cls.res1 = (res1.params, res1.bse)
+        # res1 is duplicate check, so we can follow the same pattern
+        cls.res1 = (res1.params, res1.cov_params())
         cls.res1m = res1
 
 

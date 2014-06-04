@@ -516,8 +516,7 @@ class GLM(base.LikelihoodModel):
         #       fit_constrained needs to do the transformation
         params, cov, res_constr = fit_constrained(self, R, q,
                                                   start_params=start_params,
-                                                  fit_kwds=fit_kwds,
-                                                  return_cov=True)
+                                                  fit_kwds=fit_kwds)
         #create dummy results Instance, TODO: wire up properly
         res = self.fit(start_params=params, maxiter=0) # we get a wrapper back
         res._results.params = params

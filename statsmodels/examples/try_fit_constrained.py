@@ -185,6 +185,7 @@ if __name__ == '__main__':
     cov_paramsp = transfp.transf_mat.dot(poisson_resr.cov_params()).dot(transfp.transf_mat.T)
     bsep = np.sqrt(np.diag(cov_paramsp))
     print(bsep)
-    p, se, res_r = fit_constrained(poisson_mod0, transfp.R, transfp.q)
+    p, cov, res_r = fit_constrained(poisson_mod0, transfp.R, transfp.q)
+    se = np.sqrt(np.diag(cov))
     print(p)
     print(se)

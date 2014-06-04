@@ -981,8 +981,7 @@ class Poisson(CountModel):
         #       fit_constrained needs to do the transformation
         params, cov, res_constr = fit_constrained(self, R, q,
                                                   start_params=start_params,
-                                                  fit_kwds=fit_kwds,
-                                                  return_cov=True)
+                                                  fit_kwds=fit_kwds)
         #create dummy results Instance, TODO: wire up properly
         res = self.fit(maxiter=0, method='nm', disp=0) # we get a wrapper back
         res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)

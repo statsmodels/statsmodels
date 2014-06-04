@@ -170,7 +170,7 @@ def transform_params_constraint(params, Sinv, R, q):
 
 
 def fit_constrained(model, constraint_matrix, constraint_values,
-                    start_params=None, fit_kwds=None, return_cov=False):
+                    start_params=None, fit_kwds=None):
     # note: self is model instance
     """fit model subject to linear equality constraints
 
@@ -208,7 +208,6 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     params : ndarray ?
         estimated parameters (in the original parameterization
     cov_params : ndarray
-        # TODO: this should be the only choice, drop `return_cov`
         covariance matrix of the parameter estimates. This is a reverse
         transformation of the covariance matrix of the transformed model given
         by `cov_params()`
@@ -258,10 +257,6 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     res_constr = mod_constr.fit(start_params=start_params, **fit_kwds)
     params_orig = transf.expand(res_constr.params).squeeze()
     cov_params = transf.transf_mat.dot(res_constr.cov_params()).dot(transf.transf_mat.T)
-    bse = np.sqrt(np.diag(cov_params))
 
-    if return_cov:
-        return params_orig, cov_params, res_constr
-    else:
-        return params_orig, bse, res_constr
+    return params_orig, cov_params, res_constr
 
