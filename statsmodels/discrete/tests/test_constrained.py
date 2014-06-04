@@ -17,9 +17,20 @@ import pandas as pd
 import patsy
 
 from statsmodels.discrete.discrete_model import Poisson
-import statsmodels.base._constraints as monkey
+from statsmodels.discrete.discrete_model import Logit
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod import families
+from statsmodels.base._constraints import fit_constrained
+
+from statsmodels.tools.tools import add_constant
+from statsmodels import datasets
+
+
+spector_data = datasets.spector.load()
+spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 from .results import results_poisson_constrained as results
+from .results import results_glm_logit_constrained as reslogit
 
 ss='''\
 agecat	smokes	deaths	pyears
@@ -44,7 +55,10 @@ class CheckPoissonConstrainedMixin(object):
         res1 = self.res1
         res2 = self.res2
         assert_allclose(res1[0], res2.params[self.idx], rtol=1e-6)
-        assert_allclose(res1[1], res2.bse[self.idx], rtol=1e-6)
+        # see below Stata has nan, we have zero
+        mask = (res1[1] == 0) & np.isnan(res2.bse[self.idx])
+        assert_allclose(res1[1][~mask], res2.bse[self.idx][~mask], rtol=1e-6)
+
 
     def test_basic_method(self):
         if hasattr(self, 'res1m'):
@@ -52,21 +66,29 @@ class CheckPoissonConstrainedMixin(object):
                                else self.res1m._results)
             res2 = self.res2
             assert_allclose(res1.params, res2.params[self.idx], rtol=1e-6)
-            assert_allclose(res1.bse, res2.bse[self.idx], rtol=1e-6)
+
+            # when a parameter is fixed, the Stata has bse=nan, we have bse=0
+            mask = (res1.bse == 0) & np.isnan(res2.bse[self.idx])
+            assert_allclose(res1.bse[~mask], res2.bse[self.idx][~mask], rtol=1e-6)
 
             tvalues = res2.params_table[self.idx, 2]
-            assert_allclose(res1.tvalues, tvalues, rtol=1e-6)
+            # when a parameter is fixed, the Stata has tvalue=nan, we have tvalue=inf
+            mask = np.isinf(res1.tvalues) & np.isnan(tvalues)
+            assert_allclose(res1.tvalues[~mask], tvalues[~mask], rtol=1e-6)
             pvalues = res2.params_table[self.idx, 3]
             # note most pvalues are very small
             # examples so far agree at 8 or more decimal, but rtol is stricter
-            assert_allclose(res1.pvalues, pvalues, rtol=5e-5)
+            # see above
+            mask = (res1.pvalues == 0) & np.isnan(pvalues)
+            assert_allclose(res1.pvalues[~mask], pvalues[~mask], rtol=5e-5)
 
             ci_low = res2.params_table[self.idx, 4]
             ci_upp = res2.params_table[self.idx, 5]
             ci = np.column_stack((ci_low, ci_upp))
             # note most pvalues are very small
             # examples so far agree at 8 or more decimal, but rtol is stricter
-            assert_allclose(res1.conf_int(), ci, rtol=5e-5)
+            # see above: nan versus value
+            assert_allclose(res1.conf_int()[~np.isnan(ci)], ci[~np.isnan(ci)], rtol=5e-5)
 
             #other
             assert_allclose(res1.llf, res2.ll, rtol=1e-6)
@@ -352,6 +374,66 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
         assert_allclose(res2.predict(linear=True), res2.predict(linear=True),
                         rtol=1e-10)
+
+
+class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
+    # add tests for some GLM specific attributes
+
+    def test_glm(self):
+        res2 = self.res2  # reference results
+        res1 = self.res1m
+
+        #assert_allclose(res1.aic, res2.aic, rtol=1e-10)  # far away
+        # Stata aic in ereturn and in estat ic are very different
+        # we have the same as estat ic
+        # see issue #1733
+        assert_allclose(res1.aic, res2.infocrit[4], rtol=1e-10)
+
+        assert_allclose(res1.bic, res2.bic, rtol=1e-10)
+        # bic is deviance based
+        #assert_allclose(res1.bic, res2.infocrit[5], rtol=1e-10)
+        assert_allclose(res1.deviance, res2.deviance, rtol=1e-10)
+        # TODO: which chi2 are these
+        #assert_allclose(res1.pearson_chi2, res2.chi2, rtol=1e-10)
+
+
+class TestGLMLogitConstrained(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)
+        # params sequence same as Stata, but Stata reports param = nan
+        # and we have param = value = 0
+
+        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint1
+
+        mod1 = GLM(spector_data.endog, spector_data.exog,
+                   family=families.Binomial())
+
+        constr = 'x1 = 2.8'
+        cls.res1m = mod1.fit_constrained(constr)
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q)
+
+
+class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)  # params sequence same as Stata
+        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint2
+
+        mod1 = GLM(spector_data.endog, spector_data.exog,
+                   family=families.Binomial())
+
+        constr = 'x1 - x3 = 0'
+        cls.res1m = mod1.fit_constrained(constr)
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q)
 
 
 def junk():
