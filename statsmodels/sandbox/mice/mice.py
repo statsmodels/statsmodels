@@ -149,7 +149,14 @@ class ImputedData(object):
         Parameters
         ----------
         formula : string
-            Patsy formula for 
+            Patsy formula for imputation.
+        data : pandas DataFrame
+            Data for which we want the design matrix. Defaults to self.data.
+            
+        Returns
+        -------
+        exog : pandas DataFrame
+            Design matrix implied by formula.            
         """
         if data is None:
             data = self.data
@@ -157,6 +164,21 @@ class ImputedData(object):
         return exog
     
     def get_endog(self, endog, data=None):
+        """
+        Returns the endogenous variable given a patsy formula.
+        
+        Parameters
+        ----------
+        endog : string
+            Name of endogenous variable.
+        data : pandas DataFrame
+            Data for which we want the endogenous variable. Defaults to self.data.
+            
+        Returns
+        -------
+        endog : pandas DataFrame
+            Data for endogenous variable.            
+        """
         if data is None:
             data = self.data
         endog = data[endog]
