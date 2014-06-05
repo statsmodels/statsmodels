@@ -198,6 +198,8 @@ class GLM(base.LikelihoodModel):
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',
                                 ])
+        # register kwds for __init__, offset and exposure are added by super
+        self._init_keys.append('family')
 
     def initialize(self):
         """
@@ -434,7 +436,7 @@ class GLM(base.LikelihoodModel):
         if start_params is None:
             mu = self.family.starting_mu(self.endog)
         else:
-            mu = self.family.fitted(np.dot(wlsexog, start_params))
+            mu = self.predict(start_params)
         eta = self.family.predict(mu)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
@@ -469,6 +471,66 @@ class GLM(base.LikelihoodModel):
         history['iteration'] = iteration
         glm_results.fit_history = history
         return GLMResultsWrapper(glm_results)
+
+
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+        """fit the model subject to linear equality constraints
+
+        The constraints are of the form   `R params = q`
+        where R is the constraint_matrix and q is the vector of
+        constraint_values.
+
+        The estimation creates a new model with transformed design matrix,
+        exog, and converts the results back to the original parameterization.
+
+
+        Parameters
+        ----------
+        constraints : formula expression or tuple
+            If it is a tuple, then the constraint needs to be given by two
+            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            Otherwise, the constraints can be given as strings or list of
+            strings.
+            see t_test for details
+        start_params : None or array_like
+            starting values for the optimization. `start_params` needs to be
+            given in the original parameter space and are internally
+            transformed.
+        **fit_kwds : keyword arguments
+            fit_kwds are used in the optimization of the transformed model.
+
+        Returns
+        -------
+        results : Results instance
+
+        """
+
+        from patsy import DesignInfo
+        from statsmodels.base._constraints import fit_constrained
+
+        # same pattern as in base.LikelihoodModel.t_test
+        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
+        R, q = lc.coefs, lc.constants
+
+        # TODO: add start_params option, need access to tranformation
+        #       fit_constrained needs to do the transformation
+        params, cov, res_constr = fit_constrained(self, R, q,
+                                                  start_params=start_params,
+                                                  fit_kwds=fit_kwds)
+        #create dummy results Instance, TODO: wire up properly
+        res = self.fit(start_params=params, maxiter=0) # we get a wrapper back
+        res._results.params = params
+        res._results.normalized_cov_params = cov
+        k_constr = len(q)
+        res._results.df_resid += k_constr
+        res._results.df_model -= k_constr
+        res._results.constraints = lc
+        res._results.k_constr = k_constr
+        res._results.results_constrained = res_constr
+        # TODO: the next is not the best. history should bin in results
+        res._results.model.history = res_constr.model.history
+        res._results.mu = res_constr.mu
+        return res
 
 
 class GLMResults(base.LikelihoodModelResults):
@@ -575,6 +637,11 @@ class GLMResults(base.LikelihoodModelResults):
         # are these intermediate results needed or can we just
         # call the model's attributes?
 
+        # for remove data and pickle without large arrays
+        self._data_attr.extend(['results_constrained'])
+        self.data_in_cache = getattr(self, 'data_in_cache', [])
+        self.data_in_cache.extend(['null'])
+
     @cache_readonly
     def resid_response(self):
         return self._data_weights * (self._endog-self.mu)
@@ -632,6 +699,10 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def null_deviance(self):
         return self.family.deviance(self._endog, self.null)
+
+    @cache_readonly
+    def llnull(self):
+        return self.family.loglike(self._endog, self.null, scale=self.scale)
 
     @cache_readonly
     def llf(self):
@@ -723,6 +794,10 @@ class GLMResults(base.LikelihoodModelResults):
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
                               use_t=True)
 
+        if hasattr(self, 'constraints'):
+            smry.add_extra_txt(['Model has been estimated subject to linear '
+                          'equality constraints.'])
+
         #diagnostic table is not used yet:
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
         #                  yname=yname, xname=xname,
@@ -766,6 +841,9 @@ class GLMResults(base.LikelihoodModelResults):
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
                       xname=xname, yname=yname, title=title)
+        if hasattr(self, 'constraints'):
+            smry.add_text('Model has been estimated subject to linear '
+                          'equality constraints.')
 
         return smry
 

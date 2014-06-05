@@ -934,6 +934,71 @@ class Poisson(CountModel):
                     "argument method == %s, which is not handled" % method)
         return L1PoissonResultsWrapper(discretefit)
 
+
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+        """fit the model subject to linear equality constraints
+
+        The constraints are of the form   `R params = q`
+        where R is the constraint_matrix and q is the vector of
+        constraint_values.
+
+        The estimation creates a new model with transformed design matrix,
+        exog, and converts the results back to the original parameterization.
+
+        Parameters
+        ----------
+        constraints : formula expression or tuple
+            If it is a tuple, then the constraint needs to be given by two
+            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            Otherwise, the constraints can be given as strings or list of
+            strings.
+            see t_test for details
+        start_params : None or array_like
+            starting values for the optimization. `start_params` needs to be
+            given in the original parameter space and are internally
+            transformed.
+        **fit_kwds : keyword arguments
+            fit_kwds are used in the optimization of the transformed model.
+
+        Returns
+        -------
+        results : Results instance
+
+        """
+
+        #constraints = (R, q)
+        # TODO: temporary trailing underscore to not overwrite the monkey
+        #       patched version
+        # TODO: decide whether to move the imports
+        from patsy import DesignInfo
+        from statsmodels.base._constraints import fit_constrained
+
+        # same pattern as in base.LikelihoodModel.t_test
+        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
+        R, q = lc.coefs, lc.constants
+
+        # TODO: add start_params option, need access to tranformation
+        #       fit_constrained needs to do the transformation
+        params, cov, res_constr = fit_constrained(self, R, q,
+                                                  start_params=start_params,
+                                                  fit_kwds=fit_kwds)
+        #create dummy results Instance, TODO: wire up properly
+        res = self.fit(maxiter=0, method='nm', disp=0) # we get a wrapper back
+        res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
+        res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
+                                                        'iterations', np.nan)
+        res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
+        res._results.params = params
+        res._results.normalized_cov_params = cov
+        k_constr = len(q)
+        res._results.df_resid += k_constr
+        res._results.df_model -= k_constr
+        res._results.constraints = lc
+        res._results.k_constr = k_constr
+        res._results.results_constrained = res_constr
+        return res
+
+
     def score(self, params):
         """
         Poisson model score (gradient) vector of the log-likelihood
@@ -2312,6 +2377,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
                              use_t=False)
 
+        if hasattr(self, 'constraints'):
+            smry.add_extra_txt(['Model has been estimated subject to linear '
+                          'equality constraints.'])
+
         #diagnostic table not used yet
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
         #                   yname=yname, xname=xname,
@@ -2353,6 +2422,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
                 xname=xname, yname=yname, title=title)
+
+        if hasattr(self, 'constraints'):
+            smry.add_text('Model has been estimated subject to linear '
+                          'equality constraints.')
 
         return smry
 
