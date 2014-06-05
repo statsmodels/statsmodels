@@ -1,10 +1,10 @@
 """
 This module implements the Multiple Imputation through Chained Equations (MICE)
-approach to handling missing data. This approach has 3 steps in general:
+approach to handling missing data. This approach has 3 general steps:
 
 1) Simulate observations using a user specified conditional model.
-2) Fit the model of interest to a compelte, simulated dataset.
-3) Repeat N times combine the N models according to Rubin's Rules.
+2) Fit the model of interest to a complete, simulated dataset.
+3) Repeat N times and combine the N models according to Rubin's Rules.
 
 Imputer instances, for imputing a single missing variable,
 are specified with a (statsmodels) conditional model
@@ -33,7 +33,7 @@ import random
 import operator
 import pandas as pd
 import numpy as np
-import patsy as pats
+import patsy
 import sys
 #run from local directory
 sys.path.insert(0, "C:/Users/Frank/Documents/GitHub/statsmodels/")
@@ -42,7 +42,7 @@ import statsmodels.api as sm
 class ImputedData(object):
     __doc__= """
     Stores missing data information and supports functionality for
-    inserting values in missing data slots. Can create Imputers directly.
+    inserting values in missing data slots. Can create Imputers directly via new_imputer method.
 
     %(params)s
     data : array-like object
@@ -110,14 +110,58 @@ class ImputedData(object):
         ix = self.columns[col].ix_miss
         self.data[col].iloc[ix] = vals
 
-    def get_missing(self, col, data):
+    def get_missing(self, col, data=None):
+        """
+        Returns observations where specified column is missing.
+        
+        Parameters
+        ----------
+        col : string
+            Column name whose data we want to be missing.
+        data : array
+            Dataset from which we draw a subset. 
+        """
+        if data is None:
+            data = self.data
         ix = self.columns[col].ix_miss
         return data.iloc[ix,:]
 
-    def get_obs(self, col, data):
+    def get_obs(self, col, data=None):
+        """
+        Returns observations where specified column is not missing.
+        
+        Parameters
+        ----------
+        col : string
+            Column name whose data we want to be non-missing.
+        data : array
+            Dataset from which we draw a subset.
+        """
+        if data is None:
+            data = self.data        
         ix = self.columns[col].ix_obs
         return data.iloc[ix,:]
 
+    def get_exog(self, formula, data=None):
+        """
+        Returns the design matrix given a patsy formula.
+        
+        Parameters
+        ----------
+        formula : string
+            Patsy formula for 
+        """
+        if data is None:
+            data = self.data
+        exog = patsy.dmatrices(formula, data, return_type="dataframe")[1]
+        return exog
+    
+    def get_endog(self, endog, data=None):
+        if data is None:
+            data = self.data
+        endog = data[endog]
+        return endog
+    
 class Imputer(object):
 
     __doc__= """
@@ -153,7 +197,7 @@ class Imputer(object):
         self.init_args = init_args
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
-        self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
+        self.num_missing = len(self.data.get_missing(self.endog_name))
         self.scale_method = scale_method
         self.scale_value = scale_value
 
@@ -196,28 +240,28 @@ class Imputer(object):
         """
         Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
         """
-        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name, self.data.data), **self.init_args)
+        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name), **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        exog_data = pats.dmatrices(self.formula,self.data.data,return_type="dataframe")[1]
+        exog_data = self.data.get_exog(self.formula)
         exog = self.data.get_missing(self.endog_name, exog_data)
         new_endog = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
         self.data.store_changes(new_endog, self.endog_name)
 
-    def impute_pmm(self, k0):
+    def impute_pmm(self, pmm_neighbors):
         """
         Use predictive mean matching to simulate data. Fills in values of input data.
 
         Parameters
         ----------
 
-        k0 : int
+        pmm_neighbors : int
             Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
         """
-        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name, self.data.data), **self.init_args)
+        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name), **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        exog = pats.dmatrices(self.formula,self.data.data,return_type="dataframe")[1]
+        exog = self.data.get_exog(self.formula)
         predicted = pd.DataFrame(md.predict(params,exog))
         predicted.columns = [self.endog_name]
         endog_matched = []
@@ -225,9 +269,9 @@ class Imputer(object):
         endog_obs = np.array(self.data.get_obs(self.endog_name, predicted))
         #look into memory-computation tradeoff
         for mval in endog_miss:
-            dist = np.abs(endog_obs - mval)
-            dist_ind = np.argsort(dist,axis=0)
-            endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist_ind[0:k0][0]])))
+            dist = abs(endog_obs - mval)
+            dist_ind = np.argsort(dist, axis=0)
+            endog_matched.append(random.choice(np.array(self.data.get_endog(self.endog_name)[dist_ind[0:pmm_neighbors][0]])))
         new_endog = endog_matched
         self.data.store_changes(new_endog, self.endog_name)
 
@@ -246,7 +290,7 @@ class ImputerChain(object):
         List of Imputer objects, one for each variable to be imputed.
     imputer_method : string
         Method used for simulation. See MICE.run.
-    k : int
+    pmm_neighbors : int
         Number of neighbors for pmm. See MICE.run.
 
     **Attributes**
@@ -256,14 +300,14 @@ class ImputerChain(object):
 
     Note: All imputers must refer to the same data object
     """
-    def __init__(self, imputer_list, imputer_method="gaussian", k=1):
+    def __init__(self, imputer_list, imputer_method="gaussian", pmm_neighbors=1):
         self.imputer_list = imputer_list
         #Impute variable with least missing observations first
         self.imputer_list.sort(key=operator.attrgetter('num_missing'))
         #All imputers must refer to the same data object
         self.data = imputer_list[0].data.data
         self.method = imputer_method
-        self.k = k
+        self.pmm_neighbors = pmm_neighbors
 
     def __iter__(self):
         return self
@@ -286,7 +330,7 @@ class ImputerChain(object):
                 im.impute_asymptotic_bayes()
         elif self.method == "pmm":
             for im in self.imputer_list:
-                im.impute_pmm(self.k)
+                im.impute_pmm(self.pmm_neighbors)
         elif self.method == "bootstrap":
             for im in self.imputer_list:
                 im.impute_bootstrap()

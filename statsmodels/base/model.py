@@ -154,7 +154,7 @@ class Model(object):
         """
         raise NotImplementedError
     
-    def get_distribution(self, params, scale, exog=None):
+    def get_distribution(self, params, exog=None, scale=None):
         """
         After a model has been fit get_distribution returns simulated values at given values of exog.
         
@@ -698,7 +698,7 @@ class Results(object):
 
         return self.model.predict(self.params, exog, *args, **kwargs)
 
-    def get_distribution(self, exog=None):
+    def get_distribution(self, exog=None, **kwds):
         """
         Call self.model.get_distribution with self.params as the first argument.
 
