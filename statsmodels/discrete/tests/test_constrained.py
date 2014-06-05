@@ -10,7 +10,7 @@ License: BSD-3
 from statsmodels.compat.python import StringIO
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_
 from nose import SkipTest
 
 import pandas as pd
@@ -151,6 +151,13 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         # test method of Poisson, not monkey patched
         cls.res1m = mod.fit_constrained(constr, start_params=start_params,
                                         method='bfgs')
+
+    def test_smoke(self):
+        # trailing text in summary, assumes it's the first extra string
+        summ = self.res1m.summary()
+        assert_('linear equality constraints' in summ.extra_txt)
+        summ = self.res1m.summary2()
+        assert_('linear equality constraints' in summ.extra_txt[0])
 
 
 class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -452,6 +459,14 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_allclose(predicted, res2.predict_mu, atol=1e-7)
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
+
+
+    def test_smoke(self):
+        # trailing text in summary, assumes it's the first extra string
+        summ = self.res1m.summary()
+        assert_('linear equality constraints' in summ.extra_txt)
+        summ = self.res1m.summary2()
+        assert_('linear equality constraints' in summ.extra_txt[0])
 
 
     def test_fit_constrained_wrap(self):

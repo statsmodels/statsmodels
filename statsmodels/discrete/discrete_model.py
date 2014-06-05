@@ -2377,6 +2377,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
                              use_t=False)
 
+        if hasattr(self, 'constraints'):
+            smry.add_extra_txt(['Model has been estimated subject to linear '
+                          'equality constraints.'])
+
         #diagnostic table not used yet
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
         #                   yname=yname, xname=xname,
@@ -2418,6 +2422,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
                 xname=xname, yname=yname, title=title)
+
+        if hasattr(self, 'constraints'):
+            smry.add_text('Model has been estimated subject to linear '
+                          'equality constraints.')
 
         return smry
 
