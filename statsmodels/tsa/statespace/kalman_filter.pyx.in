@@ -1,0 +1,280 @@
+# -*- cython -*-
+#
+# Tempita-templated Cython file
+#
+"""
+Multivariate Kalman Filter (Cython and BLAS/LAPACK)
+
+Author: Chad Fulton
+License: Simplified-BSD
+
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32"),
+    "d": ("double", "float"),
+    "c": ("np.complex64_t", "np.complex64"),
+    "z": ("complex", "complex"),
+}
+
+BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy"]
+LAPACK_FUNCTIONS = ["getrf", "getri", "potrf", "potri"]
+
+}}
+
+# Typical imports
+import numpy as np
+cimport numpy as np
+cimport cython
+
+# Real and complex log and abs functions
+from libc.math cimport log as dlog, abs as dabs
+from numpy cimport npy_cdouble
+
+cdef extern from "numpy/npy_math.h":
+    double npy_cabs(npy_cdouble z)
+    npy_cdouble npy_clog(npy_cdouble z)
+
+cdef inline double zabs(complex z):
+    return npy_cabs((<npy_cdouble *> &z)[0])
+
+cdef inline complex zlog(complex z):
+    cdef npy_cdouble x
+    x = npy_clog((<npy_cdouble*> &z)[0])
+    return (<complex *> &x)[0]
+
+cdef extern from "capsule.h":
+    void *Capsule_AsVoidPtr(object ptr)
+
+# BLAS / LAPACK functions
+from statsmodels.src.blas_lapack cimport *
+from scipy.linalg import blas, lapack
+
+{{for prefix, types in TYPES.items()}}
+{{for function in BLAS_FUNCTIONS}}
+{{py: name = prefix + function}}
+cdef {{name}}_t *{{name}} = <{{name}}_t*>Capsule_AsVoidPtr(blas.{{name}}._cpointer)
+{{endfor}}
+{{for function in LAPACK_FUNCTIONS}}
+{{py: name = prefix + function}}
+cdef {{name}}_t *{{name}} = <{{name}}_t*>Capsule_AsVoidPtr(lapack.{{name}}._cpointer)
+{{endfor}}
+{{endfor}}
+
+cdef sdot_t *sdot = <sdot_t*>Capsule_AsVoidPtr(blas.sdot._cpointer)
+cdef ddot_t *ddot = <ddot_t*>Capsule_AsVoidPtr(blas.ddot._cpointer)
+cdef cdotu_t *cdot = <cdotu_t*>Capsule_AsVoidPtr(blas.cdotu._cpointer)
+cdef zdotu_t *zdot = <zdotu_t*>Capsule_AsVoidPtr(blas.zdotu._cpointer)
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype = types}}
+{{py:
+combined_prefix = prefix
+if prefix == 'c': combined_prefix = 'z'
+if prefix == 's': combined_prefix = 'd'
+}}
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef {{prefix}}kalman_filter({{cython_type}} [::1,:]   y,  # nxT+1    (data: endogenous, observed)
+                     {{cython_type}} [::1,:,:] H,  # nxkxT+1  (parameters)
+                     {{cython_type}} [:]       mu, # kx0      (parameters)
+                     {{cython_type}} [::1,:]   F,  # kxk      (parameters)
+                     {{cython_type}} [::1,:]   R,  # nxn      (parameters: covariance matrix)
+                     {{cython_type}} [::1,:]   G,  # kxg      (parameters)
+                     {{cython_type}} [::1,:]   Q_star,  # gxg      (parameters: covariance matrix)
+                     {{cython_type}} [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
+                     {{cython_type}} [::1,:]   A=None,  # nxr      (parameters)
+                     {{cython_type}} [:]       beta_tt_init=None,
+                     {{cython_type}} [::1,:]   P_tt_init=None):
+
+    cdef {{cython_type}} [::1,:,:] P_tt, P_tt1, f_tt1, gain, f_inv
+    cdef int [::1,:] ipiv
+    cdef {{cython_type}} [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, Q
+    cdef {{cython_type}} [:] ll
+    cdef {{cython_type}} det
+    cdef double tol = 10e-20
+    cdef:
+        int i
+        int t
+        int T = y.shape[1]
+        int n = y.shape[0]
+        int r = 0
+        int g = Q_star.shape[0]
+        int k = mu.shape[0]
+        int time_varying_H = H.shape[2] == T
+        int H_idx = 0
+        int converged = 0
+    cdef:
+        int kn = k*n
+        int k2 = k**2
+        int n2 = n**2
+        int info # return code for dgetri, dgetrf
+        int inc = 1 # incrementer for dgemv
+        int ldwork = max(k2, n2) # number of rows/columns in work array
+        int lwork = ldwork**2 # size of work array for dgetri
+    cdef:
+        {{cython_type}} alpha = 1.0 # first scalar multiple on dgemv, dgemm
+        {{cython_type}} beta = 0.0 # second scalar multiple on dgemv, dgemm
+        {{cython_type}} gamma = -1.0 # scalar multiple for daxpy
+        {{cython_type}} delta = -0.5 # scalar multiple for log calculation
+
+    # Check if we have an exog matrix
+    if z is not None and A is not None:
+        r = z.shape[0]
+
+    # Allocate memory for variables
+    beta_tt = np.zeros((k,T+1), {{dtype}}, order="F")    # T+1xk
+    P_tt = np.zeros((k,k,T+1), {{dtype}}, order="F")     # T+1xkxk
+    beta_tt1 = np.zeros((k,T+1), {{dtype}}, order="F")   # T+1xk
+    P_tt1 = np.zeros((k,k,T+1), {{dtype}}, order="F")    # T+1xkxk
+    y_tt1 = np.zeros((n,T+1), {{dtype}}, order="F")      # T+1xn
+    eta_tt1 = np.zeros((n,T+1), {{dtype}}, order="F")    # T+1xn
+    f_tt1 = np.zeros((n,n,T+1), {{dtype}}, order="F")    # T+1xnxn
+    gain = np.zeros((k,n,T+1), {{dtype}}, order="F")     # T+1xkxn
+    ll = np.zeros((T+1,), {{dtype}})                     # T+1
+    work = np.zeros((ldwork,ldwork), {{dtype}}, order="F")
+    ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
+    PHT = np.empty((k,n), {{dtype}}, order="F")
+    f_inv = np.empty((n,n,T+1), {{dtype}}, order="F")
+    Q = np.zeros((k,k), {{dtype}}, order="F")
+
+    # Get Q = G Q^* G'
+    {{prefix}}gemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
+    {{prefix}}gemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
+
+    # Initial values
+    if beta_tt_init is None:
+        #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
+        beta_tt_init = np.zeros((k,), float, order="F")
+        tmp = np.array(np.eye(k), float, order="F") - F
+        {{prefix}}getrf(&k, &k, &tmp[0,0], &k, &ipiv[0,0], &info)
+        {{prefix}}getri(&k, &tmp[0,0], &k, &ipiv[0,0], &work[0,0], &lwork, &info)
+        {{prefix}}gemv("N",&k,&k,&alpha,&tmp[0,0],&k,&mu[0],&inc,&beta,&beta_tt_init[0],&inc)
+    beta_tt[::1,0] = beta_tt_init[::1]
+
+    if P_tt_init is None:
+        #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
+        P_tt_init = np.zeros((k,k), float, order="F")
+        tmp = np.array(np.eye(k2) - np.kron(F,F), float, order="F")
+        {{prefix}}getrf(&k2, &k2, &tmp[0,0], &k2, &ipiv[0,0], &info)
+        {{prefix}}getri(&k2, &tmp[0,0], &k2, &ipiv[0,0], &work[0,0], &lwork, &info)
+        {{prefix}}gemv("N",&k2,&k2,&alpha,&tmp[0,0],&k2,&Q[0,0],&inc,&beta,&P_tt_init[0,0],&inc)
+    P_tt[::1,:,0] = P_tt_init[::1,:]
+
+    # Redefine the tmp array
+    tmp = np.zeros((ldwork,ldwork), {{dtype}}, order="F")
+
+    # Iterate forwards
+    for t in range(1,T+1):
+        if time_varying_H:
+            H_idx = t-1
+
+        # Prediction
+        #beta_tt1[t] = mu + np.dot(F, beta_tt[t-1])
+        #beta_tt1[::1,t] = mu[::1]
+        {{prefix}}copy(&k, &mu[0], &inc, &beta_tt1[0,t], &inc)
+        {{prefix}}gemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
+
+        #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
+        if converged:
+            {{prefix}}copy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
+        else:
+            #P_tt1[::1,:,t] = Q[::1,:]
+            {{prefix}}copy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            #dsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            {{prefix}}gemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            {{prefix}}gemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
+
+        #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
+        {{prefix}}gemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
+        if r > 0:
+            # z[0] corresponds to z[t=1]
+            {{prefix}}gemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
+
+        #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
+        #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        {{prefix}}copy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
+        {{prefix}}axpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
+
+        if converged:
+            {{prefix}}copy(&n2, &f_tt1[0,0,t-1], &inc, &f_tt1[0,0,t], &inc)
+            {{prefix}}copy(&n2, &f_inv[0,0,t-1], &inc, &f_inv[0,0,t], &inc)
+        else:
+            #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
+            #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
+            {{prefix}}gemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
+
+            #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
+            #f_tt1[::1,:,t] = R[::1,:]
+            {{prefix}}copy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
+            {{prefix}}gemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
+
+            #f_inv = np.linalg.inv(f_tt1[t])
+            #f_inv[::1,:] = f_tt1[::1,:,t]
+            if n == 1:
+                det = {{combined_prefix}}abs(f_tt1[0,0,t])
+                f_inv[0,0,t] = 1/f_tt1[0,0,t]
+            else:
+                {{prefix}}copy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0,t], &inc)
+                {{prefix}}getrf(&n, &n, &f_inv[0,0,t], &n, &ipiv[0,0], &info)
+                det = 1
+                for i in range(n):
+                    if not ipiv[i,0] == i+1:
+                        det *= -1*f_inv[i,i,t]
+                    else:
+                        det *= f_inv[i,i,t]
+                # Now complete taking the inverse
+                {{prefix}}getri(&n, &f_inv[0,0,t], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+
+        # Log-likelihood as byproduct
+        #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
+        # ^ this doesn't work, crashes for some reason; probably related to taking .T as it did above
+        ll[t] = -0.5*{{combined_prefix}}log(2*np.pi*det)
+        {{prefix}}gemv("N",&n,&n,&alpha,&f_inv[0,0,t],&n,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
+        {{if combined_prefix == 'd'}}
+        ll[t] = ll[t] - 0.5*{{prefix}}dot(&n, &eta_tt1[0,t], &inc, &tmp[0,0], &inc)
+        {{else}}
+        {{prefix}}gemv("N",&inc,&n,&alpha,&eta_tt1[0,t],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
+        ll[t] = ll[t] - 0.5*work[0,0]
+        {{endif}}
+
+        # Updating
+        #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
+        if converged:
+            {{prefix}}copy(&kn, &gain[0,0,t-1], &inc, &gain[0,0,t], &inc)
+        else:
+            {{prefix}}gemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0,t], &n, &beta, &gain[0,0,t], &k)
+
+        #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
+        #beta_tt[::1,t] = beta_tt1[::1,t]
+        {{prefix}}copy(&k, &beta_tt1[0,t], &inc, &beta_tt[0,t], &inc)
+        {{prefix}}gemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
+
+        #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
+        if converged:
+            {{prefix}}copy(&k2, &P_tt[0,0,t-1], &inc, &P_tt[0,0,t], &inc)
+        else:
+            #P_tt[::1,:,t] = P_tt1[::1,:,t]
+            {{prefix}}copy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
+            {{prefix}}gemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
+            {{prefix}}gemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+
+        # Check if we have converged (by finding the determinant of P
+        if not converged and not time_varying_H:
+            {{prefix}}copy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
+            {{prefix}}axpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
+
+            {{if combined_prefix == 'd'}}
+            if {{prefix}}dot(&k2, &tmp[0,0], &inc, &tmp[0,0], &inc) < tol:
+                converged = 1
+            {{else}}
+            {{prefix}}gemv("N",&inc,&k2,&alpha,&tmp[0,0],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
+            if {{combined_prefix}}abs(work[0,0]) < tol:
+                converged = 1
+            {{endif}}
+
+    return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, f_inv, gain, ll
+{{endfor}}
