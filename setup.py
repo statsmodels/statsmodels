@@ -327,14 +327,19 @@ cmdclass["build_ext"] = CheckingBuildExt
 #NOTE: we are not currently using this but add it to Extension, if needed.
 # libraries = ['m'] if 'win32' not in sys.platform else []
 
+from numpy.distutils.misc_util import get_info
+
+npymath_info = get_info("npymath")
 ext_data = dict(
         kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
                   "depends" : ["statsmodels/src/capsule.h"],
-                  "include": ["statsmodels/src"],
+                  "include_dirs": ["statsmodels/src"],
                   "sources" : []},
         kalman_filter = {"name" : "statsmodels/tsa/statespace/kalman_filter.c",
                   "depends" : ["statsmodels/src/capsule.h"],
-                  "include": ["statsmodels/src"],
+                  "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
+                  "libraries": npymath_info['libraries'],
+                  "library_dirs": npymath_info['library_dirs'],
                   "sources" : []},
         linbin = {"name" : "statsmodels/nonparametric/linbin.c",
                  "depends" : [],
@@ -343,7 +348,6 @@ ext_data = dict(
                  "depends" : [],
                  "sources" : []}
         )
-
 
 extensions = []
 for name, data in ext_data.items():
