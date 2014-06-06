@@ -50,7 +50,20 @@ cdef extern from "capsule.h":
 
 # BLAS / LAPACK functions
 from statsmodels.src.blas_lapack cimport *
-from scipy.linalg import blas, lapack
+
+try:
+    from scipy.linalg.blas import cgerc
+except:
+    from scipy.linalg.blas import fblas as blas
+else:
+    from scipy.linalg import blas
+
+try:
+    from scipy.linalg.lapack import cgbsv
+except:
+    from scipy.linalg.lapack import flapack as lapack
+else:
+    from scipy.linalg import lapack
 
 {{for prefix, types in TYPES.items()}}
 {{for function in BLAS_FUNCTIONS}}
