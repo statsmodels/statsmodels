@@ -776,3 +776,21 @@ tvp = {
         [1.2291, -0.4531,  0.1552, -0.7252,  0.0818]
     ]
 }
+
+"""
+Real GDP, 1947:1 - 2014:1
+
+See http://research.stlouisfed.org/fred2/series/GDPC1
+
+Stata Code: test_kalman_filter_gdp.do
+R Code:     test_kalman_filter_gdp.R
+
+"""
+gdp = {
+    'stata_params': [
+        0.40725515, 0.18782621, -0.01514009, -0.01027267, -0.03642297,
+        0.11576416, 0.02573029, -.00766572, 0.13506498, 0.08649569,
+        0.06942822, -0.10685783, 0.00008
+    ],
+    'stata_loglike': 883.1262237746861
+}

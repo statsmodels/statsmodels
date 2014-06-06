@@ -20,6 +20,7 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import os
 
 try:
     from scipy.linalg.blas import find_best_blas_type
@@ -45,6 +46,8 @@ prefix_kalman_filter_map = {
     's': skalman_filter, 'd': dkalman_filter,
     'c': ckalman_filter, 'z': zkalman_filter
 }
+
+current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class Clark1987(object):
@@ -175,3 +178,93 @@ class TestClark1987DoubleComplex(Clark1987):
 
     def __init__(self):
         super(TestClark1987DoubleComplex, self).__init__(dtype=complex)
+
+
+class TestRealGDPAR(object):
+
+    def __init__(self, dtype=float):
+        self.stata_output = pd.read_csv(
+            current_path + '/results/results_kalman_filter_stata.csv')
+        self.true = results_kalman_filter.gdp
+
+        # GDP, Quarterly, 1947.1 - 2014.1
+        dlgdp = np.log(self.stata_output['value']).diff()[1:]
+
+        # Parameters
+        n = 1   # dimension of observed data
+        k = 12  # dimension of state space
+
+        # Observed data
+        y = np.array(dlgdp, ndmin=2, dtype=dtype, order="F")
+
+        # Measurement equation
+        H = np.zeros((n, k, 1), dtype=dtype, order="F")
+        H[0, 0, 0] = 1  # link state to observations
+        R = np.zeros((n, n), dtype=dtype, order="F")  # var/cov matrix
+
+        # Transition equation
+        mu = np.zeros((k,), dtype=dtype)  # state mean
+        F = np.zeros((k, k), dtype=dtype, order="F")  # state AR matrix
+        idx = np.diag_indices(k-1)
+        F[(idx[0]+1, idx[1])] = 1
+        # optional matrix so that Q_star is always positive definite
+        G = np.zeros((k, 1), dtype=dtype, order="F")
+        G[0, 0] = 1
+        Q_star = np.zeros((1, 1), dtype=dtype, order="F")
+
+        # Initialization: done within Kalman filter
+
+        # Update matrices with given parameters
+        F[0, :] = self.true['stata_params'][:12]
+        Q_star[0, 0] = self.true['stata_params'][12]
+
+        # Use the appropriate Kalman filter
+        prefix = find_best_blas_type((y,))
+        kalman_filter = prefix_kalman_filter_map[prefix[0]]
+
+        # Filter the data
+        args = (y, H, mu, F, R, G, Q_star,
+                None, None, None, None)
+        (state, state_cov, est_state, est_state_cov, forecast,
+         prediction_error, prediction_error_cov, inverse_prediction_error_cov,
+         gain, loglikelihood) = kalman_filter(*args)
+
+        # Save the output
+        self.state = np.asarray(state[:, 1:])
+        self.state_cov = np.asarray(state_cov[:, :, 1:])
+        self.est_state = np.asarray(est_state[:, 1:])
+        self.est_state_cov = np.asarray(est_state_cov[:, :, 1:])
+        self.forecast = np.asarray(forecast[:, 1:])
+        self.prediction_error = np.asarray(prediction_error[:, 1:])
+        self.prediction_error_cov = np.asarray(prediction_error_cov[:, :, 1:])
+        self.inverse_prediction_error_cov = np.asarray(
+            inverse_prediction_error_cov[:, :, 1:]
+        )
+        self.gain = np.asarray(gain[:, :, 1:])
+        self.loglikelihood = np.asarray(loglikelihood[1:])
+
+        # Get results
+        self.result = {
+            'loglike': np.sum(self.loglikelihood),
+            'state': self.state,
+            'est_state': self.est_state,
+        }
+
+    def test_loglike(self):
+        assert_almost_equal(
+            self.result['loglike'], self.true['stata_loglike'], 3
+        )
+
+    def test_filtered_state(self):
+        for i in range(12):
+            assert_almost_equal(
+                self.result['state'][i, :],
+                self.stata_output['u%d' % (i+1)][1:], 6
+            )
+
+    def test_predicted_state(self):
+        for i in range(12):
+            assert_almost_equal(
+                self.result['est_state'][i, :],
+                self.stata_output['est_u%d' % (i+1)][1:], 6
+            )
