@@ -1,5 +1,5 @@
 clear
-insheet using results_kalman_filter_stata.csv
+insheet using results_realgdpar_stata.csv
 keep value
 
 gen lgdp = log(value)
@@ -64,4 +64,4 @@ predict est_u1-est_u12, states equation(u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12)
 predict u1-u12, states equation(u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12) smethod(filter)
 
 // Output
-outsheet value u1-u12 est_u1-est_u12 using results_kalman_filter_stata.csv, comma replace
+outsheet value u1-u12 est_u1-est_u12 using results_realgdpar_stata.csv, comma replace

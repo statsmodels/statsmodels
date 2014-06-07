@@ -58,7 +58,7 @@ class Clark1987(object):
     Test data produced using GAUSS code described in Kim and Nelson (1999) and
     found at http://econ.korea.ac.kr/~cjkim/SSMARKOV.htm
 
-    See `results.results_kalman` for more information.
+    See `results.results_kalman_filter` for more information.
     """
     def __init__(self, dtype=float):
         self.true = results_kalman_filter.uc_uni
@@ -181,10 +181,21 @@ class TestClark1987DoubleComplex(Clark1987):
 
 
 class TestRealGDPAR(object):
+    """
+    Test fitting an AR(12) via a state-space model to the FRED GDPC1 series.
+
+    Tests a higher dimensional state-space.
+
+    Results set created using Stata sspace model, and also verified with the
+    FKF (Fast Kalman Filter) library in R.
+
+    See results/test_realgdpar_stata.do and results/test_realgdpar_r.R
+    for more information.
+    """
 
     def __init__(self, dtype=float):
         self.stata_output = pd.read_csv(
-            current_path + '/results/results_kalman_filter_stata.csv')
+            current_path + '/results/results_realgdpar_stata.csv')
         self.true = results_kalman_filter.gdp
 
         # GDP, Quarterly, 1947.1 - 2014.1
