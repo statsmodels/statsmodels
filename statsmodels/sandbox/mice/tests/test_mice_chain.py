@@ -20,10 +20,12 @@ sys.path.insert(0,"C:/Users/Frank/Dropbox/statsmodels/")
 from statsmodels.sandbox.mice import mice
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
+import csv
+import json
 #print statsmodels.__file__
 #data = pd.DataFrame.from_csv('missingdata.csv')
-params = []
-sde = []
+paramspmm = []
+sdepmm = []
 for i in range(500):
         
     data = pd.read_csv("C:/Users/Frank/Dropbox/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv")
@@ -52,11 +54,11 @@ for i in range(500):
     
     impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
     
-    implist = impcomb.run(method="pmm")
+    implist = impcomb.run()
     
     p1 = impcomb.combine(implist)
-    params.append(p1.params)
-    sde.append(p1.bse)
+    paramspmm.append(p1.params)
+    sdepmm.append(p1.bse)
     #impdata = mice.ImputedData(data)
     #
     #impfull = mice.AnalysisChain([m1,m2,m3], "x1 ~ x2 + x3", sm.Logit)
@@ -105,5 +107,15 @@ for i in range(500):
     #for color, label in zip('bgr',  ['x2 missing','x3 missing', 'not missing']):
     #    subset = f0[f0.subset == label]
     #    plt.scatter(subset.x2, subset.x3, s=120, c=color, label=str(label))
-    ##plt.legend()
-    
+#    ##plt.legend()
+#myfile=open("pparams_bayes.csv",'wb')    
+#wr = csv.writer(myfile,quoting=csv.QUOTE_ALL)
+#wr.writerow(params2)
+#
+#
+#myfile=open("ppstd_bayes.csv",'wb')    
+#wr = csv.writer(myfile,quoting=csv.QUOTE_ALL)
+#wr.writerow(sde2)
+#
+#with open('C:/Users/Frank/Dropbox/statsmodels/statsmodels/sandbox/mice/tests/pparams_bayes.csv','Ur') as f:
+#    data = list(list(rec) for rec in csv.reader(f,lineterminator='\n',delimiter='\t'))

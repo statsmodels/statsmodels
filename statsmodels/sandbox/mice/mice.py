@@ -29,7 +29,6 @@ SAS 9.2 User's Guide, 2014.
 
 """
 
-import random
 import operator
 import pandas as pd
 import numpy as np
@@ -110,39 +109,7 @@ class ImputedData(object):
         ix = self.columns[col].ix_miss
         self.data[col].iloc[ix] = vals
 
-    def get_missing(self, col, data=None):
-        """
-        Returns observations where specified column is missing.
-        
-        Parameters
-        ----------
-        col : string
-            Column name whose data we want to be missing.
-        data : array
-            Dataset from which we draw a subset. 
-        """
-        if data is None:
-            data = self.data
-        ix = self.columns[col].ix_miss
-        return data.iloc[ix,:]
-
-    def get_obs(self, col, data=None):
-        """
-        Returns observations where specified column is not missing.
-        
-        Parameters
-        ----------
-        col : string
-            Column name whose data we want to be non-missing.
-        data : array
-            Dataset from which we draw a subset.
-        """
-        if data is None:
-            data = self.data        
-        ix = self.columns[col].ix_obs
-        return data.iloc[ix,:]
-
-    def get_exog(self, formula, data=None):
+    def get_exog(self, formula, select="all", data=None):
         """
         Returns the design matrix given a patsy formula.
         
@@ -160,12 +127,18 @@ class ImputedData(object):
         """
         if data is None:
             data = self.data
+        endog_name = str(formula.split("~")[0].strip())
         exog = patsy.dmatrices(formula, data, return_type="dataframe")[1]
-        return exog
+        if select == "all":
+            return exog
+        elif select == "missing":
+            return exog.iloc[self.columns[endog_name].ix_miss]
+        elif select == "observed":
+            return exog.iloc[self.columns[endog_name].ix_obs]
     
-    def get_endog(self, endog, data=None):
+    def get_endog(self, endog_name, select = "all", endog=None):
         """
-        Returns the endogenous variable given a patsy formula.
+        Returns the endogenous variable given the varible name.
         
         Parameters
         ----------
@@ -179,10 +152,14 @@ class ImputedData(object):
         endog : pandas DataFrame
             Data for endogenous variable.            
         """
-        if data is None:
-            data = self.data
-        endog = data[endog]
-        return endog
+        if endog is None:
+            endog = self.data[endog_name]
+        if select == "all":
+            return endog
+        elif select == "missing":
+            return endog.iloc[self.columns[endog_name].ix_miss]
+        elif select == "observed":
+            return endog.iloc[self.columns[endog_name].ix_obs]
     
 class Imputer(object):
 
@@ -219,7 +196,7 @@ class Imputer(object):
         self.init_args = init_args
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
-        self.num_missing = len(self.data.get_missing(self.endog_name))
+        self.num_missing = len(self.data.get_endog(self.endog_name, select="missing"))
         self.scale_method = scale_method
         self.scale_value = scale_value
 
@@ -262,12 +239,11 @@ class Imputer(object):
         """
         Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
         """
-        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name), **self.init_args)
+        md = self.model_class.from_formula(self.formula, self.data.get_endog(self.endog_name, select="observed", endog=self.data.data), **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        exog_data = self.data.get_exog(self.formula)
-        exog = self.data.get_missing(self.endog_name, exog_data)
-        new_endog = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
+        exog_data = self.data.get_exog(self.formula, select="missing")
+        new_endog = md.get_distribution(params=params, exog=exog_data, scale=scale_per * mdf.scale)
         self.data.store_changes(new_endog, self.endog_name)
 
     def impute_pmm(self, pmm_neighbors):
@@ -280,22 +256,23 @@ class Imputer(object):
         pmm_neighbors : int
             Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
         """
-        md = self.model_class.from_formula(self.formula, self.data.get_obs(self.endog_name), **self.init_args)
+        md = self.model_class.from_formula(self.formula, self.data.get_endog(self.endog_name, select="observed", endog=self.data.data), **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
         exog = self.data.get_exog(self.formula)
         predicted = pd.DataFrame(md.predict(params,exog))
         predicted.columns = [self.endog_name]
-        endog_matched = []
-        endog_miss = np.array(self.data.get_missing(self.endog_name, predicted))
-        endog_obs = np.array(self.data.get_obs(self.endog_name, predicted))
-        #look into memory-computation tradeoff
-        for mval in endog_miss:
-            dist = abs(endog_obs - mval)
-            dist_ind = np.argsort(dist, axis=0)
-            endog_matched.append(random.choice(np.array(self.data.get_endog(self.endog_name)[dist_ind[0:pmm_neighbors][0]])))
-        new_endog = endog_matched
-        self.data.store_changes(new_endog, self.endog_name)
+        pendog_miss = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="missing", endog=predicted)))
+        pendog_obs = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed", endog=predicted)))
+        oendog = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed")))
+        ii = np.argsort(pendog_obs, axis=0)
+        pendog_obs = pendog_obs[ii]
+        oendog = oendog[ii]
+        ix = np.searchsorted(pendog_obs, pendog_miss)
+        ix += np.random.randint(-pmm_neighbors/2, pmm_neighbors/2, len(ix))
+        np.clip(ix, 0, len(oendog), out=ix)
+        imputed_miss = oendog[ix]        
+        self.data.store_changes(imputed_miss, self.endog_name)
 
     def impute_bootstrap(self):
         pass
