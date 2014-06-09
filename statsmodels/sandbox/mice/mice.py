@@ -108,59 +108,28 @@ class ImputedData(object):
 
         ix = self.columns[col].ix_miss
         self.data[col].iloc[ix] = vals
-
-    def get_exog(self, formula, select="all", data=None):
+    
+    def get_data_from_formula(self, formula):
         """
-        Returns the design matrix given a patsy formula.
+        Use formula to construct endog and exog split by missing status.
+        Called by Imputer before fitting model.
         
         Parameters
         ----------
         formula : string
-            Patsy formula for imputation.
-        data : pandas DataFrame
-            Data for which we want the design matrix. Defaults to self.data.
-            
-        Returns
-        -------
-        exog : pandas DataFrame
-            Design matrix implied by formula.            
+            Patsy formula for the Imputer object's conditional model.
         """
-        if data is None:
-            data = self.data
-        endog_name = str(formula.split("~")[0].strip())
-        exog = patsy.dmatrices(formula, data, return_type="dataframe")[1]
-        if select == "all":
-            return exog
-        elif select == "missing":
-            return exog.iloc[self.columns[endog_name].ix_miss]
-        elif select == "observed":
-            return exog.iloc[self.columns[endog_name].ix_obs]
-    
-    def get_endog(self, endog_name, select = "all", endog=None):
-        """
-        Returns the endogenous variable given the varible name.
+        exog = patsy.dmatrices(formula, self.data, return_type="dataframe")[1]
+        endog = patsy.dmatrices(formula, self.data, return_type="dataframe")[0]
+        if len(endog.design_info.term_names) > 1:
+            endog_name = tuple(endog.design_info.term_names)
+        else:
+            endog_name = endog.design_info.term_names[0]
+        endog_obs = endog.iloc[self.columns[endog_name].ix_obs]
+        exog_obs = exog.iloc[self.columns[endog_name].ix_obs]
+        exog_miss = exog.iloc[self.columns[endog_name].ix_miss]
+        return endog_obs, exog_obs, exog_miss
         
-        Parameters
-        ----------
-        endog : string
-            Name of endogenous variable.
-        data : pandas DataFrame
-            Data for which we want the endogenous variable. Defaults to self.data.
-            
-        Returns
-        -------
-        endog : pandas DataFrame
-            Data for endogenous variable.            
-        """
-        if endog is None:
-            endog = self.data[endog_name]
-        if select == "all":
-            return endog
-        elif select == "missing":
-            return endog.iloc[self.columns[endog_name].ix_miss]
-        elif select == "observed":
-            return endog.iloc[self.columns[endog_name].ix_obs]
-    
 class Imputer(object):
 
     __doc__= """
@@ -195,8 +164,9 @@ class Imputer(object):
         self.model_class = model_class
         self.init_args = init_args
         self.fit_args = fit_args
+        (self.endog_obs, self.exog_obs, self.exog_miss) = self.data.get_data_from_formula(self.formula)            
         self.endog_name = str(self.formula.split("~")[0].strip())
-        self.num_missing = len(self.data.get_endog(self.endog_name, select="missing"))
+        self.num_missing = len(self.exog_miss)
         self.scale_method = scale_method
         self.scale_value = scale_value
 
@@ -239,11 +209,11 @@ class Imputer(object):
         """
         Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
         """
-        md = self.model_class.from_formula(self.formula, self.data.get_endog(self.endog_name, select="observed", endog=self.data.data), **self.init_args)
+        md = self.model_class(self.endog_obs, self.exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        exog_data = self.data.get_exog(self.formula, select="missing")
-        new_endog = md.get_distribution(params=params, exog=exog_data, scale=scale_per * mdf.scale)
+        new_endog = md.get_distribution(params=params, exog=self.exog_miss, scale=scale_per * mdf.scale)
+        #stores in underlying data, may want to store in post patsy formula data?
         self.data.store_changes(new_endog, self.endog_name)
 
     def impute_pmm(self, pmm_neighbors):
@@ -256,23 +226,39 @@ class Imputer(object):
         pmm_neighbors : int
             Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
         """
-        md = self.model_class.from_formula(self.formula, self.data.get_endog(self.endog_name, select="observed", endog=self.data.data), **self.init_args)
+        md = self.model_class(self.endog_obs, self.exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        exog = self.data.get_exog(self.formula)
-        predicted = pd.DataFrame(md.predict(params,exog))
-        predicted.columns = [self.endog_name]
-        pendog_miss = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="missing", endog=predicted)))
-        pendog_obs = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed", endog=predicted)))
-        oendog = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed")))
+        #exog = pd.concat([self.exog_obs, self.exog_miss]).sort_index()
+        pendog_obs = md.predict(params, self.exog_obs)
+        pendog_miss = md.predict(params, self.exog_miss)
         ii = np.argsort(pendog_obs, axis=0)
         pendog_obs = pendog_obs[ii]
-        oendog = oendog[ii]
+        oendog = self.endog_obs.iloc[ii,:]
         ix = np.searchsorted(pendog_obs, pendog_miss)
         ix += np.random.randint(-pmm_neighbors/2, pmm_neighbors/2, len(ix))
         np.clip(ix, 0, len(oendog), out=ix)
-        imputed_miss = oendog[ix]        
+        imputed_miss = np.array(oendog.iloc[ix,:])
         self.data.store_changes(imputed_miss, self.endog_name)
+        
+#        (endog_obs, exog_obs, exog_miss) = self.data.get_data_from_formula(self.formula)        
+#        md = self.model_class(endog_obs, exog_obs, **self.init_args)
+#        mdf = md.fit(**self.fit_args)
+#        params, scale_per = self.perturb_param(mdf)
+#        exog = self.data.get_exog(self.formula)
+#        predicted = pd.DataFrame(md.predict(params,exog))
+#        predicted.columns = [self.endog_name]
+#        pendog_miss = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="missing", endog=predicted)))
+#        pendog_obs = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed", endog=predicted)))
+#        oendog = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed")))
+#        ii = np.argsort(pendog_obs, axis=0)
+#        pendog_obs = pendog_obs[ii]
+#        oendog = oendog[ii]
+#        ix = np.searchsorted(pendog_obs, pendog_miss)
+#        ix += np.random.randint(-pmm_neighbors/2, pmm_neighbors/2, len(ix))
+#        np.clip(ix, 0, len(oendog), out=ix)
+#        imputed_miss = oendog[ix]        
+#        self.data.store_changes(imputed_miss, self.endog_name)
 
     def impute_bootstrap(self):
         pass
