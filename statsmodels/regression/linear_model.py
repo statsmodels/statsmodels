@@ -257,7 +257,7 @@ class RegressionModel(base.LikelihoodModel):
             exog = self.exog
         return np.dot(exog, params)
 
-    def get_distribution(self, params, exog=None, scale = None):
+    def get_distribution(self, params, exog=None, scale=1):
         """
         Return a scipy.stats.distributions object that simulates data from the model.
 
@@ -266,7 +266,7 @@ class RegressionModel(base.LikelihoodModel):
         params : array-like
             The model parameters.
         scale : scalar
-            The scale parameter, defaults to self.scale.
+            The scale parameter, defaults to 1.
         exog : array-like
             The array of covariates, defaults to self.exog.
 
@@ -280,14 +280,13 @@ class RegressionModel(base.LikelihoodModel):
         """
         if exog is None:
             exog = self.model.exog
-
-        if scale is None:
-            scale = self.scale
         mean = self.predict(params=params, exog=exog)
-        rnum = []
-        for m in mean:
-            rnum.append(stats.norm.rvs(m,scale))
-        return rnum
+        rv = stats.norm(loc=mean, scale=scale)
+        return rv
+#        rnum = []
+#        for m in mean:
+#            rnum.append(stats.norm.rvs(m,scale))
+#        return rnum
 
 class GLS(RegressionModel):
     __doc__ = """

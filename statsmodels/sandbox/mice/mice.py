@@ -119,8 +119,9 @@ class ImputedData(object):
         formula : string
             Patsy formula for the Imputer object's conditional model.
         """
-        exog = patsy.dmatrices(formula, self.data, return_type="dataframe")[1]
-        endog = patsy.dmatrices(formula, self.data, return_type="dataframe")[0]
+        dmat = patsy.dmatrices(formula, self.data, return_type="dataframe")
+        exog = dmat[1]
+        endog = dmat[0]
         if len(endog.design_info.term_names) > 1:
             endog_name = tuple(endog.design_info.term_names)
         else:
@@ -164,9 +165,8 @@ class Imputer(object):
         self.model_class = model_class
         self.init_args = init_args
         self.fit_args = fit_args
-        (self.endog_obs, self.exog_obs, self.exog_miss) = self.data.get_data_from_formula(self.formula)            
         self.endog_name = str(self.formula.split("~")[0].strip())
-        self.num_missing = len(self.exog_miss)
+        self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
         self.scale_method = scale_method
         self.scale_value = scale_value
 
@@ -209,10 +209,12 @@ class Imputer(object):
         """
         Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
         """
-        md = self.model_class(self.endog_obs, self.exog_obs, **self.init_args)
+        (endog_obs, exog_obs, exog_miss) = self.data.get_data_from_formula(self.formula)
+        md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        new_endog = md.get_distribution(params=params, exog=self.exog_miss, scale=scale_per * mdf.scale)
+        new_rv = md.get_distribution(params=params, exog=exog_miss, scale=scale_per * mdf.scale)
+        new_endog = new_rv.rvs(size=len(exog_miss))
         #stores in underlying data, may want to store in post patsy formula data?
         self.data.store_changes(new_endog, self.endog_name)
 
@@ -226,39 +228,21 @@ class Imputer(object):
         pmm_neighbors : int
             Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
         """
-        md = self.model_class(self.endog_obs, self.exog_obs, **self.init_args)
+        (endog_obs, exog_obs, exog_miss) = self.data.get_data_from_formula(self.formula)
+        md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
         #exog = pd.concat([self.exog_obs, self.exog_miss]).sort_index()
-        pendog_obs = md.predict(params, self.exog_obs)
-        pendog_miss = md.predict(params, self.exog_miss)
+        pendog_obs = md.predict(params, exog_obs)
+        pendog_miss = md.predict(params, exog_miss)
         ii = np.argsort(pendog_obs, axis=0)
         pendog_obs = pendog_obs[ii]
-        oendog = self.endog_obs.iloc[ii,:]
+        oendog = endog_obs.iloc[ii,:]
         ix = np.searchsorted(pendog_obs, pendog_miss)
         ix += np.random.randint(-pmm_neighbors/2, pmm_neighbors/2, len(ix))
         np.clip(ix, 0, len(oendog), out=ix)
         imputed_miss = np.array(oendog.iloc[ix,:])
         self.data.store_changes(imputed_miss, self.endog_name)
-        
-#        (endog_obs, exog_obs, exog_miss) = self.data.get_data_from_formula(self.formula)        
-#        md = self.model_class(endog_obs, exog_obs, **self.init_args)
-#        mdf = md.fit(**self.fit_args)
-#        params, scale_per = self.perturb_param(mdf)
-#        exog = self.data.get_exog(self.formula)
-#        predicted = pd.DataFrame(md.predict(params,exog))
-#        predicted.columns = [self.endog_name]
-#        pendog_miss = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="missing", endog=predicted)))
-#        pendog_obs = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed", endog=predicted)))
-#        oendog = np.squeeze(np.array(self.data.get_endog(self.endog_name, select="observed")))
-#        ii = np.argsort(pendog_obs, axis=0)
-#        pendog_obs = pendog_obs[ii]
-#        oendog = oendog[ii]
-#        ix = np.searchsorted(pendog_obs, pendog_miss)
-#        ix += np.random.randint(-pmm_neighbors/2, pmm_neighbors/2, len(ix))
-#        np.clip(ix, 0, len(oendog), out=ix)
-#        imputed_miss = oendog[ix]        
-#        self.data.store_changes(imputed_miss, self.endog_name)
 
     def impute_bootstrap(self):
         pass
