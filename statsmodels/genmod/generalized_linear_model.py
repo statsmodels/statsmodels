@@ -473,6 +473,8 @@ class GLM(base.LikelihoodModel):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
             converged = _check_convergence(criterion, iteration, tol)
+            if converged:
+                break
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
