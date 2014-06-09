@@ -82,7 +82,7 @@ class TestMixedLM(object):
 
                     cov_pen = penalties.PSD(cov_pen_wt)
 
-                    np.random.seed(355890504)
+                    np.random.seed(3558)
                     exog_fe = np.random.normal(size=(n*m, p))
                     exog_re = np.random.normal(size=(n*m, pr))
                     endog = exog_fe.sum(1) + np.random.normal(size=n*m)
@@ -117,10 +117,9 @@ class TestMixedLM(object):
                         assert_almost_equal(gr / ngr, np.ones(len(gr)),
                                             decimal=3)
 
-
     def test_default_re(self):
 
-        np.random.seed(323590805)
+        np.random.seed(3235)
         exog = np.random.normal(size=(300,4))
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
@@ -131,7 +130,7 @@ class TestMixedLM(object):
 
     def test_EM(self):
 
-        np.random.seed(323590805)
+        np.random.seed(3298)
         exog = np.random.normal(size=(300,4))
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
@@ -140,7 +139,7 @@ class TestMixedLM(object):
 
     def test_profile(self):
 
-        np.random.seed(323590805)
+        np.random.seed(9814)
         exog = np.random.normal(size=(300,4))
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
@@ -151,7 +150,7 @@ class TestMixedLM(object):
 
     def test_formulas(self):
 
-        np.random.seed(24109403)
+        np.random.seed(2410)
         exog = np.random.normal(size=(300,4))
         exog_re = np.random.normal(size=300)
         groups = np.kron(np.arange(100), [1,1,1])
@@ -181,10 +180,9 @@ class TestMixedLM(object):
         md2.set_random("exog_re", data=df)
         mdf2 = md2.fit()
 
-
     def test_regularized(self):
 
-        np.random.seed(3453908)
+        np.random.seed(3453)
         exog = np.random.normal(size=(400,5))
         groups = np.kron(np.arange(100), np.ones(4))
         expected_endog = exog[:,0] - exog[:,2]

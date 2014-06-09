@@ -469,13 +469,13 @@ class MixedLM(base.LikelihoodModel):
                     x = exog[:,j]
                     u = _smw_solve(scale, ex_r, cov_re, cov_re_inv, x)
                     a += np.dot(u, x)
-                    b -= 2*np.dot(u, resid)
+                    b -= 2 * np.dot(u, resid)
 
                 pwt1 = alpha[j]
                 if b > pwt1:
-                    fe_params[j] = -(b - pwt1) / (2*a)
+                    fe_params[j] = -(b - pwt1) / (2 * a)
                 elif b < -pwt1:
-                    fe_params[j] = -(b + pwt1) / (2*a)
+                    fe_params[j] = -(b + pwt1) / (2 * a)
 
             if np.abs(fe_params_s - fe_params).max() < ptol:
                 break
@@ -495,7 +495,7 @@ class MixedLM(base.LikelihoodModel):
         ii = np.abs(params_prof) > ceps
         ii[self.k_fe:] = True
         ii = np.flatnonzero(ii)
-        hess1 = hess[ii,:][:,ii]
+        hess1 = hess[ii, :][:, ii]
         pcov[np.ix_(ii,ii)] = np.linalg.inv(-hess1)
 
         results = MixedLMResults(self, params_prof, pcov / scale)
@@ -569,7 +569,9 @@ class MixedLM(base.LikelihoodModel):
         fe_params = params[0:self.k_fe]
         re_params = params[self.k_fe:]
 
-        # Unpack the covariance matrix of the random effects
+        # Unpack the covariance matrix of the random effects.
+        # approx_hess_cs uses complex params values, so cov_re needs
+        # to hold complex values if params is complex
         cov_re = np.zeros((self.k_re, self.k_re), dtype=params.dtype)
         ix = np.tril_indices(self.k_re)
         cov_re[ix] = re_params
@@ -1150,8 +1152,8 @@ class MixedLM(base.LikelihoodModel):
             scale = 0.
             for x,y in zip(self.exog_li, self.endog_li):
                 scale += np.sum((y - np.dot(x, fe_params))**2)
-            scale -= 2*m1y
-            scale += 2*np.dot(fe_params, m1x)
+            scale -= 2 * m1y
+            scale += 2 * np.dot(fe_params, m1x)
             scale += np.trace(m2xx)
             scale /= self.n_totobs
 
