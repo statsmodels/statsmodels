@@ -327,16 +327,16 @@ class PHreg(model.LikelihoodModel):
                 # Consider all cases that fail at this point.
                 ix = uft_ix[i]
                 like += linpred[ix].sum()
+
                 m = len(ix)
-                for j in range(m):
-                    like -= np.log(xp0 - j*xp0f/float(m))
+                J = np.arange(m, dtype=np.float64) / m
+                like -= np.log(xp0 - J*xp0f).sum()
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
                 xp0 -= elinpred[ix].sum()
 
         return like
-
 
     def breslow_gradient(self, b):
 
@@ -363,9 +363,10 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
-                v = exog1[ix,:]
-                xp0 += elinpred[ix].sum()
-                xp1 += (elinpred[ix][:,None] * v).sum(0)
+                if len(ix) > 0:
+                    v = exog1[ix,:]
+                    xp0 += elinpred[ix].sum()
+                    xp1 += (elinpred[ix][:,None] * v).sum(0)
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
@@ -373,12 +374,12 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
-                v = exog1[ix,:]
-                xp0 -= elinpred[ix].sum()
-                xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                if len(ix) > 0:
+                    v = exog1[ix,:]
+                    xp0 -= elinpred[ix].sum()
+                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
 
         return grad
-
 
     def efron_gradient(self, b):
 
@@ -404,31 +405,33 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
-                v = exog1[ix,:]
-                xp0 += elinpred[ix].sum()
-                xp1 += (elinpred[ix][:,None] * v).sum(0)
+                if len(ix) > 0:
+                    v = exog1[ix,:]
+                    xp0 += elinpred[ix].sum()
+                    xp1 += (elinpred[ix][:,None] * v).sum(0)
                 ixf = uft_ix[i]
-                v = exog1[ixf,:]
-                xp0f = elinpred[ixf].sum()
-                xp1f = (elinpred[ixf][:,None] * v).sum(0)
+                if len(ixf) > 0:
+                    v = exog1[ixf,:]
+                    xp0f = elinpred[ixf].sum()
+                    xp1f = (elinpred[ixf][:,None] * v).sum(0)
 
                 # Consider all cases that fail at this point.
                 grad += v.sum(0)
                 m = len(ixf)
-                for j in range(m):
-                    numer = xp1 - j*xp1f/float(m)
-                    denom = xp0 - j*xp0f/float(m)
-                    grad -= numer / denom
+
+                J = np.arange(m, dtype=np.float64) / m
+                numer = xp1 - np.outer(J, xp1f)
+                denom = xp0 - np.outer(J, xp0f)
+                grad -= (numer / denom).sum(0)
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
-                v = exog1[ix,:]
-                xp0 -= elinpred[ix].sum()
-                xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                if len(ix) > 0:
+                    v = exog1[ix,:]
+                    xp0 -= elinpred[ix].sum()
+                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
 
         return grad
-
-
 
     def breslow_hessian(self, b):
 
@@ -455,12 +458,13 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
-                xp0 += elinpred[ix].sum()
-                v = exog1[ix,:]
-                xp1 += (elinpred[ix][:,None] * v).sum(0)
-                mat = v[None,:,:]
-                elx = elinpred[ix]
-                xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+                if len(ix) > 0:
+                    xp0 += elinpred[ix].sum()
+                    v = exog1[ix,:]
+                    xp1 += (elinpred[ix][:,None] * v).sum(0)
+                    mat = v[None,:,:]
+                    elx = elinpred[ix]
+                    xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
@@ -468,15 +472,15 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
-                xp0 -= elinpred[ix].sum()
-                v = exog1[ix,:]
-                xp1 -= (elinpred[ix][:,None] * v).sum(0)
-                mat = v[None,:,:]
-                elx = elinpred[ix]
-                xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
+                if len(ix) > 0:
+                    xp0 -= elinpred[ix].sum()
+                    v = exog1[ix,:]
+                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                    mat = v[None,:,:]
+                    elx = elinpred[ix]
+                    xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
 
         return -hess
-
 
     def efron_hessian(self, b):
 
@@ -502,36 +506,41 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
-                xp0 += elinpred[ix].sum()
-                v = exog1[ix,:]
-                xp1 += (elinpred[ix][:,None] * v).sum(0)
-                mat = v[None,:,:]
-                elx = elinpred[ix]
-                xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+                if len(ix) > 0:
+                    xp0 += elinpred[ix].sum()
+                    v = exog1[ix,:]
+                    xp1 += (elinpred[ix][:,None] * v).sum(0)
+                    mat = v[None,:,:]
+                    elx = elinpred[ix]
+                    xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
                 ixf = uft_ix[i]
-                v = exog1[ixf,:]
-                xp0f = elinpred[ixf].sum()
-                xp1f = (elinpred[ixf][:,None] * v).sum(0)
-                mat = v[None,:,:]
-                elx = elinpred[ixf]
-                xp2f = (mat.T * mat * elx[None,:,None]).sum(1)
+                if len(ixf) > 0:
+                    v = exog1[ixf,:]
+                    xp0f = elinpred[ixf].sum()
+                    xp1f = (elinpred[ixf][:,None] * v).sum(0)
+                    mat = v[None,:,:]
+                    elx = elinpred[ixf]
+                    xp2f = (mat.T * mat * elx[None,:,None]).sum(1)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
-                for j in range(m):
-                    c0 = xp0 - j*xp0f/float(m)
-                    hess += (xp2 - j*xp2f/float(m)) / c0
-                    c1 = xp1 - j*xp1f/float(m)
-                    hess -= np.outer(c1, c1) / c0**2
+                J = np.arange(m, dtype=np.float64) / m
+                c0 = xp0 - J*xp0f
+                mat = (xp2[None,:,:] - J[:,None,None]*xp2f) / c0[:,None,None]
+                hess += mat.sum(0)
+                mat = (xp1[None, :] - np.outer(J, xp1f)) / c0[:, None]
+                mat = mat[:, :, None] * mat[:, None, :]
+                hess -= mat.sum(0)
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
-                xp0 -= elinpred[ix].sum()
-                v = exog1[ix,:]
-                xp1 -= (elinpred[ix][:,None] * v).sum(0)
-                mat = v[None,:,:]
-                elx = elinpred[ix]
-                xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
+                if len(ix) > 0:
+                    xp0 -= elinpred[ix].sum()
+                    v = exog1[ix,:]
+                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                    mat = v[None,:,:]
+                    elx = elinpred[ix]
+                    xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
 
         return -hess
 

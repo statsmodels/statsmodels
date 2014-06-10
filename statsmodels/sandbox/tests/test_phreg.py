@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 import os
 import numpy as np
 from statsmodels.sandbox.phreg import PHreg
@@ -121,7 +124,6 @@ class TestPHreg(object):
         assert(len(md.endog) == 185)
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
-
 
 
 if  __name__=="__main__":
