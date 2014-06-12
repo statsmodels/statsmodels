@@ -1034,7 +1034,7 @@ class RegressionResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(lzip(lower, upper))
 
-        
+
     @cache_readonly
     def nobs(self):
         return float(self.model.wexog.shape[0])
