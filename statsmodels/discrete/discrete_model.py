@@ -355,6 +355,14 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
+    def get_distribution(self, params, scale=None, exog=None):
+        """
+        After a model has been fit get_distribution returns simulated values at given values of exog.
+
+        This is a placeholder intended to be overwritten by individual models.
+        """
+        raise NotImplementedError
+
 class BinaryModel(DiscreteModel):
     def predict(self, params, exog=None, linear=False):
         """
@@ -383,6 +391,29 @@ class BinaryModel(DiscreteModel):
         else:
             return np.dot(exog, params)
 
+    def get_distribution(self, params, exog=None, scale=None):
+        """
+        Return a scipy.stats.distributions object that simulates data from the model.
+
+        Parameters
+        --------
+        params : array-like
+            The model parameters.
+        scale : scalar
+            The scale parameter, defaults to self.scale.
+        exog : array-like
+            The array of covariates, defaults to self.exog.
+
+        Returns
+        --------
+        A scipy.stats.distributions object at given covariate, scale, and parameter values.
+        """
+        if exog is None:
+            exog = self.model.exog
+        mean = self.predict(params=params, exog=exog)
+        rv = stats.bernoulli(mean)
+        return rv
+        
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,

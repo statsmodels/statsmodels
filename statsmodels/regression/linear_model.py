@@ -257,6 +257,33 @@ class RegressionModel(base.LikelihoodModel):
             exog = self.exog
         return np.dot(exog, params)
 
+    def get_distribution(self, params, exog=None, scale=1):
+        """
+        Return a scipy.stats.distributions object that simulates data from the model.
+
+        Parameters
+        --------
+        params : array-like
+            The model parameters.
+        scale : scalar
+            The scale parameter, defaults to 1.
+        exog : array-like
+            The array of covariates, defaults to self.exog.
+
+        Returns
+        --------
+        A scipy.stats.distributions object at given covariate, scale, and parameter values.
+
+        Notes
+        -----
+        If the model has not yet been fit, params is not optional.
+        """
+        if exog is None:
+            exog = self.model.exog
+        mean = self.predict(params=params, exog=exog)
+        rv = stats.norm(loc=mean, scale=scale)
+        return rv
+
 class GLS(RegressionModel):
     __doc__ = """
     Generalized least squares model with a general covariance structure.
