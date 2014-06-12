@@ -283,10 +283,6 @@ class RegressionModel(base.LikelihoodModel):
         mean = self.predict(params=params, exog=exog)
         rv = stats.norm(loc=mean, scale=scale)
         return rv
-#        rnum = []
-#        for m in mean:
-#            rnum.append(stats.norm.rvs(m,scale))
-#        return rnum
 
 class GLS(RegressionModel):
     __doc__ = """

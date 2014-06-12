@@ -663,7 +663,7 @@ class Results(object):
         self.model = model
         if hasattr(model, 'k_constant'):
             self.k_constant = model.k_constant
-            
+
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
         Call self.model.predict with self.params as the first argument.
