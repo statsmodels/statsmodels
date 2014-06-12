@@ -33,9 +33,6 @@ import operator
 import pandas as pd
 import numpy as np
 import patsy
-import sys
-#run from local directory
-sys.path.insert(0, "C:/Users/Frank/Documents/GitHub/statsmodels/")
 import statsmodels.api as sm
 
 class ImputedData(object):
