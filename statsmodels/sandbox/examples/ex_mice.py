@@ -3,8 +3,8 @@ import statsmodels.api as sm
 from statsmodels.sandbox.mice import mice
 import os
 
-curdir = os.getcwd()
-fn = os.path.join(curdir,"missingdata.csv")
+cur_dir = os.getcwd()
+fn = os.path.join(cur_dir,"missingdata.csv")
 data = pd.read_csv(fn)
 data.columns = ['x1','x2','x3']
 impdata = mice.ImputedData(data)

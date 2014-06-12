@@ -1424,8 +1424,6 @@ class LikelihoodModelResults(Results):
 
         from statsmodels.iolib.smpickle import load_pickle
         return load_pickle(fname)
-    
-
 
     def remove_data(self):
         '''remove data arrays, all nobs arrays from result and model
