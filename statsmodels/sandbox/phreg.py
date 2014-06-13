@@ -1,12 +1,11 @@
 import numpy as np
-from scipy import sparse
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import (cache_readonly,
       resettable_cache)
 
 
-class PH_SurvivalTime(object):
+class _PH_SurvivalTime(object):
 
     def __init__(self, time, status, exog, strata=None, entry=None):
         """
@@ -215,9 +214,9 @@ class PHreg(model.LikelihoodModel):
         if self.strata is not None:
             self.strata = np.asarray(self.strata)
 
-        self.surv = PH_SurvivalTime(self.endog, self.status,
-                                    self.exog, self.strata,
-                                    self.entry)
+        self.surv = _PH_SurvivalTime(self.endog, self.status,
+                                     self.exog, self.strata,
+                                     self.entry)
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
@@ -229,7 +228,7 @@ class PHreg(model.LikelihoodModel):
 
     def fit(self, **args):
 
-        rslts = model.LikelihoodModel.fit(self, **args)
+        rslts = super(PHreg, self).fit(**args)
 
         results = PHregResults(self, rslts.params, rslts.cov_params())
 
