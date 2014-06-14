@@ -63,7 +63,8 @@ class TestPHreg(object):
         strata = np.kron(range(5), np.ones(n/5))
 
         # No stratification or entry times
-        phrb = PHreg(time, exog, status, ties=ties).fit(**args)
+        mod = PHreg(time, exog, status, ties=ties)
+        phrb = mod.fit(**args)
         coef, se = get_results(n, p, None, ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
@@ -109,6 +110,7 @@ class TestPHreg(object):
 
     def test_missing(self):
 
+        np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
@@ -121,6 +123,22 @@ class TestPHreg(object):
         assert(len(md.endog) == 185)
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
+
+    def test_score_obs(self):
+
+        np.random.seed(34234)
+        time = 50 * np.random.uniform(size=200)
+        status = np.random.randint(0, 2, 200).astype(np.float64)
+        exog = np.random.normal(size=(200,4))
+
+        for method in "breslow", "efron":
+
+            mod = PHreg(time, exog, status, ties=method)
+            params = np.zeros(4, dtype=np.float64)
+            score = mod.score(params)
+            _, score_obs = mod.score_obs(params)
+
+            assert_almost_equal(score, score_obs.sum(0))
 
 
 if  __name__=="__main__":
