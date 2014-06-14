@@ -72,9 +72,10 @@ class _PH_SurvivalTime(object):
             sth = dict([(x, []) for x in stu])
             for i,k in enumerate(strata):
                 sth[k].append(i)
-            stratum_rows = [sth[k] for k in stu]
+            stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
         else:
             stratum_rows = [np.arange(len(time)),]
+        self.stratum_rows = stratum_rows
 
         # Split everything by stratum
         self.time_s = [time[ix] for ix in stratum_rows]
@@ -161,14 +162,16 @@ class _PH_SurvivalTime(object):
                 ix = np.searchsorted(uft, t)
                 risk_exit1[ix].append(i)
 
-            self.ufailt_ix.append(uft_ix)
-            self.risk_enter.append(risk_enter1)
-            self.risk_exit.append(risk_exit1)
+            self.ufailt_ix.append([np.asarray(x, dtype=np.int32) for x in uft_ix])
+            self.risk_enter.append([np.asarray(x, dtype=np.int32) for x in risk_enter1])
+            self.risk_exit.append([np.asarray(x, dtype=np.int32) for x in risk_exit1])
 
 
 
 class PHreg(model.LikelihoodModel):
-    """Cox proportional hazards regression model."""
+    """
+    Cox proportional hazards regression model.
+    """
 
     def __init__(self, endog, exog, status=None, entry=None,
                  strata=None, ties='breslow', missing='drop'):
@@ -234,32 +237,56 @@ class PHreg(model.LikelihoodModel):
 
         return results
 
-
-    def loglike(self, b):
+    def loglike(self, params):
+        """
+        Returns the log partial likelihood function evaluated at
+        `params`.
+        """
 
         if self.ties == "breslow":
-            return self.breslow_loglike(b)
+            return self.breslow_loglike(params)
         elif self.ties == "efron":
-            return self.efron_loglike(b)
+            return self.efron_loglike(params)
 
-
-    def score(self, b):
+    def score(self, params):
+        """
+        Returns the score function evaluated at `params`.
+        """
 
         if self.ties == "breslow":
-            return self.breslow_gradient(b)
+            return self.breslow_gradient(params)
         elif self.ties == "efron":
-            return self.efron_gradient(b)
+            return self.efron_gradient(params)
 
-
-    def hessian(self, b):
+    def score_obs(self, params):
+        """
+        Returns the score functions for individual observations,
+        evaluated at `params`.
+        """
 
         if self.ties == "breslow":
-            return self.breslow_hessian(b)
+            return self.breslow_gradient(params, True)
+        elif self.ties == "efron":
+            return self.efron_gradient(params, True)
+
+    def hessian(self, params):
+        """
+        Returns the Hessian matrix of the log partial likelihood
+        function evaluated at `params`.
+        """
+
+        if self.ties == "breslow":
+            return self.breslow_hessian(params)
         else:
-            return self.efron_hessian(b)
+            return self.efron_hessian(params)
 
 
-    def breslow_loglike(self, b):
+    def breslow_loglike(self, params):
+        """
+        Returns the value of the log partial likelihood function
+        evaluated at `params`, using the Breslow method to handle tied
+        times.
+        """
 
         surv = self.surv
 
@@ -269,12 +296,12 @@ class PHreg(model.LikelihoodModel):
         for stx in range(surv.nstrat):
 
             uft_ix = surv.ufailt_ix[stx]
-            exog1 = surv.exog_s[stx]
+            exog_s = surv.exog_s[stx]
             nuft = len(uft_ix)
 
-            linpred = np.dot(exog1, b)
+            linpred = np.dot(exog_s, params)
             linpred -= linpred.max()
-            elinpred = np.exp(linpred)
+            e_linpred = np.exp(linpred)
 
             xp0 = 0.
 
@@ -283,7 +310,7 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
-                xp0 += elinpred[ix].sum()
+                xp0 += e_linpred[ix].sum()
 
                 # Loop over all cases that fail at this point.
                 ix = uft_ix[i]
@@ -291,12 +318,17 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
-                xp0 -= elinpred[ix].sum()
+                xp0 -= e_linpred[ix].sum()
 
         return like
 
 
-    def efron_loglike(self, b):
+    def efron_loglike(self, params):
+        """
+        Returns the value of the log partial likelihood function
+        evaluated at `params`, using the Efron method to handle tied
+        times.
+        """
 
         surv = self.surv
 
@@ -305,11 +337,11 @@ class PHreg(model.LikelihoodModel):
         # Loop over strata
         for stx in range(surv.nstrat):
 
-            exog1 = surv.exog_s[stx]
-
-            linpred = np.dot(exog1, b)
+            # exog and linear predictor for this stratum
+            exog_s = surv.exog_s[stx]
+            linpred = np.dot(exog_s, params)
             linpred -= linpred.max()
-            elinpred = np.exp(linpred)
+            e_linpred = np.exp(linpred)
 
             xp0 = 0.
 
@@ -320,8 +352,8 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
-                xp0 += elinpred[ix].sum()
-                xp0f = elinpred[uft_ix[i]].sum()
+                xp0 += e_linpred[ix].sum()
+                xp0f = e_linpred[uft_ix[i]].sum()
 
                 # Consider all cases that fail at this point.
                 ix = uft_ix[i]
@@ -333,27 +365,33 @@ class PHreg(model.LikelihoodModel):
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
-                xp0 -= elinpred[ix].sum()
+                xp0 -= e_linpred[ix].sum()
 
         return like
 
-    def breslow_gradient(self, b):
+    def breslow_gradient(self, b, return_grad_obs=False):
 
         surv = self.surv
 
         grad = 0.
+        if return_grad_obs:
+            grad_obs = np.zeros(self.exog.shape, dtype=np.float64)
 
         # Loop over strata
         for stx in range(surv.nstrat):
 
+            # Indices of subjects in the stratum
+            strat_ix = surv.stratum_rows[stx]
+
+            # Unique failure times in the stratum
             uft_ix = surv.ufailt_ix[stx]
             nuft = len(uft_ix)
 
-            exog1 = surv.exog_s[stx]
-
-            linpred = np.dot(exog1, b)
+            # exog and linear predictor for the stratum
+            exog_s = surv.exog_s[stx]
+            linpred = np.dot(exog_s, b)
             linpred -= linpred.max()
-            elinpred = np.exp(linpred)
+            e_linpred = np.exp(linpred)
 
             xp0, xp1 = 0., 0.
 
@@ -363,37 +401,48 @@ class PHreg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
-                    v = exog1[ix,:]
-                    xp0 += elinpred[ix].sum()
-                    xp1 += (elinpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix,:]
+                    xp0 += e_linpred[ix].sum()
+                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
-                grad += (exog1[ix,:] - xp1 / xp0).sum(0)
+                grad += (exog_s[ix,:] - xp1 / xp0).sum(0)
+                if return_grad_obs:
+                    ii = strat_ix[ix]
+                    grad_obs[ii, :] = exog_s[ix, :] - xp1 / xp0
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
-                    v = exog1[ix,:]
-                    xp0 -= elinpred[ix].sum()
-                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix,:]
+                    xp0 -= e_linpred[ix].sum()
+                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
 
-        return grad
+        if return_grad_obs:
+            return grad, grad_obs
+        else:
+            return grad
 
-    def efron_gradient(self, b):
+    def efron_gradient(self, b, return_grad_obs=False):
 
         surv = self.surv
+        if return_grad_obs:
+            grad_obs = np.zeros(self.exog.shape, dtype=np.float64)
 
         grad = 0.
 
         # Loop over strata
         for stx in range(surv.nstrat):
 
-            exog1 = surv.exog_s[stx]
+            # Indices of cases in the stratum
+            strat_ix = surv.stratum_rows[stx]
 
-            linpred = np.dot(exog1, b)
+            # exog and linear predictor of the stratum
+            exog_s = surv.exog_s[stx]
+            linpred = np.dot(exog_s, b)
             linpred -= linpred.max()
-            elinpred = np.exp(linpred)
+            e_linpred = np.exp(linpred)
 
             xp0, xp1 = 0., 0.
 
@@ -405,32 +454,43 @@ class PHreg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
-                    v = exog1[ix,:]
-                    xp0 += elinpred[ix].sum()
-                    xp1 += (elinpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix,:]
+                    xp0 += e_linpred[ix].sum()
+                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
                 ixf = uft_ix[i]
                 if len(ixf) > 0:
-                    v = exog1[ixf,:]
-                    xp0f = elinpred[ixf].sum()
-                    xp1f = (elinpred[ixf][:,None] * v).sum(0)
+                    v = exog_s[ixf,:]
+                    xp0f = e_linpred[ixf].sum()
+                    xp1f = (e_linpred[ixf][:,None] * v).sum(0)
 
-                # Consider all cases that fail at this point.
-                grad += v.sum(0)
-                m = len(ixf)
+                    # Consider all cases that fail at this point.
+                    grad += v.sum(0)
+                    if return_grad_obs:
+                        ii = strat_ix[ixf]
+                        grad_obs[ii, :] += v
 
-                J = np.arange(m, dtype=np.float64) / m
-                numer = xp1 - np.outer(J, xp1f)
-                denom = xp0 - np.outer(J, xp0f)
-                grad -= (numer / denom).sum(0)
+                    m = len(ixf)
+                    J = np.arange(m, dtype=np.float64) / m
+                    numer = xp1 - np.outer(J, xp1f)
+                    denom = xp0 - np.outer(J, xp0f)
+                    ratio = numer / denom
+                    rsum = ratio.sum(0)
+                    grad -= rsum
+                    if return_grad_obs:
+                        ii = strat_ix[ixf]
+                        grad_obs[ii, :] -= rsum / m
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
-                    v = exog1[ix,:]
-                    xp0 -= elinpred[ix].sum()
-                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                    v = exog_s[ix,:]
+                    xp0 -= e_linpred[ix].sum()
+                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
 
-        return grad
+        if return_grad_obs:
+            return grad, grad_obs
+        else:
+            return grad
 
     def breslow_hessian(self, b):
 
@@ -444,11 +504,11 @@ class PHreg(model.LikelihoodModel):
             uft_ix = surv.ufailt_ix[stx]
             nuft = len(uft_ix)
 
-            exog1 = surv.exog_s[stx]
+            exog_s = surv.exog_s[stx]
 
-            linpred = np.dot(exog1, b)
+            linpred = np.dot(exog_s, b)
             linpred -= linpred.max()
-            elinpred = np.exp(linpred)
+            e_linpred = np.exp(linpred)
 
             xp0, xp1, xp2 = 0., 0., 0.
 
@@ -458,11 +518,11 @@ class PHreg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
-                    xp0 += elinpred[ix].sum()
-                    v = exog1[ix,:]
-                    xp1 += (elinpred[ix][:,None] * v).sum(0)
+                    xp0 += e_linpred[ix].sum()
+                    v = exog_s[ix,:]
+                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
                     mat = v[None,:,:]
-                    elx = elinpred[ix]
+                    elx = e_linpred[ix]
                     xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
 
                 # Account for all cases that fail at this point.
@@ -472,11 +532,11 @@ class PHreg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
-                    xp0 -= elinpred[ix].sum()
-                    v = exog1[ix,:]
-                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                    xp0 -= e_linpred[ix].sum()
+                    v = exog_s[ix,:]
+                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
                     mat = v[None,:,:]
-                    elx = elinpred[ix]
+                    elx = e_linpred[ix]
                     xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
 
         return -hess
@@ -490,11 +550,11 @@ class PHreg(model.LikelihoodModel):
         # Loop over strata
         for stx in range(surv.nstrat):
 
-            exog1 = surv.exog_s[stx]
+            exog_s = surv.exog_s[stx]
 
-            linpred = np.dot(exog1, b)
+            linpred = np.dot(exog_s, b)
             linpred -= linpred.max()
-            elinpred = np.exp(linpred)
+            e_linpred = np.exp(linpred)
 
             xp0, xp1, xp2 = 0., 0., 0.
 
@@ -506,19 +566,20 @@ class PHreg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_enter[stx][i]
                 if len(ix) > 0:
-                    xp0 += elinpred[ix].sum()
-                    v = exog1[ix,:]
-                    xp1 += (elinpred[ix][:,None] * v).sum(0)
+                    xp0 += e_linpred[ix].sum()
+                    v = exog_s[ix,:]
+                    xp1 += (e_linpred[ix][:,None] * v).sum(0)
                     mat = v[None,:,:]
-                    elx = elinpred[ix]
+                    elx = e_linpred[ix]
                     xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+
                 ixf = uft_ix[i]
                 if len(ixf) > 0:
-                    v = exog1[ixf,:]
-                    xp0f = elinpred[ixf].sum()
-                    xp1f = (elinpred[ixf][:,None] * v).sum(0)
+                    v = exog_s[ixf,:]
+                    xp0f = e_linpred[ixf].sum()
+                    xp1f = (e_linpred[ixf][:,None] * v).sum(0)
                     mat = v[None,:,:]
-                    elx = elinpred[ixf]
+                    elx = e_linpred[ixf]
                     xp2f = (mat.T * mat * elx[None,:,None]).sum(1)
 
                 # Account for all cases that fail at this point.
@@ -534,11 +595,11 @@ class PHreg(model.LikelihoodModel):
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
                 if len(ix) > 0:
-                    xp0 -= elinpred[ix].sum()
-                    v = exog1[ix,:]
-                    xp1 -= (elinpred[ix][:,None] * v).sum(0)
+                    xp0 -= e_linpred[ix].sum()
+                    v = exog_s[ix,:]
+                    xp1 -= (e_linpred[ix][:,None] * v).sum(0)
                     mat = v[None,:,:]
-                    elx = elinpred[ix]
+                    elx = e_linpred[ix]
                     xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
 
         return -hess
