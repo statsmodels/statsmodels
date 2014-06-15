@@ -37,8 +37,9 @@ import statsmodels.api as sm
 
 class ImputedData(object):
     __doc__= """
-    Stores missing data information and supports functionality for
-    inserting values in missing data slots. Can create Imputers directly via new_imputer method.
+    Stores missing data information and supports functionality for inserting
+    values in missing data slots. Can create Imputers directly via
+    new_imputer method.
 
     %(params)s
     data : array-like object
@@ -60,7 +61,9 @@ class ImputedData(object):
             self.columns[c] = MissingDataInfo(self.data[c])
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, formula=None, model_class=None, init_args={}, fit_args={}, scale_method="fix", scale_value=None):
+    def new_imputer(self, endog_name, formula=None, model_class=None,
+                    init_args={}, fit_args={}, scale_method="fix",
+                    scale_value=None):
         """
         Create Imputer instance from our ImputedData instance
 
@@ -69,7 +72,8 @@ class ImputedData(object):
         endog_name : string
             Name of the variable to be imputed.
         formula : string
-            Conditional formula for imputation. Defaults to model with main effects for all other variables in dataset.
+            Conditional formula for imputation. Defaults to model with main
+            effects for all other variables in dataset.
         model_class : statsmodels model
             Conditional model for imputation. Defaults to OLS.
         scale_method : string
@@ -89,11 +93,13 @@ class ImputedData(object):
             model_class = sm.OLS
         if formula is None:
             formula = endog_name + " ~ " + " + ".join([x for x in self.data.columns if x != endog_name])
-        return Imputer(formula, model_class, self, init_args=init_args, fit_args=fit_args, scale_method=scale_method,scale_value=scale_value)
+        return Imputer(formula, model_class, self, init_args=init_args,
+                       fit_args=fit_args, scale_method=scale_method,
+                       scale_value=scale_value)
 
     def store_changes(self, vals, col):
         """
-        Fill in dataset with imputed values
+        Fill in dataset with imputed values.
 
         Parameters
         ----------
@@ -105,12 +111,13 @@ class ImputedData(object):
 
         ix = self.columns[col].ix_miss
         self.data[col].iloc[ix] = vals
-    
+
     def get_data_from_formula(self, formula):
         """
         Use formula to construct endog and exog split by missing status.
+
         Called by Imputer before fitting model.
-        
+
         Parameters
         ----------
         formula : string
@@ -127,7 +134,7 @@ class ImputedData(object):
         exog_obs = exog.iloc[self.columns[endog_name].ix_obs]
         exog_miss = exog.iloc[self.columns[endog_name].ix_miss]
         return endog_obs, exog_obs, exog_miss
-        
+
 class Imputer(object):
 
     __doc__= """
@@ -173,13 +180,11 @@ class Imputer(object):
 
         Parameters
         ----------
-
         mdf : statsmodels fitted model
             Passed from Imputer object.
 
         Returns
         -------
-
         params : array
             Perturbed model parameters.
         scale_per : float
@@ -190,46 +195,50 @@ class Imputer(object):
         covmat_sqrt = np.linalg.cholesky(covmat)
         if self.scale_method == "fix":
             if self.scale_value is None:
-                scale_per = 1
+                scale_per = 1.
             else:
                 scale_per = self.scale_value
         elif self.scale_method == "perturb_chi2":
             u = np.random.chisquare(mdf.df_resid)
-            scale_per = mdf.df_resid/u
+            scale_per = mdf.df_resid / u
         elif self.scale_method == "perturb_boot":
             pass
         p = len(params)
-        params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
+        params += np.dot(covmat_sqrt,
+                         np.random.normal(0, mdf.scale * scale_per, p))
         return params, scale_per
 
     def impute_asymptotic_bayes(self):
         """
-        Use Gaussian approximation to posterior distribution to simulate data. Fills in values of input data.
+        Use Gaussian approximation to posterior distribution to simulate data.
+
+        Fills in values of input data.
         """
-        (endog_obs, exog_obs, exog_miss) = self.data.get_data_from_formula(self.formula)
+        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        new_rv = md.get_distribution(params=params, exog=exog_miss, scale=scale_per * mdf.scale)
+        new_rv = md.get_distribution(params=params, exog=exog_miss,
+                                     scale=scale_per * mdf.scale)
         new_endog = new_rv.rvs(size=len(exog_miss))
-        #stores in underlying data, may want to store in post patsy formula data?
         self.data.store_changes(new_endog, self.endog_name)
 
     def impute_pmm(self, pmm_neighbors):
         """
-        Use predictive mean matching to simulate data. Fills in values of input data.
+        Use predictive mean matching to simulate data.
+
+        Fills in values of input data.
 
         Parameters
         ----------
-
         pmm_neighbors : int
-            Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
+            Number of neighbors in prediction space to select imputations from.
+            Defaults to 1 (select closest neighbor).
         """
-        (endog_obs, exog_obs, exog_miss) = self.data.get_data_from_formula(self.formula)
+        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_param(mdf)
-        #exog = pd.concat([self.exog_obs, self.exog_miss]).sort_index()
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
         ii = np.argsort(pendog_obs, axis=0)
@@ -246,9 +255,11 @@ class Imputer(object):
 
 class ImputerChain(object):
     __doc__= """
-    Manage a collection of imputers for variables in a common dataframe.
-    This class does imputation and returns the imputed data sets, it does not fit
-    the analysis model. Meant to be used as an iterator for the MICE class.
+    An iterator that returns imputed data sets produced using the MICE
+    (multiple imputation by chained equations) procedure.
+
+    This class does imputation and returns the imputed data sets, it does not
+    fit the analysis model. See the "next" method for details.
 
     %(params)s
 
@@ -264,9 +275,11 @@ class ImputerChain(object):
     data : pandas DataFrame
         Underlying data to be modified.
 
-    Note: All imputers must refer to the same data object
+    Note: All imputers must refer to the same data object. See mice.MICE.run
+    for iterator call.
     """
-    def __init__(self, imputer_list, imputer_method="gaussian", pmm_neighbors=1):
+    def __init__(self, imputer_list, imputer_method="gaussian",
+                 pmm_neighbors=1):
         self.imputer_list = imputer_list
         #Impute variable with least missing observations first
         self.imputer_list.sort(key=operator.attrgetter('num_missing'))
@@ -281,12 +294,12 @@ class ImputerChain(object):
     def next(self):
         """
         Makes this class an iterator that returns imputed datasets after
-        cycling through all contained imputers. Not all returned datsets are
-        saved unless specified in the iterator call.
+        cycling through all contained imputers.
+
+        Returned datsets are not saved unless specified in the iterator call.
 
         Returns
         -------
-
         data : pandas DataFrame
             Dataset with imputed values saved after invoking each Imputer
             object in imputer_list.
@@ -304,17 +317,18 @@ class ImputerChain(object):
 
 class AnalysisChain(object):
     __doc__= """
-    Fits the model of analytical interest to each dataset.
+    An iterator that returns the fitted model of interest given a MICE imputed
+    dataset.
+
     Datasets to be used for analysis are chosen after an initial burnin period
     where no imputed data is used and also after skipping a set number of
-    imputations for each iteration. Meant to be used as an iterator
-    for the MICE class.
+    imputations for each iteration. See the "next" method for details.
 
-    Note: See mice.MICE and mice.MICE.combine
+    Note: See mice.MICE.run for iterator call.
     """
 
-    def __init__(self, imputer_chain, analysis_formula, analysis_class, skipnum=10,
-                 burnin=5, save=False, init_args={}, fit_args={}):
+    def __init__(self, imputer_chain, analysis_formula, analysis_class,
+                 skipnum=10, burnin=5, save=False, init_args={}, fit_args={}):
         self.imputer_chain = imputer_chain
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class
@@ -325,6 +339,8 @@ class AnalysisChain(object):
         self.burned = True
         self.save = save
         self.iter = 0
+        for b in range(self.burnin):
+            self.imputer_chain.next()
 
     def __iter__(self):
         return self
@@ -332,13 +348,13 @@ class AnalysisChain(object):
     def next(self):
         """
         Makes this class an iterator that returns the fitted analysis model.
+
         Handles skipping of imputation iterations, burnin period of
         unconsidered imputation iterations, and whether or not to save the
         datasets to which an analysis model is fit.
 
         Returns
         -------
-
         mdf : statsmodels fitted model
             Fitted model of interest on imputed dataset that has passed all
             skip and burnin criteria
@@ -346,20 +362,11 @@ class AnalysisChain(object):
         Note: If save option is True, imputed datasets are saved in the format
         "mice_'iteration number'.csv"
         """
-        scount = 0
-        while scount < self.skipnum:
-            if self.burned:
-                for b in range(self.burnin):
-                    self.imputer_chain.next()
-                self.burned = False
-            else:
-                scount += 1
-                if scount == self.skipnum:
-                    data = self.imputer_chain.next()
-                else:
-                    self.imputer_chain.next()
-            print scount
-        md = self.analysis_class.from_formula(self.analysis_formula, data, **self.init_args)
+        for i in range(self.skipnum):
+            data = self.imputer_chain.next()
+            print i
+        md = self.analysis_class.from_formula(self.analysis_formula,
+                                              data, **self.init_args)
         mdf = md.fit(**self.fit_args)
         if self.save:
             fname = "%s_%d.csv" % ('mice_', self.iter)
@@ -370,7 +377,9 @@ class AnalysisChain(object):
 class MICE(object):
     __doc__= """
     Fits the analysis model to each imputed dataset and combines the
-    results using Rubin's rule. Calls mice.Imputer_Chain and mice.AnalysisChain
+    results using Rubin's rule.
+
+    Calls mice.Imputer_Chain and mice.AnalysisChain
     to handle imputation and fitting of analysis models to the correct imputed
     datasets, respectively.
 
@@ -413,13 +422,14 @@ class MICE(object):
         self.init_args = init_args
         self.fit_args = fit_args
 
-    def run(self, iternum=20, skipnum=10, burnin=5, save=False, method="gaussian", k=1):
+    def run(self, num_ds=20, skipnum=10, burnin=5, save=False,
+            method="gaussian", k_pmm=1):
         """
         Generates analysis model results.
 
         Parameters
         ----------
-        iternum : int
+        num_ds : int
             Number of imputed datasets to fit.
         skipnum : int
             Number of imputed datasets to skip between imputed datasets that
@@ -435,24 +445,23 @@ class MICE(object):
         method : string
             Simulation method to use. May take on values "gaussian", "pmm",
             or "bootstrap".
-        k : int
+        k_pmm : int
             Number of neighbors to use for predictive mean matching (pmm).
 
         Returns
         -------
         md_list : list
-            List of length iternum of fitted analysis models.
+            List of length num_ds of fitted analysis models.
         """
-        self.iternum = iternum
-        imp_chain = ImputerChain(self.imputer_list, method, k)
-        analysis_chain = AnalysisChain(imp_chain, self.analysis_formula, self.analysis_class, skipnum, burnin,
+        self.num_ds = num_ds
+        imp_chain = ImputerChain(self.imputer_list, method, k_pmm)
+        analysis_chain = AnalysisChain(imp_chain, self.analysis_formula,
+                                       self.analysis_class, skipnum, burnin,
                                        save, self.init_args, self.fit_args)
         md_list = []
-        current_iter = 0
-        while current_iter < iternum:
+        for current_iter in range(num_ds):
             model = analysis_chain.next()
             md_list.append(model)
-            current_iter += 1
             print current_iter
         return md_list
 
@@ -480,23 +489,25 @@ class MICE(object):
             cov_list.append(np.array(md.normalized_cov_params))
             scale_list.append(md.scale)
         #Just chose last analysis model instance as a place to store results
-        md = md_list[len(md_list) - 1]
+        md = md_list[-1]
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
         within_g = np.mean(cov_list, axis=0)
         #Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g + (1 + 1/float(self.iternum)) * between_g
-        md._results.params = params
-        md._results.scale = scale
-        md._results.normalized_cov_params = cov_params
+        cov_params = within_g + (1 + 1/float(self.num_ds)) * between_g
+        rslt = md._results.__class__
+        rslt.params = params
+        rslt.scale = scale
+        rslt.normalized_cov_params = cov_params
         #Will have to modify more attributes of the model class returned
-        return md
+        return rslt
 
 class MissingDataInfo(object):
     __doc__="""
     Contains all the missing data information from the passed-in data object.
-    One for each column/variable!
+
+    An attribute for each column/variable in the dataset.
 
     %(params)s
 

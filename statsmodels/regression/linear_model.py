@@ -259,7 +259,7 @@ class RegressionModel(base.LikelihoodModel):
 
     def get_distribution(self, params, exog=None, scale=1):
         """
-        Return a scipy.stats.distributions object that simulates data from the model.
+        Return a scipy.stats.distributions object corresponding to the `endog` of this model.
 
         Parameters
         --------
