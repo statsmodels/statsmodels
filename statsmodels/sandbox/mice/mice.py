@@ -523,7 +523,10 @@ class MissingDataInfo(object):
 
     def __init__(self, data):
         null = pd.isnull(data)
-        self.ix_miss = np.flatnonzero(null)
         self.ix_obs = np.flatnonzero(~null)
+        if np.flatnonzero(null).size is 0:
+            self.ix_miss = [False]
+        else:
+            self.ix_miss = np.flatnonzero(null)
         if len(self.ix_obs) == 0:
             raise ValueError("Variable to be imputed has no observed values")
