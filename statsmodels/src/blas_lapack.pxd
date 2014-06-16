@@ -54,7 +54,7 @@ ctypedef int saxpy_t(
     int *incy             # The increment between elements of y (usually 1)
 )
 
-ctypedef np.float32_t sdot_t(
+ctypedef np.float64_t sdot_t(
     # Compute DDOT := x.T * y
     int *n,           # Length of vectors
     np.float32_t *x,  # Vector x, min(len(x)) = n
