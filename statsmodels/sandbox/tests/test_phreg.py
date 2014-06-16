@@ -25,12 +25,18 @@ def get_results(n, p, ext, ties):
     if ext is None:
         coef_name = "coef_%d_%d_%s" % (n, p, ties)
         se_name = "se_%d_%d_%s" % (n, p, ties)
+        time_name = "time_%d_%d_%s" % (n, p, ties)
+        hazard_name = "hazard_%d_%d_%s" % (n, p, ties)
     else:
         coef_name = "coef_%d_%d_%s_%s" % (n, p, ext, ties)
         se_name = "se_%d_%d_%s_%s" % (n, p, ext, ties)
+        time_name = "time_%d_%d_%s_%s" % (n, p, ext, ties)
+        hazard_name = "hazard_%d_%d_%s_%s" % (n, p, ext, ties)
     coef = getattr(survival_r_results, coef_name)
     se = getattr(survival_r_results, se_name)
-    return coef, se
+    time = getattr(survival_r_results, time_name)
+    hazard = getattr(survival_r_results, hazard_name)
+    return coef, se, time, hazard
 
 class TestPHreg(object):
 
@@ -65,28 +71,29 @@ class TestPHreg(object):
         # No stratification or entry times
         mod = PHreg(time, exog, status, ties=ties)
         phrb = mod.fit(**args)
-        coef, se = get_results(n, p, None, ties1)
-        assert_almost_equal(phrb.params, coef, decimal=4)
-        assert_almost_equal(phrb.bse, se, decimal=4)
+        coef_r, se_r, time_r, hazard_r = get_results(n, p, None, ties1)
+        assert_almost_equal(phrb.params, coef_r, decimal=4)
+        assert_almost_equal(phrb.bse, se_r, decimal=4)
+        #time_h, cumhaz, surv = phrb.baseline_hazard[0]
 
         # Entry times but no stratification
         phrb = PHreg(time, exog, status, entry=entry,
                      ties=ties).fit(**args)
-        coef, se = get_results(n, p, "et", ties1)
+        coef, se, time_r, hazard_r = get_results(n, p, "et", ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification but no entry times
         phrb = PHreg(time, exog, status, strata=strata,
                       ties=ties).fit(**args)
-        coef, se = get_results(n, p, "st", ties1)
+        coef, se, time_r, hazard_r = get_results(n, p, "st", ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification and entry times
         phrb = PHreg(time, exog, status, entry=entry,
                      strata=strata, ties=ties).fit(**args)
-        coef, se = get_results(n, p, "et_st", ties1)
+        coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
@@ -107,7 +114,6 @@ class TestPHreg(object):
                         yield self.do1, fname, ties, entry_f, \
                             strata_f
 
-
     def test_missing(self):
 
         np.random.seed(34234)
@@ -124,21 +130,40 @@ class TestPHreg(object):
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
 
-    def test_score_obs(self):
-
+    def test_post_estimation(self):
+        # All smoke tests
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        for method in "breslow", "efron":
+        mod = PHreg(time, exog, status)
+        rslt = mod.fit()
+        mart_resid = rslt.martingale_residuals
+        assert_almost_equal(np.abs(mart_resid).sum(), 114.572936009)
 
-            mod = PHreg(time, exog, status, ties=method)
-            params = np.zeros(4, dtype=np.float64)
-            score = mod.score(params)
-            _, score_obs = mod.score_obs(params)
+        w_avg = rslt.weighted_covariate_averages
+        assert_almost_equal(np.abs(w_avg[0]).sum(0),
+               np.r_[7.31008415, 9.77608674,10.89515885, 13.1106801])
 
-            assert_almost_equal(score, score_obs.sum(0))
+        bc_haz = rslt.baseline_cumulative_hazard
+        v = [np.mean(np.abs(x)) for x in bc_haz[0]]
+        w = np.r_[23.482841556421608, 0.44149255358417017,
+                  0.68660114081275281]
+        assert_almost_equal(v, w)
+
+        score_resid = rslt.score_residuals
+        v = np.r_[ 0.50924792, 0.4533952, 0.4876718, 0.5441128]
+        w = np.abs(score_resid).mean(0)
+        assert_almost_equal(v, w)
+
+        groups = np.random.randint(0, 3, 200)
+        mod = PHreg(time, exog, status, groups=groups)
+        rslt = mod.fit()
+        robust_cov = rslt.robust_covariance
+        v = np.r_[ 0.00429065, 0.0024262, 0.00239675, 0.00957032]
+        w = np.abs(robust_cov).mean(0)
+        assert_almost_equal(v, w)
 
 
 if  __name__=="__main__":
