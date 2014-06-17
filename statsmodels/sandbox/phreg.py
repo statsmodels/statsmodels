@@ -117,6 +117,8 @@ class PH_SurvivalTime(object):
             self.offset_s = []
             for stx in range(nstrat):
                 self.offset_s.append(offset[stratum_rows[stx]])
+        else:
+            self.offset_s = None
 
         # Split everything by stratum
         self.time_s = []
@@ -212,9 +214,9 @@ class PHreg(model.LikelihoodModel):
         The method used to handle tied times, must be either 'breslow'
         or 'efron'.
     groups : array-like
-        Labels indicating groups of observations that may be dependent,
-        used to calculate a robust covariance matrix for parameter
-        estimates.  Does not affect fitted values.
+        Labels indicating groups of observations that may be
+        dependent.  If present, the standard errors account for this
+        dependence. Does not affect fitted values.
     offset : array-like
         Array of offset values
     missing : string
@@ -264,8 +266,12 @@ class PHreg(model.LikelihoodModel):
             args['disp'] = False
         fit_rslts = super(PHreg, self).fit(**args)
 
-        results = PHregResults(self, fit_rslts.params,
-                               fit_rslts.cov_params())
+        if self.groups is None:
+            cov_params = fit_rslts.cov_params()
+        else:
+            cov_params = self.robust_covariance(fit_rslts.params)
+
+        results = PHregResults(self, fit_rslts.params, cov_params)
 
         return results
 
@@ -320,7 +326,7 @@ class PHreg(model.LikelihoodModel):
             nuft = len(uft_ix)
 
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -361,7 +367,7 @@ class PHreg(model.LikelihoodModel):
             # exog and linear predictor for this stratum
             exog_s = surv.exog_s[stx]
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -417,7 +423,7 @@ class PHreg(model.LikelihoodModel):
             # exog and linear predictor for the stratum
             exog_s = surv.exog_s[stx]
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -474,7 +480,7 @@ class PHreg(model.LikelihoodModel):
             # exog and linear predictor of the stratum
             exog_s = surv.exog_s[stx]
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -546,7 +552,7 @@ class PHreg(model.LikelihoodModel):
             exog_s = surv.exog_s[stx]
 
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -599,7 +605,7 @@ class PHreg(model.LikelihoodModel):
             exog_s = surv.exog_s[stx]
 
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -741,7 +747,7 @@ class PHreg(model.LikelihoodModel):
             xp0 = 0.
 
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -824,7 +830,7 @@ class PHreg(model.LikelihoodModel):
                                   dtype=np.float64)
 
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
@@ -883,7 +889,7 @@ class PHreg(model.LikelihoodModel):
             nuft = len(uft_ix)
 
             linpred = np.dot(exog_s, params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             e_linpred = np.exp(linpred)
 
@@ -961,7 +967,7 @@ class PHregResults(base.LikelihoodModelResults):
     **Attributes**
 
     model : class instance
-        Pointer to PHreg model instance that called fit.
+        PHreg model instance that called fit.
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
     params : array
@@ -983,28 +989,24 @@ class PHregResults(base.LikelihoodModelResults):
         super(PHregResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
 
-    def standard_errors(self, covariance_type="naive"):
-
-        if covariance_type == "naive" and self.model.groups is not None:
-            warnings.warn("When 'groups' is specified use covariance_type='robust' to obtain robust standard errors")
-
-        if covariance_type == "naive":
-            return np.sqrt(np.diag(self.cov_params()))
-        elif covariance_type == "robust":
-            return np.sqrt(np.diag(self.robust_covariance))
-        else:
-            raise ValueError("Unknown covariance type: %s" %
-                             covariance_type)
-
     @cache_readonly
-    def robust_covariance(self):
-        return self.model.robust_covariance(self.params)
+    def standard_errors(self):
+        """
+        Returns the standard errors of the parameter estimates.
+        """
+        return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
     def bse(self):
-        return self.standard_errors(self.covariance_type)
+        """
+        Returns the standard errors of the parameter estimates.
+        """
+        return self.standard_errors
 
     def _group_stats(self, groups):
+        """
+        Descriptive statistics of the groups.
+        """
         gsize = {}
         for x in groups:
             if x not in gsize:
@@ -1016,8 +1018,8 @@ class PHregResults(base.LikelihoodModelResults):
     @cache_readonly
     def weighted_covariate_averages(self):
         """
-        The average covariate values within the at-risk set, weighted
-        by hazard.
+        The average covariate values within the at-risk set at each
+        event time point, weighted by hazard.
         """
         return self.model.weighted_covariate_averages(self.params)
 
@@ -1067,7 +1069,7 @@ class PHregResults(base.LikelihoodModelResults):
             time_s = surv.time_s[stx]
 
             linpred = np.dot(exog_s, self.params)
-            if hasattr(surv, "offset_s"):
+            if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             e_linpred = np.exp(linpred)
 
@@ -1077,8 +1079,7 @@ class PHregResults(base.LikelihoodModelResults):
 
         return mart_resid
 
-    def summary(self, yname=None, xname=None, title=None,
-                covariance_type="naive", alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """
         Summarize the proportional hazards regression results.
 
@@ -1104,14 +1105,12 @@ class PHregResults(base.LikelihoodModelResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary
             results
-
         """
 
         from statsmodels.iolib import summary2
         from statsmodels.compat.collections import OrderedDict
         smry = summary2.Summary()
         float_format = "%8.3f"
-        self.covariance_type = covariance_type
 
         info = OrderedDict()
         info["Model:"] = "PH Reg"
@@ -1122,7 +1121,7 @@ class PHregResults(base.LikelihoodModelResults):
         info["Sample size:"] = str(len(self.model.endog))
         info["Num. events:"] = str(int(sum(self.model.status)))
 
-        if self.covariance_type == "robust":
+        if self.model.groups is not None:
             mn, mx, avg = self._group_stats(self.model.groups)
             info["Max. group size:"] = str(mx)
             info["Min. group size:"] = str(mn)
@@ -1131,14 +1130,20 @@ class PHregResults(base.LikelihoodModelResults):
         smry.add_dict(info, align='l', float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
-        param = param.rename(columns={"Coef.": "log HR", "Std.Err.": "log HR SE"})
+        param = param.rename(columns={"Coef.": "log HR",
+                                      "Std.Err.": "log HR SE"})
         param.insert(2, "HR", np.exp(param["log HR"]))
-        param.loc[:, "[0.025"] = np.exp(param.loc[:, "[0.025"])
-        param.loc[:, "0.975]"] = np.exp(param.loc[:, "0.975]"])
+        a = "[%.3f" % (alpha / 2)
+        param.loc[:, a] = np.exp(param.loc[:, a])
+        a = "%.3f]" % (1 - alpha / 2)
+        param.loc[:, a] = np.exp(param.loc[:, a])
         if xname != None:
             param.index = xname
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
         smry.add_text("Confidence intervals are for the hazard ratios")
+
+        if self.model.groups is not None:
+            smry.add_text("Standard errors account for dependence within groups")
 
         return smry

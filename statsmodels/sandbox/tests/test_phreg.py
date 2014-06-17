@@ -178,11 +178,21 @@ class TestPHreg(object):
         groups = np.random.randint(0, 3, 200)
         mod = PHreg(time, exog, status, groups=groups)
         rslt = mod.fit()
-        robust_cov = rslt.robust_covariance
+        robust_cov = rslt.cov_params()
         v = [0.00513432, 0.01278423, 0.00810427, 0.00293147]
         w = np.abs(robust_cov).mean(0)
         assert_almost_equal(v, w)
 
+    def test_summaryh(self):
+        # smoke test
+        np.random.seed(34234)
+        time = 50 * np.random.uniform(size=200)
+        status = np.random.randint(0, 2, 200).astype(np.float64)
+        exog = np.random.normal(size=(200,4))
+
+        mod = PHreg(time, exog, status)
+        rslt = mod.fit()
+        rslt.summary()
 
 if  __name__=="__main__":
 
