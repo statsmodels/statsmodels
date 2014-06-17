@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 from statsmodels.sandbox.mice import mice
-#import patsy
-#from numpy.testing import assert_almost_equal
 
 class TestMice(object):
 
@@ -18,13 +16,18 @@ class TestMice(object):
         endog_obs = np.asarray(endog_obs).flatten()
         exog_obs = np.asarray(exog_obs)[:,1:]
         exog_miss = np.asarray(exog_miss)[:,1:]
-        #test = patsy.dmatrices(formula, df)
         test_exog_obs = data[0:8,2:]
         test_exog_miss = data[-2:,2:]
         test_endog_obs = data[0:8,1]
         np.testing.assert_almost_equal(exog_obs, test_exog_obs)
         np.testing.assert_almost_equal(exog_miss, test_exog_miss)
         np.testing.assert_almost_equal(endog_obs, test_endog_obs)
+
+    def test_get_data_from_formula(self):
+
+    def test_get_data_from_formula(self):
+
+    def test_get_data_from_formula(self):
 
 if  __name__=="__main__":
 
