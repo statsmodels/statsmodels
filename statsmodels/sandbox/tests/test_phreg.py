@@ -130,8 +130,26 @@ class TestPHreg(object):
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
 
+    def test_offset(self):
+
+        np.random.seed(34234)
+        time = 50 * np.random.uniform(size=200)
+        status = np.random.randint(0, 2, 200).astype(np.float64)
+        exog = np.random.normal(size=(200,4))
+
+        mod1 = PHreg(time, exog, status)
+        rslt1 = mod1.fit()
+
+        offset = exog[:,0] * rslt1.params[0]
+        exog = exog[:, 1:]
+
+        mod2 = PHreg(time, exog, status, offset=offset)
+        rslt2 = mod2.fit()
+
+        assert_almost_equal(rslt2.params, rslt1.params[1:])
+
     def test_post_estimation(self):
-        # All smoke tests
+        # All regression tests
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
@@ -140,7 +158,7 @@ class TestPHreg(object):
         mod = PHreg(time, exog, status)
         rslt = mod.fit()
         mart_resid = rslt.martingale_residuals
-        assert_almost_equal(np.abs(mart_resid).sum(), 114.572936009)
+        assert_almost_equal(np.abs(mart_resid).sum(), 120.72475743348433)
 
         w_avg = rslt.weighted_covariate_averages
         assert_almost_equal(np.abs(w_avg[0]).sum(0),
@@ -161,7 +179,7 @@ class TestPHreg(object):
         mod = PHreg(time, exog, status, groups=groups)
         rslt = mod.fit()
         robust_cov = rslt.robust_covariance
-        v = np.r_[ 0.00429065, 0.0024262, 0.00239675, 0.00957032]
+        v = [0.00513432, 0.01278423, 0.00810427, 0.00293147]
         w = np.abs(robust_cov).mean(0)
         assert_almost_equal(v, w)
 

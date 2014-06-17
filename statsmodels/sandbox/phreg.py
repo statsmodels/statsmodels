@@ -20,7 +20,8 @@ http://data.princeton.edu/pop509/NonParametricSurvival.pdf
 
 class PH_SurvivalTime(object):
 
-    def __init__(self, time, status, exog, strata=None, entry=None):
+    def __init__(self, time, status, exog, strata=None, entry=None,
+                 offset=None):
         """
         Represent a collection of survival times with possible
         stratification and left truncation.  Various indexes needed
@@ -48,6 +49,8 @@ class PH_SurvivalTime(object):
             None, the entry time is treated as being zero, which
             gives no left truncation.  The entry time must be less
             than or equal to `time`.
+        offset : array-like
+            An optional array of offsets
 
         Notes
         ------
@@ -90,39 +93,43 @@ class PH_SurvivalTime(object):
             stratum_rows = [np.arange(len(time)),]
 
         # Remove strata with no events
-        status_s = [status[ix].astype(np.int32) for ix in stratum_rows]
-        ix = [i for i,x in enumerate(status_s) if x.sum() > 0]
+        ix = [i for i,ix in enumerate(stratum_rows) if status[ix].sum() > 0]
         stratum_rows = [stratum_rows[i] for i in ix]
-        self.stratum_rows = stratum_rows
-
-        # Split everything by stratum
-        self.time_s = [time[ix] for ix in stratum_rows]
-        self.exog_s = [exog[ix,:] for ix in stratum_rows]
-        self.entry_s = [entry[ix] for ix in stratum_rows]
-        self.status_s = [status[ix] for ix in stratum_rows]
 
         # The number of strata
-        nstrat = len(self.time_s)
+        nstrat = len(stratum_rows)
         self.nstrat = nstrat
 
         # Remove subjects whose entry time occurs after the last event
         # in their stratum.
-        for stx in range(nstrat):
-            last_failure = max(self.time_s[stx][self.status_s[stx]==1])
-            ii = [i for i,t in enumerate(self.entry_s[stx]) if
+        for stx,ix in enumerate(stratum_rows):
+            last_failure = max(time[ix][status[ix] == 1])
+            ii = [i for i,t in enumerate(entry[ix]) if
                   t < last_failure]
-            self.time_s[stx] = self.time_s[stx][ii]
-            self.status_s[stx] = self.status_s[stx][ii]
-            self.exog_s[stx] = self.exog_s[stx][ii,:]
-            self.entry_s[stx] = self.entry_s[stx][ii]
+            stratum_rows[stx] = stratum_rows[stx][ii]
 
         # Order by time within each stratum
-        for stx in range(nstrat):
-            ii = np.argsort(self.time_s[stx])
-            self.time_s[stx] = self.time_s[stx][ii]
-            self.status_s[stx] = self.status_s[stx][ii]
-            self.exog_s[stx] = self.exog_s[stx][ii,:]
-            self.entry_s[stx] = self.entry_s[stx][ii]
+        for stx,ix in enumerate(stratum_rows):
+            ii = np.argsort(time[ix])
+            stratum_rows[stx] = stratum_rows[stx][ii]
+
+        if offset is not None:
+            self.offset_s = []
+            for stx in range(nstrat):
+                self.offset_s.append(offset[stratum_rows[stx]])
+
+        # Split everything by stratum
+        self.time_s = []
+        self.exog_s = []
+        self.status_s = []
+        self.entry_s = []
+        for ix in stratum_rows:
+            self.time_s.append(time[ix])
+            self.exog_s.append(exog[ix,:])
+            self.status_s.append(status[ix])
+            self.entry_s.append(entry[ix])
+
+        self.stratum_rows = stratum_rows
 
         # Precalculate some indices needed to fit Cox models.
         # Distinct failure times within a stratum are always taken to
@@ -208,13 +215,15 @@ class PHreg(model.LikelihoodModel):
         Labels indicating groups of observations that may be dependent,
         used to calculate a robust covariance matrix for parameter
         estimates.  Does not affect fitted values.
+    offset : array-like
+        Array of offset values
     missing : string
         The method used to handle missing data
     """
 
     def __init__(self, endog, exog, status=None, entry=None,
-                 strata=None, ties='breslow', groups=None,
-                 missing='drop'):
+                 strata=None, groups=None, offset=None,
+                 ties='breslow', missing='drop'):
 
         # Default is no censoring
         if status is None:
@@ -222,7 +231,8 @@ class PHreg(model.LikelihoodModel):
 
         super(PHreg, self).__init__(endog, exog, status=status,
                                     entry=entry, strata=strata,
-                                    groups=groups, missing=missing)
+                                    groups=groups, offset=offset,
+                                    missing=missing)
 
         # endog and exog are automatically converted, but these are
         # not
@@ -234,10 +244,12 @@ class PHreg(model.LikelihoodModel):
             self.strata = np.asarray(self.strata)
         if self.groups is not None:
             self.groups = np.asarray(self.groups)
+        if self.offset is not None:
+            self.offset = np.asarray(self.offset)
 
         self.surv = PH_SurvivalTime(self.endog, self.status,
                                     self.exog, self.strata,
-                                    self.entry)
+                                    self.entry, self.offset)
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
@@ -308,6 +320,8 @@ class PHreg(model.LikelihoodModel):
             nuft = len(uft_ix)
 
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -347,6 +361,8 @@ class PHreg(model.LikelihoodModel):
             # exog and linear predictor for this stratum
             exog_s = surv.exog_s[stx]
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -401,6 +417,8 @@ class PHreg(model.LikelihoodModel):
             # exog and linear predictor for the stratum
             exog_s = surv.exog_s[stx]
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -456,6 +474,8 @@ class PHreg(model.LikelihoodModel):
             # exog and linear predictor of the stratum
             exog_s = surv.exog_s[stx]
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -526,6 +546,8 @@ class PHreg(model.LikelihoodModel):
             exog_s = surv.exog_s[stx]
 
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -577,6 +599,8 @@ class PHreg(model.LikelihoodModel):
             exog_s = surv.exog_s[stx]
 
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -717,6 +741,8 @@ class PHreg(model.LikelihoodModel):
             xp0 = 0.
 
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -798,6 +824,8 @@ class PHreg(model.LikelihoodModel):
                                   dtype=np.float64)
 
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
@@ -855,6 +883,8 @@ class PHreg(model.LikelihoodModel):
             nuft = len(uft_ix)
 
             linpred = np.dot(exog_s, params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             e_linpred = np.exp(linpred)
 
             xp0 = 0.
@@ -1037,6 +1067,8 @@ class PHregResults(base.LikelihoodModelResults):
             time_s = surv.time_s[stx]
 
             linpred = np.dot(exog_s, self.params)
+            if hasattr(surv, "offset_s"):
+                linpred += surv.offset_s[stx]
             e_linpred = np.exp(linpred)
 
             ii = surv.stratum_rows[stx]
