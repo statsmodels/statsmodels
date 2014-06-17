@@ -2,11 +2,10 @@ import numpy as np
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
-import warnings
 
 """
-Implementation of proportional hazards regression models for data that
-may be censored ("Cox models").
+Implementation of proportional hazards regression models for duration
+data that may be censored ("Cox models").
 
 References
 ---------
@@ -15,6 +14,10 @@ http://www.mayo.edu/research/documents/biostat-58pdf/DOC-10027288
 
 G Rodriguez (2005).  Non-parametric estimation in survival models.
 http://data.princeton.edu/pop509/NonParametricSurvival.pdf
+
+B Gillespie (2006).  Checking the assumptions in the Cox proportional
+hazards model.
+http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
 
@@ -1047,9 +1050,48 @@ class PHregResults(base.LikelihoodModelResults):
         return self.model.baseline_cumulative_hazard_function(self.params)
 
     @cache_readonly
+    def schoenfeld_residuals(self):
+        """
+        A matrix containing the Schoenfeld residuals.
+
+        Notes
+        -----
+        Schoenfeld residuals for censored observations are set to zero.
+        """
+
+        surv = self.model.surv
+        w_avg = self.weighted_covariate_averages
+
+        # Initialize at NaN since rows that belong to strata with no
+        # events have undefined residuals.
+        sch_resid = np.nan*np.ones(self.model.exog.shape, dtype=np.float64)
+
+        # Loop over strata
+        for stx in range(surv.nstrat):
+
+            uft = surv.ufailt[stx]
+            exog_s = surv.exog_s[stx]
+            time_s = surv.time_s[stx]
+            strat_ix = surv.stratum_rows[stx]
+
+            ii = np.searchsorted(uft, time_s)
+
+            # These subjects are censored after the last event in
+            # their stratum, so have empty risk sets and undefined
+            # residuals.
+            jj = np.flatnonzero(ii < len(uft))
+
+            sch_resid[strat_ix[jj], :] = exog_s[jj, :] - w_avg[stx][ii[jj], :]
+
+        jj = np.flatnonzero(self.model.status == 0)
+        sch_resid[jj, :] = np.nan
+
+        return sch_resid
+
+    @cache_readonly
     def martingale_residuals(self):
         """
-        A matrix containing the martingale residuals.
+        The martingale residuals.
         """
 
         surv = self.model.surv
