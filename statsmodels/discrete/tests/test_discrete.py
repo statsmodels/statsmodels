@@ -378,7 +378,7 @@ class TestProbitCG(CheckBinaryResults):
                                                      maxiter=500, gtol=1e-08,
                                                      disp=0)
 
-        assert_array_less(cls.res1.mle_retvals['fcalls'], 70)
+        assert_array_less(cls.res1.mle_retvals['fcalls'], 100)
 
 
 class TestProbitNCG(CheckBinaryResults):
