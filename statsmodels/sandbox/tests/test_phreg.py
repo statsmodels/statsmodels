@@ -183,6 +183,12 @@ class TestPHreg(object):
         w = np.abs(robust_cov).mean(0)
         assert_almost_equal(v, w)
 
+        s_resid = rslt.schoenfeld_residuals
+        ii = np.flatnonzero(np.isfinite(s_resid).all(1))
+        s_resid = s_resid[ii, :]
+        v = np.r_[0.85154336, 0.72993748, 0.73758071, 0.78599333]
+        assert_almost_equal(np.abs(s_resid).mean(0), v)
+
     def test_summaryh(self):
         # smoke test
         np.random.seed(34234)
