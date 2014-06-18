@@ -174,7 +174,7 @@ class Imputer(object):
         self.scale_method = scale_method
         self.scale_value = scale_value
 
-    def perturb_param(self, mdf):
+    def perturb_params(self, mdf):
         """
         Perturbs the model's scale and fit parameters.
 
@@ -217,7 +217,7 @@ class Imputer(object):
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params, scale_per = self.perturb_param(mdf)
+        params, scale_per = self.perturb_params(mdf)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
                                      scale=scale_per * mdf.scale)
         new_endog = new_rv.rvs(size=len(exog_miss))
@@ -238,7 +238,7 @@ class Imputer(object):
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params, scale_per = self.perturb_param(mdf)
+        params, scale_per = self.perturb_params(mdf)
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
         ii = np.argsort(pendog_obs, axis=0)
