@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from statsmodels.compat.python import StringIO
 
 import numpy as np
@@ -92,6 +94,46 @@ class TestAnovaLM(object):
         np.testing.assert_almost_equal(results['F'].values, f_value, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, pr_f)
 
+
+class TestAnovaLMNoconstant(object):
+    @classmethod
+    def setupClass(cls):
+        # kidney data taken from JT's course
+        # don't know the license
+        kidney_table.seek(0)
+        cls.data = read_table(kidney_table, sep="\s+")
+        cls.kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight) - 1',
+                        data=cls.data).fit()
+
+    def test_results(self):
+        Df = np.array([2, 2, 2, 54])
+        sum_sq = np.array([158.6415227, 16.97129, 0.6356584, 28.9892])
+        mean_sq = np.array([79.3207613, 8.485645, 0.3178292, 0.536837])
+        f_value = np.array([147.7557648, 15.80674, 0.5920404, np.nan])
+        pr_f = np.array([1.262324e-22, 3.944502e-06, 0.5567479, np.nan])
+
+        results = anova_lm(self.kidney_lm)
+        np.testing.assert_equal(results['df'].values, Df)
+        np.testing.assert_almost_equal(results['sum_sq'].values, sum_sq, 4)
+        np.testing.assert_almost_equal(results['F'].values, f_value, 4)
+        np.testing.assert_almost_equal(results['PR(>F)'].values, pr_f)
+
+        # > sum2.lm = lm(logDays ~ Duration * Weight - 1, contrasts=list(Duration=contr.sum, Weight=contr.sum))
+        # > anova.lm.sum2 <- anova(sum2.lm)
+        # > anova.lm.sum2
+        # Analysis of Variance Table
+        #
+        # Response: logDays
+        #                 Df  Sum Sq Mean Sq F value    Pr(>F)
+        # Duration         2 158.642  79.321 147.756 < 2.2e-16 ***
+        # Weight           2  16.971   8.486  15.807 3.945e-06 ***
+        # Duration:Weight  2   0.636   0.318   0.592    0.5567
+        # Residuals       54  28.989   0.537
+        # ---
+        # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+
 class TestAnovaLMCompare(TestAnovaLM):
     def test_results(self):
         new_model = ols("np.log(Days+1) ~ C(Duration) + C(Weight)",
@@ -124,6 +166,40 @@ class TestAnovaLMCompare(TestAnovaLM):
         np.testing.assert_almost_equal(results["F"].values, F)
         np.testing.assert_almost_equal(results["Pr(>F)"].values, PrF)
 
+
+class TestAnovaLMCompareNoconstant(TestAnovaLM):
+    def test_results(self):
+        new_model = ols("np.log(Days+1) ~ C(Duration) + C(Weight) - 1",
+                        self.data).fit()
+        results = anova_lm(new_model, self.kidney_lm)
+
+        Res_Df = np.array([
+             56, 54
+            ])
+        RSS = np.array([
+             29.62486, 28.9892
+            ])
+        Df = np.array([
+             0, 2
+            ])
+        Sum_of_Sq = np.array([
+             np.nan, 0.6356584
+            ])
+        F = np.array([
+             np.nan, 0.5920404
+            ])
+        PrF = np.array([
+             np.nan, 0.5567479
+            ])
+
+        np.testing.assert_equal(results["df_resid"].values, Res_Df)
+        np.testing.assert_almost_equal(results["ssr"].values, RSS, 4)
+        np.testing.assert_almost_equal(results["df_diff"].values, Df)
+        np.testing.assert_almost_equal(results["ss_diff"].values, Sum_of_Sq)
+        np.testing.assert_almost_equal(results["F"].values, F)
+        np.testing.assert_almost_equal(results["Pr(>F)"].values, PrF)
+
+
 class TestAnova2(TestAnovaLM):
     # drop some observations to make an unbalanced, disproportionate panel
     # to make sure things are okay
@@ -150,6 +226,48 @@ class TestAnova2(TestAnovaLM):
         np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
         np.testing.assert_almost_equal(results['F'].values, F_value, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
+
+
+class TestAnova2Noconstant(TestAnovaLM):
+    # drop some observations to make an unbalanced, disproportionate panel
+    # to make sure things are okay
+    def test_results(self):
+        data = self.data.drop([0,1,2])
+        anova_ii = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum) - 1",
+                                data).fit()
+
+        Sum_Sq = np.array([
+             154.7131692, 13.27205, 0.1905093, 27.60181
+            ])
+        Df = np.array([
+             2, 2, 2, 51
+            ])
+        F_value = np.array([
+             142.9321191, 12.26141, 0.1760025, np.nan
+            ])
+        PrF = np.array([
+             1.238624e-21, 4.487909e-05, 0.8391231, np.nan
+            ])
+
+        results = anova_lm(anova_ii, typ="II")
+        np.testing.assert_equal(results['df'].values, Df)
+        np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
+        np.testing.assert_almost_equal(results['F'].values, F_value, 4)
+        np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
+
+        # > sum2.lm.dropped <- lm(logDays ~ Duration * Weight - 1,  dta.dropped,
+        #                 contrasts=list(Duration=contr.sum, Weight=contr.sum))
+        # > anova.ii.dropped2 <- Anova(sum2.lm.dropped, type='II')
+        # > anova.ii.dropped2
+        # Anova Table (Type II tests)
+        #
+        # Response: logDays
+        #                  Sum Sq Df F value    Pr(>F)
+        # Duration        154.713  2 142.932 < 2.2e-16 ***
+        # Weight           13.272  2  12.261 4.488e-05 ***
+        # Duration:Weight   0.191  2   0.176    0.8391
+        # Residuals        27.602 51
+
 
 class TestAnova2HC0(TestAnovaLM):
     #NOTE: R doesn't return SSq with robust covariance. Why?
