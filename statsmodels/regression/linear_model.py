@@ -2115,7 +2115,7 @@ class OLSResults(RegressionResults):
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts() # to store weights
         if len(param_nums) == len(params):
-            llr = opt_fun_inst._opt_nuis_regress(b0_vals,
+            llr = opt_fun_inst._opt_nuis_regress([],
                                     param_nums=param_nums,
                                     endog=self.model.endog,
                                     exog=self.model.exog,
