@@ -97,8 +97,9 @@ class ContrastResults(object):
             if xname is None:
                 xname = ['c%d'%ii for ii in range(len(self.effect))]
             from statsmodels.iolib.summary import summary_params
+            pvalues = np.atleast_1d(self.pvalue)
             summ = summary_params((self, self.effect, self.sd, self.statistic,
-                                   self.pvalue, self.conf_int(alpha)),
+                                   pvalues, self.conf_int(alpha)),
                                   yname=yname, xname=xname, use_t=use_t,
                                   title=title)
             return summ
