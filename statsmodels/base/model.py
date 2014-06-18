@@ -927,7 +927,8 @@ class LikelihoodModelResults(Results):
         else:
             dot_fun = np.dot
 
-        if cov_p is None and self.normalized_cov_params is None:
+        if (cov_p is None and self.normalized_cov_params is None and
+            not hasattr(self, 'cov_params_default')):
             raise ValueError('need covariance of parameters for computing '
                              '(unnormalized) covariances')
         if column is not None and (r_matrix is not None or other is not None):
@@ -937,11 +938,11 @@ class LikelihoodModelResults(Results):
             raise ValueError('other can only be specified with r_matrix')
 
         if cov_p is None:
-            if scale is None:
-                scale = self.scale
             if hasattr(self, 'cov_params_default'):
                 cov_p = self.cov_params_default
             else:
+                if scale is None:
+                    scale = self.scale
                 cov_p = self.normalized_cov_params * scale
 
         if column is not None:
