@@ -57,8 +57,12 @@ class PH_SurvivalTime(object):
 
         Notes
         ------
-        time, event, strata, entry, and the first dimension of exog
-        all must have the same length
+        Proportional hazards regression models should not include an
+        explicit or implicit intercept.  The effect of an intercept is
+        not identified using the partial likelihood approach.
+
+        `endog`, `event`, `strata`, `entry`, and the first dimension
+        of `exog` all must have the same length
         """
 
         # Default strata
@@ -216,10 +220,6 @@ class PHreg(model.LikelihoodModel):
     ties : string
         The method used to handle tied times, must be either 'breslow'
         or 'efron'.
-    groups : array-like
-        Labels indicating groups of observations that may be
-        dependent.  If present, the standard errors account for this
-        dependence. Does not affect fitted values.
     offset : array-like
         Array of offset values
     missing : string
@@ -227,8 +227,8 @@ class PHreg(model.LikelihoodModel):
     """
 
     def __init__(self, endog, exog, status=None, entry=None,
-                 strata=None, groups=None, offset=None,
-                 ties='breslow', missing='drop'):
+                 strata=None, offset=None, ties='breslow',
+                 missing='drop'):
 
         # Default is no censoring
         if status is None:
@@ -236,8 +236,7 @@ class PHreg(model.LikelihoodModel):
 
         super(PHreg, self).__init__(endog, exog, status=status,
                                     entry=entry, strata=strata,
-                                    groups=groups, offset=offset,
-                                    missing=missing)
+                                    offset=offset, missing=missing)
 
         # endog and exog are automatically converted, but these are
         # not
@@ -247,8 +246,6 @@ class PHreg(model.LikelihoodModel):
             self.entry = np.asarray(self.entry)
         if self.strata is not None:
             self.strata = np.asarray(self.strata)
-        if self.groups is not None:
-            self.groups = np.asarray(self.groups)
         if self.offset is not None:
             self.offset = np.asarray(self.offset)
 
@@ -263,7 +260,25 @@ class PHreg(model.LikelihoodModel):
 
         self.ties = ties
 
-    def fit(self, **args):
+    def fit(self, groups=None, **args):
+        """
+        Fit a proportional hazards regression model.
+
+        Parameters
+        ----------
+        groups : array-like
+            Labels indicating groups of observations that may be
+            dependent.  If present, the standard errors account for
+            this dependence. Does not affect fitted values.
+
+        Returns a PHregResults instance.
+        """
+
+        # TODO process for missing values
+        if groups is not None:
+            self.groups = np.asarray(groups)
+        else:
+            self.groups = None
 
         if 'disp' not in args:
             args['disp'] = False
