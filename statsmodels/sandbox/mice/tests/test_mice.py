@@ -50,6 +50,13 @@ class TestMice(object):
         np.testing.assert_almost_equal(params, params_test)
         np.testing.assert_almost_equal(scale_per, scale_test)
 
+    def test_impute_asymptotic_bayes(self):
+        np.random.seed(1325)
+        data = np.random.normal(size=(10,4))
+        data[8:, 1] = np.nan
+        df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
+        imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
+        
 if  __name__=="__main__":
 
     import nose
