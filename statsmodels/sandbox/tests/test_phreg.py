@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 import os
 import numpy as np
 from statsmodels.sandbox.phreg import PHreg
@@ -176,8 +179,8 @@ class TestPHreg(object):
         assert_almost_equal(v, w)
 
         groups = np.random.randint(0, 3, 200)
-        mod = PHreg(time, exog, status, groups=groups)
-        rslt = mod.fit()
+        mod = PHreg(time, exog, status)
+        rslt = mod.fit(groups=groups)
         robust_cov = rslt.cov_params()
         v = [0.00513432, 0.01278423, 0.00810427, 0.00293147]
         w = np.abs(robust_cov).mean(0)
