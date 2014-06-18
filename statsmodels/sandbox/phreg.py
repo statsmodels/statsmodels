@@ -84,6 +84,8 @@ class PH_SurvivalTime(object):
             raise ValueError("endog must be non-negative")
         if min(entry) < 0:
             raise ValueError("entry time must be non-negative")
+
+        # In Stata, this is entry >= time, in R it is >.
         if np.any(entry > time):
             raise ValueError("entry times may not occur " +
                              "after event or censoring times")
@@ -111,8 +113,19 @@ class PH_SurvivalTime(object):
         # in their stratum.
         for stx,ix in enumerate(stratum_rows):
             last_failure = max(time[ix][status[ix] == 1])
+
+            # Stata uses < here, R uses <=
             ii = [i for i,t in enumerate(entry[ix]) if
-                  t < last_failure]
+                  t <= last_failure]
+            stratum_rows[stx] = stratum_rows[stx][ii]
+
+        # Remove subjects who are censored before the first event in
+        # their stratum.
+        for stx,ix in enumerate(stratum_rows):
+            first_failure = min(time[ix][status[ix] == 1])
+
+            ii = [i for i,t in enumerate(time[ix]) if
+                  t >= first_failure]
             stratum_rows[stx] = stratum_rows[stx][ii]
 
         # Order by time within each stratum
@@ -126,6 +139,9 @@ class PH_SurvivalTime(object):
                 self.offset_s.append(offset[stratum_rows[stx]])
         else:
             self.offset_s = None
+
+        # Number of informative subjects
+        self.n_obs = sum([len(ix) for ix in stratum_rows])
 
         # Split everything by stratum
         self.time_s = []
@@ -1175,7 +1191,7 @@ class PHregResults(base.LikelihoodModelResults):
             yname = self.model.endog_names
         info["Dependent variable:"] = yname
         info["Ties:"] = self.model.ties.capitalize()
-        info["Sample size:"] = str(len(self.model.endog))
+        info["Sample size:"] = str(self.model.surv.n_obs)
         info["Num. events:"] = str(int(sum(self.model.status)))
 
         if self.model.groups is not None:
