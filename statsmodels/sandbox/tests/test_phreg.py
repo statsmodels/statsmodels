@@ -1,10 +1,10 @@
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
-
 import os
 import numpy as np
 from statsmodels.sandbox.phreg import PHreg
 from numpy.testing import assert_almost_equal
+
+# TODO: Include some corner cases: data sets with empty strata, strata
+#      with no events, entry times after censoring times, etc.
 
 # All the R results
 from . import survival_r_results
