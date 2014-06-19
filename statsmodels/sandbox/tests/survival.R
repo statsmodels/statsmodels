@@ -27,26 +27,41 @@ for (ix in ixd) {
         # Base model
         surv = Surv(time, status)
         md = coxph(surv ~ exog, ties=ties)
-        res[[sprintf("coef_%d_%d_%s", n, p, ti)]] = md$coef
-        res[[sprintf("se_%d_%d_%s", n, p, ti)]] = sqrt(diag(md$var))
+        tag = sprintf("%d_%d_%s", n, p, ti)
+        res[[sprintf("coef_%s", tag)]] = md$coef
+        res[[sprintf("se_%s", tag)]] = sqrt(diag(md$var))
+        #bhaz = basehaz(md)
+        bhaz = survfit(md, type="aalen")
+        #bhaz = survfit(md, type="efron")
+        res[[sprintf("time_%s", tag)]] = bhaz$time
+        res[[sprintf("hazard_%s", tag)]] = -log(bhaz$surv)
 
         # With entry time
         surv = Surv(entry, time, status)
         md = coxph(surv ~ exog, ties=ties)
-        res[[sprintf("coef_%d_%d_et_%s", n, p, ti)]] = md$coef
-        res[[sprintf("se_%d_%d_et_%s", n, p, ti)]] = sqrt(diag(md$var))
+        tag = sprintf("%d_%d_et_%s", n, p, ti)
+        res[[sprintf("coef_%s", tag)]] = md$coef
+        res[[sprintf("se_%s", tag)]] = sqrt(diag(md$var))
+        res[[sprintf("time_%s", tag)]] = c(0)
+        res[[sprintf("hazard_%s", tag)]] = c(0)
 
         # With strata
         surv = Surv(time, status)
         md = coxph(surv ~ exog + strata(strata), ties=ties)
-        res[[sprintf("coef_%d_%d_st_%s", n, p, ti)]] = md$coef
-        res[[sprintf("se_%d_%d_st_%s", n, p, ti)]] = sqrt(diag(md$var))
+        tag = sprintf("%d_%d_st_%s", n, p, ti)
+        res[[sprintf("coef_%s", tag)]] = md$coef
+        res[[sprintf("se_%s", tag)]] = sqrt(diag(md$var))
+        res[[sprintf("time_%s", tag)]] = c(0)
+        res[[sprintf("hazard_%s", tag)]] = c(0)
 
         # With entry time and strata
         surv = Surv(entry, time, status)
         md = coxph(surv ~ exog + strata(strata), ties=ties)
-        res[[sprintf("coef_%d_%d_et_st_%s", n, p, ti)]] = md$coef
-        res[[sprintf("se_%d_%d_et_st_%s", n, p, ti)]] = sqrt(diag(md$var))
+        tag = sprintf("%d_%d_et_st_%s", n, p, ti)
+        res[[sprintf("coef_%s", tag)]] = md$coef
+        res[[sprintf("se_%s", tag)]] = sqrt(diag(md$var))
+        res[[sprintf("time_%s", tag)]] = c(0)
+        res[[sprintf("hazard_%s", tag)]] = c(0)
     }
 }
 
