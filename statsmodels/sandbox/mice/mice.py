@@ -223,7 +223,7 @@ class Imputer(object):
         new_endog = new_rv.rvs(size=len(exog_miss))
         self.data.store_changes(new_endog, self.endog_name)
 
-    def impute_pmm(self, pmm_neighbors):
+    def impute_pmm(self, pmm_neighbors=1):
         """
         Use predictive mean matching to simulate data.
 

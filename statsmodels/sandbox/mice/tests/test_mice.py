@@ -56,6 +56,17 @@ class TestMice(object):
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
+        imputer.impute_asymptotic_bayes()
+        np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),np.asarray([-0.82292821, -0.22632992]))
+        
+    def test_impute_pmm(self):
+        np.random.seed(1325)
+        data = np.random.normal(size=(10,4))
+        data[8:, 1] = np.nan
+        df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
+        imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
+        imputer.impute_pmm()
+        np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),np.asarray([-0.77954822, -0.77954822]))
         
 if  __name__=="__main__":
 
