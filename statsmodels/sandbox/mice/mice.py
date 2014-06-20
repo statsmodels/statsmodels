@@ -163,7 +163,7 @@ class Imputer(object):
         Number of missing values.
     """
     def __init__(self, formula, model_class, data, init_args={}, fit_args={},
-                 scale_method="fix", scale_value=None):
+                 return_class=None, scale_method="fix", scale_value=None):
         self.data = data
         self.formula = formula
         self.model_class = model_class
@@ -171,6 +171,7 @@ class Imputer(object):
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
         self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
+        self.return_class = return_class
         self.scale_method = scale_method
         self.scale_value = scale_value
 
@@ -219,6 +220,7 @@ class Imputer(object):
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
+                                     model_class = self.return_class,
                                      scale=scale_per * mdf.scale)
         new_endog = new_rv.rvs(size=len(exog_miss))
         self.data.store_changes(new_endog, self.endog_name)
