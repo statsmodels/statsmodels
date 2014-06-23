@@ -8,7 +8,7 @@ Implementation of proportional hazards regression models for duration
 data that may be censored ("Cox models").
 
 References
----------
+----------
 T Therneau (1996).  Extending the Cox model.  Technical report.
 http://www.mayo.edu/research/documents/biostat-58pdf/DOC-10027288
 
@@ -27,9 +27,7 @@ class PH_SurvivalTime(object):
                  offset=None):
         """
         Represent a collection of survival times with possible
-        stratification and left truncation.  Various indexes needed
-        for fitting proportional hazards regression models are
-        precalculated.
+        stratification and left truncation.
 
         Parameters
         ----------
@@ -54,20 +52,11 @@ class PH_SurvivalTime(object):
             than or equal to `time`.
         offset : array-like
             An optional array of offsets
-
-        Notes
-        ------
-        Proportional hazards regression models should not include an
-        explicit or implicit intercept.  The effect of an intercept is
-        not identified using the partial likelihood approach.
-
-        `endog`, `event`, `strata`, `entry`, and the first dimension
-        of `exog` all must have the same length
         """
 
         # Default strata
         if strata is None:
-            strata = np.zeros(len(time))
+            strata = np.zeros(len(time), dtype=np.int32)
 
         # Default entry times
         if entry is None:
@@ -98,12 +87,15 @@ class PH_SurvivalTime(object):
             for i,k in enumerate(strata):
                 sth[k].append(i)
             stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
+            stratum_names = stu
         else:
             stratum_rows = [np.arange(len(time)),]
+            stratum_names = [0,]
 
         # Remove strata with no events
         ix = [i for i,ix in enumerate(stratum_rows) if status[ix].sum() > 0]
         stratum_rows = [stratum_rows[i] for i in ix]
+        stratum_names = [stratum_names[i] for i in ix]
 
         # The number of strata
         nstrat = len(stratum_rows)
@@ -155,6 +147,7 @@ class PH_SurvivalTime(object):
             self.entry_s.append(entry[ix])
 
         self.stratum_rows = stratum_rows
+        self.stratum_names = stratum_names
 
         # Precalculate some indices needed to fit Cox models.
         # Distinct failure times within a stratum are always taken to
@@ -240,6 +233,15 @@ class PHreg(model.LikelihoodModel):
         Array of offset values
     missing : string
         The method used to handle missing data
+
+    Notes
+    -----
+    Proportional hazards regression models should not include an
+    explicit or implicit intercept.  The effect of an intercept is
+    not identified using the partial likelihood approach.
+
+    `endog`, `event`, `strata`, `entry`, and the first dimension
+    of `exog` all must have the same length
     """
 
     def __init__(self, endog, exog, status=None, entry=None,
@@ -909,7 +911,8 @@ class PHreg(model.LikelihoodModel):
         Uses the Nelson-Aalen estimator.
         """
 
-        # TODO: some disagreements with R
+        # TODO: some disagreements with R, not the same algorithm but
+        # hard to deduce what R is doing.  Our results are reasonable.
 
         surv = self.surv
         rslt = []
@@ -963,24 +966,22 @@ class PHreg(model.LikelihoodModel):
 
         Returns
         -------
-        A list (corresponding to the strata) of functions returning
-        the baseline cumulative hazard function.
+        A dict mapping stratum names to the estimated baseline
+        cumulative hazard function.
         """
 
         from scipy.interpolate import interp1d
         surv = self.surv
         base = self.baseline_cumulative_hazard(params)
 
-        # Get the cumulative hazard function for this stratum.
-        cumhaz_f = []
-
+        cumhaz_f = {}
         for stx in range(surv.nstrat):
             time_h = base[stx][0]
             cumhaz = base[stx][1]
             time_h = np.r_[-np.inf, time_h, np.inf]
             cumhaz = np.r_[cumhaz[0], cumhaz, cumhaz[-1]]
             func = interp1d(time_h, cumhaz, kind='zero')
-            cumhaz_f.append(func)
+            cumhaz_f[self.surv.stratum_names[stx]] = func
 
         return cumhaz_f
 
@@ -1036,6 +1037,119 @@ class PHregResults(base.LikelihoodModelResults):
         Returns the standard errors of the parameter estimates.
         """
         return self.standard_errors
+
+    def predict(self, endog=None, exog=None, strata=None, offset=None,
+                pred_type="lhr"):
+        """
+        Returns predicted values from the proportional hazards
+        regression model.
+
+        Parameters:
+        -----------
+        endog : array-like
+            Duration (time) values at which the predictions are made.
+            Only used if pred_type is either 'cumhaz' or 'surv'.  If
+            using model `exog`, defaults to model `endog` (time), but
+            may be provided explicitly to make predictions at
+            alternative times.
+        exog : array-like
+            Data to use as `exog` in forming predictions.  If not
+            provided, the `exog` values from the model used to fit the
+            data are used.
+        strata : array-like
+            A vector of stratum values used to form the predictions.
+            Not used (may be 'None') if pred_type is 'lhr' or 'hr'.
+            If `exog` is None, the model stratum values are used.  If
+            `exog` is not None and pred_type is 'surv' or 'cumhaz',
+            stratum values must be provided (unless there is only one
+            stratum).
+        offset : array-like
+            Offset values used to create the predicted values.
+        pred_type : string
+            If 'lhr', returns log hazard ratios, if 'hr' returns
+            hazard ratios, if 'surv' returns the survival function, if
+            'cumhaz' returns the cumulative hazard function.
+
+        Returns
+        -------
+        A bunch containing two fields: `predicted_values` and
+        `standard_errors`.
+
+        Notes
+        -----
+        Standard errors are only returned when predicting the log
+        hazard ratio (pred_type is 'lhr').
+
+        Types `surv` and `cumhaz` require estimation of the cumulative
+        hazard function.
+        """
+
+        pred_type = pred_type.lower()
+        if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
+            msg = "Type %s not allowed for prediction" % pred_type
+            raise ValueError(msg)
+
+        class bunch:
+            predicted_values = None
+            standard_errors = None
+        ret_val = bunch()
+
+        exog_provided = True
+        if exog is None:
+            exog = self.model.exog
+            exog_provided = False
+
+        lhr = np.dot(exog, self.params)
+        if offset is not None:
+            lhr += offset
+
+        # Handle lhr and hr prediction first, since they don't make
+        # use of the hazard function.
+
+        if pred_type == "lhr":
+            ret_val.predicted_values = lhr
+            mat = np.dot(exog, self.cov_params())
+            va = (mat * exog).sum(1)
+            ret_val.standard_errors = np.sqrt(va)
+            return ret_val
+
+        hr = np.exp(lhr)
+
+        if pred_type == "hr":
+            ret_val.predicted_values = hr
+            return ret_val
+
+        # Makes sure endog is defined
+        if endog is None and exog_provided:
+            msg = "If `exog` is provided `endog` must be provided."
+            raise ValueError(msg)
+        # Use model endog if using model exog
+        elif endog is None and not exog_provided:
+            endog = self.model.endog
+
+        # Make sure strata is defined
+        if strata is None:
+            if exog_provided and self.model.surv.nstrat > 1:
+                raise ValueError("`strata` must be provided")
+            if self.model.strata is None:
+                strata = [self.model.surv.stratum_names[0],] * len(endog)
+            else:
+                strata = self.model.strata
+
+        cumhaz = np.nan * np.ones(len(endog), dtype=np.float64)
+        stv = np.unique(strata)
+        for stx in stv:
+            ix = np.flatnonzero(strata == stx)
+            func = self.baseline_cumulative_hazard_function[stx]
+            cumhaz[ix] = func(endog[ix]) * hr[ix]
+
+        if pred_type == "cumhaz":
+            ret_val.predicted_values = cumhaz
+
+        elif pred_type == "surv":
+            ret_val.predicted_values = np.exp(-cumhaz)
+
+        return ret_val
 
     def _group_stats(self, groups):
         """
