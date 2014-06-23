@@ -45,6 +45,16 @@ class VarianceFunction(object):
         mu = np.asarray(mu)
         return np.ones(mu.shape, np.float64)
 
+
+    def deriv(self, mu):
+        """
+        Derivative of the variance function v'(mu)
+        """
+        from statsmodels.tools.numdiff import approx_fprime_cs
+        # TODO: diag workaround proplem with numdiff for 1d
+        return np.diag(approx_fprime_cs(mu, self))
+
+
 constant = VarianceFunction()
 constant.__doc__ = """
 The call method of constant returns a constant variance, i.e., a vector of ones.
@@ -96,6 +106,17 @@ class Power(object):
             numpy.fabs(mu)**self.power
         """
         return np.power(np.fabs(mu), self.power)
+
+
+    def deriv(self, mu):
+        """
+        Derivative of the variance function v'(mu)
+        """
+        from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
+        #return approx_fprime_cs(mu, self)  # TODO fix breaks in `fabs
+        # TODO: diag is workaround problem with numdiff for 1d
+        return np.diag(approx_fprime(mu, self))
+
 
 mu = Power()
 mu.__doc__ = """
@@ -174,6 +195,16 @@ class Binomial(object):
         """
         p = self._clean(mu / self.n)
         return p * (1 - p) * self.n
+
+    #TODO: inherit from super
+    def deriv(self, mu):
+        """
+        Derivative of the variance function v'(mu)
+        """
+        from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
+        # TODO: diag workaround proplem with numdiff for 1d
+        return np.diag(approx_fprime_cs(mu, self))
+
 
 binary = Binomial()
 binary.__doc__ = """

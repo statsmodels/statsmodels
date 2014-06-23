@@ -131,6 +131,14 @@ class CheckComparisonMixin(object):
         score_obsd = resd.model.jac(resd.params)
         assert_allclose(score_obs1, score_obsd, rtol=1e-10)
 
+        hessian1 = res1.model.hessian(res1.params, observed=False)
+        hessiand = resd.model.hessian(resd.params)
+        assert_allclose(hessian1, hessiand, rtol=1e-10)
+
+        hessian1 = res1.model.hessian(res1.params, observed=True)
+        hessiand = resd.model.hessian(resd.params)
+        assert_allclose(hessian1, hessiand, rtol=1e-9)
+
 
 class TestGlmGaussian(CheckModelResultsMixin):
     def __init__(self):

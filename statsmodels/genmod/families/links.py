@@ -64,6 +64,17 @@ class Link(object):
         """
         return NotImplementedError
 
+
+    def deriv2(self, p):
+        """Second derivative of the link function g''(p)
+
+        implemented through numerical differentiation
+        """
+        from statsmodels.tools.numdiff import approx_fprime_cs
+        # TODO: workaround proplem with numdiff for 1d
+        return np.diag(approx_fprime_cs(p, self.deriv))
+
+
     def inverse_deriv(self, z):
         """
         Derivative of the inverse link function g^(-1)(z).

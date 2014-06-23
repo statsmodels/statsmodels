@@ -286,6 +286,60 @@ class GLM(base.LikelihoodModel):
 
         return score_factor
 
+    def eim_factor(self, params, scale=None):
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        eim_factor = 1 / (self.family.link.deriv(mu)**2 *
+                            self.family.variance(mu))
+        eim_factor *= self.data_weights
+
+        if not scale == 1:
+            eim_factor /= scale
+
+        return eim_factor
+
+
+    def oim_factor(self, params, scale=None):
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        eim_factor = self.eim_factor(params, scale=1.)
+        score_factor = self.score_factor(params, scale=1.)
+        if eim_factor.ndim > 1 or score_factor.ndim > 1:
+            raise RuntimeError('something wrong')
+
+        tmp = self.family.variance(mu) * self.family.link.deriv2(mu)
+        tmp += self.family.variance.deriv(mu) * self.family.link.deriv(mu)
+
+        tmp = score_factor * eim_factor * tmp
+        # correct for duplicatee data_weights in oim_factor and score_factor
+        tmp /= self.data_weights
+        oim_factor = eim_factor * (1 + tmp)
+
+        if tmp.ndim > 1:
+            raise RuntimeError('something wrong')
+
+        if not scale == 1:
+            oim_factor /= scale
+
+        return oim_factor
+
+
+    def hessian(self, params, scale=None, observed=True):
+
+        if observed:
+            factor = self.oim_factor(params, scale=scale)
+        else:
+            factor = self.eim_factor(params, scale=scale)
+
+        hess = -np.dot(self.exog.T * factor, self.exog)
+
+        return hess
+
+
 
     def information(self, params):
         """
