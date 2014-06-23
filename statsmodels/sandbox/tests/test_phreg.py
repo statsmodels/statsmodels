@@ -192,7 +192,7 @@ class TestPHreg(object):
         v = np.r_[0.85154336, 0.72993748, 0.73758071, 0.78599333]
         assert_almost_equal(np.abs(s_resid).mean(0), v)
 
-    def test_summaryh(self):
+    def test_summary(self):
         # smoke test
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
@@ -202,6 +202,26 @@ class TestPHreg(object):
         mod = PHreg(time, exog, status)
         rslt = mod.fit()
         rslt.summary()
+
+
+    def test_predict(self):
+        # All smoke tests. We should be able to convert the lhr and hr
+        # tests into real tests against R.  There are many options to
+        # this function that may interact in complicated ways.  Only a
+        # few key combinations are tested here.
+        np.random.seed(34234)
+        endog = 50 * np.random.uniform(size=200)
+        status = np.random.randint(0, 2, 200).astype(np.float64)
+        exog = np.random.normal(size=(200,4))
+
+        mod = PHreg(endog, exog, status)
+        rslt = mod.fit()
+        rslt.predict()
+        for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
+            rslt.predict(pred_type=pred_type)
+            rslt.predict(endog=endog[0:10], pred_type=pred_type)
+            rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
+                         pred_type=pred_type)
 
 if  __name__=="__main__":
 
