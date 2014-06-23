@@ -257,6 +257,36 @@ class GLM(base.LikelihoodModel):
         """
         return self.family.loglike(*args)
 
+
+    def score_obs(self, params, scale=None):
+        """score for each observation
+
+        If scale is None, then the default scale will be calculated
+        """
+
+        score_factor = self.score_factor(params, scale=scale)
+        return score_factor[:, None] * self.exog
+
+
+    def score_factor(self, params, scale=None):
+        """score for each observation
+
+        this does not include scale, the scale factor
+        """
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        score_factor = (self.endog - mu) / self.family.link.deriv(mu)
+        score_factor /= self.family.variance(mu)
+        score_factor *= self.data_weights
+
+        if not scale == 1:
+            score_factor /= scale
+
+        return score_factor
+
+
     def information(self, params):
         """
         Fisher information matrix.  Not yet implemented.
