@@ -2,6 +2,8 @@
 Test functions for models.GLM
 """
 
+from statsmodels.compat import range
+
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
@@ -321,6 +323,47 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
 
         modd = discrete.Logit(self.res2.endog, self.res2.exog)
         self.resd = modd.fit(start_params=self.res1.params * 0.9)
+
+
+    def score_test_r(self):
+        res1 = self.res1
+        res2 = self.res2
+        st, pv, df = res1.model.score_test(res1.params,
+                                           exog_extra=res1.model.exog[:, 1]**2)
+        st_res = 0.2837680293459376  # (-0.5326988167303712)**2
+        assert_allclose(st, st_res, rtol=1e-4)
+
+        st, pv, df = res1.model.score_test(res1.params,
+                                          exog_extra=res1.model.exog[:, 0]**2)
+        st_res = 0.6713492821514992  # (-0.8193590679009413)**2
+        assert_allclose(st, st_res, rtol=1e-4)
+
+        select = list(range(9))
+        select.pop(7)
+
+        res1b = GLM(res2.endog, res2.exog[:, select],
+                    family=sm.families.Binomial()).fit()
+        tres = res1b.model.score_test(res1b.params,
+                                      exog_extra=res1.model.exog[:, -2])
+        tres = np.asarray(tres[:2]).ravel()
+        tres_r = (2.7864148487452, 0.0950667)
+        assert_allclose(tres, tres_r, rtol=1e-4)
+
+        cmd_r = """\
+        data = read.csv("...statsmodels\\statsmodels\\genmod\\tests\\results\\stata_lbw_glm.csv")
+
+        data["race_black"] = data["race"] == "black"
+        data["race_other"] = data["race"] == "other"
+        mod = glm(low ~ age + lwt + race_black + race_other + smoke + ptl + ht + ui, family=binomial, data=data)
+        options(digits=16)
+        anova(mod, test="Rao")
+
+        library(statmod)
+        s = glm.scoretest(mod, data["age"]**2)
+        s**2
+        s = glm.scoretest(mod, data["lwt"]**2)
+        s**2
+        """
 
 #class TestGlmBernoulliIdentity(CheckModelResultsMixin):
 #    pass
