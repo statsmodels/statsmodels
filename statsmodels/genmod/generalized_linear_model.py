@@ -242,11 +242,6 @@ class GLM(base.LikelihoodModel):
             exposure = np.log(exposure)
         self.exposure = exposure
 
-    def score(self, params):
-        """
-        Score matrix.  Not yet implemeneted
-        """
-        raise NotImplementedError
 
     def loglike(self, *args):
         """
@@ -268,6 +263,14 @@ class GLM(base.LikelihoodModel):
         return score_factor[:, None] * self.exog
 
 
+    def score(self, params, scale=None):
+        """score for each observation
+
+        If scale is None, then the default scale will be calculated
+        """
+        return self.score_obs(params, scale=scale).sum(0)
+
+
     def score_factor(self, params, scale=None):
         """score for each observation
 
@@ -285,6 +288,7 @@ class GLM(base.LikelihoodModel):
             score_factor /= scale
 
         return score_factor
+
 
     def eim_factor(self, params, scale=None):
         mu = self.predict(params)
@@ -328,6 +332,15 @@ class GLM(base.LikelihoodModel):
         return oim_factor
 
 
+    def hessian_factor(self, params, scale=None, observed=True):
+
+        if observed:
+            factor = self.oim_factor(params, scale=scale)
+        else:
+            factor = self.eim_factor(params, scale=scale)
+        return factor
+
+
     def hessian(self, params, scale=None, observed=True):
 
         if observed:
@@ -340,12 +353,49 @@ class GLM(base.LikelihoodModel):
         return hess
 
 
-
-    def information(self, params):
+    def information(self, params, scale=None):
         """
         Fisher information matrix.  Not yet implemented.
         """
-        raise NotImplementedError
+        return self.hessian(params, scale=scale, observed=False)
+
+
+    def score_test(self, params_constrained, k_constraints=None,
+                   exog_extra=None, observed=True):
+        """score test for restrictions or for omitted variables
+
+        """
+
+        if exog_extra is None:
+            if k_constraints is None:
+                raise ValueError('if exog_extra is None, then k_constraints'
+                                 'needs to be given')
+
+            score = self.score(params_constrained)
+            hessian = self.hessian(params_constrained, observed=observed)
+
+        else:
+            #exog_extra = np.asarray(exog_extra)
+            if k_constraints is None:
+                k_constraints = 0
+
+            ex = np.column_stack((self.exog, exog_extra))
+            k_constraints += ex.shape[1] - self.exog.shape[1]
+
+            score_factor = self.score_factor(params_constrained)
+            score = (score_factor[:, None] * ex).sum(0)
+            hessian_factor = self.hessian_factor(params_constrained,
+                                                 observed=observed)
+            hessian = -np.dot(ex.T * hessian_factor, ex)
+
+
+        from scipy import stats
+        # TODO check sign, why minus?
+        chi2stat = -score.dot(np.linalg.solve(hessian, score[:, None]))
+        pval = stats.chi2.sf(chi2stat, k_constraints)
+        # return a stats results instance instead?  Contrast?
+        return chi2stat, pval, k_constraints
+
 
     def _update_history(self, tmp_result, mu, history):
         """

@@ -5,7 +5,7 @@ Test functions for models.GLM
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose)
+                           assert_allclose, assert_, assert_array_less)
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -131,6 +131,11 @@ class CheckComparisonMixin(object):
         score_obsd = resd.model.jac(resd.params)
         assert_allclose(score_obs1, score_obsd, rtol=1e-10)
 
+        # score
+        score1 = res1.model.score(res1.params)
+        assert_allclose(score1, score_obs1.sum(0), atol=1e-20)
+        assert_allclose(score1, np.zeros(score_obs1.shape[1]), atol=1e-7)
+
         hessian1 = res1.model.hessian(res1.params, observed=False)
         hessiand = resd.model.hessian(resd.params)
         assert_allclose(hessian1, hessiand, rtol=1e-10)
@@ -138,6 +143,26 @@ class CheckComparisonMixin(object):
         hessian1 = res1.model.hessian(res1.params, observed=True)
         hessiand = resd.model.hessian(resd.params)
         assert_allclose(hessian1, hessiand, rtol=1e-9)
+
+    def test_score_test(self):
+        res1 = self.res1
+        # fake example, should be zero, k_constraint should be 0
+        st, pv, df = res1.model.score_test(res1.params, k_constraints=1)
+        assert_allclose(st, 0, atol=1e-20)
+        assert_allclose(pv, 1, atol=1e-10)
+        assert_equal(df, 1)
+
+        st, pv, df = res1.model.score_test(res1.params, k_constraints=0)
+        assert_allclose(st, 0, atol=1e-20)
+        assert_(np.isnan(pv), msg=repr(pv))
+        assert_equal(df, 0)
+
+        # TODO: no verified numbers largely SMOKE test
+        exog_extra = res1.model.exog[:,1]**2
+        st, pv, df = res1.model.score_test(res1.params, exog_extra=exog_extra)
+        assert_array_less(0.1, st)
+        assert_array_less(0.1, pv)
+        assert_equal(df, 1)
 
 
 class TestGlmGaussian(CheckModelResultsMixin):
