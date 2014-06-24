@@ -27,6 +27,11 @@ Reference for Predictive Mean Matching:
 SAS Institute: "Predictive Mean Matching Method for Monotone Missing Data",
 SAS 9.2 User's Guide, 2014.
 
+Reference for MICE Design in R package mi:
+
+A Gelman et al.: "Multiple Imputation with Diagnostics (mi) in R: Opening
+Windows into the Black Box", Journal of Statistical Software, 2009.
+
 """
 
 import operator
@@ -38,8 +43,9 @@ import statsmodels.api as sm
 class ImputedData(object):
     __doc__= """
     Stores missing data information and supports functionality for inserting
-    values in missing data slots. Can create Imputers directly via
-    new_imputer method.
+    values in missing data slots.
+
+    Can create Imputers directly via new_imputer method.
 
     %(params)s
     data : array-like object
@@ -53,8 +59,10 @@ class ImputedData(object):
         simple column-wise means are filled into the missing values.
     columns : dictionary
         Stores indices of missing data.
+
     """
     def __init__(self, data):
+        # may not need to make copies
         self.data = pd.DataFrame(data)
         self.columns = {}
         for c in self.data.columns:
@@ -97,16 +105,16 @@ class ImputedData(object):
                        fit_args=fit_args, scale_method=scale_method,
                        scale_value=scale_value)
 
-    def store_changes(self, vals, col):
+    def store_changes(self, col, vals):
         """
         Fill in dataset with imputed values.
 
         Parameters
         ----------
-        vals : array
-            Array of imputed values to use in filling in missing values.
         col : string
             Name of variable to be filled in.
+        vals : array
+            Array of imputed values to use in filling in missing values.
         """
 
         ix = self.columns[col].ix_miss
@@ -122,6 +130,17 @@ class ImputedData(object):
         ----------
         formula : string
             Patsy formula for the Imputer object's conditional model.
+
+        Returns
+        -------
+        endog_obs : DataFrame
+            Observations of the variable to be imputed.
+        exog_obs : DataFrame
+            Observations of the predictors where the variable to be Imputed is
+            observed.
+        exog_miss : DataFrame
+            Observations of the predictors where the variable to be Imputed is
+            missing.
         """
         dmat = patsy.dmatrices(formula, self.data, return_type="dataframe")
         exog = dmat[1]
@@ -149,6 +168,10 @@ class Imputer(object):
         Conditional model for imputation.
     data : ImputedData object
         See mice.ImputedData
+    return_class : scipy.random class
+        Controls the scale/location family to use as the asymptotic
+        distribution of the imputed variable. For use in method
+        impute_asymptotic_bayes.
     scale : string
         Governs the type of perturbation given to the scale parameter.
     scale_value : float
@@ -161,6 +184,9 @@ class Imputer(object):
         Name of variable to be imputed.
     num_missing : int
         Number of missing values.
+
+    Note: all params are saved as attributes.
+
     """
     def __init__(self, formula, model_class, data, init_args={}, fit_args={},
                  return_class=None, scale_method="fix", scale_value=None):
@@ -179,6 +205,11 @@ class Imputer(object):
         """
         Perturbs the model's scale and fit parameters.
 
+        The user may choose to fix the scale at the estimated quantity or
+        perturb it using a chi square approximation.
+
+        Bootstrap perturbation upcoming.
+
         Parameters
         ----------
         mdf : statsmodels fitted model
@@ -191,6 +222,7 @@ class Imputer(object):
         scale_per : float
             Perturbed nuisance parameter.
         """
+        # switch to scipy
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
@@ -203,7 +235,7 @@ class Imputer(object):
             u = np.random.chisquare(mdf.df_resid)
             scale_per = mdf.df_resid / u
         elif self.scale_method == "perturb_boot":
-            pass
+            raise NotImplementedError
         p = len(params)
         params += np.dot(covmat_sqrt,
                          np.random.normal(0, mdf.scale * scale_per, p))
@@ -213,7 +245,9 @@ class Imputer(object):
         """
         Use Gaussian approximation to posterior distribution to simulate data.
 
-        Fills in values of input data.
+        Fills in missing values of input data. User may also choose a different
+        approximating location/scale family by specifying return_class in
+        Imputer initialization.
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
@@ -223,13 +257,16 @@ class Imputer(object):
                                      model_class = self.return_class,
                                      scale=scale_per * mdf.scale)
         new_endog = new_rv.rvs(size=len(exog_miss))
-        self.data.store_changes(new_endog, self.endog_name)
+        self.data.store_changes(self.endog_name, new_endog)
 
     def impute_pmm(self, pmm_neighbors=1):
         """
         Use predictive mean matching to simulate data.
 
-        Fills in values of input data.
+        Fills in missing values of input data. Predictive mean matching picks
+        an observation randomly from the observed value of the k-nearest
+        predictions of the endogenous variable. Naturally, the neighbors must
+        have observed endogenous values.
 
         Parameters
         ----------
@@ -241,19 +278,24 @@ class Imputer(object):
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
+        # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
         ii = np.argsort(pendog_obs, axis=0)
         pendog_obs = pendog_obs[ii]
         oendog = endog_obs.iloc[ii,:]
+        # Get indices of predicted endogs of nonmissing observations that are
+        # close to those of missing observations
         ix = np.searchsorted(pendog_obs, pendog_miss)
-        ix += np.random.randint(-pmm_neighbors/2, pmm_neighbors/2, len(ix))
+        # Select a random draw of observed endogenous variable from a set
+        # window around the closest predicted value
+        ix += np.random.randint(-pmm_neighbors / 2, pmm_neighbors / 2, len(ix))
         np.clip(ix, 0, len(oendog), out=ix)
         imputed_miss = np.array(oendog.iloc[ix,:])
-        self.data.store_changes(imputed_miss, self.endog_name)
+        self.data.store_changes(self.endog_name, imputed_miss)
 
     def impute_bootstrap(self):
-        pass
+        raise NotImplementedError
 
 class ImputerChain(object):
     __doc__= """
@@ -279,13 +321,14 @@ class ImputerChain(object):
 
     Note: All imputers must refer to the same data object. See mice.MICE.run
     for iterator call.
+
     """
     def __init__(self, imputer_list, imputer_method="gaussian",
                  pmm_neighbors=1):
         self.imputer_list = imputer_list
-        #Impute variable with least missing observations first
+        # Impute variable with least missing observations first
         self.imputer_list.sort(key=operator.attrgetter('num_missing'))
-        #All imputers must refer to the same data object
+        # All imputers must refer to the same data object
         self.data = imputer_list[0].data.data
         self.method = imputer_method
         self.pmm_neighbors = pmm_neighbors
@@ -327,6 +370,7 @@ class AnalysisChain(object):
     imputations for each iteration. See the "next" method for details.
 
     Note: See mice.MICE.run for iterator call.
+
     """
 
     def __init__(self, imputer_chain, analysis_formula, analysis_class,
@@ -338,7 +382,6 @@ class AnalysisChain(object):
         self.fit_args = fit_args
         self.skipnum = skipnum
         self.burnin = burnin
-        self.burned = True
         self.save = save
         self.iter = 0
         for b in range(self.burnin):
@@ -407,13 +450,15 @@ class MICE(object):
     >>> from statsmodels.sandbox.mice import mice
     >>> data = pd.read_csv('directory_here')
     >>> impdata = mice.ImputedData(data)
-    >>> m1 = impdata.new_imputer("x2")
-    >>> m2 = impdata.new_imputer("x3")
-    >>> m3 = impdata.new_imputer("x1", model_class=sm.Logit)
-    >>> impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit, [m1,m2,m3])
-    >>> p1 = impcomb.combine(20,10)
+    >>> m1 = impdata.new_imputer("x2", scale_method="perturb_chi2")
+    >>> m2 = impdata.new_imputer("x3", scale_method="perturb_chi2")
+    >>> m3 = impdata.new_imputer("x1", model_class=sm.Logit, scale_method="perturb_chi2")
+    >>> impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
+    >>> implist = impcomb.run(method="pmm")
+    >>> p1 = impcomb.combine(implist)
 
-    p1 contains a sm.Logit instance with MICE-provided params and cov_params.
+    The resulting p1 contains an empty sm.Logit instance with MICE-provided
+    params and cov_params.
 
     """
     def __init__(self, analysis_formula, analysis_class, imputer_list,
@@ -490,26 +535,27 @@ class MICE(object):
             params_list.append(md.params)
             cov_list.append(np.array(md.normalized_cov_params))
             scale_list.append(md.scale)
-        #Just chose last analysis model instance as a place to store results
+        # Just chose last analysis model instance as a place to store results
         md = md_list[-1]
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
         within_g = np.mean(cov_list, axis=0)
-        #Used MLE rather than method of moments between group covariance
+        # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1/float(self.num_ds)) * between_g
         rslt = md._results.__class__
         rslt.params = params
         rslt.scale = scale
         rslt.normalized_cov_params = cov_params
-        #Will have to modify more attributes of the model class returned
+        # Will have to modify more attributes of the model class returned
         return rslt
 
 class MissingDataInfo(object):
     __doc__="""
     Contains all the missing data information from the passed-in data object.
 
-    An attribute for each column/variable in the dataset.
+    A self.columns dictionary entry exists for each column/variable in the
+    dataset.
 
     %(params)s
 
@@ -520,7 +566,8 @@ class MissingDataInfo(object):
     ix_miss : array
         Indices of missing values for a particular variable.
     ix_obs : array
-        Indices of observed values for a particualr variable.
+        Indices of observed values for a particular variable.
+
     """
 
     def __init__(self, data):

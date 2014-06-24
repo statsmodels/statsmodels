@@ -31,7 +31,7 @@ class TestMice(object):
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         imp_dat = mice.ImputedData(df)
-        imp_dat.store_changes([0] * 2, "X2")
+        imp_dat.store_changes("X2", [0] * 2)
         test_data = np.asarray(imp_dat.data["X2"][8:])
         np.testing.assert_almost_equal(test_data, np.asarray([0., 0.]))
 
@@ -40,7 +40,7 @@ class TestMice(object):
         data = np.random.normal(size=(10,4))
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
-        params_test = np.asarray([-0.06642686, 0.36131348, -0.69498469])
+        params_test = np.asarray([-0.06040184,  0.40924707, -0.65996571])
         scale_test = 1.0
         md = sm.OLS.from_formula(self.formula, df)
         mdf = md.fit()
@@ -57,8 +57,9 @@ class TestMice(object):
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_asymptotic_bayes()
-        np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),np.asarray([-0.82292821, -0.22632992]))
-        
+        np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
+                                       np.asarray([-0.39097484, -0.31759086]))
+
     def test_impute_pmm(self):
         np.random.seed(1325)
         data = np.random.normal(size=(10,4))
@@ -66,8 +67,28 @@ class TestMice(object):
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_pmm()
-        np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),np.asarray([-0.77954822, -0.77954822]))
-        
+        np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
+                                       np.asarray([-0.77954822, -0.77954822]))
+
+    def test_combine(self):
+        np.random.seed(1325)
+        data = np.random.normal(size=(10,4))
+        data[8:, 1] = np.nan
+        df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
+        impdata = mice.ImputedData(df)
+        m = impdata.new_imputer("X2", scale_method="perturb_chi2")
+        impcomb = mice.MICE("X2 ~ X1 + X3", sm.OLS, [m])
+        implist = impcomb.run(method="pmm")
+        p1 = impcomb.combine(implist)
+        np.testing.assert_almost_equal(p1.params, np.asarray([0.30569492,
+                                                              0.23868318,
+                                                              0.03048026]))
+        np.testing.assert_almost_equal(p1.scale, 0.64182777495773802)
+        np.testing.assert_almost_equal(p1.normalized_cov_params, np.asarray([
+       [ 0.12735538,  0.04868423, -0.00284652],
+       [ 0.04868423,  0.09836056, -0.00940138],
+       [-0.00284652, -0.00940138,  0.10247411]]))
+
 if  __name__=="__main__":
 
     import nose

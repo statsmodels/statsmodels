@@ -257,7 +257,7 @@ class RegressionModel(base.LikelihoodModel):
             exog = self.exog
         return np.dot(exog, params)
 
-    def get_distribution(self, params, exog=None, scale=1):
+    def get_distribution(self, params, exog=None, scale=1, model_class=None):
         """
         Return a scipy.stats.distributions object corresponding to the `endog` of this model.
 
@@ -280,8 +280,10 @@ class RegressionModel(base.LikelihoodModel):
         """
         if exog is None:
             exog = self.model.exog
+        if model_class is None:
+            model_class = stats.norm
         mean = self.predict(params=params, exog=exog)
-        rv = stats.norm(loc=mean, scale=scale)
+        rv = model_class(loc=mean, scale=scale)
         return rv
 
 class GLS(RegressionModel):
