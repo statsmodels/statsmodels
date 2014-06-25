@@ -192,6 +192,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         # OLS doesn't define score_obs
         from statsmodels.regression.linear_model import OLS
         resd = OLS(self.data.endog, self.data.exog).fit()
+        self.resd = resd  # attach to access from the outside
 
         assert_allclose(res1.llf, resd.llf, rtol=1e-10)
         score_obs1 = res1.model.score_obs(res1.params)
@@ -672,6 +673,27 @@ def test_prefect_pred():
     X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
     assert_raises(PerfectSeparationError, glm.fit)
+
+
+def test_score_test_OLS():
+    # nicer example than Longley
+    from statsmodels.regression.linear_model import OLS
+    np.random.seed(5)
+    nobs = 100
+    sige = 0.5
+    x = np.random.uniform(0, 1, size=(nobs, 5))
+    x[:, 0] = 1
+    beta = 1. / np.arange(1., x.shape[1] + 1)
+    y = x.dot(beta) + sige * np.random.randn(nobs)
+
+    res_ols = OLS(y, x).fit()
+    res_olsc = OLS(y, x[:, :-2]).fit()
+    co = res_ols.compare_lm_test(res_olsc, demean=False)
+
+    res_glm = GLM(y, x[:, :-2], family=sm.families.Gaussian()).fit()
+    co2 = res_glm.model.score_test(res_glm.params, exog_extra=x[:, -2:])
+    # difference in df_resid versus nobs in scale see #1786
+    assert_allclose(co[0] * 97 / 100., co2[0], rtol=1e-13)
 
 
 def test_attribute_writable_resettable():
