@@ -112,7 +112,7 @@ cdef {{name}}_t *{{name}} = <{{name}}_t*>Capsule_AsVoidPtr(lapack.{{name}}._cpoi
 {{endfor}}
 
 cdef sdot_t *sdot = <sdot_t*>Capsule_AsVoidPtr(blas.sdot._cpointer)
-cdef {{prefix}}dot_t *{{prefix}}dot = <{{prefix}}dot_t*>Capsule_AsVoidPtr(blas.{{prefix}}dot._cpointer)
+cdef ddot_t *ddot = <ddot_t*>Capsule_AsVoidPtr(blas.ddot._cpointer)
 cdef cdotu_t *cdot = <cdotu_t*>Capsule_AsVoidPtr(blas.cdotu._cpointer)
 cdef zdotu_t *zdot = <zdotu_t*>Capsule_AsVoidPtr(blas.zdotu._cpointer)
 
