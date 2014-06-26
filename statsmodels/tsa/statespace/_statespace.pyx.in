@@ -1067,7 +1067,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         self.seek(0, True)
         for i in range(self.model.nobs):
-            self.next()
+            next(self)
 
     def __next__(self):
         # Get time subscript, and stop the iterator if at the end
