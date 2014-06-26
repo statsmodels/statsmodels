@@ -2127,6 +2127,19 @@ def test_non_invertible_hessian_fails_summary():
         res.summary()
 
 
+def test_confint_profile():
+    from statsmodels.genmod.tests.results.results_glm import Lbw
+    res2 = Lbw()
+    mod1 = GLM(res2.endog, res2.exog, family=sm.families.Binomial())
+    # we don't need to check estimation, use "true" start_params
+    res1 = mod1.fit(start_params=res2.params)
+
+    cip, _ = res1.conf_int_profile(alpha=0.05)
+    assert_allclose(cip, res1.conf_int(), rtol=0.05, atol=0.05)
+    cip1, _ = res1.conf_int_profile(index=1, alpha=0.05)
+    assert_allclose(cip1, cip[1], rtol=1e-13)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
