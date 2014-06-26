@@ -208,7 +208,7 @@ cdef class {{prefix}}Statespace(object):
     cdef readonly {{cython_type}} [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     # `missing` is a $(p \times T)$ boolean matrix where a row is a $(p \times 1)$ vector
-    # in which the $i$th position is $1$ if y_{i,t} is to be considered a missing value.  
+    # in which the $i$th position is $1$ if $y_{i,t}$ is to be considered a missing value.  
     # *Note:* This is created as the output of np.isnan(obs).
     cdef readonly int [::1,:] missing
     # `nmissing` is an `T \times 0` integer vector holding the number of *missing* observations
@@ -345,9 +345,11 @@ cdef class {{prefix}}Statespace(object):
         self.missing = np.array(np.isnan(obs), dtype = np.int32, order="F")
         self.nmissing = np.array(np.sum(self.missing, axis=0), dtype = np.int32)
 
-    # ## Initialize: user-provided
+    # ## Initialize: known values
     #
-    # Initialize the filter with specific values.
+    # Initialize the filter with specific values, assumed to be known with
+    # certainty or else as filled with parameters from a maximum likelihood
+    # estimation run.
     def initialize_known(self, {{cython_type}} [:] initial_state, {{cython_type}} [::1,:] initial_state_cov):
         """
         initialize_known(initial_state, initial_state_cov)
@@ -374,59 +376,68 @@ cdef class {{prefix}}Statespace(object):
         cdef np.npy_intp dim[1]
         dim[0] = self.nstates
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
-        self.initial_state_cov = np.asfortranarray(np.eye(self.nstates), dtype={{dtype}}) * variance
+        self.initial_state_cov = np.eye(self.nstates, dtype={{dtype}}).T * variance
 
         self.initialized = True
 
     # ## Initialize: stationary process
     # *Note:* see Durbin and Koopman section 5.6.2
+    # 
     # TODO improve efficiency with direct BLAS / LAPACK calls
     def initialize_stationary(self):
+        """
+        initialize_stationary()
+        """
         cdef np.npy_intp dim[1]
 
         from scipy.linalg import solve_discrete_lyapunov
 
         dim[0] = self.nstates
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
-        self.initial_state_cov =  np.asfortranarray(
-            solve_discrete_lyapunov(
-                np.array(self.transition[:,:,0]),
-                np.array(self.state_cov[:,:,0])
-            ), dtype={{dtype}}
+        self.initial_state_cov = solve_discrete_lyapunov(
+            np.array(self.transition[:,:,0], dtype={{dtype}}),
+            np.array(self.state_cov[:,:,0], dtype={{dtype}})
         )
 
         self.initialized = True
 
+# ## Kalman filter Routines
+# 
+# The following functions are the workhorse functions for the Kalman filter.
+# They represent four distinct but very general phases of the Kalman filtering
+# operations.
+#
+# Their argument is an object of class ?KalmanFilter, which is a stateful
+# representation of the recursive filter. For this reason, the below functions
+# work almost exclusively through *side-effects* and most return void.
+# See the Kalman filter class documentation for further discussion.
+#
+# They are defined this way so that the actual filtering process can select
+# whichever filter type is appropriate for the given time period. For example,
+# in the case of state space models with non-stationary components, the filter
+# should begin with the exact initial Kalman filter routines but after some
+# number of time periods will transition to the conventional Kalman filter
+# routines.
+#
+# Below, `<filter type>` will refer to one of the following:
+#
+# - `conventional` - the conventional Kalman filter
+#
+# Other filter types (e.g. `exact_initial`, `augmented`, etc.) may be added in
+# the future.
+# 
+# `forecast_<filter type>` generates the forecast, forecast error $v_t$ and
+# forecast error covariance matrix $F_t$  
+# `updating_<filter type>` is the updating step of the Kalman filter, and
+# generates the filtered state $a_{t|t}$ and covariance matrix $P_{t|t}$  
+# `prediction_<filter type>` is the prediction step of the Kalman filter, and
+# generates the predicted state $a_{t+1}$ and covariance matrix $P_{t+1}$.
+# `loglikelihood_<filter type>` calculates the loglikelihood for $y_t$
 
-cdef void {{prefix}}select_state_cov({{prefix}}KalmanFilter kfilter):
-    # Constants
-    cdef:
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
-
-    # #### Calculate selected state covariance matrix  
-    # $Q_t^* = R_t Q_t R_t'$
-    # 
-    # Combine the selection matrix and the state covariance matrix to get
-    # the simplified (but possibly singular) "selected" state covariance
-    # matrix (see e.g. Durbin and Koopman p. 43)
-    
-    # `tmp0` array used here, dimension $(m \times r)$  
-
-    # $\\#_0 = 1.0 * R_t Q_t$  
-    # $(m \times r) = (m \times r) (r \times r)$
-    {{prefix}}gemm("N", "N", &kfilter.nstates, &kfilter.nposdef, &kfilter.nposdef,
-          &alpha, kfilter.selection, &kfilter.nstates,
-                  kfilter.state_cov, &kfilter.nposdef,
-          &beta, kfilter.tmp0, &kfilter.nstates)
-
-    # $Q_t^* = 1.0 * \\#_0 R_t'$  
-    # $(m \times m) = (m \times r) (m \times r)'$
-    {{prefix}}gemm("N", "T", &kfilter.nstates, &kfilter.nposdef, &kfilter.nposdef,
-          &alpha, kfilter.tmp0, &kfilter.nstates,
-                  kfilter.selection, &kfilter.nstates,
-          &beta, kfilter.selected_state_cov, &kfilter.nstates)
-
+# ### Conventional Kalman filter
+#
+# The following are the above routines as defined in the conventional Kalman
+# filter.
 
 cdef void {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
 
@@ -589,6 +600,14 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
 
     return loglikelihood
 
+# ## Forecast error covariance inversion
+#
+# The following are routines that can calculate the inverse of the forecast
+# error covariance matrix (defined in `forecast_<filter type>`).
+#
+# These routines are aware of the possibility that the Kalman filter may have
+# converged to a steady state, in which case they do not need to perform the
+# inversion or calculate the determinant.
 
 cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
     """
@@ -838,22 +857,71 @@ cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{cython
 
     return determinant
 
+
+# ## Kalman filter
+
 cdef class {{prefix}}KalmanFilter(object):
     """
-    {{prefix}}KalmanFilter(model, filter = FILTER_CONVENTIONAL, inversion_method = SOLVE_CHOLESKY)
+    {{prefix}}KalmanFilter(model, filter=FILTER_CONVENTIONAL, inversion_method=INVERT_UNIVARIATE | SOLVE_CHOLESKY, stability_method=STABILITY_FORCE_SYMMETRY, tolerance=1e-19)
 
-    Notes
-    -----
+    A representation of the Kalman filter recursions.
 
-    Due to the heavy use of BLAS / LAPACK calls, two conventions are used to
-    reduce characters and aid readability:
-    1. Pointers to arrays and quantities of interest are defined at the top
-       of all functions, and then the pointers are used in the actual calls.
-    2. Pointers to arrays and quantities of the *Statespace object are only
-       defined in the main filter (`__next__`) and are then passed as arguments
-       to auxilliary functions (e.g. `solve_lu`), whereas pointers to arrays
-       and quantities of the *KalmanFilter object are re-defined at the top
-       of all functions.
+    While the filter is mathematically represented as a recursion, it is here
+    translated into Python as a stateful iterator.
+
+    Because there are actually several types of Kalman filter depending on the
+    state space model of interest, this class only handles the *iteration*
+    aspect of filtering, and delegates the actual operations to four general
+    workhorse routines, which can be implemented separately for each type of
+    Kalman filter.
+
+    In order to maintain a consistent interface, and because these four general
+    routines may be quite different across filter types, their argument is only
+    the stateful ?KalmanFilter object. Furthermore, in order to allow the
+    different types of filter to substitute alternate matrices, this class
+    defines a set of pointers to the various state space arrays and the
+    filtering output arrays.
+
+    For example, handling missing observations requires not only substituting
+    `obs`, `design`, and `obs_cov` matrices, but the new matrices actually have
+    different dimensions than the originals. This can be flexibly accomodated
+    simply by replacing e.g. the `obs` pointer to the substituted `obs` array
+    and replacing `nendog` for that iteration. Then in the next iteration, when
+    the `obs` vector may be missing different elements (or none at all), it can
+    again be redefined.
+
+    Each iteration of the filter (see `__next__`) proceeds in a number of
+    steps.
+
+    `initialize_object_pointers` initializes pointers to current-iteration
+    objects (i.e. the state space arrays and filter output arrays).  
+
+    `initialize_function_pointers` initializes pointers to the appropriate
+    Kalman filtering routines (i.e. `forecast_conventional` or
+    `forecast_exact_initial`, etc.).  
+
+    `select_arrays` converts the base arrays into "selected" arrays using
+    selection matrices. In particular, it handles the state covariance matrix
+    and redefined matrices based on missing values.  
+
+    `post_convergence` handles copying arrays from time $t-1$ to time $t$ when
+    the Kalman filter has converged and they don't need to be re-calculated.  
+
+    `forecasting` calls the Kalman filter `forcasting_<filter type>` routine
+
+    `inversion` calls the appropriate function to invert the forecast error
+    covariance matrix.  
+
+    `updating` calls the Kalman filter `updating_<filter type>` routine
+
+    `loglikelihood` calls the Kalman filter `loglikelihood_<filter type>` routine
+
+    `prediction` calls the Kalman filter `predcition_<filter type>` routine
+
+    `numerical_stability` performs end-of-iteration tasks to improve the numerical
+    stability of the filter 
+
+    `check_convergence` checks for convergence of the filter to steady-state.
     """
 
     # ### Statespace model
@@ -872,7 +940,6 @@ cdef class {{prefix}}KalmanFilter(object):
     # *Note*: is by default reset each time `seek` is called
     cdef readonly int time_invariant
     # The Kalman filter procedure to use  
-    # TODO currently only supports the conventional Kalman filter
     cdef public int filter_method
     # The method by which the terms using the inverse of the forecast
     # error covariance matrix are solved.
@@ -903,7 +970,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # `forecast_error_work` is a work array for matrix inversion if an LU
     # decomposition is used
     cdef readonly {{cython_type}} [::1,:] _forecast_error_work
-
+    # These hold the memory allocations of the unnamed temporary arrays
     cdef readonly {{cython_type}} [::1,:] _tmp0, _tmp1, _tmp3
     cdef readonly {{cython_type}} [:] _tmp2
 
@@ -944,7 +1011,7 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef {{cython_type}} * tmp2
     cdef {{cython_type}} * tmp3
 
-    # ### pointers to current-iteration Kalman filtering functions
+    # ### Pointers to current-iteration Kalman filtering functions
     cdef void (*forecasting)(
         {{prefix}}KalmanFilter
     )
@@ -1044,7 +1111,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Initialize time and convergence status
         self.seek(0)
 
-    def seek(self, unsigned int t, int reset_convergence = True):
+    cpdef seek(self, unsigned int t, int reset_convergence = True):
         """
         seek(self, t, reset_convergence = True)
 
@@ -1063,6 +1130,9 @@ cdef class {{prefix}}KalmanFilter(object):
         return self
 
     def __call__(self):
+        """
+        Iterate the filter across the entire set of observations.
+        """
         cdef int i
 
         self.seek(0, True)
@@ -1070,17 +1140,19 @@ cdef class {{prefix}}KalmanFilter(object):
             next(self)
 
     def __next__(self):
+        """
+        Perform an iteration of the Kalman filter
+        """
+
         # Get time subscript, and stop the iterator if at the end
         if not self.t < self.model.nobs:
             raise StopIteration
 
         # Initialize pointers to current-iteration objects
         self.initialize_object_pointers()
-        # print "object pointers"
 
         # Initialize pointers to appropriate Kalman filtering functions
         self.initialize_function_pointers()
-        # print "function pointers"
 
         # Convert base arrays into "selected" arrays  
         # - State covariance matrix? $Q_t \to R_t Q_t R_t`$
@@ -1089,36 +1161,27 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Post-convergence: copy previous iteration arrays
         self.post_convergence()
-        # print "post convergence"
 
         # Form forecasts
         self.forecasting(self)
-        # print "forecasting"
 
         # Perform `forecast_error_cov` inversion (or decomposition)
         self.determinant = self.inversion(self, self.determinant)
-        # print "inversion"
-        # print self.determinant
 
         # Updating step
         self.updating(self)
-        # print "updating"
 
         # Retrieve the loglikelihood
         self.model.loglikelihood[self.t] = self.loglikelihood(self, self.determinant)
-        # print "loglikelihood"
-        # print self.model.loglikelihood[self.t]
 
         # Prediction step
         self.prediction(self)
-        # print "prediction"
 
         # Aids to numerical stability
         self.numerical_stability()
 
         # Check for convergence
         self.check_convergence()
-        # print "check convergence"
 
         # Advance the time
         self.t += 1
@@ -1191,19 +1254,14 @@ cdef class {{prefix}}KalmanFilter(object):
             self.forecasting = {{prefix}}forecast_conventional
 
             if self.inversion_method & INVERT_UNIVARIATE and self.nendog == 1:
-                # print 'INVERT UNIVARIATE'
                 self.inversion = {{prefix}}inverse_univariate
             elif self.inversion_method & SOLVE_CHOLESKY:
-                # print 'SOLVE CHOLESKY'
                 self.inversion = {{prefix}}solve_cholesky
             elif self.inversion_method & SOLVE_LU:
-                # print 'SOLVE LU'
                 self.inversion = {{prefix}}solve_lu
             elif self.inversion_method & INVERT_CHOLESKY:
-                # print 'INVERT CHOLESKY'
                 self.inversion = {{prefix}}inverse_cholesky
             elif self.inversion_method & INVERT_LU:
-                # print 'INVERT LU'
                 self.inversion = {{prefix}}inverse_lu
             else:
                 raise NotImplementedError("Invalid inversion method")
@@ -1308,6 +1366,8 @@ cdef class {{prefix}}KalmanFilter(object):
             self.nendogstates = self.nendog * self.nstates
 
     cdef void post_convergence(self):
+        # TODO this should probably be defined separately for each Kalman filter type - e.g. `post_convergence_conventional`, etc.
+
         # Constants
         cdef:
             int inc = 1
