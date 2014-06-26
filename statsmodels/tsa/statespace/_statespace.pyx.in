@@ -1,0 +1,1365 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+State Space Models
+
+Author: Chad Fulton  
+License: Simplified-BSD
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "scal"]
+LAPACK_FUNCTIONS = ["getrf", "getri", "getrs", "potrf", "potri", "potrs"]
+
+}}
+
+# ## Constants
+
+# ### Filters
+# TODO note that only the conventional filter is implemented
+cdef int FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4
+cdef int FILTER_EXACT_INITIAL = 0x02    # ibid., Chapter 5.6
+cdef int FILTER_AUGMENTED = 0x04        # ibid., Chapter 5.7
+cdef int FILTER_SQUARE_ROOT = 0x08      # ibid., Chapter 6.3
+cdef int FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
+cdef int FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
+cdef int FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
+cdef int FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
+
+# ### Inversion methods
+# Methods by which the terms using the inverse of the forecast error
+# covariance matrix are solved.
+cdef int INVERT_UNIVARIATE = 0x01
+cdef int SOLVE_LU = 0x02
+cdef int INVERT_LU = 0x04
+cdef int SOLVE_CHOLESKY = 0x08
+cdef int INVERT_CHOLESKY = 0x10
+
+# ### Numerical Stability methods
+# Methods to improve numerical stability
+cdef int STABILITY_FORCE_SYMMETRY = 0x01
+
+# Typical imports
+import numpy as np
+import warnings
+cimport numpy as np
+cimport cython
+
+np.import_array()
+
+# ## Math Functions
+# Real and complex log and abs functions
+from libc.math cimport log as dlog, abs as dabs
+from numpy cimport npy_cdouble
+
+cdef extern from "numpy/npy_math.h":
+    np.float64_t NPY_PI
+    np.float64_t npy_cabs(np.npy_cdouble z)
+    np.npy_cdouble npy_clog(np.npy_cdouble z)
+
+cdef inline np.float64_t zabs(np.complex128_t z):
+    return npy_cabs((<np.npy_cdouble *> &z)[0])
+
+cdef inline np.complex128_t zlog(np.complex128_t z):
+    cdef np.npy_cdouble x
+    x = npy_clog((<np.npy_cdouble*> &z)[0])
+    return (<np.complex128_t *> &x)[0]
+
+cdef extern from "capsule.h":
+    void *Capsule_AsVoidPtr(object ptr)
+
+# ## BLAS / LAPACK functions
+
+# `blas_lapack.pxd` contains typedef statements for BLAS and LAPACK functions
+from statsmodels.src.blas_lapack cimport *
+
+try:
+    # Scipy >= 0.12.0 exposes Fortran BLAS functions directly
+    from scipy.linalg.blas import cgerc
+except:
+    # Scipy < 0.12.0 exposes Fortran BLAS functions in the `fblas` submodule
+    from scipy.linalg.blas import fblas as blas
+else:
+    from scipy.linalg import blas
+
+try:
+    # Scipy >= 0.12.0 exposes Fortran LAPACK functions directly
+    from scipy.linalg.lapack import cgbsv
+except:
+    # Scipy < 0.12.0 exposes Fortran LAPACK functions in the `flapack` submodule
+    from scipy.linalg.lapack import flapack as lapack
+else:
+    from scipy.linalg import lapack
+
+{{for prefix, types in TYPES.items()}}
+{{for function in BLAS_FUNCTIONS}}
+{{py: name = prefix + function}}
+cdef {{name}}_t *{{name}} = <{{name}}_t*>Capsule_AsVoidPtr(blas.{{name}}._cpointer)
+{{endfor}}
+{{for function in LAPACK_FUNCTIONS}}
+{{py: name = prefix + function}}
+cdef {{name}}_t *{{name}} = <{{name}}_t*>Capsule_AsVoidPtr(lapack.{{name}}._cpointer)
+{{endfor}}
+{{endfor}}
+
+cdef sdot_t *sdot = <sdot_t*>Capsule_AsVoidPtr(blas.sdot._cpointer)
+cdef {{prefix}}dot_t *{{prefix}}dot = <{{prefix}}dot_t*>Capsule_AsVoidPtr(blas.{{prefix}}dot._cpointer)
+cdef cdotu_t *cdot = <cdotu_t*>Capsule_AsVoidPtr(blas.cdotu._cpointer)
+cdef zdotu_t *zdot = <zdotu_t*>Capsule_AsVoidPtr(blas.zdotu._cpointer)
+
+cdef int FORTRAN = 1
+
+# Array shape validation
+cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, nobs=None):
+    if not shape[0] == nrows:
+        raise ValueError('Invalid shape for %s matrix: requires %d rows,'
+                         ' got %d' % (name, nrows, shape[0]))
+    if not shape[1] == ncols:
+        raise ValueError('Invalid shape for %s matrix: requires %d columns,'
+                         'got %d' % (name, shape[1], shape[1]))
+    if nobs is not None and shape[2] not in [1, nobs]:
+        raise ValueError('Invalid time-varying dimension for %s matrix:'
+                         ' requires 1 or %d, got %d' % (name, nobs, shape[2]))
+
+cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, nobs = None):
+    if not shape[0] == nrows:
+        raise ValueError('Invalid shape for %s vector: requires %d rows,'
+                         ' got %d' % (name, nrows, shape[0]))
+    if nobs is not None and not shape[1] in [1, nobs]:
+        raise ValueError('Invalid time-varying dimension for %s vector:'
+                         ' requires 1 or %d got %d' % (name, nobs, shape[1]))
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+{{py:
+combined_prefix = prefix
+combined_cython_type = cython_type
+if prefix == 'c':
+    combined_prefix = 'z'
+    combined_cython_type = 'np.complex128_t'
+if prefix == 's':
+    combined_prefix = 'd'
+    combined_cython_type = 'np.float64_t'
+}}
+
+## State Space Representation
+cdef class {{prefix}}Statespace(object):
+    """
+    {{prefix}}Statespace(obs, design, obs_intercept, obs_cov, transition, state_intercept, selection, state_cov)
+
+    *See Durbin and Koopman (2012), Chapter 4 for all notation*
+    """
+
+    # ### State space representation
+    # 
+    # $$
+    # \begin{align}
+    # y_t & = Z_t \alpha_t + d_t + \varepsilon_t \hspace{3em} & \varepsilon_t & \sim N(0, H_t) \\\\
+    # \alpha_{t+1} & = T_t \alpha_t + c_t + R_t \eta_t & \eta_t & \sim N(0, Q_t) \\\\
+    # & & \alpha_1 & \sim N(a_1, P_1)
+    # \end{align}
+    # $$
+    # 
+    # $y_t$ is $p \times 1$  
+    # $\varepsilon_t$ is $p \times 1$  
+    # $\alpha_t$ is $m \times 1$  
+    # $\eta_t$ is $r \times 1$  
+    # $t = 1, \dots, T$
+
+    # `nobs` $\equiv T$ is the length of the time-series  
+    # `nendog` $\equiv p$ is dimension of observation space  
+    # `nstates` $\equiv m$ is the dimension of the state space  
+    # `nposdef` $\equiv r$ is the dimension of the state shocks  
+    # *Old notation: T, n, k, g*
+    cdef readonly int nobs, nendog, nstates, nposdef
+    
+    # `obs` $\equiv y_t$ is the **observation vector** $(p \times T)$  
+    # `design` $\equiv Z_t$ is the **design vector** $(p \times m \times T)$  
+    # `obs_intercept` $\equiv d_t$ is the **observation intercept** $(p \times T)$  
+    # `obs_cov` $\equiv H_t$ is the **observation covariance matrix** $(p \times p \times T)$  
+    # `transition` $\equiv T_t$ is the **transition matrix** $(m \times m \times T)$  
+    # `state_intercept` $\equiv c_t$ is the **state intercept** $(m \times T)$  
+    # `selection` $\equiv R_t$ is the **selection matrix** $(m \times r \times T)$  
+    # `state_cov` $\equiv Q_t$ is the **state covariance matrix** $(r \times r \times T)$  
+    # `selected_state_cov` $\equiv R Q_t R'$ is the **selected state covariance matrix** $(m \times m \times T)$  
+    # `initial_state` $\equiv a_1$ is the **initial state mean** $(m \times 1)$  
+    # `initial_state_cov` $\equiv P_1$ is the **initial state covariance matrix** $(m \times m)$
+    #
+    # With the exception of `obs`, these are *optionally* time-varying. If they are instead time-invariant,
+    # then the dimension of length $T$ is instead of length $1$.
+    #
+    # *Note*: the initial vectors' notation 1-indexed as in Durbin and Koopman,
+    # but in the recursions below it will be 0-indexed in the Python arrays.
+    # 
+    # *Old notation: y, -, mu, beta_tt_init, P_tt_init*
+    cdef readonly {{cython_type}} [::1,:] obs, obs_intercept, state_intercept
+    cdef readonly {{cython_type}} [:] initial_state
+    cdef readonly {{cython_type}} [::1,:] initial_state_cov
+    # *Old notation: H, R, F, G, Q*, G Q* G'*
+    cdef readonly {{cython_type}} [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
+
+    # `missing` is a $(p \times T)$ boolean matrix where a row is a $(p \times 1)$ vector
+    # in which the $i$th position is $1$ if y_{i,t} is to be considered a missing value.  
+    # *Note:* This is created as the output of np.isnan(obs).
+    cdef readonly int [::1,:] missing
+    # `nmissing` is an `T \times 0` integer vector holding the number of *missing* observations
+    # $p - p_t$
+    cdef readonly int [:] nmissing
+
+    # Flag for a time-invariant model, which requires that *all* of the
+    # possibly time-varying arrays are time-invariant.
+    cdef readonly int time_invariant
+
+    # Flag for initialization.
+    cdef readonly int initialized
+
+    # ### Kalman filter properties
+
+    # `loglikelihood` $\equiv \log p(y_t | Y_{t-1})$
+    cdef readonly {{cython_type}} [:] loglikelihood
+
+    # `filtered_state` $\equiv a_{t|t} = E(\alpha_t | Y_t)$ is the **filtered estimator** of the state $(m \times T)$  
+    # `predicted_state` $\equiv a_{t+1} = E(\alpha_{t+1} | Y_t)$ is the **one-step ahead predictor** of the state $(m \times T-1)$  
+    # `forecast` $\equiv E(y_t|Y_{t-1})$ is the **forecast** of the next observation $(p \times T)$   
+    # `forecast_error` $\equiv v_t = y_t - E(y_t|Y_{t-1})$ is the **one-step ahead forecast error** of the next observation $(p \times T)$  
+    # 
+    # *Note*: Actual values in `filtered_state` will be from 1 to `nobs`+1. Actual
+    # values in `predicted_state` will be from 0 to `nobs`+1 because the initialization
+    # is copied over to the zeroth entry, and similar for the covariances, below.
+    #
+    # *Old notation: beta_tt, beta_tt1, y_tt1, eta_tt1*
+    cdef readonly {{cython_type}} [::1,:] filtered_state, predicted_state, forecast, forecast_error
+
+    # `filtered_state_cov` $\equiv P_{t|t} = Var(\alpha_t | Y_t)$ is the **filtered state covariance matrix** $(m \times m \times T)$  
+    # `predicted_state_cov` $\equiv P_{t+1} = Var(\alpha_{t+1} | Y_t)$ is the **predicted state covariance matrix** $(m \times m \times T)$  
+    # `forecast_error_cov` $\equiv F_t = Var(v_t | Y_{t-1})$ is the **forecast error covariance matrix** $(p \times p \times T)$  
+    # 
+    # *Old notation: P_tt, P_tt1, f_tt1*
+    cdef readonly {{cython_type}} [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
+
+    # ### Initialize state space model
+    # *Note*: The initial state and state covariance matrix must be provided.
+    def __init__(self,
+                 {{cython_type}} [::1,:]   obs,
+                 {{cython_type}} [::1,:,:] design,
+                 {{cython_type}} [::1,:]   obs_intercept,
+                 {{cython_type}} [::1,:,:] obs_cov,
+                 {{cython_type}} [::1,:,:] transition,
+                 {{cython_type}} [::1,:]   state_intercept,
+                 {{cython_type}} [::1,:,:] selection,
+                 {{cython_type}} [::1,:,:] state_cov):
+
+        # Local variables
+        cdef:
+            np.npy_intp dim1[1]
+            np.npy_intp dim2[2]
+            np.npy_intp dim3[3]
+
+        # #### State space representation variables  
+        # **Note**: these arrays share data with the versions defined in
+        # Python and passed to this constructor, so if they are updated in
+        # Python they will also be updated here.
+        self.obs = obs
+        self.design = design
+        self.obs_intercept = obs_intercept
+        self.obs_cov = obs_cov
+        self.transition = transition
+        self.state_intercept = state_intercept
+        self.selection = selection
+        self.state_cov = state_cov
+
+        # Dimensions
+        self.nendog = obs.shape[0]
+        self.nstates = selection.shape[0]
+        self.nposdef = selection.shape[1]
+        self.nobs = obs.shape[1]
+
+        # #### Validate matrix dimensions
+        #
+        # Make sure that the given state-space matrices have consistent sizes
+        validate_matrix_shape('design', &self.design.shape[0],
+                              self.nendog, self.nstates, self.nobs)
+        validate_vector_shape('observation intercept', &self.obs_intercept.shape[0],
+                              self.nendog, self.nobs)
+        validate_matrix_shape('observation covariance matrix', &self.obs_cov.shape[0],
+                              self.nendog, self.nendog, self.nobs)
+        validate_matrix_shape('transition', &self.transition.shape[0],
+                              self.nstates, self.nstates, self.nobs)
+        validate_vector_shape('state intercept', &self.state_intercept.shape[0],
+                              self.nstates, self.nobs)
+        validate_matrix_shape('state covariance matrix', &self.state_cov.shape[0],
+                              self.nposdef, self.nposdef, self.nobs)
+
+        # Check for a time-invariant model
+        self.time_invariant = (
+            self.design.shape[2] == 1           and
+            self.obs_intercept.shape[1] == 1    and
+            self.obs_cov.shape[2] == 1          and
+            self.transition.shape[2] == 1       and
+            self.state_intercept.shape[1] == 1  and
+            self.selection.shape[2] == 1        and
+            self.state_cov.shape[2] == 1
+        )
+
+        # Set the flag for initialization to be false
+        self.initialized = False
+
+        # #### Allocate arrays for calculations
+        
+        # Selected state covariance matrix
+        dim3[0] = self.nstates; dim3[1] = self.nstates; dim3[2] = 1;
+        # (we only allocate memory for time-varying array if necessary)
+        if self.state_cov.shape[2] > 1 or self.selection.shape[2] > 1:
+            dim3[2] = self.nobs
+        self.selected_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
+        # Arrays for Kalman filter output
+        dim2[0] = self.nstates; dim2[1] = self.nobs;
+        self.filtered_state = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        dim2[1] = self.nobs+1
+        self.predicted_state = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        dim2[0] = self.nendog; dim2[1] = self.nobs;
+        self.forecast = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self.forecast_error = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+        dim3[0] = self.nstates; dim3[1] = self.nstates; dim3[2] = self.nobs;
+        self.filtered_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+        dim3[2] = self.nobs+1
+        self.predicted_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+        dim3[0] = self.nendog; dim3[1] = self.nendog; dim3[2] = self.nobs;
+        self.forecast_error_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
+        dim1[0] = self.nobs
+        self.loglikelihood = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+
+        # Handle missing data
+        self.missing = np.array(np.isnan(obs), dtype = np.int32, order="F")
+        self.nmissing = np.array(np.sum(self.missing, axis=0), dtype = np.int32)
+
+    # ## Initialize: user-provided
+    #
+    # Initialize the filter with specific values.
+    def initialize_known(self, {{cython_type}} [:] initial_state, {{cython_type}} [::1,:] initial_state_cov):
+        """
+        initialize_known(initial_state, initial_state_cov)
+        """
+        validate_vector_shape('inital state', &initial_state.shape[0], self.nstates, None)
+        validate_matrix_shape('initial state covariance', &initial_state_cov.shape[0], self.nstates, self.nstates, None)
+
+        self.initial_state = initial_state
+        self.initial_state_cov = initial_state_cov
+
+        self.initialized = True
+
+    # ## Initialize: approximate diffuse priors
+    #
+    # Durbin and Koopman note that this initialization should only be coupled
+    # with the standard Kalman filter for "approximate exploratory work" and
+    # can lead to "large rounding errors" (p. 125).
+    # 
+    # *Note:* see Durbin and Koopman section 5.6.1
+    def initialize_approximate_diffuse(self, variance=1e2):
+        """
+        initialize_approximate_diffuse(variance=1e2)
+        """
+        cdef np.npy_intp dim[1]
+        dim[0] = self.nstates
+        self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+        self.initial_state_cov = np.asfortranarray(np.eye(self.nstates), dtype={{dtype}}) * variance
+
+        self.initialized = True
+
+    # ## Initialize: stationary process
+    # *Note:* see Durbin and Koopman section 5.6.2
+    # TODO improve efficiency with direct BLAS / LAPACK calls
+    def initialize_stationary(self):
+        cdef np.npy_intp dim[1]
+
+        from scipy.linalg import solve_discrete_lyapunov
+
+        dim[0] = self.nstates
+        self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+        self.initial_state_cov =  np.asfortranarray(
+            solve_discrete_lyapunov(
+                np.array(self.transition[:,:,0]),
+                np.array(self.state_cov[:,:,0])
+            ), dtype={{dtype}}
+        )
+
+        self.initialized = True
+
+
+cdef void {{prefix}}select_state_cov({{prefix}}KalmanFilter kfilter):
+    # Constants
+    cdef:
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    # #### Calculate selected state covariance matrix  
+    # $Q_t^* = R_t Q_t R_t'$
+    # 
+    # Combine the selection matrix and the state covariance matrix to get
+    # the simplified (but possibly singular) "selected" state covariance
+    # matrix (see e.g. Durbin and Koopman p. 43)
+    
+    # `tmp0` array used here, dimension $(m \times r)$  
+
+    # $\\#_0 = 1.0 * R_t Q_t$  
+    # $(m \times r) = (m \times r) (r \times r)$
+    {{prefix}}gemm("N", "N", &kfilter.nstates, &kfilter.nposdef, &kfilter.nposdef,
+          &alpha, kfilter.selection, &kfilter.nstates,
+                  kfilter.state_cov, &kfilter.nposdef,
+          &beta, kfilter.tmp0, &kfilter.nstates)
+
+    # $Q_t^* = 1.0 * \\#_0 R_t'$  
+    # $(m \times m) = (m \times r) (m \times r)'$
+    {{prefix}}gemm("N", "T", &kfilter.nstates, &kfilter.nposdef, &kfilter.nposdef,
+          &alpha, kfilter.tmp0, &kfilter.nstates,
+                  kfilter.selection, &kfilter.nstates,
+          &beta, kfilter.selected_state_cov, &kfilter.nstates)
+
+
+cdef void {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
+
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    # #### Forecast for time t  
+    # `forecast` $= Z_t a_t + d_t$
+    # 
+    # *Note*: $a_t$ is given from the initialization (for $t = 0$) or
+    # from the previous iteration of the filter (for $t > 0$).
+
+    # $\\# = d_t$
+    {{prefix}}copy(&kfilter.nendog, kfilter.obs_intercept, &inc, kfilter.forecast, &inc)
+    # `forecast` $= 1.0 * Z_t a_t + 1.0 * \\#$  
+    # $(p \times 1) = (p \times m) (m \times 1) + (p \times 1)$
+    {{prefix}}gemv("N", &kfilter.nendog, &kfilter.nstates,
+          &alpha, kfilter.design, &kfilter.nendog,
+                  kfilter.input_state, &inc,
+          &alpha, kfilter.forecast, &inc)
+
+
+    # #### Forecast error for time t  
+    # `forecast_error` $\equiv v_t = y_t -$ `forecast`
+
+    # $\\# = y_t$
+    {{prefix}}copy(&kfilter.nendog, kfilter.obs, &inc, kfilter.forecast_error, &inc)
+    # $v_t = -1.0 * $ `forecast` $ + \\#$
+    # $(p \times 1) = (p \times 1) + (p \times 1)$
+    {{prefix}}axpy(&kfilter.nendog, &gamma, kfilter.forecast, &inc, kfilter.forecast_error, &inc)
+
+    # *Intermediate calculation* (used just below and then once more)  
+    # `tmp1` array used here, dimension $(m \times p)$  
+    # $\\#_1 = P_t Z_t'$  
+    # $(m \times p) = (m \times m) (p \times m)'$
+    {{prefix}}gemm("N", "T", &kfilter.nstates, &kfilter.nendog, &kfilter.nstates,
+          &alpha, kfilter.input_state_cov, &kfilter.nstates,
+                  kfilter.design, &kfilter.nendog,
+          &beta, kfilter.tmp1, &kfilter.nstates)
+
+    # #### Forecast error covariance matrix for time t  
+    # $F_t \equiv Z_t P_t Z_t' + H_t$
+    # 
+    # *Note*: this and does nothing at all to `forecast_error_cov` if
+    # converged == True
+    if not kfilter.converged:
+        # $\\# = H_t$
+        {{prefix}}copy(&kfilter.nendog2, kfilter.obs_cov, &inc, kfilter.forecast_error_cov, &inc)
+        # $F_t = 1.0 * Z_t \\#_1 + 1.0 * \\#$
+        {{prefix}}gemm("N", "N", &kfilter.nendog, &kfilter.nendog, &kfilter.nstates,
+              &alpha, kfilter.design, &kfilter.nendog,
+                     kfilter.tmp1, &kfilter.nstates,
+              &alpha, kfilter.forecast_error_cov, &kfilter.nendog)
+
+cdef void {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter):
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+    
+    # #### Filtered state for time t
+    # $a_{t|t} = a_t + P_t Z_t' F_t^{-1} v_t$  
+    # $a_{t|t} = 1.0 * \\#_1 \\#_2 + 1.0 a_t$
+    {{prefix}}copy(&kfilter.nstates, kfilter.input_state, &inc, kfilter.filtered_state, &inc)
+    {{prefix}}gemv("N", &kfilter.nstates, &kfilter.nendog,
+          &alpha, kfilter.tmp1, &kfilter.nstates,
+                  kfilter.tmp2, &inc,
+          &alpha, kfilter.filtered_state, &inc)
+
+    # #### Filtered state covariance for time t
+    # $P_{t|t} = P_t - P_t Z_t' F_t^{-1} Z_t P_t$  
+    # $P_{t|t} = P_t - \\#_1 \\#_3 P_t$  
+    # 
+    # *Note*: this and does nothing at all to `filtered_state_cov` if
+    # converged == True
+    if not kfilter.converged:
+        {{prefix}}copy(&kfilter.nstates2, kfilter.input_state_cov, &inc, kfilter.filtered_state_cov, &inc)
+
+        # `tmp0` array used here, dimension $(m \times m)$  
+        # $\\#_0 = 1.0 * \\#_1 \\#_3$  
+        # $(m \times m) = (m \times p) (p \times m)$
+        {{prefix}}gemm("N", "N", &kfilter.nstates, &kfilter.nstates, &kfilter.nendog,
+              &alpha, kfilter.tmp1, &kfilter.nstates,
+                      kfilter.tmp3, &kfilter.nendog,
+              &beta, kfilter.tmp0, &kfilter.nstates)
+
+        # $P_{t|t} = - 1.0 * \\# P_t + 1.0 * P_t$  
+        # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+        {{prefix}}gemm("N", "N", &kfilter.nstates, &kfilter.nstates, &kfilter.nstates,
+              &gamma, kfilter.tmp0, &kfilter.nstates,
+                      kfilter.input_state_cov, &kfilter.nstates,
+              &alpha, kfilter.filtered_state_cov, &kfilter.nstates)
+
+cdef void {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter):
+
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    # #### Predicted state for time t+1
+    # $a_{t+1} = T_t a_{t|t} + c_t$
+    {{prefix}}copy(&kfilter.nstates, kfilter.state_intercept, &inc, kfilter.predicted_state, &inc)
+    {{prefix}}gemv("N", &kfilter.nstates, &kfilter.nstates,
+          &alpha, kfilter.transition, &kfilter.nstates,
+                  kfilter.filtered_state, &inc,
+          &alpha, kfilter.predicted_state, &inc)
+
+    # #### Predicted state covariance matrix for time t+1
+    # $P_{t+1} = T_t P_{t|t} T_t' + Q_t^*$
+    #
+    # *Note*: this and does nothing at all to `predicted_state_cov` if
+    # converged == True
+    if not kfilter.converged:
+        {{prefix}}copy(&kfilter.nstates2, kfilter.selected_state_cov, &inc, kfilter.predicted_state_cov, &inc)
+        # `tmp0` array used here, dimension $(m \times m)$  
+
+        # $\\#_0 = T_t P_{t|t} $
+
+        # $(m \times m) = (m \times m) (m \times m)$
+        {{prefix}}gemm("N", "N", &kfilter.nstates, &kfilter.nstates, &kfilter.nstates,
+              &alpha, kfilter.transition, &kfilter.nstates,
+                      kfilter.filtered_state_cov, &kfilter.nstates,
+              &beta, kfilter.tmp0, &kfilter.nstates)
+        # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+        # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+        {{prefix}}gemm("N", "T", &kfilter.nstates, &kfilter.nstates, &kfilter.nstates,
+              &alpha, kfilter.tmp0, &kfilter.nstates,
+                      kfilter.transition, &kfilter.nstates,
+              &alpha, kfilter.predicted_state_cov, &kfilter.nstates)
+
+
+cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    # Constants
+    cdef:
+        {{cython_type}} loglikelihood
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    loglikelihood = -0.5*({{combined_prefix}}log(2*NPY_PI*determinant))
+
+    {{if combined_prefix == 'd'}}
+    loglikelihood = loglikelihood - 0.5*{{prefix}}dot(&kfilter.nendog, kfilter.forecast_error, &inc, kfilter.tmp2, &inc)
+    {{else}}
+    {{prefix}}gemv("N", &inc, &kfilter.nendog,
+                   &alpha, kfilter.forecast_error, &inc,
+                           kfilter.tmp2, &inc,
+                   &beta, kfilter.tmp0, &inc)
+    loglikelihood = loglikelihood - 0.5 * kfilter.tmp0[0]
+    {{endif}}
+
+    return loglikelihood
+
+
+cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    Factorize the forecast error covariance matrix using simple division
+    in the case that the observations are univariate.
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    # #### Intermediate values
+    cdef:
+        int inc = 1
+        {{cython_type}} scalar
+
+    # Take the inverse of the forecast error covariance matrix
+    if not kfilter.converged:
+        determinant = {{combined_prefix}}abs(kfilter.forecast_error_cov[0])
+    scalar = 1.0 / kfilter.forecast_error_cov[0]
+    kfilter.tmp2[0] = scalar * kfilter.forecast_error[0]
+    {{prefix}}copy(&kfilter.nendogstates, kfilter.design, &inc, kfilter.tmp3, &inc)
+    {{prefix}}scal(&kfilter.nendogstates, &scalar, kfilter.tmp3, &inc)
+
+    return determinant
+
+cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    Factorize the forecast error covariance matrix using a Cholesky
+    decomposition. Called by either of the `solve_cholesky` or
+    `invert_cholesky` routines.
+
+    Requires a positive definite matrix, but is faster than an LU
+    decomposition.
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    cdef:
+        int inc = 1
+        int info
+        int i
+
+    if not kfilter.converged:
+        {{prefix}}copy(&kfilter.nendog2, kfilter.forecast_error_cov, &inc, kfilter.forecast_error_fac, &inc)
+        {{prefix}}potrf("U", &kfilter.nendog, kfilter.forecast_error_fac, &kfilter.nendog, &info)
+
+        if info > 0:
+            # TODO catch and re-raise this exception in main loop so that e.g.
+            # the time subscript can be provided as well.
+            warnings.warn('Non-positive-definite forecast error'
+                          ' covariance matrix encountered.')
+
+        # Calculate the determinant (just the squared product of the
+        # diagonals, in the Cholesky decomposition case)
+        determinant = 1.0
+        for i in range(kfilter.nendog):
+            determinant = determinant * kfilter._forecast_error_fac[i, i]
+        determinant = determinant**2
+
+    return determinant
+
+cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    Factorize the forecast error covariance matrix using an LU
+    decomposition. Called by either of the `solve_lu` or `invert_lu`
+    routines.
+
+    Is slower than a Cholesky decomposition, but does not require a
+    positive definite matrix.
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    cdef:
+        int inc = 1
+        int info
+        int i
+
+    if not kfilter.converged:
+        # Perform LU decomposition into `forecast_error_fac`
+        {{prefix}}copy(&kfilter.nendog2, kfilter.forecast_error_cov, &inc, kfilter.forecast_error_fac, &inc)
+        
+        {{prefix}}getrf(&kfilter.nendog, &kfilter.nendog,
+                        kfilter.forecast_error_fac, &kfilter.nendog,
+                        kfilter.forecast_error_ipiv, &info)
+
+        # Calculate the determinant (product of the diagonals, but with
+        # sign modifications according to the permutation matrix)    
+        determinant = 1
+        for i in range(kfilter.nendog):
+            if not kfilter.forecast_error_ipiv[i] == i+1:
+                determinant *= -1*kfilter._forecast_error_fac[i, i]
+            else:
+                determinant *= kfilter._forecast_error_fac[i, i]
+
+    return determinant
+
+cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    inverse_cholesky(self, determinant)
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    cdef:
+        int info
+        int inc = 1
+        int i, j
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    if not kfilter.converged:
+        # Perform the Cholesky decomposition and get the determinant
+        determinant = {{prefix}}factorize_cholesky(kfilter, determinant)
+
+        # Continue taking the inverse
+        {{prefix}}potri("U", &kfilter.nendog, kfilter.forecast_error_fac, &kfilter.nendog, &info)
+
+        # ?potri only fills in the upper triangle of the symmetric array, and
+        # since the ?symm and ?symv routines are not available as of scipy
+        # 0.11.0, we can't use them, so we must fill in the lower triangle
+        # by hand
+        for i in range(kfilter.nendog):
+            for j in range(i):
+                kfilter._forecast_error_fac[i,j] = kfilter._forecast_error_fac[j,i]
+
+
+    # Get `tmp2` and `tmp3` via matrix multiplications
+
+    # `tmp2` array used here, dimension $(p \times 1)$  
+    # $\\#_2 = F_t^{-1} v_t$  
+    #{{prefix}}symv("U", &kfilter.nendog, &alpha, kfilter.forecast_error_fac, &kfilter.nendog,
+    #               kfilter.forecast_error, &inc, &beta, kfilter.tmp2, &inc)
+    {{prefix}}gemv("N", &kfilter.nendog, &kfilter.nendog,
+                   &alpha, kfilter.forecast_error_fac, &kfilter.nendog,
+                           kfilter.forecast_error, &inc,
+                   &beta, kfilter.tmp2, &inc)
+
+    # `tmp3` array used here, dimension $(p \times m)$  
+    # $\\#_3 = F_t^{-1} Z_t$
+    #{{prefix}}symm("L", "U", &kfilter.nendog, &kfilter.nstates,
+    #               &alpha, kfilter.forecast_error_fac, &kfilter.nendog,
+    #                       kfilter.design, &kfilter.nendog,
+    #               &beta, kfilter.tmp3, &kfilter.nendog)
+    {{prefix}}gemm("N", "N", &kfilter.nendog, &kfilter.nstates, &kfilter.nendog,
+                   &alpha, kfilter.forecast_error_fac, &kfilter.nendog,
+                           kfilter.design, &kfilter.nendog,
+                   &beta, kfilter.tmp3, &kfilter.nendog)
+
+    return determinant
+
+cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    inverse_cholesky(self, determinant)
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    cdef:
+        int info
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    if not kfilter.converged:
+        # Perform the Cholesky decomposition and get the determinant
+        determinant = {{prefix}}factorize_lu(kfilter, determinant)
+
+        # Continue taking the inverse
+        {{prefix}}getri(&kfilter.nendog, kfilter.forecast_error_fac, &kfilter.nendog,
+               kfilter.forecast_error_ipiv, kfilter.forecast_error_work, &kfilter.ldwork, &info)
+
+    # Get `tmp2` and `tmp3` via matrix multiplications
+
+    # `tmp2` array used here, dimension $(p \times 1)$  
+    # $\\#_2 = F_t^{-1} v_t$  
+    {{prefix}}gemv("N", &kfilter.nendog, &kfilter.nendog,
+                   &alpha, kfilter.forecast_error_fac, &kfilter.nendog,
+                           kfilter.forecast_error, &inc,
+                   &beta, kfilter.tmp2, &inc)
+
+    # `tmp3` array used here, dimension $(p \times m)$  
+    # $\\#_3 = F_t^{-1} Z_t$
+    {{prefix}}gemm("N", "N", &kfilter.nendog, &kfilter.nstates, &kfilter.nendog,
+                   &alpha, kfilter.forecast_error_fac, &kfilter.nendog,
+                           kfilter.design, &kfilter.nendog,
+                   &beta, kfilter.tmp3, &kfilter.nendog)
+
+    return determinant
+
+cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    solve_cholesky(self, determinant)
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    cdef:
+        int info
+        int inc = 1
+
+    if not kfilter.converged:
+        # Perform the Cholesky decomposition and get the determinant
+        determinant = {{prefix}}factorize_cholesky(kfilter, determinant)
+
+    # Solve the linear systems  
+    # `tmp2` array used here, dimension $(p \times 1)$  
+    # $F_t \\#_2 = v_t$  
+    {{prefix}}copy(&kfilter.nendog, kfilter.forecast_error, &inc, kfilter.tmp2, &inc)
+    {{prefix}}potrs("U", &kfilter.nendog, &inc, kfilter.forecast_error_fac, &kfilter.nendog, kfilter.tmp2, &kfilter.nendog, &info)
+
+    # `tmp3` array used here, dimension $(p \times m)$  
+    # $F_t \\#_3 = Z_t$
+    {{prefix}}copy(&kfilter.nendogstates, kfilter.design, &inc, kfilter.tmp3, &inc)
+    {{prefix}}potrs("U", &kfilter.nendog, &kfilter.nstates, kfilter.forecast_error_fac, &kfilter.nendog, kfilter.tmp3, &kfilter.nendog, &info)
+
+    return determinant
+
+cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    """
+    inverse_cholesky(self, determinant)
+
+    If the model has converged to a steady-state, this is a NOOP and simply
+    returns the determinant that was passed in.
+    """
+    cdef:
+        int info
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    if not kfilter.converged:
+        # Perform the Cholesky decomposition and get the determinant
+        determinant = {{prefix}}factorize_lu(kfilter, determinant)
+
+    # Solve the linear systems  
+    # `tmp2` array used here, dimension $(p \times 1)$  
+    # $F_t \\#_2 = v_t$  
+    {{prefix}}copy(&kfilter.nendog, kfilter.forecast_error, &inc, kfilter.tmp2, &inc)
+    {{prefix}}getrs("N", &kfilter.nendog, &inc, kfilter.forecast_error_fac, &kfilter.nendog,
+                    kfilter.forecast_error_ipiv, kfilter.tmp2, &kfilter.nendog, &info)
+
+    # `tmp3` array used here, dimension $(p \times m)$  
+    # $F_t \\#_3 = Z_t$
+    {{prefix}}copy(&kfilter.nendogstates, kfilter.design, &inc, kfilter.tmp3, &inc)
+    {{prefix}}getrs("N", &kfilter.nendog, &kfilter.nstates, kfilter.forecast_error_fac, &kfilter.nendog,
+                    kfilter.forecast_error_ipiv, kfilter.tmp3, &kfilter.nendog, &info)
+
+    return determinant
+
+cdef class {{prefix}}KalmanFilter(object):
+    """
+    {{prefix}}KalmanFilter(model, filter = FILTER_CONVENTIONAL, inversion_method = SOLVE_CHOLESKY)
+
+    Notes
+    -----
+
+    Due to the heavy use of BLAS / LAPACK calls, two conventions are used to
+    reduce characters and aid readability:
+    1. Pointers to arrays and quantities of interest are defined at the top
+       of all functions, and then the pointers are used in the actual calls.
+    2. Pointers to arrays and quantities of the *Statespace object are only
+       defined in the main filter (`__next__`) and are then passed as arguments
+       to auxilliary functions (e.g. `solve_lu`), whereas pointers to arrays
+       and quantities of the *KalmanFilter object are re-defined at the top
+       of all functions.
+    """
+
+    # ### Statespace model
+    cdef readonly {{prefix}}Statespace model
+
+    # ### Filter parameters
+    # Holds the time-iteration state of the filter  
+    # *Note*: must be changed using the `seek` method
+    cdef readonly int t
+    # Holds the tolerance parameter for convergence
+    cdef public np.float64_t tolerance
+    # Holds the convergence to steady-state status of the filter
+    # *Note*: is by default reset each time `seek` is called
+    cdef readonly int converged
+    # Holds whether or not the model is time-invariant
+    # *Note*: is by default reset each time `seek` is called
+    cdef readonly int time_invariant
+    # The Kalman filter procedure to use  
+    # TODO currently only supports the conventional Kalman filter
+    cdef public int filter_method
+    # The method by which the terms using the inverse of the forecast
+    # error covariance matrix are solved.
+    cdef public int inversion_method
+    # Methods to improve numerical stability
+    cdef public int stability_method
+
+    # ### Temporary arrays
+    # These matrices are used to temporarily hold selected observation vectors,
+    # design matrices, and observation covariance matrices in the case of
+    # missing data.  
+    cdef readonly {{cython_type}} [:] selected_obs
+    cdef readonly {{cython_type}} [::1,:] _selected_design
+    cdef readonly {{cython_type}} [::1,:] _selected_obs_cov
+    # The following are contiguous memory segments which are then used to
+    # store the data in the above matrices.
+    cdef readonly {{cython_type}} [:] selected_design
+    cdef readonly {{cython_type}} [:] selected_obs_cov
+    # `forecast_error_fac` is a forecast error covariance matrix **factorization** $(p \times p)$.
+    # Depending on the method for handling the inverse of the forecast error covariance matrix, it may be:
+    # - a Cholesky factorization if `cholesky_solve` is used
+    # - an inverse calculated via Cholesky factorization if `cholesky_inverse` is used
+    # - an LU factorization if `lu_solve` is used
+    # - an inverse calculated via LU factorization if `lu_inverse` is used
+    cdef readonly {{cython_type}} [::1,:] _forecast_error_fac
+    # `forecast_error_ipiv` holds pivot indices if an LU decomposition is used
+    cdef readonly int [:] _forecast_error_ipiv
+    # `forecast_error_work` is a work array for matrix inversion if an LU
+    # decomposition is used
+    cdef readonly {{cython_type}} [::1,:] _forecast_error_work
+
+    cdef readonly {{cython_type}} [::1,:] _tmp0, _tmp1, _tmp3
+    cdef readonly {{cython_type}} [:] _tmp2
+
+    # Holds the determinant across calculations (this is done because after
+    # convergence, it doesn't need to be re-calculated anymore)
+    cdef readonly {{cython_type}} determinant
+
+    # ### Pointers to current-iteration arrays
+    cdef {{cython_type}} * obs
+    cdef {{cython_type}} * design
+    cdef {{cython_type}} * obs_intercept
+    cdef {{cython_type}} * obs_cov
+    cdef {{cython_type}} * transition
+    cdef {{cython_type}} * state_intercept
+    cdef {{cython_type}} * selection
+    cdef {{cython_type}} * state_cov
+    cdef {{cython_type}} * selected_state_cov
+    cdef {{cython_type}} * initial_state
+    cdef {{cython_type}} * initial_state_cov
+
+    cdef {{cython_type}} * input_state
+    cdef {{cython_type}} * input_state_cov
+
+    cdef {{cython_type}} * forecast
+    cdef {{cython_type}} * forecast_error
+    cdef {{cython_type}} * forecast_error_cov
+    cdef {{cython_type}} * filtered_state
+    cdef {{cython_type}} * filtered_state_cov
+    cdef {{cython_type}} * predicted_state
+    cdef {{cython_type}} * predicted_state_cov
+
+    cdef {{cython_type}} * forecast_error_fac
+    cdef int * forecast_error_ipiv
+    cdef {{cython_type}} * forecast_error_work
+
+    cdef {{cython_type}} * tmp0
+    cdef {{cython_type}} * tmp1
+    cdef {{cython_type}} * tmp2
+    cdef {{cython_type}} * tmp3
+
+    # ### pointers to current-iteration Kalman filtering functions
+    cdef void (*forecasting)(
+        {{prefix}}KalmanFilter
+    )
+    cdef {{cython_type}} (*inversion)(
+        {{prefix}}KalmanFilter, {{cython_type}}
+    )
+    cdef void (*updating)(
+        {{prefix}}KalmanFilter
+    )
+    cdef {{cython_type}} (*loglikelihood)(
+        {{prefix}}KalmanFilter, {{cython_type}}
+    )
+    cdef void (*prediction)(
+        {{prefix}}KalmanFilter
+    )
+
+    # ### Define some constants
+    cdef int nendog, nstates, nposdef, nendog2, nstates2, nendogstates, ldwork
+    
+    def __init__(self,
+                 {{prefix}}Statespace model,
+                 int filter_method=FILTER_CONVENTIONAL,
+                 int inversion_method=INVERT_UNIVARIATE | SOLVE_CHOLESKY,
+                 int stability_method=STABILITY_FORCE_SYMMETRY,
+                 np.float64_t tolerance=1e-19):
+        # Local variables
+        cdef:
+            np.npy_intp dim1[1]
+            np.npy_intp dim2[2]
+            np.npy_intp dim3[3]
+
+        # Save the model
+        self.model = model
+
+        # Initialize filter parameters
+        self.tolerance = tolerance
+        if not filter_method == FILTER_CONVENTIONAL:
+            raise NotImplementedError("Only the conventional Kalman filter is currently implemented")
+        self.filter_method = filter_method
+        self.inversion_method = inversion_method
+        self.stability_method = stability_method
+
+        # Initialize the constant values
+        self.time_invariant = self.model.time_invariant
+        self.nendog = self.model.nendog
+        self.nstates = self.model.nstates
+        self.nposdef = self.model.nposdef
+        self.nendog2 = self.model.nendog**2
+        self.nstates2 = self.model.nstates**2
+        self.nendogstates = self.model.nendog * self.model.nstates
+        # TODO replace with optimal work array size
+        self.ldwork = self.model.nendog
+
+        # Arrays for temporary calculations
+        # *Note*: in math notation below, a $\\#$ will represent a generic
+        # temporary array, and a $\\#_i$ will represent a named temporary array.
+
+        # Arrays related to matrix factorizations / inverses
+        dim2[0] = self.model.nendog; dim2[1] = self.model.nendog;
+        self._forecast_error_fac = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self.forecast_error_fac = &self._forecast_error_fac[0,0]
+        dim2[0] = self.ldwork; dim2[1] = self.ldwork;
+        self._forecast_error_work = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self.forecast_error_work = &self._forecast_error_work[0,0]
+        dim1[0] = self.model.nendog;
+        self._forecast_error_ipiv = np.PyArray_ZEROS(1, dim1, np.NPY_INT, FORTRAN)
+        self.forecast_error_ipiv = &self._forecast_error_ipiv[0]
+
+        # Holds arrays of dimension $(m \times m)$ and $(m \times r)$
+        dim2[0] = self.model.nstates; dim2[1] = self.model.nstates;
+        self._tmp0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self.tmp0 = &self._tmp0[0, 0]
+
+        # Holds arrays of dimension $(m \times p)$
+        dim2[0] = self.model.nstates; dim2[1] = self.model.nendog;
+        self._tmp1 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self.tmp1 = &self._tmp1[0, 0]
+
+        # Holds arrays of dimension $(p \times 1)$
+        dim1[0] = self.model.nendog;
+        self._tmp2 = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        self.tmp2 = &self._tmp2[0]
+
+        # Holds arrays of dimension $(p \times m)$
+        dim2[0] = self.model.nendog; dim2[1] = self.model.nstates;
+        self._tmp3 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self.tmp3 = &self._tmp3[0, 0]
+
+        # Arrays for missing data
+        dim1[0] = self.nendog;
+        self.selected_obs = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim1[0] = self.nendog * self.nstates;
+        self.selected_design = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim1[0] = self.nendog2;
+        self.selected_obs_cov = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+
+        # Initialize time and convergence status
+        self.seek(0)
+
+    def seek(self, unsigned int t, int reset_convergence = True):
+        """
+        seek(self, t, reset_convergence = True)
+
+        Change the time-state of the filter
+
+        Is usually called to reset the filter to the beginning.
+        """
+        if t >= self.model.nobs:
+            raise IndexError("Observation index out of range")
+        self.t = t
+
+        if reset_convergence:
+            self.converged = 0
+
+    def __iter__(self):
+        return self
+
+    def __call__(self):
+        cdef int i
+
+        self.seek(0, True)
+        for i in range(self.model.nobs):
+            self.next()
+
+    def __next__(self):
+        # Get time subscript, and stop the iterator if at the end
+        if not self.t < self.model.nobs:
+            raise StopIteration
+
+        # Initialize pointers to current-iteration objects
+        self.initialize_object_pointers()
+        # print "object pointers"
+
+        # Initialize pointers to appropriate Kalman filtering functions
+        self.initialize_function_pointers()
+        # print "function pointers"
+
+        # Convert base arrays into "selected" arrays  
+        # - State covariance matrix? $Q_t \to R_t Q_t R_t`$
+        # - Missing values: $y_t \to W_t y_t$, $Z_t \to W_t Z_t$, $H_t \to W_t H_t$
+        self.select_arrays()
+
+        # Post-convergence: copy previous iteration arrays
+        self.post_convergence()
+        # print "post convergence"
+
+        # Form forecasts
+        self.forecasting(self)
+        # print "forecasting"
+
+        # Perform `forecast_error_cov` inversion (or decomposition)
+        self.determinant = self.inversion(self, self.determinant)
+        # print "inversion"
+        # print self.determinant
+
+        # Updating step
+        self.updating(self)
+        # print "updating"
+
+        # Retrieve the loglikelihood
+        self.model.loglikelihood[self.t] = self.loglikelihood(self, self.determinant)
+        # print "loglikelihood"
+        # print self.model.loglikelihood[self.t]
+
+        # Prediction step
+        self.prediction(self)
+        # print "prediction"
+
+        # Aids to numerical stability
+        self.numerical_stability()
+
+        # Check for convergence
+        self.check_convergence()
+        # print "check convergence"
+
+        # Advance the time
+        self.t += 1
+
+    cdef void initialize_object_pointers(self) except *:
+        cdef:
+            int t = self.t
+            int inc = 1
+        # Indices for possibly time-varying arrays
+        cdef:
+            int design_t = 0
+            int obs_intercept_t = 0
+            int obs_cov_t = 0
+            int transition_t = 0
+            int state_intercept_t = 0
+            int selection_t = 0
+            int state_cov_t = 0
+
+        # Get indices for possibly time-varying arrays
+        if not self.model.time_invariant:
+            if self.model.design.shape[2] > 1:             design_t = t
+            if self.model.obs_intercept.shape[1] > 1:      obs_intercept_t = t
+            if self.model.obs_cov.shape[2] > 1:            obs_cov_t = t
+            if self.model.transition.shape[2] > 1:         transition_t = t
+            if self.model.state_intercept.shape[1] > 1:    state_intercept_t = t
+            if self.model.selection.shape[2] > 1:          selection_t = t
+            if self.model.state_cov.shape[2] > 1:          state_cov_t = t
+
+        # Initialize object-level pointers to statespace arrays
+        self.obs = &self.model.obs[0, t]
+        self.design = &self.model.design[0, 0, design_t]
+        self.obs_intercept = &self.model.obs_intercept[0, obs_intercept_t]
+        self.obs_cov = &self.model.obs_cov[0, 0, obs_cov_t]
+        self.transition = &self.model.transition[0, 0, transition_t]
+        self.state_intercept = &self.model.state_intercept[0, state_intercept_t]
+        self.selection = &self.model.selection[0, 0, selection_t]
+        self.state_cov = &self.model.state_cov[0, 0, state_cov_t]
+
+        # Initialize object-level pointers to initialization
+        if not self.model.initialized:
+            raise RuntimeError("Statespace model not initialized.")
+        self.initial_state = &self.model.initial_state[0]
+        self.initial_state_cov = &self.model.initial_state_cov[0,0]
+
+        # Initialize object-level pointers to input arrays
+        self.input_state = &self.model.predicted_state[0, t]
+        self.input_state_cov = &self.model.predicted_state_cov[0, 0, t]
+
+        # Copy initialization arrays to input arrays if we're starting the
+        # filter
+        if t == 0:
+            # `predicted_state[:,0]` $= a_1 =$ `initial_state`  
+            # `predicted_state_cov[:,:,0]` $= P_1 =$ `initial_state_cov`  
+            {{prefix}}copy(&self.nstates, self.initial_state, &inc, self.input_state, &inc)
+            {{prefix}}copy(&self.nstates2, self.initial_state_cov, &inc, self.input_state_cov, &inc)
+
+        # Initialize object-level pointers to output arrays
+        self.forecast = &self.model.forecast[0, t]
+        self.forecast_error = &self.model.forecast_error[0, t]
+        self.forecast_error_cov = &self.model.forecast_error_cov[0, 0, t]
+
+        self.filtered_state = &self.model.filtered_state[0, t]
+        self.filtered_state_cov = &self.model.filtered_state_cov[0, 0, t]
+
+        self.predicted_state = &self.model.predicted_state[0, t+1]
+        self.predicted_state_cov = &self.model.predicted_state_cov[0, 0, t+1]
+
+    cdef void initialize_function_pointers(self) except *:
+        if self.filter_method & FILTER_CONVENTIONAL:
+            self.forecasting = {{prefix}}forecast_conventional
+
+            if self.inversion_method & INVERT_UNIVARIATE and self.nendog == 1:
+                # print 'INVERT UNIVARIATE'
+                self.inversion = {{prefix}}inverse_univariate
+            elif self.inversion_method & SOLVE_CHOLESKY:
+                # print 'SOLVE CHOLESKY'
+                self.inversion = {{prefix}}solve_cholesky
+            elif self.inversion_method & SOLVE_LU:
+                # print 'SOLVE LU'
+                self.inversion = {{prefix}}solve_lu
+            elif self.inversion_method & INVERT_CHOLESKY:
+                # print 'INVERT CHOLESKY'
+                self.inversion = {{prefix}}inverse_cholesky
+            elif self.inversion_method & INVERT_LU:
+                # print 'INVERT LU'
+                self.inversion = {{prefix}}inverse_lu
+            else:
+                raise NotImplementedError("Invalid inversion method")
+
+            self.updating = {{prefix}}updating_conventional
+            self.loglikelihood = {{prefix}}loglikelihood_conventional
+            self.prediction = {{prefix}}prediction_conventional
+
+        else:
+            raise NotImplementedError("Invalid filtering method")
+
+    cdef void select_arrays(self) except *:
+        cdef:
+            int i, j, k, l
+            int inc = 1
+            int design_t = 0
+            int obs_cov_t = 0
+            int selected_state_cov_t = 0
+        cdef:
+            {{cython_type}} alpha = 1.0
+            {{cython_type}} beta = 0.0
+        cdef:
+            np.npy_intp dim1[1]
+            np.npy_intp dim2[2]
+
+        # ### Get selected state covariance matrix
+        if self.t == 0 or self.model.selected_state_cov.shape[2] > 1:
+            selected_state_cov_t = self.t
+            self.selected_state_cov = &self.model.selected_state_cov[0, 0, selected_state_cov_t]
+            
+            # #### Calculate selected state covariance matrix  
+            # $Q_t^* = R_t Q_t R_t'$
+            # 
+            # Combine the selection matrix and the state covariance matrix to get
+            # the simplified (but possibly singular) "selected" state covariance
+            # matrix (see e.g. Durbin and Koopman p. 43)
+
+            # `tmp0` array used here, dimension $(m \times r)$  
+
+            # $\\#_0 = 1.0 * R_t Q_t$  
+            # $(m \times r) = (m \times r) (r \times r)$
+            {{prefix}}gemm("N", "N", &self.nstates, &self.nposdef, &self.nposdef,
+                  &alpha, self.selection, &self.nstates,
+                          self.state_cov, &self.nposdef,
+                  &beta, self.tmp0, &self.nstates)
+            # $Q_t^* = 1.0 * \\#_0 R_t'$  
+            # $(m \times m) = (m \times r) (m \times r)'$
+            {{prefix}}gemm("N", "T", &self.nstates, &self.nposdef, &self.nposdef,
+                  &alpha, self.tmp0, &self.nstates,
+                          self.selection, &self.nstates,
+                  &beta, self.selected_state_cov, &self.nstates)
+        else:
+            self.selected_state_cov = &self.model.selected_state_cov[0, 0, 0]
+
+        # ### Perform missing selections
+        # In Durbin and Koopman (2012), these are represented as matrix
+        # multiplications, i.e. $Z_t^* = W_t Z_t$ where $W_t$ is a row
+        # selection matrix (it contains a subset of rows of the identity
+        # matrix).
+        #
+        # It's more efficient, though, to just copy over the data directly,
+        # which is what is done here. Note that the `selected_*` arrays are
+        # defined as single-dimensional, so the assignment indexes below are
+        # set such that the arrays can be interpreted by the BLAS and LAPACK
+        # functions as two-dimensional, column-major arrays.
+        if self.model.nmissing[self.t] > 0:
+            # Set dimensions
+            self.nendog = self.model.nendog - self.model.nmissing[self.t]
+            self.nendog2 = self.nendog**2
+            self.nendogstates = self.nendog * self.nstates
+
+            if self.model.design.shape[2] > 1: design_t = self.t
+            if self.model.obs_cov.shape[2] > 1: obs_cov_t = self.t
+
+            k = 0
+            for i in range(self.model.nendog):
+                if not self.model.missing[i, self.t]:
+
+                    self.selected_obs[k] = self.model.obs[i, self.t]
+
+                    # i is rows
+                    # k is rows
+                    {{prefix}}copy(&self.model.nstates,
+                          &self.model.design[i, 0, design_t], &self.model.nendog,
+                          &self.selected_design[k], &self.nendog)
+
+                    # i, k is columns
+                    # j, l is rows
+                    l = 0
+                    for j in range(self.model.nendog):
+                        if not self.model.missing[j, self.t]:
+                            self.selected_obs_cov[l + k*self.nendog] = self.model.obs_cov[j, i, obs_cov_t]
+                            l += 1
+                    k += 1
+            self.obs = &self.selected_obs[0]
+            self.design = &self.selected_design[0]
+            self.obs_cov = &self.selected_obs_cov[0]
+        else:
+            # Reset dimensions
+            self.nendog = self.model.nendog
+            self.nendog2 = self.nendog**2
+            self.nendogstates = self.nendog * self.nstates
+
+    cdef void post_convergence(self):
+        # Constants
+        cdef:
+            int inc = 1
+
+        if self.converged:
+            # $F_t$
+            {{prefix}}copy(&self.nendog2, &self.model.forecast_error_cov[0, 0, self.t-1], &inc, self.forecast_error_cov, &inc)
+            # $P_{t|t}$
+            {{prefix}}copy(&self.nstates2, &self.model.filtered_state_cov[0, 0, self.t-1], &inc, self.filtered_state_cov, &inc)
+            # $P_t$
+            {{prefix}}copy(&self.nstates2, &self.model.predicted_state_cov[0, 0, self.t-1], &inc, self.predicted_state_cov, &inc)
+
+    cdef void numerical_stability(self):
+        cdef int i, j
+        cdef {{cython_type}} value
+
+        if self.stability_method & STABILITY_FORCE_SYMMETRY:
+            # Enforce symmetry of predicted covariance matrix  
+            # $P_{t+1} = 0.5 * (P_{t+1} + P_{t+1}')$  
+            # See Grewal (2001), Section 6.3.1.1
+            for i in range(self.nstates):
+                for j in range(i, self.nstates):
+                    value = 0.5 * (
+                        self.model.predicted_state_cov[i,j,self.t+1] +
+                        self.model.predicted_state_cov[j,i,self.t+1]
+                    )
+                    self.model.predicted_state_cov[i,j,self.t+1] = value
+                    self.model.predicted_state_cov[j,i,self.t+1] = value
+
+    cdef void check_convergence(self):
+        # Constants
+        cdef:
+            int inc = 1
+            {{cython_type}} alpha = 1.0
+            {{cython_type}} beta = 0.0
+            {{cython_type}} gamma = -1.0
+
+        if not self.time_invariant and not self.converged:
+            # #### Check for steady-state convergence
+            # 
+            # `tmp0` array used here, dimension $(m \times m)$  
+            # `tmp1` array used here, dimension $(1 \times 1)$  
+            {{prefix}}copy(&self.nstates2, self.input_state_cov, &inc, self.tmp0, &inc)
+            {{prefix}}axpy(&self.nstates2, &gamma, self.predicted_state_cov, &inc, self.tmp0, &inc)
+
+            {{if combined_prefix == 'd'}}
+            if {{prefix}}dot(&self.nstates2, self.tmp0, &inc, self.tmp0, &inc) < self.tolerance:
+                self.converged = self.t
+            {{else}}
+            {{prefix}}gemv("N", &inc, &self.nstates2, &alpha, self.tmp0, &inc, self.tmp0, &inc, &beta, self.tmp1, &inc)
+            if {{combined_prefix}}abs(self.tmp1[0]) < self.tolerance:
+                self.converged = self.t
+            {{endif}}
+
+{{endfor}}
