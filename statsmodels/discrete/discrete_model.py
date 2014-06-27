@@ -393,7 +393,8 @@ class BinaryModel(DiscreteModel):
 
     def get_distribution(self, params, exog=None, scale=None):
         """
-        Return a scipy.stats.distributions object corresponding to the `endog` of this model.
+        Return a scipy.stats.distributions object corresponding to the `endog`
+        of this model.
 
         Parameters
         --------
@@ -406,7 +407,8 @@ class BinaryModel(DiscreteModel):
 
         Returns
         --------
-        A scipy.stats.distributions object at given covariate, scale, and parameter values.
+        A scipy.stats.distributions object at given covariate, scale, and
+        parameter values.
         """
         if exog is None:
             exog = self.model.exog
@@ -726,6 +728,31 @@ class CountModel(DiscreteModel):
             return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
         else:
             return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
+
+    def get_distribution(self, params, exog=None, scale=None):
+        """
+        Return a scipy.stats.distributions object corresponding to the `endog`
+        of this model.
+
+        Parameters
+        --------
+        params : array-like
+            The model parameters.
+        exog : array-like
+            The array of covariates, defaults to self.exog.
+        scale : scalar
+            The scale parameter, defaults to self.scale.
+
+        Returns
+        --------
+        A scipy.stats.distributions object at given covariate, scale, and
+        parameter values.
+        """
+        if exog is None:
+            exog = self.model.exog
+        mean = self.predict(params=params, exog=exog)
+        rv = stats.poisson(mean)
+        return rv
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """

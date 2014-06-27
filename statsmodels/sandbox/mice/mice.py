@@ -39,6 +39,7 @@ import pandas as pd
 import numpy as np
 import patsy
 import statsmodels.api as sm
+import random
 
 class ImputedData(object):
     __doc__= """
@@ -100,7 +101,8 @@ class ImputedData(object):
         if model_class is None:
             model_class = sm.OLS
         if formula is None:
-            formula = endog_name + " ~ " + " + ".join([x for x in self.data.columns if x != endog_name])
+            formula = endog_name + " ~ " + " + ".join(
+                            [x for x in self.data.columns if x != endog_name])
         return Imputer(formula, model_class, self, init_args=init_args,
                        fit_args=fit_args, scale_method=scale_method,
                        scale_value=scale_value)
@@ -232,8 +234,8 @@ class Imputer(object):
             else:
                 scale_per = self.scale_value
         elif self.scale_method == "perturb_chi2":
-            u = np.random.chisquare(mdf.df_resid)
-            scale_per = mdf.df_resid / u
+            u = np.random.chisquare(float(mdf.df_resid))
+            scale_per = float(mdf.df_resid) / float(u)
         elif self.scale_method == "perturb_boot":
             raise NotImplementedError
         p = len(params)
@@ -249,7 +251,8 @@ class Imputer(object):
         approximating location/scale family by specifying return_class in
         Imputer initialization.
         """
-        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
+        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
+                                                                self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
@@ -259,7 +262,7 @@ class Imputer(object):
         new_endog = new_rv.rvs(size=len(exog_miss))
         self.data.store_changes(self.endog_name, new_endog)
 
-    def impute_pmm(self, pmm_neighbors=1):
+    def impute_pmm(self, pmm_neighbors=1.):
         """
         Use predictive mean matching to simulate data.
 
@@ -274,25 +277,42 @@ class Imputer(object):
             Number of neighbors in prediction space to select imputations from.
             Defaults to 1 (select closest neighbor).
         """
-        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(self.formula)
+        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
+                                                                self.formula)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
         # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
-        ii = np.argsort(pendog_obs, axis=0)
-        pendog_obs = pendog_obs[ii]
-        oendog = endog_obs.iloc[ii,:]
-        # Get indices of predicted endogs of nonmissing observations that are
-        # close to those of missing observations
-        ix = np.searchsorted(pendog_obs, pendog_miss)
-        # Select a random draw of observed endogenous variable from a set
-        # window around the closest predicted value
-        ix += np.random.randint(-pmm_neighbors / 2, pmm_neighbors / 2, len(ix))
-        np.clip(ix, 0, len(oendog), out=ix)
-        imputed_miss = np.array(oendog.iloc[ix,:])
+        imputed_miss = []
+        for val in pendog_miss:
+            dist = abs(pendog_obs - val)
+            dist_ind = np.argsort(dist, axis=0)
+            imputed_miss.append(random.choice(np.array(
+            endog_obs)[dist_ind[0:pmm_neighbors][0]]))
+#        ii = np.argsort(pendog_obs, axis=0)
+#        pendog_obs = pendog_obs[ii]
+#        oendog = endog_obs.iloc[ii,:]
+#
+#        # Get indices of predicted endogs of nonmissing observations that are
+#        # close to those of missing observations
+#        ix = np.searchsorted(pendog_obs, pendog_miss)
+#        # Select a random draw of observed endogenous variable from a set
+#        # window around the closest predicted value
+#        ix += np.random.randint(-pmm_neighbors / 2, pmm_neighbors / 2, size=len(ix))
+#        np.clip(ix, 0, len(oendog), out=ix)
+#        imputed_miss = np.array(oendog.iloc[ix,:])
         self.data.store_changes(self.endog_name, imputed_miss)
+
+#        #look into memory-computation tradeoff
+#        for mval in endog_miss:
+#            dist = abs(endog_obs - mval)
+#            dist_ind = np.argsort(dist, axis=0)
+#            endog_matched.append(random.choice(np.array(self.data.get_endog(self.endog_name)[dist_ind[0:pmm_neighbors][0]])))
+#        new_endog = endog_matched
+#        self.data.store_changes(new_endog, self.endog_name)
+
 
     def impute_bootstrap(self):
         raise NotImplementedError
@@ -452,7 +472,8 @@ class MICE(object):
     >>> impdata = mice.ImputedData(data)
     >>> m1 = impdata.new_imputer("x2", scale_method="perturb_chi2")
     >>> m2 = impdata.new_imputer("x3", scale_method="perturb_chi2")
-    >>> m3 = impdata.new_imputer("x1", model_class=sm.Logit, scale_method="perturb_chi2")
+    >>> m3 = impdata.new_imputer(
+        "x1", model_class=sm.Logit, scale_method="perturb_chi2")
     >>> impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
     >>> implist = impcomb.run(method="pmm")
     >>> p1 = impcomb.combine(implist)
@@ -542,7 +563,7 @@ class MICE(object):
         within_g = np.mean(cov_list, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g + (1 + 1/float(self.num_ds)) * between_g
+        cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
         rslt = md._results.__class__
         rslt.params = params
         rslt.scale = scale

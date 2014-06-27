@@ -153,11 +153,11 @@ class Model(object):
         This is a placeholder intended to be overwritten by individual models.
         """
         raise NotImplementedError
-    
-    def get_distribution(self, params, exog=None, scale=None):
+
+    def get_distribution(self, params, exog=None, scale=None, model_class=None):
         """
         After a model has been fit get_distribution returns simulated values at given values of exog.
-        
+
         This is a placeholder intended to be overwritten by individual models.
         """
         raise NotImplementedError
@@ -711,8 +711,8 @@ class Results(object):
         See self.model.get_distribution
         """
 
-        return self.model.get_distribution(self.params, self.scale, exog)
-        
+        return self.model.get_distribution(self.params, exog, self.scale, self.model_class)
+
 #TODO: public method?
 class LikelihoodModelResults(Results):
     """
