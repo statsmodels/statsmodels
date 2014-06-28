@@ -3,6 +3,7 @@ Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries, isnull
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
@@ -81,15 +82,58 @@ class ModelData(object):
             else:
                 self.k_constant = 0
                 self.const_idx = None
+        elif self.exog is None:
+            self.const_idx = None
+            self.k_constant = 0
         else:
             try:  # to detect where the constant is
-                const_idx = np.where(self.exog.var(axis=0) == 0)[0].squeeze()
+                const_idx = np.where(self.exog.ptp(axis=0) == 0)[0].squeeze()
                 self.k_constant = const_idx.size
-                if self.k_constant > 1:
-                    raise ValueError("More than one constant detected.")
+                if self.k_constant == 1:
+                    if self.exog[:, const_idx].mean() != 0:
+                        self.const_idx = const_idx
+                    else:
+                        # we only have a zero column and no other constant
+                        self.k_constant = 0
+                        self.const_idx = None
+                elif self.k_constant > 1:
+                    # we have more than one constant column
+                    # look for ones
+                    values = []  # keep values if we need != 0
+                    for idx in const_idx:
+                        value = self.exog[:, idx].mean()
+                        if value == 1:
+                            self.k_constant = 1
+                            self.const_idx = const_idx[idx]
+                            break
+                        values.append(value)
+                    else:
+                        # we didn't break
+                        pos = (np.array(values) != 0)
+                        #raise
+                        if pos.any():
+                            # take the first nonzero column
+                            self.k_constant = 1
+                            self.const_idx = const_idx[pos.argmax()]
+                        else:
+                            # only zeror columns
+                            self.k_constant = 0
+                            self.const_idx = None
+                elif self.k_constant == 0:
+                    # look for imp
+                        # Compute rank of augmented matrix
+                        augmented_exog = np.column_stack(
+                                    (np.ones(self.exog.shape[0]), self.exog))
+                        rank_augm = np_matrix_rank(augmented_exog)
+                        rank_orig = np_matrix_rank(self.exog)
+                        self.k_constant = int(rank_orig == rank_augm)
+                        self.const_idx = None
                 else:
-                    self.const_idx = const_idx
+                    # shouldn't be here
+                    pass
+
             except:  # should be an index error but who knows, means no const
+                raise
                 self.const_idx = None
                 self.k_constant = 0
 

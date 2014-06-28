@@ -148,6 +148,7 @@ class RegressionModel(base.LikelihoodModel):
         has_constant: bool
             True if the model has a constant or implicit constant.
         """
+        return self.k_constant
         # Easy check, most common case
         if np.any(np.all(self.exog==1.0,axis=0)):
             return True
