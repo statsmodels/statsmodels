@@ -985,6 +985,217 @@ class PHreg(model.LikelihoodModel):
 
         return cumhaz_f
 
+    def predict(self, params, cov_params=None, endog=None, exog=None,
+                strata=None, offset=None, pred_type="lhr"):
+        """
+        Returns predicted values from the proportional hazards
+        regression model.
+
+        Parameters:
+        -----------
+        params : array-like
+            The proportional hazards model parameters.
+        cov_params : array-like
+            The covariance matrix of the estimated `params` vector,
+            used to obtain prediction errors if pred_type='lhr',
+            otherwise optional.
+        endog : array-like
+            Duration (time) values at which the predictions are made.
+            Only used if pred_type is either 'cumhaz' or 'surv'.  If
+            using model `exog`, defaults to model `endog` (time), but
+            may be provided explicitly to make predictions at
+            alternative times.
+        exog : array-like
+            Data to use as `exog` in forming predictions.  If not
+            provided, the `exog` values from the model used to fit the
+            data are used.
+        strata : array-like
+            A vector of stratum values used to form the predictions.
+            Not used (may be 'None') if pred_type is 'lhr' or 'hr'.
+            If `exog` is None, the model stratum values are used.  If
+            `exog` is not None and pred_type is 'surv' or 'cumhaz',
+            stratum values must be provided (unless there is only one
+            stratum).
+        offset : array-like
+            Offset values used to create the predicted values.
+        pred_type : string
+            If 'lhr', returns log hazard ratios, if 'hr' returns
+            hazard ratios, if 'surv' returns the survival function, if
+            'cumhaz' returns the cumulative hazard function.
+
+        Returns
+        -------
+        A bunch containing two fields: `predicted_values` and
+        `standard_errors`.
+
+        Notes
+        -----
+        Standard errors are only returned when predicting the log
+        hazard ratio (pred_type is 'lhr').
+
+        Types `surv` and `cumhaz` require estimation of the cumulative
+        hazard function.
+        """
+
+        pred_type = pred_type.lower()
+        if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
+            msg = "Type %s not allowed for prediction" % pred_type
+            raise ValueError(msg)
+
+        class bunch:
+            predicted_values = None
+            standard_errors = None
+        ret_val = bunch()
+
+        # Don't do anything with offset here because we want to allow
+        # different offsets to be specified even if exog is the model
+        # exog.
+        exog_provided = True
+        if exog is None:
+            exog = self.exog
+            exog_provided = False
+
+        lhr = np.dot(exog, params)
+        if offset is not None:
+            lhr += offset
+        # Never use self.offset unless we are also using self.exog
+        elif self.offset is not None and not exog_provided:
+            lhr += self.offset
+
+        # Handle lhr and hr prediction first, since they don't make
+        # use of the hazard function.
+
+        if pred_type == "lhr":
+            ret_val.predicted_values = lhr
+            mat = np.dot(exog, cov_params)
+            va = (mat * exog).sum(1)
+            ret_val.standard_errors = np.sqrt(va)
+            return ret_val
+
+        hr = np.exp(lhr)
+
+        if pred_type == "hr":
+            ret_val.predicted_values = hr
+            return ret_val
+
+        # Makes sure endog is defined
+        if endog is None and exog_provided:
+            msg = "If `exog` is provided `endog` must be provided."
+            raise ValueError(msg)
+        # Use model endog if using model exog
+        elif endog is None and not exog_provided:
+            endog = self.endog
+
+        # Make sure strata is defined
+        if strata is None:
+            if exog_provided and self.surv.nstrat > 1:
+                raise ValueError("`strata` must be provided")
+            if self.strata is None:
+                strata = [self.surv.stratum_names[0],] * len(endog)
+            else:
+                strata = self.strata
+
+        cumhaz = np.nan * np.ones(len(endog), dtype=np.float64)
+        stv = np.unique(strata)
+        bhaz = self.baseline_cumulative_hazard_function(params)
+        for stx in stv:
+            ix = np.flatnonzero(strata == stx)
+            func = bhaz[stx]
+            cumhaz[ix] = func(endog[ix]) * hr[ix]
+
+        if pred_type == "cumhaz":
+            ret_val.predicted_values = cumhaz
+
+        elif pred_type == "surv":
+            ret_val.predicted_values = np.exp(-cumhaz)
+
+        return ret_val
+
+    def get_distribution(self, params):
+        """
+        Returns a scipy distribution object corresponding to the
+        distribution of uncensored endog (duration) values for each
+        case.
+
+        Parameters:
+        -----------
+        params : arrayh-like
+            The model proportional hazards model parameters.
+
+        Returns:
+        --------
+        A list of objects of type scipy.stats.distributions.rv_discrete
+
+        Notes:
+        ------
+        The distributions are obtained from a simple discrete estimate
+        of the survivor function that puts all mass on the observed
+        failure times wihtin a stratum.
+        """
+
+        # TODO: this returns a Python list of rv_discrete objects, so
+        # nothing can be vectorized.  It appears that rv_discrete does
+        # not allow vectorization.
+
+        from scipy.stats.distributions import rv_discrete
+
+        surv = self.surv
+        bhaz = self.baseline_cumulative_hazard(params)
+
+        # The arguments to rv_discrete_float, first obtained by
+        # stratum
+        pk, xk = [], []
+
+        for stx in range(self.surv.nstrat):
+
+            exog_s = surv.exog_s[stx]
+
+            linpred = np.dot(exog_s, params)
+            if surv.offset_s is not None:
+                linpred += surv.offset_s[stx]
+            e_linpred = np.exp(linpred)
+
+            # The unique failure times for this stratum (the support
+            # of the distribution).
+            pts = bhaz[stx][0]
+
+            # The individual cumulative hazards for everyone in this
+            # stratum.
+            ichaz = np.outer(e_linpred, bhaz[stx][1])
+
+            # The individual survival functions.
+            usurv = np.exp(-ichaz)
+            usurv = np.concatenate((usurv, np.zeros((usurv.shape[0], 1))),
+                                   axis=1)
+
+            # The individual survival probability masses.
+            probs = -np.diff(usurv, 1)
+
+            pk.append(probs)
+            xk.append(np.outer(np.ones(probs.shape[0]), pts))
+
+        # Pad to make all strata have the same shape
+        mxc = max([x.shape[1] for x in xk])
+        for k in range(self.surv.nstrat):
+            if xk[k].shape[1] < mxc:
+                xk1 = np.zeros((xk.shape[0], mxc))
+                pk1 = np.zeros((pk.shape[0], mxc))
+                xk1[:, -mxc:] = xk
+                pk1[:, -mxc:] = pk
+                xk[k], pk[k] = xk1, pk1
+
+        xka = np.nan * np.zeros((len(self.endog), mxc), dtype=np.float64)
+        pka = np.ones((len(self.endog), mxc), dtype=np.float64) / mxc
+
+        for stx in range(self.surv.nstrat):
+            ix = self.surv.stratum_rows[stx]
+            xka[ix, :] = xk[stx]
+            pka[ix, :] = pk[stx]
+
+        dist = rv_discrete_float(xka, pka)
+
+        return dist
+
 
 class PHregResults(base.LikelihoodModelResults):
     '''
@@ -1038,14 +1249,36 @@ class PHregResults(base.LikelihoodModelResults):
         """
         return self.standard_errors
 
-    def predict(self, endog=None, exog=None, strata=None, offset=None,
-                pred_type="lhr"):
+    def get_distribution(self):
         """
-        Returns predicted values from the proportional hazards
+        Returns a scipy distribution object corresponding to the
+        distribution of uncensored endog (duration) values for each
+        case.
+
+        Returns:
+        --------
+        A list of objects of type scipy.stats.distributions.rv_discrete
+
+        Notes:
+        ------
+        The distributions are obtained from a simple discrete estimate
+        of the survivor function that puts all mass on the observed
+        failure times wihtin a stratum.
+        """
+
+        return self.model.get_distribution(self.params)
+
+
+    def predict(self, endog=None, exog=None, strata=None,
+                offset=None, pred_type="lhr"):
+        """
+        Returns predicted values from the fitted proportional hazards
         regression model.
 
         Parameters:
         -----------
+        params : array-;like
+            The proportional hazards model parameters.
         endog : array-like
             Duration (time) values at which the predictions are made.
             Only used if pred_type is either 'cumhaz' or 'surv'.  If
@@ -1084,72 +1317,9 @@ class PHregResults(base.LikelihoodModelResults):
         hazard function.
         """
 
-        pred_type = pred_type.lower()
-        if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
-            msg = "Type %s not allowed for prediction" % pred_type
-            raise ValueError(msg)
-
-        class bunch:
-            predicted_values = None
-            standard_errors = None
-        ret_val = bunch()
-
-        exog_provided = True
-        if exog is None:
-            exog = self.model.exog
-            exog_provided = False
-
-        lhr = np.dot(exog, self.params)
-        if offset is not None:
-            lhr += offset
-
-        # Handle lhr and hr prediction first, since they don't make
-        # use of the hazard function.
-
-        if pred_type == "lhr":
-            ret_val.predicted_values = lhr
-            mat = np.dot(exog, self.cov_params())
-            va = (mat * exog).sum(1)
-            ret_val.standard_errors = np.sqrt(va)
-            return ret_val
-
-        hr = np.exp(lhr)
-
-        if pred_type == "hr":
-            ret_val.predicted_values = hr
-            return ret_val
-
-        # Makes sure endog is defined
-        if endog is None and exog_provided:
-            msg = "If `exog` is provided `endog` must be provided."
-            raise ValueError(msg)
-        # Use model endog if using model exog
-        elif endog is None and not exog_provided:
-            endog = self.model.endog
-
-        # Make sure strata is defined
-        if strata is None:
-            if exog_provided and self.model.surv.nstrat > 1:
-                raise ValueError("`strata` must be provided")
-            if self.model.strata is None:
-                strata = [self.model.surv.stratum_names[0],] * len(endog)
-            else:
-                strata = self.model.strata
-
-        cumhaz = np.nan * np.ones(len(endog), dtype=np.float64)
-        stv = np.unique(strata)
-        for stx in stv:
-            ix = np.flatnonzero(strata == stx)
-            func = self.baseline_cumulative_hazard_function[stx]
-            cumhaz[ix] = func(endog[ix]) * hr[ix]
-
-        if pred_type == "cumhaz":
-            ret_val.predicted_values = cumhaz
-
-        elif pred_type == "surv":
-            ret_val.predicted_values = np.exp(-cumhaz)
-
-        return ret_val
+        return self.model.predict(self.params, self.cov_params(),
+                                  endog, exog, strata, offset,
+                                  pred_type)
 
     def _group_stats(self, groups):
         """
@@ -1334,3 +1504,91 @@ class PHregResults(base.LikelihoodModelResults):
             smry.add_text("Standard errors account for dependence within groups")
 
         return smry
+
+class rv_discrete_float(object):
+    """
+    A class representing a colleciton of discrete distributions.
+
+    Parameters:
+    ----------
+    xk : array-like
+        The support points, should be non-decreasing within each
+        row.
+    pk : array-like
+        The probabilities, should sum to one within each row.
+
+    Notes
+    -----
+    Each row of `xk`, and the corresponding row of `pk` describe a
+    discrete distribution.
+
+    xk and pk should both be two-dimensional ndarrays.  Each row of pk
+    should sum to 1.
+
+    This class is used as a substitute for scipy.distributions.
+    rv_discrete, since that class does not allow non-integer support
+    points, or vectorized operations.
+
+    Only a limited number of methods are implemented here compared to
+    the other scipy distribution objects.
+    """
+
+    def __init__(self, xk, pk):
+
+        self.xk = xk
+        self.pk = pk
+        self.cpk = np.cumsum(self.pk, axis=1)
+
+    def rvs(self):
+        """
+        Returns a random sample from the discrete distribution.
+
+        A vector is returned containing a single draw from each row of
+        `xk`, using the probabilities of the corresponding row of `pk`
+        """
+
+        n = self.xk.shape[0]
+        u = np.random.uniform(size=n)
+
+        ix = (self.cpk < u[:, None]).sum(1)
+        ii = np.arange(n, dtype=np.int32)
+        return self.xk[(ii,ix)]
+
+    def mean(self):
+        """
+        Returns a vector containing the mean values of the discrete
+        distributions.
+
+        A vector is returned containing the mean value of the for each
+        row of `xk`, using the probabilities in the corresponding row
+        of `pk`.
+        """
+
+        return (self.xk * self.pk).sum(1)
+
+    def var(self):
+        """
+        Returns a vector containing the variances of the discrete
+        distributions.
+
+        A vector is returned containing the variance for each row of
+        `xk`, using the probabilities in the corresponding row of
+        `pk`.
+        """
+
+        mn = self.mean()
+        xkc = self.xk - mn[:, None]
+
+        return (self.pk * (self.xk - xkc)**2).sum(1)
+
+    def std(self):
+        """
+        Returns a vector containing the standard deviations of the
+        discrete distributions.
+
+        A vector is returned containing the standard deviation for
+        each row of `xk`, using the probabilities in the corresponding
+        row of `pk`.
+        """
+
+        return np.sqrt(self.var())
