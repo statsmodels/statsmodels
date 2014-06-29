@@ -737,6 +737,7 @@ class CheckHasConstant(object):
     @classmethod
     def setup_class(cls):
         # create data
+        np.random.seed(0)
         cls.y_c = np.random.randn(20)
         cls.y_bin = (cls.y_c > 0).astype(int)
         x1 = np.column_stack((np.ones(20), np.zeros(20)))
@@ -750,9 +751,19 @@ class CheckHasConstant(object):
         result4 = (0, None)
         x5 = np.column_stack((np.zeros(20), 0.5 * np.ones(20)))
         result5 = (1, 1)
+        # implicit and zero column
+        x6 = np.column_stack((np.arange(20) < 10.5,
+                              np.arange(20) > 10.5,
+                              np.zeros(20.))).astype(float)
+        result6 = (1, None)
+        x7 = np.column_stack((np.arange(20) < 10.5,
+                              np.arange(20) > 10.5,
+                              np.zeros((20., 2)))).astype(float)
+        result7 = (1, None)
 
-        cls.exogs = (x1, x2, x3, x4, x5)
-        cls.results = (result1, result2, result3, result4, result5)
+        cls.exogs = (x1, x2, x3, x4, x5, x6, x7)
+        cls.results = (result1, result2, result3, result4, result5, result6,
+                       result7)
 
 
 class TestHasConstantOLS(CheckHasConstant):
