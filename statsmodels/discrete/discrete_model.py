@@ -355,7 +355,7 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def get_distribution(self, params, exog=None, scale=None):
+    def get_distribution(self, params, exog=None, model_class=None, scale=None):
         """
         After a model has been fit get_distribution returns simulated values at given values of exog.
 
@@ -391,7 +391,7 @@ class BinaryModel(DiscreteModel):
         else:
             return np.dot(exog, params)
 
-    def get_distribution(self, params, exog=None, scale=None):
+    def get_distribution(self, params, exog=None, model_class=None, scale=None):
         """
         Return a scipy.stats.distributions object corresponding to the `endog`
         of this model.

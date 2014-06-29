@@ -257,7 +257,7 @@ class RegressionModel(base.LikelihoodModel):
             exog = self.exog
         return np.dot(exog, params)
 
-    def get_distribution(self, params, exog=None, scale=1, model_class=None):
+    def get_distribution(self, params, exog=None, model_class=None, scale=1):
         """
         Return a scipy.stats.distributions object corresponding to the `endog` of this model.
 

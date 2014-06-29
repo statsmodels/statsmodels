@@ -40,6 +40,9 @@ import numpy as np
 import patsy
 import statsmodels.api as sm
 import random
+import statsmodels
+from statsmodels.tools.decorators import cache_readonly
+from scipy import stats
 
 class ImputedData(object):
     __doc__= """
@@ -70,7 +73,7 @@ class ImputedData(object):
             self.columns[c] = MissingDataInfo(self.data[c])
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, formula=None, model_class=None,
+    def new_imputer(self, endog_name, method="gaussian", formula=None, model_class=None,
                     init_args={}, fit_args={}, scale_method="fix",
                     scale_value=None):
         """
@@ -103,7 +106,7 @@ class ImputedData(object):
         if formula is None:
             formula = endog_name + " ~ " + " + ".join(
                             [x for x in self.data.columns if x != endog_name])
-        return Imputer(formula, model_class, self, init_args=init_args,
+        return Imputer(formula, model_class, self, method=method, init_args=init_args,
                        fit_args=fit_args, scale_method=scale_method,
                        scale_value=scale_value)
 
@@ -190,7 +193,8 @@ class Imputer(object):
     Note: all params are saved as attributes.
 
     """
-    def __init__(self, formula, model_class, data, init_args={}, fit_args={},
+    def __init__(self, formula, model_class, data,
+            method="gaussian", k_pmm=1, init_args={}, fit_args={},
                  return_class=None, scale_method="fix", scale_value=None):
         self.data = data
         self.formula = formula
@@ -202,6 +206,8 @@ class Imputer(object):
         self.return_class = return_class
         self.scale_method = scale_method
         self.scale_value = scale_value
+        self.method = method
+        self.k_pmm = k_pmm
 
     def perturb_params(self, mdf):
         """
@@ -257,7 +263,7 @@ class Imputer(object):
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
-                                     model_class = self.return_class,
+                                     model_class=self.return_class,
                                      scale=scale_per * mdf.scale)
         new_endog = new_rv.rvs(size=len(exog_miss))
         self.data.store_changes(self.endog_name, new_endog)
@@ -285,16 +291,17 @@ class Imputer(object):
         # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
+        
         imputed_miss = []
         for val in pendog_miss:
             dist = abs(pendog_obs - val)
             dist_ind = np.argsort(dist, axis=0)
             imputed_miss.append(random.choice(np.array(
             endog_obs)[dist_ind[0:pmm_neighbors][0]]))
+        
 #        ii = np.argsort(pendog_obs, axis=0)
 #        pendog_obs = pendog_obs[ii]
 #        oendog = endog_obs.iloc[ii,:]
-#
 #        # Get indices of predicted endogs of nonmissing observations that are
 #        # close to those of missing observations
 #        ix = np.searchsorted(pendog_obs, pendog_miss)
@@ -303,16 +310,8 @@ class Imputer(object):
 #        ix += np.random.randint(-pmm_neighbors / 2, pmm_neighbors / 2, size=len(ix))
 #        np.clip(ix, 0, len(oendog), out=ix)
 #        imputed_miss = np.array(oendog.iloc[ix,:])
+        
         self.data.store_changes(self.endog_name, imputed_miss)
-
-#        #look into memory-computation tradeoff
-#        for mval in endog_miss:
-#            dist = abs(endog_obs - mval)
-#            dist_ind = np.argsort(dist, axis=0)
-#            endog_matched.append(random.choice(np.array(self.data.get_endog(self.endog_name)[dist_ind[0:pmm_neighbors][0]])))
-#        new_endog = endog_matched
-#        self.data.store_changes(new_endog, self.endog_name)
-
 
     def impute_bootstrap(self):
         raise NotImplementedError
@@ -343,15 +342,12 @@ class ImputerChain(object):
     for iterator call.
 
     """
-    def __init__(self, imputer_list, imputer_method="gaussian",
-                 pmm_neighbors=1):
+    def __init__(self, imputer_list):
         self.imputer_list = imputer_list
         # Impute variable with least missing observations first
         self.imputer_list.sort(key=operator.attrgetter('num_missing'))
         # All imputers must refer to the same data object
         self.data = imputer_list[0].data.data
-        self.method = imputer_method
-        self.pmm_neighbors = pmm_neighbors
 
     def __iter__(self):
         return self
@@ -369,14 +365,12 @@ class ImputerChain(object):
             Dataset with imputed values saved after invoking each Imputer
             object in imputer_list.
         """
-        if self.method == "gaussian":
-            for im in self.imputer_list:
+        for im in self.imputer_list:
+            if im.method=="gaussian":
                 im.impute_asymptotic_bayes()
-        elif self.method == "pmm":
-            for im in self.imputer_list:
-                im.impute_pmm(self.pmm_neighbors)
-        elif self.method == "bootstrap":
-            for im in self.imputer_list:
+            elif im.method == "pmm":
+                im.impute_pmm(im.k_pmm)
+            elif im.method == "bootstrap":
                 im.impute_bootstrap()
         return self.data
 
@@ -490,8 +484,7 @@ class MICE(object):
         self.init_args = init_args
         self.fit_args = fit_args
 
-    def run(self, num_ds=20, skipnum=10, burnin=5, save=False,
-            method="gaussian", k_pmm=1):
+    def run(self, num_ds=20, skipnum=10, burnin=5, save=False):
         """
         Generates analysis model results.
 
@@ -522,7 +515,7 @@ class MICE(object):
             List of length num_ds of fitted analysis models.
         """
         self.num_ds = num_ds
-        imp_chain = ImputerChain(self.imputer_list, method, k_pmm)
+        imp_chain = ImputerChain(self.imputer_list)
         analysis_chain = AnalysisChain(imp_chain, self.analysis_formula,
                                        self.analysis_class, skipnum, burnin,
                                        save, self.init_args, self.fit_args)
@@ -530,18 +523,16 @@ class MICE(object):
         for current_iter in range(num_ds):
             model = analysis_chain.next()
             md_list.append(model)
+            if not hasattr(self, "exog_names"):
+                self.exog_names = model.model.exog_names
+                self.endog_names = model.model.endog_names
             print current_iter
-        return md_list
+        self.mod_list = md_list
 
-    def combine(self, md_list):
+    def combine(self):
         """
         Pools estimated parameters and covariance matrices of generated
         analysis models according to Rubin's Rule.
-
-        Parameters
-        ----------
-        md_list : list
-            Generated by MICE.run.
 
         Returns
         -------
@@ -552,25 +543,67 @@ class MICE(object):
         params_list = []
         cov_list = []
         scale_list = []
-        for md in md_list:
+        for md in self.mod_list:
             params_list.append(md.params)
             cov_list.append(np.array(md.normalized_cov_params))
             scale_list.append(md.scale)
         # Just chose last analysis model instance as a place to store results
-        md = md_list[-1]
+        md = self.mod_list[-1]
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
         within_g = np.mean(cov_list, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
-        rslt = md._results.__class__
-        rslt.params = params
+        rslt = MICEResults(self, params, cov_params)
         rslt.scale = scale
-        rslt.normalized_cov_params = cov_params
-        # Will have to modify more attributes of the model class returned
         return rslt
 
+
+class MICEResults(statsmodels.base.model.LikelihoodModelResults):
+
+    def __init__(self, model, params, normalized_cov_params):
+
+        super(MICEResults, self).__init__(model, params,
+                                          normalized_cov_params)
+
+    def summary(self, title=None, alpha=.05):
+        """
+        Summarize the results of running MICE (multiple imputation with chained equations).
+
+        Parameters
+        -----------
+        title : string, optional
+            Title for the top table. If not None, then this replaces
+            the default title
+        alpha : float
+            Significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            This holds the summary tables and text, which can be
+            printed or converted to various output formats.
+        """
+
+        from statsmodels.iolib import summary2
+        from statsmodels.compat.collections import OrderedDict
+        smry = summary2.Summary()
+        float_format = "%8.3f"
+
+        info = OrderedDict()
+        info["Method:"] = "MICE"
+        info["Model:"] = self.model.analysis_class.__name__
+        info["Dependent variable:"] = self.model.endog_names
+        info["Sample size:"] = "%d" % self.model.mod_list[0].model.exog.shape[0]
+
+        smry.add_dict(info, align='l', float_format=float_format)
+
+        param = summary2.summary_params(self, alpha=alpha)
+        smry.add_df(param, float_format=float_format)
+        smry.add_title(title=title, results=self)
+
+        return smry
 class MissingDataInfo(object):
     __doc__="""
     Contains all the missing data information from the passed-in data object.

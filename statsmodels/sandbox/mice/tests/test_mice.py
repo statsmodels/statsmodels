@@ -11,12 +11,13 @@ def load_data():
 
     params = pd.io.parsers.read_csv("params.csv")
     params.columns = ['int', 'x2', 'x3']
-    se = pd.io.parsers.read_csv("cov.csv")
-    se.columns = ['int', 'x2', 'x3']
+    cov = pd.io.parsers.read_csv("cov.csv")
+    cov.columns = ['int', 'x2', 'x3']
+    cov = cov**2
     data = pd.io.parsers.read_csv("missingdata.csv")
     data.columns = ['x1', 'x2', 'x3']
 
-    return params,se,data
+    return params,cov,data
 
 class TestMice(object):
     def __init__(self):
@@ -57,7 +58,7 @@ class TestMice(object):
         data = np.random.normal(size=(10,4))
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
-        params_test = np.asarray([-0.06040184,  0.40924707, -0.65996571])
+        params_test = np.asarray([-0.06642686,  0.36131348, -0.69498469])
         scale_test = 1.0
         md = sm.OLS.from_formula(self.formula, df)
         mdf = md.fit()
@@ -75,7 +76,7 @@ class TestMice(object):
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_asymptotic_bayes()
         np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
-                                       np.asarray([-0.39097484, -0.31759086]))
+                                       np.asarray([-0.82292821, -0.22632992]))
 
     def test_impute_pmm(self):
         np.random.seed(1325)
@@ -95,16 +96,16 @@ class TestMice(object):
         impdata = mice.ImputedData(df)
         m = impdata.new_imputer("X2", scale_method="perturb_chi2")
         impcomb = mice.MICE("X2 ~ X1 + X3", sm.OLS, [m])
-        implist = impcomb.run(method="pmm")
-        p1 = impcomb.combine(implist)
+        impcomb.run(method="pmm")
+        p1 = impcomb.combine()
         np.testing.assert_almost_equal(p1.params, np.asarray([0.30651575,
                                                               0.2264856 ,
                                                               0.03370901]))
         np.testing.assert_almost_equal(p1.scale, 0.64051079487931539)
-        np.testing.assert_almost_equal(p1.normalized_cov_params, np.asarray([
-       [ 0.1273622 ,  0.04854805, -0.00280011],
-       [ 0.04854805,  0.10090235, -0.01022825],
-       [-0.00280011, -0.01022825,  0.10273376]]))
+        np.testing.assert_almost_equal(p1.cov_params(), np.asarray([
+        [ 0.08157686,  0.03109555, -0.0017935 ],
+        [ 0.03109555,  0.06462905, -0.00655131],
+        [-0.0017935 , -0.00655131,  0.06580208]]))
 
     def test_overall(self):
         """
@@ -146,22 +147,18 @@ class TestMice(object):
         write.csv(pooled$qhat, "params.csv", row.names=FALSE)
         write.csv(data, "missingdata.csv", row.names=FALSE)
         """
-        params,se,data = load_data()
-        r_pooled_se = np.asarray(np.mean(se) + (1 + 1/5) * np.std(params))
+        params,cov,data = load_data()
+        r_pooled_se = np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 5.) * np.var(params)))
         r_pooled_params = np.asarray(np.mean(params))
-#        cur_dir = os.getcwd()
-#        fn = os.path.join(cur_dir,"missingdata.csv")
-#        data = pd.read_csv(fn)
-#        data.columns = ['x1','x2','x3']
         impdata = mice.ImputedData(data)
         m1 = impdata.new_imputer("x2")
         m2 = impdata.new_imputer("x3")
         m3 = impdata.new_imputer("x1", model_class=sm.Logit)
         impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
-        implist = impcomb.run(method="pmm")
-        p1 = impcomb.combine(implist)
+        impcomb.run(method="pmm")
+        p1 = impcomb.combine()
         np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.5)
-        np.testing.assert_allclose(np.sqrt(np.diag(p1.normalized_cov_params)), r_pooled_se, rtol=1)
+        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=1)
 
 if  __name__=="__main__":
 
