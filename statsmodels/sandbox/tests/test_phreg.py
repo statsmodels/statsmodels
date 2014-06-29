@@ -142,7 +142,6 @@ class TestPHreg(object):
 
         mod1 = PHreg(time, exog, status)
         rslt1 = mod1.fit()
-
         offset = exog[:,0] * rslt1.params[0]
         exog = exog[:, 1:]
 
@@ -203,7 +202,6 @@ class TestPHreg(object):
         rslt = mod.fit()
         rslt.summary()
 
-
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr
         # tests into real tests against R.  There are many options to
@@ -222,6 +220,26 @@ class TestPHreg(object):
             rslt.predict(endog=endog[0:10], pred_type=pred_type)
             rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
                          pred_type=pred_type)
+
+    def test_get_distribution(self):
+        # Smoke test
+        np.random.seed(34234)
+        exog = np.random.normal(size=(200, 2))
+        lin_pred = exog.sum(1)
+        elin_pred = np.exp(-lin_pred)
+        time = -elin_pred * np.log(np.random.uniform(size=200))
+
+        mod = PHreg(time, exog)
+        rslt = mod.fit()
+
+        dist = rslt.get_distribution()
+
+        fitted_means = dist.mean()
+        true_means = elin_pred
+        fitted_var = dist.var()
+        fitted_sd = dist.std()
+        sample = dist.rvs()
+
 
 if  __name__=="__main__":
 
