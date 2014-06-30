@@ -13,7 +13,6 @@ def load_data():
     params.columns = ['int', 'x2', 'x3']
     cov = pd.io.parsers.read_csv("cov.csv")
     cov.columns = ['int', 'x2', 'x3']
-    cov = cov**2
     data = pd.io.parsers.read_csv("missingdata.csv")
     data.columns = ['x1', 'x2', 'x3']
 
@@ -58,7 +57,7 @@ class TestMice(object):
         data = np.random.normal(size=(10,4))
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
-        params_test = np.asarray([-0.06642686,  0.36131348, -0.69498469])
+        params_test = np.asarray([-0.06523173,  0.37082165, -0.68803828])
         scale_test = 1.0
         md = sm.OLS.from_formula(self.formula, df)
         mdf = md.fit()
@@ -148,7 +147,7 @@ class TestMice(object):
         write.csv(data, "missingdata.csv", row.names=FALSE)
         """
         params,cov,data = load_data()
-        r_pooled_se = np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 5.) * np.var(params)))
+        r_pooled_se = np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 20.) * np.var(params)))
         r_pooled_params = np.asarray(np.mean(params))
         impdata = mice.ImputedData(data)
         m1 = impdata.new_imputer("x2", method="pmm")
@@ -157,8 +156,8 @@ class TestMice(object):
         impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit, [m1,m2,m3])
         impcomb.run()
         p1 = impcomb.combine()
-        np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.5)
-        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=1)
+        np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.3)
+        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=0.3)
 
 if  __name__=="__main__":
 

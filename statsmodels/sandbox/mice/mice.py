@@ -587,18 +587,18 @@ class MICE(object):
         params_list = []
         cov_list = []
         scale_list = []
+        full_cov = []
         for md in self.mod_list:
             params_list.append(md.params)
             cov_list.append(np.array(md.normalized_cov_params))
             scale_list.append(md.scale)
-        # Just chose last analysis model instance as a place to store results
-        md = self.mod_list[-1]
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
-        within_g = np.mean(cov_list, axis=0)
+        full_cov = np.asarray(cov_list) * np.asarray(scale_list)[:, np.newaxis, np.newaxis]
+        within_g = np.mean(full_cov, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g * scale + (1 + 1. / float(self.num_ds)) * between_g
+        cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
