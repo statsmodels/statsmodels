@@ -729,7 +729,7 @@ class CountModel(DiscreteModel):
         else:
             return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
 
-    def get_distribution(self, params, exog=None, scale=None):
+    def get_distribution(self, params, exog=None, model_class=None, scale=None):
         """
         Return a scipy.stats.distributions object corresponding to the `endog`
         of this model.

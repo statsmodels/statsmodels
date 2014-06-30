@@ -43,6 +43,8 @@ import random
 import statsmodels
 from statsmodels.tools.decorators import cache_readonly
 from scipy import stats
+import copy
+import sys
 
 class ImputedData(object):
     __doc__= """
@@ -73,7 +75,7 @@ class ImputedData(object):
             self.columns[c] = MissingDataInfo(self.data[c])
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, method="gaussian", formula=None, model_class=None,
+    def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, model_class=None,
                     init_args={}, fit_args={}, scale_method="fix",
                     scale_value=None):
         """
@@ -106,7 +108,7 @@ class ImputedData(object):
         if formula is None:
             formula = endog_name + " ~ " + " + ".join(
                             [x for x in self.data.columns if x != endog_name])
-        return Imputer(formula, model_class, self, method=method, init_args=init_args,
+        return Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
                        fit_args=fit_args, scale_method=scale_method,
                        scale_value=scale_value)
 
@@ -246,7 +248,7 @@ class Imputer(object):
             raise NotImplementedError
         p = len(params)
         params += np.dot(covmat_sqrt,
-                         np.random.normal(0, mdf.scale * scale_per, p))
+                         np.random.normal(0, np.sqrt(mdf.scale * scale_per), p))
         return params, scale_per
 
     def impute_asymptotic_bayes(self):
@@ -268,7 +270,7 @@ class Imputer(object):
         new_endog = new_rv.rvs(size=len(exog_miss))
         self.data.store_changes(self.endog_name, new_endog)
 
-    def impute_pmm(self, pmm_neighbors=1.):
+    def impute_pmm(self, pmm_neighbors=1):
         """
         Use predictive mean matching to simulate data.
 
@@ -292,25 +294,67 @@ class Imputer(object):
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
         
-        imputed_miss = []
-        for val in pendog_miss:
-            dist = abs(pendog_obs - val)
-            dist_ind = np.argsort(dist, axis=0)
-            imputed_miss.append(random.choice(np.array(
-            endog_obs)[dist_ind[0:pmm_neighbors][0]]))
+#        imputed_miss = []
+#        for val in pendog_miss:
+#            dist = abs(pendog_obs - val)
+#            dist_ind = np.argsort(dist, axis=0)
+#            imputed_miss.append(random.choice(np.array(
+#            endog_obs)[dist_ind[0:pmm_neighbors][0]]))
         
-#        ii = np.argsort(pendog_obs, axis=0)
-#        pendog_obs = pendog_obs[ii]
-#        oendog = endog_obs.iloc[ii,:]
-#        # Get indices of predicted endogs of nonmissing observations that are
-#        # close to those of missing observations
-#        ix = np.searchsorted(pendog_obs, pendog_miss)
-#        # Select a random draw of observed endogenous variable from a set
-#        # window around the closest predicted value
-#        ix += np.random.randint(-pmm_neighbors / 2, pmm_neighbors / 2, size=len(ix))
+        ii = np.argsort(pendog_obs, axis=0)
+        pendog_obs = pendog_obs[ii]
+        oendog = endog_obs.iloc[ii,:]
+        # Get indices of predicted endogs of nonmissing observations that are
+        # close to those of missing observations
+        ix = np.searchsorted(pendog_obs, pendog_miss)
+        np.clip(ix, 0, len(pendog_obs) - 1, out=ix)
+        ix_list = []
+        for i in range(len(pendog_miss)):
+            k = 0
+            count_low = 0
+            count_high = 0
+            ix_list.append([])
+            upper = pendog_obs[ix[i]]
+            lower = pendog_obs[ix[i] - 1]
+            target = pendog_miss[i]
+            ixs = ix_list[len(ix_list) - 1]
+            limit_low = False
+            limit_high = False
+            while k < pmm_neighbors:
+                if limit_low:
+                    count_high += 1
+                    ixs.append(ix[i] - 1 + count_high)
+                elif limit_high:
+                    count_low += 1
+                    ixs.append(ix[i] - count_low)
+                elif abs(target - upper) >= abs(target - lower):
+                    count_low += 1
+                    if ix[i] - 1 - count_low >= 0:
+                        ixs.append(ix[i] - count_low)
+                        target = copy.copy(lower)
+                        lower = pendog_obs[ix[i] - 1 - count_low]
+                    else:
+                        ixs.append(ix[i] - 1 + count_high)
+                        limit_low = True
+                elif abs(target - upper) < abs(target - lower):
+                    count_high += 1
+                    if ix[i] + count_high < len(pendog_obs):
+                        ixs.append(ix[i] - 1 + count_high)
+                        target = copy.copy(upper)
+                        upper = pendog_obs[ix[i] + count_high]
+                    else:
+                        ixs.append(ix[i] - count_low)
+                        limit_high = True
+                k += 1                    
+            ixs = np.clip(ixs, 0, len(oendog))
+            ixs = random.choice(ixs)
+        # Select a random draw of observed endogenous variable from a set
+        # window around the closest predicted value
+#        ix += np.random.randint(int(-pmm_neighbors / 2.), int(pmm_neighbors / 2.) + 1, size=len(ix))
 #        np.clip(ix, 0, len(oendog), out=ix)
 #        imputed_miss = np.array(oendog.iloc[ix,:])
-        
+        ix_list = np.squeeze(ix_list)
+        imputed_miss = np.array(oendog.iloc[ix_list,:])
         self.data.store_changes(self.endog_name, imputed_miss)
 
     def impute_bootstrap(self):
@@ -554,8 +598,8 @@ class MICE(object):
         within_g = np.mean(cov_list, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
-        rslt = MICEResults(self, params, cov_params)
+        cov_params = within_g * scale + (1 + 1. / float(self.num_ds)) * between_g
+        rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
 

@@ -76,7 +76,7 @@ class TestMice(object):
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_asymptotic_bayes()
         np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
-                                       np.asarray([-0.82292821, -0.22632992]))
+                                       np.asarray([-0.83679515, -0.22187195]))
 
     def test_impute_pmm(self):
         np.random.seed(1325)
@@ -94,18 +94,18 @@ class TestMice(object):
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         impdata = mice.ImputedData(df)
-        m = impdata.new_imputer("X2", scale_method="perturb_chi2")
+        m = impdata.new_imputer("X2", scale_method="perturb_chi2", method="pmm")
         impcomb = mice.MICE("X2 ~ X1 + X3", sm.OLS, [m])
-        impcomb.run(method="pmm")
+        impcomb.run()
         p1 = impcomb.combine()
-        np.testing.assert_almost_equal(p1.params, np.asarray([0.30651575,
-                                                              0.2264856 ,
-                                                              0.03370901]))
-        np.testing.assert_almost_equal(p1.scale, 0.64051079487931539)
+        np.testing.assert_almost_equal(p1.params, np.asarray([0.31562745, 
+                                                              0.19100593,
+                                                              0.0133906 ]))
+        np.testing.assert_almost_equal(p1.scale, 0.61329459165397548)
         np.testing.assert_almost_equal(p1.cov_params(), np.asarray([
-        [ 0.08157686,  0.03109555, -0.0017935 ],
-        [ 0.03109555,  0.06462905, -0.00655131],
-        [-0.0017935 , -0.00655131,  0.06580208]]))
+        [  7.88964139e-02,   2.70237318e-02,  -3.64367780e-03],
+        [  2.70237318e-02,   7.23763179e-02,  -1.76877602e-05],
+        [ -3.64367780e-03,  -1.76877602e-05,   6.80019669e-02]]))
 
     def test_overall(self):
         """
@@ -151,11 +151,11 @@ class TestMice(object):
         r_pooled_se = np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 5.) * np.var(params)))
         r_pooled_params = np.asarray(np.mean(params))
         impdata = mice.ImputedData(data)
-        m1 = impdata.new_imputer("x2")
-        m2 = impdata.new_imputer("x3")
-        m3 = impdata.new_imputer("x1", model_class=sm.Logit)
-        impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
-        impcomb.run(method="pmm")
+        m1 = impdata.new_imputer("x2", method="pmm")
+        m2 = impdata.new_imputer("x3", method="pmm")
+        m3 = impdata.new_imputer("x1", model_class=sm.Logit, method="pmm")
+        impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit, [m1,m2,m3])
+        impcomb.run()
         p1 = impcomb.combine()
         np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.5)
         np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=1)
