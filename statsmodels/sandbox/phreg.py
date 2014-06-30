@@ -2,6 +2,7 @@ import numpy as np
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
+from scipy.optimize import brent
 
 """
 Implementation of proportional hazards regression models for duration
@@ -271,6 +272,9 @@ class PHreg(model.LikelihoodModel):
                                     self.exog, self.strata,
                                     self.entry, self.offset)
 
+        # TODO: not used?
+        self.missing = missing
+
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
             raise ValueError("`ties` must be either `efron` or " +
@@ -310,6 +314,152 @@ class PHreg(model.LikelihoodModel):
         results = PHregResults(self, fit_rslts.params, cov_params)
 
         return results
+
+
+    def fit_regularized(self, method="coord_descent", maxiter=100,
+                        alpha=0., L1_wt=1., start_params=None,
+                        cnvrg_tol=1e-7, zero_tol=1e-8, **kwargs):
+        """
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method :
+            Only the coordinate descent algorithm is implemented.
+        maxiter : integer
+            The maximum number of iteration cycles (an iteration cycle
+            involves running coordinate descent on all variables).
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        L1_wt : scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is
+            a ridge fit, if 1 it is a lasso fit.
+        start_params : array-like
+            Starting values for `params`.
+        cnvrg_tol : scalar
+            If `params` changes by less than this amount (in sup-norm)
+            in once iteration cycle, the algorithm terminates with
+            convergence.
+        zero_tol : scalar
+            Any estimated coefficient smaller than this value is
+            replaced with zero.
+
+        Returns
+        -------
+        A PHregResults object, of the same type returned by `fit`.
+
+        Notes
+        -----
+        The penalty is the"elastic net" penalty, which
+        is a convex combination of L1 and L2 penalties.
+
+        The function that is minimized is:
+
+        -loglike + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+
+        where |*|_1 and |*|_2 are the L1 and L2 norms.
+
+        Post-estimation results are based on the same data used to
+        select variables, hence may be subject to overfitting biases.
+        """
+
+        k_exog = self.exog.shape[1]
+
+        if np.isscalar(alpha):
+            alpha = alpha * np.ones(k_exog, dtype=np.float64)
+
+        # regularization cannot be used with groups
+        self.groups = None
+
+        # Define starting params
+        if start_params is None:
+            params = np.zeros(k_exog, dtype=np.float64)
+        else:
+            params = start_params.copy()
+
+        # Maybe could be a shallow copy, but just in case...
+        import copy
+        surv = copy.deepcopy(self.surv)
+
+        # This is the base offset, onto which the effects of
+        # constrained variables are added.
+        if self.offset is None:
+            offset_s_base = [np.zeros(len(x)) for x in surv.stratum_rows]
+            surv.offset_s = [x.copy() for x in offset_s_base]
+        else:
+            offset_s_base = [x.copy() for x in surv.offset_s]
+
+        # Create a model instance for optimizing a single variable
+        model_1var = copy.deepcopy(self)
+        model_1var.surv = surv
+        model_1var.ties = self.ties
+
+        # All the negative penalized loglikeihood functions.
+        def gen_nploglike(k):
+            def nploglike(params):
+                pen = alpha[k]*((1 - L1_wt)*params**2/2 + L1_wt*np.abs(params))
+                return -model_1var.loglike(np.r_[params]) + pen
+            return nploglike
+        nploglike_funcs = [gen_nploglike(k) for k in range(len(params))]
+
+        # 1-dimensional exog's
+        exog_s = []
+        for k in range(k_exog):
+            ex = [x[:, k][:, None] for x in surv.exog_s]
+            exog_s.append(ex)
+
+        converged = False
+        btol = 1e-8
+
+        for itr in range(maxiter):
+
+            # Sweep through the parameters
+            params_save = params.copy()
+            for k in range(k_exog):
+
+                # Set exog to include only the variable whose effect
+                # is being estimated.
+                surv.exog_s = exog_s[k]
+
+                # Set the offset to account for the variables that are
+                # being held fixed.
+                params0 = params.copy()
+                params0[k] = 0
+                for stx in range(self.surv.nstrat):
+                    v = np.dot(self.surv.exog_s[stx], params0)
+                    surv.offset_s[stx] = offset_s_base[stx] + v
+
+                params[k] = brent(nploglike_funcs[k], tol=btol)
+
+            # Check for convergence
+            pchange = np.max(np.abs(params - params_save))
+            if pchange < cnvrg_tol:
+                converged = True
+                break
+
+        # Set approximate zero coefficients to be exactly zero
+        params *= np.abs(params) >= zero_tol
+
+        # Fit the reduced model to get standard errors and other
+        # post-estimation results.
+        ii = np.flatnonzero(params)
+        model = self.__class__(self.endog, self.exog[:, ii],
+                               status=self.status, entry=self.entry,
+                               strata=self.strata, offset=self.offset,
+                               ties=self.ties, missing=self.missing)
+        rslt = model.fit()
+        cov = np.zeros((k_exog, k_exog), dtype=np.float64)
+        cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
+
+        rfit = PHregResults(self, params, cov_params=cov)
+        rfit.converged = converged
+        rfit.regularized = True
+
+        return rfit
 
     def loglike(self, params):
         """
@@ -1502,6 +1652,9 @@ class PHregResults(base.LikelihoodModelResults):
 
         if self.model.groups is not None:
             smry.add_text("Standard errors account for dependence within groups")
+
+        if hasattr(self, "regularized"):
+            smry.add_text("Standard errors do not account for regularization")
 
         return smry
 
