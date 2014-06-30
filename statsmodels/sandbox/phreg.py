@@ -1507,14 +1507,14 @@ class PHregResults(base.LikelihoodModelResults):
 
 class rv_discrete_float(object):
     """
-    A class representing a colleciton of discrete distributions.
+    A class representing a collection of discrete distributions.
 
     Parameters:
     ----------
-    xk : array-like
+    xk : 2d array-like
         The support points, should be non-decreasing within each
         row.
-    pk : array-like
+    pk : 2d array-like
         The probabilities, should sum to one within each row.
 
     Notes
@@ -1522,15 +1522,15 @@ class rv_discrete_float(object):
     Each row of `xk`, and the corresponding row of `pk` describe a
     discrete distribution.
 
-    xk and pk should both be two-dimensional ndarrays.  Each row of pk
-    should sum to 1.
+    `xk` and `pk` should both be two-dimensional ndarrays.  Each row
+    of `pk` should sum to 1.
 
     This class is used as a substitute for scipy.distributions.
     rv_discrete, since that class does not allow non-integer support
     points, or vectorized operations.
 
     Only a limited number of methods are implemented here compared to
-    the other scipy distribution objects.
+    the other scipy distribution classes.
     """
 
     def __init__(self, xk, pk):
@@ -1559,9 +1559,9 @@ class rv_discrete_float(object):
         Returns a vector containing the mean values of the discrete
         distributions.
 
-        A vector is returned containing the mean value of the for each
-        row of `xk`, using the probabilities in the corresponding row
-        of `pk`.
+        A vector is returned containing the mean value of each row of
+        `xk`, using the probabilities in the corresponding row of
+        `pk`.
         """
 
         return (self.xk * self.pk).sum(1)
