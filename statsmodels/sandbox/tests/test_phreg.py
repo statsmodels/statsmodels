@@ -250,7 +250,7 @@ class TestPHreg(object):
 
         mod = PHreg(time, exog)
         rslt = mod.fit_regularized(alpha=20)
-
+        smry = rslt.summary()
 
 if  __name__=="__main__":
 

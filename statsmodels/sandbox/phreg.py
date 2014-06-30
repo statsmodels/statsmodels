@@ -315,7 +315,6 @@ class PHreg(model.LikelihoodModel):
 
         return results
 
-
     def fit_regularized(self, method="coord_descent", maxiter=100,
                         alpha=0., L1_wt=1., start_params=None,
                         cnvrg_tol=1e-7, zero_tol=1e-8, **kwargs):
