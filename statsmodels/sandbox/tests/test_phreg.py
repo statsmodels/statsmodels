@@ -243,14 +243,19 @@ class TestPHreg(object):
     def test_fit_regularized(self):
         # Smoke test
         np.random.seed(34234)
-        exog = np.random.normal(size=(100, 5))
-        lin_pred = np.dot(exog, np.r_[1, 0, 0, 0, 1])
+        n = 100
+        p = 4
+        exog = np.random.normal(size=(n, p))
+        params = np.zeros(p, dtype=np.float64)
+        params[p/2:] = 1
+        lin_pred = np.dot(exog, params)
         elin_pred = np.exp(-lin_pred)
-        time = -elin_pred * np.log(np.random.uniform(size=100))
+        time = -elin_pred * np.log(np.random.uniform(size=n))
 
         mod = PHreg(time, exog)
         rslt = mod.fit_regularized(alpha=20)
         smry = rslt.summary()
+
 
 if  __name__=="__main__":
 

@@ -398,12 +398,18 @@ class PHreg(model.LikelihoodModel):
         model_1var.ties = self.ties
 
         # All the negative penalized loglikeihood functions.
-        def gen_nploglike(k):
+        def gen_npfuncs(k):
             def nploglike(params):
                 pen = alpha[k]*((1 - L1_wt)*params**2/2 + L1_wt*np.abs(params))
                 return -model_1var.loglike(np.r_[params]) + pen
-            return nploglike
-        nploglike_funcs = [gen_nploglike(k) for k in range(len(params))]
+            def npscore(params):
+                pen_grad = alpha[k]*(1 - L1_wt)*params
+                return -model_1var.score(np.r_[params])[0] + pen_grad
+            def nphess(params):
+                pen_hess = alpha[k]*(1 - L1_wt)
+                return -model_1var.hessian(np.r_[params])[0,0] + pen_hess
+            return nploglike, npscore, nphess
+        nploglike_funcs = [gen_npfuncs(k) for k in range(len(params))]
 
         # 1-dimensional exog's
         exog_s = []
@@ -413,12 +419,18 @@ class PHreg(model.LikelihoodModel):
 
         converged = False
         btol = 1e-8
+        params_zero = np.zeros(len(params), dtype=bool)
 
         for itr in range(maxiter):
 
             # Sweep through the parameters
             params_save = params.copy()
             for k in range(k_exog):
+
+                # Under the active set method, if a parameter becomes
+                # zero we don't try to change it again.
+                if params_zero[k]:
+                    continue
 
                 # Set exog to include only the variable whose effect
                 # is being estimated.
@@ -432,7 +444,13 @@ class PHreg(model.LikelihoodModel):
                     v = np.dot(self.surv.exog_s[stx], params0)
                     surv.offset_s[stx] = offset_s_base[stx] + v
 
-                params[k] = brent(nploglike_funcs[k], tol=btol)
+                params[k] = _opt_1d(nploglike_funcs[k], params[k],
+                                    alpha[k]*L1_wt, tol=btol)
+
+                # Update the active set
+                if itr > 0 and np.abs(params[k]) < zero_tol:
+                    params_zero[k] = True
+                    params[k] = 0.
 
             # Check for convergence
             pchange = np.max(np.abs(params - params_save))
@@ -583,7 +601,7 @@ class PHreg(model.LikelihoodModel):
 
         return like
 
-    def breslow_gradient(self, params, return_grad_obs=False):
+    def breslow_gradient(self, params):
         """
         Returns the gradient of the log partial likelihood, using the
         Breslow method to handle tied times.
@@ -592,8 +610,6 @@ class PHreg(model.LikelihoodModel):
         surv = self.surv
 
         grad = 0.
-        if return_grad_obs:
-            grad_obs = np.zeros(self.exog.shape, dtype=np.float64)
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -628,9 +644,6 @@ class PHreg(model.LikelihoodModel):
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
                 grad += (exog_s[ix,:] - xp1 / xp0).sum(0)
-                if return_grad_obs:
-                    ii = strat_ix[ix]
-                    grad_obs[ii, :] = exog_s[ix, :] - xp1 / xp0
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -639,20 +652,15 @@ class PHreg(model.LikelihoodModel):
                     xp0 -= e_linpred[ix].sum()
                     xp1 -= (e_linpred[ix][:,None] * v).sum(0)
 
-        if return_grad_obs:
-            return grad, grad_obs
-        else:
-            return grad
+        return grad
 
-    def efron_gradient(self, params, return_grad_obs=False):
+    def efron_gradient(self, params):
         """
         Returns the gradient of the log partial likelihood evaluated
         at `params`, using the Efron method to handle tied times.
         """
 
         surv = self.surv
-        if return_grad_obs:
-            grad_obs = np.zeros(self.exog.shape, dtype=np.float64)
 
         grad = 0.
 
@@ -691,9 +699,6 @@ class PHreg(model.LikelihoodModel):
 
                     # Consider all cases that fail at this point.
                     grad += v.sum(0)
-                    if return_grad_obs:
-                        ii = strat_ix[ixf]
-                        grad_obs[ii, :] += v
 
                     m = len(ixf)
                     J = np.arange(m, dtype=np.float64) / m
@@ -702,9 +707,6 @@ class PHreg(model.LikelihoodModel):
                     ratio = numer / denom
                     rsum = ratio.sum(0)
                     grad -= rsum
-                    if return_grad_obs:
-                        ii = strat_ix[ixf]
-                        grad_obs[ii, :] -= rsum / m
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -713,10 +715,7 @@ class PHreg(model.LikelihoodModel):
                     xp0 -= e_linpred[ix].sum()
                     xp1 -= (e_linpred[ix][:,None] * v).sum(0)
 
-        if return_grad_obs:
-            return grad, grad_obs
-        else:
-            return grad
+        return grad
 
     def breslow_hessian(self, params):
         """
@@ -1653,7 +1652,7 @@ class PHregResults(base.LikelihoodModelResults):
             smry.add_text("Standard errors account for dependence within groups")
 
         if hasattr(self, "regularized"):
-            smry.add_text("Standard errors do not account for regularization")
+            smry.add_text("Standard errors do not account for the regularization")
 
         return smry
 
@@ -1744,3 +1743,55 @@ class rv_discrete_float(object):
         """
 
         return np.sqrt(self.var())
+
+
+def _opt_1d(funcs, start, L1_wt, tol):
+    """
+    Optimize a L1-penalized smooth one-dimensional function of a
+    single variable.
+
+    Parameters:
+    -----------
+    funcs : tuple of functions
+        funcs[0] is the objective function to be minimized.  funcs[1]
+        and funcs[2] are, respectively, the first and second
+        derivatives of the smooth part of funcs[0] (i.e. excluding the
+        L1 penalty).
+    start : real
+        A starting value for the function argument
+    L1_wt : non-negative real
+        The weight for the L1 penalty function.
+    tol : non-negative real
+        A convergence threshold.
+
+    Returns:
+    --------
+    The argmin of the objective function.
+    """
+
+    # TODO: can we detect failures without calling funcs[0] twice?
+
+    x = start
+    f = funcs[0](x)
+
+    b = funcs[1](x)
+    c = funcs[2](x)
+    d = b - c*x
+
+    if L1_wt > np.abs(d):
+        return 0.
+    elif d >= 0:
+        x += (L1_wt - b) / c
+    elif d < 0:
+        x -= (L1_wt + b) / c
+
+    f1 = funcs[0](x)
+
+    # This is an expensive fall-back if the quadratic
+    # approximation is poor and sends us far off-course.
+    if f1 > f + 1e-10:
+        return brent(funcs[0], brack=(x-0.2, x+0.2), tol=tol)
+
+    return x
+
+
