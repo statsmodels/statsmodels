@@ -240,6 +240,17 @@ class TestPHreg(object):
         fitted_sd = dist.std()
         sample = dist.rvs()
 
+    def test_fit_regularized(self):
+        # Smoke test
+        np.random.seed(34234)
+        exog = np.random.normal(size=(100, 5))
+        lin_pred = np.dot(exog, np.r_[1, 0, 0, 0, 1])
+        elin_pred = np.exp(-lin_pred)
+        time = -elin_pred * np.log(np.random.uniform(size=100))
+
+        mod = PHreg(time, exog)
+        rslt = mod.fit_regularized(alpha=20)
+
 
 if  __name__=="__main__":
 
