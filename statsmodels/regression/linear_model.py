@@ -308,7 +308,7 @@ class RegressionModel(base.LikelihoodModel):
         converged = False
         xxprod = 2*(self.wexog**2).sum(0)
 
-        # Shooting algorithm
+        # Coordinate descent
         for itr in range(maxiter):
 
             params_save = params.copy()
@@ -341,10 +341,10 @@ class RegressionModel(base.LikelihoodModel):
         model = self.__class__(self.wendog, self.wexog[:,ii])
         rslt = model.fit()
         cov = np.zeros((k_exog, k_exog), dtype=np.float64)
-        cov[ii,:][:,ii] = rslt.normalized_cov_params
+        cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
 
         lfit = RegressionResults(self, params,
-                                 normalized_cov_params=rslt.normalized_cov_params)
+                                 normalized_cov_params=cov)
         lfit.converged = converged
         return RegressionResultsWrapper(lfit)
 

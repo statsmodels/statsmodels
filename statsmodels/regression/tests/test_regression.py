@@ -996,9 +996,12 @@ class TestRegularizedFit(object):
             endog = data[:,0]
             exog = data[:,1:]
 
-            md = OLS(endog, exog)
-            mdf = md.fit_regularized(L1_wt=L1_wt, alpha=lam)
-            assert_almost_equal(mdf.params, params, decimal=3)
+            mod = OLS(endog, exog)
+            rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
+            assert_almost_equal(rslt.params, params, decimal=3)
+
+            # Smoke test for summary
+            smry = rslt.summary()
 
 
 if __name__=="__main__":
