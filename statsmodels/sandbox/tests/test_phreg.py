@@ -8,6 +8,7 @@ from numpy.testing import assert_almost_equal
 
 # All the R results
 from . import survival_r_results
+from . import survival_enet_r_results
 
 """
 Tests of phreg against R coxph.
@@ -114,8 +115,8 @@ class TestPHreg(object):
             for ties in "breslow","efron":
                 for entry_f in False,True:
                     for strata_f in False,True:
-                        yield self.do1, fname, ties, entry_f, \
-                            strata_f
+                        yield (self.do1, fname, ties, entry_f,
+                               strata_f)
 
     def test_missing(self):
 
@@ -241,20 +242,32 @@ class TestPHreg(object):
         sample = dist.rvs()
 
     def test_fit_regularized(self):
-        # Smoke test
-        np.random.seed(34234)
-        n = 100
-        p = 4
-        exog = np.random.normal(size=(n, p))
-        params = np.zeros(p, dtype=np.float64)
-        params[p/2:] = 1
-        lin_pred = np.dot(exog, params)
-        elin_pred = np.exp(-lin_pred)
-        time = -elin_pred * np.log(np.random.uniform(size=n))
 
-        mod = PHreg(time, exog)
-        rslt = mod.fit_regularized(alpha=20)
-        smry = rslt.summary()
+        # Data set sizes
+        for n,p in (50,2),(100,5):
+
+            # Penalty weights
+            for js,s in enumerate([0,0.1]):
+
+                coef_name = "coef_%d_%d_%d" % (n, p, js)
+                coef = getattr(survival_enet_r_results, coef_name)
+
+                fname = "survival_data_%d_%d.csv" % (n, p)
+                time, status, entry, exog = self.load_file(fname)
+
+                exog -= exog.mean(0)
+                exog /= exog.std(0, ddof=1)
+
+                mod = PHreg(time, exog, status=status, ties='breslow')
+                rslt = mod.fit_regularized(alpha=s)
+
+                # The agreement isn't very high, the issue may be on
+                # their side.  They seem to use some approximations
+                # that we are not using.
+                assert_almost_equal(rslt.params, coef, decimal=1)
+
+                # Smoke test for summary
+                smry = rslt.summary()
 
 
 if  __name__=="__main__":

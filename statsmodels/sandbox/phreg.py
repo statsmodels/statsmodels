@@ -358,7 +358,7 @@ class PHreg(model.LikelihoodModel):
 
         The function that is minimized is:
 
-        -loglike + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+        -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
 
         where |*|_1 and |*|_2 are the L1 and L2 norms.
 
@@ -367,6 +367,7 @@ class PHreg(model.LikelihoodModel):
         """
 
         k_exog = self.exog.shape[1]
+        n_exog = self.exog.shape[0]
 
         if np.isscalar(alpha):
             alpha = alpha * np.ones(k_exog, dtype=np.float64)
@@ -401,13 +402,13 @@ class PHreg(model.LikelihoodModel):
         def gen_npfuncs(k):
             def nploglike(params):
                 pen = alpha[k]*((1 - L1_wt)*params**2/2 + L1_wt*np.abs(params))
-                return -model_1var.loglike(np.r_[params]) + pen
+                return -model_1var.loglike(np.r_[params]) / n_exog + pen
             def npscore(params):
                 pen_grad = alpha[k]*(1 - L1_wt)*params
-                return -model_1var.score(np.r_[params])[0] + pen_grad
+                return -model_1var.score(np.r_[params])[0] / n_exog + pen_grad
             def nphess(params):
                 pen_hess = alpha[k]*(1 - L1_wt)
-                return -model_1var.hessian(np.r_[params])[0,0] + pen_hess
+                return -model_1var.hessian(np.r_[params])[0,0] / n_exog + pen_hess
             return nploglike, npscore, nphess
         nploglike_funcs = [gen_npfuncs(k) for k in range(len(params))]
 
@@ -464,13 +465,14 @@ class PHreg(model.LikelihoodModel):
         # Fit the reduced model to get standard errors and other
         # post-estimation results.
         ii = np.flatnonzero(params)
-        model = self.__class__(self.endog, self.exog[:, ii],
-                               status=self.status, entry=self.entry,
-                               strata=self.strata, offset=self.offset,
-                               ties=self.ties, missing=self.missing)
-        rslt = model.fit()
         cov = np.zeros((k_exog, k_exog), dtype=np.float64)
-        cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
+        if len(ii) > 0:
+            model = self.__class__(self.endog, self.exog[:, ii],
+                                   status=self.status, entry=self.entry,
+                                   strata=self.strata, offset=self.offset,
+                                   ties=self.ties, missing=self.missing)
+            rslt = model.fit()
+            cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
 
         rfit = PHregResults(self, params, cov_params=cov)
         rfit.converged = converged
