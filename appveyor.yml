@@ -1,19 +1,23 @@
 # Configuration file for AppVeyor continuous integration on Windows
 # https://ci.appveyor.com/project/josef-pkt/statsmodels
 
-os: Windows Server 2012
+#os: Windows Server 2012
+
+platform:
+  - x64
 
 install:
-  - ps: (new-object net.webclient).DownloadFile('https://raw.github.com/pypa/pip/master/contrib/get-pip.py', 'C:\get-pip.py')
+  - ps: Invoke-WebRequest "https://bootstrap.pypa.io/ez_setup.py" -OutFile "c:/ez_setup.py"
+  - ps: Invoke-WebRequest "https://bootstrap.pypa.io/get-pip.py" -OutFile "c:/get-pip.py"
   - C:\Python27\python.exe c:\get-pip.py
-  - C:\Python27\Scripts\pip.exe install pyyaml
-  - C:\Python27\Scripts\pip.exe install pycosat
   - C:\Python27\Scripts\pip.exe install conda
   - C:\Python27\Scripts\conda.exe init
   - C:\Python27\Scripts\conda.exe config --add channels http://conda.binstar.org/omnia
-  - C:\Python27\Scripts\conda.exe create -n py3 --yes --quiet python=3 numpy pytables cython pandas pip netcdf4 pyyaml nose scripttest scipy patsy
+  - C:\Python27\Scripts\conda.exe create -n py3 --yes --quiet python=3 numpy scipy cython pandas pip nose patsy
 
 build_script:
+#  - CALL "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64 /release
+  - set DISTUTILS_USE_SDK=1
   - C:\Python27\envs\py3\python.exe setup.py install
 
 test_script:
