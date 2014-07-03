@@ -1,0 +1,21 @@
+# Configuration file for AppVeyor continuous integration on Windows
+# https://ci.appveyor.com/project/josef-pkt/statsmodels
+
+os: Windows Server 2012
+
+install:
+  - ps: (new-object net.webclient).DownloadFile('https://raw.github.com/pypa/pip/master/contrib/get-pip.py', 'C:\get-pip.py')
+  - C:\Python27\python.exe c:\get-pip.py
+  - C:\Python27\Scripts\pip.exe install pyyaml
+  - C:\Python27\Scripts\pip.exe install pycosat
+  - C:\Python27\Scripts\pip.exe install conda
+  - C:\Python27\Scripts\conda.exe init
+  - C:\Python27\Scripts\conda.exe config --add channels http://conda.binstar.org/omnia
+  - C:\Python27\Scripts\conda.exe create -n py3 --yes --quiet python=3 numpy pytables cython pandas pip netcdf4 pyyaml nose scripttest scipy patsy
+
+build_script:
+  - C:\Python27\envs\py3\python.exe setup.py install
+
+test_script:
+  - SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
+  - C:\Python27\envs\py3\Scripts\nosetests -v
