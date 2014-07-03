@@ -898,6 +898,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # Holds the convergence to steady-state status of the filter
     # *Note*: is by default reset each time `seek` is called
     cdef readonly int converged
+    cdef readonly int period_converged
     # Holds whether or not the model is time-invariant
     # *Note*: is by default reset each time `seek` is called
     cdef readonly int time_invariant
@@ -935,6 +936,13 @@ cdef class {{prefix}}KalmanFilter(object):
     # 
     # *Old notation: P_tt, P_tt1, f_tt1*
     cdef readonly {{cython_type}} [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
+
+    # ### Steady State Matrices
+    # These matrices are used to hold the converged matrices after the Kalman
+    # filter has reached steady-state
+    cdef readonly {{cython_type}} [::1,:] converged_forecast_error_cov
+    cdef readonly {{cython_type}} [::1,:] converged_filtered_state_cov
+    cdef readonly {{cython_type}} [::1,:] converged_predicted_state_cov
 
     # ### Temporary arrays
     # These matrices are used to temporarily hold selected observation vectors,
@@ -988,6 +996,10 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef {{cython_type}} * _filtered_state_cov
     cdef {{cython_type}} * _predicted_state
     cdef {{cython_type}} * _predicted_state_cov
+
+    cdef {{cython_type}} * _converged_forecast_error_cov
+    cdef {{cython_type}} * _converged_filtered_state_cov
+    cdef {{cython_type}} * _converged_predicted_state_cov
 
     cdef {{cython_type}} * _forecast_error_fac
     cdef int * _forecast_error_ipiv
@@ -1083,6 +1095,17 @@ cdef class {{prefix}}KalmanFilter(object):
         dim3[0] = self.nendog; dim3[1] = self.nendog; dim3[2] = storage;
         self.forecast_error_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
+        # Converged matrices
+        dim2[0] = self.nendog; dim2[1] = self.nendog;
+        self.converged_forecast_error_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._converged_forecast_error_cov = &self.converged_forecast_error_cov[0,0]
+        dim2[0] = self.nstates; dim2[1] = self.nstates;
+        self.converged_filtered_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._converged_filtered_state_cov = &self.converged_filtered_state_cov[0,0]
+        dim2[0] = self.nstates; dim2[1] = self.nstates;
+        self.converged_predicted_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._converged_predicted_state_cov = &self.converged_predicted_state_cov[0,0]
+
         # #### Arrays for temporary calculations
         # *Note*: in math notation below, a $\\#$ will represent a generic
         # temporary array, and a $\\#_i$ will represent a named temporary array.
@@ -1143,6 +1166,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         if reset_convergence:
             self.converged = 0
+            self.period_converged = 0
 
     def __iter__(self):
         return self
@@ -1411,11 +1435,11 @@ cdef class {{prefix}}KalmanFilter(object):
 
         if self.converged:
             # $F_t$
-            {{prefix}}copy(&self.nendog2, &self.forecast_error_cov[0, 0, storage_t-1], &inc, self._forecast_error_cov, &inc)
+            {{prefix}}copy(&self.nendog2, self._converged_forecast_error_cov, &inc, self._forecast_error_cov, &inc)
             # $P_{t|t}$
-            {{prefix}}copy(&self.nstates2, &self.filtered_state_cov[0, 0, self.t-1], &inc, self._filtered_state_cov, &inc)
+            {{prefix}}copy(&self.nstates2, self._converged_filtered_state_cov, &inc, self._filtered_state_cov, &inc)
             # $P_t$
-            {{prefix}}copy(&self.nstates2, &self.predicted_state_cov[0, 0, storage_t-1], &inc, self._predicted_state_cov, &inc)
+            {{prefix}}copy(&self.nstates2, self._converged_predicted_state_cov, &inc, self._predicted_state_cov, &inc)
 
     cdef void numerical_stability(self):
         cdef int i, j
@@ -1448,6 +1472,11 @@ cdef class {{prefix}}KalmanFilter(object):
             {{cython_type}} beta = 0.0
             {{cython_type}} gamma = -1.0
 
+        if self.conserve_memory:
+            storage_t = 1
+        else:
+            storage_t = self.t
+
         if not self.time_invariant and not self.converged:
             # #### Check for steady-state convergence
             # 
@@ -1458,12 +1487,25 @@ cdef class {{prefix}}KalmanFilter(object):
 
             {{if combined_prefix == 'd'}}
             if {{prefix}}dot(&self.nstates2, self._tmp0, &inc, self._tmp0, &inc) < self.tolerance:
-                self.converged = self.t
+                self.converged = 1
+                self.period_converged = self.t
+
             {{else}}
             {{prefix}}gemv("N", &inc, &self.nstates2, &alpha, self._tmp0, &inc, self._tmp0, &inc, &beta, self._tmp1, &inc)
             if {{combined_prefix}}abs(self._tmp1[0]) < self.tolerance:
-                self.converged = self.t
+                self.converged = 1
+                self.period_converged = self.t
             {{endif}}
+
+            # If we just converged, copy the current iteration matrices to the
+            # converged storage
+            if self.converged == 1:
+                # $F_t$
+                {{prefix}}copy(&self.nendog2, &self.forecast_error_cov[0, 0, storage_t], &inc, self._converged_forecast_error_cov, &inc)
+                # $P_{t|t}$
+                {{prefix}}copy(&self.nstates2, &self.filtered_state_cov[0, 0, self.t], &inc, self._converged_filtered_state_cov, &inc)
+                # $P_t$
+                {{prefix}}copy(&self.nstates2, &self.predicted_state_cov[0, 0, storage_t], &inc, self._converged_predicted_state_cov, &inc)
 
     cdef void migrate_storage(self):
         cdef int inc = 1
