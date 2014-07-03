@@ -297,8 +297,8 @@ cdef class {{prefix}}Statespace(object):
         self.selected_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
         # Handle missing data
-        self.missing = np.array(np.isnan(obs), dtype = np.int32, order="F")
-        self.nmissing = np.array(np.sum(self.missing, axis=0), dtype = np.int32)
+        self.missing = np.array(np.isnan(obs), dtype=np.int32, order="F")
+        self.nmissing = np.array(np.sum(self.missing, axis=0), dtype=np.int32)
 
     # ## Initialize: known values
     #
@@ -393,12 +393,14 @@ cdef class {{prefix}}Statespace(object):
 #
 # The following are the above routines as defined in the conventional Kalman
 # filter.
+#
+# See Durbin and Koopman (2012) Chapter 4
 
-cdef void {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
+cdef int {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
 
     # Constants
     cdef:
-        int inc = 1
+        int inc = 1, ld
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
@@ -417,7 +419,6 @@ cdef void {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
           &alpha, kfilter._design, &kfilter.nendog,
                   kfilter._input_state, &inc,
           &alpha, kfilter._forecast, &inc)
-
 
     # #### Forecast error for time t  
     # `forecast_error` $\equiv v_t = y_t -$ `forecast`
@@ -451,7 +452,9 @@ cdef void {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
                      kfilter._tmp1, &kfilter.nstates,
               &alpha, kfilter._forecast_error_cov, &kfilter.nendog)
 
-cdef void {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter):
+    return 0
+
+cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter):
     # Constants
     cdef:
         int inc = 1
@@ -492,7 +495,9 @@ cdef void {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter):
                       kfilter._input_state_cov, &kfilter.nstates,
               &alpha, kfilter._filtered_state_cov, &kfilter.nstates)
 
-cdef void {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter):
+    return 0
+
+cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter):
 
     # Constants
     cdef:
@@ -531,6 +536,8 @@ cdef void {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter):
               &alpha, kfilter._tmp0, &kfilter.nstates,
                       kfilter._transition, &kfilter.nstates,
               &alpha, kfilter._predicted_state_cov, &kfilter.nstates)
+
+    return 0
 
 
 cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
@@ -992,19 +999,19 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef {{cython_type}} * _tmp3
 
     # ### Pointers to current-iteration Kalman filtering functions
-    cdef void (*forecasting)(
+    cdef int (*forecasting)(
         {{prefix}}KalmanFilter
     )
     cdef {{cython_type}} (*inversion)(
         {{prefix}}KalmanFilter, {{cython_type}}
     )
-    cdef void (*updating)(
+    cdef int (*updating)(
         {{prefix}}KalmanFilter
     )
     cdef {{cython_type}} (*calculate_loglikelihood)(
         {{prefix}}KalmanFilter, {{cython_type}}
     )
-    cdef void (*prediction)(
+    cdef int (*prediction)(
         {{prefix}}KalmanFilter
     )
 
