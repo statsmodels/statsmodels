@@ -20,6 +20,6 @@ build_script:
 
 test_script:
   - cd C:\Python27\envs\py3\Scripts
-  - activate.bat
+#  - activate.bat
   - SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
   - C:\Python27\envs\py3\Scripts\nosetests -v -A "not slow" statsmodels
