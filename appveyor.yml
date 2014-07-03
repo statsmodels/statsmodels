@@ -18,4 +18,4 @@ build_script:
 
 test_script:
   - SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
-  - C:\Python27\envs\py3\Scripts\nosetests -v
+  - C:\Python27\envs\py3\Scripts\nosetests -v statsmodels
