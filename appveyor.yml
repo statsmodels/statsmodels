@@ -23,6 +23,7 @@ build_script:
   - set DISTUTILS_USE_SDK=1
   - C:\Python27\envs\py3\python.exe setup.py install
 
+
 test_script:
   - SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
   - C:\Python27\envs\py3\Scripts\nosetests -v statsmodels
