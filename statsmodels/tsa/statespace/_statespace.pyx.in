@@ -400,19 +400,15 @@ cdef class {{prefix}}Statespace(object):
 cdef int {{prefix}}forecast_missing_conventional({{prefix}}KalmanFilter kfilter):
     cdef int i, j
     cdef int inc = 1
-    cdef {{cython_type}} gamma = -1.0
 
     # #### Forecast for time t  
     # `forecast` $= 0 a_t + d_t$
     {{prefix}}copy(&kfilter.nendog, kfilter._obs_intercept, &inc, kfilter._forecast, &inc)
 
     # #### Forecast error for time t  
-    # `forecast_error` $\equiv v_t = y_t -$ `forecast` $= y_t - d_t$
-    # $\\# = y_t$
-    {{prefix}}copy(&kfilter.nendog, kfilter._obs, &inc, kfilter._forecast_error, &inc)
-    # $v_t = -1.0 * $ `forecast` $ + \\#$
-    # $(p \times 1) = (p \times 1) + (p \times 1)$
-    {{prefix}}axpy(&kfilter.nendog, &gamma, kfilter._forecast, &inc, kfilter._forecast_error, &inc)
+    # It is undefined here, since obs is nan
+    for i in range(kfilter.nendog):
+        kfilter._forecast_error[i] = 0
 
     # #### Forecast error covariance matrix for time t  
     # $F_t \equiv 0$
@@ -1239,8 +1235,6 @@ cdef class {{prefix}}KalmanFilter(object):
         if not self.t < self.model.nobs:
             raise StopIteration
 
-
-
         # Initialize pointers to current-iteration objects
         self.initialize_object_pointers()
 
@@ -1442,7 +1436,8 @@ cdef class {{prefix}}KalmanFilter(object):
             # copy over steady state matrices
             self.converged = 0
 
-            # Dimensions are the same as usual
+            # Dimensions are the same as usual (have to reset in case previous
+            # obs was partially missing case)
             self.nendog = self.model.nendog
             self.nendog2 = self.nendog**2
             self.nendogstates = self.nendog * self.nstates
@@ -1450,7 +1445,7 @@ cdef class {{prefix}}KalmanFilter(object):
             # Design matrix is set to zeros
             for i in range(self.model.nstates):
                 for j in range(self.model.nendog):
-                    self.selected_design[j + i*self.model.nstates] = 0
+                    self.selected_design[j + i*self.model.nendog] = 0.0
             self._design = &self.selected_design[0]
 
             # Change the forecasting step to set the forecast at the intercept
