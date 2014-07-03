@@ -16,7 +16,9 @@ install:
   - C:\Python27\Scripts\conda.exe create -n py3 --yes --quiet python=3 numpy scipy cython pandas pip nose patsy
 
 build_script:
+  - "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\vcvars64.bat"
   - CALL "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64 /release
+  - setenv /x64 /release
   - set MSSdk=1
   - set DISTUTILS_USE_SDK=1
   - C:\Python27\envs\py3\python.exe setup.py install
