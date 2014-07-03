@@ -926,7 +926,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
     `loglikelihood` calls the Kalman filter `loglikelihood_<filter type>` routine
 
-    `prediction` calls the Kalman filter `predcition_<filter type>` routine
+    `prediction` calls the Kalman filter `prediction_<filter type>` routine
 
     `numerical_stability` performs end-of-iteration tasks to improve the numerical
     stability of the filter 
@@ -1239,6 +1239,8 @@ cdef class {{prefix}}KalmanFilter(object):
         if not self.t < self.model.nobs:
             raise StopIteration
 
+
+
         # Initialize pointers to current-iteration objects
         self.initialize_object_pointers()
 
@@ -1517,11 +1519,6 @@ cdef class {{prefix}}KalmanFilter(object):
         cdef:
             int inc = 1
             int storage_t
-
-        if self.conserve_memory:
-            storage_t = 1
-        else:
-            storage_t = self.t
 
         if self.converged:
             # $F_t$
