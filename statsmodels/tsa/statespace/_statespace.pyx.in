@@ -389,6 +389,54 @@ cdef class {{prefix}}Statespace(object):
 # generates the predicted state $a_{t+1}$ and covariance matrix $P_{t+1}$.
 # `loglikelihood_<filter type>` calculates the loglikelihood for $y_t$
 
+# ### Missing Observation Conventional Kalman filter
+#
+# See Durbin and Koopman (2012) Chapter 4.10
+#
+# Here nendog is the same as usual, but the design matrix and observation
+# covariance matrix are enforced to be zero matrices, and the loglikelihood
+# is defined to be zero.
+
+cdef int {{prefix}}forecast_missing_conventional({{prefix}}KalmanFilter kfilter):
+    cdef int i, j
+    cdef int inc = 1
+    cdef {{cython_type}} gamma = -1.0
+
+    # #### Forecast for time t  
+    # `forecast` $= 0 a_t + d_t$
+    {{prefix}}copy(&kfilter.nendog, kfilter._obs_intercept, &inc, kfilter._forecast, &inc)
+
+    # #### Forecast error for time t  
+    # `forecast_error` $\equiv v_t = y_t -$ `forecast` $= y_t - d_t$
+    # $\\# = y_t$
+    {{prefix}}copy(&kfilter.nendog, kfilter._obs, &inc, kfilter._forecast_error, &inc)
+    # $v_t = -1.0 * $ `forecast` $ + \\#$
+    # $(p \times 1) = (p \times 1) + (p \times 1)$
+    {{prefix}}axpy(&kfilter.nendog, &gamma, kfilter._forecast, &inc, kfilter._forecast_error, &inc)
+
+    # #### Forecast error covariance matrix for time t  
+    # $F_t \equiv 0$
+    for i in range(kfilter.nendog):
+        for j in range(kfilter.nendog):
+            kfilter._forecast_error_cov[j + i*kfilter.nendog] = 0
+
+cdef int {{prefix}}updating_missing_conventional({{prefix}}KalmanFilter kfilter):
+    cdef int inc = 1
+
+    # Simply copy over the input arrays ($a_t, P_t$) to the filtered arrays
+    # ($a_{t|t}, P_{t|t}$)
+    {{prefix}}copy(&kfilter.nstates, kfilter._input_state, &inc, kfilter._filtered_state, &inc)
+    {{prefix}}copy(&kfilter.nstates2, kfilter._input_state_cov, &inc, kfilter._filtered_state_cov, &inc)
+
+cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    # Since the inverse of the forecast error covariance matrix is not
+    # stored, we don't need to fill it (e.g. with NPY_NAN values). Instead,
+    # just do a noop here and return a zero determinant ($|0|$).
+    return 0.0
+
+cdef {{cython_type}} {{prefix}}loglikelihood_missing_conventional({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+    return 0.0
+
 # ### Conventional Kalman filter
 #
 # The following are the above routines as defined in the conventional Kalman
@@ -937,12 +985,13 @@ cdef class {{prefix}}KalmanFilter(object):
     # *Old notation: P_tt, P_tt1, f_tt1*
     cdef readonly {{cython_type}} [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
 
-    # ### Steady State Matrices
+    # ### Steady State Values
     # These matrices are used to hold the converged matrices after the Kalman
     # filter has reached steady-state
     cdef readonly {{cython_type}} [::1,:] converged_forecast_error_cov
     cdef readonly {{cython_type}} [::1,:] converged_filtered_state_cov
     cdef readonly {{cython_type}} [::1,:] converged_predicted_state_cov
+    cdef readonly {{cython_type}} converged_determinant
 
     # ### Temporary arrays
     # These matrices are used to temporarily hold selected observation vectors,
@@ -1382,7 +1431,48 @@ cdef class {{prefix}}KalmanFilter(object):
         # defined as single-dimensional, so the assignment indexes below are
         # set such that the arrays can be interpreted by the BLAS and LAPACK
         # functions as two-dimensional, column-major arrays.
-        if self.model.nmissing[self.t] > 0:
+        #
+        # In the case that all data is missing (e.g. this is what happens in
+        # forecasting), we actually set don't change the dimension, but we set
+        # the design matrix to the zeros array.
+        if self.model.nmissing[self.t] == self.model.nendog:
+            # Mark as not converged so that it does not inappropriately
+            # copy over steady state matrices
+            self.converged = 0
+
+            # Dimensions are the same as usual
+            self.nendog = self.model.nendog
+            self.nendog2 = self.nendog**2
+            self.nendogstates = self.nendog * self.nstates
+
+            # Design matrix is set to zeros
+            for i in range(self.model.nstates):
+                for j in range(self.model.nendog):
+                    self.selected_design[j + i*self.model.nstates] = 0
+            self._design = &self.selected_design[0]
+
+            # Change the forecasting step to set the forecast at the intercept
+            # $d_t$, so that the forecast error is $v_t = y_t - d_t$.
+            self.forecasting = {{prefix}}forecast_missing_conventional
+
+            # Change the updating step to just copy $a_{t|t} = a_t$ and
+            # $P_{t|t} = P_t$
+            self.updating = {{prefix}}updating_missing_conventional
+
+            # Change the inversion step to inverse to nans.
+            self.inversion = {{prefix}}inverse_missing_conventional
+
+            # Change the loglikelihood calculation to give zero.
+            self.calculate_loglikelihood = {{prefix}}loglikelihood_missing_conventional
+
+            # The prediction step is the same as the conventional Kalman
+            # filter
+
+        elif self.model.nmissing[self.t] > 0:
+            # Mark as not converged so that it does not inappropriately
+            # copy over steady state matrices
+            self.converged = 0
+
             # Set dimensions
             self.nendog = self.model.nendog - self.model.nmissing[self.t]
             self.nendog2 = self.nendog**2
@@ -1440,6 +1530,8 @@ cdef class {{prefix}}KalmanFilter(object):
             {{prefix}}copy(&self.nstates2, self._converged_filtered_state_cov, &inc, self._filtered_state_cov, &inc)
             # $P_t$
             {{prefix}}copy(&self.nstates2, self._converged_predicted_state_cov, &inc, self._predicted_state_cov, &inc)
+            # $|F_t|$
+            self.determinant = self.converged_determinant
 
     cdef void numerical_stability(self):
         cdef int i, j
@@ -1477,7 +1569,7 @@ cdef class {{prefix}}KalmanFilter(object):
         else:
             storage_t = self.t
 
-        if not self.time_invariant and not self.converged:
+        if self.time_invariant and self.model.nmissing[self.t] == 0 and not self.converged:
             # #### Check for steady-state convergence
             # 
             # `tmp0` array used here, dimension $(m \times m)$  
@@ -1506,6 +1598,13 @@ cdef class {{prefix}}KalmanFilter(object):
                 {{prefix}}copy(&self.nstates2, &self.filtered_state_cov[0, 0, self.t], &inc, self._converged_filtered_state_cov, &inc)
                 # $P_t$
                 {{prefix}}copy(&self.nstates2, &self.predicted_state_cov[0, 0, storage_t], &inc, self._converged_predicted_state_cov, &inc)
+                # $|F_t|$
+                self.converged_determinant = self.determinant
+        elif self.period_converged > 0:
+            # This is here so that the filter's state is reset to converged = 1
+            # even if it was set to converged = 0 for the current iteration
+            # due to missing values
+            self.converged = 1
 
     cdef void migrate_storage(self):
         cdef int inc = 1
