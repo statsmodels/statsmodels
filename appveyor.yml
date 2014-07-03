@@ -13,12 +13,13 @@ install:
   - C:\Python27\Scripts\pip.exe install conda
   - C:\Python27\Scripts\conda.exe init
   - C:\Python27\Scripts\conda.exe config --add channels http://conda.binstar.org/omnia
-  - C:\Python27\Scripts\conda.exe create -n py3 --yes --quiet python=3 numpy scipy cython pandas pip nose patsy
+  - C:\Python27\Scripts\conda.exe create -n py3 --yes python=3 numpy scipy cython pandas pip nose patsy
 
 build_script:
   - C:\Python27\envs\py3\python.exe setup.py install
 
 test_script:
   - cd C:\Python27\envs\py3\Scripts
+  - activate.bat
   - SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
-  - C:\Python27\envs\py3\Scripts\nosetests -v statsmodels
+  - C:\Python27\envs\py3\Scripts\nosetests -v -A "not slow" statsmodels
