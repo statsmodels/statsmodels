@@ -62,7 +62,7 @@ class Clark1987(object):
 
     See `results.results_kalman_filter` for more information.
     """
-    def __init__(self, dtype=float):
+    def __init__(self, dtype=float, conserve_memory=False):
         self.true = results_kalman_filter.uc_uni
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -74,43 +74,51 @@ class Clark1987(object):
         )
         data['lgdp'] = np.log(data['GDP'])
 
+        # Parameters
+        self.conserve_memory = conserve_memory
+
         # Observed data
-        obs = np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F")
+        self.obs = np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F")
 
         # Measurement equation
-        nendog = 1  # dimension of observed data
+        self.nendog = nendog = 1  # dimension of observed data
         # design matrix
-        design = np.zeros((nendog, 4, 1), dtype=dtype, order="F")
-        design[:, :, 0] = [1, 1, 0, 0]
+        self.design = np.zeros((nendog, 4, 1), dtype=dtype, order="F")
+        self.design[:, :, 0] = [1, 1, 0, 0]
         # observation intercept
-        obs_intercept = np.zeros((nendog, 1), dtype=dtype, order="F")
+        self.obs_intercept = np.zeros((nendog, 1), dtype=dtype, order="F")
         # observation covariance matrix
-        obs_cov = np.zeros((nendog, nendog, 1), dtype=dtype, order="F")
+        self.obs_cov = np.zeros((nendog, nendog, 1), dtype=dtype, order="F")
 
         # Transition equation
-        nstates = 4  # dimension of state space
+        self.nstates = nstates = 4  # dimension of state space
         # transition matrix
-        transition = np.zeros((nstates, nstates, 1), dtype=dtype, order="F")
-        transition[([0, 0, 1, 1, 2, 3],
-                    [0, 3, 1, 2, 1, 3],
-                    [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
+        self.transition = np.zeros((nstates, nstates, 1),
+                                   dtype=dtype, order="F")
+        self.transition[([0, 0, 1, 1, 2, 3],
+                         [0, 3, 1, 2, 1, 3],
+                         [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
         # state intercept
-        state_intercept = np.zeros((nstates, 1), dtype=dtype, order="F")
+        self.state_intercept = np.zeros((nstates, 1), dtype=dtype, order="F")
         # selection matrix
-        selection = np.asfortranarray(np.eye(nstates)[:, :, None], dtype=dtype)
+        self.selection = np.asfortranarray(np.eye(nstates)[:, :, None],
+                                           dtype=dtype)
         # state covariance matrix
-        state_cov = np.zeros((nstates, nstates, 1), dtype=dtype, order="F")
+        self.state_cov = np.zeros((nstates, nstates, 1),
+                                  dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
-        initial_state = np.zeros((nstates,), dtype=dtype, order="F")
-        initial_state_cov = np.asfortranarray(np.eye(nstates)*100, dtype=dtype)
+        self.initial_state = np.zeros((nstates,), dtype=dtype, order="F")
+        self.initial_state_cov = np.asfortranarray(np.eye(nstates)*100,
+                                                   dtype=dtype)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
             self.true['parameters'], dtype=dtype
         )
-        transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
-        state_cov[np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
+        self.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
+        self.state_cov[
+            np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
             sigma_v**2, sigma_e**2, 0, sigma_w**2
         ]
 
@@ -120,33 +128,38 @@ class Clark1987(object):
         # we need to modify the initial state covariance matrix to match
         # Kim and Nelson's results, since the *Statespace models follow Durbin
         # and Koopman.
-        initial_state_cov = np.asfortranarray(
+        self.initial_state_cov = np.asfortranarray(
             np.dot(
-                np.dot(transition[:, :, 0], initial_state_cov),
-                transition[:, :, 0].T
+                np.dot(self.transition[:, :, 0], self.initial_state_cov),
+                self.transition[:, :, 0].T
             )
         )
 
+    def init_filter(self):
         # Use the appropriate Statespace model
-        prefix = find_best_blas_type((obs,))
+        prefix = find_best_blas_type((self.obs,))
         cls = prefix_statespace_map[prefix[0]]
 
         # Instantiate the statespace model
-        self.model = cls(obs, design, obs_intercept, obs_cov, transition,
-                         state_intercept, selection, state_cov)
-        self.model.initialize_known(initial_state, initial_state_cov)
+        self.model = cls(
+            self.obs, self.design, self.obs_intercept, self.obs_cov,
+            self.transition, self.state_intercept, self.selection,
+            self.state_cov
+        )
+        self.model.initialize_known(self.initial_state, self.initial_state_cov)
 
         # Initialize the appropriate Kalman filter
         cls = prefix_kalman_filter_map[prefix[0]]
-        self.filter = cls(self.model)
+        self.filter = cls(self.model, conserve_memory=self.conserve_memory)
 
+    def run_filter(self):
         # Filter the data
         self.filter()
 
         # Get results
         self.result = {
-            'loglike': lambda burn: np.sum(self.model.loglikelihood[burn:]),
-            'state': np.array(self.model.filtered_state),
+            'loglike': lambda burn: np.sum(self.filter.loglikelihood[burn:]),
+            'state': np.array(self.filter.filtered_state),
         }
 
     def test_loglike(self):
@@ -175,7 +188,11 @@ class TestClark1987Single(Clark1987):
     """
     def __init__(self):
         raise SkipTest('Not implemented')
-        super(TestClark1987Single, self).__init__(dtype=np.float32)
+        super(TestClark1987Single, self).__init__(
+            dtype=np.float32, conserve_memory=False
+        )
+        self.init_filter()
+        self.run_filter()
 
 
 class TestClark1987Double(Clark1987):
@@ -183,7 +200,11 @@ class TestClark1987Double(Clark1987):
     Basic double precision test for the loglikelihood and filtered states.
     """
     def __init__(self):
-        super(TestClark1987Double, self).__init__(dtype=float)
+        super(TestClark1987Double, self).__init__(
+            dtype=float, conserve_memory=False
+        )
+        self.init_filter()
+        self.run_filter()
 
 
 class TestClark1987SingleComplex(Clark1987):
@@ -193,7 +214,11 @@ class TestClark1987SingleComplex(Clark1987):
     """
     def __init__(self):
         raise SkipTest('Not implemented')
-        super(TestClark1987SingleComplex, self).__init__(dtype=np.complex64)
+        super(TestClark1987SingleComplex, self).__init__(
+            dtype=np.complex64, conserve_memory=False
+        )
+        self.init_filter()
+        self.run_filter()
 
 
 class TestClark1987DoubleComplex(Clark1987):
@@ -202,10 +227,92 @@ class TestClark1987DoubleComplex(Clark1987):
     states.
     """
     def __init__(self):
-        super(TestClark1987DoubleComplex, self).__init__(dtype=complex)
+        super(TestClark1987DoubleComplex, self).__init__(
+            dtype=complex, conserve_memory=False
+        )
+        self.init_filter()
+        self.run_filter()
 
 
-class TestClark1989(object):
+class TestClark1987Conserve(Clark1987):
+    """
+    Memory conservation test for the loglikelihood and filtered states.
+    """
+    def __init__(self):
+        super(TestClark1987Conserve, self).__init__(
+            dtype=float, conserve_memory=True
+        )
+        self.init_filter()
+        self.run_filter()
+
+
+class Clark1987Forecast(Clark1987):
+    """
+    Forecasting test for the loglikelihood and filtered states.
+    """
+    def __init__(self, dtype=float, nforecast=100, conserve_memory=False):
+        super(Clark1987Forecast, self).__init__(
+            dtype, conserve_memory
+        )
+        self.nforecast = nforecast
+
+        # Add missing observations to the end (to forecast)
+        self._obs = self.obs
+        self.obs = np.array(np.r_[self.obs[0, :], [np.nan]*nforecast],
+                            ndmin=2, dtype=dtype, order="F")
+
+    def test_filtered_state(self):
+        assert_almost_equal(
+            self.result['state'][0][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 0], 4
+        )
+        assert_almost_equal(
+            self.result['state'][1][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 1], 4
+        )
+        assert_almost_equal(
+            self.result['state'][3][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 2], 4
+        )
+
+
+class TestClark1987ForecastDouble(Clark1987Forecast):
+    """
+    Basic double forecasting test for the loglikelihood and filtered states.
+    """
+    def __init__(self):
+        super(TestClark1987ForecastDouble, self).__init__()
+        self.init_filter()
+        self.run_filter()
+
+
+class TestClark1987ForecastDoubleComplex(Clark1987Forecast):
+    """
+    Basic double complex forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1987ForecastDoubleComplex, self).__init__(
+            dtype=complex
+        )
+        self.init_filter()
+        self.run_filter()
+
+
+class TestClark1987ForecastConserve(Clark1987Forecast):
+    """
+    Memory conservation forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1987ForecastConserve, self).__init__(
+            dtype=float, conserve_memory=True
+        )
+        self.init_filter()
+        self.run_filter()
+
+
+class Clark1989(object):
     """
     Clark's (1989) bivariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)
@@ -217,7 +324,7 @@ class TestClark1989(object):
 
     See `results.results_kalman_filter` for more information.
     """
-    def __init__(self, dtype=float):
+    def __init__(self, dtype=float, conserve_memory=False):
         self.true = results_kalman_filter.uc_bi
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -231,85 +338,98 @@ class TestClark1989(object):
         data['UNEMP'] = (data['UNEMP']/100)
 
         # Observed data
-        obs = np.array(data, ndmin=2, dtype=dtype, order="C").T
+        self.obs = np.array(data, ndmin=2, dtype=dtype, order="C").T
 
         # Parameters
-        nendog = 2  # dimension of observed data
-        nstates = 6  # dimension of state space
+        self.nendog = nendog = 2  # dimension of observed data
+        self.nstates = nstates = 6  # dimension of state space
+        self.conserve_memory = conserve_memory
 
         # Measurement equation
 
         # design matrix
-        design = np.zeros((nendog, nstates, 1), dtype=dtype, order="F")
-        design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
+        self.design = np.zeros((nendog, nstates, 1), dtype=dtype, order="F")
+        self.design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
         # observation intercept
-        obs_intercept = np.zeros((nendog, 1), dtype=dtype, order="F")
+        self.obs_intercept = np.zeros((nendog, 1), dtype=dtype, order="F")
         # observation covariance matrix
-        obs_cov = np.zeros((nendog, nendog, 1), dtype=dtype, order="F")
+        self.obs_cov = np.zeros((nendog, nendog, 1), dtype=dtype, order="F")
 
         # Transition equation
 
         # transition matrix
-        transition = np.zeros((nstates, nstates, 1), dtype=dtype, order="F")
-        transition[([0, 0, 1, 1, 2, 3, 4, 5],
-                    [0, 4, 1, 2, 1, 2, 4, 5],
-                    [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
+        self.transition = np.zeros((nstates, nstates, 1),
+                                   dtype=dtype, order="F")
+        self.transition[([0, 0, 1, 1, 2, 3, 4, 5],
+                         [0, 4, 1, 2, 1, 2, 4, 5],
+                         [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
         # state intercept
-        state_intercept = np.zeros((nstates, 1), dtype=dtype, order="F")
+        self.state_intercept = np.zeros((nstates, 1), dtype=dtype, order="F")
         # selection matrix
-        selection = np.asfortranarray(np.eye(nstates)[:, :, None], dtype=dtype)
+        self.selection = np.asfortranarray(np.eye(nstates)[:, :, None],
+                                           dtype=dtype)
         # state covariance matrix
-        state_cov = np.zeros((nstates, nstates, 1), dtype=dtype, order="F")
+        self.state_cov = np.zeros((nstates, nstates, 1),
+                                  dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
-        initial_state = np.zeros((nstates,), dtype=dtype)
-        initial_state_cov = np.asfortranarray(np.eye(nstates)*100, dtype=dtype)
+        self.initial_state = np.zeros((nstates,), dtype=dtype)
+        self.initial_state_cov = np.asfortranarray(np.eye(nstates)*100,
+                                                   dtype=dtype)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
          phi_1, phi_2, alpha_1, alpha_2, alpha_3) = np.array(
             self.true['parameters'], dtype=dtype
         )
-        design[([1, 1, 1], [1, 2, 3], [0, 0, 0])] = [alpha_1, alpha_2, alpha_3]
-        transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
-        obs_cov[1, 1, 0] = sigma_ec**2
-        state_cov[np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
+        self.design[([1, 1, 1], [1, 2, 3], [0, 0, 0])] = [
+            alpha_1, alpha_2, alpha_3
+        ]
+        self.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
+        self.obs_cov[1, 1, 0] = sigma_ec**2
+        self.state_cov[
+            np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
             sigma_v**2, sigma_e**2, 0, 0, sigma_w**2, sigma_vl**2
         ]
 
         # Initialization: modification
-        # Due to the difference in the way Kim and Nelson (1999) and Durbin
+        # Due to the difference in the way Kim and Nelson (1999) and Drubin
         # and Koopman (2012) define the order of the Kalman filter routines,
         # we need to modify the initial state covariance matrix to match
         # Kim and Nelson's results, since the *Statespace models follow Durbin
         # and Koopman.
-        initial_state_cov = np.asfortranarray(
+        self.initial_state_cov = np.asfortranarray(
             np.dot(
-                np.dot(transition[:, :, 0], initial_state_cov),
-                transition[:, :, 0].T
+                np.dot(self.transition[:, :, 0], self.initial_state_cov),
+                self.transition[:, :, 0].T
             )
         )
 
+    def init_filter(self):
         # Use the appropriate Statespace model
-        prefix = find_best_blas_type((obs,))
+        prefix = find_best_blas_type((self.obs,))
         cls = prefix_statespace_map[prefix[0]]
 
         # Instantiate the statespace model
-        self.model = cls(obs, design, obs_intercept, obs_cov, transition,
-                         state_intercept, selection, state_cov)
-        self.model.initialize_known(initial_state, initial_state_cov)
+        self.model = cls(
+            self.obs, self.design, self.obs_intercept, self.obs_cov,
+            self.transition, self.state_intercept, self.selection,
+            self.state_cov
+        )
+        self.model.initialize_known(self.initial_state, self.initial_state_cov)
 
         # Initialize the appropriate Kalman filter
         cls = prefix_kalman_filter_map[prefix[0]]
-        self.filter = cls(self.model)
+        self.filter = cls(self.model, conserve_memory=self.conserve_memory)
 
+    def run_filter(self):
         # Filter the data
         self.filter()
 
         # Get results
         self.result = {
-            'loglike': lambda burn: np.sum(self.model.loglikelihood[burn:]),
-            'state': np.array(self.model.filtered_state),
+            'loglike': lambda burn: np.sum(self.filter.loglikelihood[burn:]),
+            'state': np.array(self.filter.filtered_state),
         }
 
     def test_loglike(self):
@@ -334,3 +454,104 @@ class TestClark1989(object):
             self.result['state'][5][self.true['start']:],
             self.true_states.iloc[:, 3], 4
         )
+
+
+class TestClark1989(Clark1989):
+    """
+    Basic double precision test for the loglikelihood and filtered
+    states with two-dimensional observation vector.
+    """
+    def __init__(self):
+        super(TestClark1989, self).__init__(dtype=float, conserve_memory=False)
+        self.init_filter()
+        self.run_filter()
+
+
+class TestClark1989Conserve(Clark1989):
+    """
+    Memory conservation test for the loglikelihood and filtered states with
+    two-dimensional observation vector.
+    """
+    def __init__(self):
+        super(TestClark1989Conserve, self).__init__(
+            dtype=float, conserve_memory=True
+        )
+        self.init_filter()
+        self.run_filter()
+
+
+class Clark1989Forecast(Clark1989):
+    """
+    Memory conservation test for the loglikelihood and filtered states with
+    two-dimensional observation vector.
+    """
+    def __init__(self, dtype=float, nforecast=100, conserve_memory=False):
+        super(Clark1989Forecast, self).__init__(dtype, conserve_memory)
+        self.nforecast = nforecast
+
+        # Add missing observations to the end (to forecast)
+        self._obs = self.obs
+        self.obs = np.array(
+            np.c_[
+                self._obs,
+                np.r_[[np.nan, np.nan]*nforecast].reshape(2, nforecast)
+            ],
+            ndmin=2, dtype=dtype, order="F"
+        )
+
+        self.init_filter()
+        self.run_filter()
+
+    def test_filtered_state(self):
+        assert_almost_equal(
+            self.result['state'][0][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 0], 4
+        )
+        assert_almost_equal(
+            self.result['state'][1][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 1], 4
+        )
+        assert_almost_equal(
+            self.result['state'][4][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 2], 4
+        )
+        assert_almost_equal(
+            self.result['state'][5][self.true['start']:-self.nforecast],
+            self.true_states.iloc[:, 3], 4
+        )
+
+
+class TestClark1989ForecastDouble(Clark1989Forecast):
+    """
+    Basic double forecasting test for the loglikelihood and filtered states.
+    """
+    def __init__(self):
+        super(TestClark1989ForecastDouble, self).__init__()
+        self.init_filter()
+        self.run_filter()
+
+
+class TestClark1989ForecastDoubleComplex(Clark1989Forecast):
+    """
+    Basic double complex forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1989ForecastDoubleComplex, self).__init__(
+            dtype=complex
+        )
+        self.init_filter()
+        self.run_filter()
+
+
+class TestClark1989ForecastConserve(Clark1989Forecast):
+    """
+    Memory conservation forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1989ForecastConserve, self).__init__(
+            dtype=float, conserve_memory=True
+        )
+        self.init_filter()
+        self.run_filter()
