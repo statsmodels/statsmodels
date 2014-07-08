@@ -62,7 +62,7 @@ class Clark1987(object):
 
     See `results.results_kalman_filter` for more information.
     """
-    def __init__(self, dtype=float, conserve_memory=False):
+    def __init__(self, dtype=float, conserve_memory=0):
         self.true = results_kalman_filter.uc_uni
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -189,7 +189,7 @@ class TestClark1987Single(Clark1987):
     def __init__(self):
         raise SkipTest('Not implemented')
         super(TestClark1987Single, self).__init__(
-            dtype=np.float32, conserve_memory=False
+            dtype=np.float32, conserve_memory=0
         )
         self.init_filter()
         self.run_filter()
@@ -201,7 +201,7 @@ class TestClark1987Double(Clark1987):
     """
     def __init__(self):
         super(TestClark1987Double, self).__init__(
-            dtype=float, conserve_memory=False
+            dtype=float, conserve_memory=0
         )
         self.init_filter()
         self.run_filter()
@@ -215,7 +215,7 @@ class TestClark1987SingleComplex(Clark1987):
     def __init__(self):
         raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, self).__init__(
-            dtype=np.complex64, conserve_memory=False
+            dtype=np.complex64, conserve_memory=0
         )
         self.init_filter()
         self.run_filter()
@@ -228,7 +228,7 @@ class TestClark1987DoubleComplex(Clark1987):
     """
     def __init__(self):
         super(TestClark1987DoubleComplex, self).__init__(
-            dtype=complex, conserve_memory=False
+            dtype=complex, conserve_memory=0
         )
         self.init_filter()
         self.run_filter()
@@ -240,7 +240,7 @@ class TestClark1987Conserve(Clark1987):
     """
     def __init__(self):
         super(TestClark1987Conserve, self).__init__(
-            dtype=float, conserve_memory=True
+            dtype=float, conserve_memory=0x01 | 0x02
         )
         self.init_filter()
         self.run_filter()
@@ -250,7 +250,7 @@ class Clark1987Forecast(Clark1987):
     """
     Forecasting test for the loglikelihood and filtered states.
     """
-    def __init__(self, dtype=float, nforecast=100, conserve_memory=False):
+    def __init__(self, dtype=float, nforecast=100, conserve_memory=0):
         super(Clark1987Forecast, self).__init__(
             dtype, conserve_memory
         )
@@ -306,7 +306,7 @@ class TestClark1987ForecastConserve(Clark1987Forecast):
     """
     def __init__(self):
         super(TestClark1987ForecastConserve, self).__init__(
-            dtype=float, conserve_memory=True
+            dtype=float, conserve_memory=0x01 | 0x02
         )
         self.init_filter()
         self.run_filter()
@@ -324,7 +324,7 @@ class Clark1989(object):
 
     See `results.results_kalman_filter` for more information.
     """
-    def __init__(self, dtype=float, conserve_memory=False):
+    def __init__(self, dtype=float, conserve_memory=0):
         self.true = results_kalman_filter.uc_bi
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -462,7 +462,7 @@ class TestClark1989(Clark1989):
     states with two-dimensional observation vector.
     """
     def __init__(self):
-        super(TestClark1989, self).__init__(dtype=float, conserve_memory=False)
+        super(TestClark1989, self).__init__(dtype=float, conserve_memory=0)
         self.init_filter()
         self.run_filter()
 
@@ -474,7 +474,7 @@ class TestClark1989Conserve(Clark1989):
     """
     def __init__(self):
         super(TestClark1989Conserve, self).__init__(
-            dtype=float, conserve_memory=True
+            dtype=float, conserve_memory=0x01 | 0x02
         )
         self.init_filter()
         self.run_filter()
@@ -485,7 +485,7 @@ class Clark1989Forecast(Clark1989):
     Memory conservation test for the loglikelihood and filtered states with
     two-dimensional observation vector.
     """
-    def __init__(self, dtype=float, nforecast=100, conserve_memory=False):
+    def __init__(self, dtype=float, nforecast=100, conserve_memory=0):
         super(Clark1989Forecast, self).__init__(dtype, conserve_memory)
         self.nforecast = nforecast
 
@@ -551,7 +551,7 @@ class TestClark1989ForecastConserve(Clark1989Forecast):
     """
     def __init__(self):
         super(TestClark1989ForecastConserve, self).__init__(
-            dtype=float, conserve_memory=True
+            dtype=float, conserve_memory=0x01 | 0x02
         )
         self.init_filter()
         self.run_filter()
