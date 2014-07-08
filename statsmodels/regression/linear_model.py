@@ -546,7 +546,9 @@ class OLS(WLS):
     weights : scalar
         Has an attribute weights = array(1.0) due to inheritance from WLS.
 
-    See regression.GLS
+    See Also
+    --------
+    GLS
 
     Examples
     --------
