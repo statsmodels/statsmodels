@@ -905,25 +905,29 @@ class LikelihoodModelResults(Results):
 
         Returns
         -------
+        cov : ndarray
+            covariance matrix of the parameter estimates or of linear
+            combination of parameter estimates. See Notes.
+
+        Notes
+        -----
         (The below are assumed to be in matrix notation.)
 
-        cov : ndarray
-
         If no argument is specified returns the covariance matrix of a model
-        (scale)*(X.T X)^(-1)
+        ``(scale)*(X.T X)^(-1)``
 
         If contrast is specified it pre and post-multiplies as follows
-        (scale) * r_matrix (X.T X)^(-1) r_matrix.T
+        ``(scale) * r_matrix (X.T X)^(-1) r_matrix.T``
 
         If contrast and other are specified returns
-        (scale) * r_matrix (X.T X)^(-1) other.T
+        ``(scale) * r_matrix (X.T X)^(-1) other.T``
 
         If column is specified returns
-        (scale) * (X.T X)^(-1)[column,column] if column is 0d
+        ``(scale) * (X.T X)^(-1)[column,column]`` if column is 0d
 
         OR
 
-        (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
+        ``(scale) * (X.T X)^(-1)[column][:,column]`` if column is 1d
 
         """
         if (hasattr(self, 'mle_settings') and
@@ -974,7 +978,7 @@ class LikelihoodModelResults(Results):
     def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None,
                use_t=None):
         """
-        Compute a t-test for a joint linear hypothesis of the form Rb = q
+        Compute a t-test for a each linear hypothesis of the form Rb = q
 
         Parameters
         ----------

@@ -618,7 +618,7 @@ class GLMResults(base.LikelihoodModelResults):
 
     See Also
     --------
-    statsmodels.LikelihoodModelResults
+    statsmodels.base.model.LikelihoodModelResults
     """
 
     def __init__(self, model, params, normalized_cov_params, scale):
