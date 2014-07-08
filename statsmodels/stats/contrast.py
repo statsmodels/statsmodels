@@ -10,9 +10,14 @@ from statsmodels.compat.numpy import np_matrix_rank
 #TODO: should this be public if it's just a container?
 class ContrastResults(object):
     """
-    Container class for looking at contrasts of coefficients in a model.
+    Class for results of tests oflinear restrictions on coefficients in a model.
 
-    The class does nothing, it is a container for the results from T and F.
+    This class functions mainly as a container for `t_test`, `f_test` and
+    `wald_test` for the parameters of a model.
+
+    The attributes depend on the statistical test and are either based on the
+    normal, the t, the F or the chisquare distribution.
+
     """
 
     def __init__(self, t=None, F=None, sd=None, effect=None, df_denom=None,
@@ -57,6 +62,24 @@ class ContrastResults(object):
 
 
     def conf_int(self, alpha=0.05):
+        """
+        Returns the confidence interval of the value, `effect` of the constraint.
+
+        This is currently only available for t and z tests.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence interval.
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+
+        Returns
+        -------
+        ci : ndarray, (k_constraints, 2)
+            The array has the lower and the upper limit of the confidence
+            interval in the columns.
+
+        """
         if self.effect is not None:
             # confidence intervals
             q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
@@ -82,6 +105,29 @@ class ContrastResults(object):
 
 
     def summary(self, xname=None, alpha=0.05, title=None):
+        """Summarize the Results of the hypothesis test
+
+        Parameters
+        -----------
+
+        xname : list of strings, optional
+            Default is `c_##` for ## in p the number of regressors
+        alpha : float
+            significance level for the confidence intervals. Default is
+            alpha = 0.05 which implies a confidence level of 95%.
+        title : string, optional
+            Title for the params table. If not None, then this replaces the
+            default title
+
+        Returns
+        -------
+        smry : string or Summary instance
+            This contains a parameter results table in the case of t or z test
+            in the same form as the parameter results table in the model
+            results summary.
+            For F or Wald test, the return is a string.
+
+        """
         if self.effect is not None:
             # TODO: should also add some extra information, e.g. robust cov ?
             # TODO: can we infer names for constraints, xname in __init__ ?
@@ -114,6 +160,10 @@ class ContrastResults(object):
 
 
     def summary_frame(self, xname=None, alpha=0.05):
+        """Return the parameter table as a pandas DataFrame
+
+        This is only available for t and normal tests
+        """
         if self.effect is not None:
             # we have everything for a params table
             use_t = (self.distribution == 't')

@@ -672,10 +672,15 @@ class Results(object):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
+        args, kwargs :
+            Some models can take additional arguments or keywords, see the
+            predict method of the model for the details.
 
         Returns
         -------
-        See self.model.predict
+        prediction : ndarray or pandas.Series
+            See self.model.predict
+
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
@@ -998,6 +1003,13 @@ class LikelihoodModelResults(Results):
             If use_t is False, then the p-values are based on the normal
             distribution.
 
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
+            The available results have the same elements as the parameter table
+            in `summary()`.
+
         Examples
         --------
         >>> import numpy as np
@@ -1013,8 +1025,8 @@ class LikelihoodModelResults(Results):
         r tests that the coefficients on the 5th and 6th independent
         variable are the same.
 
-        >>>T_Test = results.t_test(r)
-        >>>print(T_test)
+        >>> T_test = results.t_test(r)
+        >>> print(T_test)
         <T contrast: effect=-1829.2025687192481, sd=455.39079425193762,
         t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
         >>> T_test.effect
@@ -1028,6 +1040,7 @@ class LikelihoodModelResults(Results):
 
         Alternatively, you can specify the hypothesis tests using a string
 
+        >>> from statsmodels.formula.api import ols
         >>> dta = sm.datasets.longley.load_pandas().data
         >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
         >>> results = ols(formula, dta).fit()
@@ -1035,7 +1048,7 @@ class LikelihoodModelResults(Results):
         >>> t_test = results.t_test(hypotheses)
         >>> print(t_test)
 
-        See also
+        See Also
         ---------
         tvalues : individual t statistics
         f_test : for F tests
@@ -1098,6 +1111,9 @@ class LikelihoodModelResults(Results):
         """
         Compute the F-test for a joint linear hypothesis.
 
+        This is a special case of `wald_test` that always uses the F
+        distribution.
+
         Parameters
         ----------
         r_matrix : array-like, str, or tuple
@@ -1121,6 +1137,11 @@ class LikelihoodModelResults(Results):
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
 
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
+
         Examples
         --------
         >>> import numpy as np
@@ -1140,9 +1161,9 @@ class LikelihoodModelResults(Results):
 
         Compare this to
 
-        >>> results.F
+        >>> results.fvalue
         330.2853392346658
-        >>> results.F_p
+        >>> results.f_pvalue
         4.98403096572e-10
 
         >>> B = np.array(([0,0,1,-1,0,0,0],[0,0,0,0,0,1,-1]))
@@ -1166,11 +1187,11 @@ class LikelihoodModelResults(Results):
         >>> f_test = results.f_test(hypotheses)
         >>> print(f_test)
 
-        See also
+        See Also
         --------
-        statsmodels.contrasts
-        statsmodels.model.LikelihoodModelResults.wald_test
-        statsmodels.model.LikelihoodModelResults.t_test
+        statsmodels.stats.contrast.ContrastResults
+        wald_test
+        t_test
         patsy.DesignInfo.linear_constraint
 
         Notes
@@ -1217,16 +1238,21 @@ class LikelihoodModelResults(Results):
             restrictions matrix.
         use_f : bool
             If True, then the F-distribution is used. If False, then the
-            asymptotic distribution, chisquare is used.
+            asymptotic distribution, chisquare is used. If use_f is None, then
+            the F distribution is used if the model specifies that use_t is True.
             The test statistic is proportionally adjusted for the distribution
             by the number of constraints in the hypothesis.
 
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
 
         See also
         --------
-        statsmodels.contrasts
-        statsmodels.model.LikelihoodModelResults.f_test
-        statsmodels.model.LikelihoodModelResults.t_test
+        statsmodels.stats.contrast.ContrastResults
+        f_test
+        t_test
         patsy.DesignInfo.linear_constraint
 
         Notes
@@ -1299,7 +1325,7 @@ class LikelihoodModelResults(Results):
         Parameters
         ----------
         alpha : float, optional
-            The `alpha` level for the confidence interval.
+            The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
         cols : array-like, optional
             `cols` specifies which confidence intervals to return
@@ -1307,7 +1333,7 @@ class LikelihoodModelResults(Results):
             Not Implemented Yet
             Method to estimate the confidence_interval.
             "Default" : uses self.bse which is based on inverse Hessian for MLE
-            "jhj" :
+            "hjjh" :
             "jac" :
             "boot-bse"
             "boot_quant"
@@ -1317,7 +1343,9 @@ class LikelihoodModelResults(Results):
         Returns
         --------
         conf_int : array
-            Each row contains [lower, upper] confidence interval
+            Each row contains [lower, upper] limits of the confidence interval
+            for the corresponding parameter. The first column contains all
+            lower, the second column contains all upper limits.
 
         Examples
         --------
@@ -1356,7 +1384,7 @@ class LikelihoodModelResults(Results):
             cols = np.asarray(cols)
             lower = self.params[cols] - q * bse[cols]
             upper = self.params[cols] + q * bse[cols]
-        return np.asarray(lzip(lower, upper))
+        return np.column_stack((lower, upper))
 
     def save(self, fname, remove_data=False):
         '''
