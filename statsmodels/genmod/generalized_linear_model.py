@@ -41,7 +41,7 @@ class GLM(base.LikelihoodModel):
     __doc__ = """
     Generalized Linear Models class
 
-    GLM inherits from statsmodels.LikelihoodModel
+    GLM inherits from statsmodels.base.model.LikelihoodModel
 
     Parameters
     -----------
@@ -111,7 +111,9 @@ class GLM(base.LikelihoodModel):
 
     See also
     --------
-    statsmodels.families.*
+    statsmodels.genmod.families.family
+    :ref:`families`
+    :ref:`links`
 
     Notes
     -----
@@ -832,7 +834,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
+        statsmodels.iolib.summary2.Summary : class to hold summary
             results
 
         """

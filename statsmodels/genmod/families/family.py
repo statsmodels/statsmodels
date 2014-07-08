@@ -13,7 +13,6 @@ from . import varfuncs as V
 FLOAT_EPS = np.finfo(float).eps
 
 class Family(object):
-
     """
     The parent class for one-parameter exponential families.
 
@@ -25,6 +24,11 @@ class Family(object):
     variance : a variance function
         Measures the variance as a function of the mean probabilities.
         See the individual families for the default variance function.
+
+    See Also
+    --------
+    :ref:`links`
+
     """
 #TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
@@ -260,6 +264,8 @@ class Poisson(Family):
     See also
     --------
     statsmodels.genmod.families.family.Family
+    :ref:`links`
+
     """
 
     links = [L.log, L.identity, L.sqrt]
@@ -377,7 +383,6 @@ class Poisson(Family):
         return (3/2.)*(Y**(2/3.)-mu**(2/3.))/mu**(1/6.)
 
 class Gaussian(Family):
-
     """
     Gaussian exponential family distribution.
 
@@ -398,6 +403,8 @@ class Gaussian(Family):
     See also
     --------
     statsmodels.genmod.families.family.Family
+    :ref:`links`
+
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -522,7 +529,6 @@ class Gaussian(Family):
         return Y-mu
 
 class Gamma(Family):
-
     """
     Gamma exponential family distribution.
 
@@ -543,6 +549,8 @@ class Gamma(Family):
     See also
     --------
     statsmodels.genmod.families.family.Family
+    :ref:`links`
+
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -669,7 +677,6 @@ class Gamma(Family):
         return 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
 
 class Binomial(Family):
-
     """
     Binomial exponential family distribution.
 
@@ -690,10 +697,12 @@ class Binomial(Family):
     See also
     --------
     statsmodels.genmod.families.family.Family
+    :ref:`links`
 
     Notes
     -----
     endog for Binomial can be specified in one of three ways.
+
     """
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
@@ -914,7 +923,6 @@ class Binomial(Family):
                         (mu**(1/6.)*(1-mu)**(1/6.))
 
 class InverseGaussian(Family):
-
     """
     InverseGaussian exponential family.
 
@@ -936,11 +944,13 @@ class InverseGaussian(Family):
     See also
     --------
     statsmodels.genmod.families.family.Family
+    :ref:`links`
 
     Notes
     -----
     The inverse Guassian distribution is sometimes referred to in the
     literature as the wald distribution.
+
     """
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
@@ -1074,10 +1084,12 @@ class NegativeBinomial(Family):
     See also
     --------
     statsmodels.genmod.families.family.Family
+    :ref:`links`
 
     Notes
     -----
-    Support for Power link functions is not yet supported.
+    Power link functions are not yet supported.
+
     """
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
 #TODO: add the ability to use the power links with an if test
