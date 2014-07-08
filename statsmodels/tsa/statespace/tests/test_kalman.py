@@ -62,7 +62,7 @@ class Clark1987(object):
 
     See `results.results_kalman_filter` for more information.
     """
-    def __init__(self, dtype=float, conserve_memory=0):
+    def __init__(self, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         self.true = results_kalman_filter.uc_uni
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -76,6 +76,7 @@ class Clark1987(object):
 
         # Parameters
         self.conserve_memory = conserve_memory
+        self.loglikelihood_burn = loglikelihood_burn
 
         # Observed data
         self.obs = np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F")
@@ -150,7 +151,8 @@ class Clark1987(object):
 
         # Initialize the appropriate Kalman filter
         cls = prefix_kalman_filter_map[prefix[0]]
-        self.filter = cls(self.model, conserve_memory=self.conserve_memory)
+        self.filter = cls(self.model, conserve_memory=self.conserve_memory,
+                          loglikelihood_burn=self.loglikelihood_burn)
 
     def run_filter(self):
         # Filter the data
@@ -312,6 +314,36 @@ class TestClark1987ForecastConserve(Clark1987Forecast):
         self.run_filter()
 
 
+class TestClark1987ConserveAll(Clark1987):
+    """
+    Memory conservation forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1987ConserveAll, self).__init__(
+            dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
+        )
+        self.loglikelihood_burn = self.true['start']
+        self.init_filter()
+        self.run_filter()
+
+    def test_loglike(self):
+        assert_almost_equal(
+            self.result['loglike'](0), self.true['loglike'], 5
+        )
+
+    def test_filtered_state(self):
+        end = self.true_states.shape[0]
+        assert_almost_equal(
+            self.result['state'][0][-1],
+            self.true_states.iloc[end-1, 0], 4
+        )
+        assert_almost_equal(
+            self.result['state'][1][-1],
+            self.true_states.iloc[end-1, 1], 4
+        )
+
+
 class Clark1989(object):
     """
     Clark's (1989) bivariate unobserved components model of real GDP (as
@@ -324,7 +356,7 @@ class Clark1989(object):
 
     See `results.results_kalman_filter` for more information.
     """
-    def __init__(self, dtype=float, conserve_memory=0):
+    def __init__(self, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         self.true = results_kalman_filter.uc_bi
         self.true_states = pd.DataFrame(self.true['states'])
 
@@ -344,6 +376,7 @@ class Clark1989(object):
         self.nendog = nendog = 2  # dimension of observed data
         self.nstates = nstates = 6  # dimension of state space
         self.conserve_memory = conserve_memory
+        self.loglikelihood_burn = loglikelihood_burn
 
         # Measurement equation
 
@@ -420,7 +453,8 @@ class Clark1989(object):
 
         # Initialize the appropriate Kalman filter
         cls = prefix_kalman_filter_map[prefix[0]]
-        self.filter = cls(self.model, conserve_memory=self.conserve_memory)
+        self.filter = cls(self.model, conserve_memory=self.conserve_memory,
+                          loglikelihood_burn=self.loglikelihood_burn)
 
     def run_filter(self):
         # Filter the data
@@ -555,3 +589,41 @@ class TestClark1989ForecastConserve(Clark1989Forecast):
         )
         self.init_filter()
         self.run_filter()
+
+
+class TestClark1989ConserveAll(Clark1989):
+    """
+    Memory conservation forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1989ConserveAll, self).__init__(
+            dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08,
+        )
+        self.loglikelihood_burn = self.true['start']
+        self.init_filter()
+        self.run_filter()
+
+    def test_loglike(self):
+        assert_almost_equal(
+            self.result['loglike'](0), self.true['loglike'], 2
+        )
+
+    def test_filtered_state(self):
+        end = self.true_states.shape[0]
+        assert_almost_equal(
+            self.result['state'][0][-1],
+            self.true_states.iloc[end-1, 0], 4
+        )
+        assert_almost_equal(
+            self.result['state'][1][-1],
+            self.true_states.iloc[end-1, 1], 4
+        )
+        assert_almost_equal(
+            self.result['state'][4][-1],
+            self.true_states.iloc[end-1, 2], 4
+        )
+        assert_almost_equal(
+            self.result['state'][5][-1],
+            self.true_states.iloc[end-1, 3], 4
+        )
