@@ -222,6 +222,9 @@ cdef class {{prefix}}Statespace(object):
     # Flag for initialization.
     cdef readonly int initialized
 
+    # Temporary arrays
+    cdef {{cython_type}} [::1,:] tmp
+
     # ### Initialize state space model
     # *Note*: The initial state and state covariance matrix must be provided.
     def __init__(self,
@@ -300,6 +303,11 @@ cdef class {{prefix}}Statespace(object):
         self.missing = np.array(np.isnan(obs), dtype=np.int32, order="F")
         self.nmissing = np.array(np.sum(self.missing, axis=0), dtype=np.int32)
 
+        # Create the temporary array
+        # Holds arrays of dimension $(m \times m)$
+        dim2[0] = self.nstates; dim2[1] = self.nstates;
+        self.tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
     # ## Initialize: known values
     #
     # Initialize the filter with specific values, assumed to be known with
@@ -345,16 +353,55 @@ cdef class {{prefix}}Statespace(object):
         """
         cdef np.npy_intp dim[1]
 
+        # Create selected state covariance matrix
+        {{prefix}}select_state_cov(self.nstates, self.nposdef,
+                                   &self.tmp[0,0],
+                                   &self.selection[0,0,0],
+                                   &self.state_cov[0,0,0],
+                                   &self.selected_state_cov[0,0,0])
+
         from scipy.linalg import solve_discrete_lyapunov
 
         dim[0] = self.nstates
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
         self.initial_state_cov = solve_discrete_lyapunov(
             np.array(self.transition[:,:,0], dtype={{dtype}}),
-            np.array(self.state_cov[:,:,0], dtype={{dtype}})
-        )
+            np.array(self.selected_state_cov[:,:,0], dtype={{dtype}}),
+        ).T
 
         self.initialized = True
+
+# ### Selected state covariance matrice
+cdef int {{prefix}}select_state_cov(int nstates, int nposdef,
+                                    {{cython_type}} * tmp,
+                                    {{cython_type}} * selection,
+                                    {{cython_type}} * state_cov,
+                                    {{cython_type}} * selected_state_cov):
+    cdef:
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+    
+    # #### Calculate selected state covariance matrix  
+    # $Q_t^* = R_t Q_t R_t'$
+    # 
+    # Combine the selection matrix and the state covariance matrix to get
+    # the simplified (but possibly singular) "selected" state covariance
+    # matrix (see e.g. Durbin and Koopman p. 43)
+
+    # `tmp0` array used here, dimension $(m \times r)$  
+
+    # $\\#_0 = 1.0 * R_t Q_t$  
+    # $(m \times r) = (m \times r) (r \times r)$
+    {{prefix}}gemm("N", "N", &nstates, &nposdef, &nposdef,
+          &alpha, selection, &nstates,
+                  state_cov, &nposdef,
+          &beta, tmp, &nstates)
+    # $Q_t^* = 1.0 * \\#_0 R_t'$  
+    # $(m \times m) = (m \times r) (m \times r)'$
+    {{prefix}}gemm("N", "T", &nstates, &nposdef, &nposdef,
+          &alpha, tmp, &nstates,
+                  selection, &nstates,
+          &beta, selected_state_cov, &nstates)
 
 # ## Kalman filter Routines
 # 
@@ -1391,28 +1438,12 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.t == 0 or self.model.selected_state_cov.shape[2] > 1:
             selected_state_cov_t = self.t
             self._selected_state_cov = &self.model.selected_state_cov[0, 0, selected_state_cov_t]
-            
-            # #### Calculate selected state covariance matrix  
-            # $Q_t^* = R_t Q_t R_t'$
-            # 
-            # Combine the selection matrix and the state covariance matrix to get
-            # the simplified (but possibly singular) "selected" state covariance
-            # matrix (see e.g. Durbin and Koopman p. 43)
 
-            # `tmp0` array used here, dimension $(m \times r)$  
-
-            # $\\#_0 = 1.0 * R_t Q_t$  
-            # $(m \times r) = (m \times r) (r \times r)$
-            {{prefix}}gemm("N", "N", &self.nstates, &self.nposdef, &self.nposdef,
-                  &alpha, self._selection, &self.nstates,
-                          self._state_cov, &self.nposdef,
-                  &beta, self._tmp0, &self.nstates)
-            # $Q_t^* = 1.0 * \\#_0 R_t'$  
-            # $(m \times m) = (m \times r) (m \times r)'$
-            {{prefix}}gemm("N", "T", &self.nstates, &self.nposdef, &self.nposdef,
-                  &alpha, self._tmp0, &self.nstates,
-                          self._selection, &self.nstates,
-                  &beta, self._selected_state_cov, &self.nstates)
+            {{prefix}}select_state_cov(self.nstates, self.nposdef,
+                                       self._tmp0,
+                                       self._selection,
+                                       self._state_cov,
+                                       self._selected_state_cov)
         else:
             self._selected_state_cov = &self.model.selected_state_cov[0, 0, 0]
 
