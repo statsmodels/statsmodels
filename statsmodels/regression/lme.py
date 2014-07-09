@@ -313,43 +313,65 @@ class MixedLM(base.LikelihoodModel):
             self.exog_re_names = ["Z%d" % (k+1) for k in
                                   range(self.exog_re.shape[1])]
 
-    def set_random(self, re_formula, data):
+    @classmethod
+    def from_formula(cls, formula, data, re_formula=None, subset=None,
+                     *args, **kwargs):
         """
-        Set the random effects structure using a formula.  This is an
-        alternative to providing `exog_re` in the MixedLM constructor.
+        Create a Model from a formula and dataframe.
 
-        Arguments:
+        Parameters
         ----------
-        re_formula : string
-            A string defining the variance structure of the model
-            as a formula.  The formula only contains a "right hand
-            side" (i.e. there is no "~" in the formula).
+        formula : str or generic Formula object
+            The formula specifying the model
         data : array-like
-            The data referenced in re_formula.  Currently must be a
-            Pandas DataFrame.
+            The data for the model. See Notes.
+        re_formula : string
+            A one-sided formula defining the variance structure of the
+            model.  The default gives a random intercept for each
+            group.
+        subset : array-like
+            An array-like object of booleans, integers, or index
+            values that indicate the subset of df to use in the
+            model. Assumes df is a `pandas.DataFrame`
+        args : extra arguments
+            These are passed to the model
+        kwargs : extra keyword arguments
+            These are passed to the model.
+
+        Returns
+        -------
+        model : Model instance
 
         Notes
-        -----
-        If the random effects structure is not set either by providing
-        `exog_re` to the MixedLM constructor, or by calling
-        `set_random`, then the default is to have a random intercept
-        for each group.
+        ------
+        `data` must define __getitem__ with the keys in the formula
+        terms args and kwargs are passed on to the model
+        instantiation. E.g., a numpy structured or rec array, a
+        dictionary, or a pandas DataFrame.
 
-        This does not automatically drop missing values, so if
-        `missing` is set to "drop" in the model construction, the
-        missing values must be dropped from the data frame before
-        calling this function.
+        If `re_formula` is not provided, the default is a random
+        intercept for each group.
+
+        This method currently does not correctly handle missing
+        values, so missing values should be explicitly dropped from
+        the DataFrame before calling this method.
         """
 
-        # TODO: need a way to process this for missing data
-        self.exog_re = patsy.dmatrix(re_formula, data)
-        self.exog_re_names = self.exog_re.design_info.column_names
-        self.exog_re = np.asarray(self.exog_re)
-        self.exog_re_li = self.group_list(self.exog_re)
-        self.k_re = self.exog_re.shape[1]
-        self.k_re2 = self.k_re * (self.k_re + 1) // 2
-        self.nparams = self.k_fe + self.k_re2
+        if re_formula is not None:
+            exog_re = patsy.dmatrix(re_formula, data)
+            exog_re_names = exog_re.design_info.column_names
+            exog_re = np.asarray(exog_re)
+        else:
+            exog_re = np.ones((data.shape[0], 1),
+                              dtype=np.float64)
+            exog_re_names = ["Intercept",]
 
+        mod = super(MixedLM, cls).from_formula(formula, data,
+                                               subset=None,
+                                               exog_re=exog_re,
+                                               *args, **kwargs)
+
+        return mod
 
     def group_list(self, array):
         """

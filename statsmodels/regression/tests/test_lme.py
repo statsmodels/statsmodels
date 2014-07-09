@@ -158,27 +158,27 @@ class TestMixedLM(object):
                                      [1,1,1])
         endog = exog.sum(1) + g_errors + np.random.normal(size=300)
 
-        mdf1 = MixedLM(endog, exog, groups, exog_re).fit()
+        mod1 = MixedLM(endog, exog, groups, exog_re)
+        rslt1 = mod1.fit()
 
         df = pd.DataFrame({"endog": endog})
         for k in range(exog.shape[1]):
             df["exog%d" % k] = exog[:,k]
         df["exog_re"] = exog_re
-        md2 = MixedLM.from_formula(
-            "endog ~ 0 + exog0 + exog1 + exog2 + exog3",
-            groups=groups, data=df)
-        md2.set_random("0 + exog_re", data=df)
-        mdf2 = md2.fit()
+        fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
+        re_fml = "0 + exog_re"
+        mod2 = MixedLM.from_formula(fml, df, re_formula=re_fml,
+                                    groups=groups)
+        rslt2 = mod2.fit()
+        assert_almost_equal(rslt1.params, rslt2.params)
 
-        assert_almost_equal(mdf1.params, mdf2.params)
-
-        # Check that it runs when the dimension of the random effects
-        # changes following set_random.
-        md2 = MixedLM.from_formula(
-            "endog ~ 0 + exog0 + exog1 + exog2 + exog3",
-            groups=groups, data=df)
-        md2.set_random("exog_re", data=df)
-        mdf2 = md2.fit()
+        # Check default variance structure
+        exog_re = np.ones(len(endog), dtype=np.float64)
+        mod3 = MixedLM(endog, exog, groups, exog_re)
+        rslt3 = mod3.fit()
+        mod4 = MixedLM.from_formula(fml, df, groups=groups)
+        rslt4 = mod4.fit()
+        assert_almost_equal(rslt3.params, rslt4.params)
 
     def test_regularized(self):
 
