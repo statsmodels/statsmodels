@@ -327,7 +327,8 @@ class MixedLM(base.LikelihoodModel):
             The data for the model. See Notes.
         re_formula : string
             A one-sided formula defining the variance structure of the
-            model.
+            model.  The default gives a random intercept for each
+            group.
         subset : array-like
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
@@ -363,6 +364,7 @@ class MixedLM(base.LikelihoodModel):
         # TODO: need a way to process this for missing data
         if subset is not None:
             data = data.ix[subset]
+
         if re_formula is not None:
             mod.exog_re = patsy.dmatrix(re_formula, data)
             mod.exog_re_names = mod.exog_re.design_info.column_names
@@ -372,6 +374,7 @@ class MixedLM(base.LikelihoodModel):
                                   dtype=np.float64)
             mod.exog_re_names = ["Intercept",]
         mod.exog_re_li = mod.group_list(mod.exog_re)
+
         mod.k_re = mod.exog_re.shape[1]
         mod.k_re2 = mod.k_re * (mod.k_re + 1) // 2
         mod.nparams = mod.k_fe + mod.k_re2
