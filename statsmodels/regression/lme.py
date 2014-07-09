@@ -357,27 +357,19 @@ class MixedLM(base.LikelihoodModel):
         the DataFrame before calling this method.
         """
 
+        if re_formula is not None:
+            exog_re = patsy.dmatrix(re_formula, data)
+            exog_re_names = exog_re.design_info.column_names
+            exog_re = np.asarray(exog_re)
+        else:
+            exog_re = np.ones((data.shape[0], 1),
+                              dtype=np.float64)
+            exog_re_names = ["Intercept",]
+
         mod = super(MixedLM, cls).from_formula(formula, data,
                                                subset=None,
+                                               exog_re=exog_re,
                                                *args, **kwargs)
-
-        # TODO: need a way to process this for missing data
-        if subset is not None:
-            data = data.ix[subset]
-
-        if re_formula is not None:
-            mod.exog_re = patsy.dmatrix(re_formula, data)
-            mod.exog_re_names = mod.exog_re.design_info.column_names
-            mod.exog_re = np.asarray(mod.exog_re)
-        else:
-            mod.exog_re = np.ones((len(mod.endog), 1),
-                                  dtype=np.float64)
-            mod.exog_re_names = ["Intercept",]
-        mod.exog_re_li = mod.group_list(mod.exog_re)
-
-        mod.k_re = mod.exog_re.shape[1]
-        mod.k_re2 = mod.k_re * (mod.k_re + 1) // 2
-        mod.nparams = mod.k_fe + mod.k_re2
 
         return mod
 
