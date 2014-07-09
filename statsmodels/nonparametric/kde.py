@@ -109,8 +109,8 @@ class KDEUnivariate(object):
             - "silverman" - .9 * A * nobs ** (-1/5.), where A is
               `min(std(X),IQR/1.34)`
             - "normal_reference" - C * A * nobs ** (-1/5.), where C is
-               calculated from the kernel. Equivalent (up to 2 dp) to the
-               "scott" bandwidth for gaussian kernels. See bandwidths.py
+              calculated from the kernel. Equivalent (up to 2 dp) to the
+              "scott" bandwidth for gaussian kernels. See bandwidths.py
             - If a float is given, it is the bandwidth.
 
         fft : bool

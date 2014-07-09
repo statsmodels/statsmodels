@@ -22,19 +22,20 @@ _model_params_doc = """
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See
-        `statsmodels.tools.add_constant`."""
+        :func:`statsmodels.tools.add_constant`."""
 
-_missing_param_doc = """missing : str
+_missing_param_doc = """\
+missing : str
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised. Default is 'none.'
-        """
-_extra_param_doc = """hasconst : None or bool
+        If 'raise', an error is raised. Default is 'none.'"""
+_extra_param_doc = """
+    hasconst : None or bool
         Indicates whether the RHS includes a user-supplied constant. If True,
         a constant is not checked for and k_constant is set to 1 and all
         result statistics are calculated as if a constant is present. If
         False, a constant is not checked for and k_constant is set to 0.
-        """
+"""
 
 
 class Model(object):
@@ -672,10 +673,15 @@ class Results(object):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
+        args, kwargs :
+            Some models can take additional arguments or keywords, see the
+            predict method of the model for the details.
 
         Returns
         -------
-        See self.model.predict
+        prediction : ndarray or pandas.Series
+            See self.model.predict
+
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
@@ -732,7 +738,7 @@ class LikelihoodModelResults(Results):
 
 
     Notes
-    --------
+    -----
     The covariance of params is given by scale times normalized_cov_params.
 
     Return values by solver if full_output is True during fit:
@@ -900,25 +906,29 @@ class LikelihoodModelResults(Results):
 
         Returns
         -------
+        cov : ndarray
+            covariance matrix of the parameter estimates or of linear
+            combination of parameter estimates. See Notes.
+
+        Notes
+        -----
         (The below are assumed to be in matrix notation.)
 
-        cov : ndarray
-
         If no argument is specified returns the covariance matrix of a model
-        (scale)*(X.T X)^(-1)
+        ``(scale)*(X.T X)^(-1)``
 
         If contrast is specified it pre and post-multiplies as follows
-        (scale) * r_matrix (X.T X)^(-1) r_matrix.T
+        ``(scale) * r_matrix (X.T X)^(-1) r_matrix.T``
 
         If contrast and other are specified returns
-        (scale) * r_matrix (X.T X)^(-1) other.T
+        ``(scale) * r_matrix (X.T X)^(-1) other.T``
 
         If column is specified returns
-        (scale) * (X.T X)^(-1)[column,column] if column is 0d
+        ``(scale) * (X.T X)^(-1)[column,column]`` if column is 0d
 
         OR
 
-        (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
+        ``(scale) * (X.T X)^(-1)[column][:,column]`` if column is 1d
 
         """
         if (hasattr(self, 'mle_settings') and
@@ -969,7 +979,7 @@ class LikelihoodModelResults(Results):
     def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None,
                use_t=None):
         """
-        Compute a t-test for a joint linear hypothesis of the form Rb = q
+        Compute a t-test for a each linear hypothesis of the form Rb = q
 
         Parameters
         ----------
@@ -998,6 +1008,13 @@ class LikelihoodModelResults(Results):
             If use_t is False, then the p-values are based on the normal
             distribution.
 
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
+            The available results have the same elements as the parameter table
+            in `summary()`.
+
         Examples
         --------
         >>> import numpy as np
@@ -1013,8 +1030,8 @@ class LikelihoodModelResults(Results):
         r tests that the coefficients on the 5th and 6th independent
         variable are the same.
 
-        >>>T_Test = results.t_test(r)
-        >>>print(T_test)
+        >>> T_test = results.t_test(r)
+        >>> print(T_test)
         <T contrast: effect=-1829.2025687192481, sd=455.39079425193762,
         t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
         >>> T_test.effect
@@ -1028,6 +1045,7 @@ class LikelihoodModelResults(Results):
 
         Alternatively, you can specify the hypothesis tests using a string
 
+        >>> from statsmodels.formula.api import ols
         >>> dta = sm.datasets.longley.load_pandas().data
         >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
         >>> results = ols(formula, dta).fit()
@@ -1035,7 +1053,7 @@ class LikelihoodModelResults(Results):
         >>> t_test = results.t_test(hypotheses)
         >>> print(t_test)
 
-        See also
+        See Also
         ---------
         tvalues : individual t statistics
         f_test : for F tests
@@ -1098,6 +1116,9 @@ class LikelihoodModelResults(Results):
         """
         Compute the F-test for a joint linear hypothesis.
 
+        This is a special case of `wald_test` that always uses the F
+        distribution.
+
         Parameters
         ----------
         r_matrix : array-like, str, or tuple
@@ -1121,6 +1142,11 @@ class LikelihoodModelResults(Results):
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
 
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
+
         Examples
         --------
         >>> import numpy as np
@@ -1140,9 +1166,9 @@ class LikelihoodModelResults(Results):
 
         Compare this to
 
-        >>> results.F
+        >>> results.fvalue
         330.2853392346658
-        >>> results.F_p
+        >>> results.f_pvalue
         4.98403096572e-10
 
         >>> B = np.array(([0,0,1,-1,0,0,0],[0,0,0,0,0,1,-1]))
@@ -1166,11 +1192,11 @@ class LikelihoodModelResults(Results):
         >>> f_test = results.f_test(hypotheses)
         >>> print(f_test)
 
-        See also
+        See Also
         --------
-        statsmodels.contrasts
-        statsmodels.model.LikelihoodModelResults.wald_test
-        statsmodels.model.LikelihoodModelResults.t_test
+        statsmodels.stats.contrast.ContrastResults
+        wald_test
+        t_test
         patsy.DesignInfo.linear_constraint
 
         Notes
@@ -1217,16 +1243,21 @@ class LikelihoodModelResults(Results):
             restrictions matrix.
         use_f : bool
             If True, then the F-distribution is used. If False, then the
-            asymptotic distribution, chisquare is used.
+            asymptotic distribution, chisquare is used. If use_f is None, then
+            the F distribution is used if the model specifies that use_t is True.
             The test statistic is proportionally adjusted for the distribution
             by the number of constraints in the hypothesis.
 
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
 
         See also
         --------
-        statsmodels.contrasts
-        statsmodels.model.LikelihoodModelResults.f_test
-        statsmodels.model.LikelihoodModelResults.t_test
+        statsmodels.stats.contrast.ContrastResults
+        f_test
+        t_test
         patsy.DesignInfo.linear_constraint
 
         Notes
@@ -1299,7 +1330,7 @@ class LikelihoodModelResults(Results):
         Parameters
         ----------
         alpha : float, optional
-            The `alpha` level for the confidence interval.
+            The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
         cols : array-like, optional
             `cols` specifies which confidence intervals to return
@@ -1307,7 +1338,7 @@ class LikelihoodModelResults(Results):
             Not Implemented Yet
             Method to estimate the confidence_interval.
             "Default" : uses self.bse which is based on inverse Hessian for MLE
-            "jhj" :
+            "hjjh" :
             "jac" :
             "boot-bse"
             "boot_quant"
@@ -1317,7 +1348,9 @@ class LikelihoodModelResults(Results):
         Returns
         --------
         conf_int : array
-            Each row contains [lower, upper] confidence interval
+            Each row contains [lower, upper] limits of the confidence interval
+            for the corresponding parameter. The first column contains all
+            lower, the second column contains all upper limits.
 
         Examples
         --------
@@ -1356,7 +1389,7 @@ class LikelihoodModelResults(Results):
             cols = np.asarray(cols)
             lower = self.params[cols] - q * bse[cols]
             upper = self.params[cols] + q * bse[cols]
-        return np.asarray(lzip(lower, upper))
+        return np.column_stack((lower, upper))
 
     def save(self, fname, remove_data=False):
         '''

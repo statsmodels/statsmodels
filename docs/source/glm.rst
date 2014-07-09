@@ -65,6 +65,8 @@ Results Class
 
    GLMResults
 
+.. _families:
+
 Families
 ^^^^^^^^
 
@@ -84,6 +86,8 @@ The distribution families currently implemented are
    NegativeBinomial
    Poisson
 
+
+.. _links:
 
 Link Functions
 ^^^^^^^^^^^^^^

@@ -33,6 +33,13 @@ define some common methods.
    ResultMixin
    GenericLikelihoodModelResults
 
+.. currentmodule:: statsmodels.stats.contrast
+
+.. autosummary::
+   :toctree: generated/
+
+   ContrastResults
+
 .. inheritance-diagram:: statsmodels.base.model statsmodels.discrete.discrete_model statsmodels.regression.linear_model statsmodels.miscmodels.count
    :parts: 3
 

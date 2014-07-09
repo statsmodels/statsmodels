@@ -31,3 +31,14 @@ Module Reference
    table.csv2st
    smpickle.save_pickle
    smpickle.load_pickle
+
+
+The following are classes and functions used to return the summary of
+estimation results, and mostly intended for internal use. There are currently
+two versions for creating summaries.
+
+.. autosummary::
+   :toctree: generated/
+
+   summary.Summary
+   summary2.Summary

@@ -215,7 +215,9 @@ class GEE(base.Model):
 
     See Also
     --------
-    statsmodels.families.*
+    statsmodels.genmod.families.family
+    :ref:`families`
+    :ref:`links`
 
     Notes
     -----
