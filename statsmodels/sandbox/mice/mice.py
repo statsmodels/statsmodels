@@ -74,6 +74,7 @@ class ImputedData(object):
         for c in self.data.columns:
             self.columns[c] = MissingDataInfo(self.data[c])
         self.data = self.data.fillna(self.data.mean())
+        self.implist = []
 
     def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, model_class=None,
                     init_args={}, fit_args={}, scale_method="fix",
@@ -108,9 +109,12 @@ class ImputedData(object):
         if formula is None:
             formula = endog_name + " ~ " + " + ".join(
                             [x for x in self.data.columns if x != endog_name])
-        return Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
+        self.implist.append(Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
                        fit_args=fit_args, scale_method=scale_method,
-                       scale_value=scale_value)
+                       scale_value=scale_value))
+#        return Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
+#                       fit_args=fit_args, scale_method=scale_method,
+#                       scale_value=scale_value)
 
     def store_changes(self, col, vals):
         """
@@ -123,9 +127,12 @@ class ImputedData(object):
         vals : array
             Array of imputed values to use in filling in missing values.
         """
-
+        
         ix = self.columns[col].ix_miss
-        self.data[col].iloc[ix] = vals
+        if ix[0] is False:
+            pass
+        else:
+            self.data[col].iloc[ix] = vals
 
     def get_data_from_formula(self, formula):
         """
@@ -520,13 +527,14 @@ class MICE(object):
     params and cov_params.
 
     """
-    def __init__(self, analysis_formula, analysis_class, imputer_list,
+    def __init__(self, analysis_formula, analysis_class, impdata,
                  init_args={}, fit_args={}):
-        self.imputer_list = imputer_list
+        self.imputer_list = impdata.implist
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class
         self.init_args = init_args
         self.fit_args = fit_args
+        self.N = len(impdata.implist[0].data.data)
 
     def run(self, num_ds=20, skipnum=10, burnin=5, save=False):
         """
@@ -599,6 +607,10 @@ class MICE(object):
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
+        df_approx = (float(self.num_ds) - 1.) * np.square(1. + params / (1. + 1. / float(self.num_ds) * np.diag(between_g)))
+        gamma = (1. + 1. / float(self.num_ds)) * np.diag(between_g) / np.diag(cov_params)
+        df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
+        self.df = 1. / (1. / df_approx + 1. / df_obs)
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
@@ -640,6 +652,7 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         info["Model:"] = self.model.analysis_class.__name__
         info["Dependent variable:"] = self.model.endog_names
         info["Sample size:"] = "%d" % self.model.mod_list[0].model.exog.shape[0]
+        info["Df:"] = self.model.df
 
         smry.add_dict(info, align='l', float_format=float_format)
 
@@ -677,3 +690,5 @@ class MissingDataInfo(object):
             self.ix_miss = np.flatnonzero(null)
         if len(self.ix_obs) == 0:
             raise ValueError("Variable to be imputed has no observed values")
+            
+            

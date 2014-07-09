@@ -106,6 +106,29 @@ class TestMice(object):
         [  2.70237318e-02,   7.23763179e-02,  -1.76877602e-05],
         [ -3.64367780e-03,  -1.76877602e-05,   6.80019669e-02]]))
 
+    def test_nomissing(self):
+    
+        n, p = 100, 5
+        data = np.random.normal(size=(n, p))
+        data[:,-1] = data.sum(1)
+        data = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4", "Y"])
+
+        imp_data = mice.ImputedData(data)
+        imputers = [imp_data.new_imputer(name) for name in data.columns]
+
+        mice_mod = mice.MICE("Y ~ X1 + X2 + X3 + X4", sm.OLS, imputers)
+        mice_mod.run()
+        mice_rslt = mice_mod.combine()
+
+        ols_mod = sm.OLS.from_formula("Y ~ X1 + X2 + X3 + X4", data)
+        ols_rslt = ols_mod.fit()
+
+        np.testing.assert_almost_equal(mice_rslt.params,
+                                       ols_rslt.params)
+        np.testing.assert_almost_equal(mice_rslt.cov_params(),
+                                       ols_rslt.cov_params())
+        np.testing.assert_almost_equal(mice_rslt.bse, ols_rslt.bse)
+        
     def test_overall(self):
         """
         R code used for comparison:
