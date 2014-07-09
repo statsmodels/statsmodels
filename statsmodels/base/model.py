@@ -738,7 +738,7 @@ class LikelihoodModelResults(Results):
 
 
     Notes
-    --------
+    -----
     The covariance of params is given by scale times normalized_cov_params.
 
     Return values by solver if full_output is True during fit:

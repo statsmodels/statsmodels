@@ -71,10 +71,10 @@ _discrete_results_docs = """
     *Attributes*
 
     aic : float
-        Akaike information criterion.  -2*(`llf` - p) where p is the number
+        Akaike information criterion.  `-2*(llf - p)` where `p` is the number
         of regressors including the intercept.
     bic : float
-        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
+        Bayesian information criterion. `-2*llf + ln(nobs)*p` where `p` is the
         number of regressors including the intercept.
     bse : array
         The standard errors of the coefficients.
@@ -89,13 +89,13 @@ _discrete_results_docs = """
     llnull : float
         Value of the constant-only loglikelihood
     llr : float
-        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
+        Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
     llr_pvalue : float
         The chi-squared probability of getting a log-likelihood ratio
         statistic greater than llr.  llr has a chi-squared distribution
         with degrees of freedom `df_model`.
     prsquared : float
-        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
 %(extra_attr)s"""
 
 _l1_results_attr = """    nnz_params : Integer
@@ -156,7 +156,7 @@ class DiscreteModel(base.LikelihoodModel):
         Fit the model using maximum likelihood.
 
         The rest of the docstring is from
-        statsmodels.LikelihoodModel.fit
+        statsmodels.base.model.LikelihoodModel.fit
         """
         if callback is None:
             callback = self._check_perfect_pred
@@ -795,7 +795,15 @@ class Poisson(CountModel):
     exog : array
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
-           'extra_params' : base._missing_param_doc}
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
 
     def cdf(self, X):
         """
@@ -1848,9 +1856,16 @@ class NegativeBinomial(CountModel):
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
         Heterogeneity parameter :math:`\\alpha`
-        nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
-        nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
-        geometric: Variance equal to :math:`\\mu + \\mu^2`
+
+        - nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
+        - nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
+        - geometric: Variance equal to :math:`\\mu + \\mu^2`
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
                        exposure=None, missing='none'):
@@ -2310,6 +2325,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
+        """DEPRECATED: marginal effects, use get_margeff instead
+        """
         import warnings
         warnings.warn("This method is deprecated and will be removed in 0.6.0."
                 " Use get_margeff instead", FutureWarning)
