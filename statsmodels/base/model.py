@@ -1389,7 +1389,7 @@ class LikelihoodModelResults(Results):
             cols = np.asarray(cols)
             lower = self.params[cols] - q * bse[cols]
             upper = self.params[cols] + q * bse[cols]
-        return np.column_stack((lower, upper))
+        return np.asarray(lzip(lower, upper))
 
     def save(self, fname, remove_data=False):
         '''
