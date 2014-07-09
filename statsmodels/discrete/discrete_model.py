@@ -942,6 +942,8 @@ class Poisson(CountModel):
                     "argument method == %s, which is not handled" % method)
         return L1PoissonResultsWrapper(discretefit)
 
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
