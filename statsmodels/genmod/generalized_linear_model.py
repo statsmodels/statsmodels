@@ -32,9 +32,8 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 __all__ = ['GLM']
 
 
-def _check_convergence(criterion, iteration, tol, maxiter):
-    return not ((np.fabs(criterion[iteration] - criterion[iteration-1]) > tol)
-                and iteration <= maxiter)
+def _check_convergence(criterion, iteration, tol):
+    return not (np.fabs(criterion[iteration] - criterion[iteration-1]) > tol)
 
 
 class GLM(base.LikelihoodModel):
@@ -52,7 +51,8 @@ class GLM(base.LikelihoodModel):
     exog : array-like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
-        and should be added by the user. See `statsmodels.tools.add_constant`.
+        and should be added by the user (models specified using a formula
+        include an intercept by default). See `statsmodels.tools.add_constant`.
     family : family class instance
         The default is Gaussian.  To specify the binomial distribution
         family = sm.family.Binomial()
@@ -160,7 +160,7 @@ class GLM(base.LikelihoodModel):
         statsmodels.families.  Default is Gaussian.
     mu : array
         The mean response of the transformed variable.  `mu` is the value of
-        the inverse of the link function at eta, where eta is the linear
+        the inverse of the link function at lin_pred, where lin_pred is the linear
         predicted value of the WLS fit of the transformed variable.  `mu` is
         only available after fit is called.  See
         statsmodels.families.family.fitted of the distribution family for more
@@ -199,7 +199,7 @@ class GLM(base.LikelihoodModel):
             delattr(self, 'exposure')
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',
-                                ])
+                                '_offset_exposure'])
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
@@ -428,18 +428,20 @@ class GLM(base.LikelihoodModel):
 
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
-        offset = 0.
+        offset_exposure = 0.
         if hasattr(self, 'offset'):
-            offset = self.offset.copy()
+            offset_exposure = self.offset
         if hasattr(self, 'exposure'):
-            offset += self.exposure
+            offset_exposure = offset_exposure + self.exposure
+        self._offset_exposure = offset_exposure
 
         wlsexog = self.exog
         if start_params is None:
             mu = self.family.starting_mu(self.endog)
+            lin_pred = self.family.predict(mu)
         else:
-            mu = self.predict(start_params)
-        eta = self.family.predict(mu)
+            lin_pred = np.dot(wlsexog, start_params) + offset_exposure
+            mu = self.family.fitted(lin_pred)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
             raise ValueError("The first guess on the deviance function "
@@ -449,28 +451,35 @@ class GLM(base.LikelihoodModel):
         # first guess on the deviance is assumed to be scaled by 1.
         # params are none to start, so they line up with the deviance
         history = dict(params=[None, start_params], deviance=[np.inf, dev])
-        iteration = 0
-        converged = 0
+        converged = False
         criterion = history['deviance']
-        while not converged:
+        # This special case is used to get the likelihood for a specific
+        # params vector.
+        if maxiter == 0:
+            mu = self.family.fitted(lin_pred)
+            self.scale = self.estimate_scale(mu)
+            wls_results = lm.RegressionResults(self, start_params, None)
+            iteration = 0
+        for iteration in range(maxiter):
             self.weights = data_weights*self.family.weights(mu)
-            wlsendog = (eta + self.family.link.deriv(mu) * (self.endog-mu)
-                        - offset)
+            wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
+                        - offset_exposure)
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
-            eta = np.dot(self.exog, wls_results.params) + offset
-            mu = self.family.fitted(eta)
+            lin_pred = np.dot(self.exog, wls_results.params) + offset_exposure
+            mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
-            iteration += 1
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
-            converged = _check_convergence(criterion, iteration, tol, maxiter)
+            converged = _check_convergence(criterion, iteration, tol)
+            if converged:
+                break
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
                                  self.scale)
-        history['iteration'] = iteration
+        history['iteration'] = iteration + 1
         glm_results.fit_history = history
         return GLMResultsWrapper(glm_results)
 
@@ -710,8 +719,10 @@ class GLMResults(base.LikelihoodModelResults):
     def llf(self):
         _modelfamily = self.family
         if isinstance(_modelfamily, families.NegativeBinomial):
-            XB = np.dot(self.model.exog, self.params)
-            val = _modelfamily.loglike(self.model.endog, fittedvalues=XB)
+            lin_pred = np.dot(self.model.exog, self.params) +\
+                       self.model._offset_exposure
+            val = _modelfamily.loglike(self.model.endog,
+                                       lin_pred=lin_pred)
         else:
             val = _modelfamily.loglike(self._endog, self.mu, scale=self.scale)
         return val

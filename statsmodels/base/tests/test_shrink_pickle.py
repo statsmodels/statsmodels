@@ -76,8 +76,9 @@ class RemoveDataPickle(object):
         #for testing attach res
         self.res = res
 
-        #Note: 10000 is just a guess for the limit on the length of the pickle
-        assert_(l < 10000, msg='pickle length not %d < %d' % (l, 10000))
+        #Note: l_max is just a guess for the limit on the length of the pickle
+        l_max = 20000
+        assert_(l < l_max, msg='pickle length not %d < %d' % (l, l_max))
 
         pred3 = results.predict(xf, **pred_kwds)
         np.testing.assert_equal(pred3, pred1)
