@@ -242,11 +242,6 @@ class GLM(base.LikelihoodModel):
             exposure = np.log(exposure)
         self.exposure = exposure
 
-    def score(self, params):
-        """
-        Score matrix.  Not yet implemeneted
-        """
-        raise NotImplementedError
 
     def loglike(self, *args):
         """
@@ -257,11 +252,257 @@ class GLM(base.LikelihoodModel):
         """
         return self.family.loglike(*args)
 
-    def information(self, params):
+
+    def score_obs(self, params, scale=None):
+        """score first derivative of the loglikelihood for each observation.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        score_obs : ndarray, 2d
+            The first derivative of the loglikelihood function evaluated at
+            params for each observation.
+
         """
-        Fisher information matrix.  Not yet implemented.
+
+        score_factor = self.score_factor(params, scale=scale)
+        return score_factor[:, None] * self.exog
+
+
+    def score(self, params, scale=None):
+        """score, first derivative of the loglikelihood function
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        score : ndarray_1d
+            The first derivative of the loglikelihood function calculated as
+            the sum of `score_obs`
+
         """
-        raise NotImplementedError
+        return self.score_obs(params, scale=scale).sum(0)
+
+
+    def score_factor(self, params, scale=None):
+        """weights for score for each observation
+
+        This can be considered as score residuals.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        score_factor : ndarray_1d
+            A 1d weight vector used in the calculation of the score_obs.
+            The score_obs are obtained by `score_factor[:, None] * exog`
+
+        """
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        score_factor = (self.endog - mu) / self.family.link.deriv(mu)
+        score_factor /= self.family.variance(mu)
+        score_factor *= self.data_weights
+
+        if not scale == 1:
+            score_factor /= scale
+
+        return score_factor
+
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+
+
+        """
+
+        # calculating eim_factor
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        eim_factor = 1 / (self.family.link.deriv(mu)**2 *
+                            self.family.variance(mu))
+        eim_factor *= self.data_weights
+
+        if not observed:
+            if not scale == 1:
+                eim_factor /= scale
+            return eim_factor
+
+        # calculating oim_factor, eim_factor is with scale=1
+
+        score_factor = self.score_factor(params, scale=1.)
+        if eim_factor.ndim > 1 or score_factor.ndim > 1:
+            raise RuntimeError('something wrong')
+
+        tmp = self.family.variance(mu) * self.family.link.deriv2(mu)
+        tmp += self.family.variance.deriv(mu) * self.family.link.deriv(mu)
+
+        tmp = score_factor * eim_factor * tmp
+        # correct for duplicatee data_weights in oim_factor and score_factor
+        tmp /= self.data_weights
+        oim_factor = eim_factor * (1 + tmp)
+
+        if tmp.ndim > 1:
+            raise RuntimeError('something wrong')
+
+        if not scale == 1:
+            oim_factor /= scale
+
+        return oim_factor
+
+
+    def hessian(self, params, scale=None, observed=True):
+        """Hessian, second derivative of loglikelihood function
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian : ndarray
+            Hessian, i.e. observed information, or expected information matrix.
+
+
+        """
+
+        factor = self.hessian_factor(params, scale=scale, observed=observed)
+        hess = -np.dot(self.exog.T * factor, self.exog)
+        return hess
+
+
+    def information(self, params, scale=None):
+        """
+        Fisher information matrix.
+        """
+        return self.hessian(params, scale=scale, observed=False)
+
+
+    def score_test(self, params_constrained, k_constraints=None,
+                   exog_extra=None, observed=True):
+        """score test for restrictions or for omitted variables
+
+        The covariance matrix for the score is based on the Hessian, i.e.
+        observed information matrix or optionally on the expected information
+        matrix..
+
+        Parameters
+        ----------
+        params_constrained : array_like
+            estimated parameter of the restricted model. This can be the
+            parameter estimate for the current when testing for omitted
+            variables.
+        k_constraints : int or None
+            Number of constraints that were used in the estimation of params
+            restricted relative to the number of exog in the model.
+            This must be provided if no exog_extra are given. If exog_extra is
+            not None, then k_constraints is assumed to be zero if it is None.
+        exog_extra : None or array_like
+            Explanatory variables that are jointly tested for inclusion in the
+            model, i.e. omitted variables.
+        observed : bool
+            If True, then the observed Hessian is used in calculating the
+            covariance matrix of the score. If false then the expected
+            information matrix is used.
+
+        Returns
+        -------
+        chi2_stat : float
+            chisquare statistic for the score test
+        p-value : float
+            P-value of the score test based on the chisquare distribution.
+        df : int
+            Degrees of freedom used in the p-value calculation. This is equal
+            to the number of constraints.
+
+        Notes
+        -----
+        not yet verified for case with scale not equal to 1.
+
+        """
+
+        if exog_extra is None:
+            if k_constraints is None:
+                raise ValueError('if exog_extra is None, then k_constraints'
+                                 'needs to be given')
+
+            score = self.score(params_constrained)
+            hessian = self.hessian(params_constrained, observed=observed)
+
+        else:
+            #exog_extra = np.asarray(exog_extra)
+            if k_constraints is None:
+                k_constraints = 0
+
+            ex = np.column_stack((self.exog, exog_extra))
+            k_constraints += ex.shape[1] - self.exog.shape[1]
+
+            score_factor = self.score_factor(params_constrained)
+            score = (score_factor[:, None] * ex).sum(0)
+            hessian_factor = self.hessian_factor(params_constrained,
+                                                 observed=observed)
+            hessian = -np.dot(ex.T * hessian_factor, ex)
+
+
+        from scipy import stats
+        # TODO check sign, why minus?
+        chi2stat = -score.dot(np.linalg.solve(hessian, score[:, None]))
+        pval = stats.chi2.sf(chi2stat, k_constraints)
+        # return a stats results instance instead?  Contrast?
+        return chi2stat, pval, k_constraints
+
 
     def _update_history(self, tmp_result, mu, history):
         """

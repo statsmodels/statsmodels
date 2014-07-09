@@ -2,14 +2,18 @@
 Test functions for models.GLM
 """
 
+from statsmodels.compat import range
+
 import os
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_raises
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+                           assert_allclose, assert_, assert_array_less)
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.discrete import discrete_model as discrete
 from nose import SkipTest
 
 # Test Precisions
@@ -117,6 +121,52 @@ class CheckModelResultsMixin(object):
         assert_almost_equal(self.res1.pvalues, pvalues)
         assert_almost_equal(self.res1.conf_int(), conf_int)
 
+
+class CheckComparisonMixin(object):
+
+    def test_compare_discrete(self):
+        res1 = self.res1
+        resd = self.resd
+
+        assert_allclose(res1.llf, resd.llf, rtol=1e-10)
+        score_obs1 = res1.model.score_obs(res1.params)
+        score_obsd = resd.model.jac(resd.params)
+        assert_allclose(score_obs1, score_obsd, rtol=1e-10)
+
+        # score
+        score1 = res1.model.score(res1.params)
+        assert_allclose(score1, score_obs1.sum(0), atol=1e-20)
+        assert_allclose(score1, np.zeros(score_obs1.shape[1]), atol=1e-7)
+
+        hessian1 = res1.model.hessian(res1.params, observed=False)
+        hessiand = resd.model.hessian(resd.params)
+        assert_allclose(hessian1, hessiand, rtol=1e-10)
+
+        hessian1 = res1.model.hessian(res1.params, observed=True)
+        hessiand = resd.model.hessian(resd.params)
+        assert_allclose(hessian1, hessiand, rtol=1e-9)
+
+    def test_score_test(self):
+        res1 = self.res1
+        # fake example, should be zero, k_constraint should be 0
+        st, pv, df = res1.model.score_test(res1.params, k_constraints=1)
+        assert_allclose(st, 0, atol=1e-20)
+        assert_allclose(pv, 1, atol=1e-10)
+        assert_equal(df, 1)
+
+        st, pv, df = res1.model.score_test(res1.params, k_constraints=0)
+        assert_allclose(st, 0, atol=1e-20)
+        assert_(np.isnan(pv), msg=repr(pv))
+        assert_equal(df, 0)
+
+        # TODO: no verified numbers largely SMOKE test
+        exog_extra = res1.model.exog[:,1]**2
+        st, pv, df = res1.model.score_test(res1.params, exog_extra=exog_extra)
+        assert_array_less(0.1, st)
+        assert_array_less(0.1, pv)
+        assert_equal(df, 1)
+
+
 class TestGlmGaussian(CheckModelResultsMixin):
     def __init__(self):
         '''
@@ -135,6 +185,24 @@ class TestGlmGaussian(CheckModelResultsMixin):
                         family=sm.families.Gaussian()).fit()
         from .results.results_glm import Longley
         self.res2 = Longley()
+
+
+    def test_compare_OLS(self):
+        res1 = self.res1
+        # OLS doesn't define score_obs
+        from statsmodels.regression.linear_model import OLS
+        resd = OLS(self.data.endog, self.data.exog).fit()
+        self.resd = resd  # attach to access from the outside
+
+        assert_allclose(res1.llf, resd.llf, rtol=1e-10)
+        score_obs1 = res1.model.score_obs(res1.params)
+        score_obsd = resd.resid[:, None] / resd.scale * resd.model.exog
+        # low precision because of badly scaled exog
+        assert_allclose(score_obs1, score_obsd, rtol=1e-8)
+
+        score_obs1 = res1.model.score_obs(res1.params, scale=1)
+        score_obsd = resd.resid[:, None] * resd.model.exog
+        assert_allclose(score_obs1, score_obsd, rtol=1e-8)
 
 #    def setup(self):
 #        if skipR:
@@ -247,12 +315,56 @@ class TestGlmBinomial(CheckModelResultsMixin):
 #TODO: need include logc link
 #    pass
 
-class TestGlmBernoulli(CheckModelResultsMixin):
+class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
     def __init__(self):
         from .results.results_glm import Lbw
         self.res2 = Lbw()
         self.res1 = GLM(self.res2.endog, self.res2.exog,
                 family=sm.families.Binomial()).fit()
+
+        modd = discrete.Logit(self.res2.endog, self.res2.exog)
+        self.resd = modd.fit(start_params=self.res1.params * 0.9)
+
+
+    def score_test_r(self):
+        res1 = self.res1
+        res2 = self.res2
+        st, pv, df = res1.model.score_test(res1.params,
+                                           exog_extra=res1.model.exog[:, 1]**2)
+        st_res = 0.2837680293459376  # (-0.5326988167303712)**2
+        assert_allclose(st, st_res, rtol=1e-4)
+
+        st, pv, df = res1.model.score_test(res1.params,
+                                          exog_extra=res1.model.exog[:, 0]**2)
+        st_res = 0.6713492821514992  # (-0.8193590679009413)**2
+        assert_allclose(st, st_res, rtol=1e-4)
+
+        select = list(range(9))
+        select.pop(7)
+
+        res1b = GLM(res2.endog, res2.exog[:, select],
+                    family=sm.families.Binomial()).fit()
+        tres = res1b.model.score_test(res1b.params,
+                                      exog_extra=res1.model.exog[:, -2])
+        tres = np.asarray(tres[:2]).ravel()
+        tres_r = (2.7864148487452, 0.0950667)
+        assert_allclose(tres, tres_r, rtol=1e-4)
+
+        cmd_r = """\
+        data = read.csv("...statsmodels\\statsmodels\\genmod\\tests\\results\\stata_lbw_glm.csv")
+
+        data["race_black"] = data["race"] == "black"
+        data["race_other"] = data["race"] == "other"
+        mod = glm(low ~ age + lwt + race_black + race_other + smoke + ptl + ht + ui, family=binomial, data=data)
+        options(digits=16)
+        anova(mod, test="Rao")
+
+        library(statmod)
+        s = glm.scoretest(mod, data["age"]**2)
+        s**2
+        s = glm.scoretest(mod, data["lwt"]**2)
+        s**2
+        """
 
 #class TestGlmBernoulliIdentity(CheckModelResultsMixin):
 #    pass
@@ -339,7 +451,7 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
 #            family=r.Gamma(link="identity"))
 #        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
-class TestGlmPoisson(CheckModelResultsMixin):
+class TestGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
     def __init__(self):
         '''
         Tests Poisson family with canonical log link.
@@ -354,6 +466,9 @@ class TestGlmPoisson(CheckModelResultsMixin):
         self.res1 = GLM(self.data.endog, self.data.exog,
                     family=sm.families.Poisson()).fit()
         self.res2 = Cpunish()
+        # compare with discrete, start close to save time
+        modd = discrete.Poisson(self.data.endog, self.data.exog)
+        self.resd = modd.fit(start_params=self.res1.params * 0.9)
 
 #class TestGlmPoissonIdentity(CheckModelResultsMixin):
 #    pass
@@ -558,6 +673,27 @@ def test_prefect_pred():
     X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
     assert_raises(PerfectSeparationError, glm.fit)
+
+
+def test_score_test_OLS():
+    # nicer example than Longley
+    from statsmodels.regression.linear_model import OLS
+    np.random.seed(5)
+    nobs = 100
+    sige = 0.5
+    x = np.random.uniform(0, 1, size=(nobs, 5))
+    x[:, 0] = 1
+    beta = 1. / np.arange(1., x.shape[1] + 1)
+    y = x.dot(beta) + sige * np.random.randn(nobs)
+
+    res_ols = OLS(y, x).fit()
+    res_olsc = OLS(y, x[:, :-2]).fit()
+    co = res_ols.compare_lm_test(res_olsc, demean=False)
+
+    res_glm = GLM(y, x[:, :-2], family=sm.families.Gaussian()).fit()
+    co2 = res_glm.model.score_test(res_glm.params, exog_extra=x[:, -2:])
+    # difference in df_resid versus nobs in scale see #1786
+    assert_allclose(co[0] * 97 / 100., co2[0], rtol=1e-13)
 
 
 def test_attribute_writable_resettable():
