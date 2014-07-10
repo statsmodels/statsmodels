@@ -36,13 +36,13 @@ covariates.
    from statsmodels.genmod.generalized_estimating_equations import GEE
    from statsmodels.genmod.dependence_structures import Independence
    from statsmodels.genmod.families import Poisson
-   
+
    data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
    data = pd.read_csv(data_url)
-   
+
    fam = Poisson()
    ind = Independence()
-   md = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],
+   md = GEE.from_formula("y ~ age + trt + base", "subject", data,
                           covstruct=ind, family=fam)
    mdf = md.fit()
    print mdf.summary()
@@ -96,7 +96,7 @@ We added a naive seasonal decomposition tool in the same vein as R's ``decompose
     import statsmodels.api as sm
 
     dta = sm.datasets.co2.load_pandas().data
-    # deal with missing values. see issue 
+    # deal with missing values. see issue
     dta.co2.interpolate(inplace=True)
 
     res = sm.tsa.seasonal_decompose(dta.co2)
