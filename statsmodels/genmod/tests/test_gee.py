@@ -8,7 +8,6 @@ correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
 
-from __future__ import print_function
 from statsmodels.compat import lrange
 import numpy as np
 import os
@@ -291,7 +290,6 @@ class TestGEE(object):
             ar = Autoregressive()
             md = GEE(endog, exog, groups, family=ga, cov_struct = ar)
             mdf = md.fit()
-
             assert_almost_equal(ar.dep_params, dep_params_true[gsize-1])
             assert_almost_equal(mdf.params, params_true[gsize-1])
 

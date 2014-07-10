@@ -166,23 +166,23 @@ class ParameterConstraint(object):
         return np.dot(self.lhs0, np.dot(bcov, self.lhs0.T))
 
 
-class GEE(base.Model):
-    __doc__ = """
-    Generalized Estimating Equations Models
-
-    GEE estimates Generalized Linear Models when the data have a
-    grouped structure, and the observations are possibly correlated
-    within groups but not between groups.
+_gee_init_doc = """
+    GEE can be used to fit Generalized Linear Models (GLMs) when the
+    data have a grouped structure, and the observations are possibly
+    correlated within groups but not between groups.
 
     Parameters
     ----------
     endog : array-like
-        1d array of endogenous response values.
+        1d array of endogenous values (i.e. responses, outcomes,
+        dependent variables, or 'Y' values).
     exog : array-like
-        A nobs x k array where `nobs` is the number of
-        observations and `k` is the number of regressors. An
-        intercept is not included by default and should be added
-        by the user. See `statsmodels.tools.add_constant`.
+        2d array of exogeneous values (i.e. covariates, predictors,
+        independent variables, regressors, or 'X' values). A nobs x k
+        array where `nobs` is the number of observations and `k` is
+        the number of regressors. An intercept is not included by
+        default and should be added by the user. See
+        `statsmodels.tools.add_constant`.
     groups : array-like
         A 1d array of length `nobs` containing the group labels.
     time : array-like
@@ -205,12 +205,12 @@ class GEE(base.Model):
     dep_data : array-like
         Additional data passed to the dependence structure.
     constraint : (ndarray, ndarray)
-       If provided, the constraint is a tuple (L, R) such that the
-       model parameters are estimated under the constraint L *
-       param = R, where L is a q x p matrix and R is a
-       q-dimensional vector.  If constraint is provided, a score
-       test is performed to compare the constrained model to the
-       unconstrained model.
+        If provided, the constraint is a tuple (L, R) such that the
+        model parameters are estimated under the constraint L *
+        param = R, where L is a q x p matrix and R is a
+        q-dimensional vector.  If constraint is provided, a score
+        test is performed to compare the constrained model to the
+        unconstrained model.
     %(extra_params)s
 
     See Also
@@ -245,7 +245,150 @@ class GEE(base.Model):
     DeRouen (Biometrics, 2001) reduces the downard bias of the robust
     estimator.
 
-    """ % {'extra_params': base._missing_param_doc}
+    Examples
+    --------
+    %(example)s
+"""
+
+_gee_fit_doc = """
+    Fits a marginal regression model using generalized estimating
+    equations (GEE).
+
+    Parameters
+    ----------
+    maxiter : integer
+        The maximum number of iterations
+    ctol : float
+        The convergence criterion for stopping the Gauss-Seidel
+        iterations
+    start_params : array-like
+        A vector of starting values for the regression
+        coefficients.  If None, a default is chosen.
+    params_niter : integer
+        The number of Gauss-Seidel updates of the mean structure
+        parameters that take place prior to each update of the
+        dependence structure.
+    first_dep_update : integer
+        No dependence structure updates occur before this
+        iteration number.
+    covariance_type : string
+        One of "robust", "naive", or "bias_reduced".
+
+    Returns
+    -------
+    An instance of the GEEResults class or subclass
+
+    Notes
+    -----
+    If convergence difficulties occur, increase the values of
+    `first_dep_update` and/or `params_niter`.  Setting
+    `first_dep_update` to a greater value (e.g. ~10-20) causes the
+    algorithm to move close to the GLM solution before attempting
+    to identify the dependence structure.
+
+    For the Gaussian family, there is no benefit to setting
+    `params_niter` to a value greater than 1, since the mean
+    structure parameters converge in one step.
+"""
+
+_gee_results_doc = """
+    Returns
+    -------
+    **Attributes**
+
+    naive_covariance : ndarray
+        covariance of the parameter estimates that is not robust to
+        correlation or variance misspecification
+    robust_covariance_bc : ndarray
+        covariance of the parameter estimates that is robust and bias
+        reduced
+    converged : bool
+        indicator for convergence of the optimization.
+        True if the norm of the score is smaller than a threshold
+    covariance_type : string
+        string indicating whether a "robust", "naive" or "bias_
+        reduced" covariance is used as default
+    fit_history : dict
+        Contains information about the iterations.
+    fittedvalues : array
+        Linear predicted values for the fitted model.
+        dot(exog, params)
+    model : class instance
+        Pointer to GEE model instance that called `fit`.
+    normalized_cov_params : array
+        See GEE docstring
+    params : array
+        The coefficients of the fitted model.  Note that
+        interpretation of the coefficients often depends on the
+        distribution family and the data.
+    scale : float
+        The estimate of the scale / dispersion for the model fit.
+        See GEE.fit for more information.
+    score_norm : float
+        norm of the score at the end of the iterative estimation.
+    bse : array
+        The standard errors of the fitted GEE parameters.
+"""
+
+_gee_example = """
+    Logistic regression with autoregressive working dependence:
+
+    >>> family = Binomial()
+    >>> va = Autoregressive()
+    >>> mod = GEE(endog, exog, group, family=family, cov_struct=va)
+    >>> rslt = mod.fit()
+    >>> print rslt.summary()
+
+    Use formulas to fit a Poisson GLM with independent working
+    dependence:
+
+    >>> fam = Poisson()
+    >>> ind = Independence()
+    >>> mod = GEE.from_formula("y ~ age + trt + base", data,
+                               groups=data["subject"], cov_struct=ind,
+                               family=fam)
+    >>> rslt = mod.fit()
+    >>> print rslt.summary()
+"""
+
+_gee_ordinal_example = """
+    >>> family = Binomial()
+    >>> gor = GlobalOddsRatio("ordinal")
+    >>> mod = OrdinalGEE(endog, exog, groups, None, family, gor)
+    >>> rslt = mod.fit()
+    >>> print rslt.summary()
+
+    Use formulas:
+
+    >>> mod = GEE.from_formula("y ~ x1 + x2", data, groups=groups,
+                               cov_struct=gor, family=family)
+    >>> rslt = mod.fit()
+    >>> print rslt.summary()
+"""
+
+_gee_nominal_example = """
+    >>> family = Multinomial(3)
+    >>> gor = GlobalOddsRatio("nominal")
+    >>> mod = NominalGEE(endog, exog, groups, None, family, gor)
+    >>> rslt = mod.fit()
+    >>> print rslt.summary()
+
+    Use formulas:
+
+    >>> mod = GEE.from_formula("y ~ x1 + x2", data, groups=groups,
+                               cov_struct=gor, family=family)
+    >>> rslt = mod.fit()
+    >>> print rslt.summary()
+"""
+
+
+class GEE(base.Model):
+
+    __doc__ = (
+        "    Estimation of marginal regression models using Generalized\n"
+        "    Estimating Equations (GEE).\n" + _gee_init_doc %
+        {'extra_params': base._missing_param_doc,
+         'example': _gee_example})
 
     fit_history = None
     cached_means = None
@@ -675,46 +818,6 @@ class GEE(base.Model):
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             covariance_type='robust'):
-        """
-        Fits a marginal regression model using generalized estimating
-        equations (GEE).
-
-        Parameters
-        ----------
-        maxiter : integer
-            The maximum number of iterations
-        ctol : float
-            The convergence criterion for stopping the Gauss-Seidel
-            iterations
-        start_params : array-like
-            A vector of starting values for the regression
-            coefficients.  If None, a default is chosen.
-        params_niter : integer
-            The number of Gauss-Seidel updates of the mean structure
-            parameters that take place prior to each update of the
-            dependence structure.
-        first_dep_update : integer
-            No dependence structure updates occur before this
-            iteration number.
-        covariance_type : string
-            One of "robust", "naive", or "bias_reduced".
-
-        Returns
-        -------
-        An instance of the GEEResults class
-
-        Notes
-        -----
-        If convergence difficulties occur, increase the values of
-        `first_dep_update` and/or `params_niter`.  Setting
-        `first_dep_update` to a greater value (e.g. ~10-20) causes the
-        algorithm to move close to the GLM solution before attempting
-        to identify the dependence structure.
-
-        For the Gaussian family, there is no benefit to setting
-        `params_niter` to a value greater than 1, since the mean
-        structure parameters converge in one step.
-        """
 
         self.fit_history = {'params': [],
                             'score': [],
@@ -797,6 +900,8 @@ class GEE(base.Model):
         results.cov_struct = self.cov_struct
 
         return results
+
+    fit.__doc__ = _gee_fit_doc
 
     def _handle_constraint(self, mean_params, bcov):
         """
@@ -923,57 +1028,10 @@ class GEE(base.Model):
 
 
 class GEEResults(base.LikelihoodModelResults):
-    '''
-    Class to contain GEE results.
 
-    GEEResults inherits from statsmodels.LikelihoodModelResults
-
-    Parameters
-    ----------
-    See statsmodels.LikelihoodModelReesults
-
-    Returns
-    -------
-    **Attributes**
-
-    naive_covariance : ndarray
-        covariance of the parameter estimates that is not robust to
-        correlation or variance misspecification
-    robust_covariance_bc : ndarray
-        covariance of the parameter estimates that is robust and bias
-        reduced
-    converged : bool
-        indicator for convergence of the optimization.
-        True if the norm of the score is smaller than a threshold
-    covariance_type : string
-        string indicating whether a "robust", "naive" or "bias_
-        reduced" covariance is used as default
-    fit_history : dict
-        Contains information about the iterations.
-    fittedvalues : array
-        Linear predicted values for the fitted model.
-        dot(exog, params)
-    model : class instance
-        Pointer to GEE model instance that called fit.
-    normalized_cov_params : array
-        See GEE docstring
-    params : array
-        The coefficients of the fitted model.  Note that
-        interpretation of the coefficients often depends on the
-        distribution family and the data.
-    scale : float
-        The estimate of the scale / dispersion for the model fit.
-        See GEE.fit for more information.
-    score_norm : float
-        norm of the score at the end of the iterative estimation.
-    bse : array
-        The standard errors of the fitted GEE parameters.
-
-    See Also
-    --------
-    statsmodels.LikelihoodModelResults
-    GEE
-    '''
+    __doc__ = (
+        "This class summarizes the fit of a marginal regression model using GEE.\n"
+        + _gee_results_doc)
 
     # Default covariance type
     covariance_type = "robust"
@@ -1315,9 +1373,12 @@ class GEEResults(base.LikelihoodModelResults):
 
 
 class OrdinalGEE(GEE):
-    """
-    A subclass of GEE for handling ordinal response variables.
-    """
+
+    __doc__ = (
+        "    Estimation of ordinal response marginal regression models\n"
+        "    using Generalized Estimating Equations (GEE).\n" +
+        _gee_init_doc % {'extra_params': base._missing_param_doc,
+                         'example': _gee_ordinal_example})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
@@ -1414,8 +1475,14 @@ class OrdinalGEE(GEE):
                                  rslt.cov_params() / rslt.scale,
                                  rslt.scale)
 
+    fit.__doc__ = _gee_fit_doc
 
 class OrdinalGEEResults(GEEResults):
+
+    __doc__ = (
+        "This class summarizes the fit of a marginal regression model"
+        "for an ordinal response using GEE.\n"
+        + _gee_results_doc)
 
     def __init__(self, model, params, cov_params, scale):
 
@@ -1511,9 +1578,12 @@ class OrdinalGEEResults(GEEResults):
 
 
 class NominalGEE(GEE):
-    """
-    A subclass of GEE for handling nominal response variables.
-    """
+
+    __doc__ = (
+        "    Estimation of nominal response marginal regression models\n"
+        "    using Generalized Estimating Equations (GEE).\n" +
+        _gee_init_doc % {'extra_params': base._missing_param_doc,
+                         'example': _gee_nominal_example})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
@@ -1597,7 +1667,6 @@ class NominalGEE(GEE):
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             covariance_type='robust'):
-
         rslt = super(NominalGEE, self).fit(maxiter, ctol, start_params,
                                            params_niter, first_dep_update,
                                            covariance_type)
@@ -1609,9 +1678,14 @@ class NominalGEE(GEE):
                                  rslt.cov_params() / rslt.scale,
                                  rslt.scale)
 
-
+    fit.__doc__ = _gee_fit_doc
 
 class NominalGEEResults(GEEResults):
+
+    __doc__ = (
+        "This class summarizes the fit of a marginal regression model"
+        "for a nominal response using GEE.\n"
+        + _gee_results_doc)
 
     def __init__(self, model, params, cov_params, scale):
 
@@ -1644,8 +1718,8 @@ class NominalGEEResults(GEEResults):
         'age' is not included below in the map, it is held fixed at
         its mean value.
 
-        >> ev = [{"sex": 1}, {"sex": 0}]
-        >> rslt.distribution_plot(exog_values=ev)
+        >>> ex = [{"sex": 1}, {"sex": 0}]
+        >>> rslt.distribution_plot(exog_values=ex)
         """
 
         from statsmodels.graphics import utils as gutils
