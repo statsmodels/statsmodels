@@ -342,9 +342,8 @@ _gee_example = """
 
     >>> fam = Poisson()
     >>> ind = Independence()
-    >>> mod = GEE.from_formula("y ~ age + trt + base", data,
-                               groups=data["subject"], cov_struct=ind,
-                               family=fam)
+    >>> mod = GEE.from_formula("y ~ age + trt + base", "subject",
+                               data, cov_struct=ind, family=fam)
     >>> rslt = mod.fit()
     >>> print rslt.summary()
 """
@@ -358,7 +357,7 @@ _gee_ordinal_example = """
 
     Use formulas:
 
-    >>> mod = GEE.from_formula("y ~ x1 + x2", data, groups=groups,
+    >>> mod = GEE.from_formula("y ~ x1 + x2", groups, data,
                                cov_struct=gor, family=family)
     >>> rslt = mod.fit()
     >>> print rslt.summary()
@@ -373,7 +372,7 @@ _gee_nominal_example = """
 
     Use formulas:
 
-    >>> mod = GEE.from_formula("y ~ x1 + x2", data, groups=groups,
+    >>> mod = GEE.from_formula("y ~ x1 + x2", groups, data,
                                cov_struct=gor, family=family)
     >>> rslt = mod.fit()
     >>> print rslt.summary()
@@ -540,6 +539,22 @@ class GEE(base.Model):
         self._do_cov_update = True
         if max([len(x) for x in self.endog_li]) == 1:
             self._do_cov_update = False
+
+    # Override to allow groups and time to be passed as variable
+    # names.
+    @classmethod
+    def from_formula(cls, formula, groups, data, subset=None,
+                     *args, **kwargs):
+
+        if type(groups) == str:
+            groups = data[groups]
+
+        if "time" in kwargs and type(kwargs["time"]) == str:
+            kwargs["time"] = data[kwargs["time"]]
+
+        mod = super(GEE, cls).from_formula(formula, data, subset,
+                                           groups, *args, **kwargs)
+        return mod
 
     def cluster_list(self, array):
         """

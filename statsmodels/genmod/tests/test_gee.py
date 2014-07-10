@@ -86,21 +86,20 @@ class TestGEE(object):
 
         fam = Poisson()
         ind = Independence()
-        md1 = GEE.from_formula("y ~ age + trt + base", data,
-                               groups=data["subject"], cov_struct=ind,
-                               family=fam)
-        mdf1 = md1.fit()
+        mod1 = GEE.from_formula("y ~ age + trt + base", data["subject"],
+                                data, cov_struct=ind, family=fam)
+        rslt1 = mod1.fit()
 
         # Coefficients should agree with GLM
         from statsmodels.genmod.generalized_linear_model import GLM
         from statsmodels.genmod import families
 
-        md2 = GLM.from_formula("y ~ age + trt + base", data,
+        mod2 = GLM.from_formula("y ~ age + trt + base", data,
                                family=families.Poisson())
-        mdf2 = md2.fit(scale="X2")
+        rslt2 = mod2.fit(scale="X2")
 
-        assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
-        assert_almost_equal(mdf1.scale, mdf2.scale, decimal=6)
+        assert_almost_equal(rslt1.params, rslt2.params, decimal=6)
+        assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
 
 
@@ -120,8 +119,8 @@ class TestGEE(object):
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
                           "groups": groups})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
-                              groups=D["groups"], missing='drop')
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D["groups"],
+                              missing='drop')
         mdf = md.fit()
 
         assert(len(md.endog) == 95)
@@ -238,8 +237,7 @@ class TestGEE(object):
         D.columns = ["Y","Id",] + ["X%d" % (k+1)
                                    for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
-                                   groups=D.loc[:,"Id"],
+             md = GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D,
                                    family=family, cov_struct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=6)
@@ -371,8 +369,7 @@ class TestGEE(object):
         D.columns = ["Y","Id",] + ["X%d" % (k+1)
                                    for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-            md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
-                                  groups=D.loc[:,"Id"],
+            md = GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D,
                                   family=family, cov_struct=v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
@@ -557,9 +554,8 @@ class TestGEE(object):
         D.columns = ["Y","Id",] + ["X%d" % (k+1)
                                    for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", D,
-                                   None, groups=D.loc[:,"Id"],
-                                   family=family, cov_struct=v)
+             md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", "Id",
+                                   D, family=family, cov_struct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors(), se[j],
@@ -585,9 +581,8 @@ class TestGEE(object):
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
-                              groups=groups, family=family,
-                              cov_struct=vs)
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
+                              family=family, cov_struct=vs)
         mdf = md.fit()
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
@@ -601,6 +596,48 @@ class TestGEE(object):
             np.sqrt(np.diag(mdf.naive_covariance))
         assert_almost_equal(naive_tvalues, ols.tvalues, decimal=10)
 
+    def test_formulas(self):
+        """
+        Check formulas, especially passing groups and time as either
+        variable names or arrays.
+        """
+
+        n = 100
+        Y = np.random.normal(size=n)
+        X1 = np.random.normal(size=n)
+        mat = np.concatenate((np.ones((n,1)), X1[:, None]), axis=1)
+        Time = np.random.uniform(size=n)
+        groups = np.kron(lrange(20), np.ones(5))
+
+        data = pd.DataFrame({"Y": Y, "X1": X1, "Time": Time, "groups": groups})
+
+        va = Autoregressive()
+        family = Gaussian()
+
+        mod1 = GEE(Y, mat, groups, time=Time, family=family,
+                   cov_struct=va)
+        rslt1 = mod1.fit()
+
+        mod2 = GEE.from_formula("Y ~ X1", groups, data, time=Time,
+                                family=family, cov_struct=va)
+        rslt2 = mod2.fit()
+
+        mod3 = GEE.from_formula("Y ~ X1", groups, data, time="Time",
+                                family=family, cov_struct=va)
+        rslt3 = mod3.fit()
+
+        mod4 = GEE.from_formula("Y ~ X1", "groups", data, time=Time,
+                                family=family, cov_struct=va)
+        rslt4 = mod4.fit()
+
+        mod5 = GEE.from_formula("Y ~ X1", "groups", data, time="Time",
+                                family=family, cov_struct=va)
+        rslt5 = mod5.fit()
+
+        assert_almost_equal(rslt1.params, rslt2.params, decimal=8)
+        assert_almost_equal(rslt1.params, rslt3.params, decimal=8)
+        assert_almost_equal(rslt1.params, rslt4.params, decimal=8)
+        assert_almost_equal(rslt1.params, rslt5.params, decimal=8)
 
     def test_compare_logit(self):
 
@@ -615,12 +652,14 @@ class TestGEE(object):
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, cov_struct=vs).fit()
+        mod1 = GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
+                                family=family, cov_struct=vs)
+        rslt1 = mod1.fit()
 
-        sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
+        mod2 = sm.logit("Y ~ X1 + X2 + X3", data=D)
+        rslt2 = mod2.fit()
 
-        assert_almost_equal(sml.params.values, md.params, decimal=10)
+        assert_almost_equal(rslt1.params, rslt2.params, decimal=10)
 
 
     def test_compare_poisson(self):
@@ -636,12 +675,14 @@ class TestGEE(object):
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, cov_struct=vs).fit()
+        mod1 = GEE.from_formula("Y ~ X1 + X2 + X3", groups, D,
+                                family=family, cov_struct=vs)
+        rslt1 = mod1.fit()
 
-        sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
+        mod2 = sm.poisson("Y ~ X1 + X2 + X3", data=D)
+        rslt2 = mod2.fit(disp=False)
 
-        assert_almost_equal(sml.params.values, md.params, decimal=10)
+        assert_almost_equal(rslt1.params, rslt2.params, decimal=10)
 
 
 if  __name__=="__main__":
