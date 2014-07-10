@@ -980,21 +980,30 @@ class TestRegularizedFit(object):
 
         import os
         from . import glmnet_r_results
+
         cur_dir = os.path.dirname(os.path.abspath(__file__))
+        data = np.loadtxt(os.path.join(cur_dir, "results", "lasso_data.csv"),
+                          delimiter=",")
 
         tests = [x for x in dir(glmnet_r_results) if x.startswith("rslt_")]
 
         for test in tests:
-            vec = getattr(glmnet_r_results, test)
-            fname = "lasso_data_%02d.csv" % vec[0]
-            L1_wt = float(vec[1])
-            lam = float(vec[2])
-            params = vec[3:].astype(np.float64)
 
-            data = np.loadtxt(os.path.join(cur_dir, "results", fname),
-                              delimiter=",")
-            endog = data[:,0]
-            exog = data[:,1:]
+            vec = getattr(glmnet_r_results, test)
+
+            n = vec[0]
+            p = vec[1]
+            L1_wt = float(vec[2])
+            lam = float(vec[3])
+            params = vec[4:].astype(np.float64)
+
+            endog = data[0:n, 0]
+            exog = data[0:n, 1:(p+1)]
+
+            endog = endog - endog.mean()
+            endog /= endog.std(ddof=1)
+            exog = exog - exog.mean(0)
+            exog /= exog.std(0, ddof=1)
 
             mod = OLS(endog, exog)
             rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
