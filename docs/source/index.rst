@@ -93,6 +93,7 @@ Table of Contents
    glm
    gee
    rlm
+   mixed_linear
    discretemod
    anova
    tsa
