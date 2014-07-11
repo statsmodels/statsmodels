@@ -881,7 +881,7 @@ class PHreg(model.LikelihoodModel):
             if g not in grads:
                 grads[g] = 0.
             grads[g] += score_obs[i, :]
-        grads = np.asarray(grads.values())
+        grads = np.asarray(list(grads.values()))
 
         mat = grads[None, :, :]
         mat = mat.T * mat
