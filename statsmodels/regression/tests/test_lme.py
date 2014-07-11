@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from statsmodels.regression.lme import MixedLM
+from statsmodels.regression.mixed_linear_model import MixedLM
 from numpy.testing import assert_almost_equal
 from . import lme_r_results
 from scipy.misc import derivative
@@ -172,11 +172,12 @@ class TestMixedLM(object):
         rslt2 = mod2.fit()
         assert_almost_equal(rslt1.params, rslt2.params)
 
-        # Check default variance structure
+        # Check default variance structure, with formula.api
         exog_re = np.ones(len(endog), dtype=np.float64)
         mod3 = MixedLM(endog, exog, groups, exog_re)
         rslt3 = mod3.fit()
-        mod4 = MixedLM.from_formula(fml, df, groups=groups)
+        from statsmodels.formula.api import mixedlm
+        mod4 = mixedlm(fml, df, groups=groups)
         rslt4 = mod4.fit()
         assert_almost_equal(rslt3.params, rslt4.params)
 

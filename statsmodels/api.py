@@ -5,6 +5,7 @@ from .tools.tools import add_constant, categorical
 from . import regression
 from .regression.linear_model import OLS, GLS, WLS, GLSAR
 from .regression.quantile_regression import QuantReg
+from .regression.mixed_linear_model import MixedLM
 from .genmod.generalized_linear_model import GLM
 from .genmod.generalized_estimating_equations import GEE
 from .genmod import families
