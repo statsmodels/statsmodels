@@ -206,7 +206,7 @@ class PH_SurvivalTime(object):
 
 
 
-class PHreg(model.LikelihoodModel):
+class PHReg(model.LikelihoodModel):
     """
     Fit the Cox proportional hazards regression model for right
     censored data.
@@ -253,7 +253,7 @@ class PHreg(model.LikelihoodModel):
         if status is None:
             status = np.ones(len(endog))
 
-        super(PHreg, self).__init__(endog, exog, status=status,
+        super(PHReg, self).__init__(endog, exog, status=status,
                                     entry=entry, strata=strata,
                                     offset=offset, missing=missing)
 
@@ -304,14 +304,14 @@ class PHreg(model.LikelihoodModel):
 
         if 'disp' not in args:
             args['disp'] = False
-        fit_rslts = super(PHreg, self).fit(**args)
+        fit_rslts = super(PHReg, self).fit(**args)
 
         if self.groups is None:
             cov_params = fit_rslts.cov_params()
         else:
             cov_params = self.robust_covariance(fit_rslts.params)
 
-        results = PHregResults(self, fit_rslts.params, cov_params)
+        results = PHRegResults(self, fit_rslts.params, cov_params)
 
         return results
 
@@ -475,7 +475,7 @@ class PHreg(model.LikelihoodModel):
             rslt = model.fit()
             cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
 
-        rfit = PHregResults(self, params, cov_params=cov)
+        rfit = PHRegResults(self, params, cov_params=cov)
         rfit.converged = converged
         rfit.regularized = True
 
@@ -1348,7 +1348,7 @@ class PHreg(model.LikelihoodModel):
         return dist
 
 
-class PHregResults(base.LikelihoodModelResults):
+class PHRegResults(base.LikelihoodModelResults):
     '''
     Class to contain results of fitting a Cox proportional hazards
     survival model.
@@ -1383,7 +1383,7 @@ class PHregResults(base.LikelihoodModelResults):
 
         self.covariance_type = covariance_type
 
-        super(PHregResults, self).__init__(model, params,
+        super(PHRegResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
 
     @cache_readonly

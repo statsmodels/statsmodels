@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from statsmodels.sandbox.phreg import PHreg
+from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import assert_almost_equal
 
 # TODO: Include some corner cases: data sets with empty strata, strata
@@ -11,7 +11,7 @@ from . import survival_r_results
 from . import survival_enet_r_results
 
 """
-Tests of phreg against R coxph.
+Tests of PHReg against R coxph.
 
 Tests include entry times and stratification.
 
@@ -22,7 +22,7 @@ survival.R runs R on all the test data sets and constructs the
 survival_r_results module.
 """
 
-# Arguments passed to the phreg fit method.
+# Arguments passed to the PHReg fit method.
 args = {"method": "bfgs", "disp": 0}
 
 def get_results(n, p, ext, ties):
@@ -42,7 +42,7 @@ def get_results(n, p, ext, ties):
     hazard = getattr(survival_r_results, hazard_name)
     return coef, se, time, hazard
 
-class TestPHreg(object):
+class TestPHReg(object):
 
     # Load a data file from the results directory
     def load_file(self, fname):
@@ -73,7 +73,7 @@ class TestPHreg(object):
         strata = np.kron(range(5), np.ones(n/5))
 
         # No stratification or entry times
-        mod = PHreg(time, exog, status, ties=ties)
+        mod = PHReg(time, exog, status, ties=ties)
         phrb = mod.fit(**args)
         coef_r, se_r, time_r, hazard_r = get_results(n, p, None, ties1)
         assert_almost_equal(phrb.params, coef_r, decimal=4)
@@ -81,21 +81,21 @@ class TestPHreg(object):
         #time_h, cumhaz, surv = phrb.baseline_hazard[0]
 
         # Entry times but no stratification
-        phrb = PHreg(time, exog, status, entry=entry,
+        phrb = PHReg(time, exog, status, entry=entry,
                      ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "et", ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification but no entry times
-        phrb = PHreg(time, exog, status, strata=strata,
+        phrb = PHReg(time, exog, status, strata=strata,
                       ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "st", ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification and entry times
-        phrb = PHreg(time, exog, status, entry=entry,
+        phrb = PHReg(time, exog, status, entry=entry,
                      strata=strata, ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
         assert_almost_equal(phrb.params, coef, decimal=4)
@@ -129,7 +129,7 @@ class TestPHreg(object):
         status[5:10] = np.nan
         exog[10:15,:] = np.nan
 
-        md = PHreg(time, exog, status, missing='drop')
+        md = PHReg(time, exog, status, missing='drop')
         assert(len(md.endog) == 185)
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
@@ -141,12 +141,12 @@ class TestPHreg(object):
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        mod1 = PHreg(time, exog, status)
+        mod1 = PHReg(time, exog, status)
         rslt1 = mod1.fit()
         offset = exog[:,0] * rslt1.params[0]
         exog = exog[:, 1:]
 
-        mod2 = PHreg(time, exog, status, offset=offset)
+        mod2 = PHReg(time, exog, status, offset=offset)
         rslt2 = mod2.fit()
 
         assert_almost_equal(rslt2.params, rslt1.params[1:])
@@ -158,7 +158,7 @@ class TestPHreg(object):
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        mod = PHreg(time, exog, status)
+        mod = PHReg(time, exog, status)
         rslt = mod.fit()
         mart_resid = rslt.martingale_residuals
         assert_almost_equal(np.abs(mart_resid).sum(), 120.72475743348433)
@@ -179,7 +179,7 @@ class TestPHreg(object):
         assert_almost_equal(v, w)
 
         groups = np.random.randint(0, 3, 200)
-        mod = PHreg(time, exog, status)
+        mod = PHReg(time, exog, status)
         rslt = mod.fit(groups=groups)
         robust_cov = rslt.cov_params()
         v = [0.00513432, 0.01278423, 0.00810427, 0.00293147]
@@ -199,7 +199,7 @@ class TestPHreg(object):
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        mod = PHreg(time, exog, status)
+        mod = PHReg(time, exog, status)
         rslt = mod.fit()
         rslt.summary()
 
@@ -213,7 +213,7 @@ class TestPHreg(object):
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        mod = PHreg(endog, exog, status)
+        mod = PHReg(endog, exog, status)
         rslt = mod.fit()
         rslt.predict()
         for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
@@ -230,7 +230,7 @@ class TestPHreg(object):
         elin_pred = np.exp(-lin_pred)
         time = -elin_pred * np.log(np.random.uniform(size=200))
 
-        mod = PHreg(time, exog)
+        mod = PHReg(time, exog)
         rslt = mod.fit()
 
         dist = rslt.get_distribution()
@@ -258,7 +258,7 @@ class TestPHreg(object):
                 exog -= exog.mean(0)
                 exog /= exog.std(0, ddof=1)
 
-                mod = PHreg(time, exog, status=status, ties='breslow')
+                mod = PHReg(time, exog, status=status, ties='breslow')
                 rslt = mod.fit_regularized(alpha=s)
 
                 # The agreement isn't very high, the issue may be on
