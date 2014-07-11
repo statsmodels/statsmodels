@@ -6,6 +6,8 @@ from statsmodels.regression.linear_model import OLS
 ols = OLS.from_formula
 from statsmodels.regression.linear_model import GLSAR
 glsar = GLSAR.from_formula
+from statsmodels.regression.mixed_linear_model import MixedLM
+mixedlm = MixedLM.from_formula
 from statsmodels.genmod.generalized_linear_model import GLM
 glm = GLM.from_formula
 from statsmodels.robust.robust_linear_model import RLM
