@@ -24,5 +24,7 @@ from statsmodels.discrete.discrete_model import NegativeBinomial
 negativebinomial = NegativeBinomial.from_formula
 from statsmodels.regression.quantile_regression import QuantReg
 quantreg = QuantReg.from_formula
+from statsmodels.duration.hazard_regression import PHReg
+phreg = PHReg.from_formula
 from statsmodels.genmod.generalized_estimating_equations import GEE
 gee = GEE.from_formula

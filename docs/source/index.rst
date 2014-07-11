@@ -97,6 +97,7 @@ Table of Contents
    discretemod
    anova
    tsa
+   duration
    stats
    nonparametric
    gmm

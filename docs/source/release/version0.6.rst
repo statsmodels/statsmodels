@@ -14,7 +14,7 @@ Major changes:
 Addition of Generalized Estimating Equations GEE
 
 Generalized Estimating Equations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------
 
 Generalized Estimating Equations (GEE) provide an approach to handling
 dependent data in a regression analysis.  Dependent data arise
@@ -63,9 +63,8 @@ errors that are approximately correct even if the working dependence
 structure is misspecified.
 
 
-
 Seasonality Plots
-~~~~~~~~~~~~~~~~~
+-----------------
 
 Adding functionality to look at seasonality in plots. Two new functions are :func:`sm.graphics.tsa.month_plot` and :func:`sm.graphics.tsa.quarter_plot`. Another function :func:`sm.graphics.tsa.seasonal_plot` is available for power users.
 
@@ -106,7 +105,7 @@ We added a naive seasonal decomposition tool in the same vein as R's ``decompose
 Addition of Linear Mixed Effects Models (MixedLM)
 
 Linear Mixed Effects Models
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------
 
 Linear Mixed Effects models are used for regression analyses involving
 dependent data.  Such data arise when working with longitudinal and
