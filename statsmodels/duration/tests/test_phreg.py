@@ -134,6 +134,11 @@ class TestPHReg(object):
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
 
+    def test_formula(self):
+        #Smoke test for import only
+        from statsmodels.api import PHReg
+        from statsmodels.formula.api import phreg
+
     def test_offset(self):
 
         np.random.seed(34234)
