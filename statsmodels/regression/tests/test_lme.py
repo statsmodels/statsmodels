@@ -32,7 +32,7 @@ class R_Results(object):
         self.coef = getattr(lme_r_results, "coef" + bname)
         self.vcov_r = getattr(lme_r_results, "vcov" + bname)
         self.cov_re_r = getattr(lme_r_results, "cov_re" + bname)
-        self.sig2_r = getattr(lme_r_results, "sig2" + bname)
+        self.scale_r = getattr(lme_r_results, "scale" + bname)
         self.loglike = getattr(lme_r_results, "loglike" + bname)
 
         if hasattr(lme_r_results, "ranef_mean" + bname):
@@ -82,7 +82,7 @@ class TestMixedLM(object):
 
                     cov_pen = penalties.PSD(cov_pen_wt)
 
-                    np.random.seed(355890504)
+                    np.random.seed(3558)
                     exog_fe = np.random.normal(size=(n*m, p))
                     exog_re = np.random.normal(size=(n*m, pr))
                     endog = exog_fe.sum(1) + np.random.normal(size=n*m)
@@ -117,10 +117,9 @@ class TestMixedLM(object):
                         assert_almost_equal(gr / ngr, np.ones(len(gr)),
                                             decimal=3)
 
-
     def test_default_re(self):
 
-        np.random.seed(323590805)
+        np.random.seed(3235)
         exog = np.random.normal(size=(300,4))
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
@@ -129,19 +128,29 @@ class TestMixedLM(object):
         mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
         assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
 
-
     def test_EM(self):
 
-        np.random.seed(323590805)
+        np.random.seed(3298)
         exog = np.random.normal(size=(300,4))
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
         endog = exog.sum(1) + g_errors + np.random.normal(size=300)
-        mdf1 = MixedLM(endog, exog, groups).fit()
+        mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
+
+    def test_profile(self):
+
+        np.random.seed(9814)
+        exog = np.random.normal(size=(300,4))
+        groups = np.kron(np.arange(100), [1,1,1])
+        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
+        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
+        mdf1.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
+                        num_high=1)
 
     def test_formulas(self):
 
-        np.random.seed(24109403)
+        np.random.seed(2410)
         exog = np.random.normal(size=(300,4))
         exog_re = np.random.normal(size=300)
         groups = np.kron(np.arange(100), [1,1,1])
@@ -149,32 +158,31 @@ class TestMixedLM(object):
                                      [1,1,1])
         endog = exog.sum(1) + g_errors + np.random.normal(size=300)
 
-        mdf1 = MixedLM(endog, exog, groups, exog_re).fit()
+        mod1 = MixedLM(endog, exog, groups, exog_re)
+        rslt1 = mod1.fit()
 
         df = pd.DataFrame({"endog": endog})
         for k in range(exog.shape[1]):
             df["exog%d" % k] = exog[:,k]
         df["exog_re"] = exog_re
-        md2 = MixedLM.from_formula(
-            "endog ~ 0 + exog0 + exog1 + exog2 + exog3",
-            groups=groups, data=df)
-        md2.set_random("0 + exog_re", data=df)
-        mdf2 = md2.fit()
+        fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
+        re_fml = "0 + exog_re"
+        mod2 = MixedLM.from_formula(fml, df, re_formula=re_fml,
+                                    groups=groups)
+        rslt2 = mod2.fit()
+        assert_almost_equal(rslt1.params, rslt2.params)
 
-        assert_almost_equal(mdf1.params, mdf2.params)
-
-        # Check that it runs when the dimension of the random effects
-        # changes following set_random.
-        md2 = MixedLM.from_formula(
-            "endog ~ 0 + exog0 + exog1 + exog2 + exog3",
-            groups=groups, data=df)
-        md2.set_random("exog_re", data=df)
-        mdf2 = md2.fit()
-
+        # Check default variance structure
+        exog_re = np.ones(len(endog), dtype=np.float64)
+        mod3 = MixedLM(endog, exog, groups, exog_re)
+        rslt3 = mod3.fit()
+        mod4 = MixedLM.from_formula(fml, df, groups=groups)
+        rslt4 = mod4.fit()
+        assert_almost_equal(rslt3.params, rslt4.params)
 
     def test_regularized(self):
 
-        np.random.seed(3453908)
+        np.random.seed(3453)
         exog = np.random.normal(size=(400,5))
         groups = np.kron(np.arange(100), np.ones(4))
         expected_endog = exog[:,0] - exog[:,2]
@@ -220,12 +228,6 @@ class TestMixedLM(object):
 
         rslt = R_Results(meth, irfs, ds_ix)
 
-        # Variance component MLE ~ 0 may require manual tweaking of
-        # algorithm parameters, so exclude from tests for now.
-        if np.min(np.diag(rslt.cov_re_r)) < 0.01:
-            print("Skipping %d since solution is on boundary." % ds_ix)
-            return
-
         # Fit the model
         md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
                      rslt.exog_re)
@@ -239,7 +241,7 @@ class TestMixedLM(object):
 
         assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
         assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
-        assert_almost_equal(mdf.sig2, rslt.sig2_r, decimal=4)
+        assert_almost_equal(mdf.scale, rslt.scale_r, decimal=4)
 
         pf = rslt.exog_fe.shape[1]
         assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:pf,0:pf],
