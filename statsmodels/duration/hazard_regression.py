@@ -22,7 +22,7 @@ http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
 
-class PH_SurvivalTime(object):
+class PHSurvivalTime(object):
 
     def __init__(self, time, status, exog, strata=None, entry=None,
                  offset=None):
@@ -268,7 +268,7 @@ class PHReg(model.LikelihoodModel):
         if self.offset is not None:
             self.offset = np.asarray(self.offset)
 
-        self.surv = PH_SurvivalTime(self.endog, self.status,
+        self.surv = PHSurvivalTime(self.endog, self.status,
                                     self.exog, self.strata,
                                     self.entry, self.offset)
 
