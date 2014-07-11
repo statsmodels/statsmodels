@@ -129,9 +129,7 @@ class ImputedData(object):
         """
         
         ix = self.columns[col].ix_miss
-        if ix[0] is False:
-            pass
-        else:
+        if len(ix) > 0:
             self.data[col].iloc[ix] = vals
 
     def get_data_from_formula(self, formula):
@@ -607,8 +605,9 @@ class MICE(object):
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
-        df_approx = (float(self.num_ds) - 1.) * np.square(1. + params / (1. + 1. / float(self.num_ds) * np.diag(between_g)))
-        gamma = (1. + 1. / float(self.num_ds)) * np.diag(between_g) / np.diag(cov_params)
+        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) / float(len(params))
+        df_approx = (float(self.num_ds) - 1.) * np.square(1 / gamma)
+        #np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
         df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
         self.df = 1. / (1. / df_approx + 1. / df_obs)
         rslt = MICEResults(self, params, cov_params / scale)
@@ -684,10 +683,7 @@ class MissingDataInfo(object):
     def __init__(self, data):
         null = pd.isnull(data)
         self.ix_obs = np.flatnonzero(~null)
-        if np.flatnonzero(null).size is 0:
-            self.ix_miss = [False]
-        else:
-            self.ix_miss = np.flatnonzero(null)
+        self.ix_miss = np.flatnonzero(null)
         if len(self.ix_obs) == 0:
             raise ValueError("Variable to be imputed has no observed values")
             
