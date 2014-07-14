@@ -1130,7 +1130,7 @@ cdef class {{prefix}}KalmanFilter(object):
     )
 
     # ### Define some constants
-    cdef int nendog, nstates, nposdef, nendog2, nstates2, nendogstates, ldwork
+    cdef readonly int nendog, nstates, nposdef, nendog2, nstates2, nendogstates, ldwork
     
     def __init__(self,
                  {{prefix}}Statespace model,
