@@ -605,11 +605,14 @@ class MICE(object):
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
-        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) / float(len(params))
+#        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) / float(len(params))
+        gamma = (1. + 1. / float(self.num_ds)) * np.trace(between_g) / np.trace(cov_params)
+                
         df_approx = (float(self.num_ds) - 1.) * np.square(1 / gamma)
         #np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
         df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
         self.df = 1. / (1. / df_approx + 1. / df_obs)
+        self.fmi = gamma
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
@@ -652,6 +655,7 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         info["Dependent variable:"] = self.model.endog_names
         info["Sample size:"] = "%d" % self.model.mod_list[0].model.exog.shape[0]
         info["Df:"] = self.model.df
+        info["FMI:"] = self.model.fmi
 
         smry.add_dict(info, align='l', float_format=float_format)
 

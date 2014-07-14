@@ -750,7 +750,10 @@ class CountModel(DiscreteModel):
         """
         if exog is None:
             exog = self.model.exog
+#        print params
+#        print exog.iloc[66]
         mean = self.predict(params=params, exog=exog)
+#        print mean[66]
         rv = stats.poisson(mean)
         return rv
 
