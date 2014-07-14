@@ -684,7 +684,7 @@ cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter
 
     # Take the inverse of the forecast error covariance matrix
     if not kfilter.converged:
-        determinant = {{combined_prefix}}abs(kfilter._forecast_error_cov[0])
+        determinant = kfilter._forecast_error_cov[0]
     scalar = 1.0 / kfilter._forecast_error_cov[0]
     kfilter._tmp2[0] = scalar * kfilter._forecast_error[0]
     {{prefix}}copy(&kfilter.nendogstates, kfilter._design, &inc, kfilter._tmp3, &inc)
