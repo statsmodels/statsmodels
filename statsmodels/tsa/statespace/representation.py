@@ -459,7 +459,7 @@ class Representation(object):
 
         # Enforce that the state covariance matrix is nstates by nstates
         self._validate_matrix_shape(
-            'state covariance', state_cov.shape, self.nstates, self.nstates,
+            'state covariance', state_cov.shape, self.nposdef, self.nposdef,
             self.nobs
         )
 
