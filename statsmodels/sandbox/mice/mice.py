@@ -70,6 +70,7 @@ class ImputedData(object):
     def __init__(self, data):
         # may not need to make copies
         self.data = pd.DataFrame(data)
+        self.data = self.data.dropna(how='all')
         self.columns = {}
         for c in self.data.columns:
             self.columns[c] = MissingDataInfo(self.data[c])
