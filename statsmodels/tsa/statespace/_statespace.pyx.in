@@ -236,6 +236,22 @@ cdef class {{prefix}}Statespace(object):
     # Temporary arrays
     cdef {{cython_type}} [::1,:] tmp
 
+    # Pointers  
+    # *Note*: These are not yet implemented to do anything in this base class
+    # but are used in subclasses. Necessary to have them here due to problems
+    # with redeclaring the model attribute of KalmanFilter children classes
+    cdef {{cython_type}} * _obs
+    cdef {{cython_type}} * _design
+    cdef {{cython_type}} * _obs_intercept
+    cdef {{cython_type}} * _obs_cov
+    cdef {{cython_type}} * _transition
+    cdef {{cython_type}} * _state_intercept
+    cdef {{cython_type}} * _selection
+    cdef {{cython_type}} * _state_cov
+    cdef {{cython_type}} * _selected_state_cov
+    cdef {{cython_type}} * _initial_state
+    cdef {{cython_type}} * _initial_state_cov
+
     # ### Initialize state space model
     # *Note*: The initial state and state covariance matrix must be provided.
     def __init__(self,
@@ -1273,7 +1289,9 @@ cdef class {{prefix}}KalmanFilter(object):
         self.selected_obs_cov = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
 
         # Initialize time and convergence status
-        self.seek(0)
+        self.t = 0
+        self.converged = 0
+        self.period_converged = 0
 
     cpdef seek(self, unsigned int t, int reset_convergence = True):
         """
@@ -1314,7 +1332,8 @@ cdef class {{prefix}}KalmanFilter(object):
             raise StopIteration
 
         # Initialize pointers to current-iteration objects
-        self.initialize_object_pointers()
+        self.initialize_statespace_object_pointers()
+        self.initialize_filter_object_pointers()
 
         # Initialize pointers to appropriate Kalman filtering functions
         self.initialize_function_pointers()
@@ -1322,7 +1341,8 @@ cdef class {{prefix}}KalmanFilter(object):
         # Convert base arrays into "selected" arrays  
         # - State covariance matrix? $Q_t \to R_t Q_t R_t`$
         # - Missing values: $y_t \to W_t y_t$, $Z_t \to W_t Z_t$, $H_t \to W_t H_t$
-        self.select_arrays()
+        self.select_state_cov()
+        self.select_missing()
 
         # Post-convergence: copy previous iteration arrays
         self.post_convergence()
@@ -1364,10 +1384,9 @@ cdef class {{prefix}}KalmanFilter(object):
         # Advance the time
         self.t += 1
 
-    cdef void initialize_object_pointers(self) except *:
+    cdef void initialize_statespace_object_pointers(self) except *:
         cdef:
             int t = self.t
-            int inc = 1
         # Indices for possibly time-varying arrays
         cdef:
             int design_t = 0
@@ -1377,17 +1396,6 @@ cdef class {{prefix}}KalmanFilter(object):
             int state_intercept_t = 0
             int selection_t = 0
             int state_cov_t = 0
-        # Indices for arrays that may or may not be stored completely
-        cdef:
-            int forecast_t = t
-            int filtered_t = t
-            int predicted_t = t
-        if self.conserve_memory & MEMORY_NO_FORECAST > 0:
-            forecast_t = 1
-        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
-            filtered_t = 1
-        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
-            predicted_t = 1
 
         # Get indices for possibly time-varying arrays
         if not self.model.time_invariant:
@@ -1414,6 +1422,22 @@ cdef class {{prefix}}KalmanFilter(object):
             raise RuntimeError("Statespace model not initialized.")
         self._initial_state = &self.model.initial_state[0]
         self._initial_state_cov = &self.model.initial_state_cov[0,0]
+
+    cdef void initialize_filter_object_pointers(self):
+        cdef:
+            int t = self.t
+            int inc = 1
+        # Indices for arrays that may or may not be stored completely
+        cdef:
+            int forecast_t = t
+            int filtered_t = t
+            int predicted_t = t
+        if self.conserve_memory & MEMORY_NO_FORECAST > 0:
+            forecast_t = 1
+        if self.conserve_memory & MEMORY_NO_FILTERED > 0:
+            filtered_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
+            predicted_t = 1
 
         # Initialize object-level pointers to input arrays
         self._input_state = &self.predicted_state[0, predicted_t]
@@ -1462,19 +1486,8 @@ cdef class {{prefix}}KalmanFilter(object):
         else:
             raise NotImplementedError("Invalid filtering method")
 
-    cdef void select_arrays(self) except *:
-        cdef:
-            int i, j, k, l
-            int inc = 1
-            int design_t = 0
-            int obs_cov_t = 0
-            int selected_state_cov_t = 0
-        cdef:
-            {{cython_type}} alpha = 1.0
-            {{cython_type}} beta = 0.0
-        cdef:
-            np.npy_intp dim1[1]
-            np.npy_intp dim2[2]
+    cdef void select_state_cov(self):
+        cdef int selected_state_cov_t = 0
 
         # ### Get selected state covariance matrix
         if self.t == 0 or self.model.selected_state_cov.shape[2] > 1:
@@ -1489,6 +1502,7 @@ cdef class {{prefix}}KalmanFilter(object):
         else:
             self._selected_state_cov = &self.model.selected_state_cov[0, 0, 0]
 
+    cdef void select_missing(self):
         # ### Perform missing selections
         # In Durbin and Koopman (2012), these are represented as matrix
         # multiplications, i.e. $Z_t^* = W_t Z_t$ where $W_t$ is a row
@@ -1505,80 +1519,92 @@ cdef class {{prefix}}KalmanFilter(object):
         # forecasting), we actually set don't change the dimension, but we set
         # the design matrix to the zeros array.
         if self.model.nmissing[self.t] == self.model.nendog:
-            # Mark as not converged so that it does not inappropriately
-            # copy over steady state matrices
-            self.converged = 0
-
-            # Dimensions are the same as usual (have to reset in case previous
-            # obs was partially missing case)
-            self.nendog = self.model.nendog
-            self.nendog2 = self.nendog**2
-            self.nendogstates = self.nendog * self.nstates
-
-            # Design matrix is set to zeros
-            for i in range(self.model.nstates):
-                for j in range(self.model.nendog):
-                    self.selected_design[j + i*self.model.nendog] = 0.0
-            self._design = &self.selected_design[0]
-
-            # Change the forecasting step to set the forecast at the intercept
-            # $d_t$, so that the forecast error is $v_t = y_t - d_t$.
-            self.forecasting = {{prefix}}forecast_missing_conventional
-
-            # Change the updating step to just copy $a_{t|t} = a_t$ and
-            # $P_{t|t} = P_t$
-            self.updating = {{prefix}}updating_missing_conventional
-
-            # Change the inversion step to inverse to nans.
-            self.inversion = {{prefix}}inverse_missing_conventional
-
-            # Change the loglikelihood calculation to give zero.
-            self.calculate_loglikelihood = {{prefix}}loglikelihood_missing_conventional
-
-            # The prediction step is the same as the conventional Kalman
-            # filter
-
+            self._select_missing_entire_obs()
         elif self.model.nmissing[self.t] > 0:
-            # Mark as not converged so that it does not inappropriately
-            # copy over steady state matrices
-            self.converged = 0
-
-            # Set dimensions
-            self.nendog = self.model.nendog - self.model.nmissing[self.t]
-            self.nendog2 = self.nendog**2
-            self.nendogstates = self.nendog * self.nstates
-
-            if self.model.design.shape[2] > 1: design_t = self.t
-            if self.model.obs_cov.shape[2] > 1: obs_cov_t = self.t
-
-            k = 0
-            for i in range(self.model.nendog):
-                if not self.model.missing[i, self.t]:
-
-                    self.selected_obs[k] = self.model.obs[i, self.t]
-
-                    # i is rows
-                    # k is rows
-                    {{prefix}}copy(&self.model.nstates,
-                          &self.model.design[i, 0, design_t], &self.model.nendog,
-                          &self.selected_design[k], &self.nendog)
-
-                    # i, k is columns
-                    # j, l is rows
-                    l = 0
-                    for j in range(self.model.nendog):
-                        if not self.model.missing[j, self.t]:
-                            self.selected_obs_cov[l + k*self.nendog] = self.model.obs_cov[j, i, obs_cov_t]
-                            l += 1
-                    k += 1
-            self._obs = &self.selected_obs[0]
-            self._design = &self.selected_design[0]
-            self._obs_cov = &self.selected_obs_cov[0]
+            self._select_missing_partial_obs()
         else:
             # Reset dimensions
             self.nendog = self.model.nendog
             self.nendog2 = self.nendog**2
             self.nendogstates = self.nendog * self.nstates
+
+    cdef void _select_missing_entire_obs(self):
+        cdef:
+            int i, j
+        # Mark as not converged so that it does not inappropriately
+        # copy over steady state matrices
+        self.converged = 0
+
+        # Dimensions are the same as usual (have to reset in case previous
+        # obs was partially missing case)
+        self.nendog = self.model.nendog
+        self.nendog2 = self.nendog**2
+        self.nendogstates = self.nendog * self.nstates
+
+        # Design matrix is set to zeros
+        for i in range(self.model.nstates):
+            for j in range(self.model.nendog):
+                self.selected_design[j + i*self.model.nendog] = 0.0
+        self._design = &self.selected_design[0]
+
+        # Change the forecasting step to set the forecast at the intercept
+        # $d_t$, so that the forecast error is $v_t = y_t - d_t$.
+        self.forecasting = {{prefix}}forecast_missing_conventional
+
+        # Change the updating step to just copy $a_{t|t} = a_t$ and
+        # $P_{t|t} = P_t$
+        self.updating = {{prefix}}updating_missing_conventional
+
+        # Change the inversion step to inverse to nans.
+        self.inversion = {{prefix}}inverse_missing_conventional
+
+        # Change the loglikelihood calculation to give zero.
+        self.calculate_loglikelihood = {{prefix}}loglikelihood_missing_conventional
+
+        # The prediction step is the same as the conventional Kalman
+        # filter
+
+    cdef void _select_missing_partial_obs(self):
+        cdef:
+            int i, j, k, l
+            int inc = 1
+            int design_t = 0
+            int obs_cov_t = 0
+        # Mark as not converged so that it does not inappropriately
+        # copy over steady state matrices
+        self.converged = 0
+
+        # Set dimensions
+        self.nendog = self.model.nendog - self.model.nmissing[self.t]
+        self.nendog2 = self.nendog**2
+        self.nendogstates = self.nendog * self.nstates
+
+        if self.model.design.shape[2] > 1: design_t = self.t
+        if self.model.obs_cov.shape[2] > 1: obs_cov_t = self.t
+
+        k = 0
+        for i in range(self.model.nendog):
+            if not self.model.missing[i, self.t]:
+
+                self.selected_obs[k] = self.model.obs[i, self.t]
+
+                # i is rows
+                # k is rows
+                {{prefix}}copy(&self.model.nstates,
+                      &self.model.design[i, 0, design_t], &self.model.nendog,
+                      &self.selected_design[k], &self.nendog)
+
+                # i, k is columns
+                # j, l is rows
+                l = 0
+                for j in range(self.model.nendog):
+                    if not self.model.missing[j, self.t]:
+                        self.selected_obs_cov[l + k*self.nendog] = self.model.obs_cov[j, i, obs_cov_t]
+                        l += 1
+                k += 1
+        self._obs = &self.selected_obs[0]
+        self._design = &self.selected_design[0]
+        self._obs_cov = &self.selected_obs_cov[0]
 
     cdef void post_convergence(self):
         # TODO this should probably be defined separately for each Kalman filter type - e.g. `post_convergence_conventional`, etc.
@@ -1637,7 +1663,8 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
             predicted_t = 1
 
-        if self.time_invariant and self.model.nmissing[self.t] == 0 and not self.converged:
+        #  and self.model.nmissing[self.t] == 0
+        if self.time_invariant and not self.converged:
             # #### Check for steady-state convergence
             # 
             # `tmp0` array used here, dimension $(m \times m)$  
