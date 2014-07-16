@@ -67,19 +67,25 @@ class ImputedData(object):
         Stores indices of missing data.
 
     """
-    def __init__(self, data):
+    def __init__(self, data, go=True, method="pmm"):
         # may not need to make copies
         self.data = pd.DataFrame(data)
         self.data = self.data.dropna(how='all')
         self.columns = {}
+        self.implist = []        
         for c in self.data.columns:
             self.columns[c] = MissingDataInfo(self.data[c])
+            if go:
+                self.new_imputer(c, method=method)
+#                model_class = sm.OLS
+#                formula = c + " ~ " + " + ".join(
+#                    [x for x in self.data.columns if x != c])
+#                self.implist.append(Imputer(formula, model_class, self, method="gaussian", k_pmm=1, scale_method="fix"))                
         self.data = self.data.fillna(self.data.mean())
-        self.implist = []
 
     def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, model_class=None,
                     init_args={}, fit_args={}, scale_method="fix",
-                    scale_value=None):
+                    scale_value=None, transform=None, inv_transform=None):
         """
         Create Imputer instance from our ImputedData instance
 
@@ -112,7 +118,7 @@ class ImputedData(object):
                             [x for x in self.data.columns if x != endog_name])
         self.implist.append(Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
                        fit_args=fit_args, scale_method=scale_method,
-                       scale_value=scale_value))
+                       scale_value=scale_value, transform=transform, inv_transform=inv_transform))
 #        return Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
 #                       fit_args=fit_args, scale_method=scale_method,
 #                       scale_value=scale_value)
@@ -203,7 +209,8 @@ class Imputer(object):
     """
     def __init__(self, formula, model_class, data,
             method="gaussian", k_pmm=1, init_args={}, fit_args={},
-                 return_class=None, scale_method="fix", scale_value=None):
+                 return_class=None, scale_method="fix", scale_value=None, 
+                 transform=None, inv_transform=None):
         self.data = data
         self.formula = formula
         self.model_class = model_class
@@ -216,6 +223,8 @@ class Imputer(object):
         self.scale_value = scale_value
         self.method = method
         self.k_pmm = k_pmm
+        self.transform = transform
+        self.inv_transform = inv_transform
 
     def perturb_params(self, mdf):
         """
@@ -267,6 +276,8 @@ class Imputer(object):
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
                                                                 self.formula)
+        if self.transform is not None and self.inv_transform is not None:
+            endog_obs = self.transform(endog_obs)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
@@ -274,6 +285,8 @@ class Imputer(object):
                                      model_class=self.return_class,
                                      scale=scale_per * mdf.scale)
         new_endog = new_rv.rvs(size=len(exog_miss))
+        if self.transform is not None and self.inv_transform is not None:
+            new_endog = self.inv_transform(new_endog)
         self.data.store_changes(self.endog_name, new_endog)
 
     def impute_pmm(self, pmm_neighbors=1):
@@ -293,6 +306,8 @@ class Imputer(object):
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
                                                                 self.formula)
+        if self.transform is not None and self.inv_transform is not None:
+            endog_obs = self.transform(endog_obs)                                                                
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
@@ -361,6 +376,8 @@ class Imputer(object):
 #        imputed_miss = np.array(oendog.iloc[ix,:])
         ix_list = np.squeeze(ix_list)
         imputed_miss = np.array(oendog.iloc[ix_list,:])
+        if self.transform is not None and self.inv_transform is not None:
+            imputed_miss = self.inv_transform(imputed_miss)        
         self.data.store_changes(self.endog_name, imputed_miss)
 
     def impute_bootstrap(self):
@@ -661,6 +678,10 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         smry.add_dict(info, align='l', float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
+        param['P>|t|'] = stats.t.sf(np.asarray(param['t']), self.model.df)
+        ci = np.asarray(stats.t.interval(1-alpha, self.model.df, loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
+        param['[' + str(alpha/2)] = ci[0]
+        param[str(1-alpha/2) + ']'] = ci[1]        
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
 
