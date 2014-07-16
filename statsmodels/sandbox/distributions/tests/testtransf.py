@@ -24,7 +24,8 @@ from statsmodels.sandbox.distributions.extras import (
     lognormalg, squarenormalg, absnormalg, negsquarenormalg, squaretg)
 
 
-#some patches to scipy.stats.distributions so tests work and pass
+# some patches to scipy.stats.distributions so tests work and pass
+# this should be necessary only for older scipy
 
 #patch frozen distributions with a name
 stats.distributions.rv_frozen.name = property(lambda self: self.dist.name)
@@ -45,7 +46,8 @@ def f_stats(self, dfn, dfd):
     g2 = where(v2 > 8, g2, nan)
     return mu, mu2, g1, g2
 
-stats.distributions.f_gen._stats = f_stats
+#stats.distributions.f_gen._stats = f_stats
+stats.f.__class__._stats = f_stats
 
 #correct kurtosis by subtracting 3 (Fisher)
 #after this it matches halfnorm for arg close to zero
@@ -69,7 +71,8 @@ def foldnorm_stats(self, c):
     g2 -= 3.
     return mu, mu2, g1, g2
 
-stats.distributions.foldnorm_gen._stats = foldnorm_stats
+#stats.distributions.foldnorm_gen._stats = foldnorm_stats
+stats.foldnorm.__class__._stats = foldnorm_stats
 
 
 #-----------------------------
