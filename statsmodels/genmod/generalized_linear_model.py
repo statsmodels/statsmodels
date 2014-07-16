@@ -1046,7 +1046,7 @@ class GLMResults(base.LikelihoodModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,  # [],
                              yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=True)
+                              use_t=self.use_t)
 
         if hasattr(self, 'constraints'):
             smry.add_extra_txt(['Model has been estimated subject to linear '
