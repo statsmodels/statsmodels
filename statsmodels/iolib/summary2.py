@@ -133,7 +133,7 @@ class Summary(object):
             Name of the dependent variable (optional)
         '''
 
-        param = summary_params(results, alpha=alpha)
+        param = summary_params(results, alpha=alpha, use_t=results.use_t)
         info = summary_model(results)
         if xname is not None:
             param.index = xname
