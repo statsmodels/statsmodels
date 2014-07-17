@@ -33,7 +33,7 @@ A Gelman et al.: "Multiple Imputation with Diagnostics (mi) in R: Opening
 Windows into the Black Box", Journal of Statistical Software, 2009.
 
 """
-
+#TODO: Add reference http://biomet.oxfordjournals.org/content/86/4/948.full.pdf
 import operator
 import pandas as pd
 import numpy as np
@@ -455,18 +455,18 @@ class AnalysisChain(object):
     """
 
     def __init__(self, imputer_chain, analysis_formula, analysis_class,
-                 skipnum=10, burnin=5, save=False, init_args={}, fit_args={}):
+                 skipnum=10, save=False, init_args={}, fit_args={}):
         self.imputer_chain = imputer_chain
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class
         self.init_args = init_args
         self.fit_args = fit_args
         self.skipnum = skipnum
-        self.burnin = burnin
+#        self.burnin = burnin
         self.save = save
         self.iter = 0
-        for b in range(self.burnin):
-            self.imputer_chain.next()
+#        for b in range(self.burnin):
+#            self.imputer_chain.next()
 
     def __iter__(self):
         return self
@@ -552,7 +552,7 @@ class MICE(object):
         self.fit_args = fit_args
         self.N = len(impdata.implist[0].data.data)
 
-    def run(self, num_ds=20, skipnum=10, burnin=5, save=False):
+    def run(self, num_ds=20, skipnum=10, burnin=30, save=False):
         """
         Generates analysis model results.
 
@@ -582,14 +582,18 @@ class MICE(object):
         md_list : list
             List of length num_ds of fitted analysis models.
         """
+       
         self.num_ds = num_ds
         imp_chain = ImputerChain(self.imputer_list)
+        for b in range(burnin):
+            imp_chain.next()         
         analysis_chain = AnalysisChain(imp_chain, self.analysis_formula,
-                                       self.analysis_class, skipnum, burnin,
+                                       self.analysis_class, skipnum,
                                        save, self.init_args, self.fit_args)
         md_list = []
         for current_iter in range(num_ds):
-            model = analysis_chain.next()
+            achain = copy.deepcopy(analysis_chain)
+            model = achain.next()
             md_list.append(model)
             if not hasattr(self, "exog_names"):
                 self.exog_names = model.model.exog_names
@@ -611,19 +615,19 @@ class MICE(object):
         params_list = []
         cov_list = []
         scale_list = []
-        full_cov = []
+#        full_cov = []
         for md in self.mod_list:
             params_list.append(md.params)
-            cov_list.append(np.array(md.normalized_cov_params))
+            cov_list.append(np.array(md.cov_params()))
             scale_list.append(md.scale)
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
-        full_cov = np.asarray(cov_list) * np.asarray(scale_list)[:, np.newaxis, np.newaxis]
-        within_g = np.mean(full_cov, axis=0)
+#        full_cov = np.asarray(cov_list) * np.asarray(scale_list)[:, np.newaxis, np.newaxis]
+        within_g = np.mean(cov_list, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
-#        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) / float(len(params))
+#        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) 
         gamma = (1. + 1. / float(self.num_ds)) * np.trace(between_g) / np.trace(cov_params)
                 
         df_approx = (float(self.num_ds) - 1.) * np.square(1 / gamma)
