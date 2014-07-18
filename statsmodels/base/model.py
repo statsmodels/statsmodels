@@ -853,11 +853,16 @@ class LikelihoodModelResults(Results):
             allvecs : list
                 Results at each iteration.
         """
+
+    # by default we use normal distribution
+    # can be overwritten by instances or subclasses
+    use_t = False
+
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
-        self.use_t = False  # by default we use normal distribution
+
 
     def normalized_cov_params(self):
         raise NotImplementedError
