@@ -105,7 +105,7 @@ class ModelData(object):
                     value = self.exog[:, idx].mean()
                     if value == 1:
                         self.k_constant = 1
-                        self.const_idx = const_idx[idx]
+                        self.const_idx = idx
                         break
                     values.append(value)
                 else:
