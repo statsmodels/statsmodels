@@ -94,7 +94,6 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
-        self.k_constant = float(self._has_constant())
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -137,24 +136,6 @@ class RegressionModel(base.LikelihoodModel):
     def df_resid(self, value):
         self._df_resid = value
 
-    def _has_constant(self):
-        """
-        Determines whether a model contains a constant or implicit constant,
-        for example a non-unity constant or indicator variables which sum
-        to a constant value.
-
-        Returns
-        -------
-        has_constant: bool
-            True if the model has a constant or implicit constant.
-        """
-        return self.k_constant
-        # Easy check, most common case
-        if np.any(np.all(self.exog==1.0,axis=0)):
-            return True
-        # Compute rank of augmented matrix
-        augmented_exog = add_constant(self.exog)
-        return np_matrix_rank(augmented_exog) == np_matrix_rank(self.exog)
 
     def whiten(self, X):
         raise NotImplementedError("Subclasses should implement.")
