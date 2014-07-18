@@ -357,6 +357,14 @@ class MixedLM(base.LikelihoodModel):
         the DataFrame before calling this method.
         """
 
+        if "groups" not in kwargs.keys():
+            raise AttributeError("'groups' is a required keyword argument in MixedLM.from_formula")
+
+        # If `groups` is a variable name, retrieve the data for the
+        # groups variable.
+        if type(kwargs["groups"]) == str:
+            kwargs["groups"] = np.asarray(data[kwargs["groups"]])
+
         if re_formula is not None:
             exog_re = patsy.dmatrix(re_formula, data)
             exog_re_names = exog_re.design_info.column_names
