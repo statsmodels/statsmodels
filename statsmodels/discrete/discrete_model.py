@@ -2394,7 +2394,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                           yname=yname, xname=xname, title=title)
         # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
-                             use_t=False)
+                             use_t=self.use_t)
 
         if hasattr(self, 'constraints'):
             smry.add_extra_txt(['Model has been estimated subject to linear '

@@ -85,6 +85,12 @@ class CheckGenericMixin(object):
                                                    for k in range(k_vars)]
         assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
+        # label for pvalues in summary
+        string_use_t = 'P>|z|' if use_t is False else 'P>|t|'
+        summ = str(res.summary())
+        assert_(string_use_t in summ)
+        summ = str(res.summary2())
+        assert_(string_use_t in summ)
 
 
     # TODO The following is not (yet) guaranteed across models

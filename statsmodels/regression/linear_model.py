@@ -1106,24 +1106,9 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
         The confidence interval is based on Student's t-distribution.
         """
-        bse = self.bse
-        params = self.params
-        # TODO: should be obsolete if super uses use_t
-        if self.use_t:
-            dist = stats.t
-            q = dist.ppf(1 - alpha / 2, self.df_resid)
-        else:
-            dist = stats.norm
-            q = dist.ppf(1 - alpha / 2)
-
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
-        return np.asarray(lzip(lower, upper))
+        # keep method for docstring for now
+        ci = super(RegressionResults, self).conf_int(alpha=alpha, cols=cols)
+        return ci
 
 
     @cache_readonly
@@ -1234,13 +1219,6 @@ class RegressionResults(base.LikelihoodModelResults):
     def bse(self):
         return np.sqrt(np.diag(self.cov_params()))
 
-    @cache_readonly
-    def pvalues(self):
-        # TODO: should be obsolete if super uses use_t
-        if self.use_t:
-            return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
-        else:
-            return stats.norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):

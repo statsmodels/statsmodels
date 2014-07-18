@@ -478,7 +478,6 @@ class GenericLikelihoodModel(LikelihoodModel):
             self.score = score
         if not hessian is None:
             self.hessian = hessian
-        self.confint_dist = stats.norm
 
         self.__dict__.update(kwds)
 
@@ -854,11 +853,16 @@ class LikelihoodModelResults(Results):
             allvecs : list
                 Results at each iteration.
         """
+
+    # by default we use normal distribution
+    # can be overwritten by instances or subclasses
+    use_t = False
+
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
-        self.use_t = False  # by default we use normal distribution
+
 
     def normalized_cov_params(self):
         raise NotImplementedError
@@ -880,7 +884,11 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def pvalues(self):
-        return stats.norm.sf(np.abs(self.tvalues)) * 2
+        if self.use_t:
+            return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+        else:
+            return stats.norm.sf(np.abs(self.tvalues))*2
+
 
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
             other=None):
@@ -1379,8 +1387,13 @@ class LikelihoodModelResults(Results):
         method.
         """
         bse = self.bse
-        dist = stats.norm
-        q = dist.ppf(1 - alpha / 2)
+
+        if self.use_t:
+            dist = stats.t
+            q = dist.ppf(1 - alpha / 2, self.df_resid)
+        else:
+            dist = stats.norm
+            q = dist.ppf(1 - alpha / 2)
 
         if cols is None:
             lower = self.params - q * bse
