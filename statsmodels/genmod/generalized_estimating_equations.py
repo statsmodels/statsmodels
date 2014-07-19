@@ -980,7 +980,6 @@ class GEE(base.Model):
                                    np.linalg.solve(amat_11, amat_12)))
 
         from scipy.stats.distributions import chi2
-        print score, score2, score_cov, scale
         score_statistic = np.dot(score2,
                                  np.linalg.solve(score_cov, score2))
         score_df = len(score2)
