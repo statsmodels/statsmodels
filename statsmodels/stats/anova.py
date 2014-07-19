@@ -353,9 +353,7 @@ def anova_lm(*args, **kwargs):
 
     table["ssr"] = lmap(getattr, args, ["ssr"]*n_models)
     table["df_resid"] = lmap(getattr, args, ["df_resid"]*n_models)
-    table.ix[1:]["df_diff"] = np.diff(lmap(getattr, args, ["df_model"]*n_models))
-    # issue #1213 if there are problems with constant, but examples are correct
-    #table.ix[1:]["df_diff"] = -np.diff(lmap(getattr, args, ["df_resid"]*n_models))
+    table.ix[1:]["df_diff"] = -np.diff(table["df_resid"].values)
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
