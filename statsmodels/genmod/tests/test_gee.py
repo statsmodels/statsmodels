@@ -316,13 +316,6 @@ class TestGEE(object):
         endog += 3*np.random.normal(size=n)
         group = np.kron(np.arange(n/4), np.ones(4))
 
-        # Unsconstrained fit
-        family = Gaussian()
-        va = Independence()
-        mod0 = GEE(endog, exog, group, family=family,
-                  cov_struct=va)
-        rslt0 = mod0.fit()
-
         # Test under the null.
         L = np.array([[1., -1, 0, 0]])
         R = np.array([0.,])
