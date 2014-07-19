@@ -961,7 +961,7 @@ class GEE(base.Model):
         _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
         cmat = cmat / scale**2
-        score2 = score[len(mean_params):] * scale
+        score2 = score[red_p:] / scale
 
         amat = np.linalg.inv(ncov1)
 
@@ -980,6 +980,7 @@ class GEE(base.Model):
                                    np.linalg.solve(amat_11, amat_12)))
 
         from scipy.stats.distributions import chi2
+        print score, score2, score_cov, scale
         score_statistic = np.dot(score2,
                                  np.linalg.solve(score_cov, score2))
         score_df = len(score2)

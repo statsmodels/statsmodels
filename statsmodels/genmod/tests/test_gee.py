@@ -306,6 +306,45 @@ class TestGEE(object):
         assert_almost_equal(endog - np.dot(exog, mdf.params),
                             mdf.resid)
 
+    def test_scoretest(self):
+        # Regression tests
+
+        np.random.seed(6432)
+        n = 200 # Must be divisible by 4
+        exog = np.random.normal(size=(n, 4))
+        endog = exog[:, 0] + exog[:, 1] + exog[:, 2]
+        endog += 3*np.random.normal(size=n)
+        group = np.kron(np.arange(n/4), np.ones(4))
+
+        # Unsconstrained fit
+        family = Gaussian()
+        va = Independence()
+        mod0 = GEE(endog, exog, group, family=family,
+                  cov_struct=va)
+        rslt0 = mod0.fit()
+
+        # Test under the null.
+        L = np.array([[1., -1, 0, 0]])
+        R = np.array([0.,])
+        family = Gaussian()
+        va = Independence()
+        mod1 = GEE(endog, exog, group, family=family,
+                  cov_struct=va, constraint=(L, R))
+        rslt1 = mod1.fit()
+        assert_almost_equal(mod1.score_test_results["statistic"],
+                            1.08126334)
+
+        # Test under the alternative.
+        L = np.array([[1., -1, 0, 0]])
+        R = np.array([1.0,])
+        family = Gaussian()
+        va = Independence()
+        mod2 = GEE(endog, exog, group, family=family,
+                   cov_struct=va, constraint=(L, R))
+        rslt2 = mod2.fit()
+        assert_almost_equal(mod2.score_test_results["statistic"],
+                            3.491110965)
+
 
 
     def test_linear(self):
