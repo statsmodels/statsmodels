@@ -28,13 +28,15 @@ poisdraws.mar[poisdraws.mar==99999]=NA
 
 write.csv(cbind(berndraws.mar,normdraws.mar,poisdraws.mar), "missingfull.csv", row.names=FALSE)
 
-require(mice)
+  require(mice)
+  
+  data = read.csv("missingfull.csv")
+  
+  imp = mice(data, m=20, method="pmm", maxit=20)
+  
+#  mod = glm(berndraws.mar ~ normdraws.mar + poisdraws.mar, data, family=binomial)
 
-data = read.csv("missingfull.csv")
+fit = with(data=imp,exp=glm(berndraws.mar ~ normdraws.mar + poisdraws.mar,family=binomial))
 
-imp = mice(data, m=20, method="pmm", maxit=20)
-
-mod = glm(berndraws.mar ~ normdraws.mar + poisdraws.mar, data, family=binomial)
-
-pooled = pool(with(imp, mod))
-print(summary(pooled))
+  pooled = pool(fit)
+  print(summary(pooled))

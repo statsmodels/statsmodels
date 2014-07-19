@@ -590,16 +590,15 @@ class MICE(object):
         analysis_chain = AnalysisChain(imp_chain, self.analysis_formula,
                                        self.analysis_class, skipnum,
                                        save, self.init_args, self.fit_args)
-        md_list = []
+        self.mod_list = []
         for current_iter in range(num_ds):
             achain = copy.deepcopy(analysis_chain)
             model = achain.next()
-            md_list.append(model)
+            self.mod_list.append(model)
             if not hasattr(self, "exog_names"):
                 self.exog_names = model.model.exog_names
                 self.endog_names = model.model.endog_names
             print current_iter
-        self.mod_list = md_list
 
     def combine(self):
         """
@@ -618,22 +617,22 @@ class MICE(object):
 #        full_cov = []
         for md in self.mod_list:
             params_list.append(md.params)
-            cov_list.append(np.array(md.cov_params()))
+            cov_list.append(np.asarray(md.normalized_cov_params))
             scale_list.append(md.scale)
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
-#        full_cov = np.asarray(cov_list) * np.asarray(scale_list)[:, np.newaxis, np.newaxis]
-        within_g = np.mean(cov_list, axis=0)
+        full_cov = np.asarray(cov_list) * np.asarray(scale_list)[:, np.newaxis, np.newaxis]
+        within_g = np.mean(full_cov, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
 #        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) 
-        gamma = (1. + 1. / float(self.num_ds)) * np.trace(between_g) / np.trace(cov_params)
+        gamma = (1. + 1. / float(self.num_ds)) * np.divide(np.diag(between_g), np.diag(cov_params))
                 
-        df_approx = (float(self.num_ds) - 1.) * np.square(1 / gamma)
+        df_approx = (float(self.num_ds) - 1.) * np.square(np.divide(1 , gamma))
         #np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
         df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
-        self.df = 1. / (1. / df_approx + 1. / df_obs)
+        self.df = np.divide(1. , (np.divide(1. , df_approx) + np.divide(1. , df_obs)))
         self.fmi = gamma
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
@@ -676,8 +675,8 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         info["Model:"] = self.model.analysis_class.__name__
         info["Dependent variable:"] = self.model.endog_names
         info["Sample size:"] = "%d" % self.model.mod_list[0].model.exog.shape[0]
-        info["Df:"] = self.model.df
-        info["FMI:"] = self.model.fmi
+#        info["Df:"] = self.model.df
+#        info["FMI:"] = self.model.fmi
 
         smry.add_dict(info, align='l', float_format=float_format)
 
@@ -685,7 +684,10 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         param['P>|t|'] = stats.t.sf(np.asarray(param['t']), self.model.df) / 2.
         ci = np.asarray(stats.t.interval(1-alpha, self.model.df, loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
         param['[' + str(alpha/2)] = ci[0]
-        param[str(1-alpha/2) + ']'] = ci[1]        
+        param[str(1-alpha/2) + ']'] = ci[1]    
+        param['Df'] = self.model.df
+        param['FMI'] = self.model.fmi
+#        param['#missing'] = self.model.imputer_list.
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
 
