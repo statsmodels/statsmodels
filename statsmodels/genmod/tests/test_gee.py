@@ -19,6 +19,7 @@ from statsmodels.genmod.dependence_structures import (Exchangeable,
     Independence, GlobalOddsRatio, Autoregressive, Nested)
 import pandas as pd
 import statsmodels.formula.api as sm
+from scipy.stats.distributions import norm
 
 def load_data(fname, icept=True):
     """
@@ -326,6 +327,8 @@ class TestGEE(object):
         rslt1 = mod1.fit()
         assert_almost_equal(mod1.score_test_results["statistic"],
                             1.08126334)
+        assert_almost_equal(mod1.score_test_results["p-value"],
+                            0.2984151086)
 
         # Test under the alternative.
         L = np.array([[1., -1, 0, 0]])
@@ -337,7 +340,32 @@ class TestGEE(object):
         rslt2 = mod2.fit()
         assert_almost_equal(mod2.score_test_results["statistic"],
                             3.491110965)
+        assert_almost_equal(mod2.score_test_results["p-value"],
+                            0.0616991659)
 
+        # Compare to Wald tests
+        exog = np.random.normal(size=(n, 2))
+        L = np.array([[1, -1]])
+        R = np.array([0.])
+        f = np.r_[1, -1]
+        for i in range(10):
+            endog = exog[:, 0] + (0.5 + i/10.)*exog[:, 1] +\
+                    np.random.normal(size=n)
+            family = Gaussian()
+            va = Independence()
+            mod0 = GEE(endog, exog, group, family=family,
+                       cov_struct=va)
+            rslt0 = mod0.fit()
+            family = Gaussian()
+            va = Independence()
+            mod1 = GEE(endog, exog, group, family=family,
+                       cov_struct=va, constraint=(L, R))
+            rslt1 = mod1.fit()
+            se = np.sqrt(np.dot(f, np.dot(rslt0.cov_params(), f)))
+            wald_z = np.dot(f, rslt0.params) / se
+            wald_p = 2*norm.cdf(-np.abs(wald_z))
+            score_p = mod1.score_test_results["p-value"]
+            assert(np.abs(wald_p - score_p) < 0.02)
 
 
     def test_linear(self):
