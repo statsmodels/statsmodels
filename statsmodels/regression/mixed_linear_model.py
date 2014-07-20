@@ -1296,7 +1296,39 @@ class MixedLM(base.LikelihoodModel):
 
         return params, np.max(np.abs(gro)) < gtol
 
-    def fit(self, start=None, reml=True, niter_sd=1,
+    def _starting_values(self, start_params):
+
+        if type(start_params) in [np.ndarray, pd.Series]:
+            return np.asarray(start_params)
+
+        ix = np.tril_indices(self.k_re)
+        if start_params is None:
+            start_params = {}
+        if "fe" in start_params:
+            fe_params = start_params["fe"]
+        else:
+            fe_params = np.zeros(self.exog.shape[1], dtype=np.float64)
+        if "cov_re_sqrt_unscaled" in start_params:
+            re_params = start_params["cov_re_sqrt_unscaled"]
+            if not self.use_sqrt:
+                mat = np.zeros((self.k_re, self.k_re), dtype=np.float64)
+                mat[ix] = re_params
+                mat = np.dot(mat, mat.T)
+                re_params = mat[ix]
+        elif "cov_re" in start_params:
+            cov_re_unscaled = start_params["cov_re"] / start_params["scale"]
+            if self.use_sqrt:
+                cov_re_sqrt_unscaled = np.linalg.cholesky(cov_re_unscaled)
+                re_params = cov_re_sqrt_unscaled[ix]
+            else:
+                re_params = cov_re_unscaled[ix]
+        else:
+            re_params = np.eye(self.k_re)[ix]
+
+        return np.concatenate((fe_params, re_params))
+
+
+    def fit(self, start_params=None, reml=True, niter_sd=1,
             niter_em=0, do_cg=True, fe_pen=None, cov_pen=None,
             free=None, full_output=False, **kwargs):
         """
@@ -1304,11 +1336,13 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        start: dict
-            If provided, this is a dict containing starting values.
-            `start["fe"]` contains starting values for the fixed
-            effects regression slopes.  `start["cov_re"]` contains
-            the covariance matrix of random effects as found
+        start_params: array-like or dict
+            If array-like, it is a 1d vector containing the starting
+            values in the internal parameterization.  If it is a
+            dictionary, it contains starting values for each component
+            separately.  `start["fe"]` contains starting values for
+            the fixed effects regression slopes.  `start["cov_re"]`
+            contains the covariance matrix of random effects as found
             in the `cov_re` component of MixedLMResults.  If
             `start["cov_re"]` is provided, then `start["scale"]` must
             also be provided (this is the error variance).
@@ -1368,40 +1402,18 @@ class MixedLM(base.LikelihoodModel):
         else:
             hist = None
 
-        # Starting values
-        ix = np.tril_indices(self.k_re)
-        if start is None:
-            start = {}
-        if "fe" in start:
-            fe_params = start["fe"]
-        else:
-            fe_params = np.zeros(self.exog.shape[1], dtype=np.float64)
-        if "cov_re_sqrt_unscaled" in start:
-            if self.use_sqrt:
-                re_params = start["cov_re_sqrt_unscaled"]
-            else:
-                vec = start["cov_re_sqrt_unscaled"]
-                mat = np.zeros((self.k_re, self.k_re), dtype=np.float64)
-                mat[ix] = vec
-                mat = np.dot(mat, mat.T)
-                re_params = mat[ix]
-        elif "cov_re" in start:
-            cov_re_unscaled = start["cov_re"] / start["scale"]
-            if self.use_sqrt:
-                cov_re_sqrt_unscaled = np.linalg.cholesky(cov_re_unscaled)
-                re_params = cov_re_sqrt_unscaled[ix]
-            else:
-                re_params = cov_re_unscaled[ix]
-        else:
-            re_params = np.eye(self.k_re)[ix]
-        params_prof = np.concatenate((fe_params, re_params))
+        params_prof = self._starting_values(start_params)
 
         success = False
 
         # EM iterations
         if niter_em > 0:
+            if self.use_sqrt:
+                fe_params, cov_re = self._unpack(params_prof)
+                cov_re = np.dot(cov_re, cov_re.T)
+            else:
+                fe_params, cov_re = self._unpack(params_prof, sym=True)
             scale = 1.
-            cov_re = np.eye(self.k_re)
             fe_params, cov_re, scale = self.EM(fe_params, cov_re, scale,
                                              niter_em, hist)
 

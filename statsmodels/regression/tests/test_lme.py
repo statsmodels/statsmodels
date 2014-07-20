@@ -177,16 +177,16 @@ class TestMixedLM(object):
         df["groups"] = groups
         mod3 = MixedLM.from_formula(fml, df, re_formula=re_fml,
                                     groups="groups")
-        rslt3 = mod3.fit()
-        assert_almost_equal(rslt1.params, rslt3.params)
+        rslt3 = mod3.fit(start_params=rslt2.params)
+        assert_almost_equal(rslt1.params, rslt3.params, decimal=5)
 
         # Check default variance structure with formula.api
         exog_re = np.ones(len(endog), dtype=np.float64)
         mod4 = MixedLM(endog, exog, groups, exog_re)
-        rslt4 = mod4.fit()
+        rslt4 = mod4.fit(start_params=rslt2.params)
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
-        rslt5 = mod5.fit()
+        rslt5 = mod5.fit(start_params=rslt2.params)
         assert_almost_equal(rslt4.params, rslt5.params)
 
     def test_regularized(self):
