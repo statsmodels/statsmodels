@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_equal, assert_
 import pandas
 import pandas.util.testing as ptesting
 
@@ -711,6 +712,89 @@ class TestHandleMissing(object):
         ptesting.assert_frame_equal(data['exog'], X_exp)
         ptesting.assert_series_equal(data['endog'], y_exp)
 
+
+class CheckHasConstant(object):
+
+    def test_hasconst(self):
+        for x, result in zip(self.exogs, self.results):
+            mod = self.mod(self.y, x)
+            assert_equal(mod.k_constant, result[0]) #['k_constant'])
+            assert_equal(mod.data.k_constant, result[0])
+            if result[1] is None:
+                assert_(mod.data.const_idx is None)
+            else:
+                assert_equal(mod.data.const_idx, result[1])
+
+            # extra check after fit, some models raise on singular
+            try:
+                res = mod.fit()
+                assert_equal(res.model.k_constant, result[0])
+                assert_equal(res.model.data.k_constant, result[0])
+            except:
+                pass
+
+
+    @classmethod
+    def setup_class(cls):
+        # create data
+        np.random.seed(0)
+        cls.y_c = np.random.randn(20)
+        cls.y_bin = (cls.y_c > 0).astype(int)
+        x1 = np.column_stack((np.ones(20), np.zeros(20)))
+        result1 = (1, 0)
+        x2 = np.column_stack((np.arange(20) < 10.5,
+                              np.arange(20) > 10.5)).astype(float)
+        result2 = (1, None)
+        x3 = np.column_stack((np.arange(20), np.zeros(20.)))
+        result3 = (0, None)
+        x4 = np.column_stack((np.arange(20), np.zeros((20., 2))))
+        result4 = (0, None)
+        x5 = np.column_stack((np.zeros(20), 0.5 * np.ones(20)))
+        result5 = (1, 1)
+        x5b = np.column_stack((np.arange(20), np.ones((20, 3))))
+        result5b = (1, 1)
+        x5c = np.column_stack((np.arange(20), np.ones((20, 3)) * [0.5, 1, 1]))
+        result5c = (1, 2)
+        # implicit and zero column
+        x6 = np.column_stack((np.arange(20) < 10.5,
+                              np.arange(20) > 10.5,
+                              np.zeros(20.))).astype(float)
+        result6 = (1, None)
+        x7 = np.column_stack((np.arange(20) < 10.5,
+                              np.arange(20) > 10.5,
+                              np.zeros((20., 2)))).astype(float)
+        result7 = (1, None)
+
+        cls.exogs = (x1, x2, x3, x4, x5, x5b, x5c, x6, x7)
+        cls.results = (result1, result2, result3, result4, result5, result5b,
+                       result5c, result6, result7)
+
+
+class TestHasConstantOLS(CheckHasConstant):
+
+    def __init__(self):
+        self.setup_class()  # why does nose do it properly
+        from statsmodels.regression.linear_model import OLS
+        self.mod = OLS
+        self.y = self.y_c
+
+
+class TestHasConstantGLM(CheckHasConstant):
+
+    def __init__(self):
+        self.setup_class()  # why does nose do it properly
+        from statsmodels.genmod.generalized_linear_model import GLM
+        from statsmodels.genmod import families
+        self.mod = lambda y, x : GLM(y, x, family=families.Binomial())
+        self.y = self.y_bin
+
+class TestHasConstantLogit(CheckHasConstant):
+
+    def __init__(self):
+        self.setup_class()  # why does nose do it properly
+        from statsmodels.discrete.discrete_model import Logit
+        self.mod = Logit
+        self.y = self.y_bin
 
 
 if __name__ == "__main__":
