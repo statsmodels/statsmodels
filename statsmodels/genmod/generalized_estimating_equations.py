@@ -961,7 +961,7 @@ class GEE(base.Model):
         _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
         cmat = cmat / scale**2
-        score2 = score[len(mean_params):] * scale
+        score2 = score[red_p:] / scale
 
         amat = np.linalg.inv(ncov1)
 
