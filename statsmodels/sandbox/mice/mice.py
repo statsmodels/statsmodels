@@ -51,12 +51,20 @@ class ImputedData(object):
     Stores missing data information and supports functionality for inserting
     values in missing data slots.
 
-    Can create Imputers directly via new_imputer method.
+    Can create Imputers directly via new_imputer method. By default, imputers
+    are created for each variable using OLS using all other variables as 
+    predictors.
 
     %(params)s
     data : array-like object
         Needs to support transformation to pandas dataframe. Missing value
         encoding is handled by pandas DataFrame class.
+    go : boolean
+        Governs whether to create Imputer objects automatically. If False, user 
+        must specify their own Imputers manually.
+    method : string
+        May take on values "pmm", "gaussian", or "bootstrap". Determines 
+        imputation method if go is True.
 
     **Attributes**
 
@@ -65,11 +73,14 @@ class ImputedData(object):
         simple column-wise means are filled into the missing values.
     columns : dictionary
         Stores indices of missing data.
+    implist : MICE Imputer object
+        One Imputer per variable to be imputed. See mice.Imputer.
 
     """
     def __init__(self, data, go=True, method="pmm"):
         # may not need to make copies
         self.data = pd.DataFrame(data)
+        # Drop observations where all variables are missing.
         self.data = self.data.dropna(how='all')
         self.columns = {}
         self.implist = []        
@@ -77,35 +88,45 @@ class ImputedData(object):
             self.columns[c] = MissingDataInfo(self.data[c])
             if go:
                 self.new_imputer(c, method=method)
-#                model_class = sm.OLS
-#                formula = c + " ~ " + " + ".join(
-#                    [x for x in self.data.columns if x != c])
-#                self.implist.append(Imputer(formula, model_class, self, method="gaussian", k_pmm=1, scale_method="fix"))                
+        # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, model_class=None,
-                    init_args={}, fit_args={}, scale_method="fix",
-                    scale_value=None, transform=None, inv_transform=None):
+    def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, 
+                    model_class=None, init_args={}, fit_args={}, 
+                    return_class=None, scale_method="fix", scale_value=None, 
+                    transform=None, inv_transform=None):
         """
-        Create Imputer instance from our ImputedData instance
+        Create Imputer instance from our ImputedData instance.
+        
+        Adds imputer to self.implist.
 
         Parameters
         ----------
         endog_name : string
             Name of the variable to be imputed.
+        method : string
+            May take on values "pmm", "gaussian", or "bootstrap". Determines 
+            imputation method, see mice.Imputer.       
+        k_pmm : int
+            Determines number of observations from which to draw imputation
+            when using predictive mean matching. See mice.Imputer.
         formula : string
             Conditional formula for imputation. Defaults to model with main
             effects for all other variables in dataset.
         model_class : statsmodels model
             Conditional model for imputation. Defaults to OLS.
+        return_class : 
         scale_method : string
             Governs the type of perturbation given to the scale parameter.
         scale_value : float
             Fixed value of scale parameter to use in simulation of data.
-
-        Returns
-        -------
-        mice.Imputer object
+        transform : Numpy instance
+            Transformation to apply to endogenous variable during imputation.
+            Variable will be transformed back via inv_transform for the 
+            analysis model.
+        inv_transform : Numpy instance
+            Applied after imputation to recover original form of endogenous
+            variable.
 
         See Also
         --------
@@ -195,7 +216,14 @@ class Imputer(object):
         Governs the type of perturbation given to the scale parameter.
     scale_value : float
         Fixed value of scale parameter to use in simulation of data.
-    %(extra_params)s
+    transform : Numpy instance
+        Transformation to apply to endogenous variable during imputation.
+        Variable will be transformed back via inv_transform for the 
+        analysis model.
+    inv_transform : Numpy instance
+        Applied after imputation to recover original form of endogenous
+        variable.
+    %(extra_params)
 
     **Attributes**
 
@@ -621,19 +649,21 @@ class MICE(object):
             scale_list.append(md.scale)
         scale = np.mean(scale_list)
         params = np.mean(params_list, axis=0)
+        # Get average of within-imputation covariances weighted by scale
         full_cov = np.asarray(cov_list) * np.asarray(scale_list)[:, np.newaxis, np.newaxis]
         within_g = np.mean(full_cov, axis=0)
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
 #        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) 
-        gamma = (1. + 1. / float(self.num_ds)) * np.divide(np.diag(between_g), np.diag(cov_params))
-                
+        gamma = (1. + 1. / float(self.num_ds)) * np.divide(np.diag(between_g), np.diag(cov_params))                
         df_approx = (float(self.num_ds) - 1.) * np.square(np.divide(1 , gamma))
-        #np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
+#        np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
         df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
         self.df = np.divide(1. , (np.divide(1. , df_approx) + np.divide(1. , df_obs)))
         self.fmi = gamma
+        self.within = within_g
+        self.between = between_g
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
