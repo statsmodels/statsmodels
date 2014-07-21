@@ -51,3 +51,4 @@ statsmodels/version.py
 .dropbox
 desktop.ini
 statsmodels/sandbox/examples/.~lock.missingfull.csv#
+statsmodels/sandbox/mice/tests/.Rhistory
