@@ -2211,7 +2211,7 @@ class NegativeBinomial(CountModel):
             alpha[-1] = 0
 
         # alpha for regularized poisson to get starting values
-        alpha_p = alpha[:-1] if self.k_extra else alpha
+        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
 
         self._transparams = False
         if start_params == None:

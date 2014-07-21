@@ -613,7 +613,8 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
         rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
-        rand_exog = sm.add_constant(rand_exog, prepend=True)
+        rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+        rand_exog = sm.add_constant(rand_exog_st, prepend=True)
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
         mod_unreg = sm.NegativeBinomial(rand_data.endog, exog_no_PSI)
