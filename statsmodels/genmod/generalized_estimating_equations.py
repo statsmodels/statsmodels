@@ -1384,6 +1384,7 @@ class GEEResults(base.LikelihoodModelResults):
         cov_struct = copy.deepcopy(self.model.cov_struct)
 
         # We are fixing the dependence structure in each run.
+        update_dep = model.update_dep
         model.update_dep = False
 
         dep_params = []
@@ -1401,6 +1402,8 @@ class GEEResults(base.LikelihoodModelResults):
                              first_dep_update=self.first_dep_update,
                              covariance_type=self.covariance_type)
             results.append(rslt)
+
+        model.update_dep = update_dep
 
         return results
 
