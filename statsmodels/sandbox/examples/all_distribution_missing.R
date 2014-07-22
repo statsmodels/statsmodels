@@ -31,7 +31,8 @@ write.csv(cbind(berndraws.mar,normdraws.mar,poisdraws.mar), "missingfull.csv", r
   require(mice)
   
   data = read.csv("missingfull.csv")
-  
+data = subset(data, select=-c(poisdraws.mar))
+
   imp = mice(data, m=20, method= "pmm", maxit=20)
   
 #  mod = glm(berndraws.mar ~ normdraws.mar + poisdraws.mar, data, family=binomial)
@@ -40,3 +41,14 @@ fit = with(data=imp,exp=glm(berndraws.mar ~ normdraws.mar ,family=binomial))
 
   pooled = pool(fit)
   print(summary(pooled))
+
+require(mi)
+
+data = read.csv("missingfull.csv")
+data = subset(data, select=-c(poisdraws.mar))
+mp.plot(data, y.order = TRUE, x.order = TRUE, gray.scale = TRUE)
+info <- mi.info(data)
+info
+imp <- mi(data, n.imp=20, n.iter=10)
+fit <- glm.mi(berndraws.mar ~ normdraws.mar, imp, family=binomial)
+display(fit)
