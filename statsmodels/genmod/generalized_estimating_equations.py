@@ -211,6 +211,9 @@ _gee_init_doc = """
         q-dimensional vector.  If constraint is provided, a score
         test is performed to compare the constrained model to the
         unconstrained model.
+    update_dep : bool
+        If true, the dependence parameters are optimized, otherwise
+        they are held fixed at their starting values.
     %(extra_params)s
 
     See Also
@@ -389,27 +392,16 @@ class GEE(base.Model):
         {'extra_params': base._missing_param_doc,
          'example': _gee_example})
 
-    fit_history = None
     cached_means = None
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
-                 dep_data=None, constraint=None):
-
-        self.init(endog, exog, groups, time=time, family=family,
-                  cov_struct=cov_struct, missing=missing,
-                  offset=offset, dep_data=dep_data,
-                  constraint=constraint)
-
-
-    # All the actions of __init__ should go here
-    def init(self, endog, exog, groups, time=None, family=None,
-             cov_struct=None, missing='none', offset=None,
-             dep_data=None, constraint=None):
+                 dep_data=None, constraint=None, update_dep=True):
 
         self.missing = missing
         self.dep_data = dep_data
         self.constraint = constraint
+        self.update_dep = update_dep
 
         groups = np.array(groups) # in case groups is pandas
         # Pass groups, time, offset, and dep_data so they are
@@ -420,6 +412,9 @@ class GEE(base.Model):
         super(GEE, self).__init__(endog, exog, groups=groups,
                                   time=time, offset=offset,
                                   dep_data=dep_data, missing=missing)
+
+        self._init_keys.extend(["update_dep", "constraint", "family",
+                                "cov_struct"])
 
         # Handle the family argument
         if family is None:
@@ -538,9 +533,9 @@ class GEE(base.Model):
 
         # Skip the covariance updates if all groups have a single
         # observation (reduces to fitting a GLM).
-        self._do_cov_update = True
-        if max([len(x) for x in self.endog_li]) == 1:
-            self._do_cov_update = False
+        maxgroup = max([len(x) for x in self.endog_li])
+        if maxgroup == 1:
+            self.update_dep = False
 
     # Override to allow groups and time to be passed as variable
     # names.
@@ -647,8 +642,8 @@ class GEE(base.Model):
 
         update = np.linalg.solve(bmat, score)
 
-        self.fit_history["cov_adjust"].append(
-                                   self.cov_struct.cov_adjust)
+        self._fit_history["cov_adjust"].append(
+            self.cov_struct.cov_adjust)
 
         return update, score
 
@@ -834,10 +829,10 @@ class GEE(base.Model):
             params_niter=1, first_dep_update=0,
             covariance_type='robust'):
 
-        self.fit_history = {'params': [],
-                            'score': [],
-                            'dep_params': [],
-                            'cov_adjust': []}
+        self._fit_history = {'params': [],
+                             'score': [],
+                             'dep_params': [],
+                             'cov_adjust': []}
 
         if start_params is None:
             mean_params = self._starting_params()
@@ -862,18 +857,20 @@ class GEE(base.Model):
             # this iteration.
             del_params = np.sqrt(np.sum(score**2))
 
-            self.fit_history['params'].append(mean_params.copy())
-            self.fit_history['score'].append(score)
-            self.fit_history['dep_params'].append(
+            self._fit_history['params'].append(mean_params.copy())
+            self._fit_history['score'].append(score)
+            self._fit_history['dep_params'].append(
                 self.cov_struct.dep_params)
 
             # Don't exit until the association parameters have been
             # updated at least once.
-            if del_params < ctol and num_assoc_updates > 0:
+            if (del_params < ctol and
+                (num_assoc_updates > 0 or self.update_dep == False)):
                 break
 
-            if self._do_cov_update and (itr % params_niter) == 0\
-                   and (itr >= first_dep_update):
+            # Update the dependence structure
+            if (self.update_dep and (itr % params_niter) == 0
+                and (itr >= first_dep_update)):
                 self._update_assoc(mean_params)
                 num_assoc_updates += 1
 
@@ -907,12 +904,24 @@ class GEE(base.Model):
         results = GEEResults(self, mean_params, bcov / scale, scale)
 
         results.covariance_type = covariance_type
-        results.fit_history = self.fit_history
+        results.fit_history = self._fit_history
+        delattr(self, "_fit_history")
         results.naive_covariance = ncov
         results.robust_covariance_bc = bc_cov
         results.score_norm = del_params
         results.converged = (del_params < ctol)
         results.cov_struct = self.cov_struct
+        results.params_niter = params_niter
+        results.first_dep_update = first_dep_update
+        results.ctol = ctol
+        results.maxiter = maxiter
+
+        # These will be copied over to subclasses when upgrading.
+        results._props = ["covariance_type", "fit_history",
+                          "naive_covariance", "robust_covariance_bc",
+                          "score_norm", "converged", "cov_struct",
+                          "params_niter", "first_dep_update", "ctol",
+                          "maxiter"]
 
         return results
 
@@ -1235,7 +1244,7 @@ class GEEResults(base.LikelihoodModelResults):
                      ('Max. cluster size:', [max(NY)]),
                      ('Mean cluster size:', ["%.1f" % np.mean(NY)]),
                      ('Num. iterations:', ['%d' %
-                           len(self.model.fit_history['params'])]),
+                           len(self.fit_history['params'])]),
                      ('Scale:', ["%.3f" % self.scale]),
                      ('Time:', None),
                  ]
@@ -1365,11 +1374,17 @@ class GEEResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        dep_params : array-like
-            The sequence of dependence parameter values.
         results : array-like
             The GEEResults objects resulting from the fits.
         """
+
+        model = self.model
+
+        import copy
+        cov_struct = copy.deepcopy(self.model.cov_struct)
+
+        # We are fixing the dependence structure in each run.
+        model.update_dep = False
 
         dep_params = []
         results = []
@@ -1378,12 +1393,16 @@ class GEEResults(base.LikelihoodModelResults):
             dp = x * dep_params_last + (1 - x) * dep_params_first
             dep_params.append(dp)
 
-            self.model.cov_struct.dep_params = dp
-            rslt = self.model.fit(start_params=self.params,
-                                  first_dep_update=1e50)
+            model.cov_struct = copy.deepcopy(cov_struct)
+            model.cov_struct.dep_params = dp
+            rslt = model.fit(start_params=self.params,
+                             ctol=self.ctol,
+                             params_niter=self.params_niter,
+                             first_dep_update=self.first_dep_update,
+                             covariance_type=self.covariance_type)
             results.append(rslt)
 
-        return dep_params, results
+        return results
 
 
 
@@ -1486,9 +1505,15 @@ class OrdinalGEE(GEE):
         rslt = super(OrdinalGEE, self).fit(maxiter, ctol, start_params,
                                            params_niter, first_dep_update,
                                            covariance_type)
-        return OrdinalGEEResults(self, rslt.params,
-                                 rslt.cov_params() / rslt.scale,
-                                 rslt.scale)
+
+        # Convert the GEEResults to an OrdinalGEEResults
+        ord_rslt = OrdinalGEEResults(self, rslt.params,
+                                     rslt.cov_params() / rslt.scale,
+                                     rslt.scale)
+        for k in rslt._props:
+            setattr(ord_rslt, k, getattr(rslt, k))
+
+        return ord_rslt
 
     fit.__doc__ = _gee_fit_doc
 
@@ -1682,6 +1707,7 @@ class NominalGEE(GEE):
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             covariance_type='robust'):
+
         rslt = super(NominalGEE, self).fit(maxiter, ctol, start_params,
                                            params_niter, first_dep_update,
                                            covariance_type)
@@ -1689,9 +1715,15 @@ class NominalGEE(GEE):
             warnings.warn("GEE updates did not converge",
                           ConvergenceWarning)
             return None
-        return NominalGEEResults(self, rslt.params,
-                                 rslt.cov_params() / rslt.scale,
-                                 rslt.scale)
+
+        # Convert the GEEResults to a NominalGEEResults
+        nom_rslt = NominalGEEResults(self, rslt.params,
+                                     rslt.cov_params() / rslt.scale,
+                                     rslt.scale)
+        for k in rslt._props:
+            setattr(nom_rslt, k, getattr(rslt, k))
+
+        return nom_rslt
 
     fit.__doc__ = _gee_fit_doc
 
