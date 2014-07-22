@@ -623,17 +623,9 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
         alpha[-1] = 0  # don't penalize alpha
-        # try constant only
-        start_params = np.zeros(len(alpha))
-        start_params[0] = rand_data.endog.mean()
-        start_params[-1] = 0.5
-        # cheating: use params as starting_values
-        start_params = np.zeros(len(alpha))
-        start_params[:cls.m] = cls.res_unreg.params[:-1]
-        start_params[-1] = cls.res_unreg.params[-1]
 
         mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
-        cls.res_reg = mod_reg.fit_regularized(#start_params=start_params,
+        cls.res_reg = mod_reg.fit_regularized(
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
         cls.k_extra = 1  # 1 extra parameter in nb2
