@@ -223,6 +223,9 @@ class DiscreteModel(base.LikelihoodModel):
 
         Notes
         -----
+        Extra parameters are not penalized if alpha is given as a scalar.
+        An example is the shape parameter in NegativeBinomial `nb1` and `nb2`.
+
         Optional arguments for the solvers (available in Results.mle_settings)::
 
             'l1'
@@ -431,7 +434,7 @@ class BinaryModel(DiscreteModel):
         """
         #note, this form should be appropriate for
         ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if exog == None:
+        if exog is None:
             exog = self.exog
         margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
                                                           params[None,:])
@@ -605,7 +608,7 @@ class MultinomialModel(BinaryModel):
         K = int(self.K) # number of variables
         #note, this form should be appropriate for
         ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if exog == None:
+        if exog is None:
             exog = self.exog
         if params.ndim == 1: # will get flatted from approx_fprime
             params = params.reshape(K, J-1, order='F')
@@ -729,7 +732,7 @@ class CountModel(DiscreteModel):
         but checks are done in the results in get_margeff.
         """
         # group 3 poisson, nbreg, zip, zinb
-        if exog == None:
+        if exog is None:
             exog = self.exog
         margeff = self.predict(params, exog)[:,None] * params[None,:]
         if 'ex' in transform:
@@ -1878,6 +1881,9 @@ class NegativeBinomial(CountModel):
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
             self.exog_names.append('alpha')
+            self.k_extra = 1
+        else:
+            self.k_extra = 0
         # store keys for extras if we need to recreate model instance
         # we need to append keys that don't go to super
         self._init_keys.append('loglike_method')
@@ -2170,7 +2176,7 @@ class NegativeBinomial(CountModel):
         elif self.loglike_method.startswith('nb'): # method is newton/ncg
             self._transparams = False # because we need to step in alpha space
 
-        if start_params == None:
+        if start_params is None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit(disp=0).params
             if self.loglike_method.startswith('nb'):
@@ -2187,10 +2193,50 @@ class NegativeBinomial(CountModel):
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-            nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
-            return NegativeBinomialAncillaryResultsWrapper(nbinfit)
+            nbinfit = NegativeBinomialResults(self, mlefit._results)
+            return NegativeBinomialResultsWrapper(nbinfit)
         else:
             return mlefit
+
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
+                                                     alpha != 0):
+            # don't penalize alpha if alpha is scalar
+            alpha = alpha * np.ones(len(start_params))
+            alpha[-1] = 0
+
+        # alpha for regularized poisson to get starting values
+        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+
+        self._transparams = False
+        if start_params is None:
+            # Use poisson fit as first guess.
+            start_params = Poisson(self.endog, self.exog).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            if self.loglike_method.startswith('nb'):
+                start_params = np.append(start_params, 0.1)
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1NegativeBinomialResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
+        return L1NegativeBinomialResultsWrapper(discretefit)
+
 
 ### Results Class ###
 
@@ -2470,12 +2516,10 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
-class NegativeBinomialAncillaryResults(CountResults):
+class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for NegativeBinomial 1 and 2",
                     "extra_attr" : ""}
-    def __init__(self, model, mlefit):
-        super(NegativeBinomialAncillaryResults, self).__init__(model, mlefit)
 
     @cache_readonly
     def lnalpha(self):
@@ -2488,13 +2532,15 @@ class NegativeBinomialAncillaryResults(CountResults):
     @cache_readonly
     def aic(self):
         # + 1 because we estimate alpha
-        return -2*(self.llf - (self.df_model + self.k_constant + 1))
+        k_extra = getattr(self.model, 'k_extra', 0)
+        return -2*(self.llf - (self.df_model + self.k_constant + k_extra))
 
     @cache_readonly
     def bic(self):
         # + 1 because we estimate alpha
+        k_extra = getattr(self.model, 'k_extra', 0)
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
-                                                self.k_constant + 1)
+                                                self.k_constant + k_extra)
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
@@ -2508,9 +2554,14 @@ class L1CountResults(DiscreteResults):
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-        #update degrees of freedom
+        # update degrees of freedom
         self.model.df_model = self.nnz_params - 1
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        # adjust for extra parameter in NegativeBinomial nb1 and nb2
+        # extra parameter is not included in df_model
+        k_extra = getattr(self.model, 'k_extra', 0)
+        self.model.df_model -= k_extra
+        self.model.df_resid += k_extra
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid
 
@@ -2545,6 +2596,9 @@ class PoissonResults(CountResults):
         return stats.poisson.pmf(counts, mu)
 
 class L1PoissonResults(L1CountResults, PoissonResults):
+    pass
+
+class L1NegativeBinomialResults(L1CountResults, NegativeBinomialResults):
     pass
 
 class OrderedResults(DiscreteResults):
@@ -2906,10 +2960,10 @@ class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
 
-class NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
+class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(NegativeBinomialAncillaryResultsWrapper,
-                      NegativeBinomialAncillaryResults)
+wrap.populate_wrapper(NegativeBinomialResultsWrapper,
+                      NegativeBinomialResults)
 
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
@@ -2933,6 +2987,11 @@ class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     #                            lm.RegressionResultsWrapper._wrap_methods,
     #                            _methods)
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
+
+class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1NegativeBinomialResultsWrapper,
+                      L1NegativeBinomialResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {"resid_dev" : "rows",

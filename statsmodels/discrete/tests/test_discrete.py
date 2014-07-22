@@ -540,15 +540,18 @@ class CheckL1Compatability(object):
     def test_params(self):
         m = self.m
         assert_almost_equal(
-            self.res_unreg.params, self.res_reg.params[:m], DECIMAL_4)
+            self.res_unreg.params[:m], self.res_reg.params[:m], DECIMAL_4)
         # The last entry should be close to zero
-        assert_almost_equal(0, self.res_reg.params[m:], DECIMAL_4)
+        # handle extra parameter of NegativeBinomial
+        kvars = self.res_reg.model.exog.shape[1]
+        assert_almost_equal(0, self.res_reg.params[m:kvars], DECIMAL_4)
 
     def test_cov_params(self):
         m = self.m
         # The restricted cov_params should be equal
         assert_almost_equal(
-            self.res_unreg.cov_params(), self.res_reg.cov_params()[:m, :m],
+            self.res_unreg.cov_params()[:m, :m],
+            self.res_reg.cov_params()[:m, :m],
             DECIMAL_1)
 
     def test_df(self):
@@ -558,20 +561,24 @@ class CheckL1Compatability(object):
     def test_t_test(self):
         m = self.m
         kvars = self.kvars
-        t_unreg = self.res_unreg.t_test(np.eye(m))
-        t_reg = self.res_reg.t_test(np.eye(kvars))
-        assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
-        assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
+        # handle extra parameter of NegativeBinomial
+        extra = getattr(self, 'k_extra', 0)
+        t_unreg = self.res_unreg.t_test(np.eye(len(self.res_unreg.params)))
+        t_reg = self.res_reg.t_test(np.eye(kvars + extra))
+        assert_almost_equal(t_unreg.effect[:m], t_reg.effect[:m], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd[:m], t_reg.sd[:m], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.sd[m])
-        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m], DECIMAL_3)
+        assert_allclose(t_unreg.tvalue[:m], t_reg.tvalue[:m], atol=3e-3)
         assert_almost_equal(np.nan, t_reg.tvalue[m])
 
     def test_f_test(self):
         m = self.m
         kvars = self.kvars
-        f_unreg = self.res_unreg.f_test(np.eye(m))
-        f_reg = self.res_reg.f_test(np.eye(kvars)[:m])
-        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_2)
+        # handle extra parameter of NegativeBinomial
+        extra = getattr(self, 'k_extra', 0)
+        f_unreg = self.res_unreg.f_test(np.eye(len(self.res_unreg.params))[:m])
+        f_reg = self.res_reg.f_test(np.eye(kvars + extra)[:m])
+        assert_allclose(f_unreg.fvalue, f_reg.fvalue, rtol=3e-5, atol=1e-3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
     def test_bad_r_matrix(self):
@@ -589,14 +596,64 @@ class TestPoissonL1Compatability(CheckL1Compatability):
         rand_exog = sm.add_constant(rand_exog, prepend=True)
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
-        cls.res_unreg = sm.Poisson(
-            rand_data.endog, exog_no_PSI).fit(method="newton", disp=False)
+        mod_unreg = sm.Poisson(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
         alpha[:cls.m] = 0
         cls.res_reg = sm.Poisson(rand_data.endog, rand_exog).fit_regularized(
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
+
+
+class TestNegativeBinomialL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+        rand_exog = sm.add_constant(rand_exog_st, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        mod_unreg = sm.NegativeBinomial(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
+        alpha[:cls.m] = 0
+        alpha[-1] = 0  # don't penalize alpha
+
+        mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
+        cls.res_reg = mod_reg.fit_regularized(
+            method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
+        cls.k_extra = 1  # 1 extra parameter in nb2
+
+
+class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog = sm.add_constant(rand_exog, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        mod_unreg = sm.NegativeBinomial(rand_data.endog, exog_no_PSI,
+                                         loglike_method='geometric')
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        # Do a regularized fit with alpha, effectively dropping the last columns
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
+        alpha[:cls.m] = 0
+        mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog,
+                                      loglike_method='geometric')
+        cls.res_reg = mod_reg.fit_regularized(
+            method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
+
+        assert_equal(mod_reg.loglike_method, 'geometric')
 
 
 class TestLogitL1Compatability(CheckL1Compatability):
@@ -1021,11 +1078,13 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         res2.negativebinomial_geometric_bfgs()
         cls.res2 = res2
 
+    # the following are regression tests, could be inherited instead
+
     def test_aic(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_1)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_3)
 
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_1)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
     def test_conf_int(self):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
