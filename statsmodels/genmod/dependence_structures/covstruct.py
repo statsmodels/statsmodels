@@ -23,13 +23,17 @@ class CovStruct(object):
     correlation matrix.
     """
 
-    def __init__(self):
+    def __init__(self, cov_nearest_method="clipped"):
 
         # Parameters describing the dependency structure
         self.dep_params = None
 
-        self.cov_adjust = 0
+        # Keep track of the number of times that the covariance was
+        # adjusted.
+        self.cov_adjust = []
 
+        # Method for projecting the covariance matrix if it not SPD.
+        self.cov_nearest_method = cov_nearest_method
 
 
     def initialize(self, model):
@@ -132,26 +136,30 @@ class CovStruct(object):
         if is_cor:
             vmat *= np.outer(stdev, stdev)
 
-        # Factor, the covariance matrix.  If the factorization fails,
+        # Factor the covariance matrix.  If the factorization fails,
         # attempt to condition it into a factorizable matrix.
         threshold = 1e-2
         success = False
         cov_adjust = 0
-        for itr in range(10):
+        for itr in range(20):
             try:
                 vco = spl.cho_factor(vmat)
                 success = True
                 break
             except np.linalg.LinAlgError:
-                vmat = cov_nearest(vmat, method="nearest", threshold=threshold)
+                vmat = cov_nearest(vmat, method=self.cov_nearest_method,
+                                   threshold=threshold)
                 threshold *= 2
-                cov_adjust = 1
+                cov_adjust += 1
 
-        self.cov_adjust += cov_adjust
+        self.cov_adjust.append(cov_adjust)
+
+        # Last resort if we still can't factor the covariance matrix.
         if success == False:
-            warnings.warn("Unable to condition covariance matrix to an SPD matrix",
+            warnings.warn("Unable to condition covariance matrix to an SPD matrix using cov_nearest",
                           ConvergenceWarning)
-            return None
+            vmat = np.diag(np.diag(vmat))
+            vco = spl.cho_factor(vmat)
 
         soln = [spl.cho_solve(vco, x) for x in rhs]
         return soln
