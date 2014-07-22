@@ -434,7 +434,7 @@ class BinaryModel(DiscreteModel):
         """
         #note, this form should be appropriate for
         ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if exog == None:
+        if exog is None:
             exog = self.exog
         margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
                                                           params[None,:])
@@ -608,7 +608,7 @@ class MultinomialModel(BinaryModel):
         K = int(self.K) # number of variables
         #note, this form should be appropriate for
         ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if exog == None:
+        if exog is None:
             exog = self.exog
         if params.ndim == 1: # will get flatted from approx_fprime
             params = params.reshape(K, J-1, order='F')
@@ -732,7 +732,7 @@ class CountModel(DiscreteModel):
         but checks are done in the results in get_margeff.
         """
         # group 3 poisson, nbreg, zip, zinb
-        if exog == None:
+        if exog is None:
             exog = self.exog
         margeff = self.predict(params, exog)[:,None] * params[None,:]
         if 'ex' in transform:
@@ -2176,7 +2176,7 @@ class NegativeBinomial(CountModel):
         elif self.loglike_method.startswith('nb'): # method is newton/ncg
             self._transparams = False # because we need to step in alpha space
 
-        if start_params == None:
+        if start_params is None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit(disp=0).params
             if self.loglike_method.startswith('nb'):
@@ -2214,7 +2214,7 @@ class NegativeBinomial(CountModel):
         alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
 
         self._transparams = False
-        if start_params == None:
+        if start_params is None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
