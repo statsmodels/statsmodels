@@ -115,7 +115,10 @@ class ImputedData(object):
             effects for all other variables in dataset.
         model_class : statsmodels model
             Conditional model for imputation. Defaults to OLS.
-        return_class : 
+        return_class : scipy.random instance
+            Controls the scale/location family to use as the asymptotic
+            distribution of the imputed variable. For use with method
+            impute_asymptotic_bayes.
         scale_method : string
             Governs the type of perturbation given to the scale parameter.
         scale_value : float
@@ -125,8 +128,8 @@ class ImputedData(object):
             Variable will be transformed back via inv_transform for the 
             analysis model.
         inv_transform : Numpy instance
-            Applied after imputation to recover original form of endogenous
-            variable.
+            Applied after imputation to recover original functional 
+            form of endogenous variable.
 
         See Also
         --------
@@ -137,12 +140,13 @@ class ImputedData(object):
         if formula is None:
             formula = endog_name + " ~ " + " + ".join(
                             [x for x in self.data.columns if x != endog_name])
-        self.implist.append(Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
-                       fit_args=fit_args, scale_method=scale_method,
-                       scale_value=scale_value, transform=transform, inv_transform=inv_transform))
-#        return Imputer(formula, model_class, self, method=method, k_pmm=1, init_args=init_args,
-#                       fit_args=fit_args, scale_method=scale_method,
-#                       scale_value=scale_value)
+        self.implist.append(Imputer(formula, model_class, self, method=method, 
+                                    k_pmm=k_pmm, init_args=init_args, 
+                                    fit_args=fit_args, 
+                                    scale_method=scale_method, 
+                                    scale_value=scale_value, 
+                                    transform=transform, 
+                                    inv_transform=inv_transform))
 
     def store_changes(self, col, vals):
         """
@@ -203,26 +207,35 @@ class Imputer(object):
     %(params)s
 
     formula : string
-        Conditional formula for imputation.
+        Conditional formula used for imputation.
     model_class : statsmodels model
-        Conditional model for imputation.
+        Conditional model used for imputation.
     data : ImputedData object
         See mice.ImputedData
+    method : string
+        May take on values "pmm", "gaussian", or "bootstrap". Determines 
+        imputation method, see methods impute_pmm, impute_asymptotic_bayes, and 
+        impute_bootstrap.       
+    k_pmm : int
+        Determines number of observations from which to draw imputation
+        when using predictive mean matching. See method impute_pmm.
     return_class : scipy.random class
         Controls the scale/location family to use as the asymptotic
         distribution of the imputed variable. For use in method
         impute_asymptotic_bayes.
-    scale : string
-        Governs the type of perturbation given to the scale parameter.
+    scale_method : string
+        Governs the type of perturbation given to the scale parameter. See 
+        method perturb_params.
     scale_value : float
-        Fixed value of scale parameter to use in simulation of data.
+        Fixed value of scale parameter to use in simulation of data. See 
+        method perturb_params.
     transform : Numpy instance
         Transformation to apply to endogenous variable during imputation.
         Variable will be transformed back via inv_transform for the 
         analysis model.
     inv_transform : Numpy instance
-        Applied after imputation to recover original form of endogenous
-        variable.
+        Applied after imputation to recover original functional form of 
+        endogenous variable.
     %(extra_params)
 
     **Attributes**
@@ -275,7 +288,7 @@ class Imputer(object):
         scale_per : float
             Perturbed nuisance parameter.
         """
-        # switch to scipy
+        # TODO: switch to scipy
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
@@ -291,7 +304,8 @@ class Imputer(object):
             raise NotImplementedError
         p = len(params)
         params += np.dot(covmat_sqrt,
-                         np.random.normal(0, np.sqrt(mdf.scale * scale_per), p))
+                         np.random.normal(0, np.sqrt(mdf.scale * scale_per), 
+                                          p))
         return params, scale_per
 
     def impute_asymptotic_bayes(self):
@@ -311,7 +325,7 @@ class Imputer(object):
         params, scale_per = self.perturb_params(mdf)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
                                      model_class=self.return_class,
-                                     scale=scale_per * mdf.scale)
+                                     scale=np.sqrt(scale_per * mdf.scale))
         new_endog = new_rv.rvs(size=len(exog_miss))
         if self.transform is not None and self.inv_transform is not None:
             new_endog = self.inv_transform(new_endog)
@@ -323,8 +337,8 @@ class Imputer(object):
 
         Fills in missing values of input data. Predictive mean matching picks
         an observation randomly from the observed value of the k-nearest
-        predictions of the endogenous variable. Naturally, the neighbors must
-        have observed endogenous values.
+        predictions of the endogenous variable. Naturally, the candidate
+        neighbors must have observed endogenous values.
 
         Parameters
         ----------
@@ -356,17 +370,18 @@ class Imputer(object):
         # Get indices of predicted endogs of nonmissing observations that are
         # close to those of missing observations
         ix = np.searchsorted(pendog_obs, pendog_miss)
-        np.clip(ix, 0, len(pendog_obs) - 1, out=ix)
+        np.clip(ix, 0, len(pendog_obs), out=ix)
         ix_list = []
         for i in range(len(pendog_miss)):
             k = 0
             count_low = 0
             count_high = 0
-            ix_list.append([])
+#            ix_list.append([])
             upper = pendog_obs[ix[i]]
             lower = pendog_obs[ix[i] - 1]
             target = pendog_miss[i]
-            ixs = ix_list[len(ix_list) - 1]
+            ixs = []
+#            ix_list[len(ix_list) - 1]
             limit_low = False
             limit_high = False
             while k < pmm_neighbors:
@@ -395,8 +410,8 @@ class Imputer(object):
                         ixs.append(ix[i] - count_low)
                         limit_high = True
                 k += 1                    
-            ixs = np.clip(ixs, 0, len(oendog))
-            ixs = random.choice(ixs)
+            ixs = np.clip(ixs, 0, len(oendog) - 1)
+            ix_list.append(random.choice(ixs))
         # Select a random draw of observed endogenous variable from a set
         # window around the closest predicted value
 #        ix += np.random.randint(int(-pmm_neighbors / 2.), int(pmm_neighbors / 2.) + 1, size=len(ix))
@@ -423,15 +438,12 @@ class ImputerChain(object):
 
     imputer_list : list
         List of Imputer objects, one for each variable to be imputed.
-    imputer_method : string
-        Method used for simulation. See MICE.run.
-    pmm_neighbors : int
-        Number of neighbors for pmm. See MICE.run.
 
     **Attributes**
 
     data : pandas DataFrame
-        Underlying data to be modified.
+        Underlying data to be modified. Root copy of data is stored in original
+        ImputedData object.
 
     Note: All imputers must refer to the same data object. See mice.MICE.run
     for iterator call.
@@ -543,33 +555,47 @@ class MICE(object):
         Formula for model of interest to be fitted.
     analysis_class : statsmodels model
         Statsmodels model of interest.
-    imputer_list : list
-        List of Imputer objects, one for each variable to be imputed.
+    impdata : mice.ImputedData instance
+        ImputedData object which contains an implist that is fully populated
+        by the desired Imputer objects.
     %(extra_params)s
 
     **Attributes**
 
-    data : pandas DataFrame
-        Underlying data to be modified.
+    N : int
+        Total number of observations.
+    modlist : list
+        Contains analysis model fitted on each imputed dataset.
+    df : list
+        Contains degees of freedom for each parameter in the analysis model.
+    fmi : list
+        Contains fraction of missing information for each parameter in the 
+        analysis model.
+    exog_names : list
+        Contains names of exogenous variables in the analysis model.
+    endog_name : string
+        Name of endogenous model in the analysis model.
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import statsmodels.api as sm
-    >>> from statsmodels.sandbox.mice import mice
-    >>> data = pd.read_csv('directory_here')
-    >>> impdata = mice.ImputedData(data)
-    >>> m1 = impdata.new_imputer("x2", scale_method="perturb_chi2")
-    >>> m2 = impdata.new_imputer("x3", scale_method="perturb_chi2")
-    >>> m3 = impdata.new_imputer(
-        "x1", model_class=sm.Logit, scale_method="perturb_chi2")
-    >>> impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
-    >>> implist = impcomb.run(method="pmm")
-    >>> p1 = impcomb.combine(implist)
+    >>>impdata = mice.ImputedData(data, go=False)
+    >>>impdata.new_imputer("x2", method="pmm", k_pmm=20)
+    >>>impdata.new_imputer("x1", method="pmm", model_class=sm.Logit, k_pmm=20)
+    >>>impcomb = mice.MICE("x1 ~ x2", sm.Logit,impdata)
+    >>>impcomb.run(20, 10)
+    >>>p1 = impcomb.combine()
+    >>>print p1.summary()
 
-    The resulting p1 contains an empty sm.Logit instance with MICE-provided
-    params and cov_params.
-
+                               Results: MICE
+==========================================================================
+Method:              MICE              Dependent variable:             x1 
+Model:               Logit             Sample size:                    978
+--------------------------------------------------------------------------
+           Coef.  Std.Err.    t     P>|t|   [0.025  0.975]    Df     FMI  
+--------------------------------------------------------------------------
+Intercept  2.2639   0.2182  10.3754 0.0000  1.8322  2.6956 130.0876 0.3412
+x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
+==========================================================================
     """
     def __init__(self, analysis_formula, analysis_class, impdata,
                  init_args={}, fit_args={}):
@@ -599,16 +625,6 @@ class MICE(object):
             datasets count.
         save : boolean
             Whether to save the imputed datasets chosen for analysis.
-        method : string
-            Simulation method to use. May take on values "gaussian", "pmm",
-            or "bootstrap".
-        k_pmm : int
-            Number of neighbors to use for predictive mean matching (pmm).
-
-        Returns
-        -------
-        md_list : list
-            List of length num_ds of fitted analysis models.
         """
        
         self.num_ds = num_ds
@@ -635,8 +651,8 @@ class MICE(object):
 
         Returns
         -------
-        md : statsmodels fitted model
-            Altered cov_params and params to be the MICE combined quantities.
+        rslt : MICEResults instance
+            Contains pooled analysis model results with missing data summaries.
         """
 
         params_list = []
@@ -657,13 +673,13 @@ class MICE(object):
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
 #        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) 
         gamma = (1. + 1. / float(self.num_ds)) * np.divide(np.diag(between_g), np.diag(cov_params))                
-        df_approx = (float(self.num_ds) - 1.) * np.square(np.divide(1 , gamma))
+        df_approx = (float(self.num_ds) - 1.) * np.square(np.divide(1. , gamma))
 #        np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
         df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
         self.df = np.divide(1. , (np.divide(1. , df_approx) + np.divide(1. , df_obs)))
         self.fmi = gamma
-        self.within = within_g
-        self.between = between_g
+#        self.within = within_g
+#        self.between = between_g
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
