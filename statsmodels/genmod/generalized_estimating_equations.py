@@ -621,8 +621,6 @@ class GEE(base.Model):
 
         varfunc = self.family.variance
 
-        self.cov_struct.cov_adjust = 0
-
         bmat, score = 0, 0
         for i in range(self.num_group):
 
