@@ -180,8 +180,8 @@ class TestMice(object):
         impcomb.run()
         p1 = impcomb.combine()
         print p1.summary()        
-#        np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.3)
-#        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=0.3)
+        np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.3)
+        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=0.3)
 
 if  __name__=="__main__":
 

@@ -370,7 +370,7 @@ class Imputer(object):
         # Get indices of predicted endogs of nonmissing observations that are
         # close to those of missing observations
         ix = np.searchsorted(pendog_obs, pendog_miss)
-        np.clip(ix, 0, len(pendog_obs), out=ix)
+        np.clip(ix, 0, len(pendog_obs) - 1, out=ix)
         ix_list = []
         for i in range(len(pendog_miss)):
             k = 0
