@@ -235,6 +235,10 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
     while (iterations < maxiter and np.any(np.abs(newparams -
             oldparams) > tol)):
         H = hess(newparams)
+        # regularize Hessian, not clear what ridge factor should be
+        H_diag = np.diag(H)
+        lam = max(np.median(H_diag) * 1e-8, np.max(H_diag) * 1e-10, 1e-10)
+        H += lam * np.eye(len(newparams))
         oldparams = newparams
         newparams = oldparams - np.dot(np.linalg.inv(H),
                 score(oldparams))
