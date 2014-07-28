@@ -225,7 +225,7 @@ class Optimizer(object):
 
 def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
-                    full_output=True, hess=None):
+                    full_output=True, hess=None, ridge_factor=1e-10):
     tol = kwargs.setdefault('tol', 1e-8)
     iterations = 0
     oldparams = np.inf
@@ -234,7 +234,11 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         history = [oldparams, newparams]
     while (iterations < maxiter and np.any(np.abs(newparams -
             oldparams) > tol)):
-        H = hess(newparams)
+        H = np.asarray(hess(newparams))
+        # regularize Hessian, not clear what ridge factor should be
+        # keyword option with absolute default 1e-10, see #1847
+        if not np.all(ridge_factor == 0):
+            H[np.diag_indices(H.shape[0])] += ridge_factor
         oldparams = newparams
         newparams = oldparams - np.dot(np.linalg.inv(H),
                 score(oldparams))

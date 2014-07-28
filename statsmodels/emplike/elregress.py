@@ -77,6 +77,11 @@ class _ELRegOpts(_OptFuncts):
             eta_star = self._modif_newton(x0, est_vect, wts)
             denom = 1. + np.dot(eta_star, est_vect.T)
             self.new_weights = 1. / nobs * 1. / denom
+            # the following commented out code is to verify weights
+            # see open issue #1845
+            #self.new_weights /= self.new_weights.sum()
+            #if not np.allclose(self.new_weights.sum(), 1., rtol=0, atol=1e-10):
+            #    raise RuntimeError('weights do not sum to 1')
             llr = np.sum(np.log(nobs * self.new_weights))
             return -2 * llr
         except np.linalg.linalg.LinAlgError:
