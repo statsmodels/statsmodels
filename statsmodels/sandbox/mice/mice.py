@@ -528,6 +528,7 @@ class AnalysisChain(object):
         Note: If save option is True, imputed datasets are saved in the format
         "mice_'iteration number'.csv"
         """
+        #TODO: add transform here instead of in Imputer
         for i in range(self.skipnum):
             data = self.imputer_chain.next()
             print i
