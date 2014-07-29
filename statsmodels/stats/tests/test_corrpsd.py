@@ -293,7 +293,7 @@ class Test_Factor(object):
         x = np.random.normal(size=dm)
         rslt = _spg_optim(obj, grad, x, project)
         xnew = rslt.params
-        assert_allclose(xnew, 0, rtol=0.25, atol=1e-3)
+        assert_almost_equal(obj(xnew), 0, decimal=3)
 
     def test_decorrelate(self):
 
