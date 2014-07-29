@@ -236,7 +236,7 @@ class Test_Factor(object):
             C = rslt.corr
             mat1 = C.to_matrix()
 
-            assert(np.abs(mat - mat1).max() < 1e-3)
+            assert_allclose(mat, mat1, rtol=0.25, atol=1e-3)
 
 
     # Test that we get the same result if the input is dense or sparse
@@ -293,7 +293,7 @@ class Test_Factor(object):
         x = np.random.normal(size=dm)
         rslt = _spg_optim(obj, grad, x, project)
         xnew = rslt.params
-        assert(obj(xnew) < 1e-4)
+        assert_almost_equal(obj(xnew), 0, decimal=3)
 
     def test_decorrelate(self):
 
@@ -356,7 +356,7 @@ class Test_Factor(object):
             rslt = cov_nearest_factor_homog(mat, dm)
             mat1 = rslt.to_matrix()
 
-            assert(np.abs(mat - mat1).max() < 1e-4)
+            assert_allclose(mat, mat1, rtol=0.25, atol=1e-3)
 
 
     # Check that dense and sparse inputs give the same result
