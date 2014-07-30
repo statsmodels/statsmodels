@@ -362,6 +362,7 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
         df -= params
         if np.max(np.abs(df)) < ctol:
             return Bunch(**{"Converged": True, "params": params,
+                            "objective_values": obj_hist,
                             "Message": "Converged successfully"})
 
         # The line search direction
@@ -377,8 +378,9 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
                                                  gam=gam,
                                                  maxiter=maxiter_nmls)
         if alpha is None:
-            return Bunch(**{"Converged": False, "params": params, "Message":
-                            "Failed in nmono_linesearch"})
+            return Bunch(**{"Converged": False, "params": params,
+                            "objective_values": obj_hist,
+                            "Message": "Failed in nmono_linesearch"})
 
         obj_hist.append(fval)
         s = params1 - params
@@ -395,6 +397,7 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
         gval = gval1
 
     return Bunch(**{"Converged": False, "params": params,
+                    "objective_values": obj_hist,
                     "Message": "spg_optim did not converge"})
 
 
