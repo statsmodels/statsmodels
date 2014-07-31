@@ -255,6 +255,8 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
         can be specified, they will simply be passed to `violinplot`.  Options
         specific to `beanplot` are:
 
+          - 'violin_width' : float.  Relative width of violins.  Max available
+                space is 1, default is 0.8.
           - 'bean_color', MPL color.  Color of bean plot lines.  Default is 'k'.
                 Also used for jitter marker edge color if `jitter` is True.
           - 'bean_size', scalar.  Line length as a fraction of maximum length.
@@ -265,6 +267,8 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
                 marker.
           - 'bean_mean_color', MPL color.  Color of mean line.  Default is 'b'.
           - 'bean_mean_lw', scalar.  Linewidth of mean line, default is 2.
+          - 'bean_mean_size', scalar.  Line length as a fraction of maximum length.
+                Default is 0.5.
           - 'bean_median_color', MPL color.  Color of median marker.  Default
                 is 'r'.
           - 'bean_median_marker', MPL marker.  Marker type, default is '+'.
@@ -326,13 +330,17 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
     # Determine available horizontal space for each individual violin.
     pos_span = np.max(positions) - np.min(positions)
-    width = np.min([0.15 * np.max([pos_span, 1.]),
+    violin_width = np.min([0.15 * np.max([pos_span, 1.]),
+                    plot_opts.get('violin_width', 0.8) / 2.])
+    bean_width = np.min([0.15 * np.max([pos_span, 1.]),
                     plot_opts.get('bean_size', 0.5) / 2.])
+    bean_mean_width = np.min([0.15 * np.max([pos_span, 1.]),
+                    plot_opts.get('bean_mean_size', 0.5) / 2.])
 
     legend_txt = plot_opts.get('bean_legend_text', None)
     for pos_data, pos in zip(data, positions):
         # Draw violins.
-        xvals, violin = _single_violin(ax, pos, pos_data, width, side, plot_opts)
+        xvals, violin = _single_violin(ax, pos, pos_data, violin_width, side, plot_opts)
 
         if jitter:
             # Draw data points at random coordinates within violin envelope.
@@ -345,7 +353,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
                     label=legend_txt)
         else:
             # Draw bean lines.
-            ax.hlines(pos_data, pos - width, pos + width,
+            ax.hlines(pos_data, pos - bean_width, pos + bean_width,
                       lw=plot_opts.get('bean_lw', 0.5),
                       color=plot_opts.get('bean_color', 'k'),
                       label=legend_txt)
@@ -357,7 +365,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
         # Draw mean line.
         if plot_opts.get('bean_show_mean', True):
-             ax.hlines(np.mean(pos_data), pos - width, pos + width,
+             ax.hlines(np.mean(pos_data), pos - bean_mean_width, pos + bean_mean_width,
                        lw=plot_opts.get('bean_mean_lw', 2.),
                        color=plot_opts.get('bean_mean_color', 'b'))
 
@@ -402,4 +410,3 @@ def _show_legend(ax):
     from matplotlib.artist import setp
     setp(ltext, fontsize='small')
     setp(llines, linewidth=1)
-
