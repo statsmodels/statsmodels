@@ -727,7 +727,7 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         smry.add_dict(info, align='l', float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
-        param['P>|t|'] = stats.t.sf(np.asarray(param['t']), self.model.df) / 2.
+        param['P>|t|'] = stats.t.sf(np.abs(np.asarray(param['t'])), self.model.df) / 2.
         ci = np.asarray(stats.t.interval(1-alpha, self.model.df, loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
         param['[' + str(alpha/2)] = ci[0]
         param[str(1-alpha/2) + ']'] = ci[1]    
