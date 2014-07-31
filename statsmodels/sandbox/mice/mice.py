@@ -722,8 +722,7 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         info["Model:"] = self.model.analysis_class.__name__
         info["Dependent variable:"] = self.model.endog_names
         info["Sample size:"] = "%d" % self.model.mod_list[0].model.exog.shape[0]
-#        info["Df:"] = self.model.df
-#        info["FMI:"] = self.model.fmi
+
 
         smry.add_dict(info, align='l', float_format=float_format)
 
@@ -734,7 +733,16 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         param[str(1-alpha/2) + ']'] = ci[1]    
         param['Df'] = self.model.df
         param['FMI'] = self.model.fmi
-#        param['#missing'] = self.model.imputer_list.
+        numiss = [0]
+        for value in self.model.exog_names:
+            for x in self.model.imputer_list:
+                if x.endog_name == value:
+                    numiss.append(int(x.num_missing))
+#
+#            t = next((x for x in self.model.imputer_list if x.endog_name == value), None)
+#            numiss.append(t.num_missing)
+        
+        param['#missing'] = numiss
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
 
