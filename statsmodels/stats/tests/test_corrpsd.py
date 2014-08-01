@@ -8,7 +8,8 @@ Author: Josef Perktold
 
 import numpy as np
 import scipy.sparse as sparse
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import (assert_almost_equal, assert_allclose,
+                           assert_equal)
 from statsmodels.stats.correlation_tools import (
     corr_nearest, corr_clipped, cov_nearest,
     _project_correlation_factors, corr_nearest_factor, _spg_optim,
@@ -233,9 +234,8 @@ class Test_Factor(object):
 
             # Try to recover the structure
             rslt = corr_nearest_factor(mat, dm)
-            C = rslt.corr
-            mat1 = C.to_matrix()
-
+            assert_equal(rslt.Converged, True)
+            mat1 = rslt.corr.to_matrix()
             assert_allclose(mat, mat1, rtol=0.25, atol=1e-3)
 
 
@@ -262,11 +262,13 @@ class Test_Factor(object):
             mat *= (np.abs(mat) >= 0.4)
             smat = sparse.csr_matrix(mat)
 
-            fac_dense = corr_nearest_factor(smat, dm).corr
-            mat_dense = fac_dense.to_matrix()
+            rslt = corr_nearest_factor(smat, dm)
+            assert_equal(rslt.Converged, True)
+            mat_dense = rslt.corr.to_matrix()
 
-            fac_sparse = corr_nearest_factor(smat, dm).corr
-            mat_sparse = fac_sparse.to_matrix()
+            rslt = corr_nearest_factor(smat, dm)
+            assert_equal(rslt.Converged, True)
+            mat_sparse = rslt.corr.to_matrix()
 
             assert_allclose(mat_dense, mat_sparse, rtol=0.25,
                             atol=1e-3)
@@ -293,6 +295,7 @@ class Test_Factor(object):
         x = np.random.normal(size=dm)
         rslt = _spg_optim(obj, grad, x, project)
         xnew = rslt.params
+        assert_equal(rslt.Converged, True)
         assert_almost_equal(obj(xnew), 0, decimal=3)
 
     def test_decorrelate(self):
