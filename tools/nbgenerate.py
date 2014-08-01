@@ -6,13 +6,16 @@ output.
 
 # prefer HTML over rST for now until nbconvert changes drop
 OUTPUT = "html"
-SOURCE_DIR = "/home/skipper/statsmodels/statsmodels/examples/notebooks"
 
 import os
 import io
 import sys
 import time
 import shutil
+
+SOURCE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+                                          "examples",
+                                          "notebooks"))
 
 from Queue import Empty
 
