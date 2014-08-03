@@ -1859,8 +1859,8 @@ class RegressionResults(base.LikelihoodModelResults):
                              'available options and spelling')
 
         if adjust_df:
-            # Note: we leave model.df_resid unchanged at original
-            res.df_resid = n_groups - 1
+            # Note: df_resid is used for scale and others, add new attribute
+            res.df_resid_inference = n_groups - 1
 
         return res
 
