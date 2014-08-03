@@ -59,12 +59,10 @@ class ImputedData(object):
     data : array-like object
         Needs to support transformation to pandas dataframe. Missing value
         encoding is handled by pandas DataFrame class.
-    go : boolean
-        Governs whether to create Imputer objects automatically. If False, user 
-        must specify their own Imputers manually.
     method : string
-        May take on values "pmm", "gaussian", or "bootstrap". Determines 
-        imputation method if go is True.
+        May take on values None, "pmm", "gaussian", or "bootstrap". Determines 
+        imputation method if go is True. method=None means the user must specify 
+		their own Imputer objects.
 
     **Attributes**
 
@@ -77,7 +75,7 @@ class ImputedData(object):
         One Imputer per variable to be imputed. See mice.Imputer.
 
     """
-    def __init__(self, data, go=True, method="pmm"):
+    def __init__(self, data, method=None):
         # may not need to make copies
         self.data = pd.DataFrame(data)
         # Drop observations where all variables are missing.
@@ -86,15 +84,16 @@ class ImputedData(object):
         self.implist = []        
         for c in self.data.columns:
             self.columns[c] = MissingDataInfo(self.data[c])
-            if go:
+            if method != None:
                 self.new_imputer(c, method=method)
         # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
 
     def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, 
                     model_class=None, init_args={}, fit_args={}, 
-                    return_class=None, scale_method="fix", scale_value=None, 
+                    rvs_class=None, scale_method="fix", scale_value=None, 
                     transform=None, inv_transform=None):
+		# TODO: Look into kwargs for method details such as k_pmm
         """
         Create Imputer instance from our ImputedData instance.
         
@@ -110,12 +109,14 @@ class ImputedData(object):
         k_pmm : int
             Determines number of observations from which to draw imputation
             when using predictive mean matching. See mice.Imputer.
+		init_args : Dictionary
+			Additional arguments for statsmodels model instance.
         formula : string
             Conditional formula for imputation. Defaults to model with main
             effects for all other variables in dataset.
         model_class : statsmodels model
             Conditional model for imputation. Defaults to OLS.
-        return_class : scipy.random instance
+        rvs_class : scipy.random instance
             Controls the scale/location family to use as the asymptotic
             distribution of the imputed variable. For use with method
             impute_asymptotic_bayes.
@@ -219,7 +220,11 @@ class Imputer(object):
     k_pmm : int
         Determines number of observations from which to draw imputation
         when using predictive mean matching. See method impute_pmm.
-    return_class : scipy.random class
+	init_args : Dictionary
+		Additional parameters for statsmodels model instance.
+	fit_args : Dictionary
+		Additional parameters for statsmodels fit instance.
+    rvs_class : scipy.random class
         Controls the scale/location family to use as the asymptotic
         distribution of the imputed variable. For use in method
         impute_asymptotic_bayes.
@@ -250,7 +255,7 @@ class Imputer(object):
     """
     def __init__(self, formula, model_class, data,
             method="gaussian", k_pmm=1, init_args={}, fit_args={},
-                 return_class=None, scale_method="fix", scale_value=None, 
+                 rvs_class=None, scale_method="fix", scale_value=None, 
                  transform=None, inv_transform=None):
         self.data = data
         self.formula = formula
@@ -259,7 +264,7 @@ class Imputer(object):
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
         self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
-        self.return_class = return_class
+        self.rvs_class = rvs_class
         self.scale_method = scale_method
         self.scale_value = scale_value
         self.method = method
@@ -313,7 +318,7 @@ class Imputer(object):
         Use Gaussian approximation to posterior distribution to simulate data.
 
         Fills in missing values of input data. User may also choose a different
-        approximating location/scale family by specifying return_class in
+        approximating location/scale family by specifying rvs_class in
         Imputer initialization.
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
@@ -324,7 +329,7 @@ class Imputer(object):
         mdf = md.fit(**self.fit_args)
         params, scale_per = self.perturb_params(mdf)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
-                                     model_class=self.return_class,
+                                     model_class=self.rvs_class,
                                      scale=np.sqrt(scale_per * mdf.scale))
         new_endog = new_rv.rvs(size=len(exog_miss))
         if self.transform is not None and self.inv_transform is not None:
@@ -490,12 +495,28 @@ class AnalysisChain(object):
     where no imputed data is used and also after skipping a set number of
     imputations for each iteration. See the "next" method for details.
 
+	%(params)s
+	
+	imputer_chain : ImputerChain instance
+	analysis_formula : string
+		Pandas formula for model to be analyzed.
+	analysis_class : statsmodels model
+		Model to be analyzed.
+	skipnum : integer
+		Number of imputation cycles to perform before storing dataset.
+	save : string
+		Specifies option for saving. save=full saves all, save=None saves nothing.
+	init_args : Dictionary
+		Additional parameters for statsmodels model instance.
+	fit_args : Dictionary
+		Additional parameters for statsmodels fit instance.	
+
     Note: See mice.MICE.run for iterator call.
 
     """
 
     def __init__(self, imputer_chain, analysis_formula, analysis_class,
-                 skipnum=10, save=False, init_args={}, fit_args={}):
+                 skipnum=10, save=None, init_args={}, fit_args={}):
         self.imputer_chain = imputer_chain
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class
@@ -525,7 +546,7 @@ class AnalysisChain(object):
             Fitted model of interest on imputed dataset that has passed all
             skip and burnin criteria
 
-        Note: If save option is True, imputed datasets are saved in the format
+        Note: If save="full", imputed datasets are saved in the format
         "mice_'iteration number'.csv"
         """
         #TODO: add transform here instead of in Imputer
@@ -535,7 +556,7 @@ class AnalysisChain(object):
         md = self.analysis_class.from_formula(self.analysis_formula,
                                               data, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        if self.save:
+        if self.save=="full":
             fname = "%s_%d.csv" % ('mice_', self.iter)
             data.to_csv(fname, index=False)
             self.iter += 1
@@ -579,7 +600,7 @@ class MICE(object):
 
     Examples
     --------
-    >>>impdata = mice.ImputedData(data, go=False)
+    >>>impdata = mice.ImputedData(data)
     >>>impdata.new_imputer("x2", method="pmm", k_pmm=20)
     >>>impdata.new_imputer("x1", method="pmm", model_class=sm.Logit, k_pmm=20)
     >>>impcomb = mice.MICE("x1 ~ x2", sm.Logit,impdata)
@@ -607,7 +628,7 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
         self.fit_args = fit_args
         self.N = len(impdata.implist[0].data.data)
 
-    def run(self, num_ds=20, skipnum=10, burnin=30, save=False):
+    def run(self, num_ds=20, skipnum=10, burnin=30, save=False, disp=True):
         """
         Generates analysis model results.
 
@@ -624,8 +645,10 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
         burnin : int
             Number of iterations to throw away before ever starting the skipped
             datasets count.
-        save : boolean
-            Whether to save the imputed datasets chosen for analysis.
+        save : string
+			Specifies option for saving. save=full saves all, save=None saves nothing.
+		disp : boolean
+			Specifies whether to display iteration number.
         """
        
         self.num_ds = num_ds
@@ -643,7 +666,8 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
             if not hasattr(self, "exog_names"):
                 self.exog_names = model.model.exog_names
                 self.endog_names = model.model.endog_names
-            print current_iter
+			if disp:
+				print current_iter
 
     def combine(self):
         """
