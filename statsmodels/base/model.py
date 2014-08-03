@@ -1111,12 +1111,14 @@ class LikelihoodModelResults(Results):
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
 
+        df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+
         if use_t:
             return ContrastResults(effect=_effect, t=_t, sd=_sd,
-                                   df_denom=self.df_resid)
+                                   df_denom=df_resid)
         else:
             return ContrastResults(effect=_effect, statistic=_t, sd=_sd,
-                                   df_denom=self.df_resid,
+                                   df_denom=df_resid,
                                    distribution='norm')
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
@@ -1323,9 +1325,10 @@ class LikelihoodModelResults(Results):
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
+        df_resid = getattr(self, 'df_resid_inference', self.df_resid)
         if use_f:
             F /= J
-            return ContrastResults(F=F, df_denom=self.df_resid,
+            return ContrastResults(F=F, df_denom=df_resid,
                                    df_num=invcov.shape[0])
         else:
             return ContrastResults(chi2=F, df_denom=J, statistic=F,
@@ -1390,7 +1393,8 @@ class LikelihoodModelResults(Results):
 
         if self.use_t:
             dist = stats.t
-            q = dist.ppf(1 - alpha / 2, self.df_resid)
+            df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+            q = dist.ppf(1 - alpha / 2, df_resid)
         else:
             dist = stats.norm
             q = dist.ppf(1 - alpha / 2)
