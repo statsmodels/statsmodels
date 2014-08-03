@@ -201,6 +201,43 @@ class CheckOLSRobustNewMixin(object):
         assert_allclose(ci1, ci2, rtol=rtol)
 
 
+    def test_scale(self):
+        res1 = self.res1
+        res2 = self.res2
+        rtol = 1e-5
+        # Note we always use df_resid for scale
+        # Stata uses nobs or df_resid for rmse, not always available in Stata
+        #assert_allclose(res1.scale, res2.rmse**2 * res2.N / (res2.N - res2.df_m - 1), rtol=rtol)
+        skip = False
+        if hasattr(res2, 'rss'):
+            scale = res2.rss / (res2.N - res2.df_m - 1)
+        elif hasattr(res2, 'rmse'):
+            scale = res2.rmse**2
+        else:
+            skip = True
+
+        if isinstance(res1.model, WLS):
+            skip = True
+            # Stata uses different scaling and using unweighted resid for rmse
+
+        if not skip:
+            assert_allclose(res1.scale, scale, rtol=rtol)
+
+        if not res2.vcetype == 'Newey-West':
+            # no rsquared in Stata
+            r2 = res2.r2 if hasattr(res2, 'r2') else res2.r2c
+            assert_allclose(res1.rsquared, r2, rtol=rtol, err_msg=str(skip))
+
+
+        # consistency checks, not against Stata
+        df_resid = res1.nobs - res1.df_model - 1
+        assert_equal(res1.df_resid, df_resid)
+        # variance of resid_pearson is 1, with ddof, and loc=0
+        psum = (res1.resid_pearson**2).sum()
+        assert_allclose(psum, df_resid, rtol=1e-13)
+
+
+
     def test_smoke(self):
         self.res1.summary()
 
@@ -343,6 +380,32 @@ class TestOLSRobustCluster2(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
 
+class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
+    # copy, past uses fit method
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.model.fit(cov_type='cluster',
+                                      cov_kwds=dict(
+                                                  groups=self.groups,
+                                                  use_correction=True,
+                                                  use_t=True))
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=True)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res2.results_cluster
+
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+
+
+
 class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
@@ -368,7 +431,38 @@ class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
     # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
-    def test_fvalue(self):
+    def test_f_value(self):
+        pass
+
+
+class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        model = OLS(self.res1.model.endog, self.res1.model.exog)
+        #res_ols = self.res1.model.fit(cov_type='cluster',
+        res_ols = model.fit(cov_type='cluster',
+                                      cov_kwds=dict(groups=self.groups,
+                                                  use_correction=False,
+                                                  use_t=False,
+                                                  df_correction=True))
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=False)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = False
+        self.res2 = res2.results_cluster_large
+
+        self.skip_f = True
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+
+    # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
+    def t_est_fvalue(self):
         pass
 
 
@@ -382,6 +476,31 @@ class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
                                                   maxlags=4,
                                                   use_correction=False,
                                                   use_t=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_nw_groupsum(self.res1, 4, self.time, use_correction=False)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res2.results_nw_groupsum4
+
+        self.skip_f = True
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+
+
+class TestOLSRobustClusterGSFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.model.fit(cov_type='nw-groupsum',
+                                      cov_kwds=dict(time=self.time,
+                                                  maxlags=4,
+                                                  use_correction=False,
+                                                  use_t=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse

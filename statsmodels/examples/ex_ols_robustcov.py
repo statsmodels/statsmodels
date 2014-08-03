@@ -38,8 +38,7 @@ print(tt.summary())
 print('\n\n')
 print(tt.summary_frame())
 
-print(vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1], use_f=True)))
-print(vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1], use_f=False)))
+print(vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1])))
 
 print(vars(res_hac4.wald_test(np.eye(len(res_hac4.params))[:-1], use_f=True)))
 print(vars(res_hac4.wald_test(np.eye(len(res_hac4.params))[:-1], use_f=False)))
