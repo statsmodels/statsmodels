@@ -1739,7 +1739,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         res.cov_type = cov_type
         # use_t might already be defined by the class, and already set
-        if not use_t is None:
+        if use_t is None:
             use_t = self.use_t
         res.cov_kwds = {'use_t':use_t}  # store for information
         res.use_t = use_t
