@@ -87,6 +87,62 @@ class TestPoissonClu(CheckCountRobustMixin):
         cls.get_robust_clu()
 
 
+class TestPoissonCluGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False)
+
+        debug = False
+        if debug:
+            # for debugging
+            cls.bse_nonrobust = cls.res1.bse.copy()
+            cls.res1 = res1 = mod.fit(disp=False)
+            cls.get_robust_clu()
+            cls.res3 = cls.res1
+            cls.bse_rob3 = cls.bse_rob.copy()
+            cls.res1 = res1 = mod.fit(disp=False)
+
+        from statsmodels.base.covtype import get_robustcov_results
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = res1.model.exog.shape
+        k_params = len(res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestPoissonHC1Generic(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = mod.fit(disp=False)
+
+        from statsmodels.base.covtype import get_robustcov_results
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
+
+
 class TestPoissonCluExposure(CheckCountRobustMixin):
 
     @classmethod
@@ -95,6 +151,34 @@ class TestPoissonCluExposure(CheckCountRobustMixin):
         mod = smd.Poisson(endog, exog, exposure=exposure)
         cls.res1 = mod.fit(disp=False)
         cls.get_robust_clu()
+
+
+class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_exposure_clu #nonrobust
+        mod = smd.Poisson(endog, exog, exposure=exposure)
+        cls.res1 = res1 = mod.fit(disp=False)
+
+        from statsmodels.base.covtype import get_robustcov_results
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse #sc.se_cov(cov_clu)
+
+        nobs, k_vars = res1.model.exog.shape
+        k_params = len(res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
 
 
 class TestNegbinClu(CheckCountRobustMixin):
