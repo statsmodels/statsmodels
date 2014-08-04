@@ -117,6 +117,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if use_self:
         res = self
     else:
+        # this doesn't work for most models, use raw instance instead from fit
         res = self.__class__(self.model, self.params,
                    normalized_cov_params=self.normalized_cov_params,
                    scale=self.scale)
@@ -148,9 +149,12 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
                              'does not use keywords')
         res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
                                        'robust ' + '(' + cov_type + ')')
-        # TODO cannot access cov without calling se first
-        getattr(self, cov_type.upper() + '_se')
-        res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
+
+        res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
+        if res.cov_params_default is None:
+            # results classes that don't have cov_HCx attribute
+            res.cov_params_default = sw.cov_white_simple(self,
+                                                         use_correction=False)
     elif cov_type == 'HAC':
         maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
         res.cov_kwds['maxlags'] = maxlags
