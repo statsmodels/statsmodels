@@ -10,7 +10,10 @@ import os
 import numpy as np
 import pandas as pd
 import statsmodels.discrete.discrete_model as smd
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod import families
 import statsmodels.stats.sandwich_covariance as sc
+from statsmodels.base.covtype import get_robustcov_results
 from statsmodels.tools.tools import add_constant
 
 from numpy.testing import assert_allclose
@@ -216,6 +219,57 @@ class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
 
+
+class TestGLMPoissonClu(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = smd.Poisson(endog, exog)
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = mod.fit()
+        cls.get_robust_clu()
+
+
+class TestGLMPoissonCluGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = res1 = mod.fit()
+
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = res1.model.exog.shape
+        k_params = len(res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = mod.fit()
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
 
 
 class TestNegbinClu(CheckCountRobustMixin):

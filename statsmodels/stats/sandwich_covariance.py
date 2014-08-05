@@ -235,6 +235,8 @@ def _get_sandwich_arrays(results):
         # assume we have a results instance
         if hasattr(results.model, 'jac'):
             xu = results.model.jac(results.params)
+        elif hasattr(results.model, 'score_obs'):
+            xu = results.model.score_obs(results.params)
         else:
             xu = results.model.exog * results.resid[:, None]
 
