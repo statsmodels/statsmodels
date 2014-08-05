@@ -142,6 +142,43 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(1./corr_fact)
 
+# TODO: refactor xxxFit to full testing results
+class TestPoissonCluFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
+                                  cov_kwds=dict(groups=group,
+                                                use_correction=True,
+                                                df_correction=True,  #TODO has no effect
+                                                use_t=False, #True,
+                                                ))
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestPoissonHC1Fit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = mod.fit(disp=False, cov_type='HC1')
+
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
+
 
 class TestPoissonCluExposure(CheckCountRobustMixin):
 
