@@ -140,7 +140,8 @@ class RegressionModel(base.LikelihoodModel):
     def whiten(self, X):
         raise NotImplementedError("Subclasses should implement.")
 
-    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None, **kwargs):
+    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
+            use_t=None, **kwargs):
         """
         Full fit of the model.
 
@@ -209,11 +210,11 @@ class RegressionModel(base.LikelihoodModel):
         if isinstance(self, OLS):
             lfit = OLSResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params,
-                       cov_type=cov_type, cov_kwds=cov_kwds)
+                       cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         else:
             lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params,
-                       cov_type=cov_type, cov_kwds=cov_kwds)
+                       cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         return RegressionResultsWrapper(lfit)
 
     def fit_regularized(self, method="coord_descent", maxiter=1000,
@@ -1051,7 +1052,7 @@ class RegressionResults(base.LikelihoodModelResults):
     _cache = {} # needs to be a class attribute for scale setter?
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
-                       cov_type='nonrobust', cov_kwds=None):
+                       cov_type='nonrobust', cov_kwds=None, use_t=None):
         super(RegressionResults, self).__init__(model, params,
                                                 normalized_cov_params,
                                                 scale)
@@ -1065,18 +1066,26 @@ class RegressionResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
 
-        self.use_t = True  # default for linear models
+
 
         if cov_type == 'nonrobust':
             self.cov_type = 'nonrobust'
             self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
                              'covariance matrix of the errors is correctly ' +
                              'specified.'}
+            if use_t is None:
+                self.use_t = True    # TODO: class default
         else:
             if cov_kwds is None:
                 cov_kwds = {}
+            if 'use_t' in cov_kwds:
+                # TODO: we want to get rid of 'use_t' in cov_kwds
+                use_t_2 = cov_kwds.pop('use_t')
+                if use_t is None:
+                    use_t = use_t_2
+                # TODO: warn or not?
             self.get_robustcov_results(cov_type=cov_type, use_self=True,
-                                       **cov_kwds)
+                                       use_t=use_t, **cov_kwds)
 
 
     def __str__(self):
