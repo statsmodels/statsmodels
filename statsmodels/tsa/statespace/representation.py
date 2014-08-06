@@ -762,6 +762,13 @@ class FilterResults(object):
         self.selection = model._selection.copy()
         self.state_cov = model._state_cov.copy()
 
+        # Save the state space initialization
+        self.initialization = model.initialization
+        self.inital_state = np.asarray(kalman_filter.model.initial_state)
+        self.inital_state_cov = np.asarray(
+            kalman_filter.model.initial_state_cov
+        )
+
         # Save Kalman filter parameters
         self.filter_method = kalman_filter.filter_method
         self.inversion_method = kalman_filter.inversion_method
