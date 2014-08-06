@@ -297,6 +297,18 @@ class Representation(object):
                              (name, nobs, str(shape)))
 
     @property
+    def prefix(self):
+        return find_best_blas_type((
+            self.endog, self._design, self._obs_intercept, self._obs_cov,
+            self._transition, self._state_intercept, self._selection,
+            self._state_cov
+        ))[0]
+
+    @property
+    def dtype(self):
+        return prefix_dtype_map[self.prefix]
+
+    @property
     def obs(self):
         return self.endog
 
@@ -321,7 +333,8 @@ class Representation(object):
         # Expand time-invariant design matrix
         if design.ndim == 2:
             design = np.array(design[:, :, None], order="F")
-        # Set the array
+
+        # Set the array elements
         self._design = design
 
     @property
@@ -581,12 +594,8 @@ class Representation(object):
             tolerance = self.tolerance
 
         # Determine which filter to call
-        prefix = find_best_blas_type((
-            self.endog, self._design, self._obs_intercept, self._obs_cov,
-            self._transition, self._state_intercept, self._selection,
-            self._state_cov
-        ))[0]
-        dtype = prefix_dtype_map[prefix]
+        prefix = self.prefix
+        dtype = self.dtype
 
         # If the dtype-specific representation matrices do not exist, create
         # them
@@ -731,6 +740,10 @@ class FilterResults(object):
         A Kalman filter object.
     """
     def __init__(self, model, kalman_filter):
+        # Data type
+        self.prefix = model.prefix
+        self.dtype = model.dtype
+
         # Copy the model dimensions
         self.nobs = model.nobs
         self.k_endog = model.k_endog
