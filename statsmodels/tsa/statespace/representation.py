@@ -49,12 +49,12 @@ class Representation(object):
     ----------
     endog : array_like
         The observed time-series process :math:`y`
-    nstates : int
+    k_states : int
         The dimension of the unobserved state process.
-    nposdef : int, optional
+    k_posdef : int, optional
         The dimension of a guaranteed positive definite covariance matrix
         describing the shocks in the measurement equation. Must be less than
-        or equal to `nstates`. Default is `nstates`.
+        or equal to `k_states`. Default is `k_states`.
     time-invariant : bool, optional
         In initializing model matrices, whether to assume the model is
         time-invariant (all matrices can be resized later). Default is True.
@@ -100,19 +100,19 @@ class Representation(object):
     equations are matrices describing the process. Their variable names and
     dimensions are as follows
 
-    Z : `design`          :math:`(nendog \times nstates \times nobs)`
+    Z : `design`          :math:`(k_endog \times k_states \times nobs)`
 
-    d : `obs_intercept`   :math:`(nendog \times nobs)`
+    d : `obs_intercept`   :math:`(k_endog \times nobs)`
 
-    H : `obs_cov`         :math:`(nendog \times nendog \times nobs)`
+    H : `obs_cov`         :math:`(k_endog \times k_endog \times nobs)`
 
-    T : `transition`      :math:`(nstates \times nstates \times nobs)`
+    T : `transition`      :math:`(k_states \times k_states \times nobs)`
 
-    c : `state_intercept` :math:`(nstates \times nobs)`
+    c : `state_intercept` :math:`(k_states \times nobs)`
 
-    R : `selection`       :math:`(nstates \times nposdef \times nobs)`
+    R : `selection`       :math:`(k_states \times k_posdef \times nobs)`
 
-    Q : `state_cov`       :math:`(nposdef \times nposdef \times nobs)`
+    Q : `state_cov`       :math:`(k_posdef \times k_posdef \times nobs)`
 
     In the case that one of the matrices is time-invariant (so that, for
     example, :math:`Z_t = Z_{t+1} ~ \forall ~ t`), its last dimension may
@@ -125,14 +125,14 @@ class Representation(object):
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
     """
-    def __init__(self, endog, nstates, nposdef=None, time_invariant=True,
+    def __init__(self, endog, k_states, k_posdef=None, time_invariant=True,
                  design=None, obs_intercept=None, obs_cov=None,
                  transition=None, state_intercept=None, selection=None,
                  state_cov=None, *args, **kwargs):
 
         # Explicitly copy the endogenous array
-        # Note: we assume that the given endog array is nobs x nendog, but
-        # _statespace assumes it is nendog x nobs. Thus we create it in the
+        # Note: we assume that the given endog array is nobs x k_endog, but
+        # _statespace assumes it is k_endog x nobs. Thus we create it in the
         # transposed shape as order "C" and then transpose to get order "F".
         if np.ndim(endog) == 1:
             self.endog = np.array(endog, ndmin=2, copy=True, order="F")
@@ -141,9 +141,9 @@ class Representation(object):
         dtype = self.endog.dtype
 
         # Dimensions
-        self.nendog, self.nobs = self.endog.shape
-        self.nstates = nstates
-        self.nposdef = nposdef if nposdef is not None else nstates
+        self.k_endog, self.nobs = self.endog.shape
+        self.k_states = k_states
+        self.k_posdef = k_posdef if k_posdef is not None else k_states
         self.time_invariant = time_invariant
         self.nvarying = 1 if time_invariant else self.nobs
 
@@ -154,31 +154,31 @@ class Representation(object):
         self.shapes = {
             'obs': self.endog.shape,
             'design': (
-                (self.nendog, self.nstates, self.nvarying)
+                (self.k_endog, self.k_states, self.nvarying)
                 if design is None else design.shape
             ),
             'obs_intercept': (
-                (self.nendog, self.nvarying)
+                (self.k_endog, self.nvarying)
                 if obs_intercept is None else obs_intercept.shape
             ),
             'obs_cov': (
-                (self.nendog, self.nendog, self.nvarying)
+                (self.k_endog, self.k_endog, self.nvarying)
                 if obs_cov is None else obs_cov.shape
             ),
             'transition': (
-                (self.nstates, self.nstates, self.nvarying)
+                (self.k_states, self.k_states, self.nvarying)
                 if transition is None else transition.shape
             ),
             'state_intercept': (
-                (self.nstates, self.nvarying)
+                (self.k_states, self.nvarying)
                 if state_intercept is None else state_intercept.shape
             ),
             'selection': (
-                (self.nstates, self.nposdef, self.nvarying)
+                (self.k_states, self.k_posdef, self.nvarying)
                 if selection is None else selection.shape
             ),
             'state_cov': (
-                (self.nposdef, self.nposdef, self.nvarying)
+                (self.k_posdef, self.k_posdef, self.nvarying)
                 if state_cov is None else state_cov.shape
             )
         }
@@ -305,13 +305,13 @@ class Representation(object):
         design = np.asarray(value, order="F")
 
         # Expand 1-dimensional array if possible
-        if (design.ndim == 1 and self.nendog == 1
-                and design.shape[0] == self.nstates):
+        if (design.ndim == 1 and self.k_endog == 1
+                and design.shape[0] == self.k_states):
             design = design[None, :]
 
-        # Enforce that the design matrix is nendog by nstates
+        # Enforce that the design matrix is k_endog by k_states
         self._validate_matrix_shape(
-            'design', design.shape, self.nendog, self.nstates, self.nobs
+            'design', design.shape, self.k_endog, self.k_states, self.nobs
         )
 
         # Expand time-invariant design matrix
@@ -328,9 +328,9 @@ class Representation(object):
     def obs_intercept(self, value):
         obs_intercept = np.asarray(value, order="F")
 
-        # Enforce that the observation intercept has length nendog
+        # Enforce that the observation intercept has length k_endog
         self._validate_vector_shape(
-            'observation intercept', obs_intercept.shape, self.nendog,
+            'observation intercept', obs_intercept.shape, self.k_endog,
             self.nobs
         )
 
@@ -350,13 +350,13 @@ class Representation(object):
         obs_cov = np.asarray(value, order="F")
 
         # Expand 1-dimensional array if possible
-        if (obs_cov.ndim == 1 and self.nendog == 1
-                and obs_cov.shape[0] == self.nendog):
+        if (obs_cov.ndim == 1 and self.k_endog == 1
+                and obs_cov.shape[0] == self.k_endog):
             obs_cov = obs_cov[None, :]
 
-        # Enforce that the observation covariance matrix is nendog by nendog
+        # Enforce that the observation covariance matrix is k_endog by k_endog
         self._validate_matrix_shape(
-            'observation covariance', obs_cov.shape, self.nendog, self.nendog,
+            'observation covariance', obs_cov.shape, self.k_endog, self.k_endog,
             self.nobs
         )
 
@@ -375,13 +375,13 @@ class Representation(object):
         transition = np.asarray(value, order="F")
 
         # Expand 1-dimensional array if possible
-        if (transition.ndim == 1 and self.nstates == 1
-                and transition.shape[0] == self.nstates):
+        if (transition.ndim == 1 and self.k_states == 1
+                and transition.shape[0] == self.k_states):
             transition = transition[None, :]
 
-        # Enforce that the transition matrix is nstates by nstates
+        # Enforce that the transition matrix is k_states by k_states
         self._validate_matrix_shape(
-            'transition', transition.shape, self.nstates, self.nstates,
+            'transition', transition.shape, self.k_states, self.k_states,
             self.nobs
         )
 
@@ -406,9 +406,9 @@ class Representation(object):
                              ' 1- or 2-dimensional array, got %d dimensions'
                              % state_intercept.ndim)
 
-        # Enforce that the state intercept has length nendog
+        # Enforce that the state intercept has length k_endog
         self._validate_vector_shape(
-            'state intercept', state_intercept.shape, self.nstates,
+            'state intercept', state_intercept.shape, self.k_states,
             self.nobs
         )
 
@@ -428,13 +428,13 @@ class Representation(object):
         selection = np.asarray(value, order="F")
 
         # Expand 1-dimensional array if possible
-        if (selection.ndim == 1 and self.nstates == 1
-                and selection.shape[0] == self.nstates):
+        if (selection.ndim == 1 and self.k_states == 1
+                and selection.shape[0] == self.k_states):
             selection = selection[None, :]
 
-        # Enforce that the selection matrix is nstates by nposdef
+        # Enforce that the selection matrix is k_states by k_posdef
         self._validate_matrix_shape(
-            'selection', selection.shape, self.nstates, self.nposdef,
+            'selection', selection.shape, self.k_states, self.k_posdef,
             self.nobs
         )
 
@@ -453,13 +453,13 @@ class Representation(object):
         state_cov = np.asarray(value, order="F")
 
         # Expand 1-dimensional array if possible
-        if (state_cov.ndim == 1 and self.nposdef == 1
-                and state_cov.shape[0] == self.nposdef):
+        if (state_cov.ndim == 1 and self.k_posdef == 1
+                and state_cov.shape[0] == self.k_posdef):
             state_cov = state_cov[None, :]
 
-        # Enforce that the state covariance matrix is nstates by nstates
+        # Enforce that the state covariance matrix is k_states by k_states
         self._validate_matrix_shape(
-            'state covariance', state_cov.shape, self.nposdef, self.nposdef,
+            'state covariance', state_cov.shape, self.k_posdef, self.k_posdef,
             self.nobs
         )
 
@@ -488,14 +488,14 @@ class Representation(object):
         initial_state = np.asarray(initial_state, order="F")
         initial_state_cov = np.asarray(initial_state_cov, order="F")
 
-        if not initial_state.shape == (self.nstates,):
+        if not initial_state.shape == (self.k_states,):
             raise ValueError('Invalid dimensions for initial state vector.'
                              ' Requires shape (%d,), got %s' %
-                             (self.nstates, str(initial_state.shape)))
-        if not initial_state_cov.shape == (self.nstates, self.nstates):
+                             (self.k_states, str(initial_state.shape)))
+        if not initial_state_cov.shape == (self.k_states, self.k_states):
             raise ValueError('Invalid dimensions for initial covariance'
                              ' matrix. Requires shape (%d,%d), got %s' %
-                             (self.nstates, self.nstates,
+                             (self.k_states, self.k_states,
                               str(initial_state.shape)))
 
         self._initial_state = initial_state
@@ -641,10 +641,10 @@ class Representation(object):
             kalman_filter = self._kalman_filters[prefix]
 
             recreate_filter = (
-                not kalman_filter.nendog == self.nendog or
-                not kalman_filter.nstates == self.nstates or
-                not kalman_filter.nposdef == self.nposdef or
-                not kalman_filter.nposdef == self.nposdef or
+                not kalman_filter.k_endog == self.k_endog or
+                not kalman_filter.k_states == self.k_states or
+                not kalman_filter.k_posdef == self.k_posdef or
+                not kalman_filter.k_posdef == self.k_posdef or
                 not kalman_filter.conserve_memory == conserve_memory or
                 not kalman_filter.loglikelihood_burn == loglikelihood_burn
             )
@@ -726,9 +726,9 @@ class FilterResults(object):
     def __init__(self, model, kalman_filter):
         # Copy the model dimensions
         self.nobs = model.nobs
-        self.nendog = model.nendog
-        self.nstates = model.nstates
-        self.nposdef = model.nposdef
+        self.k_endog = model.k_endog
+        self.k_states = model.k_states
+        self.k_posdef = model.k_posdef
         self.time_invariant = model.time_invariant
         self.nvarying = model.nvarying
 

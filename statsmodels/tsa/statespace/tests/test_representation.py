@@ -49,15 +49,15 @@ class Clark1987(object):
         data['lgdp'] = np.log(data['GDP'])
 
         # Construct the statespace representation
-        nstates = 4
-        self.model = ss.Representation(data['lgdp'], nstates=nstates,
-                                         **kwargs)
+        k_states = 4
+        self.model = ss.Representation(data['lgdp'], k_states=k_states,
+                                       **kwargs)
 
         self.model.design[:, :, 0] = [1, 1, 0, 0]
         self.model.transition[([0, 0, 1, 1, 2, 3],
                                [0, 3, 1, 2, 1, 3],
                                [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
-        self.model.selection = np.eye(self.model.nstates)
+        self.model.selection = np.eye(self.model.k_states)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
@@ -65,13 +65,13 @@ class Clark1987(object):
         )
         self.model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         self.model.state_cov[
-            np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
+            np.diag_indices(k_states)+(np.zeros(k_states, dtype=int),)] = [
             sigma_v**2, sigma_e**2, 0, sigma_w**2
         ]
 
         # Initialization
-        initial_state = np.zeros((nstates,))
-        initial_state_cov = np.eye(nstates)*100
+        initial_state = np.zeros((k_states,))
+        initial_state_cov = np.eye(k_states)*100
 
         # Initialization: modification
         initial_state_cov = np.dot(
@@ -283,8 +283,8 @@ class Clark1989(object):
         data['GDP'] = np.log(data['GDP'])
         data['UNEMP'] = (data['UNEMP']/100)
 
-        nstates = 6
-        self.model = ss.Representation(data, nstates=nstates, **kwargs)
+        k_states = 6
+        self.model = ss.Representation(data, k_states=k_states, **kwargs)
 
         # Statespace representation
         self.model.design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
@@ -293,7 +293,7 @@ class Clark1989(object):
              [0, 4, 1, 2, 1, 2, 4, 5],
              [0, 0, 0, 0, 0, 0, 0, 0])
         ] = [1, 1, 0, 0, 1, 1, 1, 1]
-        self.model.selection = np.eye(self.model.nstates)
+        self.model.selection = np.eye(self.model.k_states)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
@@ -306,13 +306,13 @@ class Clark1989(object):
         self.model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         self.model.obs_cov[1, 1, 0] = sigma_ec**2
         self.model.state_cov[
-            np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
+            np.diag_indices(k_states)+(np.zeros(k_states, dtype=int),)] = [
             sigma_v**2, sigma_e**2, 0, 0, sigma_w**2, sigma_vl**2
         ]
 
         # Initialization
-        initial_state = np.zeros((nstates,))
-        initial_state_cov = np.eye(nstates)*100
+        initial_state = np.zeros((k_states,))
+        initial_state_cov = np.eye(k_states)*100
 
         # Initialization: self.modelification
         initial_state_cov = np.dot(

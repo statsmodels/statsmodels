@@ -82,35 +82,35 @@ class Clark1987(object):
         self.obs = np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F")
 
         # Measurement equation
-        self.nendog = nendog = 1  # dimension of observed data
+        self.k_endog = k_endog = 1  # dimension of observed data
         # design matrix
-        self.design = np.zeros((nendog, 4, 1), dtype=dtype, order="F")
+        self.design = np.zeros((k_endog, 4, 1), dtype=dtype, order="F")
         self.design[:, :, 0] = [1, 1, 0, 0]
         # observation intercept
-        self.obs_intercept = np.zeros((nendog, 1), dtype=dtype, order="F")
+        self.obs_intercept = np.zeros((k_endog, 1), dtype=dtype, order="F")
         # observation covariance matrix
-        self.obs_cov = np.zeros((nendog, nendog, 1), dtype=dtype, order="F")
+        self.obs_cov = np.zeros((k_endog, k_endog, 1), dtype=dtype, order="F")
 
         # Transition equation
-        self.nstates = nstates = 4  # dimension of state space
+        self.k_states = k_states = 4  # dimension of state space
         # transition matrix
-        self.transition = np.zeros((nstates, nstates, 1),
+        self.transition = np.zeros((k_states, k_states, 1),
                                    dtype=dtype, order="F")
         self.transition[([0, 0, 1, 1, 2, 3],
                          [0, 3, 1, 2, 1, 3],
                          [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
         # state intercept
-        self.state_intercept = np.zeros((nstates, 1), dtype=dtype, order="F")
+        self.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
-        self.selection = np.asfortranarray(np.eye(nstates)[:, :, None],
+        self.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
                                            dtype=dtype)
         # state covariance matrix
-        self.state_cov = np.zeros((nstates, nstates, 1),
+        self.state_cov = np.zeros((k_states, k_states, 1),
                                   dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
-        self.initial_state = np.zeros((nstates,), dtype=dtype, order="F")
-        self.initial_state_cov = np.asfortranarray(np.eye(nstates)*100,
+        self.initial_state = np.zeros((k_states,), dtype=dtype, order="F")
+        self.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
                                                    dtype=dtype)
 
         # Update matrices with given parameters
@@ -119,7 +119,7 @@ class Clark1987(object):
         )
         self.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         self.state_cov[
-            np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
+            np.diag_indices(k_states)+(np.zeros(k_states, dtype=int),)] = [
             sigma_v**2, sigma_e**2, 0, sigma_w**2
         ]
 
@@ -373,41 +373,41 @@ class Clark1989(object):
         self.obs = np.array(data, ndmin=2, dtype=dtype, order="C").T
 
         # Parameters
-        self.nendog = nendog = 2  # dimension of observed data
-        self.nstates = nstates = 6  # dimension of state space
+        self.k_endog = k_endog = 2  # dimension of observed data
+        self.k_states = k_states = 6  # dimension of state space
         self.conserve_memory = conserve_memory
         self.loglikelihood_burn = loglikelihood_burn
 
         # Measurement equation
 
         # design matrix
-        self.design = np.zeros((nendog, nstates, 1), dtype=dtype, order="F")
+        self.design = np.zeros((k_endog, k_states, 1), dtype=dtype, order="F")
         self.design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
         # observation intercept
-        self.obs_intercept = np.zeros((nendog, 1), dtype=dtype, order="F")
+        self.obs_intercept = np.zeros((k_endog, 1), dtype=dtype, order="F")
         # observation covariance matrix
-        self.obs_cov = np.zeros((nendog, nendog, 1), dtype=dtype, order="F")
+        self.obs_cov = np.zeros((k_endog, k_endog, 1), dtype=dtype, order="F")
 
         # Transition equation
 
         # transition matrix
-        self.transition = np.zeros((nstates, nstates, 1),
+        self.transition = np.zeros((k_states, k_states, 1),
                                    dtype=dtype, order="F")
         self.transition[([0, 0, 1, 1, 2, 3, 4, 5],
                          [0, 4, 1, 2, 1, 2, 4, 5],
                          [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
         # state intercept
-        self.state_intercept = np.zeros((nstates, 1), dtype=dtype, order="F")
+        self.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
-        self.selection = np.asfortranarray(np.eye(nstates)[:, :, None],
+        self.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
                                            dtype=dtype)
         # state covariance matrix
-        self.state_cov = np.zeros((nstates, nstates, 1),
+        self.state_cov = np.zeros((k_states, k_states, 1),
                                   dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
-        self.initial_state = np.zeros((nstates,), dtype=dtype)
-        self.initial_state_cov = np.asfortranarray(np.eye(nstates)*100,
+        self.initial_state = np.zeros((k_states,), dtype=dtype)
+        self.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
                                                    dtype=dtype)
 
         # Update matrices with given parameters
@@ -421,7 +421,7 @@ class Clark1989(object):
         self.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         self.obs_cov[1, 1, 0] = sigma_ec**2
         self.state_cov[
-            np.diag_indices(nstates)+(np.zeros(nstates, dtype=int),)] = [
+            np.diag_indices(k_states)+(np.zeros(k_states, dtype=int),)] = [
             sigma_v**2, sigma_e**2, 0, 0, sigma_w**2, sigma_vl**2
         ]
 
