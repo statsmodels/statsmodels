@@ -407,28 +407,32 @@ cdef int {{prefix}}select_state_cov(int k_states, int k_posdef,
     cdef:
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
-    
-    # #### Calculate selected state covariance matrix  
-    # $Q_t^* = R_t Q_t R_t'$
-    # 
-    # Combine the selection matrix and the state covariance matrix to get
-    # the simplified (but possibly singular) "selected" state covariance
-    # matrix (see e.g. Durbin and Koopman p. 43)
 
-    # `tmp0` array used here, dimension $(m \times r)$  
+    # Only need to do something if there is a state covariance matrix
+    # (i.e k_posdof == 0)
+    if k_posdef > 0:
 
-    # $\\#_0 = 1.0 * R_t Q_t$  
-    # $(m \times r) = (m \times r) (r \times r)$
-    {{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
-          &alpha, selection, &k_states,
-                  state_cov, &k_posdef,
-          &beta, tmp, &k_states)
-    # $Q_t^* = 1.0 * \\#_0 R_t'$  
-    # $(m \times m) = (m \times r) (m \times r)'$
-    {{prefix}}gemm("N", "T", &k_states, &k_posdef, &k_posdef,
-          &alpha, tmp, &k_states,
-                  selection, &k_states,
-          &beta, selected_state_cov, &k_states)
+        # #### Calculate selected state covariance matrix  
+        # $Q_t^* = R_t Q_t R_t'$
+        # 
+        # Combine the selection matrix and the state covariance matrix to get
+        # the simplified (but possibly singular) "selected" state covariance
+        # matrix (see e.g. Durbin and Koopman p. 43)
+
+        # `tmp0` array used here, dimension $(m \times r)$  
+
+        # $\\#_0 = 1.0 * R_t Q_t$  
+        # $(m \times r) = (m \times r) (r \times r)$
+        {{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
+              &alpha, selection, &k_states,
+                      state_cov, &k_posdef,
+              &beta, tmp, &k_states)
+        # $Q_t^* = 1.0 * \\#_0 R_t'$  
+        # $(m \times m) = (m \times r) (m \times r)'$
+        {{prefix}}gemm("N", "T", &k_states, &k_states, &k_posdef,
+              &alpha, tmp, &k_states,
+                      selection, &k_states,
+              &beta, selected_state_cov, &k_states)
 
 # ## Kalman filter Routines
 # 
