@@ -468,7 +468,9 @@ class Clark1989(object):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.result['loglike'](self.true['start']), self.true['loglike'], 2
+            # self.result['loglike'](self.true['start']),
+            self.result['loglike'](0),
+            self.true['loglike'], 2
         )
 
     def test_filtered_state(self):
@@ -600,7 +602,8 @@ class TestClark1989ConserveAll(Clark1989):
         super(TestClark1989ConserveAll, self).__init__(
             dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08,
         )
-        self.loglikelihood_burn = self.true['start']
+        # self.loglikelihood_burn = self.true['start']
+        self.loglikelihood_burn = 0
         self.init_filter()
         self.run_filter()
 

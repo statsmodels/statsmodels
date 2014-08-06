@@ -269,6 +269,14 @@ class Clark1989(object):
     found at http://econ.korea.ac.kr/~cjkim/SSMARKOV.htm
 
     See `results.results_kalman_filter` for more information.
+
+    Notes
+    -----
+
+    There was an error in the loglikelihood computation in the GAUSS code from
+    Kim and Nelson omitting the exponent term on ``2 pi''. Therefore the
+    loglikelihood in the test results is instead from the FKF R library,
+    which can be replicated using the ``test_clark1989_r.R'' file.
     """
     def __init__(self, dtype=float, **kwargs):
         self.true = results_kalman_filter.uc_bi
@@ -327,7 +335,8 @@ class Clark1989(object):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.results.loglikelihood[self.true['start']:].sum(),
+            # self.results.loglikelihood[self.true['start']:].sum(),
+            self.results.loglikelihood[0:].sum(),
             self.true['loglike'], 2
         )
 
@@ -456,7 +465,8 @@ class TestClark1989ConserveAll(Clark1989):
         super(TestClark1989ConserveAll, self).__init__(
             dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
         )
-        self.model.loglikelihood_burn = self.true['start']
+        # self.model.loglikelihood_burn = self.true['start']
+        self.model.loglikelihood_burn = 0
         self.run_filter()
 
     def test_loglike(self):

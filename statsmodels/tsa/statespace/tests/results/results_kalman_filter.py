@@ -4,6 +4,15 @@ Results for Kalman Filter
 Author: Chad Fulton
 License: Simplified-BSD
 
+Notes
+-----
+
+There was an error in the loglikelihood computation in the GAUSS code from
+Kim and Nelson for the Clark 1989 model, omitting the exponent term on
+``2 pi''. Therefore the loglikelihood in the test results for uc_bi is instead
+from the FKF R library, which can be replicated using the
+``test_clark1989_r.R'' file.
+
 References
 ----------
 
@@ -371,7 +380,9 @@ uc_bi = {
         0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
         0.000000, 0.000000, 0.000000
     ],
-    'loglike': 1566.994602,
+    # See Notes in the file docstring for more information on the loglikelihood
+    # 'loglike': 1566.994602,
+    'loglike': 1485.41934,
     'states': [
         [7.359396,  0.023164,  0.013713,  0.044071],
         [7.362719,  0.022574,  0.012832,  0.043161],
