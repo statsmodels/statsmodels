@@ -142,6 +142,9 @@ class Representation(object):
 
         # Dimensions
         self.k_endog, self.nobs = self.endog.shape
+        if k_states < 1:
+            raise ValueError('Number of states in statespace model must be a'
+                             ' positive number.')
         self.k_states = k_states
         self.k_posdef = k_posdef if k_posdef is not None else k_states
         self.time_invariant = time_invariant
