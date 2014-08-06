@@ -85,7 +85,7 @@ class Representation(object):
     .. math::
 
         y_t = Z_t \alpha_t + d_t + \varepsilon_t \\
-        \alpha_t = T_t \alpha_t + c_t + R_t \eta_t \\
+        \alpha_t = T_t \alpha_{t-1} + c_t + R_t \eta_t \\
 
     where :math:`y_t` refers to the observation vector at time :math:`t`,
     :math:`\alpha_t` refers to the (unobserved) state vector at time
