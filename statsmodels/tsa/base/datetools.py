@@ -281,8 +281,9 @@ def _add_datetimes(dates):
     return reduce(lambda x, y: y+x, dates)
 
 def _infer_freq(dates):
-    if hasattr(dates, "freqstr"):
-        return dates.freqstr
+    maybe_freqstr = getattr(dates, 'freqstr', None)
+    if maybe_freqstr is not None:
+        return maybe_freqstr
     try:
         from pandas.tseries.api import infer_freq
         freq = infer_freq(dates)
