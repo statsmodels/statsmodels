@@ -35,6 +35,29 @@ prefix_kalman_filter_map = {
 }
 
 
+def companion_matrix(n, values=None):
+    matrix = np.zeros((n, n))
+    idx = np.diag_indices(n-1)
+    idx = (idx[0], idx[1]+1)
+    matrix[idx] = 1
+    if values is not None:
+        matrix[:, 0] = values
+    return matrix
+
+
+def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
+    differenced = np.asanyarray(series)
+
+    # Seasonal differencing
+    if seasonal_diff is not None:
+        while seasonal_diff > 0:
+            differenced = differenced[k_seasons:] - differenced[:-k_seasons]
+            seasonal_diff -= 1
+
+    # Simple differencing
+    return np.diff(differenced, diff, axis=0)
+
+
 def constrain_stationary(unconstrained):
     """
     References
