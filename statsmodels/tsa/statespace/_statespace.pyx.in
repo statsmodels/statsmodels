@@ -782,9 +782,9 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cy
         determinant = 1
         for i in range(kfilter.k_endog):
             if not kfilter._forecast_error_ipiv[i] == i+1:
-                determinant *= -1*kfilter._forecast_error_fac[i, i]
+                determinant *= -1*kfilter.forecast_error_fac[i, i]
             else:
-                determinant *= kfilter._forecast_error_fac[i, i]
+                determinant *= kfilter.forecast_error_fac[i, i]
 
     return determinant
 
