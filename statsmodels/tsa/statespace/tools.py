@@ -58,7 +58,7 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
     return np.diff(differenced, diff, axis=0)
 
 
-def constrain_stationary(unconstrained):
+def constrain_stationary_univariate(unconstrained):
     """
     References
     ----------
@@ -79,7 +79,7 @@ def constrain_stationary(unconstrained):
     return -y[n-1, :]
 
 
-def unconstrain_stationary(constrained):
+def unconstrain_stationary_univariate(constrained):
     """
     References
     ----------
