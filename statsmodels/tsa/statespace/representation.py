@@ -271,7 +271,7 @@ class Representation(object):
                              ' rows, got %d' % (name, nrows, shape[0]))
         if not shape[1] == ncols:
             raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                             ' columns, got %d' % (name, shape[1], shape[1]))
+                             ' columns, got %d' % (name, ncols, shape[1]))
         # Enforce time-varying array size
         if ndim == 3 and not shape[2] in [1, nobs]:
             raise ValueError('Invalid dimensions for time-varying %s'
