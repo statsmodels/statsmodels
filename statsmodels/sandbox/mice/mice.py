@@ -109,8 +109,8 @@ class ImputedData(object):
         k_pmm : int
             Determines number of observations from which to draw imputation
             when using predictive mean matching. See mice.Imputer.
-		init_args : Dictionary
-			Additional arguments for statsmodels model instance.
+        init_args : Dictionary
+            Additional arguments for statsmodels model instance.
         formula : string
             Conditional formula for imputation. Defaults to model with main
             effects for all other variables in dataset.
@@ -221,9 +221,9 @@ class Imputer(object):
         Determines number of observations from which to draw imputation
         when using predictive mean matching. See method impute_pmm.
 	init_args : Dictionary
-		Additional parameters for statsmodels model instance.
+        Additional parameters for statsmodels model instance.
 	fit_args : Dictionary
-		Additional parameters for statsmodels fit instance.
+		  Additional parameters for statsmodels fit instance.
     rvs_class : scipy.random class
         Controls the scale/location family to use as the asymptotic
         distribution of the imputed variable. For use in method
@@ -272,7 +272,7 @@ class Imputer(object):
         self.transform = transform
         self.inv_transform = inv_transform
 
-    def perturb_params(self, mdf):
+    def perturb_params(self, mdf, endog_obs, exog_obs):
         """
         Perturbs the model's scale and fit parameters.
 
@@ -294,23 +294,32 @@ class Imputer(object):
             Perturbed nuisance parameter.
         """
         # TODO: switch to scipy
-        params = mdf.params.copy()
-        covmat = mdf.cov_params()
-        covmat_sqrt = np.linalg.cholesky(covmat)
-        if self.scale_method == "fix":
-            if self.scale_value is None:
-                scale_per = 1.
-            else:
-                scale_per = self.scale_value
-        elif self.scale_method == "perturb_chi2":
-            u = np.random.chisquare(float(mdf.df_resid))
-            scale_per = float(mdf.df_resid) / float(u)
-        elif self.scale_method == "perturb_boot":
-            raise NotImplementedError
-        p = len(params)
-        params += np.dot(covmat_sqrt,
-                         np.random.normal(0, np.sqrt(mdf.scale * scale_per), 
-                                          p))
+
+        if self.scale_method == "perturb_boot":
+            l = len(endog_obs)
+            rix = np.random.choice(range(l),size=l)
+            endog_sample = endog_obs.iloc[rix]
+            exog_sample = exog_obs.iloc[rix]
+            md = self.model_class(endog_sample, exog_sample, **self.init_args)
+            mdf = md.fit(**self.fit_args)
+            params = mdf.params.copy()
+            scale_per = 1         
+        else:
+            params = mdf.params.copy()
+            covmat = mdf.cov_params()
+            covmat_sqrt = np.linalg.cholesky(covmat)            
+            if self.scale_method == "fix":
+                if self.scale_value is None:
+                    scale_per = 1.
+                else:
+                    scale_per = self.scale_value
+            elif self.scale_method == "perturb_chi2":
+                u = np.random.chisquare(float(mdf.df_resid))
+                scale_per = float(mdf.df_resid) / float(u)
+            p = len(params)
+            params += np.dot(covmat_sqrt,
+                             np.random.normal(0, np.sqrt(mdf.scale * scale_per), 
+                                              p))
         return params, scale_per
 
     def impute_asymptotic_bayes(self):
@@ -327,7 +336,7 @@ class Imputer(object):
             endog_obs = self.transform(endog_obs)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params, scale_per = self.perturb_params(mdf)
+        params, scale_per = self.perturb_params(mdf, endog_obs, exog_obs)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
                                      model_class=self.rvs_class,
                                      scale=np.sqrt(scale_per * mdf.scale))
@@ -357,7 +366,7 @@ class Imputer(object):
             endog_obs = self.transform(endog_obs)                                                                
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params, scale_per = self.perturb_params(mdf)
+        params, scale_per = self.perturb_params(mdf, endog_obs, exog_obs)
         # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
@@ -797,5 +806,3 @@ class MissingDataInfo(object):
         self.ix_miss = np.flatnonzero(null)
         if len(self.ix_obs) == 0:
             raise ValueError("Variable to be imputed has no observed values")
-            
-            
