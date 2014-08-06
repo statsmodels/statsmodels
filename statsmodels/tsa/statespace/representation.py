@@ -243,6 +243,7 @@ class Representation(object):
         self._kalman_filters = {}
 
         # Options
+        self.initial_variance = kwargs.get('initial_variance', 1e6)
         self.loglikelihood_burn = kwargs.get('loglikelihood_burn', 0)
 
         self.filter_method = kwargs.get(
@@ -505,7 +506,7 @@ class Representation(object):
         self._initial_state_cov = initial_state_cov
         self.initialization = 'known'
 
-    def initialize_approximate_diffuse(self, variance=1e3):
+    def initialize_approximate_diffuse(self, variance=None):
         """
         Initialize the statespace model with approximate diffuse values.
 
@@ -519,6 +520,9 @@ class Representation(object):
             The variance for approximating diffuse initial conditions. Default
             is 1e3.
         """
+        if variance is None:
+            variance = self.initial_variance
+
         self._initial_variance = variance
         self.initialization = 'approximate_diffuse'
 
