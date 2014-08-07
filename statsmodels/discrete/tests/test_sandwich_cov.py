@@ -344,6 +344,74 @@ class TestNegbinCluExposure(CheckCountRobustMixin):
 #
 #        print dir(results_st)
 
+class TestNegbinCluGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_clu
+        mod = smd.NegativeBinomial(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False)
+
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestNegbinCluFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_clu
+        mod = smd.NegativeBinomial(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
+                                  cov_kwds=dict(groups=group,
+                                                use_correction=True,
+                                                df_correction=True),  #TODO has no effect
+                                  use_t=False, #True,
+                                  )
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestNegbinCluExposureFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_exposure_clu #nonrobust
+        mod = smd.NegativeBinomial(endog, exog, exposure=exposure)
+        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
+                                  cov_kwds=dict(groups=group,
+                                                use_correction=True,
+                                                df_correction=True),  #TODO has no effect
+                                  use_t=False, #True,
+                                  )
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
 if __name__ == '__main__':
     tt = TestPoissonClu()
     tt.setup_class()

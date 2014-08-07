@@ -2176,7 +2176,12 @@ class NegativeBinomial(CountModel):
         return sc
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None, **kwargs):
+            full_output=1, disp=1, callback=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+
+        # Note: don't let super handle robust covariance because it has
+        # transformed params
+
         if self.loglike_method.startswith('nb') and method not in ['newton',
                                                                    'ncg']:
             self._transparams = True # in case same Model instance is refit
@@ -2201,9 +2206,15 @@ class NegativeBinomial(CountModel):
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
             nbinfit = NegativeBinomialResults(self, mlefit._results)
-            return NegativeBinomialResultsWrapper(nbinfit)
+            result = NegativeBinomialResultsWrapper(nbinfit)
         else:
-            return mlefit
+            result = mlefit
+
+        if cov_kwds is None:
+            cov_kwds = {}  #TODO: make this unnecessary ?
+        result._get_robustcov_results(cov_type=cov_type,
+                                    use_self=True, use_t=use_t, **cov_kwds)
+        return result
 
 
     def fit_regularized(self, start_params=None, method='l1',
@@ -2252,7 +2263,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         "A results class for the discrete dependent variable models.",
         "extra_attr" : ""}
 
-    def __init__(self, model, mlefit, cov_type='nonrobust', cov_kwds=None):
+    def __init__(self, model, mlefit, cov_type='nonrobust', cov_kwds=None,
+                 use_t=None):
         #super(DiscreteResults, self).__init__(model, params,
         #        np.linalg.inv(-hessian), scale=1.)
         self.model = model
@@ -2263,8 +2275,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.__dict__.update(mlefit.__dict__)
 
         # robust covariance
-        from statsmodels.base.covtype import get_robustcov_results
-
+        if use_t is not None:
+            self.use_t = use_t
         if cov_type == 'nonrobust':
             self.cov_type = 'nonrobust'
             self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
@@ -2273,6 +2285,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         else:
             if cov_kwds is None:
                 cov_kwds = {}
+            from statsmodels.base.covtype import get_robustcov_results
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                        **cov_kwds)
 
