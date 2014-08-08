@@ -409,7 +409,6 @@ class LikelihoodModel(Model):
                 warn(warndoc, RuntimeWarning)
                 Hinv = None
 
-
         if 'cov_type' in kwargs:
             cov_kwds = kwargs.get('cov_kwds', {})
             kwds = {'cov_type':kwargs['cov_type'], 'cov_kwds':cov_kwds}
@@ -417,6 +416,9 @@ class LikelihoodModel(Model):
             kwds = {}
         if 'use_t' in kwargs:
             kwds['use_t'] = kwargs['use_t']
+        #prints for debugging
+        #print('kwargs inLikelihoodModel.fit', kwargs)
+        #print('kwds inLikelihoodModel.fit', kwds)
         #TODO: add Hessian approximation and change the above if needed
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1., **kwds)
 

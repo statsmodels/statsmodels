@@ -1305,6 +1305,7 @@ class Logit(BinaryModel):
         bnryfit = super(Logit, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
+
         discretefit = LogitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
@@ -2274,20 +2275,22 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 
-        # robust covariance
-        if use_t is not None:
-            self.use_t = use_t
-        if cov_type == 'nonrobust':
-            self.cov_type = 'nonrobust'
-            self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
-                             'covariance matrix of the errors is correctly ' +
-                             'specified.'}
-        else:
-            if cov_kwds is None:
-                cov_kwds = {}
-            from statsmodels.base.covtype import get_robustcov_results
-            get_robustcov_results(self, cov_type=cov_type, use_self=True,
-                                       **cov_kwds)
+        if not hasattr(self, 'cov_type'):
+            # do this only if super, i.e. mlefit didn't already add cov_type
+            # robust covariance
+            if use_t is not None:
+                self.use_t = use_t
+            if cov_type == 'nonrobust':
+                self.cov_type = 'nonrobust'
+                self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
+                                 'covariance matrix of the errors is correctly ' +
+                                 'specified.'}
+            else:
+                if cov_kwds is None:
+                    cov_kwds = {}
+                from statsmodels.base.covtype import get_robustcov_results
+                get_robustcov_results(self, cov_type=cov_type, use_self=True,
+                                           **cov_kwds)
 
 
 

@@ -12,11 +12,13 @@ import pandas as pd
 import statsmodels.discrete.discrete_model as smd
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
+from statsmodels.genmod.families import links
+from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sc
 from statsmodels.base.covtype import get_robustcov_results
 from statsmodels.tools.tools import add_constant
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 
 # get data and results as module global for now, TODO: move to class
@@ -410,6 +412,80 @@ class TestNegbinCluExposureFit(CheckCountRobustMixin):
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
+
+
+class CheckDiscreteGLM(object):
+    # compare GLM with other models, no verified reference results
+
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        assert_equal(res1.cov_type, self.cov_type)
+        assert_equal(res2.cov_type, self.cov_type)
+
+        assert_allclose(res1.params, res2.params, rtol=1e-13)
+        # bug TODO res1.scale missing ?  in Gaussian/OLS
+        assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+#         if not self.cov_type == 'nonrobust':
+#             assert_allclose(res1.bse * res1.scale, res2.bse, rtol=1e-13)
+#         else:
+#             assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+
+
+class TestGLMLogit(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        endog_bin = (endog > endog.mean()).astype(int)
+        cls.cov_type = 'cluster'
+
+        mod1 = GLM(endog_bin, exog, family=families.Binomial())
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod1 = smd.Logit(endog_bin, exog)
+        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+
+class T_estGLMProbit(CheckDiscreteGLM):
+    # invalid link. What's Probit as GLM?
+
+    @classmethod
+    def setup_class(cls):
+        endog_bin = (endog > endog.mean()).astype(int)
+        cls.cov_type = 'cluster'
+
+        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink))
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod1 = smd.Probit(endog_bin, exog)
+        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+
+class TestGLMGaussNonRobust(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'nonrobust'
+
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit()
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit()
+
+
+class TestGLMGauss(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'cluster'
+
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
 
 if __name__ == '__main__':
