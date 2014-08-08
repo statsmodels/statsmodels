@@ -195,7 +195,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         self.resd = resd  # attach to access from the outside
 
         assert_allclose(res1.llf, resd.llf, rtol=1e-10)
-        score_obs1 = res1.model.score_obs(res1.params)
+        score_obs1 = res1.model.score_obs(res1.params, scale=None)
         score_obsd = resd.resid[:, None] / resd.scale * resd.model.exog
         # low precision because of badly scaled exog
         assert_allclose(score_obs1, score_obsd, rtol=1e-8)
