@@ -475,7 +475,7 @@ class TestGLMGaussNonRobust(CheckDiscreteGLM):
         cls.res2 = mod2.fit()
 
 
-class TestGLMGauss(CheckDiscreteGLM):
+class TestGLMGaussClu(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
@@ -486,6 +486,19 @@ class TestGLMGauss(CheckDiscreteGLM):
 
         mod2 = OLS(endog, exog)
         cls.res2 = mod2.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+
+class TestGLMGaussHC(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'HC0'
+
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='HC0')
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='HC0')
 
 
 if __name__ == '__main__':

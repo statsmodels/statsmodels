@@ -204,6 +204,11 @@ class TestGlmGaussian(CheckModelResultsMixin):
         score_obsd = resd.resid[:, None] * resd.model.exog
         assert_allclose(score_obs1, score_obsd, rtol=1e-8)
 
+        hess_obs1 = res1.model.hessian(res1.params, scale=None)
+        hess_obsd = -1. / resd.scale * resd.model.exog.T.dot(resd.model.exog)
+        # low precision because of badly scaled exog
+        assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
+
 #    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."

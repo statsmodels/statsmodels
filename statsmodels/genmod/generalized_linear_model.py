@@ -253,7 +253,7 @@ class GLM(base.LikelihoodModel):
         return self.family.loglike(*args)
 
 
-    def score_obs(self, params, scale=1): #None):
+    def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
 
         Parameters
