@@ -24,6 +24,9 @@ class Family(object):
     variance : a variance function
         Measures the variance as a function of the mean probabilities.
         See the individual families for the default variance function.
+    invalid_link : string in ['raise' 'warn', 'ignore']
+        Check whether links are valid for family, that is if link is one of
+        the registered classes, and raise, warn or ignore if link is invalid.
 
     See Also
     --------
@@ -53,15 +56,30 @@ class Family(object):
 # <statsmodels.family.links.Power object at 0x9a4236c>]
 # for Poisson...
         self._link = link
-        if not isinstance(link, L.Link):
-            raise TypeError("The input should be a valid Link object.")
-        if hasattr(self, "links"):
+        invalid_link = self.invalid_link
+        if invalid_link != 'ignore' and not isinstance(link, L.Link):
+            if invalid_link == 'raise':
+                raise TypeError("The input should be a valid Link object.")
+            elif invalid_link == 'warn':
+                import warnings
+                warnings.warn("The input should be a valid Link object.",
+                              RuntimeWarning)
+            else:
+                raise TypeError('invalid value for `invalid_link')
+        if invalid_link != 'ignore' and hasattr(self, "links"):
             validlink = link in self.links
 #            validlink = max([isinstance(link, _.__class__) for _ in self.links])
             validlink = max([isinstance(link, _) for _ in self.links])
             if not validlink:
                 errmsg = "Invalid link for family, should be in %s. (got %s)"
-                raise ValueError(errmsg % (repr(self.links), link))
+                if invalid_link == 'raise':
+                    raise ValueError(errmsg % (repr(self.links), link))
+                elif invalid_link == 'warn':
+                    import warnings
+                    warnings.warn(errmsg % (repr(self.links), link),
+                                  RuntimeWarning)
+                else:
+                    raise TypeError('invalid value for `invalid_link')
 
 
     def _getlink(self):
@@ -74,7 +92,8 @@ class Family(object):
     #pointer to link instance
     link = property(_getlink, _setlink, doc="Link function for family")
 
-    def __init__(self, link, variance):
+    def __init__(self, link, variance, invalid_link='raise'):
+        self.invalid_link = invalid_link
         self.link = link()
         self.variance = variance
 
@@ -272,7 +291,8 @@ class Poisson(Family):
     variance = V.mu
     valid = [0, np.inf]
 
-    def __init__(self, link=L.log):
+    def __init__(self, link=L.log, invalid_link='raise'):
+        self.invalid_link = invalid_link
         self.variance = Poisson.variance
         self.link = link()
 
@@ -410,7 +430,8 @@ class Gaussian(Family):
     links = [L.log, L.identity, L.inverse_power]
     variance = V.constant
 
-    def __init__(self, link=L.identity):
+    def __init__(self, link=L.identity, invalid_link='raise'):
+        self.invalid_link = invalid_link
         self.variance = Gaussian.variance
         self.link = link()
 
@@ -556,7 +577,8 @@ class Gamma(Family):
     links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
 
-    def __init__(self, link=L.inverse_power):
+    def __init__(self, link=L.inverse_power, invalid_link='raise'):
+        self.invalid_link = invalid_link
         self.variance = Gamma.variance
         self.link = link()
 
@@ -708,7 +730,8 @@ class Binomial(Family):
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
     variance = V.binary # this is not used below in an effort to include n
 
-    def __init__(self, link=L.logit):  #, n=1.):
+    def __init__(self, link=L.logit, invalid_link='raise'):  #, n=1.):
+        self.invalid_link = invalid_link
 #TODO: it *should* work for a constant n>1 actually, if data_weights is
 # equal to n
         self.n = 1 # overwritten by initialize if needed but
@@ -956,7 +979,8 @@ class InverseGaussian(Family):
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
     variance = V.mu_cubed
 
-    def __init__(self, link=L.inverse_squared):
+    def __init__(self, link=L.inverse_squared, invalid_link='raise'):
+        self.invalid_link = invalid_link
         self.variance = InverseGaussian.variance
         self.link = link()
 
@@ -1096,7 +1120,8 @@ class NegativeBinomial(Family):
 # similar to below
     variance = V.nbinom
 
-    def __init__(self, link=L.log, alpha=1.):
+    def __init__(self, link=L.log, alpha=1., invalid_link='raise'):
+        self.invalid_link = invalid_link
         self.alpha = alpha
         self.variance = V.NegativeBinomial(alpha=self.alpha)
         if isinstance(link, L.NegativeBinomial):
