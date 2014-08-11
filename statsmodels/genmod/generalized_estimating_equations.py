@@ -1942,6 +1942,7 @@ class Multinomial(Family):
             distribution.
         """
 
+        self.invalid_link = 'raise'
         self.ncut = nlevels - 1
         self.link = MultinomialLogit(self.ncut)
 
