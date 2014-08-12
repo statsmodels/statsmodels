@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
-
 """
 Test functions for GEE
 
@@ -124,20 +121,20 @@ class TestGEE(object):
                              "groups": groups})
 
         mod1 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                groups="groups", data=data,
+                                "groups", data=data,
                                 missing='drop')
         rslt1 = mod1.fit()
 
         assert_almost_equal(len(mod1.endog), 95)
         assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
 
-        #mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-        #                        groups="groups", data=data.dropna(),
-        #                        missing='none')
-        #rslt2 = mod2.fit()
+        mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                "groups", data=data.dropna(),
+                                missing='none')
+        rslt2 = mod2.fit()
 
-        #assert_almost_equal(rslt1.params, rslt2.params)
-        #assert_almost_equal(rslt1.bse, rslt2.bse)
+        assert_almost_equal(rslt1.params, rslt2.params)
+        assert_almost_equal(rslt1.bse, rslt2.bse)
 
 
     def test_default_time(self):
