@@ -133,7 +133,7 @@ class TestGEE(object):
 
         #mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
         #                        groups="groups", data=data.dropna(),
-                                missing='none')
+        #                        missing='none')
         #rslt2 = mod2.fit()
 
         #assert_almost_equal(rslt1.params, rslt2.params)
