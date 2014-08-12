@@ -104,30 +104,38 @@ class TestGEE(object):
         assert_almost_equal(rslt1.params, rslt2.params, decimal=6)
         assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
+    def test_missing(self):
 
-
-    # TODO: why does this test fail?
-    def t_est_missing(self):
-
-        Y = np.random.normal(size=100)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
+        endog = np.random.normal(size=100)
+        exog1 = np.random.normal(size=100)
+        exog2 = np.random.normal(size=100)
+        exog3 = np.random.normal(size=100)
         groups = np.kron(lrange(20), np.ones(5))
 
-        Y[0] = np.nan
-        Y[5:7] = np.nan
-        X2[10:12] = np.nan
+        endog[0] = np.nan
+        endog[5:7] = np.nan
+        exog2[10:12] = np.nan
 
-        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
-                          "groups": groups})
+        data = pd.DataFrame({"endog": endog, "exog1": exog1,
+                             "exog2": exog2, "exog3": exog3,
+                             "groups": groups})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D["groups"],
-                              missing='drop')
-        mdf = md.fit()
+        mod1 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                groups="groups", data=data,
+                                missing='drop')
+        rslt1 = mod1.fit()
 
-        assert_almost_equal(len(md.endog), 95)
-        assert_almost_equal(np.asarray(md.exog.shape), np.r_[95, 4])
+        assert_almost_equal(len(mod1.endog), 95)
+        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
+
+        mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                groups="groups", data=data.dropna(),
+                                missing='none')
+        rslt2 = mod2.fit()
+
+        assert_almost_equal(rslt1.params, rslt2.params)
+        assert_almost_equal(rslt1.bse, rslt2.bse)
+
 
     def test_default_time(self):
         """
