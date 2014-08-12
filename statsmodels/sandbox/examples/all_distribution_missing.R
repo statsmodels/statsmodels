@@ -45,10 +45,24 @@ fit = with(data=imp,exp=glm(berndraws.mar ~ normdraws.mar + poisdraws.mar, famil
 require(mi)
 
 data = read.csv("missingfull.csv")
-#  data = subset(data, select=-c(berndraws.mar))
+data = subset(data, select=-c(poisdraws.mar))
 # mp.plot(data, y.order = TRUE, x.order = TRUE, gray.scale = TRUE)
 # info <- mi.info(data)
 # info
-imp <- mi(data, n.imp=20, n.iter=10)
-fit <- glm.mi(berndraws.mar ~ normdraws.mar + poisdraws.mar, imp, family=binomial)
-display(fit)
+iternum = 500
+int = rep(0,iternum)
+coef = rep(0,iternum)
+intse = rep(0,iternum)
+coefse = rep(0,iternum)
+
+se = rep(0,iternum)
+for (i in 1:iternum)
+{
+  imp <- mi(data, n.imp=20, n.iter=10)
+  fit <- glm.mi(berndraws.mar ~ normdraws.mar, imp, family=binomial)
+  int[i] = coef(fit)[1]
+  coef[i] = coef(fit)[2]
+  intse[i] = se.coef(fit)[1]
+  coefse[i] = se.coef(fit)[2]
+}
+write.csv(cbind(int,coef,inse,coefse),"mi.csv",row.names=FALSE)

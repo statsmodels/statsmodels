@@ -89,7 +89,7 @@ class ImputedData(object):
         # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, method="gaussian", k_pmm=1, formula=None, 
+    def new_imputer(self, endog_name, method="gaussian", k_pmm=20, formula=None, 
                     model_class=None, init_args={}, fit_args={}, 
                     rvs_class=None, scale_method="fix", scale_value=None, 
                     transform=None, inv_transform=None):
@@ -198,7 +198,7 @@ class ImputedData(object):
         exog_obs = exog.iloc[self.columns[endog_name].ix_obs]
         exog_miss = exog.iloc[self.columns[endog_name].ix_miss]
         return endog_obs, exog_obs, exog_miss
-
+    
 class Imputer(object):
 
     __doc__= """
@@ -345,7 +345,7 @@ class Imputer(object):
             new_endog = self.inv_transform(new_endog)
         self.data.store_changes(self.endog_name, new_endog)
 
-    def impute_pmm(self, pmm_neighbors=1):
+    def impute_pmm(self, pmm_neighbors=10):
         """
         Use predictive mean matching to simulate data.
 
@@ -358,7 +358,7 @@ class Imputer(object):
         ----------
         pmm_neighbors : int
             Number of neighbors in prediction space to select imputations from.
-            Defaults to 1 (select closest neighbor).
+            Defaults to 10 (select closest neighbor).
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
                                                                 self.formula)
@@ -390,12 +390,10 @@ class Imputer(object):
             k = 0
             count_low = 0
             count_high = 0
-#            ix_list.append([])
             upper = pendog_obs[ix[i]]
             lower = pendog_obs[ix[i] - 1]
             target = pendog_miss[i]
             ixs = []
-#            ix_list[len(ix_list) - 1]
             limit_low = False
             limit_high = False
             while k < pmm_neighbors:
@@ -438,8 +436,23 @@ class Imputer(object):
         self.data.store_changes(self.endog_name, imputed_miss)
 
     def impute_bootstrap(self):
-        raise NotImplementedError
-
+        endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
+                                                                self.formula)
+        if self.transform is not None and self.inv_transform is not None:
+            endog_obs = self.transform(endog_obs)           
+        l = len(endog_obs)
+        rix = np.random.choice(range(l),size=l)
+        endog_sample = endog_obs.iloc[rix]
+        exog_sample = exog_obs.iloc[rix]
+        md = self.model_class(endog_sample, exog_sample, **self.init_args)
+        mdf = md.fit(**self.fit_args)
+        params = mdf.params.copy()
+        mdboot = self.model_class(endog_obs, exog_obs)
+        imputed_miss = mdboot.predict(params, exog_miss)
+        if self.transform is not None and self.inv_transform is not None:
+            imputed_miss = self.inv_transform(imputed_miss)        
+        self.data.store_changes(self.endog_name, imputed_miss)
+        
 class ImputerChain(object):
     __doc__= """
     An iterator that returns imputed data sets produced using the MICE
@@ -675,7 +688,7 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
             if not hasattr(self, "exog_names"):
                 self.exog_names = model.model.exog_names
                 self.endog_names = model.model.endog_names
-			if disp:
+        if disp:
 				print current_iter
 
     def combine(self):
@@ -769,7 +782,7 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         numiss = [0]
         for value in self.model.exog_names:
             for x in self.model.imputer_list:
-                if x.endog_name == value:
+                if x.endog_name == value :
                     numiss.append(int(x.num_missing))
 #
 #            t = next((x for x in self.model.imputer_list if x.endog_name == value), None)
