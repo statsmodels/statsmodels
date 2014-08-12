@@ -459,10 +459,10 @@ class GEE(base.Model):
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the clusters.
-        group_labels = sorted(set(groups))
+        group_labels = sorted(set(self.groups))
         group_indices = dict((s, []) for s in group_labels)
         for i in range(len(self.endog)):
-            group_indices[groups[i]].append(i)
+            group_indices[self.groups[i]].append(i)
         for k in iterkeys(group_indices):
             group_indices[k] = np.asarray(group_indices[k])
         self.group_indices = group_indices
