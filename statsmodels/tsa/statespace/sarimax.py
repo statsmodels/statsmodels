@@ -1507,11 +1507,11 @@ class SARIMAXResults(StatespaceResults):
         seasonal_order = ''
         if self.k_seasonal_ar + self.k_seasonal_diff + self.k_seasonal_ma > 0:
             if self.k_ar == self.k_ar_params:
-                order_seasonal_ar = self.k_seasonal_ar
+                order_seasonal_ar = int(self.k_seasonal_ar / self.k_seasons)
             else:
                 order_seasonal_ar = tuple(self.polynomial_seasonal_ar.nonzero()[0][1:])
             if self.k_ma == self.k_ma_params:
-                order_seasonal_ma = self.k_seasonal_ma
+                order_seasonal_ma = int(self.k_seasonal_ma / self.k_seasons)
             else:
                 order_seasonal_ma = tuple(self.polynomial_seasonal_ma.nonzero()[0][1:])
             seasonal_order = ('(%s, %d, %s, %d)' %
