@@ -9,7 +9,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 from statsmodels.tools.data import _is_using_pandas
-from pykf import _statespace
+from statsmodels.tsa.statespace import _statespace
 
 try:
     from scipy.linalg.blas import find_best_blas_type
