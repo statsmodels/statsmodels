@@ -6,10 +6,12 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
+from warnings import warn
+
 import numpy as np
 from .tools import (
     find_best_blas_type, prefix_dtype_map, prefix_statespace_map,
-    prefix_kalman_filter_map
+    prefix_kalman_filter_map, validate_matrix_shape, validate_vector_shape
 )
 
 # Define constants
@@ -125,7 +127,7 @@ class Representation(object):
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
     """
-    def __init__(self, endog, k_states, k_posdef=None, time_invariant=True,
+    def __init__(self, endog, k_states, k_posdef=None,
                  design=None, obs_intercept=None, obs_cov=None,
                  transition=None, state_intercept=None, selection=None,
                  state_cov=None, *args, **kwargs):
@@ -147,41 +149,41 @@ class Representation(object):
                              ' positive number.')
         self.k_states = k_states
         self.k_posdef = k_posdef if k_posdef is not None else k_states
-        self.time_invariant = time_invariant
-        self.nvarying = 1 if time_invariant else self.nobs
 
         # Parameters
         self.initialization = None
 
         # Record the shapes of all of our matrices
+        # Note: these are time-invariant shapes; in practice the last dimension
+        # may also be `self.nobs` for any or all of these.
         self.shapes = {
             'obs': self.endog.shape,
             'design': (
-                (self.k_endog, self.k_states, self.nvarying)
+                (self.k_endog, self.k_states, 1)
                 if design is None else design.shape
             ),
             'obs_intercept': (
-                (self.k_endog, self.nvarying)
+                (self.k_endog, 1)
                 if obs_intercept is None else obs_intercept.shape
             ),
             'obs_cov': (
-                (self.k_endog, self.k_endog, self.nvarying)
+                (self.k_endog, self.k_endog, 1)
                 if obs_cov is None else obs_cov.shape
             ),
             'transition': (
-                (self.k_states, self.k_states, self.nvarying)
+                (self.k_states, self.k_states, 1)
                 if transition is None else transition.shape
             ),
             'state_intercept': (
-                (self.k_states, self.nvarying)
+                (self.k_states, 1)
                 if state_intercept is None else state_intercept.shape
             ),
             'selection': (
-                (self.k_states, self.k_posdef, self.nvarying)
+                (self.k_states, self.k_posdef, 1)
                 if selection is None else selection.shape
             ),
             'state_cov': (
-                (self.k_posdef, self.k_posdef, self.nvarying)
+                (self.k_posdef, self.k_posdef, 1)
                 if state_cov is None else state_cov.shape
             )
         }
@@ -245,6 +247,7 @@ class Representation(object):
         # Options
         self.initial_variance = kwargs.get('initial_variance', 1e6)
         self.loglikelihood_burn = kwargs.get('loglikelihood_burn', 0)
+        self.filter_results_class = kwargs.get('filter_results_class', FilterResults)
 
         self.filter_method = kwargs.get(
             'filter_method', FILTER_CONVENTIONAL
@@ -258,44 +261,6 @@ class Representation(object):
         self.conserve_memory = kwargs.get('conserve_memory', 0)
         self.tolerance = kwargs.get('tolerance', 1e-19)
 
-    def _validate_matrix_shape(self, name, shape, nrows, ncols, nobs):
-        ndim = len(shape)
-
-        # Enforce dimension
-        if ndim not in [2, 3]:
-            raise ValueError('Invalid value for %s matrix. Requires a'
-                             ' 2- or 3-dimensional array, got %d dimensions' %
-                             (name, ndim))
-        # Enforce the shape of the matrix
-        if not shape[0] == nrows:
-            raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                             ' rows, got %d' % (name, nrows, shape[0]))
-        if not shape[1] == ncols:
-            raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                             ' columns, got %d' % (name, ncols, shape[1]))
-        # Enforce time-varying array size
-        if ndim == 3 and not shape[2] in [1, nobs]:
-            raise ValueError('Invalid dimensions for time-varying %s'
-                             ' matrix. Requires shape (*,*,%d), got %s' %
-                             (name, nobs, str(shape)))
-
-    def _validate_vector_shape(self, name, shape, nrows, nobs):
-        ndim = len(shape)
-        # Enforce dimension
-        if ndim not in [1, 2]:
-            raise ValueError('Invalid value for %s vector. Requires a'
-                             ' 1- or 2-dimensional array, got %d dimensions' %
-                             (name, ndim))
-        # Enforce the shape of the vector
-        if not shape[0] == nrows:
-            raise ValueError('Invalid dimensions for %s vector: requires %d'
-                             ' rows, got %d' % (name, nrows, shape[0]))
-        # Enforce time-varying array size
-        if ndim == 2 and not shape[1] in [1, nobs]:
-            raise ValueError('Invalid dimensions for time-varying %s'
-                             ' vector. Requires shape (*,%d), got %s' %
-                             (name, nobs, str(shape)))
-
     @property
     def prefix(self):
         return find_best_blas_type((
@@ -307,6 +272,29 @@ class Representation(object):
     @property
     def dtype(self):
         return prefix_dtype_map[self.prefix]
+
+    @property
+    def time_invariant(self):
+        return (
+            self._design.shape[2] == self._obs_intercept.shape[1] ==
+            self._obs_cov.shape[2] == self._transition.shape[2] ==
+            self._state_intercept.shape[1] == self._selection.shape[2] ==
+            self._state_cov.shape[2]
+        )
+
+    @property
+    def _statespace(self):
+        prefix = self.prefix
+        if prefix in self._statespaces:
+            return self._statespaces[prefix]
+        return None
+
+    @property
+    def _kalman_filter(self):
+        prefix = self.prefix
+        if prefix in self._kalman_filters:
+            return self._kalman_filters[prefix]
+        return None
 
     @property
     def obs(self):
@@ -326,7 +314,7 @@ class Representation(object):
             design = design[None, :]
 
         # Enforce that the design matrix is k_endog by k_states
-        self._validate_matrix_shape(
+        validate_matrix_shape(
             'design', design.shape, self.k_endog, self.k_states, self.nobs
         )
 
@@ -346,7 +334,7 @@ class Representation(object):
         obs_intercept = np.asarray(value, order="F")
 
         # Enforce that the observation intercept has length k_endog
-        self._validate_vector_shape(
+        validate_vector_shape(
             'observation intercept', obs_intercept.shape, self.k_endog,
             self.nobs
         )
@@ -372,9 +360,9 @@ class Representation(object):
             obs_cov = obs_cov[None, :]
 
         # Enforce that the observation covariance matrix is k_endog by k_endog
-        self._validate_matrix_shape(
-            'observation covariance', obs_cov.shape, self.k_endog, self.k_endog,
-            self.nobs
+        validate_matrix_shape(
+            'observation covariance', obs_cov.shape, self.k_endog,
+            self.k_endog, self.nobs
         )
 
         # Expand time-invariant obs_cov matrix
@@ -397,7 +385,7 @@ class Representation(object):
             transition = transition[None, :]
 
         # Enforce that the transition matrix is k_states by k_states
-        self._validate_matrix_shape(
+        validate_matrix_shape(
             'transition', transition.shape, self.k_states, self.k_states,
             self.nobs
         )
@@ -424,7 +412,7 @@ class Representation(object):
                              % state_intercept.ndim)
 
         # Enforce that the state intercept has length k_endog
-        self._validate_vector_shape(
+        validate_vector_shape(
             'state intercept', state_intercept.shape, self.k_states,
             self.nobs
         )
@@ -450,7 +438,7 @@ class Representation(object):
             selection = selection[None, :]
 
         # Enforce that the selection matrix is k_states by k_posdef
-        self._validate_matrix_shape(
+        validate_matrix_shape(
             'selection', selection.shape, self.k_states, self.k_posdef,
             self.nobs
         )
@@ -475,7 +463,7 @@ class Representation(object):
             state_cov = state_cov[None, :]
 
         # Enforce that the state covariance matrix is k_states by k_states
-        self._validate_matrix_shape(
+        validate_matrix_shape(
             'state covariance', state_cov.shape, self.k_posdef, self.k_posdef,
             self.nobs
         )
@@ -545,41 +533,11 @@ class Representation(object):
         """
         self.initialization = 'stationary'
 
-    def filter(self, filter_method=None, inversion_method=None,
-               stability_method=None, conserve_memory=None, tolerance=None,
-               loglikelihood_burn=None,
-               recreate=True, return_loglike=False):
-        """
-        Apply the Kalman filter to the statespace model.
-
-        Parameters
-        ----------
-        filter_method : int, optional
-            Determines which Kalman filter to use. Default is conventional.
-        inversion_method : int, optional
-            Determines which inversion technique to use. Default is by Cholesky
-            decomposition.
-        stability_method : int, optional
-            Determines which numerical stability techniques to use. Default is
-            to enforce symmetry of the predicted state covariance matrix.
-        conserve_memory : int, optional
-            Determines what output from the filter to store. Default is to
-            store everything.
-        tolerance : float, optional
-            The tolerance at which the Kalman filter determines convergence to
-            steady-state. Default is 1e-19.
-        loglikelihood_burn : int, optional
-            The number of initial periods during which the loglikelihood is not
-            recorded. Default is 0.
-        recreate : bool, optional
-            Whether or not to consider re-creating the underlying _statespace
-            or filter objects (e.g. due to changing parameters, etc.). Often
-            set to false during maximum likelihood estimation. Default is true.
-        return_loglike : bool, optional
-            Whether to only return the loglikelihood rather than a full
-            `FilterResults` object. Default is False.
-        """
-
+    def _initialize_filter(self, filter_method=None, inversion_method=None,
+                           stability_method=None, conserve_memory=None,
+                           tolerance=None, loglikelihood_burn=None,
+                           recreate=True, return_loglike=False,
+                           *args, **kwargs):
         if filter_method is None:
             filter_method = self.filter_method
         if inversion_method is None:
@@ -604,19 +562,21 @@ class Representation(object):
             self._representations[prefix] = {}
             for matrix in self.shapes.keys():
                 if matrix == 'obs':
-                    continue
-                # Note: this always makes a copy
-                self._representations[prefix][matrix] = (
-                    getattr(self, '_' + matrix).astype(dtype)
-                )
+                    self._representations[prefix][matrix] = self.obs.astype(dtype)
+                else:
+                    # Note: this always makes a copy
+                    self._representations[prefix][matrix] = (
+                        getattr(self, '_' + matrix).astype(dtype)
+                    )
         # If they do exist, update them
         else:
             for matrix in self.shapes.keys():
                 if matrix == 'obs':
-                    continue
-                self._representations[prefix][matrix][:] = (
-                    getattr(self, '_' + matrix).astype(dtype)[:]
-                )
+                    self._representations[prefix][matrix] = self.obs.astype(dtype)[:]
+                else:
+                    self._representations[prefix][matrix][:] = (
+                        getattr(self, '_' + matrix).astype(dtype)[:]
+                    )
 
         # Determine if we need to re-create the _statespace models
         # (if time-varying matrices changed)
@@ -640,7 +600,7 @@ class Representation(object):
             # Setup the base statespace object
             cls = prefix_statespace_map[prefix]
             self._statespaces[prefix] = cls(
-                self.endog.astype(dtype),
+                self._representations[prefix]['obs'],
                 self._representations[prefix]['design'],
                 self._representations[prefix]['obs_intercept'],
                 self._representations[prefix]['obs_cov'],
@@ -669,7 +629,6 @@ class Representation(object):
         # to recreate it), create it
         if prefix not in self._kalman_filters or recreate_filter:
             if recreate_filter:
-                print('recreate')
                 # Delete the old filter
                 del self._kalman_filters[prefix]
             # Setup the filter
@@ -701,13 +660,61 @@ class Representation(object):
         else:
             raise RuntimeError('Statespace model not initialized.')
 
+        return prefix, dtype
+
+    def filter(self, filter_method=None, inversion_method=None,
+               stability_method=None, conserve_memory=None, tolerance=None,
+               loglikelihood_burn=None,
+               recreate=True, return_loglike=False, results_class=None,
+               *args, **kwargs):
+        """
+        Apply the Kalman filter to the statespace model.
+
+        Parameters
+        ----------
+        filter_method : int, optional
+            Determines which Kalman filter to use. Default is conventional.
+        inversion_method : int, optional
+            Determines which inversion technique to use. Default is by Cholesky
+            decomposition.
+        stability_method : int, optional
+            Determines which numerical stability techniques to use. Default is
+            to enforce symmetry of the predicted state covariance matrix.
+        conserve_memory : int, optional
+            Determines what output from the filter to store. Default is to
+            store everything.
+        tolerance : float, optional
+            The tolerance at which the Kalman filter determines convergence to
+            steady-state. Default is 1e-19.
+        loglikelihood_burn : int, optional
+            The number of initial periods during which the loglikelihood is not
+            recorded. Default is 0.
+        recreate : bool, optional
+            Whether or not to consider re-creating the underlying _statespace
+            or filter objects (e.g. due to changing parameters, etc.). Often
+            set to false during maximum likelihood estimation. Default is true.
+        return_loglike : bool, optional
+            Whether to only return the loglikelihood rather than a full
+            `FilterResults` object. Default is False.
+        """
+
+        if results_class is None:
+            results_class = self.filter_results_class
+
+        # Initialize the filter
+        prefix, dtype = self._initialize_filter(
+            filter_method, inversion_method, stability_method, conserve_memory,
+            tolerance, loglikelihood_burn, recreate, return_loglike,
+            *args, **kwargs
+        )
+
         # Run the filter
         self._kalman_filters[prefix]()
 
         if return_loglike:
             return np.array(self._kalman_filters[prefix].loglikelihood)
         else:
-            return FilterResults(self, self._kalman_filters[prefix])
+            return results_class(self, self._kalman_filters[prefix])
 
     def loglike(self, loglikelihood_burn=None, *args, **kwargs):
         """
@@ -750,7 +757,6 @@ class FilterResults(object):
         self.k_states = model.k_states
         self.k_posdef = model.k_posdef
         self.time_invariant = model.time_invariant
-        self.nvarying = model.nvarying
 
         # Save the state space representation at the time
         self.endog = model.endog
@@ -762,11 +768,25 @@ class FilterResults(object):
         self.selection = model._selection.copy()
         self.state_cov = model._state_cov.copy()
 
+        self.missing = np.array(model._statespaces[self.prefix].missing,
+                                copy=True)
+        self.nmissing = np.array(model._statespaces[self.prefix].nmissing,
+                                 copy=True)
+
+        # Save the final shapes of the matrices
+        self.shapes = dict(model.shapes)
+        for name in self.shapes.keys():
+            if name == 'obs':
+                continue
+            self.shapes[name] = getattr(self, name).shape
+        self.shapes['obs'] = self.endog.shape
+
         # Save the state space initialization
         self.initialization = model.initialization
-        self.inital_state = np.asarray(kalman_filter.model.initial_state)
-        self.inital_state_cov = np.asarray(
-            kalman_filter.model.initial_state_cov
+        self.initial_state = np.array(kalman_filter.model.initial_state,
+                                      copy=True)
+        self.initial_state_cov = np.array(
+            kalman_filter.model.initial_state_cov, copy=True
         )
 
         # Save Kalman filter parameters
@@ -781,13 +801,275 @@ class FilterResults(object):
         self.converged = bool(kalman_filter.converged)
         self.period_converged = kalman_filter.period_converged
 
-        self.filtered_state = np.asarray(kalman_filter.filtered_state)
-        self.filtered_state_cov = np.asarray(kalman_filter.filtered_state_cov)
-        self.predicted_state = np.asarray(kalman_filter.predicted_state)
-        self.predicted_state_cov = np.asarray(
-            kalman_filter.predicted_state_cov
+        self.filtered_state = np.array(kalman_filter.filtered_state, copy=True)
+        self.filtered_state_cov = np.array(kalman_filter.filtered_state_cov, copy=True)
+        self.predicted_state = np.array(kalman_filter.predicted_state, copy=True)
+        self.predicted_state_cov = np.array(
+            kalman_filter.predicted_state_cov, copy=True
         )
-        self.forecast = np.asarray(kalman_filter.forecast)
-        self.forecast_error = np.asarray(kalman_filter.forecast_error)
-        self.forecast_error_cov = np.asarray(kalman_filter.forecast_error_cov)
-        self.loglikelihood = np.asarray(kalman_filter.loglikelihood)
+        # Note: use forecasts rather than forecast, so as not to interfer
+        # with the `forecast` methods in subclasses
+        self.forecasts = np.array(kalman_filter.forecast, copy=True)
+        self.forecasts_error = np.array(kalman_filter.forecast_error, copy=True)
+        self.forecasts_error_cov = np.array(kalman_filter.forecast_error_cov, copy=True)
+        self.loglikelihood = np.array(kalman_filter.loglikelihood, copy=True)
+
+        # Fill in missing values in the forecast, forecast error, and
+        # forecast error covariance matrix (this is required due to how the
+        # Kalman filter implements observations that are completely missing)
+        # Construct the predictions, forecasts
+        if not (self.conserve_memory & MEMORY_NO_FORECAST or
+                self.conserve_memory & MEMORY_NO_PREDICTED):
+            for t in range(self.nobs):
+                design_t = 0 if self.design.shape[2] == 1 else t
+                obs_cov_t = 0 if self.obs_cov.shape[2] == 1 else t
+                obs_intercept_t = 0 if self.obs_intercept.shape[1] == 1 else t
+
+                # Skip anything that is less than completely missing
+                if self.nmissing[t] < self.k_endog:
+                    continue
+
+                self.forecasts[:, t] = np.dot(
+                    self.design[:, :, design_t], self.predicted_state[:, t]
+                ) + self.obs_intercept[:, obs_intercept_t]
+                self.forecasts_error[:, t] = np.nan
+                self.forecasts_error_cov[:, :, t] = np.dot(
+                    np.dot(self.design[:, :, design_t],
+                           self.predicted_state_cov[:, :, t]),
+                    self.design[:, :, design_t].T
+                ) + self.obs_cov[:, :, obs_cov_t]
+
+    @property
+    def standardized_forecast_error(self):
+        standardized_forecast_error = np.zeros(self.forecasts_error.shape,
+                                               dtype=self.dtype)
+
+        for t in range(self.forecasts_error_cov.shape[2]):
+            upper = np.linalg.cholesky(self.forecasts_error_cov[:, :, t]).T
+            standardized_forecast_error[:, t] = np.dot(
+                upper, self.forecasts_error[:, t]
+            )
+
+        return standardized_forecast_error
+
+    def predict(self, start=None, end=None, dynamic=None, full_results=False,
+                *args, **kwargs):
+        """
+        Statespace model in-sample and out-of-sample prediction.
+
+        Parameters
+        ----------
+        start : int, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast will be at start.
+        end : int, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast will be at end.
+        dynamic : int, optional
+            Specifies the number of steps ahead for each in-sample prediction.
+            If not specified, then in-sample predictions are one-step-ahead.
+
+        Returns
+        -------
+        predict : array
+            The predicted values.
+
+        Notes
+        -----
+        All prediction is performed by applying the deterministic part of the
+        measurement equation using the predicted state variables.
+
+        Out-of-sample prediction first applies the Kalman filter to missing
+        data for the number of periods desired to obtain the predicted states.
+        """
+        # Cannot predict if we do not have appropriate arrays
+        if (self.conserve_memory & MEMORY_NO_FORECAST or
+           self.conserve_memory & MEMORY_NO_PREDICTED):
+            raise ValueError('Predict is not possible if memory conservation'
+                             ' has been used to avoid storing forecasts or'
+                             ' predicted values.')
+
+        # Get the start and the end of the entire prediction range
+        if start is None:
+            start = 0
+        elif start < 0:
+            raise ValueError('Cannot predict values period to the sample.')
+        if end is None:
+            end = self.nobs
+
+        # Total number of predicted values
+        npredicted = end - start
+
+        # Short-circuit if end is before start
+        if npredicted < 0:
+            return (np.zeros((self.k_endog, 0)),
+                    np.zeros((self.k_endog, self.k_endog, 0)))
+
+        # Get the number of forecasts to make after the end of the sample
+        # Note: this may be larger than npredicted if the predict command was
+        # called, for example, to calculate forecasts for nobs+10 through
+        # nobs+20, because the operations below will need to start forecasts no
+        # later than the end of the sample and go through `end`. Any
+        # calculations prior to `start` will be ignored.
+        nforecast = max(0, end - self.nobs)
+
+        # Get the total size of the in-sample prediction component (whether via
+        # one-step-ahead or dynamic prediction)
+        nsample = npredicted - nforecast
+
+        # Get the number of periods until dynamic forecasting is used
+        if dynamic > nsample:
+            warn('Dynamic prediction specified for more steps-ahead (%d) than'
+                 ' there are observations in the specified range (%d).'
+                 ' `dynamic` has been automatically adjusted to %d. If'
+                 ' possible, you may want to set `start` to be earlier.'
+                 % (dynamic, nsample, nsample))
+            dynamic = nsample
+
+        if dynamic is None or dynamic is False:
+            dynamic = nsample
+        ndynamic = nsample - dynamic
+
+        if dynamic < 0:
+            raise ValueError('Prediction cannot be specified with a negative'
+                             ' dynamic prediction offset.')
+
+        # Get the number of in-sample, one-step-ahead predictions
+        ninsample = nsample - ndynamic
+
+        # Total numer of left-padded zeros
+        # Two cases would have this as non-zero. Here are some examples:
+        # - If start = 4 and dynamic = 4, then npadded >= 4 so that even the
+        #   `start` observation has dynamic of 4
+        # - If start = 10 and nobs = 5, then npadded >= 5 because the
+        #   intermediate forecasts are required for the desired forecasts.
+        npadded = max(0, start - dynamic, start - self.nobs)
+
+        # Construct the design and observation intercept and covariance
+        # matrices for start-npadded:end. If not time-varying in the original
+        # model, then they will be copied over if none are provided in
+        # `kwargs`. Otherwise additional matrices must be provided in `kwargs`.
+        representation = {}
+        for name, shape in self.shapes.items():
+            if name == 'obs':
+                continue
+            mat = getattr(self, name)
+            if shape[-1] == 1:
+                representation[name] = mat
+            elif len(shape) == 3:
+                representation[name] = mat[:, :, start-npadded:]
+            else:
+                representation[name] = mat[:, start-npadded:]
+
+        # Update the matrices from kwargs for forecasts
+        warning = ('Model has time-invariant %s matrix, so the %s'
+                   ' argument to `predict` has been ignored.')
+        exception = ('Forecasting for models with time-varying %s matrix'
+                     ' requires an updated time-varying matrix for the'
+                     ' period to be forecasted.')
+        if nforecast > 0:
+            for name, shape in self.shapes.items():
+                if name == 'obs':
+                    continue
+                if representation[name].shape[-1] == 1:
+                    if name in kwargs:
+                        warn(warning % (name, name))
+                elif name not in kwargs:
+                    raise ValueError(exception % name)
+                else:
+                    mat = np.asarray(kwargs[name])
+                    if len(shape) == 2:
+                        validate_vector_shape('obs_intercept', mat.shape,
+                                              shape[0], nforecast)
+                        if mat.ndim < 2 or not mat.shape[1] == nforecast:
+                            raise ValueError(exception % name)
+                        representation[name] = np.c_[representation[name], mat]
+                    else:
+                        validate_matrix_shape(name, mat.shape, shape[0],
+                                              shape[1], nforecast)
+                        if mat.ndim < 3 or not mat.shape[2] == nforecast:
+                            raise ValueError(exception % name)
+                        representation[name] = np.c_[representation[name], mat]
+
+        # Construct the predicted state and covariance matrix for each time
+        # period depending on whether that time period corresponds to
+        # one-step-ahead prediction, dynamic prediction, or out-of-sample
+        # forecasting.
+
+        # If we only have simple prediction, then we can use the already saved
+        # Kalman filter output
+        if ndynamic == 0 and nforecast == 0:
+            result = self
+        else:
+            # Construct the new endogenous array - notice that it has
+            # npredicted + npadded values (rather than the entire start array,
+            # in case the number of observations is large and we don't want to
+            # re-run the entire filter just for forecasting)
+            endog = np.empty((self.k_endog, nforecast))
+            endog.fill(np.nan)
+            endog = np.c_[self.endog[:, start-npadded:], endog]
+
+            # Setup the new statespace representation
+            model_kwargs = {
+                'filter_method': self.filter_method,
+                'inversion_method': self.inversion_method,
+                'stability_method': self.stability_method,
+                'conserve_memory': self.conserve_memory,
+                'tolerance': self.tolerance,
+                'loglikelihood_burn': self.loglikelihood_burn
+            }
+            model_kwargs.update(representation)
+            model = Representation(
+                endog.T, self.k_states, self.k_posdef, **model_kwargs
+            )
+            model.initialize_known(
+                self.predicted_state[:, 0],
+                self.predicted_state_cov[:, :, 0]
+            )
+            model._initialize_filter(*args, **kwargs)
+
+            result = self._predict(ninsample, ndynamic, nforecast, model)
+
+        if full_results:
+            return result
+        else:
+            return (
+                result.forecasts[:, npadded:],
+                result.forecasts_error[:, npadded:],
+                result.forecasts_error_cov[:, :, npadded:]
+            )
+
+    def _predict(self, ninsample, ndynamic, nforecast, model, *args, **kwargs):
+        # Get the underlying filter
+        kfilter = model._kalman_filter
+
+        # Save this (which shares memory with the memoryview on which the
+        # Kalman filter will be operating) so that we can replace actual data
+        # with predicted data during dynamic forecasting
+        endog = model._representations[model.prefix]['obs']
+
+        for t in range(kfilter.model.nobs):
+            # Run the Kalman filter for the first `ninsample` periods (for
+            # which dynamic computation will not be performed)
+            if t < ninsample:
+                next(kfilter)
+            # Perform dynamic prediction
+            elif t < ninsample+ndynamic:
+                design_t = 0 if model.design.shape[2] == 1 else t
+                obs_intercept_t = 0 if model.obs_intercept.shape[1] == 1 else t
+
+                # Predict endog[:, t] given `predicted_state` calculated in
+                # previous iteration (i.e. t-1)
+                endog[:, t] = np.dot(
+                    model.design[:, :, design_t],
+                    kfilter.predicted_state[:, t]
+                ) + model.obs_intercept[:, obs_intercept_t]
+
+                # Advance Kalman filter
+                next(kfilter)
+            # Perform any (one-step-ahead) forecasting
+            else:
+                next(kfilter)
+
+        # Return the predicted state and predicted state covariance matrices
+        return FilterResults(model, kfilter)

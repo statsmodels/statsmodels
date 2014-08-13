@@ -7,7 +7,9 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
-from statsmodels.tsa.statespace import _statespace
+import pandas as pd
+from statsmodels.tools.data import _is_using_pandas
+from pykf import _statespace
 
 try:
     from scipy.linalg.blas import find_best_blas_type
@@ -46,7 +48,8 @@ def companion_matrix(n, values=None):
 
 
 def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
-    differenced = np.asanyarray(series)
+    pandas = _is_using_pandas(series, None)
+    differenced = np.asanyarray(series) if not pandas else series
 
     # Seasonal differencing
     if seasonal_diff is not None:
@@ -55,11 +58,22 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
             seasonal_diff -= 1
 
     # Simple differencing
-    return np.diff(differenced, diff, axis=0)
+    if not pandas:
+        differenced = np.diff(differenced, diff, axis=0)
+    else:
+        differenced = differenced.diff(diff)[diff:]
+    return differenced
+
+
+def is_invertible(params):
+    return np.all(np.abs(np.roots(np.r_[1, params])) < 1)
 
 
 def constrain_stationary_univariate(unconstrained):
     """
+    Transform unconstrained parameters used by the optimizer to constrained
+    parameters used in likelihood evaluation
+
     References
     ----------
 
@@ -81,6 +95,9 @@ def constrain_stationary_univariate(unconstrained):
 
 def unconstrain_stationary_univariate(constrained):
     """
+    Transform constrained parameters used in likelihood evaluation
+    to unconstrained parameters used by the optimizer
+
     References
     ----------
 
@@ -98,3 +115,43 @@ def unconstrain_stationary_univariate(constrained):
     r = y.diagonal()
     x = r / ((1 - r**2)**0.5)
     return x
+
+
+def validate_matrix_shape(name, shape, nrows, ncols, nobs):
+    ndim = len(shape)
+
+    # Enforce dimension
+    if ndim not in [2, 3]:
+        raise ValueError('Invalid value for %s matrix. Requires a'
+                         ' 2- or 3-dimensional array, got %d dimensions' %
+                         (name, ndim))
+    # Enforce the shape of the matrix
+    if not shape[0] == nrows:
+        raise ValueError('Invalid dimensions for %s matrix: requires %d'
+                         ' rows, got %d' % (name, nrows, shape[0]))
+    if not shape[1] == ncols:
+        raise ValueError('Invalid dimensions for %s matrix: requires %d'
+                         ' columns, got %d' % (name, ncols, shape[1]))
+    # Enforce time-varying array size
+    if ndim == 3 and not shape[2] in [1, nobs]:
+        raise ValueError('Invalid dimensions for time-varying %s'
+                         ' matrix. Requires shape (*,*,%d), got %s' %
+                         (name, nobs, str(shape)))
+
+
+def validate_vector_shape(name, shape, nrows, nobs):
+    ndim = len(shape)
+    # Enforce dimension
+    if ndim not in [1, 2]:
+        raise ValueError('Invalid value for %s vector. Requires a'
+                         ' 1- or 2-dimensional array, got %d dimensions' %
+                         (name, ndim))
+    # Enforce the shape of the vector
+    if not shape[0] == nrows:
+        raise ValueError('Invalid dimensions for %s vector: requires %d'
+                         ' rows, got %d' % (name, nrows, shape[0]))
+    # Enforce time-varying array size
+    if ndim == 2 and not shape[1] in [1, nobs]:
+        raise ValueError('Invalid dimensions for time-varying %s'
+                         ' vector. Requires shape (*,%d), got %s' %
+                         (name, nobs, str(shape)))
