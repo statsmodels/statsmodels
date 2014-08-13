@@ -91,7 +91,7 @@ class Test_Transf2(object):
            (absnormalg, stats.halfnorm),
            (absnormalg, stats.foldnorm(1e-5)),  #try frozen
            #(negsquarenormalg, 1-stats.chi2),  # won't work as distribution
-           #(squaretg(10), stats.f(1, 10))  # disable temporarily see #1864
+           (squaretg(10), stats.f(1, 10))
             ]      #try both frozen
 
         l,s = 0.0, 1.0

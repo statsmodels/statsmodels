@@ -738,6 +738,16 @@ class TransfTwo_gen(distributions.rv_continuous):
                                 shapes = kls.shapes,
                                 longname = longname, extradoc = extradoc)
 
+        # add enough info for self.freeze() to be able to reconstruct the instance
+        try:
+            self._ctor_param.update(dict(kls=kls, func=func,
+                    funcinvplus=funcinvplus, funcinvminus=funcinvminus,
+                    derivplus=derivplus, derivminus=derivminus,
+                    shape=self.shape))
+        except AttributeError:
+            # scipy < 0.14 does not have this, ignore and do nothing
+            pass
+
     def _rvs(self, *args):
         self.kls._size = self._size   #size attached to self, not function argument
         return self.func(self.kls._rvs(*args))
