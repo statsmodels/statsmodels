@@ -105,32 +105,29 @@ class TestGEE(object):
         assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
     def test_missing(self):
+        """
+        Test missing data handling for calling from the api.  Missing
+        data handling does not currently work for formulas.
+        """
 
         endog = np.random.normal(size=100)
-        exog1 = np.random.normal(size=100)
-        exog2 = np.random.normal(size=100)
-        exog3 = np.random.normal(size=100)
+        exog = np.random.normal(size=(100, 3))
+        exog[:, 0] = 1
         groups = np.kron(lrange(20), np.ones(5))
 
         endog[0] = np.nan
         endog[5:7] = np.nan
-        exog2[10:12] = np.nan
+        exog[10:12, 1] = np.nan
 
-        data = pd.DataFrame({"endog": endog, "exog1": exog1,
-                             "exog2": exog2, "exog3": exog3,
-                             "groups": groups})
-
-        mod1 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                "groups", data=data,
-                                missing='drop')
+        mod1 = GEE(endog, exog, groups, missing='drop')
         rslt1 = mod1.fit()
 
         assert_almost_equal(len(mod1.endog), 95)
-        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
+        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 3])
 
-        mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
-                                "groups", data=data.dropna(),
-                                missing='none')
+        ii = np.isfinite(endog) & np.isfinite(exog).all(1)
+
+        mod2 = GEE(endog[ii], exog[ii, :], groups[ii], missing='none')
         rslt2 = mod2.fit()
 
         assert_almost_equal(rslt1.params, rslt2.params)
