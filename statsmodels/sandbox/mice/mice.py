@@ -55,25 +55,14 @@ class ImputedData(object):
     are created for each variable using OLS using all other variables as 
     predictors.
 
-    %(params)s
+    **Parameters**
     data : array-like object
         Needs to support transformation to pandas dataframe. Missing value
         encoding is handled by pandas DataFrame class.
-    method : string
+    method : string or None
         May take on values None, "pmm", "gaussian", or "bootstrap". Determines 
-        imputation method if go is True. method=None means the user must specify 
-		their own Imputer objects.
-
-    **Attributes**
-
-    data : pandas dataframe
-        Dataset with missing values. After recording missing data information,
-        simple column-wise means are filled into the missing values.
-    columns : dictionary
-        Stores indices of missing data.
-    implist : MICE Imputer object
-        One Imputer per variable to be imputed. See mice.Imputer.
-
+        imputation method for automatic Imputer creation. method=None means 
+        the user must specify their own Imputer objects.
     """
     def __init__(self, data, method=None):
         # may not need to make copies
@@ -84,7 +73,7 @@ class ImputedData(object):
         self.implist = []        
         for c in self.data.columns:
             self.columns[c] = MissingDataInfo(self.data[c])
-            if method != None:
+            if method is not None:
                 self.new_imputer(c, method=method)
         # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
@@ -95,10 +84,8 @@ class ImputedData(object):
                     transform=None, inv_transform=None):
 		# TODO: Look into kwargs for method details such as k_pmm
         """
-        Create Imputer instance from our ImputedData instance.
+        Specify the imputation process for a single variable.        
         
-        Adds imputer to self.implist.
-
         Parameters
         ----------
         endog_name : string
@@ -124,13 +111,11 @@ class ImputedData(object):
             Governs the type of perturbation given to the scale parameter.
         scale_value : float
             Fixed value of scale parameter to use in simulation of data.
-        transform : Numpy instance
-            Transformation to apply to endogenous variable during imputation.
-            Variable will be transformed back via inv_transform for the 
-            analysis model.
-        inv_transform : Numpy instance
-            Applied after imputation to recover original functional 
-            form of endogenous variable.
+        transform : function
+            Transformation to apply to endogeneous variable prior to imputation.
+            Should be an invertible function on the domain of the variable.
+        inv_transform : function
+            Functional inverse of `transform`.
 
         See Also
         --------
@@ -139,15 +124,13 @@ class ImputedData(object):
         if model_class is None:
             model_class = sm.OLS
         if formula is None:
-            formula = endog_name + " ~ " + " + ".join(
-                            [x for x in self.data.columns if x != endog_name])
-        self.implist.append(Imputer(formula, model_class, self, method=method, 
-                                    k_pmm=k_pmm, init_args=init_args, 
-                                    fit_args=fit_args, 
-                                    scale_method=scale_method, 
-                                    scale_value=scale_value, 
-                                    transform=transform, 
-                                    inv_transform=inv_transform))
+            main_effects = [x for x in self.data.columns if x != endog_name]            
+            formula = endog_name + " ~ " + " + ".join(main_effects)
+        imp = Imputer(formula, model_class, self, method=method, k_pmm=k_pmm, 
+                      init_args=init_args, fit_args=fit_args, 
+                      scale_method=scale_method, scale_value=scale_value, 
+                      transform=transform, inv_transform=inv_transform)
+        self.implist.append(imp)
 
     def store_changes(self, col, vals):
         """
@@ -169,8 +152,6 @@ class ImputedData(object):
         """
         Use formula to construct endog and exog split by missing status.
 
-        Called by Imputer before fitting model.
-
         Parameters
         ----------
         formula : string
@@ -179,12 +160,12 @@ class ImputedData(object):
         Returns
         -------
         endog_obs : DataFrame
-            Observations of the variable to be imputed.
+            Observed values of the variable to be imputed.
         exog_obs : DataFrame
-            Observations of the predictors where the variable to be Imputed is
+            Current values of the predictors where the variable to be Imputed is
             observed.
         exog_miss : DataFrame
-            Observations of the predictors where the variable to be Imputed is
+            Current values of the predictors where the variable to be Imputed is
             missing.
         """
         dmat = patsy.dmatrices(formula, self.data, return_type="dataframe")
@@ -202,46 +183,40 @@ class ImputedData(object):
 class Imputer(object):
 
     __doc__= """
-    Initializes object that imputes values for a single variable
-    using a given formula.
+    Object to conduct imputations for a single variable.
 
-    %(params)s
+    **Parameters**
 
     formula : string
         Conditional formula used for imputation.
     model_class : statsmodels model
         Conditional model used for imputation.
     data : ImputedData object
-        See mice.ImputedData
-    method : string
+        The parent ImputedData object to which this Imputer object is attached    
+    method : string or None
         May take on values "pmm", "gaussian", or "bootstrap". Determines 
         imputation method, see methods impute_pmm, impute_asymptotic_bayes, and 
         impute_bootstrap.       
     k_pmm : int
         Determines number of observations from which to draw imputation
         when using predictive mean matching. See method impute_pmm.
-	init_args : Dictionary
-        Additional parameters for statsmodels model instance.
-	fit_args : Dictionary
-		  Additional parameters for statsmodels fit instance.
+    init_args : Dictionary
+        Additional parameters to pass to init method when creating model.
+    fit_args : Dictionary
+        Additional parameters for statsmodels fit instance.
     rvs_class : scipy.random class
-        Controls the scale/location family to use as the asymptotic
-        distribution of the imputed variable. For use in method
-        impute_asymptotic_bayes.
+        The probability distribution class of the conditional model.
     scale_method : string
         Governs the type of perturbation given to the scale parameter. See 
         method perturb_params.
     scale_value : float
         Fixed value of scale parameter to use in simulation of data. See 
         method perturb_params.
-    transform : Numpy instance
-        Transformation to apply to endogenous variable during imputation.
-        Variable will be transformed back via inv_transform for the 
-        analysis model.
+    transform : function
+        Transformation to apply to endogeneous variable prior to imputation.  
+        Should be an invertible function on the domain of the variable.
     inv_transform : Numpy instance
-        Applied after imputation to recover original functional form of 
-        endogenous variable.
-    %(extra_params)
+        Functional inverse of `transform`
 
     **Attributes**
 
@@ -274,23 +249,21 @@ class Imputer(object):
 
     def perturb_params(self, mdf, endog_obs, exog_obs):
         """
-        Perturbs the model's scale and fit parameters.
-
-        The user may choose to fix the scale at the estimated quantity or
-        perturb it using a chi square approximation.
+        Perturbs the model's coefficients and scale parameter.
 
         Bootstrap perturbation upcoming.
 
         Parameters
         ----------
-        mdf : statsmodels fitted model
-            Passed from Imputer object.
+        mdf : Statsmodels results class instance.
+            The current fitted conditional model for the variable managed by 
+            this Imputer instance.
 
         Returns
         -------
-        params : array
+        params_pert : array
             Perturbed model parameters.
-        scale_per : float
+        scale_pert : float
             Perturbed nuisance parameter.
         """
         # TODO: switch to scipy
@@ -302,25 +275,25 @@ class Imputer(object):
             exog_sample = exog_obs.iloc[rix]
             md = self.model_class(endog_sample, exog_sample, **self.init_args)
             mdf = md.fit(**self.fit_args)
-            params = mdf.params.copy()
-            scale_per = 1         
+            params_pert = mdf.params.copy()
+            scale_pert = 1         
         else:
-            params = mdf.params.copy()
+            params_pert = mdf.params.copy()
             covmat = mdf.cov_params()
             covmat_sqrt = np.linalg.cholesky(covmat)            
             if self.scale_method == "fix":
                 if self.scale_value is None:
-                    scale_per = 1.
+                    scale_pert = 1.
                 else:
-                    scale_per = self.scale_value
+                    scale_pert = self.scale_value
             elif self.scale_method == "perturb_chi2":
                 u = np.random.chisquare(float(mdf.df_resid))
-                scale_per = float(mdf.df_resid) / float(u)
-            p = len(params)
-            params += np.dot(covmat_sqrt,
-                             np.random.normal(0, np.sqrt(mdf.scale * scale_per), 
+                scale_pert = float(mdf.df_resid) / float(u)
+            p = len(params_pert)
+            params_pert += np.dot(covmat_sqrt,
+                             np.random.normal(0, np.sqrt(mdf.scale * scale_pert), 
                                               p))
-        return params, scale_per
+        return params_pert, scale_pert
 
     def impute_asymptotic_bayes(self):
         """
