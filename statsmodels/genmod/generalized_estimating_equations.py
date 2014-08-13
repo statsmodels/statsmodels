@@ -549,6 +549,9 @@ class GEE(base.Model):
         if "time" in kwargs and type(kwargs["time"]) == str:
             kwargs["time"] = data[kwargs["time"]]
 
+        if np.any(pd.isnull(data)) or pd.isnull(groups).any():
+            warnings.warn("Missing data handling not implemented for formulas.")
+
         mod = super(GEE, cls).from_formula(formula, data, subset,
                                            groups, *args, **kwargs)
         return mod
