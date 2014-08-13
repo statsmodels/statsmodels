@@ -502,7 +502,7 @@ cdef int {{prefix}}updating_missing_conventional({{prefix}}KalmanFilter kfilter)
     {{prefix}}copy(&kfilter.k_states, kfilter._input_state, &inc, kfilter._filtered_state, &inc)
     {{prefix}}copy(&kfilter.k_states2, kfilter._input_state_cov, &inc, kfilter._filtered_state_cov, &inc)
 
-cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant)  except *:
     # Since the inverse of the forecast error covariance matrix is not
     # stored, we don't need to fill it (e.g. with NPY_NAN values). Instead,
     # just do a noop here and return a zero determinant ($|0|$).
@@ -693,7 +693,7 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
 # converged to a steady state, in which case they do not need to perform the
 # inversion or calculate the determinant.
 
-cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     Factorize the forecast error covariance matrix using simple division
     in the case that the observations are univariate.
@@ -709,14 +709,19 @@ cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter
     # Take the inverse of the forecast error covariance matrix
     if not kfilter.converged:
         determinant = kfilter._forecast_error_cov[0]
-    scalar = 1.0 / kfilter._forecast_error_cov[0]
+    try:
+        scalar = 1.0 / kfilter._forecast_error_cov[0]
+    except:
+        raise np.linalg.LinAlgError('Non-positive-definite forecast error'
+                                   ' covariance matrix encountered at'
+                                   ' period %d' % kfilter.t)
     kfilter._tmp2[0] = scalar * kfilter._forecast_error[0]
     {{prefix}}copy(&kfilter.k_endogstates, kfilter._design, &inc, kfilter._tmp3, &inc)
     {{prefix}}scal(&kfilter.k_endogstates, &scalar, kfilter._tmp3, &inc)
 
     return determinant
 
-cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     Factorize the forecast error covariance matrix using a Cholesky
     decomposition. Called by either of the `solve_cholesky` or
@@ -737,11 +742,14 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
         {{prefix}}copy(&kfilter.k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
         {{prefix}}potrf("U", &kfilter.k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, &info)
 
+        if info < 0:
+            raise np.linalg.LinAlgError('Illegal value in forecast error'
+                                        ' covariance matrix encountered at'
+                                        ' period %d' % kfilter.t)
         if info > 0:
-            # TODO catch and re-raise this exception in main loop so that e.g.
-            # the time subscript can be provided as well.
-            warnings.warn('Non-positive-definite forecast error'
-                          ' covariance matrix encountered.')
+            raise np.linalg.LinAlgError('Non-positive-definite forecast error'
+                                       ' covariance matrix encountered at'
+                                       ' period %d' % kfilter.t)
 
         # Calculate the determinant (just the squared product of the
         # diagonals, in the Cholesky decomposition case)
@@ -752,7 +760,7 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
 
     return determinant
 
-cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     Factorize the forecast error covariance matrix using an LU
     decomposition. Called by either of the `solve_lu` or `invert_lu`
@@ -777,6 +785,15 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cy
                         kfilter._forecast_error_fac, &kfilter.k_endog,
                         kfilter._forecast_error_ipiv, &info)
 
+        if info < 0:
+            raise np.linalg.LinAlgError('Illegal value in forecast error'
+                                        ' covariance matrix encountered at'
+                                        ' period %d' % kfilter.t)
+        if info > 0:
+            raise np.linalg.LinAlgError('Singular forecast error covariance'
+                                        ' matrix encountered at period %d' %
+                                        kfilter.t)
+
         # Calculate the determinant (product of the diagonals, but with
         # sign modifications according to the permutation matrix)    
         determinant = 1
@@ -788,7 +805,7 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cy
 
     return determinant
 
-cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     inverse_cholesky(self, determinant)
 
@@ -842,7 +859,7 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
 
     return determinant
 
-cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     inverse_cholesky(self, determinant)
 
@@ -881,7 +898,7 @@ cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{cyth
 
     return determinant
 
-cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     solve_cholesky(self, determinant)
 
@@ -909,7 +926,7 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
 
     return determinant
 
-cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant):
+cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{cython_type}} determinant) except *:
     """
     inverse_cholesky(self, determinant)
 
@@ -1142,7 +1159,7 @@ cdef class {{prefix}}KalmanFilter(object):
     )
     cdef {{cython_type}} (*inversion)(
         {{prefix}}KalmanFilter, {{cython_type}}
-    )
+    ) except *
     cdef int (*updating)(
         {{prefix}}KalmanFilter
     )
