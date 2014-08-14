@@ -233,8 +233,8 @@ class Imputer(object):
     Note: all params are saved as attributes.
 
     """
-    def __init__(self, formula, model_class, data,
-            method="gaussian", k_pmm=1, init_args={}, fit_args={},
+    def __init__(self, formula, model_class, data, method="gaussian", 
+                 perturb_method="gaussian", k_pmm=1, init_args={}, fit_args={},
                  rvs_class=None, scale_method="fix", scale_value=None, 
                  transform=None, inv_transform=None):
         self.data = data
@@ -251,6 +251,7 @@ class Imputer(object):
         self.k_pmm = k_pmm
         self.transform = transform
         self.inv_transform = inv_transform
+        self.perturb_method = perturb_method
 
     def perturb_params(self, mdf, endog_obs, exog_obs):
         """
@@ -273,7 +274,7 @@ class Imputer(object):
         """
         # TODO: switch to scipy
 
-        if self.scale_method == "perturb_boot":
+        if self.perturb_method == "boot":
             m = len(endog_obs)
             rix = np.random.randint(0, m, m)
             endog_sample = endog_obs.iloc[rix,:]
@@ -282,7 +283,7 @@ class Imputer(object):
             mdf = md.fit(**self.fit_args)
             params_pert = mdf.params
             scale_pert = 1.         
-        else:
+        elif self.perturb_method == "gaussian":
             params_pert = mdf.params.copy()
             covmat = mdf.cov_params()
             covmat_sqrt = np.linalg.cholesky(covmat)            
@@ -298,6 +299,9 @@ class Imputer(object):
             params_pert += np.dot(covmat_sqrt,
                              np.random.normal(0, np.sqrt(mdf.scale * scale_pert), 
                                               p))
+        else:
+            raise(ValueError("Unknown perturbation method"))
+            
         return params_pert, scale_pert
 
     def impute_asymptotic_bayes(self):
