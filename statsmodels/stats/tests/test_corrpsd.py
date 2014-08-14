@@ -216,7 +216,74 @@ def test_corrpsd_threshold():
 
 class Test_Factor(object):
 
+
+    def test_corr_nearest_factor_arrpack(self):
+
+        # regression results for svds call
+        u2 = np.array([[
+         6.39407581e-19,   9.15225947e-03,   1.82631698e-02,
+         2.72917181e-02,   3.61975557e-02,   4.49413101e-02,
+         5.34848732e-02,   6.17916613e-02,   6.98268388e-02,
+         7.75575058e-02,   8.49528448e-02,   9.19842264e-02,
+         9.86252769e-02,   1.04851906e-01,   1.10642305e-01,
+         1.15976906e-01,   1.20838331e-01,   1.25211306e-01,
+         1.29082570e-01,   1.32440778e-01,   1.35276397e-01,
+         1.37581605e-01,   1.39350201e-01,   1.40577526e-01,
+         1.41260396e-01,   1.41397057e-01,   1.40987160e-01,
+         1.40031756e-01,   1.38533306e-01,   1.36495727e-01,
+         1.33924439e-01,   1.30826443e-01,   1.27210404e-01,
+         1.23086750e-01,   1.18467769e-01,   1.13367717e-01,
+         1.07802909e-01,   1.01791811e-01,   9.53551023e-02,
+         8.85157320e-02,   8.12989329e-02,   7.37322125e-02,
+         6.58453049e-02,   5.76700847e-02,   4.92404406e-02,
+         4.05921079e-02,   3.17624629e-02,   2.27902803e-02,
+         1.37154584e-02,   4.57871801e-03,  -4.57871801e-03,
+        -1.37154584e-02,  -2.27902803e-02,  -3.17624629e-02,
+        -4.05921079e-02,  -4.92404406e-02,  -5.76700847e-02,
+        -6.58453049e-02,  -7.37322125e-02,  -8.12989329e-02,
+        -8.85157320e-02,  -9.53551023e-02,  -1.01791811e-01,
+        -1.07802909e-01,  -1.13367717e-01,  -1.18467769e-01,
+        -1.23086750e-01,  -1.27210404e-01,  -1.30826443e-01,
+        -1.33924439e-01,  -1.36495727e-01,  -1.38533306e-01,
+        -1.40031756e-01,  -1.40987160e-01,  -1.41397057e-01,
+        -1.41260396e-01,  -1.40577526e-01,  -1.39350201e-01,
+        -1.37581605e-01,  -1.35276397e-01,  -1.32440778e-01,
+        -1.29082570e-01,  -1.25211306e-01,  -1.20838331e-01,
+        -1.15976906e-01,  -1.10642305e-01,  -1.04851906e-01,
+        -9.86252769e-02,  -9.19842264e-02,  -8.49528448e-02,
+        -7.75575058e-02,  -6.98268388e-02,  -6.17916613e-02,
+        -5.34848732e-02,  -4.49413101e-02,  -3.61975557e-02,
+        -2.72917181e-02,  -1.82631698e-02,  -9.15225947e-03,
+        -3.51829569e-17]]).T
+        s2 = np.array([ 24.88812183])
+
+        d = 100
+        dm = 1
+
+        # Construct a test matrix with exact factor structure
+        X = np.zeros((d,dm), dtype=np.float64)
+        x = np.linspace(0, 2*np.pi, d)
+        for j in range(dm):
+            X[:,j] = np.sin(x*(j+1))
+        _project_correlation_factors(X)
+        X *= 0.7
+        mat = np.dot(X, X.T)
+        np.fill_diagonal(mat, 1.)
+
+        from scipy.sparse.linalg import svds
+        u, s, vt = svds(mat, dm)
+
+        #difference in sign
+        dsign = np.sign(u[1]) * np.sign(u2[1])
+
+        assert_allclose(u, dsign * u2, rtol=1e-6, atol=1e-14)
+        assert_allclose(s, s2, rtol=1e-6)
+
+
     def test_corr_nearest_factor(self):
+
+        objvals = [np.array([6241.8, 6241.8, 579.4, 264.6, 264.3]),
+                   np.array([2104.9, 2104.9, 710.5, 266.3, 286.1])]
 
         d = 100
 
@@ -234,9 +301,12 @@ class Test_Factor(object):
 
             # Try to recover the structure
             rslt = corr_nearest_factor(mat, dm)
-            assert_equal(rslt.Converged, True)
+            err_msg = 'rank=%d, niter=%d' % (dm, len(rslt.objective_values))
+            assert_allclose(rslt.objective_values[:5], objvals[dm - 1],
+                            rtol=0.5, err_msg=err_msg)
+            assert_equal(rslt.Converged, True, err_msg=err_msg)
             mat1 = rslt.corr.to_matrix()
-            assert_allclose(mat, mat1, rtol=0.25, atol=1e-3)
+            assert_allclose(mat, mat1, rtol=0.25, atol=1e-3, err_msg=err_msg)
 
 
     # Test that we get the same result if the input is dense or sparse
