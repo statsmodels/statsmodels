@@ -34,28 +34,27 @@ Windows into the Black Box", Journal of Statistical Software, 2009.
 
 """
 #TODO: Add reference http://biomet.oxfordjournals.org/content/86/4/948.full.pdf
+#TODO: Change md to mod, mdf to rslt
 import operator
 import pandas as pd
 import numpy as np
 import patsy
 import statsmodels.api as sm
-import random
+#import random
 import statsmodels
 from statsmodels.tools.decorators import cache_readonly
 from scipy import stats
 import copy
-import sys
+#import sys
 
 class ImputedData(object):
     __doc__= """
     Stores missing data information and supports functionality for inserting
     values in missing data slots.
 
-    Can create Imputers directly via new_imputer method. By default, imputers
-    are created for each variable using OLS using all other variables as 
-    predictors.
-
-    **Parameters**
+    Parameters
+    ----------
+    
     data : array-like object
         Needs to support transformation to pandas dataframe. Missing value
         encoding is handled by pandas DataFrame class.
@@ -63,6 +62,10 @@ class ImputedData(object):
         May take on values None, "pmm", "gaussian", or "bootstrap". Determines 
         imputation method for automatic Imputer creation. method=None means 
         the user must specify their own Imputer objects.
+    
+    Note: Can create Imputers directly via new_imputer method. By default, 
+    imputers are created for each variable using OLS using all other variables 
+    as predictors.
     """
     def __init__(self, data, method=None):
         # may not need to make copies
@@ -185,7 +188,8 @@ class Imputer(object):
     __doc__= """
     Object to conduct imputations for a single variable.
 
-    **Parameters**
+    Parameters
+    ----------
 
     formula : string
         Conditional formula used for imputation.
@@ -218,7 +222,8 @@ class Imputer(object):
     inv_transform : Numpy instance
         Functional inverse of `transform`
 
-    **Attributes**
+    Attributes
+    ----------
 
     endog_name : string
         Name of variable to be imputed.
@@ -251,8 +256,6 @@ class Imputer(object):
         """
         Perturbs the model's coefficients and scale parameter.
 
-        Bootstrap perturbation upcoming.
-
         Parameters
         ----------
         mdf : Statsmodels results class instance.
@@ -265,18 +268,20 @@ class Imputer(object):
             Perturbed model parameters.
         scale_pert : float
             Perturbed nuisance parameter.
+        
+        Note: Bootstrap perturbation still experimental.
         """
         # TODO: switch to scipy
 
         if self.scale_method == "perturb_boot":
-            l = len(endog_obs)
-            rix = np.random.choice(range(l),size=l)
-            endog_sample = endog_obs.iloc[rix]
-            exog_sample = exog_obs.iloc[rix]
+            m = len(endog_obs)
+            rix = np.random.randint(0, m, m)
+            endog_sample = endog_obs.iloc[rix,:]
+            exog_sample = exog_obs.iloc[rix,:]
             md = self.model_class(endog_sample, exog_sample, **self.init_args)
             mdf = md.fit(**self.fit_args)
-            params_pert = mdf.params.copy()
-            scale_pert = 1         
+            params_pert = mdf.params
+            scale_pert = 1.         
         else:
             params_pert = mdf.params.copy()
             covmat = mdf.cov_params()
@@ -322,16 +327,16 @@ class Imputer(object):
         """
         Use predictive mean matching to simulate data.
 
-        Fills in missing values of input data. Predictive mean matching picks
-        an observation randomly from the observed value of the k-nearest
-        predictions of the endogenous variable. Naturally, the candidate
-        neighbors must have observed endogenous values.
-
         Parameters
         ----------
         pmm_neighbors : int
             Number of neighbors in prediction space to select imputations from.
             Defaults to 10 (select closest neighbor).
+        
+        Note: Fills in missing values of input data. Predictive mean matching 
+        picks an observation randomly from the observed value of the k-nearest
+        predictions of the endogenous variable. Naturally, the candidate
+        neighbors must have observed endogenous values.
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
                                                                 self.formula)
@@ -396,7 +401,7 @@ class Imputer(object):
                         limit_high = True
                 k += 1                    
             ixs = np.clip(ixs, 0, len(oendog) - 1)
-            ix_list.append(random.choice(ixs))
+            ix_list.append(np.random.choice(ixs))
         # Select a random draw of observed endogenous variable from a set
         # window around the closest predicted value
 #        ix += np.random.randint(int(-pmm_neighbors / 2.), int(pmm_neighbors / 2.) + 1, size=len(ix))
@@ -431,23 +436,22 @@ class ImputerChain(object):
     An iterator that returns imputed data sets produced using the MICE
     (multiple imputation by chained equations) procedure.
 
-    This class does imputation and returns the imputed data sets, it does not
-    fit the analysis model. See the "next" method for details.
-
-    %(params)s
+    Parameters
+    ----------
 
     imputer_list : list
         List of Imputer objects, one for each variable to be imputed.
 
-    **Attributes**
+    Attributes
+    ----------
 
     data : pandas DataFrame
         Underlying data to be modified. Root copy of data is stored in original
         ImputedData object.
 
     Note: All imputers must refer to the same data object. See mice.MICE.run
-    for iterator call.
-
+    for iterator call. This class does imputation and returns the imputed data 
+    sets, it does not fit the analysis model. See the "next" method for details.
     """
     def __init__(self, imputer_list):
         self.imputer_list = imputer_list
@@ -464,13 +468,14 @@ class ImputerChain(object):
         Makes this class an iterator that returns imputed datasets after
         cycling through all contained imputers.
 
-        Returned datsets are not saved unless specified in the iterator call.
-
         Returns
         -------
         data : pandas DataFrame
             Dataset with imputed values saved after invoking each Imputer
             object in imputer_list.
+            
+        Note: Returned datsets are not saved unless specified in the iterator 
+        call.
         """
         for im in self.imputer_list:
             if im.method=="gaussian":
@@ -486,11 +491,8 @@ class AnalysisChain(object):
     An iterator that returns the fitted model of interest given a MICE imputed
     dataset.
 
-    Datasets to be used for analysis are chosen after an initial burnin period
-    where no imputed data is used and also after skipping a set number of
-    imputations for each iteration. See the "next" method for details.
-
-	%(params)s
+    Parameters
+    ----------
 	
 	imputer_chain : ImputerChain instance
 	analysis_formula : string
@@ -506,8 +508,10 @@ class AnalysisChain(object):
 	fit_args : Dictionary
 		Additional parameters for statsmodels fit instance.	
 
-    Note: See mice.MICE.run for iterator call.
-
+    Note: See mice.MICE.run for iterator call. Datasets to be used for analysis
+    are chosen after an initial burnin period where no imputed data is used and
+    also after skipping a set number of imputations for each iteration. See the
+    "next" method for details.
     """
 
     def __init__(self, imputer_chain, analysis_formula, analysis_class,
@@ -531,10 +535,6 @@ class AnalysisChain(object):
         """
         Makes this class an iterator that returns the fitted analysis model.
 
-        Handles skipping of imputation iterations, burnin period of
-        unconsidered imputation iterations, and whether or not to save the
-        datasets to which an analysis model is fit.
-
         Returns
         -------
         mdf : statsmodels fitted model
@@ -542,7 +542,9 @@ class AnalysisChain(object):
             skip and burnin criteria
 
         Note: If save="full", imputed datasets are saved in the format
-        "mice_'iteration number'.csv"
+        "mice_'iteration number'.csv". Handles skipping of imputation 
+        iterations, burnin period of unconsidered imputation iterations, and 
+        whether or not to save the datasets to which an analysis model is fit.
         """
         #TODO: add transform here instead of in Imputer
         for i in range(self.skipnum):
@@ -562,11 +564,8 @@ class MICE(object):
     Fits the analysis model to each imputed dataset and combines the
     results using Rubin's rule.
 
-    Calls mice.Imputer_Chain and mice.AnalysisChain
-    to handle imputation and fitting of analysis models to the correct imputed
-    datasets, respectively.
-
-    %(params)s
+    Parameters
+    ----------
 
     analysis_formula : string
         Formula for model of interest to be fitted.
@@ -575,9 +574,9 @@ class MICE(object):
     impdata : mice.ImputedData instance
         ImputedData object which contains an implist that is fully populated
         by the desired Imputer objects.
-    %(extra_params)s
 
-    **Attributes**
+    Attributes
+    ----------
 
     N : int
         Total number of observations.
@@ -613,6 +612,10 @@ Model:               Logit             Sample size:                    978
 Intercept  2.2639   0.2182  10.3754 0.0000  1.8322  2.6956 130.0876 0.3412
 x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
 ==========================================================================
+
+    Note: Calls mice.Imputer_Chain and mice.AnalysisChain to handle imputation 
+    and fitting of analysis models to the correct imputed datasets, 
+    respectively.
     """
     def __init__(self, analysis_formula, analysis_class, impdata,
                  init_args={}, fit_args={}):
@@ -770,20 +773,21 @@ class MissingDataInfo(object):
     __doc__="""
     Contains all the missing data information from the passed-in data object.
 
-    A self.columns dictionary entry exists for each column/variable in the
-    dataset.
-
-    %(params)s
+    Parameters
+    ----------
 
     data : pandas DataFrame with missing values.
 
-    **Attributes**
+    Attributes
+    ----------
 
     ix_miss : array
         Indices of missing values for a particular variable.
     ix_obs : array
         Indices of observed values for a particular variable.
-
+    
+    Note: A self.columns dictionary entry exists for each column/variable in 
+    the dataset.
     """
 
     def __init__(self, data):
