@@ -4,8 +4,8 @@ Test AR Model
 import statsmodels.api as sm
 from statsmodels.compat.python import range
 from statsmodels.tsa.ar_model import AR
-from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_)
+from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
+from statsmodels.tools.testing import assert_equal
 from .results import results_ar
 import numpy as np
 import numpy.testing as npt
