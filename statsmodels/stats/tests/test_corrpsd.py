@@ -292,9 +292,12 @@ class Test_Factor(object):
             # Construct a test matrix with exact factor structure
             X = np.zeros((d,dm), dtype=np.float64)
             x = np.linspace(0, 2*np.pi, d)
+            np.random.seed(10)
             for j in range(dm):
-                X[:,j] = np.sin(x*(j+1))
+                X[:,j] = np.sin(x*(j+1)) + 1e-10 * np.random.randn(d)
+
             _project_correlation_factors(X)
+            assert np.isfinite(X).all()
             X *= 0.7
             mat = np.dot(X, X.T)
             np.fill_diagonal(mat, 1.)
@@ -319,8 +322,9 @@ class Test_Factor(object):
             # Generate a test matrix of factors
             X = np.zeros((d,dm), dtype=np.float64)
             x = np.linspace(0, 2*np.pi, d)
+            np.random.seed(10)
             for j in range(dm):
-                X[:,j] = np.sin(x*(j+1))
+                X[:,j] = np.sin(x*(j+1)) + 1e-10 * np.random.randn(d)
 
             # Get the correlation matrix
             _project_correlation_factors(X)
