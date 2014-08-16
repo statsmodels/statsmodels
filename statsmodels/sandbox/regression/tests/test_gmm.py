@@ -29,8 +29,8 @@ def get_griliches76_data():
     for yr in years:
         griliches76_data['D_%i' %yr] = np.zeros(N)
         for i in range(N):
-            if griliches76_data['year'][i] == yr:
-                griliches76_data['D_%i' %yr][i] = 1
+            if griliches76_data.ix[i, 'year'] == yr:
+                griliches76_data.ix[i, 'D_%i' %yr] = 1
             else:
                 pass
 
