@@ -784,7 +784,7 @@ class MultiComparison(object):
 
     def __init__(self, data, groups, group_order=None):
         self.data = np.asarray(data)
-        self.groups = np.asarray(groups)
+        self.groups = groups = np.asarray(groups)
 
         # Allow for user-provided sorting of groups
         if group_order is None:
