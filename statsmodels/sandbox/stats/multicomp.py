@@ -760,6 +760,7 @@ class TukeyHSDResults(object):
         ax1.set_ylim([-1, self._multicomp.ngroups])
         ax1.set_xlim([np.min(minrange) - r / 10., np.max(maxrange) + r / 10.])
         ax1.set_yticklabels(np.insert(self.groupsunique.astype(str), 0, ''))
+        ax1.set_yticks(np.arange(-1, len(means)+1))
         ax1.set_xlabel(xlabel if xlabel is not None else '')
         ax1.set_ylabel(ylabel if ylabel is not None else '')
         return fig
