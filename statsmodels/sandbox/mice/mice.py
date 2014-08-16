@@ -219,7 +219,7 @@ class Imputer(object):
     transform : function
         Transformation to apply to endogeneous variable prior to imputation.  
         Should be an invertible function on the domain of the variable.
-    inv_transform : Numpy instance
+    inv_transform : function
         Functional inverse of `transform`
 
     Attributes
@@ -253,7 +253,7 @@ class Imputer(object):
         self.inv_transform = inv_transform
         self.perturb_method = perturb_method
 
-    def perturb_params(self, mdf, endog_obs, exog_obs):
+    def perturb_params(self, mdf):
         """
         Perturbs the model's coefficients and scale parameter.
 
@@ -275,6 +275,8 @@ class Imputer(object):
         # TODO: switch to scipy
 
         if self.perturb_method == "boot":
+            endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
+                                                                self.formula)
             m = len(endog_obs)
             rix = np.random.randint(0, m, m)
             endog_sample = endog_obs.iloc[rix,:]
@@ -318,7 +320,7 @@ class Imputer(object):
             endog_obs = self.transform(endog_obs)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params, scale_per = self.perturb_params(mdf, endog_obs, exog_obs)
+        params, scale_per = self.perturb_params(mdf)
         new_rv = md.get_distribution(params=params, exog=exog_miss,
                                      model_class=self.rvs_class,
                                      scale=np.sqrt(scale_per * mdf.scale))
@@ -348,7 +350,7 @@ class Imputer(object):
             endog_obs = self.transform(endog_obs)                                                                
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
         mdf = md.fit(**self.fit_args)
-        params, scale_per = self.perturb_params(mdf, endog_obs, exog_obs)
+        params, scale_per = self.perturb_params(mdf)
         # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
@@ -422,8 +424,8 @@ class Imputer(object):
                                                                 self.formula)
         if self.transform is not None and self.inv_transform is not None:
             endog_obs = self.transform(endog_obs)           
-        l = len(endog_obs)
-        rix = np.random.choice(range(l),size=l)
+        m = len(endog_obs)
+        rix = np.random.randint(0, m, m)
         endog_sample = endog_obs.iloc[rix]
         exog_sample = exog_obs.iloc[rix]
         md = self.model_class(endog_sample, exog_sample, **self.init_args)
@@ -771,8 +773,8 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         param['#missing'] = numiss
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
-
         return smry
+        
 class MissingDataInfo(object):
     __doc__="""
     Contains all the missing data information from the passed-in data object.

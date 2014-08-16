@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.sandbox.mice import mice
 import statsmodels.api as sm
-import os
+#import os
 
 def load_data():
     """
@@ -10,11 +10,11 @@ def load_data():
     """
 
     params = pd.io.parsers.read_csv("params.csv")
-    params.columns = ['int', 'x2']
+    params.columns = ['int', 'x2', 'x3']
     cov = pd.io.parsers.read_csv("cov.csv")
-    cov.columns = ['int', 'x2']
+    cov.columns = ['int', 'x2', 'x3']
     data = pd.io.parsers.read_csv("missingdata.csv")
-    data.columns = ['x1', 'x2']
+    data.columns = ['x1', 'x2', 'x3']
 
     return params,cov,data
 
@@ -75,7 +75,7 @@ class TestMice(object):
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_asymptotic_bayes()
         np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
-                                       np.asarray([-0.83679515, -0.22187195]))
+                                       np.asarray([-0.64163604, -0.26610016]))
 
     def test_impute_pmm(self):
         np.random.seed(1325)
@@ -85,7 +85,7 @@ class TestMice(object):
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_pmm()
         np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
-                                       np.asarray([-0.77954822, -0.77954822]))
+                                       np.asarray([ 0.50272064,  0.68366113]))
 
     def test_combine(self):
         np.random.seed(1325)
@@ -93,18 +93,19 @@ class TestMice(object):
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         impdata = mice.ImputedData(df)
-        m = impdata.new_imputer("X2", scale_method="perturb_chi2", method="pmm")
-        impcomb = mice.MICE("X2 ~ X1 + X3", sm.OLS, [m])
+        impdata.new_imputer("X2", scale_method="perturb_chi2", method="pmm",
+                                k_pmm=20)
+        impcomb = mice.MICE("X2 ~ X1 + X3", sm.OLS, impdata)
         impcomb.run()
         p1 = impcomb.combine()
-        np.testing.assert_almost_equal(p1.params, np.asarray([0.31562745, 
-                                                              0.19100593,
-                                                              0.0133906 ]))
-        np.testing.assert_almost_equal(p1.scale, 0.61329459165397548)
+        np.testing.assert_almost_equal(p1.params, np.asarray([0.38021906, 
+                                                              -0.0572892 , 
+                                                              -0.13245096 ]))
+        np.testing.assert_almost_equal(p1.scale, 0.44794708586717524)
         np.testing.assert_almost_equal(p1.cov_params(), np.asarray([
-        [  7.88964139e-02,   2.70237318e-02,  -3.64367780e-03],
-        [  2.70237318e-02,   7.23763179e-02,  -1.76877602e-05],
-        [ -3.64367780e-03,  -1.76877602e-05,   6.80019669e-02]]))
+        [ 0.05769299,  0.02021915, -0.00322985],
+        [ 0.02021915,  0.05233605, -0.00184258],
+        [-0.00322985, -0.00184258,  0.05320861]]))
 
     def test_nomissing(self):
     
@@ -114,9 +115,9 @@ class TestMice(object):
         data = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4", "Y"])
 
         imp_data = mice.ImputedData(data)
-        imputers = [imp_data.new_imputer(name) for name in data.columns]
-
-        mice_mod = mice.MICE("Y ~ X1 + X2 + X3 + X4", sm.OLS, imputers)
+        for name in data.columns:
+            imp_data.new_imputer(name)
+        mice_mod = mice.MICE("Y ~ X1 + X2 + X3 + X4", sm.OLS, imp_data)
         mice_mod.run()
         mice_rslt = mice_mod.combine()
 
@@ -124,67 +125,68 @@ class TestMice(object):
         ols_rslt = ols_mod.fit()
 
         np.testing.assert_almost_equal(mice_rslt.params,
-                                       ols_rslt.params)
+                                       np.asarray(ols_rslt.params))
         np.testing.assert_almost_equal(mice_rslt.cov_params(),
-                                       ols_rslt.cov_params())
-        np.testing.assert_almost_equal(mice_rslt.bse, ols_rslt.bse)
+                                       np.asarray(ols_rslt.cov_params()))
+        np.testing.assert_almost_equal(mice_rslt.bse, np.asarray(ols_rslt.bse))
         
     def test_overall(self):
         """
         R code used for comparison:
 
-        N<-250;
-        x1<-rbinom(N,1,prob=.4)  #draw from a binomial dist with probability=.4
-        x2<-rnorm(N,0,1)         #draw from a normal dist with mean=0, sd=1
-        x3<-rnorm(N,-10,1)
-        y<--1+1*x1-1*x2+1*x3+rnorm(N,0,1)  #simulate linear regression data with a normal error (sd=1)
+        require(mvtnorm)
+        size = 1000
+        cor = 0.9
+        mu = rep(0,3)
+        sig = matrix(cor, nrow=3, ncol=3) + diag(3) * (1-cor) #Generate covariance matrix for normal
+        draws = rmvnorm(n=size, mean=mu, sigma=sig)
+        unidraws = pnorm(draws) #Apply probability integral transform to get uniform draws
+        normdraws1 = draws[,1] #Draw from original normal
+        berndraws = qbinom(1-unidraws[,2], 1, 0.75) #Inverse Bernoulli cdf using uniform draws
+        normdraws2 = draws[,3] #Inverse Poisson cdf using uniform draws
+        y<--1+1*berndraws-1*normdraws1+1*normdraws2+rnorm(size,0,1) #Simulate linear regression to get conditional behavior in missingness rate
         
-        #Generate MAR data
-        
-        alpha.1<-exp(16+2*y-x2)/(1+exp(16+2*y-x2));
-        alpha.2<-exp(3.5+.7*y)/(1+exp(3.5+.7*y));
-        alpha.3<-exp(-13-1.2*y-x1)/(1+exp(-13-1.2*y-x1));
-        
-        
-        r.x1.mar<-rbinom(N,1,prob=alpha.1)
-        r.x2.mar<-rbinom(N,1,prob=alpha.2)
-        r.x3.mar<-rbinom(N,1,prob=alpha.3)
-        x1.mar<-x1*(1-r.x1.mar)+r.x1.mar*99999  #x1.mar=x1 if not missing, 99999 if missing
-        x2.mar<-x2*(1-r.x2.mar)+r.x2.mar*99999
-        x3.mar<-x3*(1-r.x3.mar)+r.x3.mar*99999
-        x1.mar[x1.mar==99999]=NA                  #change 99999 to NA (R's notation for missing)
-        x2.mar[x2.mar==99999]=NA
-        x3.mar[x3.mar==99999]=NA
+        alpha.1<-exp(-1+2*y-normdraws1)/(1+exp(-1+2*y-normdraws1))
+        alpha.2<-exp(-3.5+.7*y)/(1+exp(-3.5+.7*y))
+        alpha.3<-exp(-6+1.2*y-berndraws)/(1+exp(-6+1.2*y-berndraws))
+                
+        r.berndraws.mar<-rbinom(size,1,prob=alpha.1)
+        r.normdraws1.mar<-rbinom(size,1,prob=alpha.2)
+        r.normdraws2.mar<-rbinom(size,1,prob=alpha.3)
+        berndraws.mar<-berndraws*(1-r.berndraws.mar)+r.berndraws.mar*99999  #berndraws.mar=berndraws if not missing, 99999 if missing
+        normdraws1.mar<-normdraws1*(1-r.normdraws1.mar)+r.normdraws1.mar*99999
+        normdraws2.mar<-normdraws2*(1-r.normdraws2.mar)+r.normdraws2.mar*99999
+        berndraws.mar[berndraws.mar==99999]=NA #change 99999 to NA (R's notation for missing)
+        normdraws1.mar[normdraws1.mar==99999]=NA
+        normdraws2.mar[normdraws2.mar==99999]=NA
         
         require(mice)
-        data = as.data.frame(cbind(x1.mar,x2.mar,x3.mar))
-        data$x1.mar = as.factor(data$x1.mar)
-        nrep = 500
+        data = as.data.frame(cbind(berndraws.mar,normdraws1.mar,normdraws2.mar))
+        data$berndraws.mar = as.factor(data$berndraws.mar)
         params = array(0, nrep)
-        imp_pmm = mice(data, m=20, maxit=10, method="pmm")
-        fit = with(data=imp_pmm,exp=glm(x1.mar~x2.mar + x3.mar,family=binomial))
+        imp_pmm = mice(data, m=10, maxit=20, method="pmm")
+        fit = with(data=imp_pmm,exp=glm(berndraws.mar~normdraws1.mar + normdraws2.mar,family=binomial))   
         pooled = pool(fit)
         print(summary(pooled))
-        
         setwd("C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests")
         write.csv(cbind(pooled$u[1:20], pooled$u[81:100], pooled$u[161:180]), "cov.csv", row.names=FALSE)
         write.csv(pooled$qhat, "params.csv", row.names=FALSE)
         write.csv(data, "missingdata.csv", row.names=FALSE)
         """
         params,cov,data = load_data()
-        r_pooled_se = np.asarray(cov)
-#        np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 20.) * np.var(params)))
+        r_pooled_se = np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 20.) * np.var(params)))
         r_pooled_params = np.asarray(np.mean(params))
         impdata = mice.ImputedData(data)
         impdata.new_imputer("x2", method="pmm", k_pmm=20)
+        impdata.new_imputer("x3", method="pmm", k_pmm=20)
 #        impdata.new_imputer("x3", method="pmm", k_pmm=20)
         impdata.new_imputer("x1", model_class=sm.Logit, method="pmm", k_pmm=20)
-        impcomb = mice.MICE("x1 ~ x2", sm.Logit, impdata)
+        impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit, impdata)
         impcomb.run(20,10)
         p1 = impcomb.combine()
         print p1.summary()        
-        np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.4)
-        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=0.3)
+        np.testing.assert_allclose(p1.params, r_pooled_params, rtol=0.1)
+        np.testing.assert_allclose(np.sqrt(np.diag(p1.cov_params())), r_pooled_se, rtol=0.1)
 
 if  __name__=="__main__":
 
