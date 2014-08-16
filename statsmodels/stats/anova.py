@@ -128,9 +128,9 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     table.index = Index(index + ['Residual'])
     table.ix[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
     if test == 'F':
-        table[:n_rows][test] = ((table['sum_sq']/table['df'])/
+        table.ix[:n_rows, test] = ((table['sum_sq']/table['df'])/
                                 (model.ssr/model.df_resid))
-        table[:n_rows][pr_test] = stats.f.sf(table["F"], table["df"],
+        table.ix[:n_rows, pr_test] = stats.f.sf(table["F"], table["df"],
                                 model.df_resid)
 
     # fill in residual
@@ -353,7 +353,7 @@ def anova_lm(*args, **kwargs):
 
     table["ssr"] = lmap(getattr, args, ["ssr"]*n_models)
     table["df_resid"] = lmap(getattr, args, ["df_resid"]*n_models)
-    table.ix[1:]["df_diff"] = -np.diff(table["df_resid"].values)
+    table.ix[1:, "df_diff"] = -np.diff(table["df_resid"].values)
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
