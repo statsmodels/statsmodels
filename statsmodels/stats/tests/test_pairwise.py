@@ -235,7 +235,8 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
 
         import pandas
         self.endog = pandas.Series(self.endog)
-        self.groups = pandas.Series(self.groups)
+        # we are working with bytes on python 3, not with strings in this case
+        self.groups = pandas.Series(self.groups, dtype=object)
 
 
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
