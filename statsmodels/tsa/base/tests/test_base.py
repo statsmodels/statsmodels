@@ -3,6 +3,7 @@ from pandas import Series
 from pandas import date_range
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 import numpy.testing as npt
+from statsmodels.tools.testing import assert_equal
 
 def test_pandas_nodates_index():
     from statsmodels.datasets import sunspots
@@ -30,7 +31,7 @@ def test_predict_freq():
     #expected_dates = date_range("2006-12-31", "2016-12-31",
     #                            freq="AS-APR")
     expected_dates = date_range("2006-4-30", "2016-4-30", freq="A-APR")
-    npt.assert_equal(predict_dates, expected_dates)
+    assert_equal(predict_dates, expected_dates)
     #ptesting.assert_series_equal(predict_dates, expected_dates)
 
 

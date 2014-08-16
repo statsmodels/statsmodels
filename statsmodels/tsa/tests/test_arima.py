@@ -1,8 +1,9 @@
 from statsmodels.compat.python import lrange, BytesIO
 import numpy as np
 from nose.tools import nottest
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+from numpy.testing import (assert_almost_equal, assert_,
                            assert_raises, dec, TestCase)
+from statsmodels.tools.testing import assert_equal
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
@@ -1563,9 +1564,9 @@ def test_arima_wrapper():
     cpi = load_pandas().data['cpi']
     cpi.index = pandas.Index(cpi_dates)
     res = ARIMA(cpi, (4,1,1), freq='Q').fit(disp=-1)
-    assert_equal(res.params.index, ['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
+    assert_equal(res.params.index, pandas.Index(['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
                                     'ar.L3.D.cpi', 'ar.L4.D.cpi',
-                                    'ma.L1.D.cpi'])
+                                    'ma.L1.D.cpi']))
     assert_equal(res.model.endog_names, 'D.cpi')
 
 def test_1dexog():
