@@ -227,6 +227,18 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
             assert_((first_group, second_group) == expected_order[i - 1])
 
 
+class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
+
+    @classmethod
+    def setup_class(self):
+        super(TestTuckeyHSD2Pandas, self).setup_class()
+
+        import pandas
+        self.endog = pandas.Series(self.endog)
+        # we are working with bytes on python 3, not with strings in this case
+        self.groups = pandas.Series(self.groups, dtype=object)
+
+
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
     @classmethod
     def setup_class(self):
