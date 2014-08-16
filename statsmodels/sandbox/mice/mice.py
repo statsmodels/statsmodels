@@ -40,12 +40,10 @@ import pandas as pd
 import numpy as np
 import patsy
 import statsmodels.api as sm
-#import random
 import statsmodels
 from statsmodels.tools.decorators import cache_readonly
 from scipy import stats
 import copy
-#import sys
 
 class ImputedData(object):
     __doc__= """
@@ -68,7 +66,7 @@ class ImputedData(object):
     as predictors.
     """
     def __init__(self, data, method=None):
-        # may not need to make copies
+        # May not need to make copies
         self.data = pd.DataFrame(data)
         # Drop observations where all variables are missing.
         self.data = self.data.dropna(how='all')
@@ -272,8 +270,8 @@ class Imputer(object):
         
         Note: Bootstrap perturbation still experimental.
         """
+        
         # TODO: switch to scipy
-
         if self.perturb_method == "boot":
             endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
                                                                 self.formula)
@@ -354,14 +352,6 @@ class Imputer(object):
         # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
-        
-#        imputed_miss = []
-#        for val in pendog_miss:
-#            dist = abs(pendog_obs - val)
-#            dist_ind = np.argsort(dist, axis=0)
-#            imputed_miss.append(random.choice(np.array(
-#            endog_obs)[dist_ind[0:pmm_neighbors][0]]))
-        
         ii = np.argsort(pendog_obs, axis=0)
         pendog_obs = pendog_obs[ii]
         oendog = endog_obs.iloc[ii,:]
@@ -408,11 +398,6 @@ class Imputer(object):
                 k += 1                    
             ixs = np.clip(ixs, 0, len(oendog) - 1)
             ix_list.append(np.random.choice(ixs))
-        # Select a random draw of observed endogenous variable from a set
-        # window around the closest predicted value
-#        ix += np.random.randint(int(-pmm_neighbors / 2.), int(pmm_neighbors / 2.) + 1, size=len(ix))
-#        np.clip(ix, 0, len(oendog), out=ix)
-#        imputed_miss = np.array(oendog.iloc[ix,:])
         ix_list = np.squeeze(ix_list)
         imputed_miss = np.array(oendog.iloc[ix_list,:])
         if self.transform is not None and self.inv_transform is not None:
@@ -528,11 +513,8 @@ class AnalysisChain(object):
         self.init_args = init_args
         self.fit_args = fit_args
         self.skipnum = skipnum
-#        self.burnin = burnin
         self.save = save
         self.iter = 0
-#        for b in range(self.burnin):
-#            self.imputer_chain.next()
 
     def __iter__(self):
         return self
@@ -552,7 +534,7 @@ class AnalysisChain(object):
         iterations, burnin period of unconsidered imputation iterations, and 
         whether or not to save the datasets to which an analysis model is fit.
         """
-        #TODO: add transform here instead of in Imputer
+        #TODO: Possibly add transform here instead of in Imputer.
         for i in range(self.skipnum):
             data = self.imputer_chain.next()
             print i
@@ -687,7 +669,6 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
         params_list = []
         cov_list = []
         scale_list = []
-#        full_cov = []
         for md in self.mod_list:
             params_list.append(md.params)
             cov_list.append(np.asarray(md.normalized_cov_params))
@@ -700,15 +681,11 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
         # Used MLE rather than method of moments between group covariance
         between_g = np.cov(np.array(params_list).T, bias=1)
         cov_params = within_g + (1 + 1. / float(self.num_ds)) * between_g
-#        gamma = (1. + 1. / float(self.num_ds)) * np.trace(np.dot(between_g,np.linalg.inv(cov_params))) 
         gamma = (1. + 1. / float(self.num_ds)) * np.divide(np.diag(between_g), np.diag(cov_params))                
         df_approx = (float(self.num_ds) - 1.) * np.square(np.divide(1. , gamma))
-#        np.sum(np.square(1. + np.diag(within_g)/(np.diag(between_g)*(1+1/float(self.N)))))
         df_obs = (float(self.N) - float(len(params)) + 1.) / (float(self.N) - float(len(params)) + 3.) * (1. - gamma) * (float(self.N) - float(len(params)))
         self.df = np.divide(1. , (np.divide(1. , df_approx) + np.divide(1. , df_obs)))
         self.fmi = gamma
-#        self.within = within_g
-#        self.between = between_g
         rslt = MICEResults(self, params, cov_params / scale)
         rslt.scale = scale
         return rslt
@@ -766,10 +743,6 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
             for x in self.model.imputer_list:
                 if x.endog_name == value :
                     numiss.append(int(x.num_missing))
-#
-#            t = next((x for x in self.model.imputer_list if x.endog_name == value), None)
-#            numiss.append(t.num_missing)
-        
         param['#missing'] = numiss
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)

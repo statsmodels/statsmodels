@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from statsmodels.sandbox.mice import mice
 import statsmodels.api as sm
-#import os
 
 def load_data():
     """
@@ -51,7 +50,7 @@ class TestMice(object):
         imp_dat.store_changes("X2", [0] * 2)
         test_data = np.asarray(imp_dat.data["X2"][8:])
         np.testing.assert_almost_equal(test_data, np.asarray([0., 0.]))
-#
+        
     def test_perturb_params(self):
         np.random.seed(1325)
         data = np.random.normal(size=(10,4))
@@ -179,7 +178,6 @@ class TestMice(object):
         impdata = mice.ImputedData(data)
         impdata.new_imputer("x2", method="pmm", k_pmm=20)
         impdata.new_imputer("x3", method="pmm", k_pmm=20)
-#        impdata.new_imputer("x3", method="pmm", k_pmm=20)
         impdata.new_imputer("x1", model_class=sm.Logit, method="pmm", k_pmm=20)
         impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit, impdata)
         impcomb.run(20,10)
