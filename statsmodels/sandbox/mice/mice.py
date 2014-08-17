@@ -41,7 +41,7 @@ import numpy as np
 import patsy
 import statsmodels.api as sm
 import statsmodels
-from statsmodels.tools.decorators import cache_readonly
+#from statsmodels.tools.decorators import cache_readonly
 from scipy import stats
 import copy
 
@@ -80,7 +80,7 @@ class ImputedData(object):
         self.data = self.data.fillna(self.data.mean())
 
     def new_imputer(self, endog_name, method="gaussian", k_pmm=20, formula=None, 
-                    model_class=None, init_args={}, fit_args={}, 
+                    model_class=None, init_args={}, fit_args={}, perturb_method="gaussian",
                     rvs_class=None, scale_method="fix", scale_value=None, 
                     transform=None, inv_transform=None):
 		# TODO: Look into kwargs for method details such as k_pmm
@@ -732,18 +732,22 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         smry.add_dict(info, align='l', float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
-        param['P>|t|'] = stats.t.sf(np.abs(np.asarray(param['t'])), self.model.df) / 2.
-        ci = np.asarray(stats.t.interval(1-alpha, self.model.df, loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
-        param['[' + str(alpha/2)] = ci[0]
-        param[str(1-alpha/2) + ']'] = ci[1]    
-        param['Df'] = self.model.df
-        param['FMI'] = self.model.fmi
-        numiss = [0]
-        for value in self.model.exog_names:
-            for x in self.model.imputer_list:
-                if x.endog_name == value :
-                    numiss.append(int(x.num_missing))
-        param['#missing'] = numiss
+        # TODO: Fix diagnostics t be consistent with R
+#        param['P>|t|'] = stats.t.sf(np.abs(np.asarray(param['t'])), self.model.df) / 2.
+#        ci = np.asarray(stats.t.interval(1-alpha, self.model.df, loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
+#        param['[' + str(alpha/2)] = ci[0]
+#        param[str(1-alpha/2) + ']'] = ci[1]    
+#        param['Df'] = self.model.df
+#        param['Df'][0] = -100        
+#        param['FMI'] = self.model.fmi
+#        param['FMI'][0] = -100
+#        numiss = [0]
+#        for value in self.model.exog_names:
+#            for x in self.model.imputer_list:
+#                if x.endog_name == value :
+#                    numiss.append(int(x.num_missing))
+#        param['#missing'] = numiss
+#        param['#missing'][0] = -100
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
         return smry
