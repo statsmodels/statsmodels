@@ -14,6 +14,7 @@ import subprocess
 import re
 from distutils.version import StrictVersion
 
+
 # temporarily redirect config directory to prevent matplotlib importing
 # testing that for writeable directory which results in sandbox error in
 # certain easy_install versions
@@ -35,21 +36,14 @@ except ImportError:
     from distutils.core import setup, Command
     _have_setuptools = False
 
-setuptools_kwargs = {}
-if sys.version_info[0] >= 3:
-    setuptools_kwargs = {'zip_safe': False}
-
-    if not _have_setuptools:
-        sys.exit("need setuptools/distribute for Py3k"
-                 "\n$ pip install distribute")
+if _have_setuptools:
+    setuptools_kwargs = {"zip_safe": False,
+                         "test_suite": "nose.collector"}
 else:
-    setuptools_kwargs = {
-        'install_requires': [],
-        'zip_safe': False,
-    }
-
-if not _have_setuptools:
     setuptools_kwargs = {}
+    if sys.version_info[0] >= 3:
+        sys.exit("Need setuptools to install statsmodels for Python 3.x")
+
 
 curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(pjoin(curdir, "README.txt")).read()
@@ -63,9 +57,9 @@ URL = 'http://statsmodels.sourceforge.net/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
+# These imports need to be here; setuptools needs to be imported first.
 from distutils.extension import Extension
 from distutils.command.build import build
-from distutils.command.sdist import sdist
 from distutils.command.build_ext import build_ext as _build_ext
 
 
@@ -354,10 +348,6 @@ for name, data in ext_data.items():
     extensions.append(obj)
 
 
-if _have_setuptools:
-    setuptools_kwargs["test_suite"] = "nose.collector"
-
-
 def get_data_files():
     sep = os.path.sep
     # install the datasets
@@ -398,8 +388,10 @@ if __name__ == "__main__":
             sys.argv[1] in ('--help-commands', 'egg_info', '--version',
                             'clean'))):
         setup_requires, install_requires = check_dependency_versions(min_versions)
-        setuptools_kwargs['setup_requires'] = setup_requires
-        setuptools_kwargs['install_requires'] = install_requires
+        if _have_setuptools:
+            setuptools_kwargs['setup_requires'] = setup_requires
+            setuptools_kwargs['install_requires'] = install_requires
+
         write_version_py()
 
     # this adds *.csv and *.dta files in datasets folders
