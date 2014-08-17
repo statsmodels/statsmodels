@@ -7,6 +7,7 @@ from statsmodels.tools import add_constant
 from statsmodels.datasets.longley import load, load_pandas
 
 import numpy.testing as npt
+from statsmodels.tools.testing import assert_equal
 from numpy.testing.utils import WarningManager
 
 
@@ -88,7 +89,7 @@ def test_formula_labels():
     from pandas import read_table
     dta = read_table(dta, sep=" ")
     model = ols("prestige ~ income + education", dta).fit()
-    npt.assert_equal(model.fittedvalues.index, dta.index)
+    assert_equal(model.fittedvalues.index, dta.index)
 
 
 def test_formula_predict():
