@@ -216,6 +216,7 @@ def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
             from statsmodels.version import git_revision as GIT_REVISION
         except ImportError:
             dowrite = False
+            GIT_REVISION = "Unknown"
     else:
         GIT_REVISION = "Unknown"
 
