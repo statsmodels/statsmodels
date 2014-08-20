@@ -885,7 +885,8 @@ class LikelihoodModelResults(Results):
     @cache_readonly
     def pvalues(self):
         if self.use_t:
-            return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+            df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+            return stats.t.sf(np.abs(self.tvalues), df_resid)*2
         else:
             return stats.norm.sf(np.abs(self.tvalues))*2
 
