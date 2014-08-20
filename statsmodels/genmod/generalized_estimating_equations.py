@@ -796,7 +796,7 @@ class GEE(base.Model):
         fitted = offset + np.dot(exog, params)
 
         if not linear:
-            fitted = self.family.link(fitted)
+            fitted = self.family.link.inverse(fitted)
 
         return fitted
 
@@ -1182,7 +1182,7 @@ class GEEResults(base.LikelihoodModelResults):
                                                      self.params))
 
     def conf_int(self, alpha=.05, cols=None,
-                 covariance_type="robust"):
+                 covariance_type=None):
         """
         Returns confidence intervals for the fitted parameters.
 
@@ -1202,7 +1202,13 @@ class GEEResults(base.LikelihoodModelResults):
         -----
         The confidence interval is based on the Gaussian distribution.
         """
-        bse = self.standard_errors(covariance_type=covariance_type)
+        # super doesn't allow to specify covariance_type and method is not
+        # implemented,
+        # FIXME: remove this method here
+        if covariance_type is None:
+            bse = self.bse
+        else:
+            bse = self.standard_errors(covariance_type=covariance_type)
         params = self.params
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
