@@ -405,6 +405,16 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
 
+    def test_basic_inference(self):
+        res1 = self.res1
+        res2 = self.res2
+        rtol = 1e-7
+        assert_allclose(res1.params, res2.params, rtol=1e-8)
+        assert_allclose(res1.bse, res2.bse, rtol=rtol)
+        assert_allclose(res1.pvalues, res2.pvalues, rtol=rtol, atol=1e-20)
+        ci = res2.params_table[:, 4:6]
+        assert_allclose(res1.conf_int(), ci, rtol=5e-7, atol=1e-20)
+
 
 class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
