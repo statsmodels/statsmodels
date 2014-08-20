@@ -1222,8 +1222,7 @@ class GEEResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(lzip(lower, upper))
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                covariance_type="robust"):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """
         Summarize the GEE regression results
 
@@ -1257,8 +1256,6 @@ class GEEResults(base.LikelihoodModelResults):
 
         """
 
-        #self.covariance_type = covariance_type
-
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
                     ('Method:', ['Generalized']),
@@ -1267,7 +1264,7 @@ class GEEResults(base.LikelihoodModelResults):
                     ('Dependence structure:',
                      [self.model.cov_struct.__class__.__name__]),
                     ('Date:', None),
-                    ('Covariance type: ', [covariance_type,])
+                    ('Covariance type: ', [self.covariance_type,])
                    ]
 
         NY = [len(y) for y in self.model.endog_li]
