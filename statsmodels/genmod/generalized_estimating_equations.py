@@ -896,16 +896,22 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
+        #kwargs to add to results instance, need to be available in __init__
+        res_kwds = dict(covariance_type = covariance_type,
+                        robust_covariance = bcov,
+                        naive_covariance = ncov,
+                        robust_covariance_bc = bc_cov)
+
         # The superclass constructor will multiply the covariance
         # matrix argument bcov by scale, which we don't want, so we
         # divide bcov by the scale parameter here
-        results = GEEResults(self, mean_params, bcov / scale, scale)
+        results = GEEResults(self, mean_params, bcov / scale, scale,
+                             cov_type=covariance_type, use_t=False,
+                             attr_kwds=res_kwds)
 
-        results.covariance_type = covariance_type
+        # attributes not needed during results__init__
         results.fit_history = self._fit_history
         delattr(self, "_fit_history")
-        results.naive_covariance = ncov
-        results.robust_covariance_bc = bc_cov
         results.score_norm = del_params
         results.converged = (del_params < ctol)
         results.cov_struct = self.cov_struct
@@ -915,8 +921,10 @@ class GEE(base.Model):
         results.maxiter = maxiter
 
         # These will be copied over to subclasses when upgrading.
-        results._props = ["covariance_type", "fit_history",
+        results._props = ["covariance_type", "use_t",
+                          "cov_params_default", "robust_covariance",
                           "naive_covariance", "robust_covariance_bc",
+                           "fit_history",
                           "score_norm", "converged", "cov_struct",
                           "params_niter", "first_dep_update", "ctol",
                           "maxiter"]
@@ -1058,10 +1066,32 @@ class GEEResults(base.LikelihoodModelResults):
     # Default covariance type
     covariance_type = "robust"
 
-    def __init__(self, model, params, cov_params, scale):
+    def __init__(self, model, params, cov_params, scale,
+                 cov_type='robust', use_t=False, **kwds):
 
         super(GEEResults, self).__init__(model, params,
                 normalized_cov_params=cov_params, scale=scale)
+
+        attr_kwds = kwds.pop('attr_kwds', {})
+        self.__dict__.update(attr_kwds)
+
+        self.covariance_type = self.cov_type = cov_type # keep alias
+        covariance_type = self.covariance_type.lower()
+        allowed_covariances = ["robust", "naive", "bias_reduced"]
+        if covariance_type not in allowed_covariances:
+            msg = "GEE: `covariance_type` must be one of " +\
+                ", ".join(allowed_covariances)
+            raise ValueError(msg)
+
+        if cov_type == "robust":
+            cov = self.robust_covariance
+        elif cov_type == "naive":
+            cov = self.naive_covariance
+        elif cov_type == "bias_reduced":
+            cov = self.robust_covariance_bc
+
+        self.cov_params_default = cov
+
 
     def standard_errors(self, covariance_type="robust"):
         """
@@ -1087,7 +1117,7 @@ class GEEResults(base.LikelihoodModelResults):
             raise ValueError(msg)
 
         if covariance_type == "robust":
-            return np.sqrt(np.diag(self.cov_params()))
+            return np.sqrt(np.diag(self.robust_covariance))
         elif covariance_type == "naive":
             return np.sqrt(np.diag(self.naive_covariance))
         elif covariance_type == "bias_reduced":
@@ -1221,7 +1251,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         """
 
-        self.covariance_type = covariance_type
+        #self.covariance_type = covariance_type
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -1507,12 +1537,13 @@ class OrdinalGEE(GEE):
                                            params_niter, first_dep_update,
                                            covariance_type)
 
+        res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
         # Convert the GEEResults to an OrdinalGEEResults
         ord_rslt = OrdinalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
-                                     rslt.scale)
-        for k in rslt._props:
-            setattr(ord_rslt, k, getattr(rslt, k))
+                                     rslt.scale, attr_kwds=res_kwds)
+        #for k in rslt._props:
+        #    setattr(ord_rslt, k, getattr(rslt, k))
 
         return ord_rslt
 
@@ -1524,11 +1555,6 @@ class OrdinalGEEResults(GEEResults):
         "This class summarizes the fit of a marginal regression model"
         "for an ordinal response using GEE.\n"
         + _gee_results_doc)
-
-    def __init__(self, model, params, cov_params, scale):
-
-        super(OrdinalGEEResults, self).__init__(model, params,
-                                      cov_params, scale)
 
 
     def plot_distribution(self, ax=None, exog_values=None):
@@ -1717,12 +1743,13 @@ class NominalGEE(GEE):
                           ConvergenceWarning)
             return None
 
+        res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
         # Convert the GEEResults to a NominalGEEResults
         nom_rslt = NominalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
-                                     rslt.scale)
-        for k in rslt._props:
-            setattr(nom_rslt, k, getattr(rslt, k))
+                                     rslt.scale, attr_kwds=res_kwds)
+        #for k in rslt._props:
+        #    setattr(nom_rslt, k, getattr(rslt, k))
 
         return nom_rslt
 
@@ -1735,10 +1762,6 @@ class NominalGEEResults(GEEResults):
         "for a nominal response using GEE.\n"
         + _gee_results_doc)
 
-    def __init__(self, model, params, cov_params, scale):
-
-        super(NominalGEEResults, self).__init__(model, params,
-                                      cov_params, scale)
 
     def plot_distribution(self, ax=None, exog_values=None):
         """

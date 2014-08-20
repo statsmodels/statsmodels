@@ -11,8 +11,9 @@ differ among implementations and the results will not agree exactly.
 from statsmodels.compat import lrange
 import numpy as np
 import os
-from numpy.testing import (assert_almost_equal, assert_array_less,
-                           assert_equal)
+
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
+                           assert_array_less, assert_raises)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
      OrdinalGEE, NominalGEE, GEEMargins, Multinomial,
      NominalGEEResults, OrdinalGEEResults)
@@ -814,6 +815,78 @@ class TestGEE(object):
         # Regression test
         assert_almost_equal([x.params[0] for x in ps],
                             np.r_[-0.1256575, -0.126747036])
+
+
+class CheckConsistency(object):
+
+    def test_cov_type(self):
+        mod = self.mod
+        res_robust = mod.fit()
+        res_naive = mod.fit(covariance_type='naive')
+        res_robust_bc = mod.fit(covariance_type='bias_reduced')
+
+        # call summary to make sure it doesn't change covariance_type
+        res_naive.summary()
+        res_robust_bc.summary()
+
+        #check covariance_type
+        assert_equal(res_robust.covariance_type, 'robust')
+        assert_equal(res_naive.covariance_type, 'naive')
+        assert_equal(res_robust_bc.covariance_type, 'bias_reduced')
+
+
+        # check bse and cov_params
+        rtol = 1e-12
+        for (res, cov_type, cov) in [
+                (res_robust, 'robust', res_robust.robust_covariance),
+                (res_naive, 'naive', res_robust.naive_covariance),
+                (res_robust_bc, 'bias_reduced', res_robust.robust_covariance_bc)
+                ]:
+            bse = np.sqrt(np.diag(cov))
+            assert_allclose(res.bse, bse, rtol=rtol)
+            bse = res_naive.standard_errors(covariance_type=cov_type)
+            assert_allclose(res.bse, bse, rtol=rtol)
+            # currently fails
+            assert_allclose(res.cov_params(), cov, rtol=rtol)
+            assert_allclose(res.cov_params_default, cov, rtol=rtol)
+
+        # check exception for misspelled cov_type
+        assert_raises(ValueError, mod.fit, covariance_type='robust_bc')
+
+
+class TestGEEPoissonCovType(CheckConsistency):
+
+    @classmethod
+    def setup_class(cls):
+
+
+        endog, exog, group_n = load_data("gee_poisson_1.csv")
+
+        family = Poisson()
+        vi = Independence()
+
+        cls.mod = GEE(endog, exog, group_n, None, family, vi)
+
+
+class TestGEEPoissonFormulaCovType(CheckConsistency):
+
+    @classmethod
+    def setup_class(cls):
+
+        endog, exog, group_n = load_data("gee_poisson_1.csv")
+
+        family = Poisson()
+        vi = Independence()
+        # Test with formulas
+        D = np.concatenate((endog[:,None], group_n[:,None],
+                            exog[:,1:]), axis=1)
+        D = pd.DataFrame(D)
+        D.columns = ["Y","Id",] + ["X%d" % (k+1)
+                                   for k in range(exog.shape[1]-1)]
+
+        cls.mod = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", "Id",
+                                    D, family=family, cov_struct=vi)
+
 
 if  __name__=="__main__":
 
