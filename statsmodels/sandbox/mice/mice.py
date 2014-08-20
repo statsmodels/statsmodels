@@ -43,7 +43,7 @@ import patsy
 import statsmodels.api as sm
 import statsmodels
 #from statsmodels.tools.decorators import cache_readonly
-from scipy import stats
+#from scipy import stats
 import copy
 
 class ImputedData(object):
@@ -87,10 +87,11 @@ class ImputedData(object):
         # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, method="gaussian", k_pmm=20, formula=None,
-                    model_class=None, init_args={}, fit_args={}, perturb_method="gaussian",
-                    alt_distribution=None, scale_method="fix", scale_value=None,
-                    transform=None, inv_transform=None):
+    def new_imputer(self, endog_name, method="gaussian", k_pmm=20, 
+                    formula=None, model_class=None, init_args={}, fit_args={}, 
+                    perturb_method="gaussian", alt_distribution=None, 
+                    scale_method="fix", scale_value=None, transform=None, 
+                    inv_transform=None):
         # TODO: Look into kwargs for method details such as k_pmm
         """
         Specify the imputation process for a single variable.
@@ -171,15 +172,14 @@ class ImputedData(object):
         endog_obs : DataFrame
             Observed values of the variable to be imputed.
         exog_obs : DataFrame
-            Current values of the predictors where the variable to be Imputed is
-            observed.
+            Current values of the predictors where the variable to be Imputed 
+            is observed.
         exog_miss : DataFrame
-            Current values of the predictors where the variable to be Imputed is
-            missing.
+            Current values of the predictors where the variable to be Imputed 
+            is missing.
         """
-        endog, exog = patsy.dmatrices(formula, self.data, return_type="dataframe")
-#        exog = dmat[1]
-#        endog = dmat[0]
+        endog, exog = patsy.dmatrices(formula, self.data, 
+                                      return_type="dataframe")
         if len(endog.design_info.term_names) > 1:
             endog_name = tuple(endog.design_info.term_names)
         else:
@@ -189,9 +189,6 @@ class ImputedData(object):
         exog_obs = exog.iloc[ix]
         ix = self.columns[endog_name].ix_miss
         exog_miss = exog.iloc[ix]            
-#        endog_obs = endog.iloc[self.columns[endog_name].ix_obs]
-#        exog_obs = exog.iloc[self.columns[endog_name].ix_obs]
-#        exog_miss = exog.iloc[self.columns[endog_name].ix_miss]
         return endog_obs, exog_obs, exog_miss
 
 class Imputer(object):
@@ -667,6 +664,7 @@ x2        -3.8863   0.3304 -11.7609 0.5000 -4.5393 -3.2332 145.9336 0.3187
         params_list = []
         cov_list = []
         scale_list = []
+        # TODO: Verify calculations for diagnostics
         for md in self.mod_list:
             params_list.append(md.params)
             cov_list.append(np.asarray(md.normalized_cov_params))
@@ -732,7 +730,8 @@ class MICEResults(statsmodels.base.model.LikelihoodModelResults):
         param = summary2.summary_params(self, alpha=alpha)
         # TODO: Fix diagnostics to be consistent with R
 #        param['P>|t|'] = stats.t.sf(np.abs(np.asarray(param['t'])), self.model.df) / 2.
-#        ci = np.asarray(stats.t.interval(1-alpha, self.model.df, loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
+#        ci = np.asarray(stats.t.interval(1-alpha, self.model.df, 
+#        loc=np.asarray(param['Coef.']), scale=np.asarray(param['Std.Err.'])))
 #        param['[' + str(alpha/2)] = ci[0]
 #        param[str(1-alpha/2) + ']'] = ci[1]
 #        param['Df'] = self.model.df
