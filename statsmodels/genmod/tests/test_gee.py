@@ -11,9 +11,11 @@ differ among implementations and the results will not agree exactly.
 from statsmodels.compat import lrange
 import numpy as np
 import os
-from numpy.testing import assert_almost_equal
+from numpy.testing import (assert_almost_equal, assert_array_less,
+                           assert_equal)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
-     OrdinalGEE, NominalGEE, GEEMargins, Multinomial)
+     OrdinalGEE, NominalGEE, GEEMargins, Multinomial,
+     NominalGEEResults, OrdinalGEEResults)
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
 from statsmodels.genmod.dependence_structures import (Exchangeable,
     Independence, GlobalOddsRatio, Autoregressive, Nested)
@@ -102,30 +104,68 @@ class TestGEE(object):
         assert_almost_equal(rslt1.params, rslt2.params, decimal=6)
         assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
+    def test_missing(self):
+        """
+        Test missing data handling for calling from the api.  Missing
+        data handling does not currently work for formulas.
+        """
 
-
-    # TODO: why does this test fail?
-    def t_est_missing(self):
-
-        Y = np.random.normal(size=100)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
+        endog = np.random.normal(size=100)
+        exog = np.random.normal(size=(100, 3))
+        exog[:, 0] = 1
         groups = np.kron(lrange(20), np.ones(5))
 
-        Y[0] = np.nan
-        Y[5:7] = np.nan
-        X2[10:12] = np.nan
+        endog[0] = np.nan
+        endog[5:7] = np.nan
+        exog[10:12, 1] = np.nan
 
-        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
-                          "groups": groups})
+        mod1 = GEE(endog, exog, groups, missing='drop')
+        rslt1 = mod1.fit()
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D["groups"],
-                              missing='drop')
-        mdf = md.fit()
+        assert_almost_equal(len(mod1.endog), 95)
+        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 3])
 
-        assert(len(md.endog) == 95)
-        assert(md.exog.shape) == (95,4)
+        ii = np.isfinite(endog) & np.isfinite(exog).all(1)
+
+        mod2 = GEE(endog[ii], exog[ii, :], groups[ii], missing='none')
+        rslt2 = mod2.fit()
+
+        assert_almost_equal(rslt1.params, rslt2.params)
+        assert_almost_equal(rslt1.bse, rslt2.bse)
+
+    def t_est_missing_formula(self):
+        """
+        Test missing data handling for formulas.
+        """
+
+        endog = np.random.normal(size=100)
+        exog1 = np.random.normal(size=100)
+        exog2 = np.random.normal(size=100)
+        exog3 = np.random.normal(size=100)
+        groups = np.kron(lrange(20), np.ones(5))
+
+        endog[0] = np.nan
+        endog[5:7] = np.nan
+        exog2[10:12] = np.nan
+
+        data = pd.DataFrame({"endog": endog, "exog1": exog1, "exog2": exog2,
+                             "exog3": exog3, "groups": groups})
+
+        mod1 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                groups, data, missing='drop')
+        rslt1 = mod1.fit()
+
+        assert_almost_equal(len(mod1.endog), 95)
+        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 3])
+
+        data = data.dropna()
+
+        mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
+                                groups, data, missing='none')
+        rslt2 = mod2.fit()
+
+        assert_almost_equal(rslt1.params, rslt2.params)
+        assert_almost_equal(rslt1.bse, rslt2.bse)
 
     def test_default_time(self):
         """
@@ -365,7 +405,7 @@ class TestGEE(object):
             wald_z = np.dot(f, rslt0.params) / se
             wald_p = 2*norm.cdf(-np.abs(wald_z))
             score_p = mod1.score_test_results["p-value"]
-            assert(np.abs(wald_p - score_p) < 0.02)
+            assert_array_less(np.abs(wald_p - score_p), 0.02)
 
 
     def test_linear(self):
@@ -463,7 +503,7 @@ class TestGEE(object):
 
         family = Gaussian()
 
-        endog,exog,group = load_data("gee_nested_linear_1.csv")
+        endog, exog, group = load_data("gee_nested_linear_1.csv")
 
         group_n = []
         for i in range(endog.shape[0]//10):
@@ -502,20 +542,23 @@ class TestGEE(object):
         endog, exog, groups = load_data("gee_ordinal_1.csv",
                                         icept=False)
 
-        v = GlobalOddsRatio("ordinal")
+        va = GlobalOddsRatio("ordinal")
 
-        md = OrdinalGEE(endog, exog, groups, None, family, v)
-        mdf = md.fit()
+        mod = OrdinalGEE(endog, exog, groups, None, family, va)
+        rslt = mod.fit()
 
+        # Regression test
         cf = np.r_[1.09250002, 0.0217443 , -0.39851092, -0.01812116,
                    0.03023969, 1.18258516, 0.01803453, -1.10203381]
+        assert_almost_equal(rslt.params, cf, decimal=5)
 
+        # Regression test
         se = np.r_[0.10883461, 0.10330197, 0.11177088, 0.05486569,
                    0.05997153, 0.09168148, 0.05953324, 0.0853862]
+        assert_almost_equal(rslt.bse, se, decimal=5)
 
-        assert_almost_equal(mdf.params, cf, decimal=5)
-        assert_almost_equal(mdf.bse, se, decimal=5)
-
+        # Check that we get the correct results type
+        assert_equal(type(rslt), OrdinalGEEResults)
 
     def test_nominal(self):
 
@@ -525,27 +568,29 @@ class TestGEE(object):
                                         icept=False)
 
         # Test with independence correlation
-        v = Independence()
-        md = NominalGEE(endog, exog, groups, None, family, v)
-        mdf1 = md.fit()
+        va = Independence()
+        mod1 = NominalGEE(endog, exog, groups, None, family, va)
+        rslt1 = mod1.fit()
 
-        # From statsmodels.GEE (not an independent test)
+        # Regression test
         cf1 = np.r_[0.44944752,  0.45569985, -0.92007064, -0.46766728]
         se1 = np.r_[0.09801821,  0.07718842,  0.13229421,  0.08544553]
-        assert_almost_equal(mdf1.params, cf1, decimal=5)
-        assert_almost_equal(mdf1.standard_errors(), se1, decimal=5)
+        assert_almost_equal(rslt1.params, cf1, decimal=5)
+        assert_almost_equal(rslt1.standard_errors(), se1, decimal=5)
 
         # Test with global odds ratio dependence
-        v = GlobalOddsRatio("nominal")
-        md = NominalGEE(endog, exog, groups, None, family, v)
-        mdf2 = md.fit(start_params=mdf1.params)
+        va = GlobalOddsRatio("nominal")
+        mod2 = NominalGEE(endog, exog, groups, None, family, va)
+        rslt2 = mod2.fit(start_params=rslt1.params)
 
-        # From statsmodels.GEE (not an independent test)
+        # Regression test
         cf2 = np.r_[0.45448248,  0.41945568, -0.92008924, -0.50485758]
         se2 = np.r_[0.09632274,  0.07433944,  0.13264646,  0.0911768]
-        assert_almost_equal(mdf2.params, cf2, decimal=5)
-        assert_almost_equal(mdf2.standard_errors(), se2, decimal=5)
+        assert_almost_equal(rslt2.params, cf2, decimal=5)
+        assert_almost_equal(rslt2.standard_errors(), se2, decimal=5)
 
+        # Make sure we get the correct results type
+        assert_equal(type(rslt1), NominalGEEResults)
 
 
     def test_poisson(self):
@@ -744,6 +789,31 @@ class TestGEE(object):
 
         assert_almost_equal(rslt1.params, rslt2.params, decimal=10)
 
+
+    def test_sensitivity(self):
+
+        va = Exchangeable()
+        family = Gaussian()
+
+        n = 100
+        Y = np.random.normal(size=n)
+        X1 = np.random.normal(size=n)
+        X2 = np.random.normal(size=n)
+        groups = np.kron(np.arange(50), np.r_[1, 1])
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2})
+
+        mod = GEE.from_formula("Y ~ X1 + X2", groups, D,
+                               family=family, cov_struct=va)
+        rslt = mod.fit()
+        ps = rslt.params_sensitivity(0, 0.5, 2)
+        assert_almost_equal(len(ps), 2)
+        assert_almost_equal([x.cov_struct.dep_params for x in ps],
+                            [0.0, 0.5])
+
+        # Regression test
+        assert_almost_equal([x.params[0] for x in ps],
+                            np.r_[-0.1256575, -0.126747036])
 
 if  __name__=="__main__":
 
