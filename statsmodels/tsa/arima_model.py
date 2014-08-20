@@ -656,7 +656,7 @@ class ARMA(tsbase.TimeSeriesModel):
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
                 # we need the last k_ar exog for the lag-polynomial
-            if self.k_exog > 0:
+            if self.k_exog > 0 and k_ar > 0:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[-k_ar:, self.k_trend:], exog))
 
