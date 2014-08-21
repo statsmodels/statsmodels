@@ -152,22 +152,40 @@ class TestPoissonCluFit(CheckCountRobustMixin):
 
     @classmethod
     def setup_class(cls):
+
+
         cls.res2 = results_st.results_poisson_clu
         mod = smd.Poisson(endog, exog)
-        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
-                                  cov_kwds=dict(groups=group,
-                                                use_correction=True,
-                                                df_correction=True),  #TODO has no effect
-                                  use_t=False, #True,
-                                  )
+
+        # scaling of cov_params_default to match Stata
+        # TODO should the default be changed?
+        nobs, k_params = mod.exog.shape
+        sc_fact = (nobs-1.) / float(nobs - k_params)
+
+        cls.res1 = mod.fit(disp=False, cov_type='cluster',
+                           cov_kwds=dict(groups=group,
+                                         use_correction=True,
+                                         scaling_factor=1. / sc_fact,
+                                         df_correction=True),  #TODO has no effect
+                           use_t=False, #True,
+                           )
+
         cls.bse_rob = cls.res1.bse
 
-        nobs, k_vars = mod.exog.shape
-        k_params = len(cls.res1.params)
-        #n_groups = len(np.unique(group))
-        corr_fact = (nobs-1.) / float(nobs - k_params)
-        # for bse we need sqrt of correction factor
-        cls.corr_fact = np.sqrt(corr_fact)
+        # backwards compatibility with inherited test methods
+        cls.corr_fact = 1
+
+
+    def test_basic_inference(self):
+        res1 = self.res1
+        res2 = self.res2
+        rtol = 1e-7
+        assert_allclose(res1.params, res2.params, rtol=1e-8)
+        assert_allclose(res1.bse, res2.bse, rtol=rtol)
+        assert_allclose(res1.tvalues, res2.tvalues, rtol=rtol, atol=1e-8)
+        assert_allclose(res1.pvalues, res2.pvalues, rtol=rtol, atol=1e-20)
+        ci = res2.params_table[:, 4:6]
+        assert_allclose(res1.conf_int(), ci, rtol=5e-7, atol=1e-20)
 
 
 class TestPoissonHC1Fit(CheckCountRobustMixin):

@@ -36,6 +36,18 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     Notes
     -----
+    Warning: Some of the options and defaults in cov_kwds may be changed in a
+    future version.
+
+    The covariance keywords provide an option 'scaling_factor' to adjust the
+    scaling of the covariance matrix, that is the covariance is multiplied by
+    this factor if it is given and is not `None`. This allows the user to
+    adjust the scaling of the covariance matrix to match other statistical
+    packages.
+    For example, `scaling_factor=(nobs - 1.) / (nobs - k_params)` provides a
+    correction so that the robust covariance matrices match those of Stata in
+    some models like GLM and discrete Models.
+
     The following covariance types and required or optional arguments are
     currently available:
 
@@ -245,6 +257,12 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     else:
         raise ValueError('cov_type not recognized. See docstring for ' +
                          'available options and spelling')
+
+    # generic optional factor to scale covariance
+    sc_factor = kwds.get('scaling_factor', None)
+    res.cov_kwds['scaling_factor'] = sc_factor
+    if sc_factor is not None:
+        res.cov_params_default *= sc_factor
 
     if adjust_df:
         # Note: df_resid is used for scale and others, add new attribute
