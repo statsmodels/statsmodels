@@ -392,6 +392,11 @@ class SARIMAX(Model):
         self.transition = self.initial_transition
         self.selection = self.initial_selection
 
+        # If we are estimating a simple ARMA model, then we can use a faster
+        # initialization method.
+        if k_diffuse_states == 0:
+            self.initialize_stationary()
+
     def initialize(self):
         # Internal flag for whether the default mixed approximate diffuse /
         # stationary initialization has been overridden with a user-supplied
