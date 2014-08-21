@@ -235,10 +235,14 @@ def _get_sandwich_arrays(results):
         # assume we have a results instance
         if hasattr(results.model, 'jac'):
             xu = results.model.jac(results.params)
+            hessian_inv = np.linalg.inv(results.model.hessian(results.params))
+        elif hasattr(results.model, 'score_obs'):
+            xu = results.model.score_obs(results.params)
+            hessian_inv = np.linalg.inv(results.model.hessian(results.params))
         else:
             xu = results.model.exog * results.resid[:, None]
 
-        hessian_inv = np.asarray(results.normalized_cov_params)
+            hessian_inv = np.asarray(results.normalized_cov_params)
     else:
         raise ValueError('need either tuple of (jac, hessian_inv) or results' +
                          'instance')

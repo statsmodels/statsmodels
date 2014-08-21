@@ -409,8 +409,18 @@ class LikelihoodModel(Model):
                 warn(warndoc, RuntimeWarning)
                 Hinv = None
 
+        if 'cov_type' in kwargs:
+            cov_kwds = kwargs.get('cov_kwds', {})
+            kwds = {'cov_type':kwargs['cov_type'], 'cov_kwds':cov_kwds}
+        else:
+            kwds = {}
+        if 'use_t' in kwargs:
+            kwds['use_t'] = kwargs['use_t']
+        #prints for debugging
+        #print('kwargs inLikelihoodModel.fit', kwargs)
+        #print('kwds inLikelihoodModel.fit', kwds)
         #TODO: add Hessian approximation and change the above if needed
-        mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
+        mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1., **kwds)
 
         #TODO: hardcode scale?
         if isinstance(retvals, dict):
@@ -858,14 +868,57 @@ class LikelihoodModelResults(Results):
     # can be overwritten by instances or subclasses
     use_t = False
 
-    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.,
+                 **kwargs):
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
 
+        # robust covariance
+        # We put cov_type in kwargs so subclasses can decide in fit whether to
+        # use this generic implementation
+        if 'use_t' in kwargs:
+            use_t = kwargs['use_t']
+            if use_t is not None:
+                self.use_t = use_t
+        if 'cov_type' in kwargs:
+            cov_type = kwargs.get('cov_type', 'nonrobust')
+            cov_kwds = kwargs.get('cov_kwds', {})
+
+            if cov_type == 'nonrobust':
+                self.cov_type = 'nonrobust'
+                self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
+                                 'covariance matrix of the errors is correctly ' +
+                                 'specified.'}
+            else:
+                from statsmodels.base.covtype import get_robustcov_results
+                if cov_kwds is None:
+                    cov_kwds = {}
+                use_t = self.use_t
+                # TODO: we shouldn't need use_t in get_robustcov_results
+                get_robustcov_results(self, cov_type=cov_type, use_self=True,
+                                           use_t=use_t, **cov_kwds)
+
 
     def normalized_cov_params(self):
         raise NotImplementedError
+
+
+    def _get_robustcov_results(self, cov_type='nonrobust', use_self=True,
+                                   use_t=None, **cov_kwds):
+        from statsmodels.base.covtype import get_robustcov_results
+        if cov_kwds is None:
+            cov_kwds = {}
+
+        if cov_type == 'nonrobust':
+            self.cov_type = 'nonrobust'
+            self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
+                             'covariance matrix of the errors is correctly ' +
+                             'specified.'}
+        else:
+            # TODO: we shouldn't need use_t in get_robustcov_results
+            get_robustcov_results(self, cov_type=cov_type, use_self=True,
+                                       use_t=use_t, **cov_kwds)
 
     @cache_readonly
     def llf(self):

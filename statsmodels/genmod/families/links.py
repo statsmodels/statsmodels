@@ -552,6 +552,17 @@ class CDFLink(Logit):
         p = self._clean(p)
         return 1. / self.dbn.pdf(self.dbn.ppf(p))
 
+
+    def deriv2(self, p):
+        """Second derivative of the link function g''(p)
+
+        implemented through numerical differentiation
+        """
+        from statsmodels.tools.numdiff import approx_fprime
+        # Note: speciaf function for norm.ppf does not support complex
+        return np.diag(approx_fprime(p, self.deriv, centered=True))
+
+
     def inverse_deriv(self, z):
         """
         Derivative of the inverse of the CDF transformation link function

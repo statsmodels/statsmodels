@@ -10,10 +10,15 @@ import os
 import numpy as np
 import pandas as pd
 import statsmodels.discrete.discrete_model as smd
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod import families
+from statsmodels.genmod.families import links
+from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sc
+from statsmodels.base.covtype import get_robustcov_results
 from statsmodels.tools.tools import add_constant
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 
 # get data and results as module global for now, TODO: move to class
@@ -87,6 +92,117 @@ class TestPoissonClu(CheckCountRobustMixin):
         cls.get_robust_clu()
 
 
+class TestPoissonCluGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False)
+
+        debug = False
+        if debug:
+            # for debugging
+            cls.bse_nonrobust = cls.res1.bse.copy()
+            cls.res1 = res1 = mod.fit(disp=False)
+            cls.get_robust_clu()
+            cls.res3 = cls.res1
+            cls.bse_rob3 = cls.bse_rob.copy()
+            cls.res1 = res1 = mod.fit(disp=False)
+
+        from statsmodels.base.covtype import get_robustcov_results
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = res1.model.exog.shape
+        k_params = len(res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestPoissonHC1Generic(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = mod.fit(disp=False)
+
+        from statsmodels.base.covtype import get_robustcov_results
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
+
+# TODO: refactor xxxFit to full testing results
+class TestPoissonCluFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+
+
+        cls.res2 = results_st.results_poisson_clu
+        mod = smd.Poisson(endog, exog)
+
+        # scaling of cov_params_default to match Stata
+        # TODO should the default be changed?
+        nobs, k_params = mod.exog.shape
+        sc_fact = (nobs-1.) / float(nobs - k_params)
+
+        cls.res1 = mod.fit(disp=False, cov_type='cluster',
+                           cov_kwds=dict(groups=group,
+                                         use_correction=True,
+                                         scaling_factor=1. / sc_fact,
+                                         df_correction=True),  #TODO has no effect
+                           use_t=False, #True,
+                           )
+
+        cls.bse_rob = cls.res1.bse
+
+        # backwards compatibility with inherited test methods
+        cls.corr_fact = 1
+
+
+    def test_basic_inference(self):
+        res1 = self.res1
+        res2 = self.res2
+        rtol = 1e-7
+        assert_allclose(res1.params, res2.params, rtol=1e-8)
+        assert_allclose(res1.bse, res2.bse, rtol=rtol)
+        assert_allclose(res1.tvalues, res2.tvalues, rtol=rtol, atol=1e-8)
+        assert_allclose(res1.pvalues, res2.pvalues, rtol=rtol, atol=1e-20)
+        ci = res2.params_table[:, 4:6]
+        assert_allclose(res1.conf_int(), ci, rtol=5e-7, atol=1e-20)
+
+
+class TestPoissonHC1Fit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = smd.Poisson(endog, exog)
+        cls.res1 = mod.fit(disp=False, cov_type='HC1')
+
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
+
+
 class TestPoissonCluExposure(CheckCountRobustMixin):
 
     @classmethod
@@ -95,6 +211,123 @@ class TestPoissonCluExposure(CheckCountRobustMixin):
         mod = smd.Poisson(endog, exog, exposure=exposure)
         cls.res1 = mod.fit(disp=False)
         cls.get_robust_clu()
+
+
+class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_exposure_clu #nonrobust
+        mod = smd.Poisson(endog, exog, exposure=exposure)
+        cls.res1 = res1 = mod.fit(disp=False)
+
+        from statsmodels.base.covtype import get_robustcov_results
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse #sc.se_cov(cov_clu)
+
+        nobs, k_vars = res1.model.exog.shape
+        k_params = len(res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestGLMPoissonClu(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = smd.Poisson(endog, exog)
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = mod.fit()
+        cls.get_robust_clu()
+
+
+class TestGLMPoissonCluGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = res1 = mod.fit()
+
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = res1.model.exog.shape
+        k_params = len(res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = mod.fit()
+
+        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
+
+
+# TODO: refactor xxxFit to full testing results
+class TestGLMPoissonCluFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_clu
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = res1 = mod.fit(cov_type='cluster',
+                                  cov_kwds=dict(groups=group,
+                                                use_correction=True,
+                                                df_correction=True),  #TODO has no effect
+                                  use_t=False, #True,
+                                                )
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestGLMPoissonHC1Fit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_hc1
+        mod = GLM(endog, exog, family=families.Poisson())
+        cls.res1 = mod.fit(cov_type='HC1')
+
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
 
 
 class TestNegbinClu(CheckCountRobustMixin):
@@ -130,6 +363,161 @@ class TestNegbinCluExposure(CheckCountRobustMixin):
 #        print wt
 #
 #        print dir(results_st)
+
+class TestNegbinCluGeneric(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_clu
+        mod = smd.NegativeBinomial(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False)
+
+        get_robustcov_results(cls.res1._results, 'cluster',
+                                                  groups=group,
+                                                  use_correction=True,
+                                                  df_correction=True,  #TODO has no effect
+                                                  use_t=False, #True,
+                                                  use_self=True)
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestNegbinCluFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_clu
+        mod = smd.NegativeBinomial(endog, exog)
+        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
+                                  cov_kwds=dict(groups=group,
+                                                use_correction=True,
+                                                df_correction=True),  #TODO has no effect
+                                  use_t=False, #True,
+                                  )
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class TestNegbinCluExposureFit(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_exposure_clu #nonrobust
+        mod = smd.NegativeBinomial(endog, exog, exposure=exposure)
+        cls.res1 = res1 = mod.fit(disp=False, cov_type='cluster',
+                                  cov_kwds=dict(groups=group,
+                                                use_correction=True,
+                                                df_correction=True),  #TODO has no effect
+                                  use_t=False, #True,
+                                  )
+        cls.bse_rob = cls.res1.bse
+
+        nobs, k_vars = mod.exog.shape
+        k_params = len(cls.res1.params)
+        #n_groups = len(np.unique(group))
+        corr_fact = (nobs-1.) / float(nobs - k_params)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(corr_fact)
+
+
+class CheckDiscreteGLM(object):
+    # compare GLM with other models, no verified reference results
+
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        assert_equal(res1.cov_type, self.cov_type)
+        assert_equal(res2.cov_type, self.cov_type)
+
+        assert_allclose(res1.params, res2.params, rtol=1e-13)
+        # bug TODO res1.scale missing ?  in Gaussian/OLS
+        assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+#         if not self.cov_type == 'nonrobust':
+#             assert_allclose(res1.bse * res1.scale, res2.bse, rtol=1e-13)
+#         else:
+#             assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+
+
+class TestGLMLogit(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        endog_bin = (endog > endog.mean()).astype(int)
+        cls.cov_type = 'cluster'
+
+        mod1 = GLM(endog_bin, exog, family=families.Binomial())
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod1 = smd.Logit(endog_bin, exog)
+        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+
+class T_estGLMProbit(CheckDiscreteGLM):
+    # invalid link. What's Probit as GLM?
+
+    @classmethod
+    def setup_class(cls):
+        endog_bin = (endog > endog.mean()).astype(int)
+        cls.cov_type = 'cluster'
+
+        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink))
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod1 = smd.Probit(endog_bin, exog)
+        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+
+class TestGLMGaussNonRobust(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'nonrobust'
+
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit()
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit()
+
+
+class TestGLMGaussClu(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'cluster'
+
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+
+class TestGLMGaussHC(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'HC0'
+
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='HC0')
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='HC0')
+
 
 if __name__ == '__main__':
     tt = TestPoissonClu()
