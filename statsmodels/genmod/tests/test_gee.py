@@ -13,7 +13,7 @@ import numpy as np
 import os
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises)
+                           assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
      OrdinalGEE, NominalGEE, GEEMargins, Multinomial,
      NominalGEEResults, OrdinalGEEResults)
@@ -763,7 +763,7 @@ class TestGEE(object):
         rslt1 = mod1.fit()
 
         mod2 = sm.logit("Y ~ X1 + X2 + X3", data=D)
-        rslt2 = mod2.fit()
+        rslt2 = mod2.fit(disp=False)
 
         assert_almost_equal(rslt1.params, rslt2.params, decimal=10)
 
@@ -819,11 +819,15 @@ class TestGEE(object):
 
 class CheckConsistency(object):
 
+    start_params = None
+
     def test_cov_type(self):
         mod = self.mod
-        res_robust = mod.fit()
-        res_naive = mod.fit(covariance_type='naive')
-        res_robust_bc = mod.fit(covariance_type='bias_reduced')
+        res_robust = mod.fit(start_params=self.start_params)
+        res_naive = mod.fit(start_params=self.start_params,
+                            covariance_type='naive')
+        res_robust_bc = mod.fit(start_params=self.start_params,
+                                covariance_type='bias_reduced')
 
         # call summary to make sure it doesn't change covariance_type
         res_naive.summary()
@@ -836,7 +840,10 @@ class CheckConsistency(object):
 
 
         # check bse and cov_params
-        rtol = 1e-12
+        # we are comparing different runs of the optimization
+        # bse in ordinal and multinomial have an atol around 5e-10 for two
+        # consecutive calls to fit.
+        rtol = 1e-8
         for (res, cov_type, cov) in [
                 (res_robust, 'robust', res_robust.robust_covariance),
                 (res_naive, 'naive', res_robust.naive_covariance),
@@ -846,9 +853,14 @@ class CheckConsistency(object):
             assert_allclose(res.bse, bse, rtol=rtol)
             bse = res_naive.standard_errors(covariance_type=cov_type)
             assert_allclose(res.bse, bse, rtol=rtol)
-            # currently fails
-            assert_allclose(res.cov_params(), cov, rtol=rtol)
-            assert_allclose(res.cov_params_default, cov, rtol=rtol)
+            assert_allclose(res.cov_params(), cov, rtol=rtol, atol=1e-10)
+            assert_allclose(res.cov_params_default, cov, rtol=rtol, atol=1e-10)
+
+        # assert that we don't have a copy
+        assert_(res_robust.cov_params_default is res_robust.robust_covariance)
+        assert_(res_naive.cov_params_default is res_naive.naive_covariance)
+        assert_(res_robust_bc.cov_params_default is
+                res_robust_bc.robust_covariance_bc)
 
         # check exception for misspelled cov_type
         assert_raises(ValueError, mod.fit, covariance_type='robust_bc')
@@ -866,6 +878,10 @@ class TestGEEPoissonCovType(CheckConsistency):
         vi = Independence()
 
         cls.mod = GEE(endog, exog, group_n, None, family, vi)
+
+        cls.start_params = np.array([-0.03644504, -0.05432094,  0.01566427,
+                                      0.57628591, -0.0046566,  -0.47709315])
+
 
 
 class TestGEEPoissonFormulaCovType(CheckConsistency):
@@ -886,6 +902,45 @@ class TestGEEPoissonFormulaCovType(CheckConsistency):
 
         cls.mod = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", "Id",
                                     D, family=family, cov_struct=vi)
+
+        cls.start_params = np.array([-0.03644504, -0.05432094,  0.01566427,
+                                      0.57628591, -0.0046566,  -0.47709315])
+
+
+class TestGEEOrdinalCovType(CheckConsistency):
+
+    @classmethod
+    def setup_class(cls):
+
+
+        family = Binomial()
+
+        endog, exog, groups = load_data("gee_ordinal_1.csv",
+                                        icept=False)
+
+        va = GlobalOddsRatio("ordinal")
+
+        cls.mod = OrdinalGEE(endog, exog, groups, None, family, va)
+        cls.start_params = np.array([ 1.09250002, 0.0217443 , -0.39851092,
+                                     -0.01812116, 0.03023969, 1.18258516,
+                                      0.01803453, -1.10203381])
+
+
+class TestGEEMultinomialCovType(CheckConsistency):
+
+    @classmethod
+    def setup_class(cls):
+
+        family = Multinomial(3)
+
+        endog, exog, groups = load_data("gee_nominal_1.csv",
+                                        icept=False)
+
+        # Test with independence correlation
+        va = Independence()
+        cls.mod = NominalGEE(endog, exog, groups, None, family, va)
+        cls.start_params = np.array([0.44944752,  0.45569985, -0.92007064,
+                                     -0.46766728])
 
 
 if  __name__=="__main__":
