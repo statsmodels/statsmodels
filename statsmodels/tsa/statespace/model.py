@@ -160,6 +160,10 @@ class Model(Representation, tsbase.TimeSeriesModel):
         raise NotImplementedError
 
     @property
+    def params_names(self):
+        return self.model_names
+
+    @property
     def model_names(self):
         return self._get_model_names(latex=False)
 
@@ -167,7 +171,7 @@ class Model(Representation, tsbase.TimeSeriesModel):
     def model_latex_names(self):
         return self._get_model_names(latex=True)
 
-    def _get_params_names(self, latex=False):
+    def _get_model_names(self, latex=False):
         if latex:
             names = ['param_%d' % i for i in range(len(self.start_params))]
         else:
@@ -199,9 +203,7 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
         self._endog_names = model.endog_names
         self._exog_names = model.endog_names
         self._params = model.params
-        self._params_included = model.params_included
         self._params_names = model.params_names
-        self._model_orders = model.model_orders
         self._model_names = model.model_names
         self._model_latex_names = model.model_latex_names
 
@@ -249,10 +251,10 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
         return self.loglikelihood[self.loglikelihood_burn:].sum()
 
     def resid(self):
-        return self.forecast_error.copy()
+        return self.forecasts_error.copy()
 
     def fittedvalues(self):
-        return self.forecast.copy()
+        return self.forecasts.copy()
 
     @cache_readonly
     def pvalues(self):
