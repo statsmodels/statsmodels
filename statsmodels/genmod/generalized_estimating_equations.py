@@ -274,7 +274,7 @@ _gee_fit_doc = """
     first_dep_update : integer
         No dependence structure updates occur before this
         iteration number.
-    covariance_type : string
+    cov_type : string
         One of "robust", "naive", or "bias_reduced".
 
     Returns
@@ -313,7 +313,7 @@ _gee_results_doc = """
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
-    covariance_type : string
+    cov_type : string
         string indicating whether a "robust", "naive" or "bias_
         reduced" covariance is used as default
     fit_history : dict
@@ -830,7 +830,7 @@ class GEE(base.Model):
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
-            covariance_type='robust'):
+            cov_type='robust'):
 
         self._fit_history = {'params': [],
                              'score': [],
@@ -902,7 +902,7 @@ class GEE(base.Model):
         scale = self.estimate_scale()
 
         #kwargs to add to results instance, need to be available in __init__
-        res_kwds = dict(covariance_type = covariance_type,
+        res_kwds = dict(cov_type = cov_type,
                         robust_covariance = bcov,
                         naive_covariance = ncov,
                         robust_covariance_bc = bc_cov)
@@ -911,7 +911,7 @@ class GEE(base.Model):
         # matrix argument bcov by scale, which we don't want, so we
         # divide bcov by the scale parameter here
         results = GEEResults(self, mean_params, bcov / scale, scale,
-                             cov_type=covariance_type, use_t=False,
+                             cov_type=cov_type, use_t=False,
                              attr_kwds=res_kwds)
 
         # attributes not needed during results__init__
@@ -926,8 +926,7 @@ class GEE(base.Model):
         results.maxiter = maxiter
 
         # These will be copied over to subclasses when upgrading.
-        results._props = ["covariance_type", "use_t",
-                          "cov_type",     #alias to be refactored
+        results._props = ["cov_type", "use_t",
                           "cov_params_default", "robust_covariance",
                           "naive_covariance", "robust_covariance_bc",
                            "fit_history",
@@ -1083,11 +1082,11 @@ class GEEResults(base.LikelihoodModelResults):
         # subclasses can set it through attr_kwds
         if not (hasattr(self, 'cov_type') and
                 hasattr(self, 'cov_params_default')):
-            self.covariance_type = self.cov_type = cov_type # keep alias
-            covariance_type = self.covariance_type.lower()
+            self.cov_type = cov_type # keep alias
+            covariance_type = self.cov_type.lower()
             allowed_covariances = ["robust", "naive", "bias_reduced"]
             if covariance_type not in allowed_covariances:
-                msg = "GEE: `covariance_type` must be one of " +\
+                msg = "GEE: `cov_type` must be one of " +\
                     ", ".join(allowed_covariances)
                 raise ValueError(msg)
 
@@ -1105,7 +1104,7 @@ class GEEResults(base.LikelihoodModelResults):
                                  'already attached cov_type')
 
 
-    def standard_errors(self, covariance_type="robust"):
+    def standard_errors(self, cov_type="robust"):
         """
         This is a convenience function that returns the standard
         errors for any covariance type.  The value of `bse` is the
@@ -1114,14 +1113,14 @@ class GEEResults(base.LikelihoodModelResults):
 
         Arguments:
         ----------
-        covariance_type : string
+        cov_type : string
             One of "robust", "naive", or "bias_reduced".  Determines
             the covariance used to compute standard errors.  Defaults
             to "robust".
         """
 
         # Check covariance_type
-        covariance_type = covariance_type.lower()
+        covariance_type = cov_type.lower()
         allowed_covariances = ["robust", "naive", "bias_reduced"]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " +\
@@ -1138,7 +1137,7 @@ class GEEResults(base.LikelihoodModelResults):
     # Need to override to allow for different covariance types.
     @cache_readonly
     def bse(self):
-        return self.standard_errors(self.covariance_type)
+        return self.standard_errors(self.cov_type)
 
     @cache_readonly
     def resid(self):
@@ -1193,8 +1192,7 @@ class GEEResults(base.LikelihoodModelResults):
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
 
-    def conf_int(self, alpha=.05, cols=None,
-                 covariance_type=None):
+    def conf_int(self, alpha=.05, cols=None, cov_type=None):
         """
         Returns confidence intervals for the fitted parameters.
 
@@ -1205,7 +1203,7 @@ class GEEResults(base.LikelihoodModelResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cols : array-like, optional
              `cols` specifies which confidence intervals to return
-        covariance_type : string
+        cov_type : string
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
              See `GEE` for details.
@@ -1214,13 +1212,13 @@ class GEEResults(base.LikelihoodModelResults):
         -----
         The confidence interval is based on the Gaussian distribution.
         """
-        # super doesn't allow to specify covariance_type and method is not
+        # super doesn't allow to specify cov_type and method is not
         # implemented,
         # FIXME: remove this method here
-        if covariance_type is None:
+        if cov_type is None:
             bse = self.bse
         else:
-            bse = self.standard_errors(covariance_type=covariance_type)
+            bse = self.standard_errors(cov_type=cov_type)
         params = self.params
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
@@ -1249,7 +1247,7 @@ class GEEResults(base.LikelihoodModelResults):
             the default title
         alpha : float
             significance level for the confidence intervals
-        covariance_type : string
+        cov_type : string
             The covariance type used to compute the standard errors;
             one of 'robust' (the usual robust sandwich-type covariance
             estimate), 'naive' (ignores dependence), and 'bias
@@ -1276,7 +1274,7 @@ class GEEResults(base.LikelihoodModelResults):
                     ('Dependence structure:',
                      [self.model.cov_struct.__class__.__name__]),
                     ('Date:', None),
-                    ('Covariance type: ', [self.covariance_type,])
+                    ('Covariance type: ', [self.cov_type,])
                    ]
 
         NY = [len(y) for y in self.model.endog_li]
@@ -1443,7 +1441,7 @@ class GEEResults(base.LikelihoodModelResults):
                              ctol=self.ctol,
                              params_niter=self.params_niter,
                              first_dep_update=self.first_dep_update,
-                             covariance_type=self.covariance_type)
+                             cov_type=self.cov_type)
             results.append(rslt)
 
         model.update_dep = update_dep
@@ -1546,18 +1544,18 @@ class OrdinalGEE(GEE):
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
-            covariance_type='robust'):
+            cov_type='robust'):
 
         rslt = super(OrdinalGEE, self).fit(maxiter, ctol, start_params,
                                            params_niter, first_dep_update,
-                                           covariance_type=covariance_type)
+                                           cov_type=cov_type)
 
         res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
         # Convert the GEEResults to an OrdinalGEEResults
         ord_rslt = OrdinalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
                                      rslt.scale,
-                                     cov_type=covariance_type,
+                                     cov_type=cov_type,
                                      attr_kwds=res_kwds)
         #for k in rslt._props:
         #    setattr(ord_rslt, k, getattr(rslt, k))
@@ -1750,11 +1748,11 @@ class NominalGEE(GEE):
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
-            covariance_type='robust'):
+            cov_type='robust'):
 
         rslt = super(NominalGEE, self).fit(maxiter, ctol, start_params,
                                            params_niter, first_dep_update,
-                                           covariance_type=covariance_type)
+                                           cov_type=cov_type)
         if rslt is None:
             warnings.warn("GEE updates did not converge",
                           ConvergenceWarning)
@@ -1765,7 +1763,7 @@ class NominalGEE(GEE):
         nom_rslt = NominalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
                                      rslt.scale,
-                                     cov_type=covariance_type,
+                                     cov_type=cov_type,
                                      attr_kwds=res_kwds)
         #for k in rslt._props:
         #    setattr(nom_rslt, k, getattr(rslt, k))

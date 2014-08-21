@@ -695,7 +695,7 @@ class TestGEE(object):
 
         assert_almost_equal(ols.params.values, mdf.params, decimal=10)
 
-        se = mdf.standard_errors(covariance_type="naive")
+        se = mdf.standard_errors(cov_type="naive")
         assert_almost_equal(ols.bse, se, decimal=10)
 
         naive_tvalues = mdf.params / \
@@ -825,18 +825,18 @@ class CheckConsistency(object):
         mod = self.mod
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params,
-                            covariance_type='naive')
+                            cov_type='naive')
         res_robust_bc = mod.fit(start_params=self.start_params,
-                                covariance_type='bias_reduced')
+                                cov_type='bias_reduced')
 
-        # call summary to make sure it doesn't change covariance_type
+        # call summary to make sure it doesn't change cov_type
         res_naive.summary()
         res_robust_bc.summary()
 
-        #check covariance_type
-        assert_equal(res_robust.covariance_type, 'robust')
-        assert_equal(res_naive.covariance_type, 'naive')
-        assert_equal(res_robust_bc.covariance_type, 'bias_reduced')
+        #check cov_type
+        assert_equal(res_robust.cov_type, 'robust')
+        assert_equal(res_naive.cov_type, 'naive')
+        assert_equal(res_robust_bc.cov_type, 'bias_reduced')
 
 
         # check bse and cov_params
@@ -851,7 +851,7 @@ class CheckConsistency(object):
                 ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
-            bse = res_naive.standard_errors(covariance_type=cov_type)
+            bse = res_naive.standard_errors(cov_type=cov_type)
             assert_allclose(res.bse, bse, rtol=rtol)
             assert_allclose(res.cov_params(), cov, rtol=rtol, atol=1e-10)
             assert_allclose(res.cov_params_default, cov, rtol=rtol, atol=1e-10)
@@ -863,7 +863,7 @@ class CheckConsistency(object):
                 res_robust_bc.robust_covariance_bc)
 
         # check exception for misspelled cov_type
-        assert_raises(ValueError, mod.fit, covariance_type='robust_bc')
+        assert_raises(ValueError, mod.fit, cov_type='robust_bc')
 
 
 class TestGEEPoissonCovType(CheckConsistency):
