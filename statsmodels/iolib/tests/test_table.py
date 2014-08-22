@@ -120,22 +120,30 @@ stub R2 C2  40.95038  40.65765
             #print(actual)
             #print(desired)
             self.assertEqual(actual, desired)
-            def test_ltx_fmt1(self):
-                # Limited test of custom ltx_fmt
-                desired = r"""
+        def test_ltx_fmt1(self):
+            # Limited test of custom ltx_fmt
+            desired = r"""
 \begin{tabular}{lcc}
 \toprule
-                        & \textbf{header1} & \textbf{header2}  \\
+               & \textbf{header1} & \textbf{header2}  \\
 \midrule
 \textbf{stub1} &       0.0        &        1          \\
 \textbf{stub2} &        2         &      3.333        \\
 \bottomrule
 \end{tabular}
 """
-            actual = '\n%s\n' % tbl.as_latex_tabular()
+            actual = '\n%s\n' % tbl.as_latex_tabular(center=False)
             #print(actual)
             #print(desired)
             self.assertEqual(actual, desired)
+            # Test "center=True" (the default):
+            desired_centered = r"""
+\begin{center}
+%s
+\end{center}
+""" % desired[1:-1]
+            actual_centered = '\n%s\n' % tbl.as_latex_tabular()
+            self.assertEqual(actual_centered, desired_centered)
         def test_html_fmt1(self):
             # Limited test of custom html_fmt
             desired = """
@@ -144,16 +152,18 @@ stub R2 C2  40.95038  40.65765
     <td></td>    <th>header1</th> <th>header2</th>
 </tr>
 <tr>
-  <th>stub1</th>   <td>0.0</td>      <td>1</td>
+  <th>stub1</th>   <td>0.0</td>      <td>1</td>   
 </tr>
 <tr>
-  <th>stub2</th>    <td>2</td>     <td>3.333</td>
+  <th>stub2</th>    <td>2</td>     <td>3.333</td> 
 </tr>
 </table>
 """
             actual = '\n%s\n' % tbl.as_html()
             self.assertEqual(actual, desired)
-    
+        test_txt_fmt1(self)
+        test_ltx_fmt1(self)
+        test_html_fmt1(self)
     def test_regression_with_tuples(self):
         i = pandas.Series( [1,2,3,4]*10 , name="i")
         y = pandas.Series( [1,2,3,4,5]*8, name="y")
