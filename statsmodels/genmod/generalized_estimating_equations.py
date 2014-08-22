@@ -502,6 +502,9 @@ class GEE(base.Model):
         # Total sample size
         group_ns = [len(y) for y in self.endog_li]
         self.nobs = sum(group_ns)
+        # The following are column based, not on rank see #1928
+        self.df_model = self.exog.shape[1] - 1  # assumes constant
+        self.df_resid = self.nobs - self.exog.shape[1]
 
         # mean_deriv is the derivative of E[endog|exog] with respect
         # to params
@@ -1072,6 +1075,10 @@ class GEEResults(base.LikelihoodModelResults):
 
         super(GEEResults, self).__init__(model, params,
                 normalized_cov_params=cov_params, scale=scale)
+
+        # not added by super
+        self.df_resid = model.df_resid
+        self.df_model = model.df_model
 
         attr_kwds = kwds.pop('attr_kwds', {})
         self.__dict__.update(attr_kwds)

@@ -277,9 +277,6 @@ class TestGenericGEEPoisson(CheckGenericMixin):
         self.results = sm.GEE(y_count, self.exog, groups, family=family,
                                 cov_struct=vi).fit(start_params=start_params)
 
-        # patch the results for missing df_resid, see issue #1918
-        self.results.df_resid = x.shape[0]
-
 
 class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
@@ -301,10 +298,6 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
         self.results = sm.GEE(y_count, self.exog, groups, family=family,
                                 cov_struct=vi).fit(start_params=start_params,
                                                    cov_type='naive')
-
-        # patch the results for missing df_resid, see issue #1918
-        self.results.df_resid = x.shape[0]
-
 
 
 class TestGenericGEEPoissonBC(CheckGenericMixin):
@@ -328,9 +321,6 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
         mod = sm.GEE(y_count, self.exog, groups, family=family, cov_struct=vi)
         self.results = mod.fit(start_params=start_params,
                                cov_type='bias_reduced')
-
-        # patch the results for missing df_resid, see issue #1918
-        self.results.df_resid = x.shape[0]
 
 
 if __name__ == '__main__':
