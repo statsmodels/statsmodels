@@ -1157,7 +1157,7 @@ class GEEResults(base.LikelihoodModelResults):
         return self.model.endog - self.fittedvalues
 
     @cache_readonly
-    def split_resid(self):
+    def resid_split(self):
         """
         Returns the residuals, the endogeneous data minus the fitted
         values from the model.  The residuals are returned as a list
@@ -1170,7 +1170,7 @@ class GEEResults(base.LikelihoodModelResults):
         return sresid
 
     @cache_readonly
-    def centered_resid(self):
+    def resid_centered(self):
         """
         Returns the residuals centered within each group.
         """
@@ -1181,7 +1181,7 @@ class GEEResults(base.LikelihoodModelResults):
         return cresid
 
     @cache_readonly
-    def split_centered_resid(self):
+    def resid_centered_split(self):
         """
         Returns the residuals centered within each group.  The
         residuals are returned as a list of arrays containing the
@@ -1192,6 +1192,13 @@ class GEEResults(base.LikelihoodModelResults):
             ii = self.model.group_indices[v]
             sresid.append(self.centered_resid[ii])
         return sresid
+
+
+    # FIXME: alias to be removed, temporary backwards compatibility
+    split_resid = resid_split
+    centered_resid = resid_centered
+    split_centered_resid = resid_centered_split
+
 
     @cache_readonly
     def fittedvalues(self):
@@ -1407,7 +1414,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         return fig
 
-    def params_sensitivity(self, dep_params_first,
+    def sensitivity_params(self, dep_params_first,
                            dep_params_last, num_steps):
         """
         Refits the GEE model using a sequence of values for the
@@ -1456,6 +1463,10 @@ class GEEResults(base.LikelihoodModelResults):
         model.update_dep = update_dep
 
         return results
+
+    # FIXME: alias to be removed, temporary backwards compatibility
+    params_sensitivity = sensitivity_params
+
 
 class GEEResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {
