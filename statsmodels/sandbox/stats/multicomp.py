@@ -783,6 +783,10 @@ class MultiComparison(object):
     '''
 
     def __init__(self, data, groups, group_order=None):
+        if len(set(groups)) < 2:
+            raise ValueError('2 or more groups required for multiple comparisons')
+        if len(data) != len(groups):
+            raise ValueError('data has %d elements and groups has %d' % (len(data), len(groups)))
         self.data = np.asarray(data)
         self.groups = groups = np.asarray(groups)
 
