@@ -1703,6 +1703,12 @@ class NominalGEE(GEE):
             self.time_orig = None
             time = np.zeros((len(endog),1))
 
+        exog = np.asarray(exog)
+        endog = np.asarray(endog)
+        groups = np.asarray(groups)
+        time = np.asarray(time)
+        offset = np.asarray(offset)
+
         # The unique outcomes, except the greatest one.
         self.endog_values = np.unique(endog)
         endog_cuts = self.endog_values[0:-1]
