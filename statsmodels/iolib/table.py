@@ -412,8 +412,9 @@ class SimpleTable(list):
         # fetch the text format, override with fmt_dict
         fmt = self._get_fmt('latex', **fmt_dict)
 
+        formatted_rows = []
         if center:
-            formatted_rows = ["\\begin{center}"]
+            formatted_rows.append( r'\begin{center}' )
 
         table_dec_above = fmt['table_dec_above'] or ''
         table_dec_below = fmt['table_dec_below'] or ''
@@ -448,8 +449,10 @@ class SimpleTable(list):
             title = r'%%\caption{%s}' % self.title
             formatted_rows.append(title)
         if center:
-            formatted_rows.append("\\end{center}")
+            formatted_rows.append( r'\end{center}' )
+
         return '\n'.join(formatted_rows)
+
 
     def extend_right(self, table):
         """Return None.
