@@ -30,6 +30,10 @@ import pandas as pd
 from statsmodels.tools.decorators import (cache_readonly,
     resettable_cache)
 import statsmodels.base.model as base
+# used for wrapper:
+import statsmodels.regression.linear_model as lm
+import statsmodels.base.wrapper as wrap
+
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import CovStruct
@@ -935,7 +939,7 @@ class GEE(base.Model):
                           "params_niter", "first_dep_update", "ctol",
                           "maxiter"]
 
-        return results
+        return GEEResultsWrapper(results)
 
     fit.__doc__ = _gee_fit_doc
 
@@ -1453,6 +1457,13 @@ class GEEResults(base.LikelihoodModelResults):
 
         return results
 
+class GEEResultsWrapper(lm.RegressionResultsWrapper):
+    _attrs = {
+              'centered_resid' : 'rows',
+              }
+    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
+                                   _attrs)
+wrap.populate_wrapper(GEEResultsWrapper, GEEResults)
 
 
 class OrdinalGEE(GEE):
@@ -1555,6 +1566,7 @@ class OrdinalGEE(GEE):
                                            params_niter, first_dep_update,
                                            cov_type=cov_type)
 
+        rslt = rslt._results   # use unwrapped instance
         res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
         # Convert the GEEResults to an OrdinalGEEResults
         ord_rslt = OrdinalGEEResults(self, rslt.params,
@@ -1565,9 +1577,10 @@ class OrdinalGEE(GEE):
         #for k in rslt._props:
         #    setattr(ord_rslt, k, getattr(rslt, k))
 
-        return ord_rslt
+        return OrdinalGEEResultsWrapper(ord_rslt)
 
     fit.__doc__ = _gee_fit_doc
+
 
 class OrdinalGEEResults(GEEResults):
 
@@ -1662,6 +1675,10 @@ class OrdinalGEEResults(GEEResults):
         ax.set_ylim(0, 1)
 
         return fig
+
+class OrdinalGEEResultsWrapper(GEEResultsWrapper):
+    pass
+wrap.populate_wrapper(OrdinalGEEResultsWrapper, OrdinalGEEResults)
 
 
 class NominalGEE(GEE):
@@ -1769,6 +1786,7 @@ class NominalGEE(GEE):
                           ConvergenceWarning)
             return None
 
+        rslt = rslt._results   # use unwrapped instance
         res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
         # Convert the GEEResults to a NominalGEEResults
         nom_rslt = NominalGEEResults(self, rslt.params,
@@ -1779,7 +1797,7 @@ class NominalGEE(GEE):
         #for k in rslt._props:
         #    setattr(nom_rslt, k, getattr(rslt, k))
 
-        return nom_rslt
+        return NominalGEEResultsWrapper(nom_rslt)
 
     fit.__doc__ = _gee_fit_doc
 
@@ -1870,6 +1888,9 @@ class NominalGEEResults(GEEResults):
 
         return fig
 
+class NominalGEEResultsWrapper(GEEResultsWrapper):
+    pass
+wrap.populate_wrapper(NominalGEEResultsWrapper, NominalGEEResults)
 
 
 class MultinomialLogit(Link):

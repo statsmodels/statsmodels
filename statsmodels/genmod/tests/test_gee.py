@@ -16,7 +16,8 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
      OrdinalGEE, NominalGEE, GEEMargins, Multinomial,
-     NominalGEEResults, OrdinalGEEResults)
+     NominalGEEResults, OrdinalGEEResults,
+     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
 from statsmodels.genmod.dependence_structures import (Exchangeable,
     Independence, GlobalOddsRatio, Autoregressive, Nested)
@@ -50,6 +51,19 @@ def load_data(fname, icept=True):
                               axis=1)
 
     return endog,exog,group
+
+
+def check_wrapper(results):
+    # check wrapper
+    assert_(isinstance(results.params, pd.Series))
+    assert_(isinstance(results.fittedvalues, pd.Series))
+    assert_(isinstance(results.resid, pd.Series))
+    assert_(isinstance(results.centered_resid, pd.Series))
+
+    assert_(isinstance(results._results.params, np.ndarray))
+    assert_(isinstance(results._results.fittedvalues, np.ndarray))
+    assert_(isinstance(results._results.resid, np.ndarray))
+    assert_(isinstance(results._results.centered_resid, np.ndarray))
 
 
 class TestGEE(object):
@@ -559,7 +573,8 @@ class TestGEE(object):
         assert_almost_equal(rslt.bse, se, decimal=5)
 
         # Check that we get the correct results type
-        assert_equal(type(rslt), OrdinalGEEResults)
+        assert_equal(type(rslt), OrdinalGEEResultsWrapper)
+        assert_equal(type(rslt._results), OrdinalGEEResults)
 
     def test_nominal(self):
 
@@ -591,7 +606,8 @@ class TestGEE(object):
         assert_almost_equal(rslt2.standard_errors(), se2, decimal=5)
 
         # Make sure we get the correct results type
-        assert_equal(type(rslt1), NominalGEEResults)
+        assert_equal(type(rslt1), NominalGEEResultsWrapper)
+        assert_equal(type(rslt1._results), NominalGEEResults)
 
 
     def test_poisson(self):
@@ -745,6 +761,9 @@ class TestGEE(object):
         assert_almost_equal(rslt1.params, rslt4.params, decimal=8)
         assert_almost_equal(rslt1.params, rslt5.params, decimal=8)
 
+        check_wrapper(rslt2)
+
+
     def test_compare_logit(self):
 
         vs = Independence()
@@ -883,6 +902,21 @@ class TestGEEPoissonCovType(CheckConsistency):
                                       0.57628591, -0.0046566,  -0.47709315])
 
 
+    def test_wrapper(self):
+
+        endog, exog, group_n = load_data("gee_poisson_1.csv",
+                                        icept=False)
+        #endog = pd.Series(endog)
+        exog = pd.DataFrame(exog)
+
+        family = Poisson()
+        vi = Independence()
+
+        mod = GEE(endog, exog, group_n, None, family, vi)
+        rslt2 = mod.fit()
+
+        check_wrapper(rslt2)
+
 
 class TestGEEPoissonFormulaCovType(CheckConsistency):
 
@@ -925,6 +959,22 @@ class TestGEEOrdinalCovType(CheckConsistency):
                                      -0.01812116, 0.03023969, 1.18258516,
                                       0.01803453, -1.10203381])
 
+    def test_wrapper(self):
+
+        endog, exog, groups = load_data("gee_ordinal_1.csv",
+                                        icept=False)
+
+
+        endog = pd.Series(endog)
+        exog = pd.DataFrame(exog)
+
+        family = Binomial()
+        va = GlobalOddsRatio("ordinal")
+        mod = OrdinalGEE(endog, exog, groups, None, family, va)
+        rslt2 = mod.fit()
+
+        check_wrapper(rslt2)
+
 
 class TestGEEMultinomialCovType(CheckConsistency):
 
@@ -941,6 +991,22 @@ class TestGEEMultinomialCovType(CheckConsistency):
         cls.mod = NominalGEE(endog, exog, groups, None, family, va)
         cls.start_params = np.array([0.44944752,  0.45569985, -0.92007064,
                                      -0.46766728])
+
+
+    def test_wrapper(self):
+
+        endog, exog, groups = load_data("gee_nominal_1.csv",
+                                        icept=False)
+        #endog = pd.Series(endog)
+        exog = pd.DataFrame(exog)
+
+        family = Multinomial(3)
+        va = Independence()
+        mod = NominalGEE(endog, exog, groups, None, family, va)
+        rslt2 = mod.fit()
+
+        check_wrapper(rslt2)
+
 
 
 if  __name__=="__main__":
