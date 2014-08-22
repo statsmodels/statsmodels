@@ -699,7 +699,7 @@ class TestGEE(object):
         assert_almost_equal(ols.bse, se, decimal=10)
 
         naive_tvalues = mdf.params / \
-            np.sqrt(np.diag(mdf.naive_covariance))
+            np.sqrt(np.diag(mdf.cov_naive))
         assert_almost_equal(naive_tvalues, ols.tvalues, decimal=10)
 
     def test_formulas(self):
@@ -845,9 +845,9 @@ class CheckConsistency(object):
         # consecutive calls to fit.
         rtol = 1e-8
         for (res, cov_type, cov) in [
-                (res_robust, 'robust', res_robust.robust_covariance),
-                (res_naive, 'naive', res_robust.naive_covariance),
-                (res_robust_bc, 'bias_reduced', res_robust.robust_covariance_bc)
+                (res_robust, 'robust', res_robust.cov_robust),
+                (res_naive, 'naive', res_robust.cov_naive),
+                (res_robust_bc, 'bias_reduced', res_robust.cov_robust_bc)
                 ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
@@ -857,10 +857,10 @@ class CheckConsistency(object):
             assert_allclose(res.cov_params_default, cov, rtol=rtol, atol=1e-10)
 
         # assert that we don't have a copy
-        assert_(res_robust.cov_params_default is res_robust.robust_covariance)
-        assert_(res_naive.cov_params_default is res_naive.naive_covariance)
+        assert_(res_robust.cov_params_default is res_robust.cov_robust)
+        assert_(res_naive.cov_params_default is res_naive.cov_naive)
         assert_(res_robust_bc.cov_params_default is
-                res_robust_bc.robust_covariance_bc)
+                res_robust_bc.cov_robust_bc)
 
         # check exception for misspelled cov_type
         assert_raises(ValueError, mod.fit, cov_type='robust_bc')

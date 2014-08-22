@@ -302,12 +302,12 @@ _gee_results_doc = """
     cov_params_default : ndarray
         default covariance of the parameter estimates. Is chosen among one
         of the following three based on `cov_type`
-    robust_covariance_bc : ndarray
+    cov_robust : ndarray
         covariance of the parameter estimates that is robust
-    naive_covariance : ndarray
+    cov_naive : ndarray
         covariance of the parameter estimates that is not robust to
         correlation or variance misspecification
-    robust_covariance_bc : ndarray
+    cov_robust_bc : ndarray
         covariance of the parameter estimates that is robust and bias
         reduced
     converged : bool
@@ -683,15 +683,15 @@ class GEE(base.Model):
 
         Returns
         -------
-        robust_covariance : array-like
+        cov_robust : array-like
            The robust, or sandwich estimate of the covariance, which
            is meaningful even if the working covariance structure is
            incorrectly specified.
-        naive_covariance : array-like
+        cov_naive : array-like
            The model-based estimate of the covariance, which is
            meaningful if the covariance structure is correctly
            specified.
-        robust_covariance_bc : array-like
+        cov_robust_bc : array-like
            The "bias corrected" robust covariance of Mancl and
            DeRouen.
         cmat : array-like
@@ -728,11 +728,11 @@ class GEE(base.Model):
         scale = self.estimate_scale()
 
         bmati = np.linalg.inv(bmat)
-        naive_covariance = bmati * scale
-        robust_covariance = np.dot(bmati, np.dot(cmat, bmati))
+        cov_naive = bmati * scale
+        cov_robust = np.dot(bmati, np.dot(cmat, bmati))
 
         # Calculate the bias-corrected sandwich estimate of Mancl and
-        # DeRouen (requires naive_covariance so cannot be calculated
+        # DeRouen (requires cov_naive so cannot be calculated
         # in the previous loop).
         bcm = 0
         for i in range(self.num_group):
@@ -749,7 +749,7 @@ class GEE(base.Model):
             vinv_d = rslt[0]
             vinv_d /= scale
 
-            hmat = np.dot(vinv_d, naive_covariance)
+            hmat = np.dot(vinv_d, cov_naive)
             hmat = np.dot(hmat, dmat.T).T
 
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
@@ -761,11 +761,9 @@ class GEE(base.Model):
             srt = np.dot(dmat.T, srt) / scale
             bcm += np.outer(srt, srt)
 
-        robust_covariance_bc = np.dot(naive_covariance,
-                                      np.dot(bcm, naive_covariance))
+        cov_robust_bc = np.dot(cov_naive, np.dot(bcm, cov_naive))
 
-        return (robust_covariance, naive_covariance,
-            robust_covariance_bc, cmat)
+        return (cov_robust, cov_naive, cov_robust_bc, cmat)
 
     def predict(self, params, exog=None, offset=None, linear=False):
         """
@@ -903,9 +901,9 @@ class GEE(base.Model):
 
         #kwargs to add to results instance, need to be available in __init__
         res_kwds = dict(cov_type = cov_type,
-                        robust_covariance = bcov,
-                        naive_covariance = ncov,
-                        robust_covariance_bc = bc_cov)
+                        cov_robust = bcov,
+                        cov_naive = ncov,
+                        cov_robust_bc = bc_cov)
 
         # The superclass constructor will multiply the covariance
         # matrix argument bcov by scale, which we don't want, so we
@@ -927,8 +925,8 @@ class GEE(base.Model):
 
         # These will be copied over to subclasses when upgrading.
         results._props = ["cov_type", "use_t",
-                          "cov_params_default", "robust_covariance",
-                          "naive_covariance", "robust_covariance_bc",
+                          "cov_params_default", "cov_robust",
+                          "cov_naive", "cov_robust_bc",
                            "fit_history",
                           "score_norm", "converged", "cov_struct",
                           "params_niter", "first_dep_update", "ctol",
@@ -1091,11 +1089,11 @@ class GEEResults(base.LikelihoodModelResults):
                 raise ValueError(msg)
 
             if cov_type == "robust":
-                cov = self.robust_covariance
+                cov = self.cov_robust
             elif cov_type == "naive":
-                cov = self.naive_covariance
+                cov = self.cov_naive
             elif cov_type == "bias_reduced":
-                cov = self.robust_covariance_bc
+                cov = self.cov_robust_bc
 
             self.cov_params_default = cov
         else:
@@ -1128,11 +1126,11 @@ class GEEResults(base.LikelihoodModelResults):
             raise ValueError(msg)
 
         if covariance_type == "robust":
-            return np.sqrt(np.diag(self.robust_covariance))
+            return np.sqrt(np.diag(self.cov_robust))
         elif covariance_type == "naive":
-            return np.sqrt(np.diag(self.naive_covariance))
+            return np.sqrt(np.diag(self.cov_naive))
         elif covariance_type == "bias_reduced":
-            return np.sqrt(np.diag(self.robust_covariance_bc))
+            return np.sqrt(np.diag(self.cov_robust_bc))
 
     # Need to override to allow for different covariance types.
     @cache_readonly
