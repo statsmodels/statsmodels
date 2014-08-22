@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 from statsmodels.compat.python import BytesIO, asbytes, range
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_
+from numpy.testing import assert_almost_equal, assert_equal, assert_, assert_raises
 
 from statsmodels.stats.libqsturng import qsturng
 
@@ -238,6 +238,13 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         # we are working with bytes on python 3, not with strings in this case
         self.groups = pandas.Series(self.groups, dtype=object)
 
+    def test_incorrect_output(self):
+        # too few groups
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1, 2] * 4)
+        # too many groups
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1, 2] * 6)
+        # just one group
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1] * 10)
 
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
     @classmethod
