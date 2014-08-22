@@ -906,8 +906,9 @@ class TestGEEPoissonCovType(CheckConsistency):
 
         endog, exog, group_n = load_data("gee_poisson_1.csv",
                                         icept=False)
-        #endog = pd.Series(endog)
+        endog = pd.Series(endog)
         exog = pd.DataFrame(exog)
+        group_n = pd.Series(group_n)
 
         family = Poisson()
         vi = Independence()
@@ -965,8 +966,9 @@ class TestGEEOrdinalCovType(CheckConsistency):
                                         icept=False)
 
 
-        endog = pd.Series(endog)
+        endog = pd.Series(endog, name='yendog')
         exog = pd.DataFrame(exog)
+        groups = pd.Series(groups, name='the_group')
 
         family = Binomial()
         va = GlobalOddsRatio("ordinal")
@@ -997,8 +999,9 @@ class TestGEEMultinomialCovType(CheckConsistency):
 
         endog, exog, groups = load_data("gee_nominal_1.csv",
                                         icept=False)
-        #endog = pd.Series(endog)
+        endog = pd.Series(endog, name='yendog')
         exog = pd.DataFrame(exog)
+        groups = pd.Series(groups, name='the_group')
 
         family = Multinomial(3)
         va = Independence()

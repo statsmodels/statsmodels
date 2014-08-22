@@ -1770,7 +1770,7 @@ class NominalGEE(GEE):
 
         # Preserve endog name if there is one
         if type(self.endog_orig) == pd.Series:
-            endog_out = pd.Series(endog_out, name=self.endog_orig.names)
+            endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
 
