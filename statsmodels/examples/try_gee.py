@@ -61,8 +61,8 @@ marg2 = GEEMargins(mdf2, ())
 print(marg2.summary())
 
 
-mdf_nc = md2.fit(covariance_type='naive')
-mdf_bc = md2.fit(covariance_type='bias_reduced')
+mdf_nc = md2.fit(cov_type='naive')
+mdf_bc = md2.fit(cov_type='bias_reduced')
 
 mdf_nc.use_t = False
 mdf_nc.df_resid = np.diff(mdf2.model.exog.shape)

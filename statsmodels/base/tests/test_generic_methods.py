@@ -89,8 +89,14 @@ class CheckGenericMixin(object):
         string_use_t = 'P>|z|' if use_t is False else 'P>|t|'
         summ = str(res.summary())
         assert_(string_use_t in summ)
-        summ = str(res.summary2())
-        assert_(string_use_t in summ)
+
+        # try except for models that don't have summary2
+        try:
+            summ2 = str(res.summary2())
+        except AttributeError:
+            summ2 = None
+        if summ2 is not None:
+            assert_(string_use_t in summ2)
 
 
     # TODO The following is not (yet) guaranteed across models
@@ -99,7 +105,11 @@ class CheckGenericMixin(object):
         # ignore wrapper for isinstance check
         from statsmodels.genmod.generalized_linear_model import GLMResults
         from statsmodels.discrete.discrete_model import DiscreteResults
-        results = self.results._results
+        # FIXME: work around GEE has no wrapper
+        if hasattr(self.results, '_results'):
+            results = self.results._results
+        else:
+            results = self.results
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
             raise SkipTest
@@ -117,7 +127,13 @@ class CheckGenericMixin(object):
         # ignore wrapper for isinstance check
         from statsmodels.genmod.generalized_linear_model import GLMResults
         from statsmodels.discrete.discrete_model import DiscreteResults
-        results = self.results._results
+
+        # FIXME: work around GEE has no wrapper
+        if hasattr(self.results, '_results'):
+            results = self.results._results
+        else:
+            results = self.results
+
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
             # SMOKE test only  TODO
@@ -240,6 +256,72 @@ class TestGenericGLM(CheckGenericMixin):
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
+
+
+class TestGenericGEEPoisson(CheckGenericMixin):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        groups = np.random.randint(0, 4, size=x.shape[0])
+        # use start_params to speed up test, difficult convergence not tested
+        start_params = np.array([0., 1., 1., 1.])
+
+        # no sm. import
+        # vi = sm.dependence_structures.Independence()
+        from statsmodels.genmod.dependence_structures import Independence
+        vi = Independence()
+        family = sm.families.Poisson()
+        self.results = sm.GEE(y_count, self.exog, groups, family=family,
+                                cov_struct=vi).fit(start_params=start_params)
+
+
+class TestGenericGEEPoissonNaive(CheckGenericMixin):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
+        groups = np.random.randint(0, 4, size=x.shape[0])
+        # use start_params to speed up test, difficult convergence not tested
+        start_params = np.array([0., 1., 1., 1.])
+
+        # no sm. import
+        # vi = sm.dependence_structures.Independence()
+        from statsmodels.genmod.dependence_structures import Independence
+        vi = Independence()
+        family = sm.families.Poisson()
+        self.results = sm.GEE(y_count, self.exog, groups, family=family,
+                                cov_struct=vi).fit(start_params=start_params,
+                                                   cov_type='naive')
+
+
+class TestGenericGEEPoissonBC(CheckGenericMixin):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
+        groups = np.random.randint(0, 4, size=x.shape[0])
+        # use start_params to speed up test, difficult convergence not tested
+        start_params = np.array([0., 1., 1., 1.])
+        # params_est = np.array([-0.0063238 ,  0.99463752,  1.02790201,  0.98080081])
+
+        # no sm. import
+        # vi = sm.dependence_structures.Independence()
+        from statsmodels.genmod.dependence_structures import Independence
+        vi = Independence()
+        family = sm.families.Poisson()
+        mod = sm.GEE(y_count, self.exog, groups, family=family, cov_struct=vi)
+        self.results = mod.fit(start_params=start_params,
+                               cov_type='bias_reduced')
+
 
 if __name__ == '__main__':
     pass

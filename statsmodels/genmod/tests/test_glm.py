@@ -328,7 +328,7 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
                 family=sm.families.Binomial()).fit()
 
         modd = discrete.Logit(self.res2.endog, self.res2.exog)
-        self.resd = modd.fit(start_params=self.res1.params * 0.9)
+        self.resd = modd.fit(start_params=self.res1.params * 0.9, disp=False)
 
 
     def score_test_r(self):
@@ -473,7 +473,7 @@ class TestGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
         self.res2 = Cpunish()
         # compare with discrete, start close to save time
         modd = discrete.Poisson(self.data.endog, self.data.exog)
-        self.resd = modd.fit(start_params=self.res1.params * 0.9)
+        self.resd = modd.fit(start_params=self.res1.params * 0.9, disp=False)
 
 #class TestGlmPoissonIdentity(CheckModelResultsMixin):
 #    pass
