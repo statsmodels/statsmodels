@@ -116,6 +116,10 @@ class TestGEE(object):
                                family=families.Poisson())
         rslt2 = mod2.fit(scale="X2")
 
+        # don't use wrapper, asserts_xxx don't work
+        rslt1 = rslt1._results
+        rslt2 = rslt2._results
+
         assert_almost_equal(rslt1.params, rslt2.params, decimal=6)
         assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
@@ -709,7 +713,10 @@ class TestGEE(object):
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(ols.params.values, mdf.params, decimal=10)
+        # don't use wrapper, asserts_xxx don't work
+        ols = ols._results
+
+        assert_almost_equal(ols.params, mdf.params, decimal=10)
 
         se = mdf.standard_errors(cov_type="naive")
         assert_almost_equal(ols.bse, se, decimal=10)
@@ -784,7 +791,8 @@ class TestGEE(object):
         mod2 = sm.logit("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
-        assert_almost_equal(rslt1.params, rslt2.params, decimal=10)
+        assert_almost_equal(rslt1.params.values, rslt2.params.values,
+                            decimal=10)
 
 
     def test_compare_poisson(self):
@@ -807,7 +815,8 @@ class TestGEE(object):
         mod2 = sm.poisson("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
-        assert_almost_equal(rslt1.params, rslt2.params, decimal=10)
+        assert_almost_equal(rslt1.params.values, rslt2.params.values,
+                            decimal=10)
 
 
     def test_sensitivity(self):
