@@ -2,7 +2,7 @@
 Heckman correction for sample selection bias.
 
 Created August 19, 2014 by B.I.
-Last modified August 24, 2014 by B.I.
+Last modified August 25, 2014 by B.I.
 
 NO warranty is provided for this software.
 """
@@ -18,8 +18,6 @@ class Heckman(base.LikelihoodModel):
     """
     Class for Heckman correction for sample selection bias model.
     """
-
-
 
     def __init__(self, endog, exog, select_exog):
         #TODO: add code to take care of missing data in X and Z
@@ -64,8 +62,6 @@ class Heckman(base.LikelihoodModel):
 
 
         """
-
-
 
         ## prep data
         Y = np.asarray(self.endog)
