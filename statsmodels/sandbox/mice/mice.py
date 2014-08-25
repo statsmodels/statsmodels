@@ -73,7 +73,8 @@ class ImputedData(object):
         # May not need to make copies
         self.data = pd.DataFrame(data)
         # Drop observations where all variables are missing.
-        self.data = self.data.dropna(how='all')
+        self.data = self.data.dropna(how='all').reset_index(drop=True)
+#        df.reset_index(drop=True)
         self.columns = {}
         self.implist = []
         for col in self.data.columns:
@@ -87,7 +88,7 @@ class ImputedData(object):
         # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, method="gaussian", k_pmm=20, 
+    def new_imputer(self, endog_name, method="pmm", k_pmm=20, 
                     formula=None, model_class=None, init_args={}, fit_args={}, 
                     perturb_method="gaussian", alt_distribution=None, 
                     scale_method="fix", scale_value=None, transform=None, 
@@ -184,13 +185,281 @@ class ImputedData(object):
             endog_name = tuple(endog.design_info.term_names)
         else:
             endog_name = endog.design_info.term_names[0]
+        # Turn endog into a series since it is always 1D
+        endog = endog.iloc[:, 0]                                                  
         ix = self.columns[endog_name].ix_obs
-        endog_obs = endog.iloc[ix]
-        exog_obs = exog.iloc[ix]
+        endog_obs = endog[ix]
+        exog_obs = exog.iloc[ix,:]
         ix = self.columns[endog_name].ix_miss
         exog_miss = exog.iloc[ix]            
         return endog_obs, exog_obs, exog_miss
 
+    def plot_missing_pattern(self, ax=None, row_order="pattern",
+                             column_order="pattern",
+                             hide_complete_rows=False,
+                             hide_complete_columns=False,
+                             color_row_patterns=False):
+        """
+        Generates an image showing the missing data pattern.
+
+        Parameters
+        ----------
+        ax : matplotlib axes
+            Axes on which to draw the plot.
+        row_order : string
+            The method for ordering the rows.  Must be one of 'pattern',
+            'proportion', or 'raw'.
+        column_order : string
+            The method for ordering the columns.  Must be one of 'pattern',
+            'proportion', or 'raw'.
+        hide_complete_rows : bool
+            If True, rows with no missing values are not drawn.
+        hide_complete_columns : bool
+            If True, columns with no missing values are not drawn.
+
+        Returns
+        -------
+        A figure containing a plot of the missing data pattern.
+        """
+
+        # Create an indicator matrix for missing values.
+        miss = np.zeros(self.data.shape)
+        cols = self.data.columns
+        for j, col in enumerate(cols):
+            ix = self.columns[col].ix_miss
+            miss[ix, j] = 1
+
+        # Order the columns as requested
+        if column_order == "proportion":
+            ix = np.argsort(miss.mean(0))
+        elif column_order == "pattern":
+            cv = np.cov(miss.T)
+            u, s, vt = np.linalg.svd(cv, 0)
+            ix = np.argsort(cv[:, 0])
+        elif column_order == "raw":
+            ix = np.arange(len(cols))
+        else:
+            raise ValueError(column_order + " is not an allowed value for `column_order`.")
+        miss = miss[:, ix]
+        cols = [cols[i] for i in ix]
+
+        # Order the rows as requested
+        if row_order == "proportion":
+            ix = np.argsort(miss.mean(1))
+        elif row_order == "pattern":
+            # Force rows with no missing to bottom
+            ix1 = np.flatnonzero((miss == 0).any(1))
+            ix0 = np.flatnonzero((miss != 0).all(1))
+            miss_c = miss[ix1, :]
+            miss_c -= miss_c.mean(1)[:, None]
+            u, s, vt = np.linalg.svd(miss_c, 0)
+            ix = np.argsort(u[:, 0])
+            ix = np.concatenate((ix1[ix], ix0))
+        elif row_order == "raw":
+            ix = np.arange(miss.shape[0])
+        else:
+            raise ValueError(row_order + " is not an allowed value for `row_order`.")
+        miss = miss[ix, :]
+
+        if hide_complete_rows:
+            ix = np.flatnonzero((miss == 1).any(1))
+            miss = miss[ix, :]
+
+        if hide_complete_columns:
+            ix = np.flatnonzero((miss == 1).any(0))
+            miss = miss[:, ix]
+            cols = [cols[i] for i in ix]
+
+        from statsmodels.graphics import utils as gutils
+        from matplotlib.colors import LinearSegmentedColormap
+
+        if ax is None:
+            fig, ax = gutils.create_mpl_ax(ax)
+        else:
+            fig = ax.get_figure()
+
+        if color_row_patterns:
+            x = 2**np.arange(miss.shape[1])
+            rky = np.dot(miss, x)
+            _, rcol = np.unique(rky, return_inverse=True)
+            miss *= 1 + rcol[:, None]
+            ax.imshow(miss, aspect="auto", interpolation="nearest",
+                      cmap='gist_ncar_r')
+        else:
+            cmap = LinearSegmentedColormap.from_list("_",
+                                         ["white", "darkgrey"])
+            ax.imshow(miss, aspect="auto", interpolation="nearest",
+                      cmap=cmap)
+
+        ax.set_ylabel("Cases")
+        ax.set_xticks(range(len(cols)))
+        ax.set_xticklabels(cols, rotation=90)
+
+        return fig
+
+    def bivariate_scatterplot(self, col1_name, col2_name,
+                              lowess_args={}, lowess_min_n=40,
+                              plot_points=True, ax=None):
+        """
+        Create a scatterplot between two variables, plotting the
+        observed and imputed values with different colors.
+
+        Parameters:
+        -----------
+        col1_name : string
+            The variable to be plotted on the horizontal axis.
+        col2_name : string
+            The variable to be plotted on the vertical axis.
+        lowess_args : dictionary
+            A dictionary of dictionaries, keys are 'ii', 'io', 'oi'
+            and 'oo', where 'o' denotes 'observed' and 'i' denotes
+            imputed.  See Notes for details.
+        lowess_min_n : integer
+            Minimum sample size to plot a lowess fit
+        plot_points : bool
+            If True, the data points are plotted.
+        ax : matplotlib axes object
+            Axes on which to plot, created if not provided.
+
+        Returns:
+        --------
+        The matplotlib figure on which the plot id drawn.
+        """
+
+        from statsmodels.graphics import utils as gutils
+        from statsmodels.nonparametric.smoothers_lowess import lowess
+
+        if ax is None:
+            fig, ax = gutils.create_mpl_ax(ax)
+        else:
+            fig = ax.get_figure()
+
+        ax.set_position([0.1, 0.1, 0.7, 0.8])
+
+        ix1i = self.columns[col1_name].ix_miss
+        ix1o = self.columns[col1_name].ix_obs
+        ix2i = self.columns[col2_name].ix_miss
+        ix2o = self.columns[col2_name].ix_obs
+
+        ix_ii = np.intersect1d(ix1i, ix2i)
+        ix_io = np.intersect1d(ix1i, ix2o)
+        ix_oi = np.intersect1d(ix1o, ix2i)
+        ix_oo = np.intersect1d(ix1o, ix2o)
+
+        vec1 = np.asarray(self.data[col1_name])
+        vec2 = np.asarray(self.data[col2_name])
+
+        # Plot the points
+        keys = ['oo', 'io', 'oi', 'ii']
+        lak = {'i': 'imp', 'o': 'obs'}
+        ixs = {'ii': ix_ii, 'io': ix_io, 'oi': ix_oi, 'oo': ix_oo}
+        color = {'oo': 'grey', 'ii': 'red', 'io': 'orange',
+                 'oi': 'lime'}
+        if plot_points:
+            for ky in keys:
+                ix = ixs[ky]
+                lab = lak[ky[0]] + "/" + lak[ky[1]]
+                ax.plot(vec1[ix], vec2[ix], 'o', color=color[ky],
+                        label=lab, alpha=0.6)
+
+        # Plot the lowess fits
+        for ky in keys:
+            ix = ixs[ky]
+            if len(ix) < lowess_min_n:
+                continue
+            if ky in lowess_args:
+                la = lowess_args[ky]
+            else:
+                la = {}
+            ix = ixs[ky]
+            lfit = lowess(vec2[ix], vec1[ix], **la)
+            if plot_points:
+                ax.plot(lfit[:, 0], lfit[:, 1], '-', color=color[ky],
+                        alpha=0.6, lw=4)
+            else:
+                lab = lak[ky[0]] + "/" + lak[ky[1]]
+                ax.plot(lfit[:, 0], lfit[:, 1], '-', color=color[ky],
+                        alpha=0.6, lw=4, label=lab)
+
+        ha, la = ax.get_legend_handles_labels()
+        pad = 0.0001 if plot_points else 0.5
+        leg = fig.legend(ha, la, 'center right', numpoints=1,
+                         handletextpad=pad)
+        leg.draw_frame(False)
+
+        ax.set_xlabel(col1_name)
+        ax.set_ylabel(col2_name)
+
+        return fig
+
+
+    def hist(self, col_name, ax=None, imp_hist_args={},
+             obs_hist_args={}, all_hist_args={}):
+        """
+        Produce a set of three overlaid histograms showing the
+        marginal distributions of the observed values, imputed
+        values, and all values for a given variable.
+
+        Parameters:
+        -----------
+        col_name : string
+            The name of the variable to be plotted.
+        ax : matplotlib axes
+            An axes on which to draw the histograms.  If not provided,
+            one is created.
+        imp_hist_args : dict
+            Keyword arguments to be passed to pyplot.hist when
+            creating the histogram for imputed values.
+        obs_hist_args : dict
+            Keyword arguments to be passed to pyplot.hist when
+            creating the histogram for observed values.
+        all_hist_args : dict
+            Keyword arguments to be passed to pyplot.hist when
+            creating the histogram for all values.
+
+        Returns:
+        --------
+        The matplotlib figure on which the histograms were drawn
+        """
+
+        from statsmodels.graphics import utils as gutils
+        from matplotlib.colors import LinearSegmentedColormap
+
+        if ax is None:
+            fig, ax = gutils.create_mpl_ax(ax)
+        else:
+            fig = ax.get_figure()
+
+        ax.set_position([0.1, 0.1, 0.7, 0.8])
+
+        ixm = self.columns[col_name].ix_miss
+        ixo = self.columns[col_name].ix_obs
+
+        imp = self.data[col_name].iloc[ixm]
+        obs = self.data[col_name].iloc[ixo]
+
+        for di in imp_hist_args, obs_hist_args, all_hist_args:
+            if 'histtype' not in di:
+                di['histtype'] = 'step'
+
+        ha, la = [], []
+        if len(imp) > 0:
+            h = ax.hist(np.asarray(imp), **imp_hist_args)
+            ha.append(h[-1][0])
+            la.append("Imp")
+        h1 = ax.hist(np.asarray(obs), **obs_hist_args)
+        h2 = ax.hist(np.asarray(self.data[col_name]), **all_hist_args)
+        ha.extend([h1[-1][0], h2[-1][0]])
+        la.extend(["Obs", "All"])
+
+        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg.draw_frame(False)
+
+        ax.set_xlabel(col_name)
+        ax.set_ylabel("Frequency")
+
+        return fig
+        
 class Imputer(object):
     """
     Object to conduct imputations for a single variable.
@@ -241,7 +510,7 @@ class Imputer(object):
 
     """
     
-    def __init__(self, formula, model_class, data, method="gaussian",
+    def __init__(self, formula, model_class, data, method="pmm",
                  perturb_method="gaussian", k_pmm=1, init_args={}, fit_args={},
                  alt_distribution=None, scale_method="fix", scale_value=None,
                  transform=None, inv_transform=None):
@@ -287,7 +556,7 @@ class Imputer(object):
                                                                 self.formula)
             m = len(endog_obs)
             rix = np.random.randint(0, m, m)
-            endog_sample = endog_obs.iloc[rix,:]
+            endog_sample = endog_obs[rix]
             exog_sample = exog_obs.iloc[rix,:]
             md = self.model_class(endog_sample, exog_sample, **self.init_args)
             mdf = md.fit(**self.fit_args)
@@ -362,54 +631,42 @@ class Imputer(object):
         # Predict imputed variable for both missing and nonmissing observations
         pendog_obs = md.predict(params, exog_obs)
         pendog_miss = md.predict(params, exog_miss)
-        ii = np.argsort(pendog_obs, axis=0)
+        
+        # Jointly sort the observed and predicted endog values for the
+        # cases with observed values.
+        ii = np.argsort(pendog_obs)
+        endog_obs = endog_obs[ii]
         pendog_obs = pendog_obs[ii]
-        oendog = endog_obs.iloc[ii,:]
-        # Get indices of predicted endogs of nonmissing observations that are
-        # close to those of missing observations
+
+        # Find the closest match to the predicted endog values for cases
+        # with missing endog values.
         ix = np.searchsorted(pendog_obs, pendog_miss)
-        np.clip(ix, 0, len(pendog_obs) - 1, out=ix)
-        ix_list = []
-        for i in range(len(pendog_miss)):
-            k = 0
-            count_low = 0
-            count_high = 0
-            upper = pendog_obs[ix[i]]
-            lower = pendog_obs[ix[i] - 1]
-            target = pendog_miss[i]
-            ixs = []
-            limit_low = False
-            limit_high = False
-            while k < pmm_neighbors:
-                if limit_low:
-                    count_high += 1
-                    ixs.append(ix[i] - 1 + count_high)
-                elif limit_high:
-                    count_low += 1
-                    ixs.append(ix[i] - count_low)
-                elif abs(target - upper) >= abs(target - lower):
-                    count_low += 1
-                    if ix[i] - 1 - count_low >= 0:
-                        ixs.append(ix[i] - count_low)
-                        target = copy.copy(lower)
-                        lower = pendog_obs[ix[i] - 1 - count_low]
-                    else:
-                        ixs.append(ix[i] - 1 + count_high)
-                        limit_low = True
-                elif abs(target - upper) < abs(target - lower):
-                    count_high += 1
-                    if ix[i] + count_high < len(pendog_obs):
-                        ixs.append(ix[i] - 1 + count_high)
-                        target = copy.copy(upper)
-                        upper = pendog_obs[ix[i] + count_high]
-                    else:
-                        ixs.append(ix[i] - count_low)
-                        limit_high = True
-                k += 1
-            ixs = np.clip(ixs, 0, len(oendog) - 1)
-            ix_list.append(np.random.choice(ixs))
-        ix_list = np.squeeze(ix_list)
-        imputed_miss = np.array(oendog.iloc[ix_list,:])
+
+        # Get the indices for the closest pmm_neighbors values on either
+        # side of the closest index.
+        ixm = ix[:, None] +  np.arange(-pmm_neighbors, pmm_neighbors)[None, :]
+
+        # Account for boundary effects
+        msk = np.nonzero((ixm < 0) | (ixm > len(endog_obs) - 1))
+        ixm = np.clip(ixm, 0, len(endog_obs) - 1)
+
+        # Get the distances
+        dx = pendog_miss[:, None] - pendog_obs[ixm]
+        dx = np.abs(dx)
+        dx[msk] = np.inf
+
+        # Closest positions in ix, row-wise.
+        dxi = np.argsort(dx, 1)[:, 0:pmm_neighbors]
+
+        # Choose a column for each row.
+        ir = np.random.randint(0, pmm_neighbors, len(pendog_miss))
+
+        # Unwind the indices
+        jj = np.arange(dxi.shape[0])
+        ix = dxi[[jj, ir]]
+        iz = ixm[[jj, ix]]
+        
+        imputed_miss = np.array(endog_obs[iz])
         if self.transform is not None and self.inv_transform is not None:
             imputed_miss = self.inv_transform(imputed_miss)
         self.data.store_changes(self.endog_name, imputed_miss)
@@ -529,7 +786,7 @@ class AnalysisChain(object):
         whether or not to save the datasets to which an analysis model is fit.
         """
         #TODO: Possibly add transform here instead of in Imputer.
-        for i in range(self.skipnum):
+        for i in range(self.skipnum + 1):
             data = self.imputer_chain.next()
             print i
         md = self.analysis_class.from_formula(self.analysis_formula,
