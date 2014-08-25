@@ -1,3 +1,9 @@
+"""
+Test module for the Heckman module.
+
+All tests pass if file runs without error.
+"""
+
 
 import numpy as np
 import pandas as pd
@@ -6,6 +12,7 @@ import imp
 import csv
 import urllib
 from numpy.testing import assert_
+
 
 from statsmodels.regression import heckman
 imp.reload(heckman)
@@ -35,14 +42,7 @@ def prep_female_labor_supply_data():
 
 	return data_prepped
 
-
-def test_heckman_2step():
-	############################################################################
-	# Tests to make sure that the Heckman 2 step estimates produced by the
-	# Heckman module are the same as/very close to the estimates produced by
-	# Stata for the female labor supply data.
-	############################################################################
-
+def prep_censored_wage_heckman_exampledata():
 	## Get female labor supply data, and construct additional variables ##
 	data_prepped = prep_female_labor_supply_data()
 
@@ -52,11 +52,15 @@ def test_heckman_2step():
 	data['K'] = 0
 	data['K'][(data['KL6'] + data['K618'])>0] = 1
 
+	# create wage variable that is missing if not working
+	data['wage'] = pd.Series(
+		[ data['WW'][i] if data['LFP'][i]==1 else np.nan for i in data.index ],
+		index=data.index)
 
-	## Fit data with Heckman model using 2 step ##
+	## Split data into dependent variable, independent variables for regression equation,
+	## and independent variables for selection equation
+	Y = data['wage']
 
-	Y = data['WW']
-	Y[data['LFP']==0] = np.nan
 
 	X = data[['AX','AX2','WE','CIT']]
 	X = sm.add_constant(X, prepend=True)
@@ -64,10 +68,23 @@ def test_heckman_2step():
 	Z = data[['WA','WA2','FAMINC','WE','K']]
 	Z = sm.add_constant(Z, prepend=True)
 
+	## Return as three vars
+	return Y, X, Z
+
+
+def test_heckman_2step():
+	############################################################################
+	# Tests to make sure that the Heckman 2 step estimates produced by the
+	# Heckman module are the same as/very close to the estimates produced by
+	# Stata for the female labor supply data.
+	############################################################################
+
+	## Fit data with Heckman model using 2 step ##
+	Y, X, Z = prep_censored_wage_heckman_exampledata()
+
 	heckman_model = heckman.Heckman(Y,X,Z)
 	heckman_res = heckman_model.fit(method='2step')
-	heckman_smry = heckman_res.summary()
-	print(heckman_smry)
+	heckman_smry = heckman_res.summary(disp=False)
 
 
 	## Check against Stata's estimates ##
@@ -166,7 +183,7 @@ def test_heckman_2step():
 
 
 	# check against those estimates
-	TOL = 1e-6
+	TOL = 1e-3
 
 	stata_regvar_ordered = ['const','AX','AX2','WE','CIT']
 	stata_selectvar_ordered = ['const','WA','WA2','FAMINC','WE','K']
@@ -180,8 +197,8 @@ def test_heckman_2step():
 	test_list = [
 		{'trueval' : stata_reg_coef_arr, 'estval': heckman_res.params},
 		{'trueval' : stata_reg_stderr_arr, 'estval': np.sqrt(np.diag(heckman_res.scale*heckman_res.normalized_cov_params))},
-		{'trueval' : stata_select_coef_arr, 'estval': heckman_res.params_select},
-		{'trueval' : stata_select_stderr_arr, 'estval': heckman_res.stderr_params_select},
+		{'trueval' : stata_select_coef_arr, 'estval': heckman_res.select_res.params},
+		{'trueval' : stata_select_stderr_arr, 'estval': np.sqrt(np.diag(heckman_res.select_res.scale*heckman_res.select_res.normalized_cov_params))},
 		{'trueval' : stata_lambda_coef, 'estval': heckman_res.param_inverse_mills},
 		{'trueval' : stata_lambda_stderr, 'estval': heckman_res.stderr_inverse_mills},
 		{'trueval' : stata_rho, 'estval': heckman_res.corr_eqnerrors},
@@ -189,4 +206,11 @@ def test_heckman_2step():
 		]
 
 	for test_set in test_list:
-		assert_( all(np.atleast_1d( (test_set['trueval']-test_set['estval'])/test_set['trueval'] < TOL )) )
+		t = np.array(test_set['trueval'])
+		e = np.array(test_set['estval'])
+		assert_( all(np.atleast_1d( (t-e)/t < TOL )) )
+
+
+## Run tests if file is run ##
+if __name__ == '__main__':
+	test_heckman_2step()
