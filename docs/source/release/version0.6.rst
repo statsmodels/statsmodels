@@ -164,6 +164,45 @@ It is now possible to call out to X-12-ARIMA or X-13ARIMA-SEATS from statsmodels
     fig.tight_layout()
 
 
+Heckman Selection Model
+-----------------------
+Added module to estimate the Heckman selection model for correcting selection bias.
+
+
+.. code-block:: python
+
+    from statsmodels.regression import heckman
+    from statsmodels.regression.tests.test_heckman import prep_female_labor_supply_data
+    import numpy as np
+
+    ## Get female labor supply data, and construct additional variables ##
+    data_prepped = prep_female_labor_supply_data()
+
+    data = data_prepped[['WW','LFP','AX','WE','CIT','WA','FAMINC','KL6','K618']]
+    data['AX2'] = data['AX']**2
+    data['WA2'] = data['WA']**2
+    data['K'] = 0
+    data['K'][(data['KL6'] + data['K618'])>0] = 1
+
+
+    ## Fit data with Heckman model using 2 step ##
+
+    Y = data['WW']
+    Y[data['LFP']==0] = np.nan
+
+    X = data[['AX','AX2','WE','CIT']]
+    X = sm.add_constant(X, prepend=True)
+
+    Z = data[['WA','WA2','FAMINC','WE','K']]
+    Z = sm.add_constant(Z, prepend=True)
+
+    heckman_model = heckman.Heckman(Y,X,Z)
+    heckman_res = heckman_model.fit(method='2step')
+    heckman_smry = heckman_res.summary()
+    print(heckman_smry)
+
+
+
 Other important new features
 ----------------------------
 
