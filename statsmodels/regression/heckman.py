@@ -21,7 +21,12 @@ class Heckman(base.LikelihoodModel):
 
     Attributes
     ----------
-    exog_select : ndarray
+    endog : 1darray
+        Data for the dependent variable. Should be set to np.nan for
+        censored observations.
+    exog : 2darray
+        Data for the regression (response) equation
+    exog_select : 2darray
         Data for the selection equation
     """
 
