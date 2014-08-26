@@ -28,19 +28,11 @@ def prep_female_labor_supply_data():
 
 	data_url = 'http://people.stern.nyu.edu/wgreene/Text/Edition7/TableF5-1.csv'
 	data_raw = str((urllib.request.urlopen(data_url)).read()).strip("b'")
-
-	varnames = data_raw.split(sep='\\r\\n')[VAR_NAMES_ROW].split(sep=',')
-	varnames = [var.strip(" ") for var in varnames]
-
-	data_raw_byobs = data_raw.split(sep='\\r\\n')[FIRST_DATA_ROW:FIRST_DATA_ROW+N]
-	data_prepped = [row.split(sep=',') for row in data_raw_byobs]
-	for rowno in range(len(data_prepped)):
-		for colno in range(len(data_prepped[0])):
-			data_prepped[rowno][colno] = float(data_prepped[rowno][colno])
-
-	data_prepped = pd.DataFrame(data_prepped, columns=varnames)
+	data_prepped = pd.io.parsers.read_csv(data_url)
+	data_prepped.columns = [v.strip(' ') for v in data_prepped.columns]
 
 	return data_prepped
+
 
 def prep_censored_wage_heckman_exampledata():
 	## Get female labor supply data, and construct additional variables ##
