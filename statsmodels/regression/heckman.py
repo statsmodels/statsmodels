@@ -165,7 +165,7 @@ class Heckman(base.LikelihoodModel):
         else:
             raise ValueError("Invalid choice for estimation method.")
 
-
+        
         ## return fitted Heckman model
         return fitted
 
@@ -296,9 +296,13 @@ class HeckmanResults(base.LikelihoodModelResults):
         # add the selection equation estimates table
         smry.add_table_params(self.select_res, yname=yname, xname=zname, alpha=alpha,
                              use_t=self.select_res.use_t)
-        
+
         # add the estimate to the inverse Mills estimate
-        smry.add_table_params(base.LikelihoodModelResults(None, np.atleast_1d(self.param_inverse_mills), normalized_cov_params=np.atleast_1d(self.stderr_inverse_mills**2), scale=1.), yname=None, xname=['IMR (Lambda)'], alpha=alpha, use_t=False)  #TODO: grab the actual computed std err for imr
+        smry.add_table_params(
+            base.LikelihoodModelResults(None, np.atleast_1d(self.param_inverse_mills), 
+            normalized_cov_params=np.atleast_1d(self.stderr_inverse_mills**2), scale=1.), 
+            yname=None, xname=['IMR (Lambda)'], alpha=alpha, 
+            use_t=False)  #TODO: return t-score instead of z-score for IMR
         
         # add point estimates for rho and sigma
         diagn_left = [('rho:', ["%#6.3f" % self.corr_eqnerrors]),
