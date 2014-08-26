@@ -188,7 +188,7 @@ class ImputedData(object):
         # Turn endog into a series since it is always 1D
         endog = endog.iloc[:, 0]                                                  
         ix = self.columns[endog_name].ix_obs
-        endog_obs = endog[ix]
+        endog_obs = endog.iloc[ix]
         exog_obs = exog.iloc[ix,:]
         ix = self.columns[endog_name].ix_miss
         exog_miss = exog.iloc[ix]            
@@ -623,6 +623,10 @@ class Imputer(object):
         """
         endog_obs, exog_obs, exog_miss = self.data.get_data_from_formula(
                                                                 self.formula)
+        endog_obs.reset_index(drop=True, inplace=True)
+        exog_obs.reset_index(drop=True, inplace=True)
+        exog_miss.reset_index(drop=True, inplace=True)
+        
         if self.transform is not None and self.inv_transform is not None:
             endog_obs = self.transform(endog_obs)
         md = self.model_class(endog_obs, exog_obs, **self.init_args)
