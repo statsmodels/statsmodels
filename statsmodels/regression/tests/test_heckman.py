@@ -83,8 +83,8 @@ def test_heckman_2step():
 	Y, X, Z = prep_censored_wage_heckman_exampledata()
 
 	heckman_model = heckman.Heckman(Y,X,Z)
-	heckman_res = heckman_model.fit(method='2step')
-	heckman_smry = heckman_res.summary(disp=False)
+	heckman_res = heckman_model.fit(method='twostep')
+	heckman_smry = heckman_res.summary(disp=True)
 
 
 	## Check against Stata's estimates ##
