@@ -39,7 +39,9 @@ def _prep_censored_wage_heckman_exampledata():
 	## Get female labor supply data, and construct additional variables ##
 	data_prepped = _prep_female_labor_supply_data()
 
-	data = data_prepped[['WW','LFP','AX','WE','CIT','WA','FAMINC','KL6','K618']]
+	data = data_prepped[['WW','LFP','AX','WE','CIT','WA','FAMINC','KL6','K618']].copy()
+	del data_prepped
+
 	data['AX2'] = data['AX']**2
 	data['WA2'] = data['WA']**2
 	data['K'] = 0
@@ -240,6 +242,63 @@ def _check_heckman_to_stata(
 
 
 #TODO: add missing non-Pandas data test
+
+	'''
+	Stata estimates can be produced with this Stata code:
+
+	insheet using "http://people.stern.nyu.edu/wgreene/Text/Edition7/TableF5-1.csv", comma clear
+	assert _N==753
+	rename *, upper
+
+	gen AX2 = AX^2
+	gen WA2 = WA^2
+	gen K = (KL6+K618)>0
+
+	replace WW = . if _n==1
+	replace AX = . if _n==2
+	replace WA = . if _n==3
+
+	replace WW = . if LFP==0
+	heckman WW AX AX2 WE CIT, select(WA WA2 FAMINC WE K) twostep
+
+
+	which produces the following output
+
+	Heckman selection model -- two-step estimates   Number of obs      =       751
+	(regression model with sample selection)        Censored obs       =       326
+	                                                Uncensored obs     =       425
+
+	                                                Wald chi2(4)       =     22.85
+	                                                Prob > chi2        =    0.0001
+
+	------------------------------------------------------------------------------
+	          WW |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+	-------------+----------------------------------------------------------------
+	WW           |
+	          AX |   .0178018   .0628961     0.28   0.777    -.1054722    .1410759
+	         AX2 |   .0002058   .0018881     0.11   0.913    -.0034948    .0039064
+	          WE |    .415142   .1003871     4.14   0.000      .218387     .611897
+	         CIT |   .4571676    .318401     1.44   0.151     -.166887    1.081222
+	       _cons |  -.9155062   2.065008    -0.44   0.658    -4.962847    3.131835
+	-------------+----------------------------------------------------------------
+	select       |
+	          WA |   .1951469   .0661367     2.95   0.003     .0655214    .3247724
+	         WA2 |  -.0025278   .0007753    -3.26   0.001    -.0040474   -.0010083
+	      FAMINC |   4.65e-06   4.21e-06     1.11   0.269    -3.59e-06    .0000129
+	          WE |   .0988935   .0229896     4.30   0.000     .0538348    .1439522
+	           K |  -.4527965   .1308841    -3.46   0.001    -.7093247   -.1962683
+	       _cons |  -4.394952   1.406405    -3.12   0.002    -7.151456   -1.638448
+	-------------+----------------------------------------------------------------
+	mills        |
+	      lambda |  -1.107076    1.25778    -0.88   0.379     -3.57228    1.358128
+	-------------+----------------------------------------------------------------
+	         rho |   -0.34488
+	       sigma |  3.2100548
+	------------------------------------------------------------------------------
+
+
+	'''
+
 
 #TODO: add constant option test
 
