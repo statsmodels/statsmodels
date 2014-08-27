@@ -5,6 +5,7 @@ Compatibility tools for differences between Python 2 and 3
 import functools
 import itertools
 import sys
+import urllib
 
 PY3 = (sys.version_info[0] >= 3)
 PY3_2 = sys.version_info[:2] == (3, 2)
@@ -31,6 +32,7 @@ except ImportError:
     import urllib.request
     import urllib.parse
     from urllib.request import HTTPError, urlretrieve
+
 
 if PY3:
     import io
@@ -90,6 +92,7 @@ if PY3:
     urlopen = urllib.request.urlopen
     urljoin = urllib.parse.urljoin
     urlretrieve = urllib.request.urlretrieve
+    urlencode = urllib.parse.urlencode
     string_types = str
     input = input
 
@@ -130,6 +133,7 @@ else:
 
     urlopen = urllib2.urlopen
     urljoin = urlparse.urljoin
+    urlencode = urllib.urlencode
     HTTPError = urllib2.HTTPError
     string_types = basestring
 
