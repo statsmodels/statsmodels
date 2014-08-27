@@ -246,6 +246,37 @@ class Heckman(base.LikelihoodModel):
         return None
 
 
+    def predict(self, params, exog=None):
+        """
+        Return linear predicted values from a design matrix.
+
+        Parameters
+        ----------
+        exog : array-like
+            Design / exogenous data
+        params : array-like, optional after fit has been called
+            Parameters of a linear model
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model has not yet been fit, params is not optional.
+        """
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
+
+        if self._results is None and params is None:
+            raise ValueError("If the model has not been fit, then you must specify the params argument.")
+        if self._results is not None:
+            return np.dot(exog, self._results.params)
+        else:
+            return np.dot(exog, params)
+
+
 class HeckmanResults(base.LikelihoodModelResults):
     """
     Class to represent results/fits for Heckman model.
