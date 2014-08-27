@@ -30,6 +30,7 @@ from .formula import api as formula
 from .iolib.smpickle import load_pickle as load
 
 from .tools.print_version import show_versions
+from .tools.web import doc
 
 import os
 
