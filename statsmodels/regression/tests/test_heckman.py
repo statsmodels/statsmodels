@@ -138,10 +138,14 @@ def test_heckman_2step():
 	       sigma |  3.2000643
 	------------------------------------------------------------------------------
 
+	then get predictions with
+
+	predict y_pred
+
 	'''
 
 	## Stata's estimates ##
-
+	# parameter estimates
 	stata_reg_coef = {
 	          'AX' :    .021061,
 	         'AX2' :   .0001371,
@@ -182,6 +186,12 @@ def test_heckman_2step():
 	stata_rho = -0.34300
 	stata_sigma = 3.2000643
 
+	# predicts on first and last rows of data
+	y_new_firstobs = 4.354729
+	y_new_lastobs = 3.498265
+
+
+
 
 	## check against those estimates
 	stata_regvar_ordered = ['const','AX','AX2','WE','CIT']
@@ -194,13 +204,15 @@ def test_heckman_2step():
 	stata_select_stderr_arr = np.array([stata_select_stderr[k] for k in stata_selectvar_ordered])
 
 	## for pandas input with var names ##
+	TOL=1e-3
+
 	_check_heckman_to_stata(
 		stata_reg_coef_arr, stata_reg_stderr_arr,
 		stata_select_coef_arr, stata_select_stderr_arr,
 		stata_lambda_coef, stata_lambda_stderr,
 		stata_rho, stata_sigma,
 		heckman_res,
-		TOL=1e-3)
+		TOL=TOL)
 
 	## for basic list input ##
 	_check_heckman_to_stata(
@@ -209,7 +221,14 @@ def test_heckman_2step():
 		stata_lambda_coef, stata_lambda_stderr,
 		stata_rho, stata_sigma,
 		heckman_basic_res,
-		TOL=1e-3)
+		TOL=TOL)
+
+	## check that predict method works
+	y_pred = heckman_basic_res.predict()
+	assert_( (y_new_firstobs-y_pred[0])/y_new_firstobs < TOL )
+	assert_( (y_new_lastobs-y_pred[-1])/y_new_lastobs < TOL )
+
+
 
 
 def _check_heckman_to_stata(
