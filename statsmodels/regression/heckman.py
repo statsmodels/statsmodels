@@ -13,7 +13,7 @@ import statsmodels.base.model as base
 from statsmodels.iolib import summary
 from scipy.stats import norm
 from scipy.stats import t
-
+import pdb
 
 class Heckman(base.LikelihoodModel):
     """
@@ -28,49 +28,104 @@ class Heckman(base.LikelihoodModel):
         Data for the regression (response) equation
     exog_select : 2darray
         Data for the selection equation
+    **kwargs:
+        missing=, hasconst=
+
+    See Also
+    --------
+    The selection equation should contain at least one variable that
+    is not in the regression (response) equation, i.e. the selection
+    equation should contain at least one instrument. However, if the
+    user chooses not to do this, this module will still go ahead and
+    estimate the Heckman correction.
     """
 
-    def __init__(self, endog, exog, exog_select):
-        #TODO: add code to take care of missing data in X and Z
-        #TODO: add type checking and shape checking
+    def __init__(self, endog, exog, exog_select, **kwargs):
         #TODO: make sure that selection equation contains at least one more unique var than in reg eqn
 
-        # store data
-        self.exog_select = exog_select
-        self.treated = np.asarray(~np.isnan(endog))
-        super(Heckman, self).__init__(endog, exog)
+        # check that Z has same index as X (and consequently Y through super().__init__)
+        try:
+            if not all(endog.index==exog_select.index):
+                raise ValueError("Z indices need to be the same as X and Y indices")
+        except:
+            pass
+
+        # shape checks
+        if (len(endog) == len(exog)) and (len(endog) == len(exog_select)):
+            pass
+        else:
+            raise ValueError("Y, X, and Z data shapes do not conform with each other.")
+
+        try:
+            if (endog.ndim == 1) and (exog.ndim <= 2) and (exog_select.ndim <= 2):
+                pass
+            else:
+                raise ValueError("Y, X, and Z data shapes do not conform with each other.")
+        except:
+            #TODO: implement dimension check if user inputs data as lists
+            pass
+
+        # give missing (treated) values in endog variable finite values so that super().__init__
+        # does not strip them out -- they will be put back after the call to super().__init__
+        treated = np.asarray(~np.isnan(endog))
+
+        try:
+            endog_nomissing = endog.copy()
+            endog_nomissing[~treated] = -99999
+        except:
+            endog_nomissing = [endog[i] if treated[i] else -99999 for i in range(len(treated))]
+
+        # create 1-D array that will be np.nan for every row of exog_select that has any missing
+        # values and a finite value otherwise for the call to super().__init__ so that it can
+        # strip out rows where exog_select has missing data if missing option is set
+
+        exog_select_1dnan_placeholder = \
+            [np.nan if any(np.isnan(row)) else 1 for row in np.asarray(exog_select)]
+
+        try:
+            exog_select_1dnan_placeholder = pd.Series(exog_select_1dnan_placeholder, index=endog.index)
+        except:
+            pass
+
+        # create array of sequential row positions so that rows of exog_select that have missing
+        # data can be identified after call to super().__init__
+        obsno = list(range(len(endog)))
+
+        # call super().__init__
+        super(Heckman, self).__init__(
+            endog_nomissing, exog=exog,
+            exog_select_1dnan_placeholder=exog_select_1dnan_placeholder, obsno=obsno,
+            treated=treated,
+            **kwargs)
+
+        # put np.nan back into endog for treated rows
+        self.endog = self.data.endog = \
+            [self.endog[i] if self.treated[i] else np.nan for i in range(len(self.treated))]
+
+        # strip out rows stripped out by call to super().__init__ in Z variable
+        self.exog_select = np.asarray([np.asarray(exog_select)[obs] for obs in self.obsno])
+
+        # store variable names of exog_select
+        try:
+            self.exog_select_names = exog_select.columns.tolist()
+        except:
+            self.exog_select_names = None
+
+        # delete attributes created by the call to super().__init__ that are no longer needed
+        del self.exog_select_1dnan_placeholder
+        del self.obsno
+
 
         # store observation counts
-        self.nobs_total = endog.size
+        self.nobs_total = len(endog)
         self.nobs_uncensored = self.nobs = np.sum(self.treated)
         self.nobs_censored = self.nobs_total - self.nobs_uncensored
 
-        # store variable names if data came in as Pandas objects
-        try:
-            self.yname = endog.name
-        except AttributeError:
-            self.yname = None
-
-        try:
-            self.xname = [v for v in exog.columns]
-        except AttributeError:
-            try:
-                self.xname = exog.name
-            except AttributeError:
-                self.xname = None
-
-        try:
-            self.zname = [v for v in exog_select.columns]
-        except AttributeError:
-            try:
-                self.zname = exog_select.name
-            except AttributeError:
-                self.zname = None
 
     def initialize(self):
         self.wendog = self.endog
         self.wexog = self.exog
-        self.wexog_select = self.exog_select
+
 
     def whiten(self, data):
         """
@@ -78,7 +133,7 @@ class Heckman(base.LikelihoodModel):
         """
         return data
 
-    def fit(self, method='2step'):
+    def fit(self, method='twostep'):
         """
         Fit the Heckman selection model.
 
@@ -270,15 +325,16 @@ class HeckmanResults(base.LikelihoodModelResults):
 
         """
 
-        ## Put in y,x,zname detected from data if none supplied
-        if yname is None:
-            yname=self.model.yname
-
-        if xname is None:
-            xname=self.model.xname
-
-        if zname is None:
-            zname=self.model.zname
+        ## Put in Z name detected from data if none supplied, unless that too could not be
+        ## inferred from data, then put in generic names
+        if zname is None and self.model.exog_select_names is not None:
+            zname=self.model.exog_select_names
+        elif zname is None and self.model.exog_select_names is None:
+            try:
+                zname = ['z' + str(i) for i in range(len(self.model.exog_select[0]))]
+                zname[0]  = 'z0_or_zconst'
+            except:
+                zname = 'z0_or_zconst'
 
 
         ## create summary object

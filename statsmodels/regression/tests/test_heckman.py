@@ -12,12 +12,14 @@ import imp
 import csv
 import urllib
 from numpy.testing import assert_
+import pdb
 
 
 from statsmodels.regression import heckman
+
 imp.reload(heckman)
 
-def prep_female_labor_supply_data():
+def _prep_female_labor_supply_data():
 	############################################################################
 	# Gets Greene's female labor supply data, and prepares it for use.
 	############################################################################
@@ -27,22 +29,22 @@ def prep_female_labor_supply_data():
 	N = 753
 
 	data_url = 'http://people.stern.nyu.edu/wgreene/Text/Edition7/TableF5-1.csv'
-	data_raw = str((urllib.request.urlopen(data_url)).read()).strip("b'")
 	data_prepped = pd.io.parsers.read_csv(data_url)
 	data_prepped.columns = [v.strip(' ') for v in data_prepped.columns]
 
 	return data_prepped
 
 
-def prep_censored_wage_heckman_exampledata():
+def _prep_censored_wage_heckman_exampledata():
 	## Get female labor supply data, and construct additional variables ##
-	data_prepped = prep_female_labor_supply_data()
+	data_prepped = _prep_female_labor_supply_data()
 
 	data = data_prepped[['WW','LFP','AX','WE','CIT','WA','FAMINC','KL6','K618']]
 	data['AX2'] = data['AX']**2
 	data['WA2'] = data['WA']**2
 	data['K'] = 0
-	data['K'][(data['KL6'] + data['K618'])>0] = 1
+
+	data.loc[(data['KL6'] + data['K618'])>0, 'K'] = 1
 
 	# create wage variable that is missing if not working
 	data['wage'] = pd.Series(
@@ -71,15 +73,20 @@ def test_heckman_2step():
 	# Stata for the female labor supply data.
 	############################################################################
 
-	## Fit data with Heckman model using 2 step ##
-	Y, X, Z = prep_censored_wage_heckman_exampledata()
+	### Fit data with Heckman model using 2 step ###
+	## With pandas input with named variables ##
+	Y, X, Z = _prep_censored_wage_heckman_exampledata()
 
 	heckman_model = heckman.Heckman(Y,X,Z)
 	heckman_res = heckman_model.fit(method='twostep')
 	heckman_smry = heckman_res.summary(disp=True)
 
+	## With list input (no names) ##
+	heckman_basic_model = heckman.Heckman(Y.tolist(), X.as_matrix().tolist(), Z.as_matrix().tolist())
+	heckman_basic_res = heckman_basic_model.fit(method='twostep')
+	heckman_basic_smry = heckman_basic_res.summary(disp=True)
 
-	## Check against Stata's estimates ##
+	### Check against Stata's estimates ###
 	'''
 	Stata estimates can be produced with this Stata code:
 
@@ -131,7 +138,7 @@ def test_heckman_2step():
 
 	'''
 
-	# Stata's estimates
+	## Stata's estimates ##
 
 	stata_reg_coef = {
 	          'AX' :    .021061,
@@ -174,9 +181,7 @@ def test_heckman_2step():
 	stata_sigma = 3.2000643
 
 
-	# check against those estimates
-	TOL = 1e-3
-
+	## check against those estimates
 	stata_regvar_ordered = ['const','AX','AX2','WE','CIT']
 	stata_selectvar_ordered = ['const','WA','WA2','FAMINC','WE','K']
 
@@ -185,6 +190,37 @@ def test_heckman_2step():
 
 	stata_select_coef_arr = np.array([stata_select_coef[k] for k in stata_selectvar_ordered])
 	stata_select_stderr_arr = np.array([stata_select_stderr[k] for k in stata_selectvar_ordered])
+
+	## for pandas input with var names ##
+	_check_heckman_to_stata(
+		stata_reg_coef_arr, stata_reg_stderr_arr,
+		stata_select_coef_arr, stata_select_stderr_arr,
+		stata_lambda_coef, stata_lambda_stderr,
+		stata_rho, stata_sigma,
+		heckman_res,
+		TOL=1e-3)
+
+	## for basic list input ##
+	_check_heckman_to_stata(
+		stata_reg_coef_arr, stata_reg_stderr_arr,
+		stata_select_coef_arr, stata_select_stderr_arr,
+		stata_lambda_coef, stata_lambda_stderr,
+		stata_rho, stata_sigma,
+		heckman_basic_res,
+		TOL=1e-3)
+
+
+def _check_heckman_to_stata(
+		stata_reg_coef_arr, stata_reg_stderr_arr,
+		stata_select_coef_arr, stata_select_stderr_arr,
+		stata_lambda_coef, stata_lambda_stderr,
+		stata_rho, stata_sigma,
+		heckman_res,
+		TOL=1e-3):
+	# this function checks output from the Heckman module against known Stata output;
+	# an error occurs if they are different, otherwise function will simply return
+
+
 
 	test_list = [
 		{'trueval' : stata_reg_coef_arr, 'estval': heckman_res.params},
@@ -201,6 +237,11 @@ def test_heckman_2step():
 		t = np.array(test_set['trueval'])
 		e = np.array(test_set['estval'])
 		assert_( all(np.atleast_1d( (t-e)/t < TOL )) )
+
+
+#TODO: add missing non-Pandas data test
+
+#TODO: add constant option test
 
 
 ## Run tests if file is run ##
