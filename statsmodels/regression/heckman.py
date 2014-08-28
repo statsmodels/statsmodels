@@ -1,5 +1,5 @@
 """
-Heckman correction for sample selection bias.
+Heckman correction for sample selection bias (the Heckit procedure).
 
 Created August 19, 2014 by B.I.
 Last modified August 25, 2014 by B.I.
@@ -25,11 +25,15 @@ class Heckman(base.LikelihoodModel):
         Data for the dependent variable. Should be set to np.nan for
         censored observations.
     exog : 2darray
-        Data for the regression (response) equation
+        Data for the regression (response) equation. If a constant
+        term is desired, the user should directly add the constant
+        column to the data before using it as an argument here.
     exog_select : 2darray
-        Data for the selection equation
+        Data for the selection equation. If a constant
+        term is desired, the user should directly add the constant
+        column to the data before using it as an argument here.
     **kwargs:
-        missing=, hasconst=
+        missing=
 
     See Also
     --------
@@ -133,6 +137,18 @@ class Heckman(base.LikelihoodModel):
         """
         return data
 
+    def get_datamats(self):
+        Y = np.asarray(self.endog)
+        Y = Y[self.treated]
+
+        X = np.asarray(self.exog)
+        X = X[self.treated,:]
+
+        Z = np.asarray(self.exog_select)
+
+        return Y, X, Z
+
+
     def fit(self, method='twostep'):
         """
         Fit the Heckman selection model.
@@ -154,13 +170,7 @@ class Heckman(base.LikelihoodModel):
         """
 
         ## prep data
-        Y = np.asarray(self.endog)
-        Y = Y[self.treated]
-
-        X = np.asarray(self.exog)
-        X = X[self.treated,:]
-
-        Z = np.asarray(self.exog_select)
+        Y, X, Z = self.get_datamats()
 
         ## fit
         if method=='twostep':
@@ -235,15 +245,83 @@ class Heckman(base.LikelihoodModel):
         results = HeckmanResults(self, params, normalized_varcov, sigma2Hat,
             select_res=step1res,
             param_inverse_mills=betaHat_inverse_mills, stderr_inverse_mills=stderr_betaHat_inverse_mills,
-            var_reg_error=sigma2Hat, corr_eqnerrors=rhoHat)
+            var_reg_error=sigma2Hat, corr_eqnerrors=rhoHat,
+            method='twostep')
 
         return results
 
 
     def _fit_mle(self, Y, X, Z):
+        #TODO: implement MLE fitting
         raise ValueError("Invalid choice for estimation method."
             " MLE estimation may be implemented at a later time.")
         return None
+
+
+    def loglike(self, params_all):
+        """
+        Log-likelihood of model.
+
+        Parameters
+        ----------
+        params_all : array-like
+            Parameter estimates, with the parameters for the regression
+            equation coming first, then the parameters for the
+            selection equation, then rho, then sigma2.
+
+        Returns
+        -------
+        loglike : float
+            The value of the log-likelihood function for a Heckman correction model.
+
+        """
+
+        # set up data and parameters needed to compute log likelihood
+        Y, X, Z = self.get_datamats()
+        D = self.treated
+
+        num_xvars = X.shape[1]
+        num_zvars = Z.shape[1]
+
+        xbeta = np.asarray(params_all[:num_xvars])  # reg eqn coefs
+        zbeta = np.asarray(params_all[num_xvars:num_xvars+num_zvars])  # selection eqn coefs
+        rho = params_all[-2]
+        sigma2 = params_all[-1]
+
+        # line the data vectors up
+        Z_zbeta_aligned = Z.dot(zbeta)
+
+        X_xbeta = X.dot(xbeta)
+        X_xbeta_aligned = np.empty(self.nobs_total)
+        X_xbeta_aligned[:] = np.nan
+        X_xbeta_aligned[D] = X_xbeta
+        del X_xbeta
+
+        Y_aligned = np.empty(self.nobs_total)
+        Y_aligned[:] = np.nan
+        Y_aligned[D] = Y
+
+        # create an array where each row is the log likelihood contribution of
+        # the regression model for the corresponding observation
+        ll_contrib_regmod = np.multiply(D,
+            np.log(
+                (2*np.pi*sigma2)**(-1/2) * \
+                    np.exp(
+                        -(Y_aligned - X_xbeta_aligned - rho * norm.pdf(Z_zbeta_aligned)/norm.cdf(Z_zbeta_aligned))**2 / (2*sigma2)
+                    )
+                )
+            )
+        ll_contrib_regmod[~D] = 0
+
+        # create an array where each row is the log likelihood contribution of
+        # the selection model for the corresponding observation
+        ll_contrib_selectmod = np.multiply(D, np.log(norm.cdf(Z_zbeta_aligned))) + \
+            np.multiply(1-D, np.log(1-norm.cdf(Z_zbeta_aligned)))
+
+        # compute the log likelihood given the data and inputted parameters
+        ll = np.sum(ll_contrib_regmod) + np.sum(ll_contrib_selectmod)
+
+        return ll
 
 
     def predict(self, params, exog=None):
@@ -296,6 +374,8 @@ class HeckmanResults(base.LikelihoodModelResults):
     corr_eqnerrors : scalar
         Estimate of the "rho" term, i.e. the correlation estimate of the errors between the
         regression (response) equation and the selection equation
+    method : string
+        The method used to produce the estimates, i.e. 'twostep', 'mle'
     """
 
     #TODO: better to inherit from RegressionResults?
@@ -303,7 +383,8 @@ class HeckmanResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
         select_res=None,
         param_inverse_mills=None, stderr_inverse_mills=None,
-        var_reg_error=None, corr_eqnerrors=None):
+        var_reg_error=None, corr_eqnerrors=None,
+        method=None):
 
         super(HeckmanResults, self).__init__(model, params,
                                                 normalized_cov_params,
@@ -314,6 +395,7 @@ class HeckmanResults(base.LikelihoodModelResults):
         self.stderr_inverse_mills = stderr_inverse_mills
         self.var_reg_error = var_reg_error
         self.corr_eqnerrors = corr_eqnerrors
+        self.method = method
 
         if not hasattr(self, 'use_t'):
             self.use_t = False
@@ -373,9 +455,16 @@ class HeckmanResults(base.LikelihoodModelResults):
         smry = summary.Summary()
 
         # add top info
+        if self.method=='twostep':
+            methodstr = 'Heckman Two-Step'
+        elif self.method=='mle':
+            methodstr = 'Heckman MLE'
+        else:
+            raise ValueError("Invalid method set")
+
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
-                    ('Method:', ['Heckman Two-Step']),
+                    ('Method:', [methodstr]),
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Total Obs.:', ["%#i" % self.model.nobs_total]),
