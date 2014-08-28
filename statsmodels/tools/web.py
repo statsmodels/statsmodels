@@ -41,7 +41,7 @@ def _generate_url(arg, stable):
     return url
 
 
-def open_doc(arg=None, stable=None):
+def webdoc(arg=None, stable=None):
     """
     Opens a browser and displays online documentation
 
@@ -58,9 +58,9 @@ def open_doc(arg=None, stable=None):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> sm.open_doc()  # Documention site
-    >>> sm.open_doc('glm')  # Search for glm in docs
-    >>> sm.open_doc(sm.OLS, stable=False)  # Go to generated help for OLS, devel
+    >>> sm.webdoc()  # Documention site
+    >>> sm.webdoc('glm')  # Search for glm in docs
+    >>> sm.webdoc(sm.OLS, stable=False)  # Go to generated help for OLS, devel
 
     Notes
     -----

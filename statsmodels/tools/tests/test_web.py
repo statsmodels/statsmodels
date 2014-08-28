@@ -1,4 +1,4 @@
-from statsmodels.tools.web import _generate_url, open_doc
+from statsmodels.tools.web import _generate_url, webdoc
 from statsmodels.regression.linear_model import OLS
 from unittest import TestCase
 from nose.tools import assert_equal, assert_raises
@@ -26,8 +26,8 @@ class TestWeb(TestCase):
         assert_equal(url, 'http://statsmodels.sourceforge.net/devel/')
 
     def test_errors(self):
-        assert_raises(ValueError, open_doc, array, True)
-        assert_raises(ValueError, open_doc, 1, False)
+        assert_raises(ValueError, webdoc, array, True)
+        assert_raises(ValueError, webdoc, 1, False)
 
 
 
