@@ -38,6 +38,12 @@ matrix:
     - PANDAS=0.13
   - python: 2.7
     env:
+    - PYTHON=3.4
+    - NUMPY=1.8
+    - SCIPY=0.14
+    - PANDAS=0.14
+  - python: 2.7
+    env:
     - PYTHON=2.7
     - NUMPY=
     - SCIPY=
