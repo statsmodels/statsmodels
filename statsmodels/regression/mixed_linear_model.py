@@ -378,6 +378,8 @@ class MixedLM(base.LikelihoodModel):
                                                exog_re=exog_re,
                                                *args, **kwargs)
 
+        mod.exog_re_names = exog_re_names
+
         return mod
 
     def group_list(self, array):
@@ -1579,7 +1581,8 @@ class MixedLMResults(base.LikelihoodModelResults):
 
     def ranef(self):
         """
-        Returns posterior means of all random effects.
+        Returns the conditional means of all random effects given the
+        data.
 
         Returns:
         --------
@@ -1618,7 +1621,7 @@ class MixedLMResults(base.LikelihoodModelResults):
     def ranef_cov(self):
         """
         Returns the conditional covariance matrix of the random
-        effects for each group.
+        effects for each group given the data.
 
         Returns:
         --------
@@ -1653,7 +1656,8 @@ class MixedLMResults(base.LikelihoodModelResults):
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
                 title=None, alpha=.05):
-        """Summarize the Regression Results
+        """
+        Summarize the mixed model regression results.
 
         Parameters
         -----------
@@ -1679,7 +1683,6 @@ class MixedLMResults(base.LikelihoodModelResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary
             results
-
         """
 
         from statsmodels.iolib import summary2
