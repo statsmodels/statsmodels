@@ -11,8 +11,10 @@ import numpy as np
 import statsmodels.api as sm
 import statsmodels.base.model as base
 from statsmodels.iolib import summary
+from statsmodels.tools.numdiff import approx_fprime
 from scipy.stats import norm
 from scipy.stats import t
+import warnings
 import pdb
 
 class Heckman(base.LikelihoodModel):
@@ -104,7 +106,9 @@ class Heckman(base.LikelihoodModel):
 
         # put np.nan back into endog for treated rows
         self.endog = self.data.endog = \
-            [self.endog[i] if self.treated[i] else np.nan for i in range(len(self.treated))]
+            np.asarray(
+                [self.endog[i] if self.treated[i] else np.nan for i in range(len(self.treated))]
+                )
 
         # strip out rows stripped out by call to super().__init__ in Z variable
         self.exog_select = np.asarray([np.asarray(exog_select)[obs] for obs in self.obsno])
@@ -149,7 +153,7 @@ class Heckman(base.LikelihoodModel):
         return Y, X, Z
 
 
-    def fit(self, method='twostep'):
+    def fit(self, method='twostep', start_params_mle=None, method_mle=None, maxiter_mle=None, **kwargs_mle):
         """
         Fit the Heckman selection model.
 
@@ -157,6 +161,14 @@ class Heckman(base.LikelihoodModel):
         ----------
         method : str
             Can only be "2step", which uses Heckman's two-step method.
+        start_params_mle: 1darray
+            If using MLE, starting parameters.
+        method_mle: str
+            If using MLE, the MLE estimation method.
+        maxiter_mle: scalar
+            If using MLE, the maximum number of iterations for MLE estimation.
+        **kwargs_mle:
+            Other arguments to pass to optimizer for MLE estimation.
 
         Returns
         -------
@@ -169,14 +181,12 @@ class Heckman(base.LikelihoodModel):
 
         """
 
-        ## prep data
-        Y, X, Z = self.get_datamats()
-
         ## fit
         if method=='twostep':
-            results = self._fit_twostep(Y, X, Z)
+            results = self._fit_twostep()
         elif method=='mle':
-            results = self._fit_mle(Y, X, Z)
+            results = self._fit_mle(
+                start_params_mle=start_params_mle, method_mle=method_mle, maxiter_mle=maxiter_mle)
         else:
             raise ValueError("Invalid choice for estimation method.")
 
@@ -185,11 +195,14 @@ class Heckman(base.LikelihoodModel):
         return results
 
 
-    def _fit_twostep(self, Y, X, Z):
+    def _fit_twostep(self):
         ########################################################################
         # PRIVATE METHOD
         # Fits using Heckman two-step from Heckman (1979).
         ########################################################################
+
+        ## prep data
+        Y, X, Z = self.get_datamats()
 
         ## Step 1
         step1model = sm.Probit(self.treated, Z)
@@ -251,14 +264,78 @@ class Heckman(base.LikelihoodModel):
         return results
 
 
-    def _fit_mle(self, Y, X, Z):
-        #TODO: implement MLE fitting
-        raise ValueError("Invalid choice for estimation method."
-            " MLE estimation may be implemented at a later time.")
-        return None
+    def _fit_mle(self, start_params_mle=None, method_mle=None, maxiter_mle=None, **kwargs_mle):
+        #NOTE: see
+        # http://www.econ.psu.edu/~hbierens/EasyRegTours/HECKMAN_Tourfiles/HECKMAN.PDF
 
+        # get number of X parameters and number of Z parameters
+        Y, X, Z = self.get_datamats()  #TODO: implement this chunk of code a better way
+        num_xvars = X.shape[1]
+        num_zvars = Z.shape[1]
+        del Y, X, Z
 
-    def loglike(self, params_all):
+        # let the Heckman two-step parameter estimates be the starting values
+        # of the the optimizer of the Heckman MLE estimate if not specified by user
+        if start_params_mle is None:
+            twostep_res = self._fit_twostep()
+
+            xparams = np.asarray(twostep_res.params)
+            zparams = np.asarray(twostep_res.select_res.params)
+            params_all = np.append(xparams, zparams)
+            params_all = np.append(params_all, twostep_res.corr_eqnerrors)
+            params_all = np.append(params_all, twostep_res.var_reg_error)
+
+            start_params_mle = params_all
+
+        # fit Heckman parameters by MLE
+        results_mle = super(Heckman, self).fit(
+            start_params=start_params_mle, method=method_mle, maxiter=maxiter_mle,
+            **kwargs_mle
+            )
+
+        xbeta_hat = np.asarray(results_mle.params[:num_xvars])  # reg eqn coefs
+        zbeta_hat = np.asarray(results_mle.params[num_xvars:num_xvars+num_zvars])  # selection eqn coefs
+        rho_hat = results_mle.params[-2]
+        sigma2_hat = results_mle.params[-1]
+
+        scale = results_mle.scale
+        xbeta_ncov_hat = results_mle.normalized_cov_params[:num_xvars,:num_xvars]  #TODO: I think these should be the sandwich estimates, but some variances are negative
+        zbeta_ncov_hat = results_mle.normalized_cov_params[num_xvars:(num_xvars+num_zvars),num_xvars:(num_xvars+num_zvars)]
+
+        rho_var_hat = results_mle.normalized_cov_params[-2,-2] * scale
+        sigma2_var_hat = results_mle.normalized_cov_params[-1,-1] * scale
+
+        imr_hat = rho_hat*np.sqrt(sigma2_hat)
+
+        #NOTE: for two RVs:
+        # Var(XY) = Var(X)Var(Y) + Var(X)E(Y)^2 + Var(Y)E(X)^2
+        #TODO: check that this is an ok way to compute this std err,
+        # since we would need to assume that the MLE estimates are unbiased
+        # and independent
+        imr_stderr_hat = np.sqrt(
+            rho_var_hat*sigma2_var_hat + rho_var_hat*(sigma2_hat**2) + sigma2_var_hat*(rho_hat**2)
+            )
+
+        # fill in results for this fit, and return
+
+        DUMMY_COEF_STDERR_IMR = 0.
+
+        results = HeckmanResults(self, xbeta_hat,
+            xbeta_ncov_hat, scale,
+            select_res=base.LikelihoodModelResults(None, zbeta_hat, zbeta_ncov_hat, scale),
+            param_inverse_mills=imr_hat, stderr_inverse_mills=imr_stderr_hat,
+            var_reg_error=sigma2_hat, corr_eqnerrors=rho_hat,
+            method='mle')
+
+        return results
+
+    def loglike(self, params):
+        return self.loglikeobs(params).sum(axis=0)
+
+    def nloglike(self, params):
+        return -self.loglikeobs(params).sum(axis=0)
+
+    def loglikeobs(self, params_all):
         """
         Log-likelihood of model.
 
@@ -319,9 +396,49 @@ class Heckman(base.LikelihoodModel):
             np.multiply(1-D, np.log(1-norm.cdf(Z_zbeta_aligned)))
 
         # compute the log likelihood given the data and inputted parameters
-        ll = np.sum(ll_contrib_regmod) + np.sum(ll_contrib_selectmod)
+        ll_obs = ll_contrib_regmod + ll_contrib_selectmod
 
-        return ll
+        return ll_obs
+
+    def score(self, params):
+        '''
+        Gradient of log-likelihood evaluated at params
+        '''
+        #TODO: this is the numerical approx func taken from
+        # base.model.GenericLikelihoodModel -- eventually should
+        # replace this with an analytic form
+
+        kwds = {}
+        kwds.setdefault('centered', True)
+        return approx_fprime(params, self.loglike, **kwds).ravel()
+
+    def jac(self, params, **kwds):
+        '''
+        Jacobian/Gradient of log-likelihood evaluated at params for each
+        observation.
+        '''
+        #TODO: this is the numerical approx func taken from
+        # base.model.GenericLikelihoodModel -- eventually should
+        # replace this with an analytic form
+
+        #kwds.setdefault('epsilon', 1e-4)
+        kwds.setdefault('centered', True)
+        return approx_fprime(params, self.loglikeobs, **kwds)
+
+    def hessian(self, params):
+        '''
+        Hessian of log-likelihood evaluated at params
+        '''
+        #TODO: this is the numerical approx func taken from
+        # base.model.GenericLikelihoodModel -- eventually should
+        # replace this with an analytic form
+
+        from statsmodels.tools.numdiff import approx_hess
+        # need options for hess (epsilon)
+        return approx_hess(params, self.loglike)
+
+
+
 
 
     def predict(self, params, exog=None):
