@@ -1437,7 +1437,6 @@ class MixedLM(base.LikelihoodModel):
                 break
 
             # Gradient iterations
-            print "X"
             if do_cg:
                 try:
                     fit_args = dict(kwargs)
