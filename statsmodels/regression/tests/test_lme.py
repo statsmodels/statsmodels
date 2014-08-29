@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from statsmodels.regression.mixed_linear_model import MixedLM
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 from . import lme_r_results
 from scipy.misc import derivative
 from statsmodels.base import _penalties as penalties
@@ -127,6 +127,17 @@ class TestMixedLM(object):
         mdf1 = MixedLM(endog, exog, groups).fit()
         mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
         assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
+
+    def test_history(self):
+
+        np.random.seed(3235)
+        exog = np.random.normal(size=(300,4))
+        groups = np.kron(np.arange(100), [1,1,1])
+        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
+        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        mod = MixedLM(endog, exog, groups)
+        rslt = mod.fit(full_output=True)
+        assert_equal(hasattr(rslt, "hist"), True)
 
     def test_EM(self):
 

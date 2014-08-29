@@ -210,8 +210,7 @@ class MixedLM(base.LikelihoodModel):
     exog_re : 2d array-like
         A matrix of covariates used to determine the variance and
         covariance structure (the "random effects" covariates).  If
-        None, defaults to a random intercept for each of the groups.
-        May also be set from a formula using a call to `set_random`.
+        None, defaults to a random intercept for each group.
     use_sqrt : bool
         If True, optimization is carried out using the lower
         triangle of the square root of the random effects
@@ -1438,6 +1437,7 @@ class MixedLM(base.LikelihoodModel):
                 break
 
             # Gradient iterations
+            print "X"
             if do_cg:
                 try:
                     fit_args = dict(kwargs)
@@ -1454,7 +1454,7 @@ class MixedLM(base.LikelihoodModel):
                 params_prof = rslt.params
                 success = True
                 if hist is not None:
-                    hist.append(rslt.allvecs)
+                    hist.append(rslt.mle_retvals)
                 break
 
         if not success:
