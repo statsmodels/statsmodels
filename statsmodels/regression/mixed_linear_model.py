@@ -146,7 +146,8 @@ def _smw_solve(s, A, B, BI, rhs):
     # Direct calculation
     if _no_smw or BI is None:
         mat = np.dot(A, np.dot(B, A.T))
-        mat += s * np.eye(A.shape[0])
+        # Add constant to diagonal
+        mat.flat[::mat.shape[0]+1] += s
         return np.linalg.solve(mat, rhs)
 
     # Use SMW identity
@@ -175,15 +176,21 @@ def _smw_logdet(s, A, B, BI, B_logdet):
         The inverse of `B`; can be None if B is singular.
     B_logdet : real
         The log determinant of B
+
+    Returns:
+    --------
+    The log determinant of s*I + A*B*A'.
     """
+
+    p = A.shape[0]
 
     if _no_smw or BI is None:
         mat = np.dot(A, np.dot(B, A.T))
-        mat += s * np.eye(A.shape[0])
+        # Add constant to diagonal
+        mat.flat[::p+1] += s
         _, ld = np.linalg.slogdet(mat)
         return ld
 
-    p = A.shape[0]
     ld = p * np.log(s)
 
     qmat = BI + np.dot(A.T, A) / s
@@ -1445,7 +1452,7 @@ class MixedLM(base.LikelihoodModel):
                     fit_args["retall"] = hist is not None
                     if "disp" not in fit_args:
                         fit_args["disp"] = False
-                    # Only bfgs seems to work for some reason.
+                    # Only bfgs and lbfgs seem to work
                     fit_args["method"] = "bfgs"
                     rslt = super(MixedLM, self).fit(start_params=params_prof, **fit_args)
                 except np.linalg.LinAlgError:
