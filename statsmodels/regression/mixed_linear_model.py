@@ -116,7 +116,7 @@ from statsmodels.base._penalties import Penalty
 # factor-structured matrices.  Should be False except when testing.
 _no_smw = False
 
-def _smw_solve(s, A, B, BI, rhs):
+def _smw_solve(s, A, AtA, B, BI, rhs):
     """
     Solves the system (s*I + A*B*A') * x = rhs for x and returns x.
 
@@ -126,6 +126,8 @@ def _smw_solve(s, A, B, BI, rhs):
         See above for usage
     A : square symmetric ndarray
         See above for usage
+    AtA : square ndarray
+        A.T * A
     B : square symmetric ndarray
         See above for usage
     BI : square symmetric ndarray
@@ -151,7 +153,7 @@ def _smw_solve(s, A, B, BI, rhs):
         return np.linalg.solve(mat, rhs)
 
     # Use SMW identity
-    qmat = BI + np.dot(A.T, A) / s
+    qmat = BI + AtA / s
     u = np.dot(A.T, rhs)
     qmat = np.linalg.solve(qmat, u)
     qmat = np.dot(A, qmat)
@@ -159,7 +161,7 @@ def _smw_solve(s, A, B, BI, rhs):
     return rslt
 
 
-def _smw_logdet(s, A, B, BI, B_logdet):
+def _smw_logdet(s, A, AtA, B, BI, B_logdet):
     """
     Use the matrix determinant lemma to accelerate the calculation of
     the log determinant of s*I + A*B*A'.
@@ -170,6 +172,8 @@ def _smw_logdet(s, A, B, BI, B_logdet):
         See above for usage
     A : square symmetric ndarray
         See above for usage
+    AtA : square matrix
+        A.T * A
     B : square symmetric ndarray
         See above for usage
     BI : square symmetric ndarray
@@ -193,7 +197,7 @@ def _smw_logdet(s, A, B, BI, B_logdet):
 
     ld = p * np.log(s)
 
-    qmat = BI + np.dot(A.T, A) / s
+    qmat = BI + AtA / s
     _, ld1 = np.linalg.slogdet(qmat)
 
     return B_logdet + ld + ld1
@@ -303,6 +307,9 @@ class MixedLM(base.LikelihoodModel):
         self.endog_li = self.group_list(self.endog)
         self.exog_li = self.group_list(self.exog)
         self.exog_re_li = self.group_list(self.exog_re)
+
+        # Precompute this.
+        self.exog_re2_li = [np.dot(x.T, x) for x in self.exog_re_li]
 
         # The total number of observations, summed over all groups
         self.n_totobs = sum([len(y) for y in self.endog_li])
@@ -502,10 +509,12 @@ class MixedLM(base.LikelihoodModel):
 
                     exog = self.exog_li[k]
                     ex_r = self.exog_re_li[k]
+                    ex2_r = self.exog_re2_li[k]
                     resid = resid_all[self.row_indices[lab]]
 
                     x = exog[:,j]
-                    u = _smw_solve(scale, ex_r, cov_re, cov_re_inv, x)
+                    u = _smw_solve(scale, ex_r, ex2_r, cov_re,
+                                   cov_re_inv, x)
                     a += np.dot(u, x)
                     b -= 2 * np.dot(u, resid)
 
@@ -697,20 +706,22 @@ class MixedLM(base.LikelihoodModel):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
+            ex2_r = self.exog_re2_li[k]
             resid = resid_all[self.row_indices[lab]]
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = _smw_logdet(1., ex_r, cov_re, cov_re_inv,
+            ld = _smw_logdet(1., ex_r, ex2_r, cov_re, cov_re_inv,
                              cov_re_logdet)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            u = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            u = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv, resid)
             qf += np.dot(resid, u)
 
             # Adjustment for REML
             if self.reml:
-                mat = _smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
+                mat = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                                 exog)
                 xvx += np.dot(exog.T, mat)
 
         if self.reml:
@@ -837,21 +848,25 @@ class MixedLM(base.LikelihoodModel):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
+            ex2_r = self.exog_re2_li[k]
 
             # The residuals
             expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
             if self.reml:
-                viexog = _smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
+                viexog = _smw_solve(1., ex_r, ex2_r, cov_re,
+                                    cov_re_inv, exog)
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
             jj = 0
-            vex = _smw_solve(1., ex_r, cov_re, cov_re_inv, ex_r)
-            vir = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            vex = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                             ex_r)
+            vir = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                             resid)
             for jj,mat in self._gen_dV_dPsi(ex_r):
-                dlv[jj] = np.trace(_smw_solve(1., ex_r, cov_re,
+                dlv[jj] = np.trace(_smw_solve(1., ex_r, ex2_r, cov_re,
                                      cov_re_inv, mat))
                 rvavr[jj] += np.dot(vir, np.dot(mat, vir))
                 if self.reml:
@@ -1017,14 +1032,17 @@ class MixedLM(base.LikelihoodModel):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
+            ex2_r = self.exog_re2_li[k]
 
             # The residuals
             expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
-            viexog = _smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
+            viexog = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                                exog)
             xtvix += np.dot(exog.T, viexog)
-            vir = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            vir = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                             resid)
             rvir += np.dot(resid, vir)
 
             for jj1,mat1 in self._gen_dV_dPsi(ex_r):
@@ -1035,7 +1053,8 @@ class MixedLM(base.LikelihoodModel):
                     xtax[jj1] += np.dot(viexog.T, np.dot(mat1, viexog))
 
                 B[jj1] += np.dot(vir, np.dot(mat1, vir))
-                E = _smw_solve(1., ex_r, cov_re, cov_re_inv, mat1)
+                E = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                               mat1)
 
                 for jj2,mat2 in self._gen_dV_dPsi(ex_r, jj1):
                     Q = np.dot(mat2, E)
@@ -1044,7 +1063,8 @@ class MixedLM(base.LikelihoodModel):
                     D[jj1, jj2] += vt
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
-                    R = _smw_solve(1., ex_r, cov_re, cov_re_inv, Q)
+                    R = _smw_solve(1., ex_r, ex2_r, cov_re,
+                                   cov_re_inv, Q)
                     rt = np.trace(R) / 2
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -1126,12 +1146,14 @@ class MixedLM(base.LikelihoodModel):
 
             # Contruct the marginal covariance matrix for this group
             ex_r = self.exog_re_li[k]
+            ex2_r = self.exog_re2_li[k]
 
-            vr1 = _smw_solve(scale, ex_r, cov_re, cov_re_inv, resid)
+            vr1 = _smw_solve(scale, ex_r, ex2_r, cov_re, cov_re_inv,
+                             resid)
             vr1 = np.dot(ex_r.T, vr1)
             vr1 = np.dot(cov_re, vr1)
 
-            vr2 = _smw_solve(scale, ex_r, cov_re, cov_re_inv,
+            vr2 = _smw_solve(scale, ex_r, ex2_r, cov_re, cov_re_inv,
                             self.exog_re_li[k])
             vr2 = np.dot(vr2, cov_re)
             vr2 = np.dot(ex_r.T, vr2)
@@ -1229,12 +1251,14 @@ class MixedLM(base.LikelihoodModel):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
+            ex2_r = self.exog_re2_li[k]
 
             # The residuals
             expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
-            mat = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            mat = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                             resid)
             qf += np.dot(resid, mat)
 
         if self.reml:
@@ -1610,13 +1634,14 @@ class MixedLMResults(base.LikelihoodModelResults):
             endog = self.model.endog_li[k]
             exog = self.model.exog_li[k]
             ex_r = self.model.exog_re_li[k]
+            ex2_r = self.model.exog_re2_li[k]
             label = self.model.group_labels[k]
 
             # Get the residuals
             expval = np.dot(exog, self.fe_params)
             resid = endog - expval
 
-            vresid = _smw_solve(self.scale, ex_r, self.cov_re,
+            vresid = _smw_solve(self.scale, ex_r, ex2_r, self.cov_re,
                                 cov_re_inv, resid)
 
             ranef_dict[label] = np.dot(self.cov_re,
@@ -1649,11 +1674,12 @@ class MixedLMResults(base.LikelihoodModelResults):
             endog = self.model.endog_li[k]
             exog = self.model.exog_li[k]
             ex_r = self.model.exog_re_li[k]
+            ex2_r = self.model.exog_re2_li[k]
             label = self.model.group_labels[k]
 
             mat1 = np.dot(ex_r, self.cov_re)
-            mat2 = _smw_solve(self.scale, ex_r, self.cov_re, cov_re_inv,
-                             mat1)
+            mat2 = _smw_solve(self.scale, ex_r, ex2_r, self.cov_re,
+                              cov_re_inv, mat1)
             mat2 = np.dot(mat1.T, mat2)
 
             ranef_dict[label] = self.cov_re - mat2
