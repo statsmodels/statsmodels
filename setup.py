@@ -51,7 +51,7 @@ if not _have_setuptools:
     setuptools_kwargs = {}
 
 curdir = os.path.abspath(os.path.dirname(__file__))
-README = open(pjoin(curdir, "README.txt")).read()
+README = open(pjoin(curdir, "README.rst")).read()
 
 DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
