@@ -7,6 +7,7 @@ from statsmodels.base import _penalties as penalties
 import os
 import csv
 
+# TODO: add tests with unequal group sizes
 
 class R_Results(object):
     """
