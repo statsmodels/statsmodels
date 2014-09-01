@@ -89,12 +89,13 @@ singular is numerically challenging.  Small changes in the covariance
 parameters may lead to large changes in the likelihood and
 derivatives.
 
-3. The optimization strategy is to optionally perform a few EM steps,
-followed by optionally performing a few steepest descent steps,
-followed by conjugate gradient descent using one of the scipy gradient
-optimizers.  The EM and steepest descent steps are used to get
-adequate starting values for the conjugate gradient optimization,
-which is much faster.
+3. The optimization strategy is to first use OLS to get starting
+values for the mean structure.  Then we optionally perform a few EM
+steps, followed by optionally performing a few steepest ascent steps.
+This is followed by conjugate gradient optimization using one of the
+scipy gradient optimizers.  The EM and steepest ascent steps are used
+to get adequate starting values for the conjugate gradient
+optimization, which is much faster.
 """
 
 import numpy as np
@@ -204,6 +205,15 @@ class MixedLMParams(object):
         return pa
 
     from_components = staticmethod(from_components)
+
+    def copy(self):
+        """
+        Returns a copy of the object.
+        """
+
+        obj = MixedLMParams(self.k_fe, self.k_re, self.use_sqrt)
+        obj.set_packed(self.get_packed().copy())
+        return obj
 
     def get_packed(self, use_sqrt=None):
         """
@@ -1278,6 +1288,47 @@ class MixedLM(base.LikelihoodModel):
 
         return hess
 
+    def steepest_ascent(self, params, n_iter):
+        """
+        Take steepest ascent steps to increase the log-likelihood
+        function.
+
+        Arguments:
+        ----------
+        params : array-like
+            The starting point of the optimization.
+        n_iter: non-negative integer
+            Return once this number of iterations have occured.
+
+        Returns:
+        --------
+        A MixedLMParameters object containing the final value of the
+        optimization.
+        """
+
+        fval = self.loglike(params)
+
+        params = params.copy()
+        params1 = params.copy()
+
+        for itr in range(n_iter):
+
+            gro = self.score(params)
+            gr = gro / np.max(np.abs(gro))
+
+            sl = 0.5
+            while sl > 1e-20:
+                params1._params = params._params + sl*gr
+                fval1 = self.loglike(params1)
+                if fval1 > fval:
+                    cov_re = params1.get_cov_re()
+                    if np.min(np.diag(cov_re)) > 1e-2:
+                        params, params1 = params1, params
+                        fval = fval1
+                        break
+                sl /= 2
+
+        return params
 
     def Estep(self, fe_params, cov_re, scale):
         """
@@ -1468,8 +1519,8 @@ class MixedLM(base.LikelihoodModel):
 
 
     def fit(self, start_params=None, reml=True, niter_em=0,
-            do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, **kwargs):
+            niter_sa=1, do_cg=True, fe_pen=None, cov_pen=None,
+            free=None, full_output=False, **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1482,8 +1533,8 @@ class MixedLM(base.LikelihoodModel):
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
-        niter_sd : integer
-            The number of steepest descent iterations
+        niter_sa : integer
+            The number of steepest ascent iterations
         niter_em : non-negative integer
             The number of EM steps.  The EM steps always
             preceed steepest descent and conjugate gradient
@@ -1547,6 +1598,9 @@ class MixedLM(base.LikelihoodModel):
         # only one cycle is used.
         if do_cg:
             for cycle in range(10):
+
+                params = self.steepest_ascent(params, niter_sa)
+
                 try:
                     fit_args = dict(kwargs)
                     fit_args["retall"] = hist is not None
