@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
-from statsmodels.regression.mixed_linear_model import MixedLM
-from numpy.testing import assert_almost_equal, assert_equal
+from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from . import lme_r_results
-from scipy.misc import derivative
 from statsmodels.base import _penalties as penalties
 import os
 import csv
@@ -68,13 +67,15 @@ class R_Results(object):
 class TestMixedLM(object):
 
     # Test analytic scores using numeric differentiation
-    # TODO: should also do this with the hessian
-    def test_score(self):
+    # TODO: better checks on Hessian
+    def test_compare_numdiff(self):
 
-        n = 200
-        m = 5
-        p = 3
-        pr = 2
+        import statsmodels.tools.numdiff as nd
+
+        n_grp = 200
+        grpsize = 5
+        k_fe = 3
+        k_re = 2
 
         for jl in 0,1:
             for reml in False,True:
@@ -83,39 +84,58 @@ class TestMixedLM(object):
                     cov_pen = penalties.PSD(cov_pen_wt)
 
                     np.random.seed(3558)
-                    exog_fe = np.random.normal(size=(n*m, p))
-                    exog_re = np.random.normal(size=(n*m, pr))
-                    endog = exog_fe.sum(1) + np.random.normal(size=n*m)
-                    groups = np.kron(range(n), np.ones(m))
+                    exog_fe = np.random.normal(size=(n_grp*grpsize, k_fe))
+                    exog_re = np.random.normal(size=(n_grp*grpsize, k_re))
+                    exog_re[:, 0] = 1
+                    slopes = np.random.normal(size=(n_grp, k_re))
+                    slopes = np.kron(slopes, np.ones((grpsize,1)))
+                    re_values = (slopes * exog_re).sum(1)
+                    err = np.random.normal(size=n_grp*grpsize)
+                    endog = exog_fe.sum(1) + re_values + err
+                    groups = np.kron(range(n_grp), np.ones(grpsize))
 
-                    md = MixedLM(endog, exog_fe, groups, exog_re)
+                    if jl == 0:
+                        md = MixedLM(endog, exog_fe, groups, exog_re)
+                        score = lambda x: -md.score_sqrt(x)
+                        hessian = lambda x : -md.hessian_sqrt(x)
+                    else:
+                        md = MixedLM(endog, exog_fe, groups, exog_re, use_sqrt=False)
+                        score = lambda x: -md.score_full(x)
+                        hessian = lambda x: -md.hessian_full(x)
                     md.reml = reml
                     md.cov_pen = cov_pen
-                    if jl == 0:
-                        like = lambda x: -md.loglike_sqrt(x)
-                        score = lambda x: -md.score_sqrt(x)
-                    else:
-                        like = lambda x: -md.loglike(x)
-                        score = lambda x: -md.score(x)
+                    loglike = lambda x: -md.loglike(x)
+                    rslt = md.fit()
 
+                    # Test the score at several points.
                     for kr in range(5):
-                        fe_params = np.random.normal(size=p)
-                        cov_re = np.random.normal(size=(pr,pr))
+                        fe_params = np.random.normal(size=k_fe)
+                        cov_re = np.random.normal(size=(k_re, k_re))
                         cov_re = np.dot(cov_re.T, cov_re)
-                        params_prof = md._pack(fe_params, cov_re)
-                        gr = score(params_prof)
+                        params = MixedLMParams.from_components(fe_params, cov_re)
+                        if jl == 0:
+                            params_vec = params.get_packed()
+                        else:
+                            params_vec = params.get_packed(use_sqrt=False)
 
-                        ngr = np.zeros_like(gr)
-                        for k in range(len(ngr)):
-                            def f(x):
-                                pp = params_prof.copy()
-                                pp[k] = x
-                                return like(pp)
-                            ngr[k] = derivative(f, params_prof[k],
-                                                dx=1e-6)
+                        # Check scores
+                        gr = score(params)
+                        ngr = nd.approx_fprime(params_vec, loglike)
+                        assert_allclose(gr, ngr, rtol=1e-2)
 
-                        assert_almost_equal(gr / ngr, np.ones(len(gr)),
-                                            decimal=3)
+                        # Hessian matrices don't agree well away from
+                        # the MLE.
+                        #if cov_pen_wt == 0:
+                        #    hess = hessian(params)
+                        #    nhess = nd.approx_hess(params_vec, loglike)
+                        #    assert_allclose(hess, nhess, rtol=1e-2)
+
+                    # Check Hessian matrices at the MLE.
+                    if cov_pen_wt == 0:
+                        hess = hessian(rslt.params_object)
+                        params_vec = rslt.params_object.get_packed()
+                        nhess = nd.approx_hess(params_vec, loglike)
+                        assert_allclose(hess, nhess, rtol=1e-2)
 
     def test_default_re(self):
 
@@ -189,9 +209,10 @@ class TestMixedLM(object):
         mod3 = MixedLM.from_formula(fml, df, re_formula=re_fml,
                                     groups="groups")
         rslt3 = mod3.fit(start_params=rslt2.params)
-        assert_almost_equal(rslt1.params, rslt3.params, decimal=5)
+        assert_allclose(rslt1.params, rslt3.params, rtol=1e-4)
 
-        # Check default variance structure with formula.api
+        # Check default variance structure with non-formula model
+        # creation.
         exog_re = np.ones(len(endog), dtype=np.float64)
         mod4 = MixedLM(endog, exog, groups, exog_re)
         rslt4 = mod4.fit(start_params=rslt2.params)
