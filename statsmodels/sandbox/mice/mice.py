@@ -106,14 +106,20 @@ class ImputedData(object):
         ----------
         endog_name : string
             Name of the variable to be imputed.
-        method : string
-            May take on values "pmm", "gaussian", or "bootstrap". Determines
-            imputation method, see mice.Imputer.
+        sampling_method : string or None
+            May take on values "pmm" or "method". Determines imputation method,
+            see mice.Imputer.
+        perturb_method : string or None
+            May take on values "gaussian" or "bootstrap". Determines method for
+            perturbing parameters, see mice.Imputer.
         k_pmm : int
             Determines number of observations from which to draw imputation
             when using predictive mean matching. See mice.Imputer.
         init_args : Dictionary
             Additional arguments for statsmodels model instance.
+        fit_args : Dictionary
+            Additional parameters for statsmodels fit instance.
+        perturb_method : string
         formula : string
             Conditional formula for imputation. Defaults to model with main
             effects for all other variables in dataset.
@@ -142,10 +148,11 @@ class ImputedData(object):
         if formula is None:
             main_effects = [x for x in self.data.columns if x != endog_name]
             formula = endog_name + " ~ " + " + ".join(main_effects)
-        imp = Imputer(formula, model_class, self, sampling_method=sampling_method, k_pmm=k_pmm,
-                      init_args=init_args, fit_args=fit_args,
-                      scale_method=scale_method, scale_value=scale_value,
-                      transform=transform, inv_transform=inv_transform)
+        imp = Imputer(formula, model_class, self, sampling_method=sampling_method, 
+                      perturb_method=perturb_method, k_pmm=k_pmm, init_args=init_args, 
+                      fit_args=fit_args, scale_method=scale_method, 
+                      scale_value=scale_value, transform=transform, 
+                      inv_transform=inv_transform)
         self.implist.append(imp)
 
     def store_changes(self, col, vals):
@@ -477,9 +484,11 @@ class Imputer(object):
         Conditional model used for imputation.
     data : ImputedData object
         The parent ImputedData object to which this Imputer object is attached
-    method : string or None
-        May take on values "pmm", "gaussian", or "bootstrap". Determines
-        imputation method.
+    sampling_method : string or None
+        May take on values "pmm" or "method". Determines imputation method.
+    perturb_method : string or None
+        May take n values "gaussian" or "bootstrap". Determines method for 
+        perturbing parameters.
     k_pmm : int
         Determines number of observations from which to draw imputation
         when using predictive mean matching. See method impute_pmm.
@@ -515,7 +524,7 @@ class Imputer(object):
 
     """
     
-    def __init__(self, formula, model_class, data, sampling_method="pmm",
+    def __init__(self, formula, model_class, data, sampling_method="method",
                  perturb_method="gaussian", k_pmm=1, init_args={}, fit_args={},
                  alt_distribution=None, scale_method="fix", scale_value=None,
                  transform=None, inv_transform=None):
@@ -728,7 +737,7 @@ class ImputerChain(object):
         call.
         """
         for im in self.imputer_list:
-            if im.sampling_method=="gaussian":
+            if im.sampling_method=="method":
                 im.impute_asymptotic_bayes()
             elif im.sampling_method == "pmm":
                 im.impute_pmm(im.k_pmm)
