@@ -2,7 +2,7 @@
 Heckman correction for sample selection bias (the Heckit procedure).
 
 Created August 19, 2014 by B.I.
-Last modified August 25, 2014 by B.I.
+Last modified September 02, 2014 by B.I.
 
 NO warranty is provided for this software.
 """
@@ -15,6 +15,7 @@ from statsmodels.tools.numdiff import approx_fprime
 from scipy.stats import norm
 from scipy.stats import t
 import warnings
+import pandas as pd
 import pdb
 
 class Heckman(base.LikelihoodModel):
@@ -35,26 +36,23 @@ class Heckman(base.LikelihoodModel):
         term is desired, the user should directly add the constant
         column to the data before using it as an argument here.
     **kwargs:
-        missing=
+        missing=, which can be 'none', 'drop', or 'raise'
 
-    See Also
-    --------
+    Notes
+    -----
     The selection equation should contain at least one variable that
     is not in the regression (response) equation, i.e. the selection
-    equation should contain at least one instrument. However, if the
-    user chooses not to do this, this module will still go ahead and
-    estimate the Heckman correction.
+    equation should contain at least one instrument. However, this
+    module should still work if the user chooses not to do this.
     """
 
     def __init__(self, endog, exog, exog_select, **kwargs):
-        #TODO: make sure that selection equation contains at least one more unique var than in reg eqn
 
         # check that Z has same index as X (and consequently Y through super().__init__)
-        try:
+        if pd.__name__ in type(endog).__module__ and pd.__name__ in type(exog).__module__:
             if not all(endog.index==exog_select.index):
                 raise ValueError("Z indices need to be the same as X and Y indices")
-        except:
-            pass
+
 
         # shape checks
         if (len(endog) == len(exog)) and (len(endog) == len(exog_select)):
@@ -67,9 +65,11 @@ class Heckman(base.LikelihoodModel):
                 pass
             else:
                 raise ValueError("Y, X, and Z data shapes do not conform with each other.")
-        except:
-            #TODO: implement dimension check if user inputs data as lists
-            pass
+        except AttributeError:
+            if (np.asarray(endog).ndim == 1) and (np.asarray(exog).ndim <= 2) and (np.asarray(exog_select).ndim <= 2):
+                pass
+            else:
+                raise ValueError("Y, X, and Z data shapes do not conform with each other.")
 
         # give missing (treated) values in endog variable finite values so that super().__init__
         # does not strip them out -- they will be put back after the call to super().__init__
@@ -78,24 +78,27 @@ class Heckman(base.LikelihoodModel):
         try:
             endog_nomissing = endog.copy()
             endog_nomissing[~treated] = -99999
-        except:
+        except TypeError:
             endog_nomissing = [endog[i] if treated[i] else -99999 for i in range(len(treated))]
 
         # create 1-D array that will be np.nan for every row of exog_select that has any missing
         # values and a finite value otherwise for the call to super().__init__ so that it can
         # strip out rows where exog_select has missing data if missing option is set
 
-        exog_select_1dnan_placeholder = \
-            [np.nan if any(np.isnan(row)) else 1 for row in np.asarray(exog_select)]
+        if np.asarray(exog_select).ndim==2:
+            exog_select_1dnan_placeholder = \
+                [np.nan if any(np.isnan(row)) else 1 for row in np.asarray(exog_select)]
+        else:  # assume ==1
+            exog_select_1dnan_placeholder = [np.nan if np.isnan(row) else 1 for row in np.asarray(exog_select)]
 
-        try:
+        if pd.__name__ in type(endog).__module__:
             exog_select_1dnan_placeholder = pd.Series(exog_select_1dnan_placeholder, index=endog.index)
-        except:
-            pass
+        else:
+            exog_select_1dnan_placeholder = np.array(exog_select_1dnan_placeholder)
 
         # create array of sequential row positions so that rows of exog_select that have missing
         # data can be identified after call to super().__init__
-        obsno = list(range(len(endog)))
+        obsno = np.array(list(range(len(endog))))
 
         # call super().__init__
         super(Heckman, self).__init__(
@@ -116,7 +119,7 @@ class Heckman(base.LikelihoodModel):
         # store variable names of exog_select
         try:
             self.exog_select_names = exog_select.columns.tolist()
-        except:
+        except AttributeError:
             self.exog_select_names = None
 
         # delete attributes created by the call to super().__init__ that are no longer needed
@@ -141,14 +144,19 @@ class Heckman(base.LikelihoodModel):
         """
         return data
 
+
     def get_datamats(self):
         Y = np.asarray(self.endog)
         Y = Y[self.treated]
 
         X = np.asarray(self.exog)
         X = X[self.treated,:]
+        if X.ndim==1:
+            X = np.atleast_2d(X).T
 
         Z = np.asarray(self.exog_select)
+        if Z.ndim==1:
+            Z = np.atleast_2d(Z).T
 
         return Y, X, Z
 
@@ -181,12 +189,21 @@ class Heckman(base.LikelihoodModel):
 
         """
 
+        ## Show warning to user if estimation is by two-step but MLE arguments were also provided
+        if method=='twostep':
+            if start_params_mle is not None or method_mle is not None or maxiter_mle is not None or \
+                len(kwargs_mle.keys())>0:
+                warnings.warn('The user chose to estimate the Heckman model by Two-Step,' + \
+                    ' but MLE arguments were provided. Extraneous MLE arguments will be ignored.')
+
+
         ## fit
         if method=='twostep':
             results = self._fit_twostep()
         elif method=='mle':
             results = self._fit_mle(
-                start_params_mle=start_params_mle, method_mle=method_mle, maxiter_mle=maxiter_mle)
+                start_params_mle=start_params_mle, method_mle=method_mle, maxiter_mle=maxiter_mle,
+                **kwargs_mle)
         else:
             raise ValueError("Invalid choice for estimation method.")
 
@@ -239,6 +256,7 @@ class Heckman(base.LikelihoodModel):
         D = np.zeros([self.nobs_uncensored, self.nobs_uncensored])
         for i in range(self.nobs_uncensored):
             D[i,i] = delta[i]
+
 
 
         Q = rhoHat**2 * (W.T.dot(D).dot(Z[self.treated])).dot(step1_varcov).dot(Z[self.treated].T.dot(D).dot(W))
@@ -299,8 +317,13 @@ class Heckman(base.LikelihoodModel):
         sigma2_hat = results_mle.params[-1]
 
         scale = results_mle.scale
-        xbeta_ncov_hat = results_mle.normalized_cov_params[:num_xvars,:num_xvars]  #TODO: I think these should be the sandwich estimates, but some variances are negative
-        zbeta_ncov_hat = results_mle.normalized_cov_params[num_xvars:(num_xvars+num_zvars),num_xvars:(num_xvars+num_zvars)]
+        #TODO: I think these should be the sandwich estimates, but should confirm
+        #TODO: sometimes variance estimates are negative -- need to look into
+        # how to remedy this
+        xbeta_ncov_hat = results_mle.normalized_cov_params[:num_xvars,:num_xvars]
+        zbeta_ncov_hat = results_mle.normalized_cov_params[
+            num_xvars:(num_xvars+num_zvars),num_xvars:(num_xvars+num_zvars)
+            ]
 
         rho_var_hat = results_mle.normalized_cov_params[-2,-2] * scale
         sigma2_var_hat = results_mle.normalized_cov_params[-1,-1] * scale
@@ -384,7 +407,10 @@ class Heckman(base.LikelihoodModel):
             np.log(
                 (2*np.pi*sigma2)**(-1/2) * \
                     np.exp(
-                        -(Y_aligned - X_xbeta_aligned - rho * norm.pdf(Z_zbeta_aligned)/norm.cdf(Z_zbeta_aligned))**2 / (2*sigma2)
+                        -(
+                            Y_aligned - X_xbeta_aligned -
+                                rho * norm.pdf(Z_zbeta_aligned)/norm.cdf(Z_zbeta_aligned)
+                        )**2 / (2*sigma2)
                     )
                 )
             )
@@ -563,8 +589,15 @@ class HeckmanResults(base.LikelihoodModelResults):
             try:
                 zname = ['z' + str(i) for i in range(len(self.model.exog_select[0]))]
                 zname[0]  = 'z0_or_zconst'
-            except:
+            except TypeError:
                 zname = 'z0_or_zconst'
+
+        try:  # for Python 3
+            if isinstance(zname, str):
+                zname = [zname]
+        except NameError:  # for Python 2
+            if isinstance(zname, basestring):
+                zname = [zname]
 
 
         ## create summary object
