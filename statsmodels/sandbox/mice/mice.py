@@ -69,7 +69,7 @@ class ImputedData(object):
     as predictors.
     """
     
-    def __init__(self, data, method=None):
+    def __init__(self, data, perturb_method=None, sampling_method=None):
         # May not need to make copies
         self.data = pd.DataFrame(data)
         # Drop observations where all variables are missing.
@@ -79,16 +79,21 @@ class ImputedData(object):
         self.implist = []
         for col in self.data.columns:
             self.columns[col] = MissingDataInfo(self.data[col])
-            umeth = "pmm"
-            if type(method) is dict and col in method:
-                umeth = method[col]
-            elif type(method) is str:
-                umeth = method
-            self.new_imputer(col, method=umeth)
+            smeth = "pmm"
+            pmeth = "gaussian"
+            if type(sampling_method) is dict and col in sampling_method:
+                smeth = sampling_method[col]
+            elif type(sampling_method) is str:
+                smeth = sampling_method
+            if type(perturb_method) is dict and col in perturb_method:
+                pmeth = perturb_method[col]
+            elif type(perturb_method) is str:
+                pmeth = perturb_method            
+            self.new_imputer(col, perturb_method=pmeth, sampling_method=smeth)
         # Fill missing values with column-wise mean.
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog_name, method="pmm", k_pmm=20, 
+    def new_imputer(self, endog_name, sampling_method="pmm", k_pmm=20, 
                     formula=None, model_class=None, init_args={}, fit_args={}, 
                     perturb_method="gaussian", alt_distribution=None, 
                     scale_method="fix", scale_value=None, transform=None, 
@@ -137,7 +142,7 @@ class ImputedData(object):
         if formula is None:
             main_effects = [x for x in self.data.columns if x != endog_name]
             formula = endog_name + " ~ " + " + ".join(main_effects)
-        imp = Imputer(formula, model_class, self, method=method, k_pmm=k_pmm,
+        imp = Imputer(formula, model_class, self, sampling_method=sampling_method, k_pmm=k_pmm,
                       init_args=init_args, fit_args=fit_args,
                       scale_method=scale_method, scale_value=scale_value,
                       transform=transform, inv_transform=inv_transform)
@@ -510,7 +515,7 @@ class Imputer(object):
 
     """
     
-    def __init__(self, formula, model_class, data, method="pmm",
+    def __init__(self, formula, model_class, data, sampling_method="pmm",
                  perturb_method="gaussian", k_pmm=1, init_args={}, fit_args={},
                  alt_distribution=None, scale_method="fix", scale_value=None,
                  transform=None, inv_transform=None):
@@ -524,7 +529,7 @@ class Imputer(object):
         self.alt_distribution = alt_distribution
         self.scale_method = scale_method
         self.scale_value = scale_value
-        self.method = method
+        self.sampling_method = sampling_method
         self.k_pmm = k_pmm
         self.transform = transform
         self.inv_transform = inv_transform
@@ -723,12 +728,10 @@ class ImputerChain(object):
         call.
         """
         for im in self.imputer_list:
-            if im.method=="gaussian":
+            if im.sampling_method=="gaussian":
                 im.impute_asymptotic_bayes()
-            elif im.method == "pmm":
+            elif im.sampling_method == "pmm":
                 im.impute_pmm(im.k_pmm)
-            elif im.method == "bootstrap":
-                im.impute_bootstrap()
         return self.data
 
 class AnalysisChain(object):
