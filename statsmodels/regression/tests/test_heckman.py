@@ -520,8 +520,116 @@ def test_heckman_mle(verbose=True):
 
 
 
+def test_heckman_2step_missingdata(verbose=True):
+    ############################################################################
+    # Tests to make sure that the Heckman 2 step estimates produced by the
+    # Heckman module WITH MISSING DATA and DROP OPTION are the same as/very
+    # close to the estimates produced by Stata for the female labor supply data.
+    ############################################################################
+
+    ### Fit data with Heckman model using 2 step ###
+    ## With pandas input with named variables ##
+    Y, X, Z = _prep_censored_wage_heckman_exampledata()
+
+    ## delete some data ##
+    '''
+    /* start introducing some missings */
+    replace WW = . if _n==1
+    replace AX = . if _n==2
+    replace WA = . if _n==3
+
+    replace WW = . if _n==101
+    replace CIT = . if _n==102
+    replace FAMINC = . if _n==103
+
+    replace WW = . if _n==201
+    replace WE = . if _n==202
+    replace K = . if _n==203
+
+    /* last of introduced missings */
+    '''
+
+    Y.ix[1-1] = np.nan
+    X.ix[2-1,'AX'] = np.nan
+    Z.ix[3-1,'WA'] = np.nan
+
+    Y.ix[101-1] = np.nan
+    X.ix[102-1,'CIT'] = np.nan
+    Z.ix[103-1,'FAMINC'] = np.nan
+
+    Y.ix[201-1] = np.nan
+    X.ix[202-1,'WE'] = np.nan
+    Z.ix[203-1,'K'] = np.nan
+
+    ## fit it
+
+    heckman_model = heckman.Heckman(Y,X,Z,
+        missing='drop')
+    heckman_res = heckman_model.fit(method='twostep')
+    heckman_smry = heckman_res.summary(disp=verbose)
+
+    ## With list input (no names) ##
+    heckman_basic_model = heckman.Heckman(Y.tolist(), X.as_matrix().tolist(), Z.as_matrix().tolist(),
+        missing='drop')
+    heckman_basic_res = heckman_basic_model.fit(method='twostep')
+    heckman_basic_smry = heckman_basic_res.summary(disp=verbose)
+
+    ### Check against Stata's estimates ###
+    ## Load Stata's estimates
+    retdict = _load_stata_femalewage_missing_2step_estimates()
+
+    stata_reg_coef = retdict['stata_reg_coef']
+    stata_reg_stderr = retdict['stata_reg_stderr']
+    stata_select_coef = retdict['stata_select_coef']
+    stata_select_stderr = retdict['stata_select_stderr']
+    stata_lambda_coef = retdict['stata_lambda_coef']
+    stata_lambda_stderr = retdict['stata_lambda_stderr']
+    stata_rho = retdict['stata_rho']
+    stata_sigma = retdict['stata_sigma']
+    y_new_firstobs = retdict['y_new_firstobs']
+    y_new_lastobs = retdict['y_new_lastobs']
+
+
+    ## check against those estimates
+    stata_regvar_ordered = ['const','AX','AX2','WE','CIT']
+    stata_selectvar_ordered = ['const','WA','WA2','FAMINC','WE','K']
+
+    stata_reg_coef_arr = np.array([stata_reg_coef[k] for k in stata_regvar_ordered])
+    stata_reg_stderr_arr = np.array([stata_reg_stderr[k] for k in stata_regvar_ordered])
+
+    stata_select_coef_arr = np.array([stata_select_coef[k] for k in stata_selectvar_ordered])
+    stata_select_stderr_arr = np.array([stata_select_stderr[k] for k in stata_selectvar_ordered])
+
+    # for pandas input with var names #
+    TOL=1e-3
+
+    _check_heckman_to_stata(
+        stata_reg_coef_arr, stata_reg_stderr_arr,
+        stata_select_coef_arr, stata_select_stderr_arr,
+        stata_lambda_coef, stata_lambda_stderr,
+        stata_rho, stata_sigma,
+        heckman_res,
+        TOL=TOL)
+
+    # for basic list input #
+    _check_heckman_to_stata(
+        stata_reg_coef_arr, stata_reg_stderr_arr,
+        stata_select_coef_arr, stata_select_stderr_arr,
+        stata_lambda_coef, stata_lambda_stderr,
+        stata_rho, stata_sigma,
+        heckman_basic_res,
+        TOL=TOL)
+
+    ## check that predict method works
+    y_pred = heckman_basic_res.predict()
+    assert_( (y_new_firstobs-y_pred[0])/y_new_firstobs < TOL )
+    assert_( (y_new_lastobs-y_pred[-1])/y_new_lastobs < TOL )
+
+
+
 
 ## Run tests if file is ran ##
 if __name__ == '__main__':
     test_heckman_2step(verbose=False)
     test_heckman_mle(verbose=False)
+    test_heckman_2step_missingdata(verbose=False)
