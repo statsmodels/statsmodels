@@ -10,11 +10,9 @@ where
 
 * n_i is the number of observations in group i
 * Y is a n_i dimensional response vector
-* X is a n_i x k_fe dimensional matrix of fixed effects
-  coefficients
+* X is a n_i x k_fe design matrix for the fixed effects
 * beta is a k_fe-dimensional vector of fixed effects slopes
-* Z is a n_i x k_re dimensional matrix of random effects
-  coefficients
+* Z is a n_i x k_re design matrix for the random effects
 * gamma is a k_re-dimensional random vector with mean 0
   and covariance matrix Psi; note that each group
   gets its own independent realization of gamma.
@@ -131,7 +129,7 @@ class MixedLMParams(object):
     the scale parameter has been profiled out.
     """
 
-    def __init__(self, k_fe, k_re, use_sqrt):
+    def __init__(self, k_fe, k_re, use_sqrt=True):
 
         self.k_fe = k_fe
         self.k_re = k_re
@@ -174,7 +172,8 @@ class MixedLMParams(object):
 
     from_packed = staticmethod(from_packed)
 
-    def from_components(fe_params, cov_re, use_sqrt=True):
+    def from_components(fe_params, cov_re=None, cov_re_sqrt=None,
+                        use_sqrt=True):
         """
         Factory method to create a MixedLMParams object from given
         values for each parameter component.
@@ -186,6 +185,9 @@ class MixedLMParams(object):
         cov_re : array-like
             The random effects covariance matrix (a square, symmetric
             2-dimensional array).
+        cov_re_sqrt : array-like
+            The Cholesky (lower triangular) square root of the random
+            effects covariance matrix.
         use_sqrt : boolean
             If True, the random effects covariance matrix is stored as
             the lower triangle of its Cholesky factor, otherwise the
@@ -448,7 +450,6 @@ class MixedLM(base.LikelihoodModel):
         self.reml = True
         self.fe_pen = None
         self.re_pen = None
-        self.score_pat = 1.
 
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
@@ -1124,7 +1125,11 @@ class MixedLM(base.LikelihoodModel):
                     xtvix, xtax[j]))
 
         score_vec = np.concatenate((score_fe, score_re))
-        return self.score_pat * score_vec
+
+        if self._freepat is not None:
+            return self._freepat.get_packed() * score_vec
+        else:
+            return score_vec
 
     def score_sqrt(self, params):
         """
@@ -1162,7 +1167,10 @@ class MixedLM(base.LikelihoodModel):
             v = lin[i] + 2 * np.dot(quad[i], params_vec)
             scr += score_full[i] * v
 
-        return self.score_pat * scr
+        if self._freepat is not None:
+            return self._freepat.get_packed() * scr
+        else:
+            return scr
 
     def hessian_full(self, params):
         """
@@ -1512,8 +1520,8 @@ class MixedLM(base.LikelihoodModel):
         from statsmodels.regression.linear_model import OLS
         fe_params = OLS(self.endog, self.exog).fit().params
         cov_re = np.eye(self.k_re)
-        pa = MixedLMParams.from_components(fe_params, cov_re,
-                                           self.use_sqrt)
+        pa = MixedLMParams.from_components(fe_params, cov_re=cov_re,
+                                           use_sqrt=self.use_sqrt)
 
         return pa
 
@@ -1548,30 +1556,35 @@ class MixedLM(base.LikelihoodModel):
             A penalty for the random effects covariance matrix
         fe_pen : Penalty object
             A penalty on the fixed effects
-        free : tuple of ndarrays
-            If not `None`, this is a tuple of length 2 containing 2
-            0/1 indicator arrays.  The first element of `free`
-            corresponds to the regression slopes and the second
-            element of `free` corresponds to the random effects
-            covariance matrix (if `use_sqrt` is False) or it square root
-            (if `use_sqrt` is True).  A 1 in either array indicates that
-            the corresponding parameter is estimated, a 0 indicates
-            that it is fixed at its starting value.  One use case if
-            to set free[1] to the identity matrix to estimate a model
-            with independent random effects.
+        free : MixedLMParams object
+            If not `None`, this is a mask that allows parameters to be
+            held fixed at specified values.  A 1 indicates that the
+            correspondinig parameter is estimated, a 0 indicates that
+            it is fixed at its starting value.  Setting the `cov_re`
+            component to the identity matrix fits a model with
+            independent random effects.  The state of `use_sqrt` for
+            `free` must agree with that of the parent model.
         full_output : bool
             If true, attach iteration history to results
 
         Returns
         -------
         A MixedLMResults instance.
+
+        Notes
+        -----
+        If `start` is provided as an array, it must have the same
+        `use_sqrt` state as the parent model.
+
+        The value of `free` must have the same `use_sqrt` state as the
+        parent model.
         """
 
         self.reml = reml
         self.cov_pen = cov_pen
         self.fe_pen = fe_pen
 
-        self._set_score_pattern(free)
+        self._freepat = free
 
         if full_output:
             hist = []
@@ -1638,15 +1651,17 @@ class MixedLM(base.LikelihoodModel):
             warnings.warn(msg, ConvergenceWarning)
 
         # Compute the Hessian at the MLE.  Note that this is the
-        # hessian with respect to the random effects covariance matrix
+        # Hessian with respect to the random effects covariance matrix
         # (not its square root).  It is used for obtaining standard
         # errors, not for optimization.
         hess = self.hessian_full(params)
         if free is not None:
-            ii = np.flatnonzero(self.score_pat)
-            hess1 = hess[ii,:][:,ii]
             pcov = np.zeros_like(hess)
-            pcov[np.ix_(ii,ii)] = np.linalg.inv(-hess1)
+            pat = self._freepat.get_packed()
+            ii = np.flatnonzero(pat)
+            if len(ii) > 0:
+                hess1 = hess[np.ix_(ii, ii)]
+                pcov[np.ix_(ii, ii)] = np.linalg.inv(-hess1)
         else:
             pcov = np.linalg.inv(-hess)
 
@@ -1667,19 +1682,10 @@ class MixedLM(base.LikelihoodModel):
         results.k_fe = self.k_fe
         results.k_re = self.k_re
         results.k_re2 = self.k_re2
+        results.use_sqrt = self.use_sqrt
+        results.freepat = self._freepat
 
         return results
-
-    def _set_score_pattern(self, free):
-        # TODO: could the pattern be set by a formula?
-        if free is not None:
-            pat_slopes = free[0]
-            ix = np.tril_indices(self.k_re)
-            pat_cov_re = free[1][ix]
-            self.score_pat = np.concatenate((pat_slopes, pat_cov_re))
-        else:
-            self.score_pat = np.ones(self.nparams)
-
 
 
 class MixedLMResults(base.LikelihoodModelResults):
@@ -1952,52 +1958,58 @@ class MixedLMResults(base.LikelihoodModelResults):
         """
 
         model = self.model
-        p = model.exog.shape[1]
-        pr = model.exog_re.shape[1]
+        k_fe = model.exog.shape[1]
+        k_re = model.exog_re.shape[1]
 
-        # Need to permute the variables so that the profiled variable
-        # is first.
+        # Need to permute the columns of the random effects design
+        # matrix so that the profiled variable is in the first column.
         exog_re_li_save = [x.copy() for x in model.exog_re_li]
-        ix = list(range(pr))
+        ix = np.arange(k_re)
         ix[0] = re_ix
         ix[re_ix] = 0
-        for k in range(len(model.exog_re_li)):
-           model.exog_re_li[k] = model.exog_re_li[k][:,ix]
+        for k in range(self.model.n_groups):
+           model.exog_re_li[k] = model.exog_re_li[k][:, ix]
 
-        # Permute the covariance structure to match the permuted data.
-        ru = self.params[p:]
-        ik = np.tril_indices(pr)
-        mat = np.zeros((pr ,pr), dtype=np.float64)
-        mat[ik] = ru
-        mat = np.dot(mat, mat.T)
-        mat = mat[ix,:][:,ix]
-        ix = np.tril_indices(pr)
-        re_params = np.linalg.cholesky(mat)[ix]
+        # Permute the covariance structure to match the permuted
+        # design matrix.
+        params = self.params_object.copy()
+        cov_re = params.get_cov_re()
+        cov_re = cov_re[np.ix_(ix, ix)]
+        params.set_cov_re(cov_re)
 
-        # Define the values to which the parameter of interest will be
-        # constrained.
-        ru0 = re_params[0]
+        # Define the sequence of values to which the parameter of
+        # interest will be constrained.
+        ru0 = cov_re[0, 0]
         left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
         right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
         rvalues = np.concatenate((left, right))
 
         # Indicators of which parameters are free and fixed.
-        free_slopes = np.ones(p, dtype=np.float64)
-        free_cov_re = np.ones((pr, pr), dtype=np.float64)
-        free_cov_re[0] = 0
-
-        start = {"fe": self.fe_params}
+        free = MixedLMParams(k_fe, k_re, self.use_sqrt)
+        if self.freepat is None:
+            free.set_fe_params(np.ones(k_fe))
+            mat = np.ones((k_re, k_re))
+        else:
+            free.set_fe_params(self.freepat.get_fe_params())
+            mat = self.freepat.get_cov_re()
+            mat = mat[np.ix_(ix, ix)]
+        mat[0, 0] = 0
+        if self.use_sqrt:
+            free.set_cov_re(cov_re_sqrt=mat)
+        else:
+            free.set_cov_re(cov_re=mat)
 
         likev = []
         for x in rvalues:
-            re_params[0] = x
-            start["cov_re_sqrt_unscaled"] = re_params
-            md1 = model.fit(start=start,
-                            free=(free_slopes, free_cov_re),
-                            reml=self.reml, cov_pen=self.cov_pen)
-            likev.append([md1.cov_re[0,0], md1.likeval])
+            cov_re = params.get_cov_re()
+            cov_re[0, 0] = x
+            params.set_cov_re(cov_re)
+            rslt = model.fit(start_params=params, free=free,
+                             reml=self.reml, cov_pen=self.cov_pen)
+            likev.append([rslt.cov_re[0, 0], rslt.likeval])
         likev = np.asarray(likev)
 
+        # Restore the original exog
         model.exog_re = exog_re_li_save
 
         return likev

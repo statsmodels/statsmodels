@@ -170,15 +170,18 @@ class TestMixedLM(object):
         mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
 
     def test_profile(self):
-
+        # Smoke test
         np.random.seed(9814)
-        exog = np.random.normal(size=(300,4))
-        groups = np.kron(np.arange(100), [1,1,1])
-        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
-        mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
-        mdf1.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
-                        num_high=1)
+        k_fe = 4
+        gsize = 3
+        n_grp = 100
+        exog = np.random.normal(size=(n_grp * gsize, k_fe))
+        groups = np.kron(np.arange(n_grp), np.ones(gsize))
+        g_errors = np.kron(np.random.normal(size=100), np.ones(gsize))
+        endog = exog.sum(1) + g_errors + np.random.normal(size=n_grp * gsize)
+        rslt = MixedLM(endog, exog, groups).fit(niter_em=10)
+        prof = rslt.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
+                               num_high=1)
 
     def test_formulas(self):
 
@@ -278,8 +281,10 @@ class TestMixedLM(object):
         else: # Independent random effects
             k_fe = rslt.exog_fe.shape[1]
             k_re = rslt.exog_re.shape[1]
-            mdf = md.fit(reml=reml, gtol=1e-7,
-                         free=(np.ones(k_fe), np.eye(k_re)))
+            free = MixedLMParams(k_fe, k_re)
+            free.set_fe_params(np.ones(k_fe))
+            free.set_cov_re(np.eye(k_re))
+            mdf = md.fit(reml=reml, gtol=1e-7, free=free)
 
         assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
         assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
