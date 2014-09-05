@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose
+import pandas as pd
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
@@ -135,9 +136,35 @@ class TestPHReg(object):
         assert(all(md.exog.shape == np.r_[185,4]))
 
     def test_formula(self):
-        #Smoke test for import only
-        from statsmodels.api import PHReg
-        from statsmodels.formula.api import phreg
+
+        np.random.seed(34234)
+        time = 50 * np.random.uniform(size=200)
+        status = np.random.randint(0, 2, 200).astype(np.float64)
+        exog = np.random.normal(size=(200,4))
+        entry = np.zeros_like(time)
+        entry[0:10] = time[0:10] / 2
+
+        df = pd.DataFrame({"time": time, "status": status,
+                           "exog1": exog[:, 0], "exog2": exog[:, 1],
+                           "exog3": exog[:, 2], "exog4": exog[:, 3],
+                           "entry": entry})
+
+        mod1 = PHReg(time, exog, status, entry=entry)
+        rslt1 = mod1.fit()
+
+        fml = "time ~ 0 + exog1 + exog2 + exog3 + exog4"
+        mod2 = PHReg.from_formula(fml, df, status=status,
+                                  entry=entry)
+        rslt2 = mod2.fit()
+
+        mod3 = PHReg.from_formula(fml, df, status="status",
+                                  entry="entry")
+        rslt3 = mod3.fit()
+
+        assert_allclose(rslt1.params, rslt2.params)
+        assert_allclose(rslt1.params, rslt3.params)
+        assert_allclose(rslt1.bse, rslt2.bse)
+        assert_allclose(rslt1.bse, rslt3.bse)
 
     def test_offset(self):
 
