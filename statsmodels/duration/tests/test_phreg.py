@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import (assert_allclose,
+                           assert_equal)
 import pandas as pd
 
 # TODO: Include some corner cases: data sets with empty strata, strata
@@ -77,30 +78,30 @@ class TestPHReg(object):
         mod = PHReg(time, exog, status, ties=ties)
         phrb = mod.fit(**args)
         coef_r, se_r, time_r, hazard_r = get_results(n, p, None, ties1)
-        assert_almost_equal(phrb.params, coef_r, decimal=4)
-        assert_almost_equal(phrb.bse, se_r, decimal=4)
+        assert_allclose(phrb.params, coef_r, rtol=1e-3)
+        assert_allclose(phrb.bse, se_r, rtol=1e-4)
         #time_h, cumhaz, surv = phrb.baseline_hazard[0]
 
         # Entry times but no stratification
         phrb = PHReg(time, exog, status, entry=entry,
                      ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "et", ties1)
-        assert_almost_equal(phrb.params, coef, decimal=4)
-        assert_almost_equal(phrb.bse, se, decimal=4)
+        assert_allclose(phrb.params, coef, rtol=1e-3)
+        assert_allclose(phrb.bse, se, rtol=1e-3)
 
         # Stratification but no entry times
         phrb = PHReg(time, exog, status, strata=strata,
                       ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "st", ties1)
-        assert_almost_equal(phrb.params, coef, decimal=4)
-        assert_almost_equal(phrb.bse, se, decimal=4)
+        assert_allclose(phrb.params, coef, rtol=1e-4)
+        assert_allclose(phrb.bse, se, rtol=1e-4)
 
         # Stratification and entry times
         phrb = PHReg(time, exog, status, entry=entry,
                      strata=strata, ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
-        assert_almost_equal(phrb.params, coef, decimal=4)
-        assert_almost_equal(phrb.bse, se, decimal=4)
+        assert_allclose(phrb.params, coef, rtol=1e-3)
+        assert_allclose(phrb.bse, se, rtol=1e-4)
 
 
     # Run all the tests
@@ -131,9 +132,9 @@ class TestPHReg(object):
         exog[10:15,:] = np.nan
 
         md = PHReg(time, exog, status, missing='drop')
-        assert(len(md.endog) == 185)
-        assert(len(md.status) == 185)
-        assert(all(md.exog.shape == np.r_[185,4]))
+        assert_allclose(len(md.endog), 185)
+        assert_allclose(len(md.status), 185)
+        assert_allclose(md.exog.shape, np.r_[185,4])
 
     def test_formula(self):
 
@@ -181,7 +182,7 @@ class TestPHReg(object):
         mod2 = PHReg(time, exog, status, offset=offset)
         rslt2 = mod2.fit()
 
-        assert_almost_equal(rslt2.params, rslt1.params[1:])
+        assert_allclose(rslt2.params, rslt1.params[1:])
 
     def test_post_estimation(self):
         # All regression tests
@@ -193,22 +194,22 @@ class TestPHReg(object):
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
         mart_resid = rslt.martingale_residuals
-        assert_almost_equal(np.abs(mart_resid).sum(), 120.72475743348433)
+        assert_allclose(np.abs(mart_resid).sum(), 120.72475743348433)
 
         w_avg = rslt.weighted_covariate_averages
-        assert_almost_equal(np.abs(w_avg[0]).sum(0),
+        assert_allclose(np.abs(w_avg[0]).sum(0),
                np.r_[7.31008415, 9.77608674,10.89515885, 13.1106801])
 
         bc_haz = rslt.baseline_cumulative_hazard
         v = [np.mean(np.abs(x)) for x in bc_haz[0]]
         w = np.r_[23.482841556421608, 0.44149255358417017,
                   0.68660114081275281]
-        assert_almost_equal(v, w)
+        assert_allclose(v, w)
 
         score_resid = rslt.score_residuals
         v = np.r_[ 0.50924792, 0.4533952, 0.4876718, 0.5441128]
         w = np.abs(score_resid).mean(0)
-        assert_almost_equal(v, w)
+        assert_allclose(v, w)
 
         groups = np.random.randint(0, 3, 200)
         mod = PHReg(time, exog, status)
@@ -216,13 +217,13 @@ class TestPHReg(object):
         robust_cov = rslt.cov_params()
         v = [0.00513432, 0.01278423, 0.00810427, 0.00293147]
         w = np.abs(robust_cov).mean(0)
-        assert_almost_equal(v, w)
+        assert_allclose(v, w, rtol=1e-6)
 
         s_resid = rslt.schoenfeld_residuals
         ii = np.flatnonzero(np.isfinite(s_resid).all(1))
         s_resid = s_resid[ii, :]
         v = np.r_[0.85154336, 0.72993748, 0.73758071, 0.78599333]
-        assert_almost_equal(np.abs(s_resid).mean(0), v)
+        assert_allclose(np.abs(s_resid).mean(0), v)
 
     def test_summary(self):
         # smoke test
@@ -296,7 +297,7 @@ class TestPHReg(object):
                 # The agreement isn't very high, the issue may be on
                 # their side.  They seem to use some approximations
                 # that we are not using.
-                assert_almost_equal(rslt.params, coef, decimal=1)
+                assert_allclose(rslt.params, coef, rtol=0.3)
 
                 # Smoke test for summary
                 smry = rslt.summary()
