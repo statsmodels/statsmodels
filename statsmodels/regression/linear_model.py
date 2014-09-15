@@ -681,6 +681,10 @@ class OLS(WLS):
     def __init__(self, endog, exog=None, missing='none', hasconst=None):
         super(OLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst)
+        print self._init_keys
+        if "weights" in self._init_keys:
+            self._init_keys.remove("weights")
+        print self._init_keys
 
     def loglike(self, params):
         """
