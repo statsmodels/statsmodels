@@ -534,7 +534,11 @@ def calculate_residual_weights(np.ndarray[DTYPE_t, ndim = 1] y,
     '''
 
     std_resid = np.abs(y - y_fit)
-    std_resid /= 6.0 * np.median(std_resid)
+    median = np.median(std_resid)
+    if median == 0:
+        std_resid[:] = 0
+    else:
+        std_resid /= 6.0 * median
 
     # Some trimming of outlier residuals.
     std_resid[std_resid >= 1.0] = 1.0

@@ -44,6 +44,17 @@ class  TestLowess(object):
         assert_almost_equal(expected_lowess, actual_lowess, decimal = testdec)
 
 
+    def test_flat(self):
+        rfile = os.path.join(rpath, 'test_lowess_flat.csv')
+        test_data = np.genfromtxt(open(rfile, 'rb'),
+                                  delimiter = ',', names = True)
+        expected_lowess = np.array([test_data['x'], test_data['out']]).T
+
+        actual_lowess = lowess(test_data['y'], test_data['x'])
+
+        assert_almost_equal(expected_lowess, actual_lowess, decimal = testdec)
+
+
     def test_iter(self):
         rfile = os.path.join(rpath, 'test_lowess_iter.csv')
         test_data = np.genfromtxt(open(rfile, 'rb'),
