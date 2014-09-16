@@ -536,7 +536,7 @@ def calculate_residual_weights(np.ndarray[DTYPE_t, ndim = 1] y,
     std_resid = np.abs(y - y_fit)
     median = np.median(std_resid)
     if median == 0:
-        std_resid[:] = 0
+        std_resid[std_resid > 0] = 1
     else:
         std_resid /= 6.0 * median
 
