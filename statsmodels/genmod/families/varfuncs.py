@@ -266,6 +266,14 @@ class NegativeBinomial(object):
         p = self._clean(mu)
         return p + self.alpha*p**2
 
+    def deriv(self, mu):
+        """
+        Derivative of the negative binomial variance function.
+        """
+
+        p = self._clean(mu)
+        return 1 + 2 * self.alpha * p
+
 nbinom = NegativeBinomial()
 nbinom.__doc__ = """
 Negative Binomial variance function.

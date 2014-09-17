@@ -192,7 +192,8 @@ class Family(object):
             The mean response variables given by the inverse of the link
             function.
         """
-        return self.link.inverse(lin_pred)
+        fits = self.link.inverse(lin_pred)
+        return fits
 
     def predict(self, mu):
         """
@@ -213,7 +214,8 @@ class Family(object):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The loglikelihood function.
+        The log-likelihood function expressed as a function of the
+        fitted mean response.
 
         Parameters
         ----------
@@ -221,6 +223,8 @@ class Family(object):
             Usually the endogenous response variable.
         `mu` : array
             Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter
 
         Returns
         -------
@@ -349,7 +353,8 @@ class Poisson(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        Loglikelihood function for Poisson exponential family distribution.
+        The log-likelihood function for the Poisson exponential family
+        expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -358,7 +363,7 @@ class Poisson(Family):
         mu : array-like
             Fitted mean response variable
         scale : float, optional
-            The default is 1.
+            The scale parameter, defaults to 1.
 
         Returns
         -------
@@ -483,7 +488,8 @@ class Gaussian(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        Loglikelihood function for Gaussian exponential family distribution.
+        The log-likelihood function for the Gaussian exponential
+        family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -648,7 +654,8 @@ class Gamma(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        Loglikelihood function for Gamma exponential family distribution.
+        The log-likelihood function for the Gamma exponential family
+        expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -870,7 +877,8 @@ class Binomial(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        Loglikelihood function for Binomial exponential family distribution.
+        The log-likelihood function for the Binomial exponential
+        family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -879,7 +887,7 @@ class Binomial(Family):
         mu : array-like
             Fitted mean response variable
         scale : float, optional
-            The default is 1.
+            Not used for the Binomial GLM.
 
         Returns
         -------
@@ -986,7 +994,7 @@ class InverseGaussian(Family):
     Notes
     -----
     The inverse Guassian distribution is sometimes referred to in the
-    literature as the wald distribution.
+    literature as the Wald distribution.
 
     """
 
@@ -1047,7 +1055,9 @@ class InverseGaussian(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        Loglikelihood function for inverse Gaussian distribution.
+        The log-likelihood function for the inverse Gaussian
+        distribution expressed as a function of the fitted mean
+        response.
 
         Parameters
         ----------
@@ -1247,17 +1257,19 @@ class NegativeBinomial(Family):
                                  (1 + self.alpha * mu)))
         return np.sign(endog - mu) * np.sqrt(tmp)/scale
 
-    def loglike(self, endog, lin_pred=None):
+    def loglike(self, endog, mu, scale):
         """
-        The loglikelihood function for the negative binomial family.
+        The log-likelihood function for the negative binomial family
+        expressed as a function of the fitted mean response.
 
         Parameters
         ----------
         endog : array-like
             Endogenous response variable
-        lin_pred : array-like
-            The linear predictor of the model.  This is dot(exog,params),
-            plus the offset if present.
+        mu : array-like
+            The fitted mean response values
+        scale : float
+            The scale parameter
 
         Returns
         -------
@@ -1275,14 +1287,9 @@ class NegativeBinomial(Family):
            constant = gammaln(endog + 1/alpha) - gammaln(endog + 1) -
                       gammaln(1/alpha)
         """
-        # don't need to specify mu
-        if lin_pred is None:
-            raise AttributeError('The loglikelihood for the negative binomial'
-                                 ' requires that the fitted values be '
-                                 'provided via the `lin_pred` keyword '
-                                 'argument.')
-        constant = (special.gammaln(endog + 1/self.alpha) -
-                    special.gammaln(endog+1) - special.gammaln(1/self.alpha))
+        lin_pred = self._link(mu)
+        constant = special.gammaln(endog + 1/self.alpha) - special.gammaln(endog+1)\
+                    -special.gammaln(1/self.alpha)
         exp_lin_pred = np.exp(lin_pred)
         return (np.sum(endog * np.log(self.alpha * exp_lin_pred /
                                       (1 + self.alpha * exp_lin_pred)) -

@@ -214,6 +214,7 @@ class GLM(base.LikelihoodModel):
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
+
     def initialize(self):
         """
         Initialize a generalized linear model.
@@ -248,15 +249,21 @@ class GLM(base.LikelihoodModel):
             if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
 
-    def loglike(self, *args):
+    def loglike_mu(self, mu, scale=1.):
         """
-        Loglikelihood function.
-
-        Each distribution family has its own loglikelihood function.
-        See statsmodels.families.family
+        Evaluate the log-likelihood for a generalized linear model.
         """
-        return self.family.loglike(*args)
+        return self.family.loglike(mu, self.endog, self.exog, scale)
 
+    def loglike(self, params, scale=1.):
+        """
+        Evaluate the log-likelihood for a generalized linear model.
+        """
+        lin_pred = np.dot(self.exog, params) + self._offset_exposure
+        expval = self.family.link.inverse(lin_pred)
+        if scale is None:
+            scale = self.estimate_scale(expval)
+        return self.family.loglike(expval, self.endog, scale)
 
     def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
@@ -359,8 +366,6 @@ class GLM(base.LikelihoodModel):
         hessian_factor : ndarray, 1d
             A 1d weight vector used in the calculation of the Hessian.
             The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
-
-
         """
 
         # calculating eim_factor
@@ -399,7 +404,6 @@ class GLM(base.LikelihoodModel):
 
         return oim_factor
 
-
     def hessian(self, params, scale=None, observed=True):
         """Hessian, second derivative of loglikelihood function
 
@@ -419,14 +423,11 @@ class GLM(base.LikelihoodModel):
         -------
         hessian : ndarray
             Hessian, i.e. observed information, or expected information matrix.
-
-
         """
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         hess = -np.dot(self.exog.T * factor, self.exog)
         return hess
-
 
     def information(self, params, scale=None):
         """
@@ -662,6 +663,7 @@ class GLM(base.LikelihoodModel):
         -----
         This method does not take any extra undocumented ``kwargs``.
         """
+
         endog = self.endog
         if endog.ndim > 1 and endog.shape[1] == 2:
             data_weights = endog.sum(1)  # weights are total trials
@@ -686,12 +688,55 @@ class GLM(base.LikelihoodModel):
             offset_exposure = offset_exposure + self.exposure
         self._offset_exposure = offset_exposure
 
+        if method == "IRLS":
+            return self._fit_irls(start_params=start_params, maxiter=maxiter,
+                                  tol=tol, scale=scale, cov_type=cov_type,
+                                  cov_kwds=cov_kwds, use_t=use_t)
+        else:
+            return self._fit_gradient(start_params=start_params,
+                                      method=method,
+                                      maxiter=maxiter,
+                                      tol=tol, scale=scale,
+                                      cov_type=cov_type,
+                                      cov_kwds=cov_kwds, use_t=use_t)
+
+    def _fit_gradient(self, start_params=None, method="newton", maxiter=100, tol=1e-8,
+                      scale=None, cov_type='nonrobust', cov_kwds=None,
+                      use_t=None):
+        """
+        Fits a generalized linear model for a given family using
+        iteratively using the scipy gradient optimizers.
+        """
+
+        # TODO: pass more into fit here
+        rslt = super(GLM, self).fit(start_params=start_params)
+        self.mu = self.predict(rslt.params)
+        self.scale = self.estimate_scale(self.mu)
+
+        glm_results = GLMResults(self, rslt.params,
+                                 rslt.normalized_cov_params / self.scale,
+                                 self.scale,
+                                 cov_type=cov_type, cov_kwds=cov_kwds,
+                                 use_t=use_t)
+
+        return GLMResultsWrapper(glm_results)
+
+
+    def _fit_irls(self, start_params=None, maxiter=100, tol=1e-8,
+                  scale=None, cov_type='nonrobust', cov_kwds=None,
+                  use_t=None):
+        """
+        Fits a generalized linear model for a given family using
+        iteratively reweighted least squares (IRLS).
+        """
+
+        endog = self.endog
         wlsexog = self.exog
         if start_params is None:
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:
-            lin_pred = np.dot(wlsexog, start_params) + offset_exposure
+            lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
@@ -712,11 +757,11 @@ class GLM(base.LikelihoodModel):
             wls_results = lm.RegressionResults(self, start_params, None)
             iteration = 0
         for iteration in range(maxiter):
-            self.weights = data_weights*self.family.weights(mu)
+            self.weights = self.data_weights*self.family.weights(mu)
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
-                        - offset_exposure)
+                        - self._offset_exposure)
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
-            lin_pred = np.dot(self.exog, wls_results.params) + offset_exposure
+            lin_pred = np.dot(self.exog, wls_results.params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
@@ -993,13 +1038,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def llf(self):
         _modelfamily = self.family
-        if isinstance(_modelfamily, families.NegativeBinomial):
-            lin_pred = np.dot(self.model.exog, self.params) +\
-                       self.model._offset_exposure
-            val = _modelfamily.loglike(self.model.endog,
-                                       lin_pred=lin_pred)
-        else:
-            val = _modelfamily.loglike(self._endog, self.mu, scale=self.scale)
+        val = _modelfamily.loglike(self._endog, self.mu, scale=self.scale)
         return val
 
     @cache_readonly
