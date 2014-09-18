@@ -541,7 +541,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
 
 def _simple_tables(tables, settings, pad_col=None, pad_index=None):
     simple_tables = []
-    float_format = '%.4f'
+    float_format = settings[1]['float_format']
     if pad_col is None:
         pad_col = [0] * len(tables)
     if pad_index is None:
