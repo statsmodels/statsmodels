@@ -1622,8 +1622,9 @@ class MixedLM(base.LikelihoodModel):
                     # Only bfgs and lbfgs seem to work
                     fit_args["method"] = "bfgs"
                     pa = params.get_packed()
-                    rslt = super(MixedLM, self).fit(
-                        start_params=pa, **fit_args)
+                    rslt = super(MixedLM, self).fit(start_params=pa,
+                                                    skip_hessian=True,
+                                                    **fit_args)
                 except np.linalg.LinAlgError:
                     continue
 
