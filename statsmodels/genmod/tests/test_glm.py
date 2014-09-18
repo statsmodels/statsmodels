@@ -863,13 +863,16 @@ def test_gradient_irls():
         rslt_gradient = mod_gradient.fit(start_params=rslt_irls.params, method="newton")
 
         assert_allclose(rslt_gradient.params,
-                        rslt_irls.params, rtol=1e-6, atol=1e-6)
+                        rslt_irls.params, rtol=1e-6, atol=1e-6,
+                        err_msg=family_name + " params")
 
-        # TODO: figure out why this fails
-        if family_name != "negbinom":
-            assert_allclose(rslt_gradient.bse,
-                            rslt_irls.bse, rtol=1e-6, atol=1e-6)
->>>>>>> Add gradient-based optimization for fitting GLM's
+        gradient_bse = rslt_gradient.bse
+        if family_name == "negbinom":
+            ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
+            gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+        assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6,
+                        atol=1e-6, err_msg=family_name + " SE")
+
 
 
 if __name__=="__main__":
