@@ -255,7 +255,7 @@ class GLM(base.LikelihoodModel):
         """
         return self.family.loglike(mu, self.endog, self.exog, scale)
 
-    def loglike(self, params, scale=1.):
+    def loglike(self, params, scale=None):
         """
         Evaluate the log-likelihood for a generalized linear model.
         """
