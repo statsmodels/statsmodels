@@ -47,11 +47,11 @@ def test_inverse():
         for k in range(10):
             p = np.random.uniform(0, 1) # In domain for all families
             d = link.inverse(link(p))
-            assert_allclose(d, p, atol=1e-8)
+            assert_allclose(d, p, atol=1e-8, err_msg=str(link))
 
             z = get_domainvalue(link)
             d = link(link.inverse(z))
-            assert_allclose(d, z, atol=1e-8)
+            assert_allclose(d, z, atol=1e-8, err_msg=str(link))
 
 
 def test_deriv():
@@ -66,7 +66,8 @@ def test_deriv():
             p = np.random.uniform(0, 1)
             d = link.deriv(p)
             da = nd.approx_fprime(np.r_[p], link)
-            assert_allclose(d, da, rtol=1e-6, atol=1e-6)
+            assert_allclose(d, da, rtol=1e-6, atol=1e-6,
+                            err_msg=str(link))
 
 
 def test_deriv2():
@@ -88,7 +89,8 @@ def test_deriv2():
                 p = np.clip(p, 0.03, 0.97)
             d = link.deriv2(p)
             da = nd.approx_fprime(np.r_[p], link.deriv)
-            assert_allclose(d, da, rtol=1e-6, atol=1e-6)
+            assert_allclose(d, da, rtol=1e-6, atol=1e-6,
+                            err_msg=str(link))
 
 def test_inverse_deriv():
     """
@@ -102,7 +104,8 @@ def test_inverse_deriv():
             z = -np.log(np.random.uniform()) # In domain for all families
             d = link.inverse_deriv(z)
             f = 1 / link.deriv(link.inverse(z))
-            assert_allclose(d, f, rtol=1e-8, atol=1e-10)
+            assert_allclose(d, f, rtol=1e-8, atol=1e-10,
+                            err_msg=str(link))
 
 
 def test_invlogit_stability():
