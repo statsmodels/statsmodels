@@ -978,16 +978,15 @@ class TestRegularizedFit(object):
 
     # Make sure there are no issues when there are no selected
     # variables.
-#    def test_empty_model(self):
+    def test_empty_model(self):
 
-#        np.random.seed(742)
-#        n = 100
-#        endog = np.random.normal(size=n)
-#        exog = np.random.normal(size=(n, 3))
+       np.random.seed(742)
+       n = 100
+       endog = np.random.normal(size=n)
+       exog = np.random.normal(size=(n, 3))
 
-#        model = OLS(endog, exog)
-#        result = model.fit_regularized(alpha=1000)
-
+       model = OLS(endog, exog)
+       result = model.fit_regularized(alpha=1000)
 
     def test_regularized(self):
 
