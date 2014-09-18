@@ -318,8 +318,8 @@ _gee_results_doc = """
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     cov_type : string
-        string indicating whether a "robust", "naive" or "bias_
-        reduced" covariance is used as default
+        string indicating whether a "robust", "naive" or "bias_reduced"
+        covariance is used as default
     fit_history : dict
         Contains information about the iterations.
     fittedvalues : array

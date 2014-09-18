@@ -206,7 +206,7 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None,
-            retall=False, **kwargs):
+            retall=False, skip_hessian=False, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -250,6 +250,11 @@ class LikelihoodModel(Model):
         retall : bool, optional
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
+        skip_hessian : bool, optional
+            If False (default), then the negative inverse hessian is calculated
+            after the optimization. If True, then the hessian will not be
+            calculated. However, it will be available in methods that use the
+            hessian in the optimization (currently only with `"newton"`).
 
         Notes
         -----
@@ -398,7 +403,7 @@ class LikelihoodModel(Model):
             Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
-        else:
+        elif not skip_hessian:
             try:
                 Hinv = np.linalg.inv(-1 * self.hessian(xopt))
             except:
