@@ -267,9 +267,6 @@ class Power(Link):
         g(p) = x**self.power
         """
 
-        # TODO: not sure if this is a good idea...
-        p = np.clip(p, 1e-10, 1e10)
-
         z = np.power(p, self.power)
         return z
 
@@ -291,8 +288,6 @@ class Power(Link):
         -----
         g^(-1)(z`) = `z`**(1/`power`)
         """
-        # TODO: not sure if this is a good idea...
-        z = np.clip(z, 1e-10, 1e10)
 
         p = np.power(z, 1. / self.power)
         return p
