@@ -14,7 +14,7 @@ import urllib
 from numpy.testing import assert_
 import pdb
 
-import heckman
+from statsmodels.regression import heckman
 
 imp.reload(heckman)
 
