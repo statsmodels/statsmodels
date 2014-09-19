@@ -631,9 +631,9 @@ class GLM(base.LikelihoodModel):
         else:
             return self.family.fitted(linpred)
 
-    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
-            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
-            **kwargs):
+    def fit(self, start_params=None, maxiter=100, method='IRLS',
+            tol=1e-8, full_output=True, disp=False, scale=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None):
         """
         Fits a generalized linear model for a given family.
 
@@ -653,6 +653,14 @@ class GLM(base.LikelihoodModel):
             `dev` is the deviance divided by df_resid
         tol : float
             Convergence tolerance.  Default is 1e-8.
+        full_output : bool, optional
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See LikelihoodModelResults notes section for more information.
+            Not used if methhod is IRLS.
+        disp : bool, optional
+            Set to True to print convergence messages.  Not used if method is
+            IRLS.
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is family-specific and is given by the
@@ -688,7 +696,7 @@ class GLM(base.LikelihoodModel):
             offset_exposure = offset_exposure + self.exposure
         self._offset_exposure = offset_exposure
 
-        if method == "IRLS":
+        if method.lower() == "irls":
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t)
@@ -697,19 +705,23 @@ class GLM(base.LikelihoodModel):
                                       method=method,
                                       maxiter=maxiter,
                                       tol=tol, scale=scale,
-                                      cov_type=cov_type,
+                                      full_output=full_output,
+                                      disp=disp, cov_type=cov_type,
                                       cov_kwds=cov_kwds, use_t=use_t)
 
-    def _fit_gradient(self, start_params=None, method="newton", maxiter=100, tol=1e-8,
-                      scale=None, cov_type='nonrobust', cov_kwds=None,
-                      use_t=None):
+    def _fit_gradient(self, start_params=None, method="newton",
+                      maxiter=100, tol=1e-8, full_output=True,
+                      disp=True, scale=None, cov_type='nonrobust',
+                      cov_kwds=None, use_t=None):
         """
-        Fits a generalized linear model for a given family using
-        iteratively using the scipy gradient optimizers.
+        Fits a generalized linear model for a given family iteratively
+        using the scipy gradient optimizers.
         """
 
         # TODO: pass more into fit here
-        rslt = super(GLM, self).fit(start_params=start_params)
+        rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
+                                    maxiter=maxiter, full_output=full_output,
+                                    method=method, disp=disp)
         self.mu = self.predict(rslt.params)
         self.scale = self.estimate_scale(self.mu)
 
@@ -718,6 +730,15 @@ class GLM(base.LikelihoodModel):
                                  self.scale,
                                  cov_type=cov_type, cov_kwds=cov_kwds,
                                  use_t=use_t)
+
+        # TODO: iteration count is not always available
+        history = {'iteration': 0}
+        if full_output:
+            glm_results.mle_retvals = rslt.mle_retvals
+            if 'iterations' in rslt.mle_retvals:
+                history['iteration'] = rslt.mle_retvals['iterations']
+        glm_results.method = method
+        glm_results.fit_history = history
 
         return GLMResultsWrapper(glm_results)
 
@@ -779,6 +800,7 @@ class GLM(base.LikelihoodModel):
                                  cov_type=cov_type, cov_kwds=cov_kwds,
                                  use_t=use_t)
 
+        glm_results.method = "IRLS"
         history['iteration'] = iteration + 1
         glm_results.fit_history = history
         glm_results.converged = converged
@@ -1133,7 +1155,7 @@ class GLMResults(base.LikelihoodModelResults):
                     ('Model:', None),
                     ('Model Family:', [self.family.__class__.__name__]),
                     ('Link Function:', [self.family.link.__class__.__name__]),
-                    ('Method:', ['IRLS']),
+                    ('Method:', [self.method]),
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Iterations:',

@@ -832,6 +832,24 @@ def gen_endog(lin_pred, family_name):
     return endog
 
 
+def test_summary():
+    """
+    Smoke test for summary.
+    """
+
+    np.random.seed(4323)
+
+    n = 100
+    exog = np.random.normal(size=(n, 2))
+    exog[:, 0] = 1
+    endog = np.random.normal(size=n)
+
+    for method in "irls", "cg":
+        fa = sm.families.Gaussian()
+        model = sm.GLM(endog, exog, family=fa)
+        rslt = model.fit(method=method)
+        s = rslt.summary()
+
 def test_gradient_irls():
     """
     Compare the results when using gradient optimization and IRLS.
