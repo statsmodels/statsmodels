@@ -891,7 +891,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     method = str(method).lower()
     if method not in ["unbiased", "mle"]:
         raise ValueError("ACF estimation method must be 'unbiased' or 'MLE'")
-    X = np.array(X)
+    X = np.array(X, dtype=np.float64)
     if demean:
         X -= X.mean()                  # automatically demean's X
     n = df or X.shape[0]
