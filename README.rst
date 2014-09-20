@@ -51,6 +51,14 @@ Binaries and source distributions are available from PyPi
 
     http://pypi.python.org/pypi/statsmodels/
 
+Binaries can be installed in Anaconda
+
+    conda install statsmodels
+
+Development snapshots are also avaiable in Anaconda
+
+    conda install -c https://conda.binstar.org/statsmodels statsmodels
+
 
 Installation from sources
 =========================
