@@ -14,6 +14,14 @@ The Datasets Package
 ``statsmodels`` provides data sets (i.e. data *and* meta-data) for use in
 examples, tutorials, model testing, etc.
 
+Using Datasets from Stata
+-------------------------
+
+.. autosummary::
+   :toctree: ./
+
+   webuse
+
 Using Datasets from R
 ---------------------
 

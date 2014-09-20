@@ -40,7 +40,6 @@ NOTE        = """::
 """
 
 from numpy import recfromtxt, column_stack, array
-from statsmodels.tools import categorical
 from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
@@ -58,6 +57,7 @@ def load():
     raw_data has the firm variable expanded to dummy variables for each
     firm (ie., there is no reference dummy)
     """
+    from statsmodels.tools import categorical
     data = _get_data()
     raw_data = categorical(data, col='firm', drop=True)
     ds = du.process_recarray(data, endog_idx=0, stack=False)

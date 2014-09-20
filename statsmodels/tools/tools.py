@@ -1,18 +1,18 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
-                                StringIO, range)
+from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
-from scipy.interpolate import interp1d
 from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
-                                               StepFunction)
+                                       StepFunction)
+from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.compat.numpy import np_matrix_rank
 from pandas import DataFrame
+
 
 def _make_dictnames(tmp_arr, offset=0):
     """
@@ -20,11 +20,12 @@ def _make_dictnames(tmp_arr, offset=0):
     to the name in tmp_arr.
     """
     col_map = {}
-    for i,col_name in enumerate(tmp_arr):
+    for i, col_name in enumerate(tmp_arr):
         col_map.update({i+offset : col_name})
     return col_map
 
-def drop_missing(Y,X=None, axis=1):
+
+def drop_missing(Y, X=None, axis=1):
     """
     Returns views on the arrays Y and X where missing observations are dropped.
 
@@ -46,21 +47,23 @@ def drop_missing(Y,X=None, axis=1):
     """
     Y = np.asarray(Y)
     if Y.ndim == 1:
-        Y = Y[:,None]
+        Y = Y[:, None]
     if X is not None:
         X = np.array(X)
         if X.ndim == 1:
-            X = X[:,None]
-        keepidx = np.logical_and(~np.isnan(Y).any(axis),~np.isnan(X).any(axis))
+            X = X[:, None]
+        keepidx = np.logical_and(~np.isnan(Y).any(axis),
+                                 ~np.isnan(X).any(axis))
         return Y[keepidx], X[keepidx]
     else:
         keepidx = ~np.isnan(Y).any(axis)
         return Y[keepidx]
 
-#TODO: needs to better preserve dtype and be more flexible
+
+# TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
-#TODO: add name validator (ie., bad names for datasets.grunfeld)
+# TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False, ):
     '''
     Returns a dummy matrix given an array of categorical variables.
@@ -141,7 +144,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         except:
             raise ValueError("Can only convert one column at a time")
 
-    #TODO: add a NameValidator function
+    # TODO: add a NameValidator function
     # catch recarrays and structured arrays
     if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
@@ -156,66 +159,67 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         # if the cols are shape (#,) vs (#,1) need to add an axis and flip
         _swap = True
         if data[col].ndim == 1:
-            tmp_arr = tmp_arr[:,None]
+            tmp_arr = tmp_arr[:, None]
             _swap = False
-        tmp_dummy = (tmp_arr==data[col]).astype(float)
+        tmp_dummy = (tmp_arr == data[col]).astype(float)
         if _swap:
-            tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
+            tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
 
-        if not tmp_arr.dtype.names: # how do we get to this code path?
+        if not tmp_arr.dtype.names:  # how do we get to this code path?
             tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr)]
         elif tmp_arr.dtype.names:
             tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr.tolist())]
 
-# prepend the varname and underscore, if col is numeric attribute lookup
-# is lost for recarrays...
+        # prepend the varname and underscore, if col is numeric attribute
+        # lookup is lost for recarrays...
         if col is None:
             try:
                 col = data.dtype.names[0]
             except:
                 col = 'var'
-#TODO: the above needs to be made robust because there could be many
-# var_yes, var_no varaibles for instance.
-        tmp_arr = [col + '_'+ item for item in tmp_arr]
-#TODO: test this for rec and structured arrays!!!
+        # TODO: the above needs to be made robust because there could be many
+        # var_yes, var_no varaibles for instance.
+        tmp_arr = [col + '_' + item for item in tmp_arr]
+        # TODO: test this for rec and structured arrays!!!
 
         if drop is True:
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
-                    tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
+                    tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
                 dt = lzip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
                 # preserve array type
                 return np.array(lmap(tuple, tmp_dummy.tolist()),
-                        dtype=dt).view(type(data))
+                                dtype=dt).view(type(data))
 
-            data=nprf.drop_fields(data, col, usemask=False,
-                            asrecarray=type(data) is np.recarray)
-        data=nprf.append_fields(data, tmp_arr, data=tmp_dummy,
-            usemask=False, asrecarray=type(data) is np.recarray)
+            data = nprf.drop_fields(data, col, usemask=False,
+                                    asrecarray=type(data) is np.recarray)
+        data = nprf.append_fields(data, tmp_arr, data=tmp_dummy,
+                                  usemask=False,
+                                  asrecarray=type(data) is np.recarray)
         return data
 
     # handle ndarrays and catch array-like for an error
-    elif data.__class__ is np.ndarray or not isinstance(data,np.ndarray):
+    elif data.__class__ is np.ndarray or not isinstance(data, np.ndarray):
         if not isinstance(data, np.ndarray):
             raise NotImplementedError("Array-like objects are not supported")
 
         if isinstance(col, int):
             offset = data.shape[1]          # need error catching here?
-            tmp_arr = np.unique(data[:,col])
-            tmp_dummy = (tmp_arr[:,np.newaxis]==data[:,col]).astype(float)
-            tmp_dummy = tmp_dummy.swapaxes(1,0)
+            tmp_arr = np.unique(data[:, col])
+            tmp_dummy = (tmp_arr[:, np.newaxis] == data[:, col]).astype(float)
+            tmp_dummy = tmp_dummy.swapaxes(1, 0)
             if drop is True:
                 offset -= 1
                 data = np.delete(data, col, axis=1).astype(float)
-            data = np.column_stack((data,tmp_dummy))
+            data = np.column_stack((data, tmp_dummy))
             if dictnames is True:
                 col_map = _make_dictnames(tmp_arr, offset)
                 return data, col_map
             return data
         elif col is None and np.squeeze(data).ndim == 1:
             tmp_arr = np.unique(data)
-            tmp_dummy = (tmp_arr[:,None]==data).astype(float)
-            tmp_dummy = tmp_dummy.swapaxes(1,0)
+            tmp_dummy = (tmp_arr[:, None] == data).astype(float)
+            tmp_dummy = tmp_dummy.swapaxes(1, 0)
             if drop is True:
                 if dictnames is True:
                     col_map = _make_dictnames(tmp_arr)
@@ -230,6 +234,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         else:
             raise IndexError("The index %s is not understood" % col)
 
+
 def _series_add_constant(data, prepend):
     const = np.ones_like(data)
     if not prepend:
@@ -238,6 +243,7 @@ def _series_add_constant(data, prepend):
         columns = ['const', data.name]
     results = DataFrame({data.name : data, 'const' : const}, columns=columns)
     return results
+
 
 def _dataframe_add_constant(data, prepend):
     # check for const.
@@ -249,6 +255,7 @@ def _dataframe_add_constant(data, prepend):
         data['const'] = 1
     return data
 
+
 def _pandas_add_constant(data, prepend):
     from pandas import Series
     if isinstance(data, Series):
@@ -257,7 +264,7 @@ def _pandas_add_constant(data, prepend):
         return _dataframe_add_constant(data, prepend)
 
 
-#TODO: add an axis argument to this for sysreg
+# TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True):
     '''
     This appends a column of ones to an array if prepend==False.
@@ -297,11 +304,12 @@ def add_constant(data, prepend=True):
         return_rec = data.__class__ is np.recarray
         if prepend:
             ones = np.ones((data.shape[0], 1), dtype=[('const', float)])
-            data = nprf.append_fields(ones, data.dtype.names, [data[i] for
-                i in data.dtype.names], usemask=False, asrecarray=return_rec)
+            data = nprf.append_fields(ones, data.dtype.names,
+                                      [data[i] for i in data.dtype.names],
+                                      usemask=False, asrecarray=return_rec)
         else:
             data = nprf.append_fields(data, 'const', np.ones(data.shape[0]),
-                    usemask=False, asrecarray = return_rec)
+                                      usemask=False, asrecarray=return_rec)
     return data
 
 
@@ -365,7 +373,8 @@ def pinv_extended(X, rcond=1e-15):
             s[i] = 1./s[i]
         else:
             s[i] = 0.
-    res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis], np.transpose(u)))
+    res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis],
+                                               np.transpose(u)))
     return res, s_orig
 
 
@@ -378,6 +387,7 @@ def recipr(X):
     x = np.maximum(np.asarray(X).astype(np.float64), 0)
     return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
 
+
 def recipr0(X):
     """
     Return the reciprocal of an array, setting all entries equal to 0
@@ -387,13 +397,15 @@ def recipr0(X):
     test = np.equal(np.asarray(X), 0)
     return np.where(test, 0, 1. / X)
 
+
 def clean0(matrix):
     """
     Erase columns of zeros: can save some time in pseudoinverse.
     """
     colsum = np.add.reduce(matrix**2, 0)
-    val = [matrix[:,i] for i in np.flatnonzero(colsum)]
+    val = [matrix[:, i] for i in np.flatnonzero(colsum)]
     return np.array(np.transpose(val))
+
 
 def rank(X, cond=1.0e-12):
     """
@@ -406,9 +418,11 @@ def rank(X, cond=1.0e-12):
     X = np.asarray(X)
     if len(X.shape) == 2:
         D = svdvals(X)
-        return int(np.add.reduce(np.greater(D / D.max(), cond).astype(np.int32)))
+        return int(np.add.reduce(np.greater(D / D.max(),
+                                            cond).astype(np.int32)))
     else:
         return int(not np.alltrue(np.equal(X, 0.)))
+
 
 def fullrank(X, r=None):
     """
@@ -427,18 +441,20 @@ def fullrank(X, r=None):
     order = order[::-1]
     value = []
     for i in range(r):
-        value.append(V[:,order[i]])
+        value.append(V[:, order[i]])
     return np.asarray(np.transpose(value)).astype(np.float64)
 
 StepFunction = np.deprecate(StepFunction,
-                old_name = 'statsmodels.tools.tools.StepFunction',
-                new_name = 'statsmodels.distributions.StepFunction')
+                            old_name='statsmodels.tools.tools.StepFunction',
+                            new_name='statsmodels.distributions.StepFunction')
 monotone_fn_inverter = np.deprecate(monotone_fn_inverter,
-                old_name = 'statsmodels.tools.tools.monotone_fn_inverter',
-                new_name = 'statsmodels.distributions.monotone_fn_inverter')
+                                    old_name='statsmodels.tools.tools'
+                                             '.monotone_fn_inverter',
+                                    new_name='statsmodels.distributions'
+                                             '.monotone_fn_inverter')
 ECDF = np.deprecate(ECDF,
-                old_name = 'statsmodels.tools.tools.ECDF',
-                new_name = 'statsmodels.distributions.ECDF')
+                    old_name='statsmodels.tools.tools.ECDF',
+                    new_name='statsmodels.distributions.ECDF')
 
 
 def unsqueeze(data, axis, oldshape):
@@ -459,6 +475,7 @@ def unsqueeze(data, axis, oldshape):
     newshape = list(oldshape)
     newshape[axis] = 1
     return data.reshape(newshape)
+
 
 def chain_dot(*arrs):
     """
@@ -486,43 +503,6 @@ def chain_dot(*arrs):
     """
     return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
-    """
-    Parameters
-    ----------
-    data : str
-        Name of dataset to fetch.
-    baseurl : str
-        The base URL to the stata datasets.
-    as_df : bool
-        If True, returns a `pandas.DataFrame`
-
-    Returns
-    -------
-    dta : Record Array
-        A record array containing the Stata dataset.
-
-    Examples
-    --------
-    >>> dta = webuse('auto')
-
-    Notes
-    -----
-    Make sure baseurl has trailing forward slash. Doesn't do any
-    error checking in response URLs.
-    """
-    # lazy imports
-    from statsmodels.iolib import genfromdta
-
-    url = urljoin(baseurl, data+'.dta')
-    dta = urlopen(url)
-    #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
-    dta = StringIO(dta.read()) # make it truly file-like
-    if as_df: # could make this faster if we don't process dta twice?
-        from pandas import DataFrame
-        return DataFrame.from_records(genfromdta(dta))
-    else:
-        return genfromdta(dta)
 
 def nan_dot(A, B):
     """
@@ -546,6 +526,7 @@ def nan_dot(A, B):
 
     return C
 
+
 def maybe_unwrap_results(results):
     """
     Gets raw results back from wrapped results.
@@ -555,10 +536,18 @@ def maybe_unwrap_results(results):
     """
     return getattr(results, '_results', results)
 
+
 class Bunch(dict):
     """
     Returns a dict-like object with keys accessible via attribute lookup.
     """
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
+
+webuse = np.deprecate(webuse,
+                      old_name='statsmodels.tools.tools.webuse',
+                      new_name='statsmodels.datasets.webuse',
+                      message='webuse will be removed from the tools '
+                              'namespace in the 0.7.0 release. Please use the'
+                              ' new import.')

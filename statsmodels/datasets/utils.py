@@ -1,21 +1,53 @@
-from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError, lrange,
-                                cPickle)
+from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError,
+                                       lrange, cPickle, urljoin)
 import sys
 import shutil
 from os import environ
 from os import makedirs
-from os.path import basename
 from os.path import expanduser
 from os.path import exists
-from os.path import expanduser
 from os.path import join
 
-import time
-
-
 import numpy as np
-from numpy import genfromtxt, array
-from pandas import read_csv
+from numpy import array
+from pandas import read_csv, DataFrame, Index
+
+
+def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
+    """
+    Parameters
+    ----------
+    data : str
+        Name of dataset to fetch.
+    baseurl : str
+        The base URL to the stata datasets.
+    as_df : bool
+        If True, returns a `pandas.DataFrame`
+
+    Returns
+    -------
+    dta : Record Array
+        A record array containing the Stata dataset.
+
+    Examples
+    --------
+    >>> dta = webuse('auto')
+
+    Notes
+    -----
+    Make sure baseurl has trailing forward slash. Doesn't do any
+    error checking in response URLs.
+    """
+    # lazy imports
+    from statsmodels.iolib import genfromdta
+
+    url = urljoin(baseurl, data+'.dta')
+    dta = urlopen(url)
+    dta = StringIO(dta.read())  # make it truly file-like
+    if as_df:  # could make this faster if we don't process dta twice?
+        return DataFrame.from_records(genfromdta(dta))
+    else:
+        return genfromdta(dta)
 
 
 class Dataset(dict):
@@ -26,17 +58,18 @@ class Dataset(dict):
         self.data = None
         self.names = None
 
-        dict.__init__(self,kw)
+        dict.__init__(self, kw)
         self.__dict__ = self
         # Some datasets have string variables. If you want a raw_data
         # attribute you must create this in the dataset's load function.
-        try: # some datasets have string variables
+        try:  # some datasets have string variables
             self.raw_data = self.data.view((float, len(self.names)))
         except:
             pass
 
     def __repr__(self):
         return str(self.__class__)
+
 
 def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     names = list(data.dtype.names)
@@ -55,7 +88,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
 
     if exog_idx is None:
         exog_name = [names[i] for i in range(len(names))
-                 if i not in endog_idx]
+                     if i not in endog_idx]
     else:
         exog_name = [names[i] for i in exog_idx]
 
@@ -73,9 +106,9 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
 
     return dataset
 
+
 def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
                             index_idx=None):
-    from pandas import DataFrame
 
     data = DataFrame(data, dtype=dtype)
     names = data.columns
@@ -97,8 +130,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
         else:
             exog = data.filter(names[exog_idx])
 
-    if index_idx is not None: #NOTE: will have to be improved for dates
-        from pandas import Index
+    if index_idx is not None:  # NOTE: will have to be improved for dates
         endog.index = Index(data.ix[:, index_idx])
         exog.index = Index(data.ix[:, index_idx])
         data = data.set_index(names[index_idx])
@@ -108,25 +140,27 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
                       endog_name=endog_name, exog_name=exog_name)
     return dataset
 
+
 def _maybe_reset_index(data):
     """
     All the Rdatasets have the integer row.labels from R if there is no
     real index. Strip this for a zero-based index
     """
-    from pandas import Index
-    if data.index.equals(Index(lrange(1,len(data)+1))):
+    if data.index.equals(Index(lrange(1, len(data) + 1))):
         data = data.reset_index(drop=True)
     return data
+
 
 def _get_cache(cache):
     if cache is False:
         # do not do any caching or load from cache
         cache = None
-    elif cache is True: # use default dir for cache
+    elif cache is True:  # use default dir for cache
         cache = get_data_home(None)
     else:
         cache = get_data_home(cache)
     return cache
+
 
 def _cache_it(data, cache_path):
     if sys.version_info[0] >= 3:
@@ -134,13 +168,14 @@ def _cache_it(data, cache_path):
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
         open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data,
-                                                                protocol=2)))
+                                                                 protocol=2)))
     else:
         open(cache_path, "wb").write(cPickle.dumps(data).encode("zip"))
 
+
 def _open_cache(cache_path):
     if sys.version_info[0] >= 3:
-        #NOTE: don't know why but decode('zip') doesn't work on my
+        # NOTE: don't know why but decode('zip') doesn't work on my
         # Python 3 build
         import zlib
         data = zlib.decompress(open(cache_path, 'rb').read())
@@ -151,6 +186,7 @@ def _open_cache(cache_path):
         data = cPickle.loads(data)
     return data
 
+
 def _urlopen_cached(url, cache):
     """
     Tries to load data from cache location otherwise downloads it. If it
@@ -160,7 +196,7 @@ def _urlopen_cached(url, cache):
     from_cache = False
     if cache is not None:
         cache_path = join(cache,
-                          url.split("://")[-1].replace('/', ',') +".zip")
+                          url.split("://")[-1].replace('/', ',') + ".zip")
         try:
             data = _open_cache(cache_path)
             from_cache = True
@@ -170,7 +206,7 @@ def _urlopen_cached(url, cache):
     # not using the cache or didn't find it in cache
     if not from_cache:
         data = urlopen(url).read()
-        if cache is not None: # then put it in the cache
+        if cache is not None:  # then put it in the cache
             _cache_it(data, cache_path)
     return data, from_cache
 
@@ -195,13 +231,14 @@ def _get_dataset_meta(dataname, package, cache):
     index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
                  "datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
-    #Python 3
+    # Python 3
     if sys.version[0] == '3':  # pragma: no cover
         data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
     dataset_meta = index.ix[idx]
     return dataset_meta["Title"].item()
+
 
 def get_rdataset(dataname, package="datasets", cache=False):
     """download and return R dataset
@@ -240,7 +277,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     is checked to see if the data should be downloaded again or not. If the
     dataset is in the cache, it's used.
     """
-    #NOTE: use raw github bc html site might not be most up to date
+    # NOTE: use raw github bc html site might not be most up to date
     data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
                      "master/csv/"+package+"/")
     docs_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
@@ -256,7 +293,8 @@ def get_rdataset(dataname, package="datasets", cache=False):
     return Dataset(data=data, __doc__=doc.read(), package=package, title=title,
                    from_cache=from_cache)
 
-### The below function were taken from sklearn
+# The below function were taken from sklearn
+
 
 def get_data_home(data_home=None):
     """Return the path of the statsmodels data dir.
@@ -275,7 +313,7 @@ def get_data_home(data_home=None):
     """
     if data_home is None:
         data_home = environ.get('STATSMODELS_DATA',
-                               join('~', 'statsmodels_data'))
+                                join('~', 'statsmodels_data'))
     data_home = expanduser(data_home)
     if not exists(data_home):
         makedirs(data_home)
