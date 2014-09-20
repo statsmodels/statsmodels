@@ -50,6 +50,14 @@ def test_ywcoef():
     assert_array_almost_equal(mlywar.arcoef1000[1:],
                     -sm.regression.yule_walker(x1000, 20, method='mle')[0], 8)
 
+
+def test_yule_walker_inter():
+    # see 1869
+    x = np.array([1, -1, 2, 2, 0, -2, 1, 0, -3, 0, 0])
+    # it works
+    result = sm.regresion.yule_walker(x, 3)
+
+
 def test_duplication_matrix():
     for k in range(2, 10):
         m = tools.unvech(np.random.randn(k * (k + 1) / 2))
