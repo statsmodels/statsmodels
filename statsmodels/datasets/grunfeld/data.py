@@ -79,6 +79,7 @@ def load_pandas():
     firm (ie., there is no reference dummy)
     """
     from pandas import DataFrame
+    from statsmodels.tools import categorical
     data = _get_data()
     raw_data = categorical(data, col='firm', drop=True)
     ds = du.process_recarray_pandas(data, endog_idx=0)
