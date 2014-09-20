@@ -1349,6 +1349,11 @@ def test_isdummy():
     assert_equal(count_ind, [4, 6])
 
 
+def test_non_binary():
+    y = [1, 2, 1, 2, 1, 2]
+    X = np.random.randn(6, 2)
+    np.testing.assert_raises(ValueError, Logit, y, X)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
