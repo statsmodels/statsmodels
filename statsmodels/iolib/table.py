@@ -220,6 +220,9 @@ class SimpleTable(list):
     def __repr__(self):
         return str(type(self))
 
+    def _repr_html_(self, **fmt_dict):
+        return self.as_html(**fmt_dict)
+
     def _add_headers_stubs(self, headers, stubs):
         """Return None.  Adds headers and stubs to table,
         if these were provided at initialization.
