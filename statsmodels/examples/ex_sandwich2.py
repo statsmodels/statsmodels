@@ -23,7 +23,7 @@ except IOError:
     urlretrieve('http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta', 'srs.dta')
     print('downloading file')
     srs = dta.genfromdta("srs.dta")
-#    from statsmodels.tools.tools import webuse
+#    from statsmodels.datasets import webuse
 #    srs = webuse('srs', 'http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/')
 #    #does currently not cache file
 

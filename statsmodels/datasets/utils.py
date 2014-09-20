@@ -1,5 +1,5 @@
 from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError, lrange,
-                                cPickle)
+                                cPickle, urljoin)
 import sys
 import shutil
 from os import environ
@@ -16,6 +16,45 @@ import time
 import numpy as np
 from numpy import genfromtxt, array
 from pandas import read_csv
+
+
+def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
+    """
+    Parameters
+    ----------
+    data : str
+        Name of dataset to fetch.
+    baseurl : str
+        The base URL to the stata datasets.
+    as_df : bool
+        If True, returns a `pandas.DataFrame`
+
+    Returns
+    -------
+    dta : Record Array
+        A record array containing the Stata dataset.
+
+    Examples
+    --------
+    >>> dta = webuse('auto')
+
+    Notes
+    -----
+    Make sure baseurl has trailing forward slash. Doesn't do any
+    error checking in response URLs.
+    """
+    # lazy imports
+    from statsmodels.iolib import genfromdta
+
+    url = urljoin(baseurl, data+'.dta')
+    dta = urlopen(url)
+    #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
+    dta = StringIO(dta.read()) # make it truly file-like
+    if as_df: # could make this faster if we don't process dta twice?
+        from pandas import DataFrame
+        return DataFrame.from_records(genfromdta(dta))
+    else:
+        return genfromdta(dta)
 
 
 class Dataset(dict):

@@ -1,8 +1,8 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
-                                StringIO, range)
+from statsmodels.compat.python import (reduce, lzip, lmap, asstr2,
+                                       StringIO, range)
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
@@ -10,6 +10,7 @@ from scipy.interpolate import interp1d
 from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
+from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.compat.numpy import np_matrix_rank
 from pandas import DataFrame
@@ -486,44 +487,6 @@ def chain_dot(*arrs):
     """
     return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
-    """
-    Parameters
-    ----------
-    data : str
-        Name of dataset to fetch.
-    baseurl : str
-        The base URL to the stata datasets.
-    as_df : bool
-        If True, returns a `pandas.DataFrame`
-
-    Returns
-    -------
-    dta : Record Array
-        A record array containing the Stata dataset.
-
-    Examples
-    --------
-    >>> dta = webuse('auto')
-
-    Notes
-    -----
-    Make sure baseurl has trailing forward slash. Doesn't do any
-    error checking in response URLs.
-    """
-    # lazy imports
-    from statsmodels.iolib import genfromdta
-
-    url = urljoin(baseurl, data+'.dta')
-    dta = urlopen(url)
-    #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
-    dta = StringIO(dta.read()) # make it truly file-like
-    if as_df: # could make this faster if we don't process dta twice?
-        from pandas import DataFrame
-        return DataFrame.from_records(genfromdta(dta))
-    else:
-        return genfromdta(dta)
-
 def nan_dot(A, B):
     """
     Returns np.dot(left_matrix, right_matrix) with the convention that
@@ -562,3 +525,10 @@ class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
         self.__dict__  = self
+
+webuse = np.deprecate(webuse,
+                      old_name='statsmodels.tools.tools.webuse',
+                      new_name='statsmodels.datasets.webuse',
+                      message='webuse will be removed from the tools '
+                              'namespace in the 0.7.0 release. Please use the'
+                              ' new import.')

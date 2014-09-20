@@ -1750,7 +1750,7 @@ if __name__ == "__main__":
     res14css = arma14css.fit(order=(4, 1), trend='nc', method='css')
 
     # ARIMA Model
-    from statsmodels.tools.tools import webuse
+    from statsmodels.datasets import webuse
     dta = webuse('wpi1')
     wpi = dta['wpi']
 
