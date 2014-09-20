@@ -144,24 +144,6 @@ Miscellaneous
  .. currentmodule:: statsmodels.sandbox.tools.tools_tsa
 
 
-Tools for Time Series Analysis
-""""""""""""""""""""""""""""""
-
-nothing left in here
-
-
-Tools: Principal Component Analysis
-"""""""""""""""""""""""""""""""""""
-
-.. currentmodule:: statsmodels.sandbox.tools.tools_pca
-
-.. autosummary::
-   :toctree: generated/
-
-   pca
-   pcasvd
-
-
 Descriptive Statistics Printing
 """""""""""""""""""""""""""""""
 
@@ -172,8 +154,6 @@ Descriptive Statistics Printing
 
    descstats.sign_test
    descstats.descstats
-
-
 
 
 Original stats.models

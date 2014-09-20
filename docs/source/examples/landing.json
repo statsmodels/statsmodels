@@ -140,6 +140,17 @@
           ]
   },
   {
+      "header":"Data Reduction",
+      "id":"datareduction",
+      "links":[
+      {
+          "text": "Principal Components Analysis",
+          "target": "notebooks/generated/pca_fertility_factors.html",
+          "img": "../_static/images/pca_fertility.png"
+      }
+      ]
+  },
+  {
     "header":"User Notes",
     "id":"user",
     "links":[
