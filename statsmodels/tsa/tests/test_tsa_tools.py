@@ -55,7 +55,7 @@ def test_yule_walker_inter():
     # see 1869
     x = np.array([1, -1, 2, 2, 0, -2, 1, 0, -3, 0, 0])
     # it works
-    result = sm.regresion.yule_walker(x, 3)
+    result = sm.regression.yule_walker(x, 3)
 
 
 def test_duplication_matrix():
