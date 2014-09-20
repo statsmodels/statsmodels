@@ -188,7 +188,7 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
 
     # Draw the violin.
     ax.fill_betweenx(xvals, envelope_l, envelope_r,
-                     facecolor=plot_opts.get('violin_fc', 'y'),
+                     facecolor=plot_opts.get('violin_fc', '#66c2a5'),
                      edgecolor=plot_opts.get('violin_ec', 'k'),
                      lw=plot_opts.get('violin_lw', 1),
                      alpha=plot_opts.get('violin_alpha', 0.5))
