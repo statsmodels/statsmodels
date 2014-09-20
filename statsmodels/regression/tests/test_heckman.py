@@ -59,9 +59,11 @@ def _prep_censored_wage_heckman_exampledata():
 
     X = data[['AX','AX2','WE','CIT']]
     X = sm.add_constant(X, prepend=True)
+    X = X.astype(float)
 
     Z = data[['WA','WA2','FAMINC','WE','K']]
     Z = sm.add_constant(Z, prepend=True)
+    Z = Z.astype(float)
 
     ## Return as three vars
     return Y, X, Z
