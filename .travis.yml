@@ -39,9 +39,10 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.4
-    - NUMPY=1.8
+    - NUMPY=1.9
     - SCIPY=0.14
     - PANDAS=0.14
+    - MATPLOTLIB=1.4
   - python: 2.7
     env:
     - PYTHON=2.7
