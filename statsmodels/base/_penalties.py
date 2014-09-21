@@ -25,15 +25,15 @@ class Penalty(object):
     """
     A class for representing a scalar-value penalty.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     wts : array-like
         A vector of weights that determines the weight of the penalty
         for each parameter.
 
 
-    Notes:
-    ------
+    Notes
+    -----
     The class has a member called `alpha` that scales the weights.
     """
 
@@ -45,13 +45,13 @@ class Penalty(object):
         """
         A penalty function on a vector of parameters.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params : array-like
             A vector of parameters.
 
-        Returns:
-        --------
+        Returns
+        -------
         A scalar penaty value; greater values imply greater
         penalization.
         """
@@ -61,13 +61,13 @@ class Penalty(object):
         """
         The gradient of a penalty function.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params : array-like
             A vector of parameters
 
-        Returns:
-        --------
+        Returns
+        -------
         The gradient of the penalty with respect to each element in
         `params`.
         """
@@ -124,30 +124,30 @@ class CovariancePenalty(object):
 
     def func(self, mat, mat_inv):
         """
-        Parameters:
-        -----------
+        Parameters
+        ----------
         mat : square matrix
             The matrix to be penalized.
         mat_inv : square matrix
             The inverse of `mat`.
 
-        Returns:
-        --------
+        Returns
+        -------
         A scalar penalty value
         """
         raise NotImplementedError
 
     def grad(self, mat, mat_inv):
         """
-        Parameters:
-        -----------
+        Parameters
+        ----------
         mat : square matrix
             The matrix to be penalized.
         mat_inv : square matrix
             The inverse of `mat`.
 
-        Returns:
-        --------
+        Returns
+        -------
         A vector containing the gradient of the penalty
         with respect to each element in the lower triangle
         of `mat`.

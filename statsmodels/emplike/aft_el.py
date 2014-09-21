@@ -281,12 +281,10 @@ class emplikeAFT(object):
         Computes KM estimator value at each observation, taking into acocunt
         ties in the data.
 
-        Parameters:
+        Parameters
         ----------
-
         tie_indic: 1d array
             Indicates if the i'th observation is the same as the ith +1
-
         untied_km: 1d array
             Km estimates at each observation assuming no ties.
 
@@ -315,16 +313,13 @@ class emplikeAFT(object):
 
         Parameters
         ----------
-
         endog: nx1 array
             Array of response variables
-
         censors: nx1 array
             Censor-indicating variable
 
         Returns
-        ------
-
+        -------
         Kaplan Meier estimate for each observation
 
         Notes

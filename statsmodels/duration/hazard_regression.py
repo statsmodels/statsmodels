@@ -1142,8 +1142,8 @@ class PHReg(model.LikelihoodModel):
         Returns predicted values from the proportional hazards
         regression model.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params : array-like
             The proportional hazards model parameters.
         cov_params : array-like
@@ -1268,17 +1268,17 @@ class PHReg(model.LikelihoodModel):
         distribution of uncensored endog (duration) values for each
         case.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params : arrayh-like
             The model proportional hazards model parameters.
 
-        Returns:
-        --------
+        Returns
+        -------
         A list of objects of type scipy.stats.distributions.rv_discrete
 
-        Notes:
-        ------
+        Notes
+        -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
         failure times wihtin a stratum.
@@ -1406,12 +1406,12 @@ class PHRegResults(base.LikelihoodModelResults):
         distribution of uncensored endog (duration) values for each
         case.
 
-        Returns:
-        --------
+        Returns
+        -------
         A list of objects of type scipy.stats.distributions.rv_discrete
 
-        Notes:
-        ------
+        Notes
+        -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
         failure times wihtin a stratum.
@@ -1426,8 +1426,8 @@ class PHRegResults(base.LikelihoodModelResults):
         Returns predicted values from the fitted proportional hazards
         regression model.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params : array-;like
             The proportional hazards model parameters.
         endog : array-like
@@ -1663,7 +1663,7 @@ class rv_discrete_float(object):
     """
     A class representing a collection of discrete distributions.
 
-    Parameters:
+    Parameters
     ----------
     xk : 2d array-like
         The support points, should be non-decreasing within each
@@ -1753,8 +1753,8 @@ def _opt_1d(funcs, start, L1_wt, tol):
     Optimize a L1-penalized smooth one-dimensional function of a
     single variable.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     funcs : tuple of functions
         funcs[0] is the objective function to be minimized.  funcs[1]
         and funcs[2] are, respectively, the first and second
@@ -1767,8 +1767,8 @@ def _opt_1d(funcs, start, L1_wt, tol):
     tol : non-negative real
         A convergence threshold.
 
-    Returns:
-    --------
+    Returns
+    -------
     The argmin of the objective function.
     """
 

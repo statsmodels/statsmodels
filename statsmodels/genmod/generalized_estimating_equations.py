@@ -72,7 +72,7 @@ class ParameterConstraint(object):
 
     def __init__(self, lhs, rhs, exog):
         """
-        Parameters:
+        Parameters
         ----------
         lhs : ndarray
            A q x p matrix which is the left hand side of the
@@ -126,8 +126,8 @@ class ParameterConstraint(object):
         Returns a vector that should be added to the offset vector to
         accommodate the constraint.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         exog : array-like
            The exogeneous data for the model.
         """
@@ -139,8 +139,8 @@ class ParameterConstraint(object):
         Returns a linearly transformed exog matrix whose columns span
         the constrained model space.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         exog : array-like
            The exogeneous data for the model.
         """
@@ -948,15 +948,15 @@ class GEE(base.Model):
         Expand the parameter estimate `mean_params` and covariance matrix
         `bcov` to the coordinate system of the unconstrained model.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         mean_params : array-like
             A parameter vector estimate for the reduced model.
         bcov : array-like
             The covariance matrix of mean_params.
 
-        Returns:
-        --------
+        Returns
+        -------
         mean_params : array-like
             The input parameter vector mean_params, expanded to the
             coordinate system of the full model
