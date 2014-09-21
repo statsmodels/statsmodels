@@ -36,7 +36,7 @@ import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
-from statsmodels.genmod.dependence_structures import CovStruct
+from statsmodels.genmod.dependence_structures.covstruct import CovStruct
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.families import Family
