@@ -1056,7 +1056,7 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + offset + exposure)
         return np.dot(self.endog - L, X)
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Poisson model Jacobian of the log-likelihood for each observation
 
@@ -1257,7 +1257,7 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return np.dot(y - L,X)
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Logit model Jacobian of the log-likelihood for each observation
 
@@ -1465,7 +1465,7 @@ class Probit(BinaryModel):
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return np.dot(L,X)
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Probit model Jacobian for each observation
 
@@ -1710,7 +1710,7 @@ class MNLogit(MultinomialModel):
         score_array = np.dot(firstterm.T, self.exog).flatten()
         return loglike_value, score_array
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Jacobian matrix for multinomial logit model log-likelihood
 
@@ -2180,7 +2180,7 @@ class NegativeBinomial(CountModel):
         return hess_arr
 
     #TODO: replace this with analytic where is it used?
-    def jac(self, params):
+    def score_obs(self, params):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 

@@ -111,7 +111,7 @@ class CheckModelResults(object):
 
     def test_jac(self):
         #basic cross check
-        jacsum = self.res1.model.jac(self.res1.params).sum(0)
+        jacsum = self.res1.model.score_obs(self.res1.params).sum(0)
         score = self.res1.model.score(self.res1.params)
         assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
 

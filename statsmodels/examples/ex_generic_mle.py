@@ -373,11 +373,11 @@ array([   5.51471653,   80.36595035,    7.46933695,   82.92232357,
 Is scale a misnomer, actually scale squared, i.e. variance of error term ?
 '''
 
-print(res_norm3.model.jac(res_norm3.params).shape)
+print(res_norm3.model.score_obs(res_norm3.params).shape)
 
-jac = res_norm3.model.jac(res_norm3.params)
+jac = res_norm3.model.score_obs(res_norm3.params)
 print(np.sqrt(np.diag(np.dot(jac.T, jac)))/start_params)
-jac2 = res_norm3.model.jac(res_norm3.params, centered=True)
+jac2 = res_norm3.model.score_obs(res_norm3.params, centered=True)
 
 print(np.sqrt(np.diag(np.linalg.inv(np.dot(jac.T, jac)))))
 print(res_norm3.bse)

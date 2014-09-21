@@ -130,7 +130,7 @@ class CheckComparisonMixin(object):
 
         assert_allclose(res1.llf, resd.llf, rtol=1e-10)
         score_obs1 = res1.model.score_obs(res1.params)
-        score_obsd = resd.model.jac(resd.params)
+        score_obsd = resd.model.score_obs(resd.params)
         assert_allclose(score_obs1, score_obsd, rtol=1e-10)
 
         # score

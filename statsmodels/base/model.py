@@ -596,7 +596,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglike, **kwds).ravel()
 
-    def jac(self, params, **kwds):
+    def score_obs(self, params, **kwds):
         '''
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation.
@@ -1609,10 +1609,10 @@ class ResultMixin(object):
         return -2 * self.llf + np.log(self.nobs) * (self.df_modelwc)
 
     @cache_readonly
-    def jacv(self):
+    def score_obsv(self):
         '''cached Jacobian of log-likelihood
         '''
-        return self.model.jac(self.params)
+        return self.model.score_obs(self.params)
 
     @cache_readonly
     def hessv(self):
@@ -1631,7 +1631,7 @@ class ResultMixin(object):
         ##      raise ValueError('need to call fit first')
         ##      #self.fit()
         ##  self.jacv = jacv = self.jac(self._results.params)
-        jacv = self.jacv
+        jacv = self.score_obsv
         return np.linalg.inv(np.dot(jacv.T, jacv))
 
     @cache_readonly
@@ -1642,11 +1642,10 @@ class ResultMixin(object):
 
         name should be covhjh
         '''
-        jacv = self.jacv
-        ##  hessv = self.hessv
-        ##  hessinv = np.linalg.inv(hessv)
-        ##  self.hessinv = hessinv
-        hessinv = self.cov_params()
+        jacv = self.score_obsv
+        hessv = self.hessv
+        hessinv = np.linalg.inv(hessv)
+        ##  self.hessinv = hessin = self.cov_params()
         return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
 
     @cache_readonly
