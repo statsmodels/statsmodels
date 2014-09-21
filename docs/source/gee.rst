@@ -21,25 +21,18 @@ within clusters using data on epilepsy seizures.
 
 ::
 
-   import statsmodels.api as sm
-   from statsmodels.genmod.dependence_structures import Exchangeable
+    import statsmodels.api as sm
+    #from statsmodels.genmod.dependence_structures import Exchangeable
 
-   data = sm.datasets.get_rdataset('epil', package='MASS').data
+    data = sm.datasets.get_rdataset('epil', package='MASS').data
 
-   fam = sm.families.Poisson()
-   ind = Exchangeable()
-   mod = sm.GEE.from_formula("y ~ age + trt + base", "subject", data,
-                             cov_struct=ind, family=fam)
-   res = mod.fit()
-   print(res.summary())
+    fam = sm.families.Poisson()
+    ind = sm.genmod.cov_struct.Exchangeable()
+    mod = sm.GEE.from_formula("y ~ age + trt + base", "subject", data,
+                              cov_struct=ind, family=fam)
+    res = mod.fit()
+    print(res.summary())
 
-
-Detailed examples can be found here:
-
-.. toctree::
-   :maxdepth: 1
-
-   examples/generated/not_yet_example_gee
 
 Several notebook examples of the use of GEE can be found on the Wiki:
 `Wiki notebooks for GEE <https://github.com/statsmodels/statsmodels/wiki/Examples#generalized-estimating-equations-gee>`_
@@ -154,3 +147,4 @@ The list of available link functions can be obtained by
    logit
    nbinom
    probit
+
