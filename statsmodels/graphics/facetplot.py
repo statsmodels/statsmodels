@@ -2,6 +2,8 @@
 from __future__ import division
 __all__ = ['facet_plot']
 
+import warnings
+
 import numpy as np
 try:
     import matplotlib.pyplot as plt
@@ -753,7 +755,9 @@ def _multi_legend(ax):
     # and make a merge of them
     fig = ax.figure
     for t_ax in fig.axes:
-        leg = t_ax.legend()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            leg = t_ax.legend()
         if leg:
             leg.set_visible(False)
             plt.draw()
