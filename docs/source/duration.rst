@@ -34,7 +34,7 @@ Detailed examples can be found here:
 .. toctree::
     :maxdepth: 2
 
-    examples/notebooks/generated/    not yet
+    examples/notebooks/generated/
 
 There some notebook examples on the Wiki:
 `Wiki notebooks for PHReg and Survival Analysis <https://github.com/statsmodels/statsmodels/wiki/Examples#survival-analysis>`_
