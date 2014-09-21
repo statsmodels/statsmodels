@@ -256,7 +256,7 @@ class KDEMultivariate(GenericKDE):
             The bandwidth parameter(s).
 
         Returns
-        ------
+        -------
         CV: float
             The cross-validation objective function.
 
