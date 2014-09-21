@@ -408,7 +408,7 @@ class MixedLM(base.LikelihoodModel):
     An object specifying a linear mixed effects model.  Use the `fit`
     method to fit the model and obtain a results object.
 
-    Arguments:
+    Parameters
     ----------
     endog : 1d array-like
         The dependent variable
@@ -610,7 +610,7 @@ class MixedLM(base.LikelihoodModel):
 
 
     def fit_regularized(self, start_params=None, method='l1', alpha=0,
-                        ceps=1e-4, ptol=1e-6, maxit=200, **fit_args):
+                        ceps=1e-4, ptol=1e-6, maxit=200, **fit_kwargs):
         """
         Fit a model in which the fixed effects parameters are
         penalized.  The dependence parameters are held fixed at their
@@ -635,8 +635,8 @@ class MixedLM(base.LikelihoodModel):
             `ptol`.
         maxit : integer
             The maximum number of iterations.
-        fit_args :
-            Additional arguments passed to fit.
+        fit_kwargs : keywords
+            Additional keyword arguments passed to fit.
 
         Returns:
         --------
@@ -669,17 +669,16 @@ class MixedLM(base.LikelihoodModel):
 
         # If method is a smooth penalty just optimize directly.
         if isinstance(method, Penalty):
-            fit_args = dict(fit_args)
             # Scale the penalty weights by alpha
             method.alpha = alpha
-            fit_args.update({"fe_pen": method})
-            return self.fit(**fit_args)
+            fit_kwargs.update({"fe_pen": method})
+            return self.fit(**fit_kwargs)
 
         if np.isscalar(alpha):
             alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
 
         # Fit the unpenalized model to get the dependence structure.
-        mdf = self.fit(**fit_args)
+        mdf = self.fit(**fit_kwargs)
         fe_params = mdf.fe_params
         cov_re = mdf.cov_re
         scale = mdf.scale
@@ -863,8 +862,8 @@ class MixedLM(base.LikelihoodModel):
         Evaluate the (profile) log-likelihood of the linear mixed
         effects model.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         params : MixedLMParams, or array-like.
             The parameter value.  If array-like, must be a packed
             parameter vector compatible with this model.
@@ -1137,7 +1136,7 @@ class MixedLM(base.LikelihoodModel):
         in which the random effects covariance matrix is represented
         through its Cholesky square root.
 
-        Arguments:
+        Parameters
         ----------
         params : MixedLMParams or array-like
             The model parameters.  If array-like must contain packed
@@ -1301,7 +1300,7 @@ class MixedLM(base.LikelihoodModel):
         Take steepest ascent steps to increase the log-likelihood
         function.
 
-        Arguments:
+        Parameters
         ----------
         params : array-like
             The starting point of the optimization.
@@ -1464,7 +1463,7 @@ class MixedLM(base.LikelihoodModel):
         Returns the estimated error variance based on given estimates
         of the slopes and random effects covariance matrix.
 
-        Arguments:
+        Parameters
         ----------
         fe_params : array-like
             The regression slope estimates
@@ -1615,16 +1614,15 @@ class MixedLM(base.LikelihoodModel):
                 params = self.steepest_ascent(params, niter_sa)
 
                 try:
-                    fit_args = dict(kwargs)
-                    fit_args["retall"] = hist is not None
-                    if "disp" not in fit_args:
-                        fit_args["disp"] = False
+                    kwargs["retall"] = hist is not None
+                    if "disp" not in kwargs:
+                        kwargs["disp"] = False
                     # Only bfgs and lbfgs seem to work
-                    fit_args["method"] = "bfgs"
+                    kwargs["method"] = "bfgs"
                     pa = params.get_packed()
                     rslt = super(MixedLM, self).fit(start_params=pa,
                                                     skip_hessian=True,
-                                                    **fit_args)
+                                                    **kwargs)
                 except np.linalg.LinAlgError:
                     continue
 
@@ -1933,7 +1931,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         Calculate a series of values along a 1-dimensional profile
         likelihood.
 
-        Arguments:
+        Parameters
         ----------
         re_ix : integer
             The index of the variance parameter for which to construct

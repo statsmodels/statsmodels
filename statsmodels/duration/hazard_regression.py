@@ -211,8 +211,8 @@ class PHReg(model.LikelihoodModel):
     Fit the Cox proportional hazards regression model for right
     censored data.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     endog : array-like
         The observed times (event or censoring)
     exog : 2D array-like
@@ -983,8 +983,8 @@ class PHReg(model.LikelihoodModel):
         Returns the hazard-weighted average of covariate values for
         subjects who are at-risk at a particular time.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         params : ndarray
             Parameter vector
 

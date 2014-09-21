@@ -1120,7 +1120,7 @@ class GEEResults(base.LikelihoodModelResults):
         standard errors for whichever covariance type is specified as
         an argument to `fit` (defaults to "robust").
 
-        Arguments:
+        Parameters
         ----------
         cov_type : string
             One of "robust", "naive", or "bias_reduced".  Determines
@@ -1352,7 +1352,7 @@ class GEEResults(base.LikelihoodModelResults):
         plot can be used to assess the possible form of an isotropic
         covariance structure.
 
-        Arguments:
+        Parameters
         ----------
         ax : Matplotlib axes instance
             An axes on which to draw the graph.  If None, new
@@ -1606,7 +1606,7 @@ class OrdinalGEEResults(GEEResults):
         Plot the fitted probabilities of endog in an ordinal model,
         for specifed values of the predictors.
 
-        Arguments:
+        Parameters
         ----------
         ax : Matplotlib axes instance
             An axes on which to draw the graph.  If None, new
@@ -1825,7 +1825,7 @@ class NominalGEEResults(GEEResults):
         Plot the fitted probabilities of endog in an nominal model,
         for specifed values of the predictors.
 
-        Arguments:
+        Parameters
         ----------
         ax : Matplotlib axes instance
             An axes on which to draw the graph.  If None, new
@@ -2051,7 +2051,7 @@ class Multinomial(Family):
 
     def __init__(self, nlevels):
         """
-        Arguments:
+        Parameters
         ----------
         nlevels : integer
             The number of distinct categories for the multinomial
