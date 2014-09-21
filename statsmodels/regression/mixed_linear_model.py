@@ -1339,9 +1339,10 @@ class MixedLM(base.LikelihoodModel):
 
     def Estep(self, fe_params, cov_re, scale):
         """
-        The E-step of the EM algorithm.  This is for ML (not REML),
-        but it seems to be good enough to use for REML starting
-        values.
+        The E-step of the EM algorithm.
+
+        This is for ML (not REML), but it seems to be good enough to use for
+        REML starting values.
 
         Parameters
         ----------
@@ -1356,15 +1357,15 @@ class MixedLM(base.LikelihoodModel):
         Returns
         -------
         m1x : 1d ndarray
-            sum_groups X'*Z*E[gamma | Y], where X and Z are the fixed
+            sum_groups :math:`X'*Z*E[gamma | Y]`, where X and Z are the fixed
             and random effects covariates, gamma is the random
             effects, and Y is the observed data
         m1y : scalar
-            sum_groups Y'*E[gamma | Y]
+            sum_groups :math:`Y'*E[gamma | Y]`
         m2 : 2d ndarray
-            sum_groups E[gamma * gamma' | Y]
+           sum_groups :math:`E[gamma * gamma' | Y]`
         m2xx : 2d ndarray
-            sum_groups Z'*Z * E[gamma * gamma' | Y]
+            sum_groups :math:`Z'*Z * E[gamma * gamma' | Y]`
         """
 
         m1x, m1y, m2, m2xx = 0., 0., 0., 0.
@@ -1423,9 +1424,9 @@ class MixedLM(base.LikelihoodModel):
 
         Notes
         -----
-        This uses the parameterization of the likelihood scale*I +
-        Z'*V*Z, note that this differs from the profile likelihood
-        used in the gradient calculations.
+        This uses the parameterization of the likelihood
+        :math:`scale*I + Z'*V*Z`, note that this differs from the profile
+        likelihood used in the gradient calculations.
         """
 
         xxtot = 0.
