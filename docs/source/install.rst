@@ -117,6 +117,6 @@ Dependencies
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-* `Matplotlib <http://matplotlib.org/>`__ is needed for plotting functions and running many of the examples. 
+* `Matplotlib <http://matplotlib.org/>`__ >= 1.1 is needed for plotting functions and running many of the examples. 
 * `Nose <https://nose.readthedocs.org/en/latest>`__ is required to run the test suite.
-* `IPython <http://ipython.org>`__ is required to build the docs locally.
+* `IPython <http://ipython.org>`__ >= 1.0 is required to build the docs locally.

@@ -221,7 +221,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
 
     fig.suptitle('Regression Plots for %s' % exog_name, fontsize="large")
 
-    fig = utils.maybe_tight_layout(fig)
+    fig.tight_layout()
 
     fig.subplots_adjust(top=.90)
     return fig
@@ -460,7 +460,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     fig.suptitle("Partial Regression Plot", fontsize="large")
 
-    fig = utils.maybe_tight_layout(fig)
+    fig.tight_layout()
 
     fig.subplots_adjust(top=.95)
     return fig
@@ -598,7 +598,7 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     fig.suptitle("Component-Component Plus Residual Plot", fontsize="large")
 
-    fig = utils.maybe_tight_layout(fig)
+    fig.tight_layout()
 
     fig.subplots_adjust(top=.95)
     return fig

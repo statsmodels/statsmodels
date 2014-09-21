@@ -35,7 +35,7 @@ cython >= 0.20.1
 Optional Dependencies
 ---------------------
 
-matplotlib >= 1.0.0
+matplotlib >= 1.1
 
     http://matplotlib.sf.net/
 

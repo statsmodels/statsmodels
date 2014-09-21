@@ -154,10 +154,8 @@ def teardown_module():
 def have_matplotlib():
     try:
         import matplotlib
-        if matplotlib.__version__ < '1':
-            raise ImportError("matplotlib not is too old.  Please update.")
         return True
-    except:
+    except ImportError:
         return False
 
 class CheckIRF(object):
