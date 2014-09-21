@@ -35,8 +35,9 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
-from statsmodels.genmod import dependence_structures
-from statsmodels.genmod.dependence_structures.covstruct import CovStruct
+from statsmodels.genmod.dependence_structures.api import (Independence,
+                                                          GlobalOddsRatio,
+                                                          CovStruct)
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.families import Family
@@ -436,7 +437,7 @@ class GEE(base.Model):
 
         # Handle the cov_struct argument
         if cov_struct is None:
-            cov_struct = dependence_structures.Independence()
+            cov_struct = Independence()
         else:
             if not issubclass(cov_struct.__class__, CovStruct):
                 raise ValueError("GEE: `cov_struct` must be a genmod "
@@ -815,9 +816,6 @@ class GEE(base.Model):
         Returns a starting value for the mean parameters and a list of
         variable names.
         """
-
-        from statsmodels.genmod.dependence_structures import (
-            GlobalOddsRatio, Independence)
 
         dm = self.exog.shape[1]
 

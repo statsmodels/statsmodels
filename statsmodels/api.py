@@ -6,10 +6,7 @@ from . import regression
 from .regression.linear_model import OLS, GLS, WLS, GLSAR
 from .regression.quantile_regression import QuantReg
 from .regression.mixed_linear_model import MixedLM
-from .genmod.generalized_linear_model import GLM
-from .genmod.generalized_estimating_equations import GEE
-from .genmod import families
-from .genmod.dependence_structures import api as covariance
+from .genmod.api import *
 from . import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
