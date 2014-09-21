@@ -38,7 +38,7 @@ if PY3:
     import io
     bytes = bytes
     str = str
-    asunicode = str
+    asunicode = lambda x, _ : str(x)
 
     def asbytes(s):
         if isinstance(s, bytes):
@@ -107,10 +107,10 @@ else:
     def isfileobj(f):
         return isinstance(f, file)
 
-    def asunicode(s):
-        if isinstance(s, str):
+    def asunicode(s, encoding='ascii'):
+        if isinstance(s, unicode):
             return s
-        return s.decode('ascii')
+        return s.decode(encoding)
 
     def open_latin1(filename, mode='r'):
         return open(filename, mode=mode)
