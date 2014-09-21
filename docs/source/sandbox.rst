@@ -1,6 +1,3 @@
-.. currentmodule:: statsmodels.sandbox
-
-
 .. _sandbox:
 
 
@@ -20,14 +17,12 @@ not yet part of the core of statsmodels. The quality and testing of the
 sandbox code varies widely.
 
 
-.. automodule:: statsmodels.sandbox
-
-
 Examples
 --------
-    There are some examples in the `sandbox.examples` folder. Additional
-    examples are directly included in the modules and in subfolders of
-    the sandbox.
+
+There are some examples in the `sandbox.examples` folder. Additional
+examples are directly included in the modules and in subfolders of
+the sandbox.
 
 
 Module Reference
@@ -42,25 +37,23 @@ series analysis. Most of the models and function have been moved to
 :mod:`statsmodels.tsa`. Currently, GARCH models remain in development stage in
 `sandbox.tsa`.
 
-
-.. currentmodule:: statsmodels.sandbox
-
-
-
 Moving Window Statistics
 """"""""""""""""""""""""
+
 
 Most moving window statistics, like rolling mean, moments (up to 4th order), min,
 max, mean, and variance, are covered by the functions for `Moving (rolling)
 statistics/moments <http://pandas.pydata.org/pandas-docs/stable/computation.html#moving-rolling-statistics-moments>`_ in Pandas.
 
+.. currentmodule:: statsmodels.sandbox.tsa
 
 .. autosummary::
    :toctree: generated/
 
-   tsa.movstat
-
-
+   movstat.movorder
+   movstat.movmean
+   movstat.movvar
+   movstat.movmoment
 
 
 Regression and ANOVA
