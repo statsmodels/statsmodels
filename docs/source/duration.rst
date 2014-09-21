@@ -70,7 +70,7 @@ The model class is:
 
    PHReg
 
-The result classe is:
+The result class is:
 
 .. autosummary::
    :toctree: generated/
