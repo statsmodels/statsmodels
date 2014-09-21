@@ -1,6 +1,4 @@
-# TODO: Check tests with constant and without.  This might be an issue since df_model does nto include constant
 # TODO: Determine which tests are valid for GLSAR, and under what conditions
-# TODO: Fix HCCM to work with GLS/WLS
 # TODO: Fix issue with constant and GLS
 # TODO: GLS: add options Iterative GLS, for iterative fgls if sigma is None
 # TODO: GLS: default if sigma is none should be two-step GLS
@@ -997,7 +995,7 @@ class RegressionResults(base.LikelihoodModelResults):
         HC2_see is a cached property.
         When HC2_se or cov_HC2 is called the RegressionResults instance will
         then have another attribute `het_scale`, which is in this case is
-        resid^(2)/(1-h_ii).  HCCM matrices are only appropriate for OLS.
+        resid^(2)/(1-h_ii).
     HC3_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
@@ -1247,7 +1245,9 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def condition_number(self):
         """
-        Return condition number of exogenous matrix, calculated as ratio of largest to smallest eigenvalue.
+        Return condition number of exogenous matrix.
+
+        Calculated as ratio of largest to smallest eigenvalue.
         """
         eigvals = self.eigenvals
         return np.sqrt(eigvals[0]/eigvals[-1])
@@ -1301,8 +1301,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         See statsmodels.RegressionResults
         """
-
-        # above probably could be optimized to only calc the diag
         h = np.diag(chain_dot(self.model.wexog,
                               self.normalized_cov_params,
                               self.model.wexog.T))
