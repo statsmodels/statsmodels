@@ -12,7 +12,7 @@ except:
 
 import sys
 py3 = sys.version[0] == '3'
-from statsmodels.compatnp.py3k import asunicode
+from statsmodels.compat.python import asunicode
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
 from statsmodels.graphics.boxplots import _single_violin
