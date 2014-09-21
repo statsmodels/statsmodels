@@ -6,10 +6,8 @@ from statsmodels.graphics.factorplots import interaction_plot
 try:
     import matplotlib.pyplot as plt
     import matplotlib
-    if matplotlib.__version__ < '1':
-        raise ImportError("matplotlib is too old. Please upgrade.")
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 

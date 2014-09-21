@@ -1,6 +1,4 @@
-# TODO: Check tests with constant and without.  This might be an issue since df_model does nto include constant
 # TODO: Determine which tests are valid for GLSAR, and under what conditions
-# TODO: Fix HCCM to work with GLS/WLS
 # TODO: Fix issue with constant and GLS
 # TODO: GLS: add options Iterative GLS, for iterative fgls if sigma is None
 # TODO: GLS: default if sigma is none should be two-step GLS
@@ -240,9 +238,9 @@ class RegressionModel(base.LikelihoodModel):
             Must be between 0 and 1 (inclusive).  If 0, the fit is
             ridge regression.  If 1, the fit is the lasso.
         start_params : array-like
-            Starting values for `params`.
+            Starting values for ``params``.
         cnvrg_tol : scalar
-            If `params` changes by less than this amount (in sup-norm)
+            If ``params`` changes by less than this amount (in sup-norm)
             in once iteration cycle, the algorithm terminates with
             convergence.
         zero_tol : scalar
@@ -252,7 +250,7 @@ class RegressionModel(base.LikelihoodModel):
         Returns
         -------
         A RegressionResults object, of the same type returned by
-        `fit`.
+        ``fit``.
 
         Notes
         -----
@@ -260,12 +258,13 @@ class RegressionModel(base.LikelihoodModel):
         package in R.  The penalty is the "elastic net" penalty, which
         is a convex combination of L1 and L2 penalties.
 
-        The function that is minimized is:
+        The function that is minimized is: ..math::
 
-        0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
 
         where RSS is the usual regression sum of squares, n is the
-        sample size, and |*|_1 and |*|_2 are the L1 and L2 norms.
+        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
+        norms.
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
@@ -996,7 +995,7 @@ class RegressionResults(base.LikelihoodModelResults):
         HC2_see is a cached property.
         When HC2_se or cov_HC2 is called the RegressionResults instance will
         then have another attribute `het_scale`, which is in this case is
-        resid^(2)/(1-h_ii).  HCCM matrices are only appropriate for OLS.
+        resid^(2)/(1-h_ii).
     HC3_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
@@ -1246,7 +1245,9 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def condition_number(self):
         """
-        Return condition number of exogenous matrix, calculated as ratio of largest to smallest eigenvalue.
+        Return condition number of exogenous matrix.
+
+        Calculated as ratio of largest to smallest eigenvalue.
         """
         eigvals = self.eigenvals
         return np.sqrt(eigvals[0]/eigvals[-1])
@@ -1300,8 +1301,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         See statsmodels.RegressionResults
         """
-
-        # above probably could be optimized to only calc the diag
         h = np.diag(chain_dot(self.model.wexog,
                               self.normalized_cov_params,
                               self.model.wexog.T))
@@ -2119,6 +2118,9 @@ class OLSResults(RegressionResults):
             the instance has methods to calculate the main influence and
             outlier measures for the OLS regression
 
+        See also
+        --------
+        :class:`statsmodels.stats.outliers_influence.OLSInfluence`
         """
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)

@@ -9,10 +9,8 @@ pdf_output = False
 try:
     import matplotlib.pyplot as plt
     import matplotlib
-    if matplotlib.__version__ < '1':
-        raise
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 

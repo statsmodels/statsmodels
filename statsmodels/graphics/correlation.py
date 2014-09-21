@@ -107,15 +107,9 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     if not title == '':
         ax.set_title(title)
 
-    if mpl.__version__ >= '1.1':
-        # The tight_layout feature is not available before version 1.1
-        # It automatically pads the figure so labels do not get clipped.
-        if create_colorbar:
-            fig.colorbar(axim, use_gridspec=True)
-        fig.tight_layout()
-    else:
-        if create_colorbar:
-            fig.colorbar(axim)
+    if create_colorbar:
+        fig.colorbar(axim, use_gridspec=True)
+    fig.tight_layout()
 
     ax.tick_params(which='minor', length=0)
     ax.tick_params(direction='out', top=False, right=False)

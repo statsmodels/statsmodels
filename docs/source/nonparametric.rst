@@ -63,6 +63,22 @@ References
   Princeton University Press, 2006.
 * Hastie, Tibshirani and Friedman, "The Elements of Statistical Learning:
   Data Mining, Inference, and Prediction", Springer, 2009.
+* Racine, J., Li, Q. "Nonparametric Estimation of Distributions
+  with Categorical and Continuous Data." Working Paper. (2000)
+* Racine, J. Li, Q. "Kernel Estimation of Multivariate Conditional
+  Distributions Annals of Economics and Finance 5, 211-235 (2004)
+* Liu, R., Yang, L. "Kernel estimation of multivariate
+  cumulative distribution function." Journal of Nonparametric Statistics 
+  (2008)
+* Li, R., Ju, G. "Nonparametric Estimation of Multivariate CDF
+  with Categorical and Continuous Data." Working Paper
+* Li, Q., Racine, J. "Cross-validated local linear nonparametric
+  regression" Statistica Sinica 14(2004), pp. 485-512
+* Racine, J.: "Consistent Significance Testing for Nonparametric
+  Regression" Journal of Business & Economics Statistics
+* Racine, J., Hart, J., Li, Q., "Testing the Significance of
+  Categorical Predictor Variables in Nonparametric Regression
+  Models", 2006, Econometric Reviews 25, 523-544
 
 
 Module Reference

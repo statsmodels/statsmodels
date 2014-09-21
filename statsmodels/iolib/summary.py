@@ -801,17 +801,14 @@ class Summary(object):
     '''class to hold tables for result summary presentation
 
     Construction does not take any parameters. Tables and text can be added
-    with the add_... methods.
+    with the `add_` methods.
 
     Attributes
     ----------
     tables : list of tables
-        Contains the list of SimpleTable instances, horizontally concatenated
-        tables are not saved separately.
+        Contains the list of SimpleTable instances, horizontally concatenated tables are not saved separately.
     extra_txt : string
-        extra lines that are added to the text output, used for warnings and
-        explanations.
-
+        extra lines that are added to the text output, used for warnings and explanations.
     '''
     def __init__(self):
         self.tables = []
@@ -839,7 +836,6 @@ class Summary(object):
             instance
         title : string or None
             if None, then a default title is used.
-            ?how did I do no title?
         gleft : list of tuples
             elements for the left table, tuples are (name, value) pairs
             If gleft is None, then a default table is created

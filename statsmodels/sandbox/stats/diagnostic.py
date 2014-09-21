@@ -406,7 +406,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
 
 def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
              ddof=0):
-    '''Enlge's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
+    '''Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
 
     Parameters
     ----------

@@ -256,15 +256,14 @@ class KDEMultivariate(GenericKDE):
             The bandwidth parameter(s).
 
         Returns
-        ------
+        -------
         CV: float
             The cross-validation objective function.
 
         Notes
         -----
-        See p. 27 in [1]
-        For details on how to handle the multivariate
-        estimation with mixed data types see p.6 in [3]
+        See p. 27 in [1]_ for details on how to handle the multivariate
+        estimation with mixed data types see p.6 in [2]_.
 
         The formula for the cross-validation objective function is:
 
@@ -273,7 +272,14 @@ class KDEMultivariate(GenericKDE):
             \sum_{j=1,j\neq i}^{N}K_{h}(X_{i},X_{j})
 
         Where :math:`\bar{K}_{h}` is the multivariate product convolution
-        kernel (consult [3] for mixed data types).
+        kernel (consult [2]_ for mixed data types).
+
+        References
+        ----------
+        .. [1] Racine, J., Li, Q. Nonparametric econometrics: theory and
+                practice. Princeton University Press. (2007)
+        .. [2] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
+                with Categorical and Continuous Data." Working Paper. (2000)
         """
         #F = 0
         #for i in range(self.nobs):
@@ -544,7 +550,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        For more details on the estimation see [5], and p.181 in [1].
+        For more details on the estimation see [2]_, and p.181 in [1]_.
 
         The multivariate conditional CDF for mixed data (continuous and
         ordered/unordered discrete) is estimated by:
@@ -555,6 +561,14 @@ class KDEMultivariateConditional(GenericKDE):
         where G() is the product kernel CDF estimator for the dependent (y)
         variable(s) and W() is the product kernel CDF estimator for the
         independent variable(s).
+
+        References
+        ----------
+        .. [1] Racine, J., Li, Q. Nonparametric econometrics: theory and
+                practice. Princeton University Press. (2007)
+        .. [2] Liu, R., Yang, L. "Kernel estimation of multivariate cumulative
+                    distribution function." Journal of Nonparametric
+                    Statistics (2008)
         """
         if endog_predict is None:
             endog_predict = self.endog
@@ -603,8 +617,8 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        For more details see pp. 156-166 in [1].
-        For details on how to handle the mixed variable types see [3].
+        For more details see pp. 156-166 in [1]_. For details on how to
+        handle the mixed variable types see [2]_.
 
         The formula for the cross-validation objective function for mixed
         variable types is:
@@ -626,6 +640,13 @@ class KDEMultivariateConditional(GenericKDE):
         The value of the function is minimized by the ``_cv_ls`` method of the
         `GenericKDE` class to return the bw estimates that minimize the
         distance between the estimated and "true" probability density.
+
+        References
+        ----------
+        .. [1] Racine, J., Li, Q. Nonparametric econometrics: theory and
+                practice. Princeton University Press. (2007)
+        .. [2] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
+                with Categorical and Continuous Data." Working Paper. (2000)
         """
         zLOO = LeaveOneOut(self.data)
         CV = 0

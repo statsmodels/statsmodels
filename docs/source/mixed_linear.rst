@@ -41,12 +41,12 @@ Examples
   mdf = md.fit()
   print(mdf.summary())
 
-Detailed examples can be found here:
+Detailed examples can be found here
 
 .. toctree::
-    :maxdepth: 2
+   :maxdepth: 2
 
-    examples/notebooks/generated/    not yet
+   examples/notebooks/generated/
 
 There some notebook examples on the Wiki:
 `Wiki notebooks for MixedLM <https://github.com/statsmodels/statsmodels/wiki/Examples#linear-mixed-models>`_
@@ -152,12 +152,9 @@ adequate starting values for the conjugate gradient optimization,
 which is much faster.
 
 
-References
-^^^^^^^^^^
+.. todo::
 
-General references for this class of models are::
-
-TODO
+   General references for this class of models are
 
 Module Reference
 ----------------

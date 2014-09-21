@@ -685,8 +685,8 @@ class GlobalOddsRatio(CovStruct):
     No. 1 (Mar., 1996), pp. 354-361
     http://www.jstor.org/stable/2533173
 
-    Notes:
-    ------
+    Notes
+    -----
     The following data structures are calculated in the class:
 
     'ibd' is a list whose i^th element ibd[i] is a sequence of integer

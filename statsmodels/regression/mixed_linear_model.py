@@ -112,8 +112,8 @@ class MixedLMParams(object):
     """
     This class represents a parameter state for a mixed linear model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     k_fe : integer
         The number of covariates with fixed effects.
     k_re : integer
@@ -123,7 +123,7 @@ class MixedLMParams(object):
         triangle of its Cholesky square root, otherwise it is stored
         as the lower triangle of the covariance matrix.
 
-    Note:
+    Notes
     -----
     This object represents the parameter state for the model in which
     the scale parameter has been profiled out.
@@ -144,8 +144,8 @@ class MixedLMParams(object):
         Factory method to create a MixedLMParams object based on the
         given packed parameter vector.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params : array-like
             The mode parameters packed into a single vector.
         k_fe : integer
@@ -155,8 +155,8 @@ class MixedLMParams(object):
             its Cholesky factor, otherwise the lower triangle of the
             covariance matrix is stored.
 
-        Returns:
-        --------
+        Returns
+        -------
         A MixedLMParams object.
         """
 
@@ -178,8 +178,8 @@ class MixedLMParams(object):
         Factory method to create a MixedLMParams object from given
         values for each parameter component.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         fe_params : array-like
             The fixed effects parameter (a 1-dimensional array).
         cov_re : array-like
@@ -193,8 +193,8 @@ class MixedLMParams(object):
             the lower triangle of its Cholesky factor, otherwise the
             lower triangle of the covariance matrix is stored.
 
-        Returns:
-        --------
+        Returns
+        -------
         A MixedLMParams object.
         """
 
@@ -221,8 +221,8 @@ class MixedLMParams(object):
         """
         Returns the model parameters packed into a single vector.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         use_sqrt : None or bool
             If None, `use_sqrt` has the value of this instance's
             `use_sqrt`.  Otherwise it is set to the given value.
@@ -265,15 +265,15 @@ class MixedLMParams(object):
         """
         Set the random effects covariance matrix to the given value.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         cov_re : array-like
             The random effects covariance matrix.
         cov_re_sqrt : array-like
             The Cholesky square root of the random effects covariance
             matrix.  Only the lower triangle is read.
 
-        Note:
+        Notes
         -----
         The first of `cov_re` and `cov_re_sqrt` that is not None is
         used.
@@ -320,8 +320,8 @@ def _smw_solve(s, A, AtA, B, BI, rhs):
     """
     Solves the system (s*I + A*B*A') * x = rhs for x and returns x.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     s : scalar
         See above for usage
     A : square symmetric ndarray
@@ -335,8 +335,8 @@ def _smw_solve(s, A, AtA, B, BI, rhs):
     rhs : ndarray
         See above for usage
 
-    Returns:
-    --------
+    Returns
+    -------
     x : ndarray
         See above
 
@@ -366,8 +366,8 @@ def _smw_logdet(s, A, AtA, B, BI, B_logdet):
     Use the matrix determinant lemma to accelerate the calculation of
     the log determinant of s*I + A*B*A'.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     s : scalar
         See above for usage
     A : square symmetric ndarray
@@ -381,8 +381,8 @@ def _smw_logdet(s, A, AtA, B, BI, B_logdet):
     B_logdet : real
         The log determinant of B
 
-    Returns:
-    --------
+    Returns
+    -------
     The log determinant of s*I + A*B*A'.
     """
 
@@ -408,7 +408,7 @@ class MixedLM(base.LikelihoodModel):
     An object specifying a linear mixed effects model.  Use the `fit`
     method to fit the model and obtain a results object.
 
-    Arguments:
+    Parameters
     ----------
     endog : 1d array-like
         The dependent variable
@@ -430,8 +430,8 @@ class MixedLM(base.LikelihoodModel):
     missing : string
         The approach to missing data handling
 
-    Notes:
-    ------
+    Notes
+    -----
     The covariates in `exog` and `exog_re` may (but need not)
     partially or wholly overlap.
 
@@ -610,14 +610,14 @@ class MixedLM(base.LikelihoodModel):
 
 
     def fit_regularized(self, start_params=None, method='l1', alpha=0,
-                        ceps=1e-4, ptol=1e-6, maxit=200, **fit_args):
+                        ceps=1e-4, ptol=1e-6, maxit=200, **fit_kwargs):
         """
         Fit a model in which the fixed effects parameters are
         penalized.  The dependence parameters are held fixed at their
         estimated values in the unpenalized model.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         method : string of Penalty object
             Method for regularization.  If a string, must be 'l1'.
         alpha : array-like
@@ -635,15 +635,15 @@ class MixedLM(base.LikelihoodModel):
             `ptol`.
         maxit : integer
             The maximum number of iterations.
-        fit_args :
-            Additional arguments passed to fit.
+        fit_kwargs : keywords
+            Additional keyword arguments passed to fit.
 
-        Returns:
-        --------
+        Returns
+        -------
         A MixedLMResults instance containing the results.
 
-        Notes:
-        ------
+        Notes
+        -----
         The covariance structure is not updated as the fixed effects
         parameters are varied.
 
@@ -654,8 +654,8 @@ class MixedLM(base.LikelihoodModel):
         obtain the covariance structure, but are ignored during the
         L1-penalized fitting.
 
-        References:
-        -----------
+        References
+        ----------
         Friedman, J. H., Hastie, T. and Tibshirani, R. Regularized
         Paths for Generalized Linear Models via Coordinate
         Descent. Journal of Statistical Software, 33(1) (2008)
@@ -669,17 +669,16 @@ class MixedLM(base.LikelihoodModel):
 
         # If method is a smooth penalty just optimize directly.
         if isinstance(method, Penalty):
-            fit_args = dict(fit_args)
             # Scale the penalty weights by alpha
             method.alpha = alpha
-            fit_args.update({"fe_pen": method})
-            return self.fit(**fit_args)
+            fit_kwargs.update({"fe_pen": method})
+            return self.fit(**fit_kwargs)
 
         if np.isscalar(alpha):
             alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
 
         # Fit the unpenalized model to get the dependence structure.
-        mdf = self.fit(**fit_args)
+        mdf = self.fit(**fit_kwargs)
         fe_params = mdf.fe_params
         cov_re = mdf.cov_re
         scale = mdf.scale
@@ -765,15 +764,15 @@ class MixedLM(base.LikelihoodModel):
         Returns parameters of the map converting parameters from the
         form used in optimization to the form returned to the user.
 
-        Returns:
-        --------
+        Returns
+        -------
         lin : list-like
             Linear terms of the map
         quad : list-like
             Quadratic terms of the map
 
-        Notes:
-        ------
+        Notes
+        -----
         If P are the standard form parameters and R are the
         modified parameters (i.e. with square root covariance),
         then P[i] = lin[i] * R + R' * quad[i] * R
@@ -863,8 +862,8 @@ class MixedLM(base.LikelihoodModel):
         Evaluate the (profile) log-likelihood of the linear mixed
         effects model.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         params : MixedLMParams, or array-like.
             The parameter value.  If array-like, must be a packed
             parameter vector compatible with this model.
@@ -974,7 +973,7 @@ class MixedLM(base.LikelihoodModel):
         """
         Returns the score vector of the profile log-likelihood.
 
-        Note:
+        Notes
         -----
         The score vector that is returned is computed with respect to
         the parameterization defined by this model instance's
@@ -992,7 +991,7 @@ class MixedLM(base.LikelihoodModel):
         """
         Returns the Hessian matrix of the profile log-likelihood.
 
-        Note:
+        Notes
         -----
         The Hessian matrix that is returned is computed with respect
         to the parameterization defined by this model's `use_sqrt`
@@ -1137,14 +1136,14 @@ class MixedLM(base.LikelihoodModel):
         in which the random effects covariance matrix is represented
         through its Cholesky square root.
 
-        Arguments:
+        Parameters
         ----------
         params : MixedLMParams or array-like
             The model parameters.  If array-like must contain packed
             parameters that are compatible with this model instance.
 
-        Returns:
-        --------
+        Returns
+        -------
         The score vector.
 
         Notes
@@ -1190,8 +1189,8 @@ class MixedLM(base.LikelihoodModel):
         hess : 2d ndarray
             The Hessian matrix, evaluated at `params`.
 
-        Note
-        ----
+        Notes
+        -----
         Tf provided as a MixedLMParams object, the input may be of
         any parameterization.
         """
@@ -1301,15 +1300,15 @@ class MixedLM(base.LikelihoodModel):
         Take steepest ascent steps to increase the log-likelihood
         function.
 
-        Arguments:
+        Parameters
         ----------
         params : array-like
             The starting point of the optimization.
         n_iter: non-negative integer
             Return once this number of iterations have occured.
 
-        Returns:
-        --------
+        Returns
+        -------
         A MixedLMParameters object containing the final value of the
         optimization.
         """
@@ -1340,9 +1339,10 @@ class MixedLM(base.LikelihoodModel):
 
     def Estep(self, fe_params, cov_re, scale):
         """
-        The E-step of the EM algorithm.  This is for ML (not REML),
-        but it seems to be good enough to use for REML starting
-        values.
+        The E-step of the EM algorithm.
+
+        This is for ML (not REML), but it seems to be good enough to use for
+        REML starting values.
 
         Parameters
         ----------
@@ -1357,15 +1357,15 @@ class MixedLM(base.LikelihoodModel):
         Returns
         -------
         m1x : 1d ndarray
-            sum_groups X'*Z*E[gamma | Y], where X and Z are the fixed
+            sum_groups :math:`X'*Z*E[gamma | Y]`, where X and Z are the fixed
             and random effects covariates, gamma is the random
             effects, and Y is the observed data
         m1y : scalar
-            sum_groups Y'*E[gamma | Y]
+            sum_groups :math:`Y'*E[gamma | Y]`
         m2 : 2d ndarray
-            sum_groups E[gamma * gamma' | Y]
+           sum_groups :math:`E[gamma * gamma' | Y]`
         m2xx : 2d ndarray
-            sum_groups Z'*Z * E[gamma * gamma' | Y]
+            sum_groups :math:`Z'*Z * E[gamma * gamma' | Y]`
         """
 
         m1x, m1y, m2, m2xx = 0., 0., 0., 0.
@@ -1424,9 +1424,9 @@ class MixedLM(base.LikelihoodModel):
 
         Notes
         -----
-        This uses the parameterization of the likelihood scale*I +
-        Z'*V*Z, note that this differs from the profile likelihood
-        used in the gradient calculations.
+        This uses the parameterization of the likelihood
+        :math:`scale*I + Z'*V*Z`, note that this differs from the profile
+        likelihood used in the gradient calculations.
         """
 
         xxtot = 0.
@@ -1464,15 +1464,15 @@ class MixedLM(base.LikelihoodModel):
         Returns the estimated error variance based on given estimates
         of the slopes and random effects covariance matrix.
 
-        Arguments:
+        Parameters
         ----------
         fe_params : array-like
             The regression slope estimates
         cov_re : 2d array
             Estimate of the random effects covariance matrix (Psi).
 
-        Returns:
-        --------
+        Returns
+        -------
         scale : float
             The estimated error variance.
         """
@@ -1615,16 +1615,15 @@ class MixedLM(base.LikelihoodModel):
                 params = self.steepest_ascent(params, niter_sa)
 
                 try:
-                    fit_args = dict(kwargs)
-                    fit_args["retall"] = hist is not None
-                    if "disp" not in fit_args:
-                        fit_args["disp"] = False
+                    kwargs["retall"] = hist is not None
+                    if "disp" not in kwargs:
+                        kwargs["disp"] = False
                     # Only bfgs and lbfgs seem to work
-                    fit_args["method"] = "bfgs"
+                    kwargs["method"] = "bfgs"
                     pa = params.get_packed()
                     rslt = super(MixedLM, self).fit(start_params=pa,
                                                     skip_hessian=True,
-                                                    **fit_args)
+                                                    **kwargs)
                 except np.linalg.LinAlgError:
                     continue
 
@@ -1752,8 +1751,8 @@ class MixedLMResults(base.LikelihoodModelResults):
         Returns the conditional means of all random effects given the
         data.
 
-        Returns:
-        --------
+        Returns
+        -------
         ranef_dict : dict
             A dictionary mapping the distinct values of the `group`
             variable to the conditional means of the random effects
@@ -1792,8 +1791,8 @@ class MixedLMResults(base.LikelihoodModelResults):
         Returns the conditional covariance matrix of the random
         effects for each group given the data.
 
-        Returns:
-        --------
+        Returns
+        -------
         ranef_dict : dict
             A dictionary mapping the distinct values of the `group`
             variable to the conditional covariance matrix of the
@@ -1933,7 +1932,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         Calculate a series of values along a 1-dimensional profile
         likelihood.
 
-        Arguments:
+        Parameters
         ----------
         re_ix : integer
             The index of the variance parameter for which to construct
@@ -1951,9 +1950,9 @@ class MixedLMResults(base.LikelihoodModelResults):
             The distance above the MLE of the parameter of interest to
             begin calculating points on the profile likelihood.
 
-        Result
-        ------
-        A matrix with two columns.  The first column contains the
+        Returns
+        -------
+        An array with two columns.  The first column contains the
         values to which the parameter of interest is constrained.  The
         second column contains the corresponding likelihood values.
         """
@@ -1969,7 +1968,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         ix[0] = re_ix
         ix[re_ix] = 0
         for k in range(self.model.n_groups):
-           model.exog_re_li[k] = model.exog_re_li[k][:, ix]
+            model.exog_re_li[k] = model.exog_re_li[k][:, ix]
 
         # Permute the covariance structure to match the permuted
         # design matrix.
