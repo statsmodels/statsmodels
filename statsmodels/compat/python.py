@@ -108,7 +108,7 @@ else:
         return isinstance(f, file)
 
     def asunicode(s):
-        if isinstance(s, str):
+        if isinstance(s, unicode):
             return s
         return s.decode('ascii')
 
