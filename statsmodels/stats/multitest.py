@@ -103,14 +103,14 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     Notes
     -----
+    There may be API changes for this function in the future.
+
     Except for 'fdr_twostage', the p-value correction is independent of the
     alpha specified as argument. In these cases the corrected p-values
     can also be compared with a different alpha. In the case of 'fdr_twostage',
     the corrected p-values are specific to the given alpha, see
     ``fdrcorrection_twostage``.
 
-    all corrected p-values now tested against R.
-    insufficient "cosmetic" tests yet
     The 'fdr_gbs' procedure is not verified against another package, p-values
     are derived from scratch and are not derived in the reference. In Monte
     Carlo experiments the method worked correctly and maintained the false
@@ -131,13 +131,6 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     Method='hommel' is very slow for large arrays, since it requires the
     evaluation of n partitions, where n is the number of p-values.
-
-    there will be API changes.
-
-
-    References
-    ----------
-
     '''
     import gc
     pvals = np.asarray(pvals)
