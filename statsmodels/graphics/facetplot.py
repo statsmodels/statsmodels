@@ -307,14 +307,14 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     kind = kind or _oracle(value_x, value_y)
     if not kind:
         raise ValueError("Could not determine the best plot, "
-                         "please choose between: {}".format(
+                         "please choose between: {0}".format(
                          facet_plot.registered_plots.keys()))
     # load the function among the available ones, troubles
     # can happens if the user chooses something not present
     try:
         plot_function = registered_plots[kind]
     except KeyError:
-        raise ValueError("Plot kind '{}' not understood".format(kind))
+        raise ValueError("Plot kind '{0}' not understood".format(kind))
     #create a dictionary with all the levels for all the categories
     categories = _analyze_categories(value_x)
     categories.update(_analyze_categories(value_y))
@@ -533,8 +533,8 @@ def _make_numeric(data, ax, dir, jitter=1.0, categories=None):
         data = data.apply(lambda s: indexes[s])
         if ax:
             labels = range(len(states))
-            ax.__getattribute__('set_{}ticks'.format(dir))(labels)
-            ax.__getattribute__('set_{}ticklabels'.format(dir))(states)
+            ax.__getattribute__('set_{0}ticks'.format(dir))(labels)
+            ax.__getattribute__('set_{0}ticklabels'.format(dir))(states)
     if data.dtype != float:
         data = _jitter(data, jitter)
         if not jitter:
@@ -663,7 +663,7 @@ def _array4name(formula, data, strict_patsy=False, intercept=True):
     for name in _formula_terms(formula, intercept):
         #this should allow to follow the same structure as patsy
         name = name.strip()
-        logging.warning('name: {}, {}'.format(name, type(name)))
+        logging.warning('name: {0}, {1}'.format(name, type(name)))
         try:
             name = EvalFactor(name)
         except SyntaxError:
@@ -876,8 +876,8 @@ def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None,
         ax.set_xlabel(asunicode(x.name, encoding))
     else:
         ax.xcorr(x.values, y.values, maxlags=None, **kwargs)
-        ax.set_xlabel("{} Vs {}".format(asunicode(x.name, encoding),
-                                        asunicode(y.name, encoding)))
+        ax.set_xlabel("{0} Vs {1}".format(asunicode(x.name, encoding),
+                                          asunicode(y.name, encoding)))
     ax.set_ylabel('correlation')
     return ax
 
@@ -1124,7 +1124,7 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None,
     ax.set_xlabel(asunicode(x.name, encoding))
     ax.margins(0.05)
     spearman = spearmanr(x_data, y_data)[0]
-    ax.text(0.5, 0.98, "spearman: {:.3f}".format(spearman),
+    ax.text(0.5, 0.98, "spearman: {0:.3f}".format(spearman),
             horizontalalignment='center',
             verticalalignment='top',
             transform=ax.transAxes,
@@ -1431,8 +1431,8 @@ def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None,
     else:
         ax.csd(x.values, y.values, **kwargs)
         ax.set_ylabel('cross spectral density')
-        ax.set_xlabel("{} Vs {}".format(asunicode(x.name, encoding),
-                                        asunicode(y.name, encoding)))
+        ax.set_xlabel("{0} Vs {1}".format(asunicode(x.name, encoding),
+                                          asunicode(y.name, encoding)))
     return ax
 
 ###################################################
@@ -1443,7 +1443,7 @@ def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None,
 class _default_dict(dict):
     def __missing__(self, key):
         raise KeyError('the desired plot is not available, '
-                       'choose between {}'.format(self.keys()))
+                       'choose between {0}'.format(self.keys()))
 
 registered_plots = _default_dict()
 registered_plots['violinplot'] = kind_violinplot
@@ -1477,8 +1477,9 @@ def _dump(x, y, ax, **kwargs):
     if isinstance(ax, list):
         fig, row, col, idx, base = ax
         ax = fig.add_subplot(row, col, idx, sharex=base, sharey=base)
-    logging.info("\nfacet: {}".format(kwargs.get('facet',"no facet obtained")))
-    logging.info("\ndump of the data:\nX:\n{}\nY:\n{}".format(x, y))
+    logging.info("\nfacet: {0}".format(kwargs.get('facet',
+                                                  "no facet obtained")))
+    logging.info("\ndump of the data:\nX:\n{0}\nY:\n{1}".format(x, y))
     return ax
 
 def _null(x, y, ax, **kwargs):
