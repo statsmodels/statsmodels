@@ -165,7 +165,7 @@ Releasing
 
 #. Go back to setup.py and set `isreleased = False` and bump the major version in master.
 
-#. Update the version numbers in the statsmodels/statsmodels-website repo. These are in conf.py. Also upload the released version docs to stable/.
+#. Update the version numbers in the statsmodels/statsmodels-website repo. These are in conf.py. Also upload the released version docs to stable/, move stable/ to a placeholder for older version documentation.
 
 #. Make an announcment
 
