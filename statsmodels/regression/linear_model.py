@@ -240,9 +240,9 @@ class RegressionModel(base.LikelihoodModel):
             Must be between 0 and 1 (inclusive).  If 0, the fit is
             ridge regression.  If 1, the fit is the lasso.
         start_params : array-like
-            Starting values for `params`.
+            Starting values for ``params``.
         cnvrg_tol : scalar
-            If `params` changes by less than this amount (in sup-norm)
+            If ``params`` changes by less than this amount (in sup-norm)
             in once iteration cycle, the algorithm terminates with
             convergence.
         zero_tol : scalar
@@ -252,7 +252,7 @@ class RegressionModel(base.LikelihoodModel):
         Returns
         -------
         A RegressionResults object, of the same type returned by
-        `fit`.
+        ``fit``.
 
         Notes
         -----
@@ -260,12 +260,13 @@ class RegressionModel(base.LikelihoodModel):
         package in R.  The penalty is the "elastic net" penalty, which
         is a convex combination of L1 and L2 penalties.
 
-        The function that is minimized is:
+        The function that is minimized is: ..math::
 
-        0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
 
         where RSS is the usual regression sum of squares, n is the
-        sample size, and |*|_1 and |*|_2 are the L1 and L2 norms.
+        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
+        norms.
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
