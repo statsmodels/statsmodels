@@ -68,7 +68,6 @@ Basic Documentation
     gettingstarted
     example_formulas
     install
-    related
     about
 
 Information about the structure and development of
