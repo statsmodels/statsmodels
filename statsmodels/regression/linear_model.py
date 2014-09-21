@@ -2120,6 +2120,9 @@ class OLSResults(RegressionResults):
             the instance has methods to calculate the main influence and
             outlier measures for the OLS regression
 
+        See also
+        --------
+        :class:`statsmodels.stats.outliers_influence.OLSInfluence`
         """
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
