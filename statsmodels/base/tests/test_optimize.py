@@ -17,10 +17,10 @@ def dummy_func(x):
     return x**2
 
 def dummy_score(x):
-    return 2*x
+    return 2.*x
 
 def dummy_hess(x):
-    return [[2]]
+    return [[2.]]
 
 def test_full_output_false():
     # just a smoke test

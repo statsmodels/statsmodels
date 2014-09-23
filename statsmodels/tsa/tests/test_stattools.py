@@ -179,6 +179,10 @@ class TestPACF(CheckCorrGram):
         # from edited Stata ado file
         res = [[-.1375625, .1375625]] * 40
         assert_almost_equal(centered[1:41], res, DECIMAL_6)
+        # check lag 0
+        assert_equal(centered[0], [0., 0.])
+        assert_equal(confint[0], [1, 1])
+        assert_equal(pacfols[0], 1)
 
 
     def test_yw(self):

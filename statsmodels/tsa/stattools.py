@@ -582,9 +582,10 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     else:
         raise ValueError('method not available')
     if alpha is not None:
-        varacf = 1. / len(x)
+        varacf = 1. / len(x) # for all lags >=1
         interval = stats.norm.ppf(1. - alpha / 2.) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
+        confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
         return ret, confint
     else:
         return ret

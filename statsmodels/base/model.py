@@ -1700,7 +1700,7 @@ class ResultMixin(object):
         print(self.model.__class__)
         hascloneattr = True if hasattr(self, 'cloneattr') else False
         for i in range(nrep):
-            rvsind = np.random.randint(self.nobs - 1, size=self.nobs)
+            rvsind = np.random.randint(self.nobs, size=self.nobs)
             #this needs to set startparam and get other defining attributes
             #need a clone method on model
             fitmod = self.model.__class__(self.endog[rvsind],

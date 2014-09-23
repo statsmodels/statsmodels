@@ -726,8 +726,9 @@ class CheckHasConstant(object):
                 assert_equal(mod.data.const_idx, result[1])
 
             # extra check after fit, some models raise on singular
+            fit_kwds = getattr(self, 'fit_kwds', {})
             try:
-                res = mod.fit()
+                res = mod.fit(**fit_kwds)
                 assert_equal(res.model.k_constant, result[0])
                 assert_equal(res.model.data.k_constant, result[0])
             except:
@@ -795,6 +796,7 @@ class TestHasConstantLogit(CheckHasConstant):
         from statsmodels.discrete.discrete_model import Logit
         self.mod = Logit
         self.y = self.y_bin
+        self.fit_kwds = {'disp': False}
 
 
 if __name__ == "__main__":
