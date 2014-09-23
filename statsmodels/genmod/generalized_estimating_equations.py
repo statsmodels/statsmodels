@@ -38,7 +38,7 @@ from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import CovStruct
 import statsmodels.genmod.families.varfuncs as varfuncs
-from statsmodels.genmod.families.links import Link, Log
+from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.families import Family
 
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
@@ -318,8 +318,8 @@ _gee_results_doc = """
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     cov_type : string
-        string indicating whether a "robust", "naive" or "bias_
-        reduced" covariance is used as default
+        string indicating whether a "robust", "naive" or "bias_reduced"
+        covariance is used as default
     fit_history : dict
         Contains information about the iterations.
     fittedvalues : array
@@ -657,7 +657,7 @@ class GEE(base.Model):
 
         endog = self.endog_li
         exog = self.exog_li
-        offset_exposure = self.offset_li
+        offset = self.offset_li
 
         cached_means = self.cached_means
 
@@ -675,7 +675,7 @@ class GEE(base.Model):
             expval, _ = cached_means[i]
 
             sdev = np.sqrt(varfunc(expval))
-            resid = (endog[i] - offset_exposure[i] - expval) / sdev
+            resid = (endog[i] - offset[i] - expval) / sdev
 
             scale += np.sum(resid**2)
 
