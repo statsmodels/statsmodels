@@ -33,18 +33,15 @@ covariates.
 .. code-block:: python
 
    import numpy as np
-   import pandas as pd
-   from statsmodels.genmod.generalized_estimating_equations import GEE
+   import statsmodels.api as sm
+   import statsmodels.formula.api as smf
    from statsmodels.genmod.dependence_structures import Independence
-   from statsmodels.genmod.families import Poisson
 
-   data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
-   data = pd.read_csv(data_url)
+   data = sm.datasets.get_rdataset("epil", "MASS").data
 
-   fam = Poisson()
    ind = Independence()
-   md = GEE.from_formula("y ~ age + trt + base", "subject", data,
-                          covstruct=ind, family=fam)
+   md = smf.gee("y ~ age + trt + base", "subject", data,
+                cov_struct=ind, family=sm.families.Poisson())
    mdf = md.fit()
    print mdf.summary()
 
