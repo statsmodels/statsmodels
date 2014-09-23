@@ -637,7 +637,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
 
 
 # not available yet for WLS
-class T_estWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+class TestWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup(self):
@@ -661,7 +661,7 @@ class T_estWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
 
 
 # not available yet for WLS
-class T_estWLSRobustCluster2Large(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+class TestWLSRobustCluster2Large(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup(self):
