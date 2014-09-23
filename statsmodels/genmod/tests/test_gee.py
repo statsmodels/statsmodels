@@ -19,8 +19,9 @@ from statsmodels.genmod.generalized_estimating_equations import (GEE,
      NominalGEEResults, OrdinalGEEResults,
      NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
-from statsmodels.genmod.dependence_structures.api import (Exchangeable,
-    Independence, GlobalOddsRatio, Autoregressive, Nested)
+from statsmodels.genmod.cov_struct import (Exchangeable, Independence,
+                                           GlobalOddsRatio, Autoregressive,
+                                           Nested)
 import pandas as pd
 import statsmodels.formula.api as sm
 from scipy.stats.distributions import norm

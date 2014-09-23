@@ -35,9 +35,9 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
-from statsmodels.genmod.dependence_structures.api import (Independence,
-                                                          GlobalOddsRatio,
-                                                          CovStruct)
+from statsmodels.genmod.cov_struct import (Independence,
+                                           GlobalOddsRatio,
+                                           CovStruct)
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.families import Family
@@ -202,7 +202,7 @@ _gee_init_doc = """
     cov_struct : CovStruct class instance
         The default is Independence.  To specify an exchangeable
         structure use cov_struct = Exchangeable().  See
-        statsmodels.genmod.dependence_structures.CovStruct for more
+        statsmodels.genmod.cov_struct.CovStruct for more
         information.
     offset : array-like
         An offset to be included in the fit.  If provided, must be

@@ -1,4 +1,4 @@
 from .generalized_linear_model import GLM
 from .generalized_estimating_equations import GEE
 from . import families
-from .dependence_structures import api as cov_struct
+from . import cov_struct
