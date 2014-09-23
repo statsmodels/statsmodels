@@ -1056,7 +1056,7 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + offset + exposure)
         return np.dot(self.endog - L, X)
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Poisson model Jacobian of the log-likelihood for each observation
 
@@ -1085,6 +1085,9 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + offset + exposure)
         return (self.endog - L)[:,None] * X
+
+    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
+                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -1257,7 +1260,7 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return np.dot(y - L,X)
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Logit model Jacobian of the log-likelihood for each observation
 
@@ -1284,6 +1287,9 @@ class Logit(BinaryModel):
         X = self.exog
         L = self.cdf(np.dot(X, params))
         return (y - L)[:,None] * X
+
+    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
+                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -1465,7 +1471,7 @@ class Probit(BinaryModel):
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return np.dot(L,X)
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Probit model Jacobian for each observation
 
@@ -1496,6 +1502,9 @@ class Probit(BinaryModel):
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return L[:,None] * X
+
+    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
+                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -1710,7 +1719,7 @@ class MNLogit(MultinomialModel):
         score_array = np.dot(firstterm.T, self.exog).flatten()
         return loglike_value, score_array
 
-    def jac(self, params):
+    def score_obs(self, params):
         """
         Jacobian matrix for multinomial logit model log-likelihood
 
@@ -1740,6 +1749,9 @@ class MNLogit(MultinomialModel):
                                                   params))[:,1:]
         #NOTE: might need to switch terms if params is reshaped
         return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
+
+    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
+                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -2180,9 +2192,12 @@ class NegativeBinomial(CountModel):
         return hess_arr
 
     #TODO: replace this with analytic where is it used?
-    def jac(self, params):
+    def score_obs(self, params):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
+
+    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
+                       " jac will be removed in 0.7")
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
