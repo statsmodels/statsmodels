@@ -8,7 +8,8 @@ Author: Josef Perktold
 
 from statsmodels.compat.python import BytesIO, asbytes, range
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_
+from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+                           assert_raises, assert_allclose)
 
 from statsmodels.stats.libqsturng import qsturng
 
@@ -237,6 +238,42 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         self.endog = pandas.Series(self.endog)
         # we are working with bytes on python 3, not with strings in this case
         self.groups = pandas.Series(self.groups, dtype=object)
+
+    def test_incorrect_output(self):
+        # too few groups
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1, 2] * 4)
+        # too many groups
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1, 2] * 6)
+        # just one group
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1] * 10)
+
+        # group_order doesn't select all observations, only one group left
+        assert_raises(ValueError, MultiComparison, np.array([1] * 10),
+                     [1, 2] * 5, group_order=[1])
+
+        # group_order doesn't select all observations,
+        # we do tukey_hsd with reduced set of observations
+        data = np.arange(15)
+        groups = np.repeat([1, 2, 3], 5)
+        mod1 = MultiComparison(np.array(data), groups, group_order=[1, 2])
+        res1 = mod1.tukeyhsd(alpha=0.01)
+        mod2 = MultiComparison(np.array(data[:10]), groups[:10])
+        res2 = mod2.tukeyhsd(alpha=0.01)
+
+        attributes = ['confint', 'data', 'df_total', 'groups', 'groupsunique',
+                     'meandiffs', 'q_crit', 'reject', 'reject2', 'std_pairs',
+                     'variance']
+        for att in attributes:
+            err_msg = att + 'failed'
+            assert_allclose(getattr(res1, att), getattr(res2, att), rtol=1e-14,
+                            err_msg=err_msg)
+
+        attributes = ['data', 'datali', 'groupintlab', 'groups', 'groupsunique',
+                      'ngroups', 'nobs', 'pairindices']
+        for att in attributes:
+            err_msg = att + 'failed'
+            assert_allclose(getattr(mod1, att), getattr(mod2, att), rtol=1e-14,
+                            err_msg=err_msg)
 
 
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):

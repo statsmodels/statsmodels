@@ -766,7 +766,6 @@ class TukeyHSDResults(object):
         return fig
 
 
-
 class MultiComparison(object):
     '''Tests for multiple comparisons
 
@@ -778,11 +777,16 @@ class MultiComparison(object):
         group labels corresponding to each data point
     group_order : list of strings, optional
         the desired order for the group mean results to be reported in. If
-        not specified, results are reported in increasing order
+        not specified, results are reported in increasing order.
+        If group_order does not contain all labels that are in groups, then
+        only those observations are kept that have a label in group_order.
 
     '''
 
     def __init__(self, data, groups, group_order=None):
+
+        if len(data) != len(groups):
+            raise ValueError('data has %d elements and groups has %d' % (len(data), len(groups)))
         self.data = np.asarray(data)
         self.groups = groups = np.asarray(groups)
 
@@ -797,15 +801,33 @@ class MultiComparison(object):
                     raise ValueError(
                             "group_order value '%s' not found in groups"%grp)
             self.groupsunique = np.array(group_order)
-            self.groupintlab = np.zeros(len(data))
+            self.groupintlab = np.empty(len(data), int)
+            self.groupintlab.fill(-999)  # instead of a nan
+            count = 0
             for name in self.groupsunique:
                 idx = np.where(self.groups == name)[0]
+                count += len(idx)
                 self.groupintlab[idx] = np.where(self.groupsunique == name)[0]
+            if count != data.shape[0]:
+                #raise ValueError('group_order does not contain all groups')
+                # warn and keep only observations with label in group_order
+                import warnings
+                warnings.warn('group_order does not contain all groups:' +
+                              ' dropping observations')
+
+                mask_keep = self.groupintlab != -999
+                self.groupintlab = self.groupintlab[mask_keep]
+                self.data = self.data[mask_keep]
+                self.groups = self.groups[mask_keep]
+
+        if len(self.groupsunique) < 2:
+            raise ValueError('2 or more groups required for multiple comparisons')
 
         self.datali = [data[self.groups == k] for k in self.groupsunique]
         self.pairindices = np.triu_indices(len(self.groupsunique), 1)  #tuple
         self.nobs = self.data.shape[0]
         self.ngroups = len(self.groupsunique)
+
 
     def getranks(self):
         '''convert data to rankdata and attach
