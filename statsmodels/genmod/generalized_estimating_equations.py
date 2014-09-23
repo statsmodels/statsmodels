@@ -406,7 +406,8 @@ class GEE(base.Model):
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
-                 dep_data=None, constraint=None, update_dep=True):
+                 exposure=None, dep_data=None, constraint=None,
+                 update_dep=True):
 
         self.missing = missing
         self.dep_data = dep_data
@@ -421,6 +422,7 @@ class GEE(base.Model):
         # self.data.endog, etc.
         super(GEE, self).__init__(endog, exog, groups=groups,
                                   time=time, offset=offset,
+                                  exposure=exposure,
                                   dep_data=dep_data, missing=missing)
 
         self._init_keys.extend(["update_dep", "constraint", "family",
@@ -445,11 +447,16 @@ class GEE(base.Model):
 
         self.cov_struct = cov_struct
 
-        if offset is None:
-            self.offset = np.zeros(self.exog.shape[0],
-                                   dtype=np.float64)
-        else:
+        # Handle the offset and exposure
+        self._offset_exposure = np.zeros(len(self.endog))
+        if offset is not None:
+            self._offset_exposure += self.offset
             self.offset = offset
+        if exposure is not None:
+            if not isinstance(self.family.link, families.links.Log):
+                raise ValueError("exposure can only be used with the log link function")
+            self._offset_exposure += np.log(exposure)
+            self.exposure = exposure
 
         # Handle the constraint
         self.constraint = None
@@ -464,7 +471,7 @@ class GEE(base.Model):
                                                   constraint[1],
                                                   self.exog)
 
-            self.offset += self.constraint.offset_increment()
+            self._offset_exposure += self.constraint.offset_increment()
             self.exog = self.constraint.reduced_exog()
 
         # Convert the data to the internal representation, which is a
@@ -495,7 +502,7 @@ class GEE(base.Model):
                  for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
-        self.offset_li = self.cluster_list(self.offset)
+        self.offset_li = self.cluster_list(self._offset_exposure)
         if constraint is not None:
             self.constraint.exog_fulltrans_li = \
                 self.cluster_list(self.constraint.exog_fulltrans)
@@ -554,17 +561,81 @@ class GEE(base.Model):
     # names.
     @classmethod
     def from_formula(cls, formula, groups, data, subset=None,
+                     time=None, offset=None, exposure=None,
                      *args, **kwargs):
+        """
+        Create a GEE model instance from a formula and dataframe.
+
+        Parameters
+        ----------
+        formula : str or generic Formula object
+            The formula specifying the model
+        groups : array-like or string
+            Array of grouping labels.  If a string, this is the name
+            of a variable in `data` that contains the grouping labels.
+        data : array-like
+            The data for the model.
+        subset : array-like
+            An array-like object of booleans, integers, or index
+            values that indicate the subset of the data to used when
+            fitting the model.
+        time : array-like or string
+            The time values, used for dependence structures involving
+            distances between observations.  If a string, this is the
+            name of a variable in `data` that contains the time
+            values.
+        offset : array-like or string
+            The offset values, added to the linear predictor.  If a
+            string, this is the name of a variable in `data` that
+            contains the offset values.
+        exposure : array-like or string
+            The exposure values, only used if the link function is the
+            logarithm function, in which case the log of `exposure`
+            is added to the offset (if any).  If a string, this is the
+            name of a variable in `data` that contains the offset
+            values.
+        %(missing_param_doc)s
+        args : extra arguments
+            These are passed to the model
+        kwargs : extra keyword arguments
+            These are passed to the model.
+
+        Returns
+        -------
+        model : GEE model instance
+
+        Notes
+        ------
+        `data` must define __getitem__ with the keys in the formula
+        terms args and kwargs are passed on to the model
+        instantiation. E.g., a numpy structured or rec array, a
+        dictionary, or a pandas DataFrame.
+
+        This method currently does not correctly handle missing
+        values, so missing values should be explicitly dropped from
+        the DataFrame before calling this method.
+        """ % {'missing_param_doc' : base._missing_param_doc}
+
 
         if type(groups) == str:
             groups = data[groups]
 
-        if "time" in kwargs and type(kwargs["time"]) == str:
-            kwargs["time"] = data[kwargs["time"]]
+        if type(time) == str:
+            time = data[time]
 
-        mod = super(GEE, cls).from_formula(formula, data, subset,
-                                           groups, *args, **kwargs)
-        return mod
+        if type(offset) == str:
+            offset = data[offset]
+
+        if type(exposure) == str:
+            exposure = data[exposure]
+
+        model = super(GEE, cls).from_formula(formula, data, subset,
+                                             groups, time=time,
+                                             offset=offset,
+                                             exposure=exposure,
+                                             *args, **kwargs)
+
+        return model
 
     def cluster_list(self, array):
         """
@@ -799,12 +870,15 @@ class GEE(base.Model):
 
         if exog is None:
             exog = self.exog
-            offset = self.offset
-        else:
             if offset is None:
-                offset = 0
+                offset = self._offset_exposure
 
-        fitted = offset + np.dot(exog, params)
+        if (offset is not None) and (len(offset) != exog.shape[0]):
+            raise ValueError("the length of offset must equal the number of rows of exog")
+
+        fitted = np.dot(exog, params)
+        if offset is not None:
+            fitted += offset
 
         if not linear:
             fitted = self.family.link.inverse(fitted)
@@ -819,15 +893,18 @@ class GEE(base.Model):
 
         dm = self.exog.shape[1]
 
+        # For categorical models, use independence cov_struct to get
+        # starting values.
         if isinstance(self.cov_struct, GlobalOddsRatio):
 
             ind = Independence()
             md = GEE(self.endog, self.exog, self.groups,
                      time=self.time, family=self.family,
-                     offset=self.offset)
+                     offset=self.offset, exposure=self.exposure)
             mdf = md.fit()
             return mdf.params
 
+        # TODO: use GLM to get Poisson starting values
         else:
             return np.zeros(dm, dtype=np.float64)
 
