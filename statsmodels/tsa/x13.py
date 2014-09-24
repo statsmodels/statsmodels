@@ -26,6 +26,7 @@ __all__ = ["x13_arima_select_order", "x13_arima_analysis"]
 
 _binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
 
+
 class _freq_to_period:
     def __getitem__(self, key):
         if key.startswith('M'):
@@ -159,7 +160,7 @@ def _make_regression_options(trading, exog):
         var_names = _make_var_names(exog)
         reg_spec += "    user = ({0})\n".format(var_names)
         reg_spec += "    data = ({0})\n".format("\n".join(map(str,
-                                               exog.values.ravel().tolist())))
+                                                exog.values.ravel().tolist())))
 
     reg_spec += "}\n"  # close out regression spec
     return reg_spec
@@ -272,8 +273,8 @@ class SeriesSpec(Spec):
 
 
 def pandas_to_series_spec(x):
-    #from statsmodels.tools.data import _check_period_index
-    #_check_period_index(x)
+    # from statsmodels.tools.data import _check_period_index
+    # check_period_index(x)
     if hasattr(x, 'columns'):  # convert to series
         if len(x.columns) > 1:
             raise ValueError("Does not handle DataFrame with more than one "
@@ -305,7 +306,8 @@ def pandas_to_series_spec(x):
     else:
         name = 'Unnamed Series'
     series_spec = SeriesSpec(data=data, name=name, period=period,
-                             title=name, start="{0}.{1}".format(year, stperiod))
+                             title=name, start="{0}.{1}".format(year,
+                                                                stperiod))
     return series_spec
 
 
@@ -361,8 +363,8 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``endog`` does not have date information in its index.
-        Anything accapted by pandas.DatetimeIndex for the freq value.
+        Must be givein if ``endog`` does not have date information in its
+        index. Anything accapted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
@@ -400,6 +402,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     -----
     This works by creating a specification file, writing it to a temporary
     directory, invoking X12/X13 in a subprocess, and reading the output
+    directory, invoking exog12/X13 in a subprocess, and reading the output
     back in.
     """
     x12path = _check_x12(x12path)
@@ -424,7 +427,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     if speconly:
         return spec
     # write it to a tempfile
-    #TODO: make this more robust - give the user some control?
+    # TODO: make this more robust - give the user some control?
     ftempin = tempfile.NamedTemporaryFile(delete=False, suffix='.spc')
     ftempout = tempfile.NamedTemporaryFile(delete=False)
     try:
@@ -448,7 +451,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         irregular = _open_and_read(ftempout.name + '.d13')
     finally:
         try:  # sometimes this gives a permission denied error?
-              # not sure why. no process should have these open
+            #   not sure why. no process should have these open
             os.remove(ftempin.name)
             os.remove(ftempout.name)
         except:
@@ -463,17 +466,17 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     trend = _convert_out_to_series(trend, endog.index, 'trend')
     irregular = _convert_out_to_series(irregular, endog.index, 'irregular')
 
-    #NOTE: there isn't likely anything in stdout that's not in results
-    #      so may be safe to just suppress and remove it
+    # NOTE: there isn't likely anything in stdout that's not in results
+    #       so may be safe to just suppress and remove it
     if not retspec:
         res = X13ArimaAnalysisResult(observed=endog, results=results,
-                                        seasadj=seasadj, trend=trend,
-                                        irregular=irregular, stdout=stdout)
+                                     seasadj=seasadj, trend=trend,
+                                     irregular=irregular, stdout=stdout)
     else:
         res = X13ArimaAnalysisResult(observed=endog, results=results,
-                                        seasadj=seasadj, trend=trend,
-                                        irregular=irregular, stdout=stdout,
-                                        spec=spec)
+                                     seasadj=seasadj, trend=trend,
+                                     irregular=irregular, stdout=stdout,
+                                     spec=spec)
     return res
 
 
@@ -511,8 +514,8 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     exog : array-like
         Exogenous variables.
     log : bool or None
-        If None, it is automatically determined whether to log the series or not.
-        If False, logs are not taken. If True, logs are taken.
+        If None, it is automatically determined whether to log the series or
+        not. If False, logs are not taken. If True, logs are taken.
     outlier : bool
         Whether or not outliers are tested for and corrected, if detected.
     trading : bool
@@ -523,8 +526,8 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``endog`` does not have date information in its index.
-        Anything accapted by pandas.DatetimeIndex for the freq value.
+        Must be givein if ``endog`` does not have date information in its
+        index. Anything accapted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
@@ -603,7 +606,6 @@ class X13ArimaAnalysisResult(object):
 
 
 if __name__ == "__main__":
-    import pandas as pd
     import numpy as np
     from statsmodels.tsa.arima_process import ArmaProcess
     np.random.seed(123)
@@ -625,7 +627,8 @@ if __name__ == "__main__":
 
     results = x13_arima_analysis(xpath, ts, log=False)
 
-    #seas_y = pd.read_csv("usmelec.csv")
-    #seas_y = pd.TimeSeries(seas_y["usmelec"].values,
-    #                       index=pd.DatetimeIndex(seas_y["date"], freq="MS"))
-    #results = x13_arima_analysis(xpath, seas_y)
+    # import pandas as pd
+    # seas_y = pd.read_csv("usmelec.csv")
+    # seas_y = pd.TimeSeries(seas_y["usmelec"].values,
+    #                        index=pd.DatetimeIndex(seas_y["date"], freq="MS"))
+    # results = x13_arima_analysis(xpath, seas_y)
