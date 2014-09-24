@@ -5,25 +5,14 @@ from numpy.testing import (assert_almost_equal, assert_,
                            assert_raises, dec, TestCase)
 from statsmodels.tools.testing import assert_equal
 import statsmodels.sandbox.tsa.fftarma as fa
-from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.base.datetools import dates_from_range
 from .results import results_arma, results_arima
 import os
-from statsmodels.tsa.base import datetools
 from statsmodels.tsa.arima_process import arma_generate_sample
 import pandas
-from pandas.util.testing import assert_produces_warning
-try:
-    from statsmodels.tsa.kalmanf import kalman_loglike
-    fast_kalman = 1
-except:
-    fast_kalman = 0
-    #NOTE: the KF with complex input returns a different precision for
-    # the hessian imaginary part, so we use approx_hess and the the
-    # resulting stats are slightly different.
 
 try:
     import matplotlib.pyplot as plt
@@ -61,10 +50,10 @@ def test_compare_arma():
     x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(size=200,
             burnin=1000)
 
-# this used kalman filter through descriptive
-#    d = ARMA(x)
-#    d.fit((1,1), trend='nc')
-#    dres = d.res
+    # this used kalman filter through descriptive
+    #d = ARMA(x)
+    #d.fit((1,1), trend='nc')
+    #dres = d.res
 
     modkf = ARMA(x, (1,1))
     ##rkf = mkf.fit((1,1))
@@ -84,7 +73,8 @@ def test_compare_arma():
     #rescm also contains variance estimate as last element of params
 
     #assert_almost_equal(np.abs(rescm.params[:-1] / d.params), np.ones(d.params.shape), decimal=1)
-    assert_almost_equal(rescm.params[:-1] / dres.params, np.ones(dres.params.shape), decimal=1)
+    assert_almost_equal(rescm.params[:-1] / dres.params,
+                        np.ones(dres.params.shape), decimal=1)
     #return resls[0], d.params, rescm.params
 
 
@@ -162,6 +152,7 @@ class CheckArmaResultsMixin(object):
         # smoke tests
         table = self.res1.summary()
 
+
 class CheckForecastMixin(object):
     decimal_forecast = DECIMAL_4
     def test_forecast(self):
@@ -172,6 +163,7 @@ class CheckForecastMixin(object):
     def test_forecasterr(self):
         assert_almost_equal(self.res1.forecast_err, self.res2.forecasterr,
                 self.decimal_forecasterr)
+
 
 class CheckDynamicForecastMixin(object):
     decimal_forecast_dyn = 4
@@ -196,7 +188,7 @@ class CheckArimaResultsMixin(CheckArmaResultsMixin):
         assert_almost_equal(self.res1.predict(typ='levels'), self.res2.linear,
                 self.decimal_predict_levels)
 
-#NOTE: Ok
+
 class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
@@ -214,7 +206,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
         res_unpickled = self.res1.__class__.load(fh)
         assert_(type(res_unpickled) is type(self.res1))
 
-#NOTE: Ok
+
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -222,7 +214,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma14()
 
-#NOTE: Ok
+
 @dec.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
@@ -234,7 +226,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
         cls.res2 = results_arma.Y_arma41()
         cls.decimal_maroots = DECIMAL_3
 
-#NOTE: Ok
+
 class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -242,7 +234,7 @@ class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma22()
 
-#NOTE: Ok
+
 class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
@@ -252,7 +244,7 @@ class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50()
 
-#NOTE: Ok
+
 class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -260,7 +252,7 @@ class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma02()
 
-#NOTE: Ok
+
 class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
@@ -270,12 +262,14 @@ class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
 
+
 class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
+
 
 @dec.slow
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
@@ -290,11 +284,8 @@ class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
         cls.decimal_fittedvalues = DECIMAL_3
         cls.decimal_resid = DECIMAL_3
         cls.decimal_params = DECIMAL_3
-        if fast_kalman:
-            cls.decimal_cov_params -= 2
-            cls.decimal_bse -= 1
 
-#NOTE: Ok
+
 class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -302,7 +293,7 @@ class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
 
-#NOTE: Ok
+
 class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
@@ -312,7 +303,7 @@ class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50c()
 
-#NOTE: Ok
+
 class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -320,7 +311,7 @@ class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma02c()
 
-#NOTE:
+
 # cov_params and tvalues are off still but not as much vs. R
 class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
@@ -330,6 +321,7 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
                             disp=-1)
         cls.res2 = results_arma.Y_arma11("css")
         cls.decimal_t = DECIMAL_1
+
 
 # better vs. R
 class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
@@ -343,8 +335,7 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
         cls.decimal_resid = DECIMAL_3
         cls.decimal_t = DECIMAL_1
 
-#NOTE: Ok
-#NOTE:
+
 # bse, etc. better vs. R
 # maroot is off because maparams is off a bit (adjust tolerance?)
 class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
@@ -359,7 +350,7 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_maroots = DECIMAL_1
 
-#NOTE: Ok
+
 #same notes as above
 class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
@@ -373,7 +364,7 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
         cls.decimal_pvalues = DECIMAL_1
         cls.decimal_fittedvalues = DECIMAL_3
 
-#NOTE: Ok
+
 #NOTE: gretl just uses least squares for AR CSS
 # so BIC, etc. is
 # -2*res1.llf + np.log(nobs)*(res1.q+res1.p+res1.k)
@@ -390,7 +381,7 @@ class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
         cls.decimal_t = 0
         cls.decimal_llf = DECIMAL_1 # looks like rounding error?
 
-#NOTE: ok
+
 class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -399,7 +390,7 @@ class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
                             disp=-1)
         cls.res2 = results_arma.Y_arma02("css")
 
-#NOTE: Ok
+
 #NOTE: our results are close to --x-12-arima option and R
 class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
     @classmethod
@@ -412,7 +403,7 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_t = DECIMAL_1
 
-#NOTE: Ok
+
 class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -423,7 +414,7 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
         cls.decimal_t = DECIMAL_1
         cls.decimal_pvalues = DECIMAL_1
 
-#NOTE: Ok
+
 class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -436,7 +427,7 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
         cls.decimal_maroots = DECIMAL_3
         cls.decimal_bse = DECIMAL_1
 
-#NOTE: Ok
+
 class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -447,7 +438,7 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
         cls.decimal_t = 0
         cls.decimal_pvalues = DECIMAL_1
 
-#NOTE: Ok
+
 class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -459,7 +450,7 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
         cls.decimal_params = DECIMAL_3
         cls.decimal_cov_params = DECIMAL_2
 
-#NOTE: Ok
+
 class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -468,12 +459,14 @@ class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
                         disp=-1)
         cls.res2 = results_arma.Y_arma02c("css")
 
+
 def test_reset_trend():
     endog = y_arma[:,0]
     mod = ARMA(endog, order=(1,1))
     res1 = mod.fit(trend="c", disp=-1)
     res2 = mod.fit(trend="nc", disp=-1)
     assert_equal(len(res1.params), len(res2.params)+1)
+
 
 @dec.slow
 def test_start_params_bug():
@@ -539,6 +532,7 @@ def test_start_params_bug():
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     res = ARMA(data, order=(4,1)).fit(disp=-1)
 
+
 class Test_ARIMA101(CheckArmaResultsMixin):
     # just make sure this works
     @classmethod
@@ -551,6 +545,7 @@ class Test_ARIMA101(CheckArmaResultsMixin):
         cls.res2.k_diff = 0
         cls.res2.k_ar = 1
         cls.res2.k_ma = 1
+
 
 class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
                     CheckDynamicForecastMixin):
@@ -582,6 +577,7 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
     def test_freq(self):
         assert_almost_equal(self.res1.arfreq, [0.0000], 4)
         assert_almost_equal(self.res1.mafreq, [0.0000], 4)
+
 
 class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
                        CheckDynamicForecastMixin):
@@ -672,6 +668,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 #         cls.res1.forecast_err,
 #         conf_int)              = cls.res1.forecast(25)
 
+
 def test_arima_predict_mle_dates():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
@@ -704,6 +701,7 @@ def test_arima_predict_mle_dates():
     start, end = '1965q1', '2015q4'
     fv = res1.predict(start, end, dynamic=True, typ='levels')
     assert_almost_equal(fv, fcdyn2[24:227+1], DECIMAL_4)
+
 
 def test_arma_predict_mle_dates():
     from statsmodels.datasets.sunspots import load
@@ -771,6 +769,7 @@ def test_arma_predict_css_dates():
     mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
     mod.method = 'css'
     assert_raises(ValueError, mod._get_predict_start, *('1701', False))
+
 
 def test_arima_predict_mle():
     from statsmodels.datasets.macrodata import load
@@ -920,13 +919,16 @@ def test_arima_predict_mle():
     fv = res1.predict(start, end, dynamic=True, typ='levels')
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
 
+
 def _check_start(model, given, expected, dynamic):
     start = model._get_predict_start(given, dynamic)
     assert_equal(start, expected)
 
+
 def _check_end(model, given, end_expect, out_of_sample_expect):
     end, out_of_sample = model._get_predict_end(given)
     assert_equal((end, out_of_sample), (end_expect, out_of_sample_expect))
+
 
 def test_arma_predict_indices():
     from statsmodels.datasets.sunspots import load
@@ -996,6 +998,7 @@ def test_arma_predict_indices():
 
     for case in end_test_cases:
         _check_end(*((model,)+case))
+
 
 def test_arima_predict_indices():
     from statsmodels.datasets.macrodata import load
@@ -1128,6 +1131,7 @@ def test_arima_predict_indices():
     for case in end_test_cases:
         _check_end(*((model,)+case))
 
+
 def test_arima_predict_indices_css():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
@@ -1141,6 +1145,7 @@ def test_arima_predict_indices_css():
     assert_raises(ValueError, model._get_predict_start, *(0, True))
     assert_raises(ValueError, model._get_predict_start, *(2, False))
     assert_raises(ValueError, model._get_predict_start, *(2, True))
+
 
 def test_arima_predict_css():
     from statsmodels.datasets.macrodata import load
@@ -1279,6 +1284,7 @@ def test_arima_predict_css():
     start, end = None, None
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
+
 
 def test_arima_predict_css_diffs():
 
@@ -1424,6 +1430,7 @@ def test_arima_predict_css_diffs():
     fv = res1.model.predict(params, start, end, dynamic=True)
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
 
+
 def test_arima_predict_mle_diffs():
 
     from statsmodels.datasets.macrodata import load
@@ -1564,6 +1571,7 @@ def test_arima_predict_mle_diffs():
     fv = res1.model.predict(params, start, end, dynamic=True)
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
 
+
 def test_arima_wrapper():
     from statsmodels.datasets.macrodata import load_pandas
 
@@ -1575,6 +1583,7 @@ def test_arima_wrapper():
                                     'ma.L1.D.cpi']))
     assert_equal(res.model.endog_names, 'D.cpi')
 
+
 def test_1dexog():
     # smoke test, this will raise an error if broken
     from statsmodels.datasets.macrodata import load_pandas
@@ -1583,6 +1592,7 @@ def test_1dexog():
     exog = dta['m1'].values.squeeze()
     mod = ARMA(endog, (1,1), exog).fit(disp=-1)
 
+
 def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
@@ -1590,6 +1600,7 @@ def test_arima_predict_bug():
     dta.index = pandas.Index(dates_from_range('1700', '2008'))
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
+
 
 def test_arima_predict_q2():
     # bug with q > 1 for arima predict
@@ -1601,6 +1612,7 @@ def test_arima_predict_q2():
     assert_almost_equal(fc,
                         [7.306320, 7.313825, 7.321749, 7.329827, 7.337962],
                         5)
+
 
 def test_arima_predict_pandas_nofreq():
     # this is issue 712
@@ -1644,6 +1656,7 @@ def test_arima_predict_pandas_nofreq():
     assert_(predict.index.equals(data.index[2:10]))
     predict = arma.predict(start=2, end="2010-1-13")
     assert_(predict.index.equals(data.index[2:10]))
+
 
 def test_arima_predict_exog():
     # check 625 and 626
@@ -1704,6 +1717,7 @@ def test_arima_predict_exog():
     ## exog for out-of-sample and in-sample dynamic
     #assert_almost_equal(predict, predict_expected.values, 3)
 
+
 def test_arima_no_diff():
     # issue 736
     # smoke test, predict will break if we have ARIMAResults but
@@ -1717,6 +1731,7 @@ def test_arima_no_diff():
     # smoke test just to be sure
     res.predict()
 
+
 def test_arima_predict_noma():
     # issue 657
     # smoke test
@@ -1726,6 +1741,7 @@ def test_arima_predict_noma():
     arma = ARMA(data, order=(0,1))
     arma_res = arma.fit(disp=-1)
     arma_res.forecast(1)
+
 
 def test_arimax():
     from statsmodels.datasets.macrodata import load_pandas
@@ -1773,6 +1789,7 @@ def test_arimax():
 
     assert_almost_equal(res.params.values, params, 3)
 
+
 def test_bad_start_params():
     endog = np.array([820.69093, 781.0103028, 785.8786988, 767.64282267,
          778.9837648 ,   824.6595702 ,   813.01877867,   751.65598567,
@@ -1794,6 +1811,7 @@ def test_bad_start_params():
     arima_mod = ARIMA(np.log(inv), (1,1,2))
     assert_raises(ValueError, mod.fit)
 
+
 def test_arima_small_data_bug():
     # Issue 1038, too few observations with given order
     from datetime import datetime
@@ -1806,6 +1824,7 @@ def test_arima_small_data_bug():
     df = pandas.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
     assert_raises(ValueError, mod.fit)
+
 
 def test_arima_dataframe_integer_name():
     # Smoke Test for Issue 1038
@@ -1820,6 +1839,7 @@ def test_arima_dataframe_integer_name():
     df = pandas.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
 
+
 def test_arima_exog_predict_1d():
     # test 1067
     np.random.seed(12345)
@@ -1828,6 +1848,7 @@ def test_arima_exog_predict_1d():
     mod = ARMA(y, (2, 1), x).fit(disp=-1)
     newx = np.random.random(10)
     results = mod.forecast(steps=10, alpha=0.05, exog=newx)
+
 
 def test_arima_1123():
     # test ARMAX predict when trend is none
@@ -1870,6 +1891,7 @@ def test_arima_1123():
     assert_almost_equal(fc[0], 2.481219, 6)
     assert_almost_equal(fc[1], 0.968759, 6)
     assert_almost_equal(fc[2][0], [0.582485, 4.379952], 6)
+
 
 def test_small_data():
     # 1146
@@ -1971,6 +1993,7 @@ def test_arima_dates_startatend():
     assert_(pred.index[0] == x.index.shift(1)[-1])
     fc = res.forecast()[0]
     assert_almost_equal(pred.values[0], fc)
+
 
 def test_arma_missing():
     from statsmodels.base.data import MissingDataError
