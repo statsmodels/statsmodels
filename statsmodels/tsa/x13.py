@@ -130,36 +130,36 @@ def _make_automdl_options(maxorder, maxdiff, diff):
     return options
 
 
-def _make_var_names(X):
-    if hasattr(X, "name"):
-        var_names = X.name
-    elif hasattr(X, "columns"):
-        var_names = X.columns
+def _make_var_names(exog):
+    if hasattr(exog, "name"):
+        var_names = exog.name
+    elif hasattr(exog, "columns"):
+        var_names = exog.columns
     else:
-        raise ValueError("X is not a Series or DataFrame or is unnamed.")
+        raise ValueError("exog is not a Series or DataFrame or is unnamed.")
     try:
         var_names = " ".join(var_names)
     except TypeError:  # cannot have names that are numbers, pandas default
         from statsmodels.base.data import _make_exog_names
-        if X.ndim == 1:
+        if exog.ndim == 1:
             var_names = "x1"
         else:
-            var_names = " ".join(_make_exog_names(X))
+            var_names = " ".join(_make_exog_names(exog))
     return var_names
 
 
-def _make_regression_options(trading, X):
-    if not trading and X is None:  # start regression spec
+def _make_regression_options(trading, exog):
+    if not trading and exog is None:  # start regression spec
         return ""
 
     reg_spec = "regression{\n"
     if trading:
         reg_spec += "    variables = (td)\n"
-    if X is not None:
-        var_names = _make_var_names(X)
+    if exog is not None:
+        var_names = _make_var_names(exog)
         reg_spec += "    user = ({0})\n".format(var_names)
         reg_spec += "    data = ({0})\n".format("\n".join(map(str,
-                                               X.values.ravel().tolist())))
+                                               exog.values.ravel().tolist())))
 
     reg_spec += "}\n"  # close out regression spec
     return reg_spec
@@ -309,8 +309,8 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
-                       log=None, outlier=True, trading=False,
+def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
+                       exog=None, log=None, outlier=True, trading=False,
                        forecast_years=None, retspec=False,
                        speconly=False, start=None, freq=None,
                        print_stdout=False, x12path=None, prefer_x13=True):
@@ -319,7 +319,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
 
     Parameters
     ----------
-    y : array-like, pandas.Series
+    endog : array-like, pandas.Series
         The series to model. It is best to use a pandas object with a
         DatetimeIndex or PeriodIndex. However, you can pass an array-like
         object. If your object does not have a dates index then ``start`` and
@@ -340,7 +340,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         differencing. Regular differencing may be 0, 1, or 2. Seasonal
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
-    X : array-like
+    exog : array-like
         Exogenous variables.
     log : bool or None
         If None, it is automatically determined whether to log the series or
@@ -358,18 +358,18 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         Whether to create the specification file and then return it without
         performing the analysis. Can be useful for debugging.
     start : str, datetime
-        Must be given if ``y`` does not have date information in its index.
+        Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``y`` does not have date information in its index.
+        Must be givein if ``endog`` does not have date information in its index.
         Anything accapted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
     x12path : str or None
         The path to x12 or x13 binary. If None, the program will attempt
-        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
-        depending on the value of prefer_x13.
+        to find x13as or x12a on the PATH or by looking at X13PATH or
+        X12PATH depending on the value of prefer_x13.
     prefer_x13 : bool
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
@@ -385,11 +385,11 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series
-          The final seasonally adjusted ``y``
+          The final seasonally adjusted ``endog``
         - trend : pandas.Series
-          The trend-cycle component of ``y``
+          The trend-cycle component of ``endog``
         - irregular : pandas.Series
-          The final irregular component of ``y``
+          The final irregular component of ``endog``
         - stdout : str
           The captured stdout produced by x12/x13.
         - spec : str, optional
@@ -399,25 +399,26 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
     Notes
     -----
     This works by creating a specification file, writing it to a temporary
-    directory, invoking X12/X13 in a subprocess, and reading the output back
-    in.
+    directory, invoking X12/X13 in a subprocess, and reading the output
+    back in.
     """
     x12path = _check_x12(x12path)
 
-    if not isinstance(y, (pd.DataFrame, pd.Series)):
+    if not isinstance(endog, (pd.DataFrame, pd.Series)):
         if start is None or freq is None:
-            raise ValueError("start and freq cannot be none if y is not "
+            raise ValueError("start and freq cannot be none if endog is not "
                              "a pandas object")
-        y = pd.Series(y, index=pd.DatetimeIndex(start=start, periods=len(y),
-                                                freq=freq))
-    spec_obj = pandas_to_series_spec(y)
+        endog = pd.Series(endog, index=pd.DatetimeIndex(start=start,
+                                                        periods=len(endog),
+                                                        freq=freq))
+    spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
     spec += "transform{{function={0}}}\n".format(_log_to_x12[log])
     if outlier:
         spec += "outlier{}\n"
     options = _make_automdl_options(maxorder, maxdiff, diff)
     spec += "automdl{{{0}}}\n".format(options)
-    spec += _make_regression_options(trading, X)
+    spec += _make_regression_options(trading, exog)
     spec += _make_forecast_options(forecast_years)
     spec += "x11{ save=(d11 d12 d13) }"
     if speconly:
@@ -458,26 +459,26 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
                 warn("Failed to delete resource {0}".format(ftempout.name),
                      IOWarning)
 
-    seasadj = _convert_out_to_series(seasadj, y.index, 'seasadj')
-    trend = _convert_out_to_series(trend, y.index, 'trend')
-    irregular = _convert_out_to_series(irregular, y.index, 'irregular')
+    seasadj = _convert_out_to_series(seasadj, endog.index, 'seasadj')
+    trend = _convert_out_to_series(trend, endog.index, 'trend')
+    irregular = _convert_out_to_series(irregular, endog.index, 'irregular')
 
     #NOTE: there isn't likely anything in stdout that's not in results
     #      so may be safe to just suppress and remove it
     if not retspec:
-        res = X13ArimaAnalysisResult(observed=y, results=results,
-                                     seasadj=seasadj, trend=trend,
-                                     irregular=irregular, stdout=stdout)
+        res = X13ArimaAnalysisResult(observed=endog, results=results,
+                                        seasadj=seasadj, trend=trend,
+                                        irregular=irregular, stdout=stdout)
     else:
-        res = X13ArimaAnalysisResult(observed=y, results=results,
-                                     seasadj=seasadj, trend=trend,
-                                     irregular=irregular, stdout=stdout,
-                                     spec=spec)
+        res = X13ArimaAnalysisResult(observed=endog, results=results,
+                                        seasadj=seasadj, trend=trend,
+                                        irregular=irregular, stdout=stdout,
+                                        spec=spec)
     return res
 
 
-def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
-                           X=None, log=None, outlier=True, trading=False,
+def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
+                           exog=None, log=None, outlier=True, trading=False,
                            forecast_years=None,
                            start=None, freq=None, print_stdout=False,
                            x12path=None, prefer_x13=True):
@@ -486,7 +487,7 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
 
     Parameters
     ----------
-    y : array-like, pandas.Series
+    endog : array-like, pandas.Series
         The series to model. It is best to use a pandas object with a
         DatetimeIndex or PeriodIndex. However, you can pass an array-like
         object. If your object does not have a dates index then ``start`` and
@@ -507,7 +508,7 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         differencing. Regular differencing may be 0, 1, or 2. Seasonal
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
-    X : array-like
+    exog : array-like
         Exogenous variables.
     log : bool or None
         If None, it is automatically determined whether to log the series or not.
@@ -519,10 +520,10 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     forecast_years : int
         Number of forecasts produced. The default is one year.
     start : str, datetime
-        Must be given if ``y`` does not have date information in its index.
+        Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``y`` does not have date information in its index.
+        Must be givein if ``endog`` does not have date information in its index.
         Anything accapted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
@@ -559,7 +560,7 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     directory, invoking X12/X13 in a subprocess, and reading the output back
     in.
     """
-    results = x13_arima_analysis(y, x12path=x12path, X=X, log=log,
+    results = x13_arima_analysis(endog, x12path=x12path, exog=exog, log=log,
                                  outlier=outlier, trading=trading,
                                  forecast_years=forecast_years,
                                  maxorder=maxorder, maxdiff=maxdiff, diff=diff,
