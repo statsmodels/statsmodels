@@ -154,6 +154,7 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
 
     def test_smoke(self):
         # trailing text in summary, assumes it's the first extra string
+        #NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary()
         assert_('linear equality constraints' in summ.extra_txt)
         summ = self.res1m.summary2()
@@ -371,7 +372,7 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         res2 = mod.fit_constrained(constr, start_params=self.res1m.params,
-                                        method='newton')
+                                   method='newton', warn_convergence=False)
 
         # we get high precision because we use the params as start_params
 

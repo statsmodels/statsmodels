@@ -368,15 +368,16 @@ class TestProbitCG(CheckBinaryResults):
         from statsmodels.tools.transform_model import StandardizeTransform
         transf = StandardizeTransform(data.exog)
         exog_st = transf(data.exog)
-        res1_st = Probit(data.endog, exog_st).fit(method="cg",
-                                             disp=0, maxiter=500, gtol=1e-08)
+        res1_st = Probit(data.endog,
+                         exog_st).fit(method="cg", disp=0, maxiter=1000,
+                                      gtol=1e-08)
         start_params = transf.transform_params(res1_st.params)
         assert_allclose(start_params, res2.params, rtol=1e-5, atol=1e-6)
 
-        cls.res1 = Probit(data.endog, data.exog).fit(start_params=start_params,
-                                                     method="cg",
-                                                     maxiter=500, gtol=1e-08,
-                                                     disp=0)
+        cls.res1 = Probit(data.endog,
+                          data.exog).fit(start_params=start_params,
+                                         method="cg", maxiter=1000,
+                                         gtol=1e-05, disp=0)
 
         assert_array_less(cls.res1.mle_retvals['fcalls'], 100)
 
@@ -390,7 +391,9 @@ class TestProbitNCG(CheckBinaryResults):
         res2.probit()
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
-            disp=0, avextol=1e-8)
+                                                     disp=0, avextol=1e-8,
+                                                     warn_convergence=False)
+        # converges close enough but warnflag is 2 for precision loss
 
 class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
