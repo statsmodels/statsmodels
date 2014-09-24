@@ -843,20 +843,25 @@ class GEE(base.Model):
 
         return (cov_robust, cov_naive, cov_robust_bc, cmat)
 
-    def predict(self, params, exog=None, offset=None, linear=False):
+    def predict(self, params, exog=None, offset=None,
+                exposure=None, linear=False):
         """
-        Return predicted values for a design matrix
+        Return predicted values for a marginal regression model fit
+        using GEE.
 
         Parameters
         ----------
         params : array-like
-            Parameters / coefficients of a GLM.
+            Parameters / coefficients of a marginal regression model.
         exog : array-like, optional
             Design / exogenous data. If exog is None, model exog is
             used.
         offset : array-like, optional
             Offset for exog if provided.  If offset is None, model
             offset is used.
+        exposure : array-like, optional
+            Exposure for exog, if exposure is None, model exposure is
+            used.  Only allowed if link function is the logarithm.
         linear : bool
             If True, returns the linear predicted values.  If False,
             returns the value of the inverse of the model's link
@@ -865,24 +870,61 @@ class GEE(base.Model):
         Returns
         -------
         An array of fitted values
+
+        Notes
+        -----
+        Using log(V) as the offset is equivalent to using V as the
+        exposure.  If exposure U and offset V are both provided, then
+        log(U) + V is added to the linear predictor.
         """
 
+        # TODO: many paths through this, not well covered in tests
+
+        if exposure is not None and not isinstance(self.family.link, families.links.Log):
+            raise ValueError("exposure can only be used with the log link function")
+
+        # This is the combined offset and exposure
+        _offset = 0.
+
+        # Using model exog
         if exog is None:
             exog = self.exog
-            if offset is None:
-                offset = self._offset_exposure
 
-        if (offset is not None) and (len(offset) != exog.shape[0]):
-            raise ValueError("the length of offset must equal the number of rows of exog")
+            if not isinstance(self.family.link, families.links.Log):
+                # Don't need to worry about exposure
+                if offset is None:
+                    _offset = self._offset_exposure
+                else:
+                    _offset = offset
 
-        fitted = np.dot(exog, params)
-        if offset is not None:
-            fitted += offset
+            else:
+                if offset is None and exposure is None:
+                    _offset = self._offset_exposure
+                elif offset is None and exposure is not None:
+                    _offset = np.log(exposure)
+                    if hasattr(self, "offset"):
+                        _offset = _offset + self.offset
+                elif offset is not None and exposure is None:
+                    _offset = offset
+                    if hasattr(self, "exposure"):
+                        _offset = offset + np.log(self.exposure)
+                else:
+                    _offset = offset + np.log(exposure)
+
+        # exog is provided: this is simpler than above because we
+        # never use model exog or exposure if exog is provided.
+        else:
+            if offset is not None:
+                _offset += offset
+            if exposure is not None:
+                _offset += np.log(exposure)
+
+        lin_pred = _offset + np.dot(exog, params)
 
         if not linear:
-            fitted = self.family.link.inverse(fitted)
+            return self.family.link.inverse(lin_pred)
 
-        return fitted
+        return lin_pred
 
     def _starting_params(self):
         """
