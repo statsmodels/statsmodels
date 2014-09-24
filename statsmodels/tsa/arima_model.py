@@ -24,7 +24,8 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.regression.linear_model import yule_walker, GLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
-                                      _ma_transparams, _ma_invtransparams)
+                                      _ma_transparams, _ma_invtransparams,
+                                      unintegrate)
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
@@ -138,9 +139,13 @@ _predict = """
 
         Returns
         -------
-        predict : array
-            The predicted values.
+        %(returns)s
         %(extra_section)s
+"""
+
+_predict_returns = """predict : array
+            The predicted values.
+
 """
 
 _arma_predict = _predict % {"Model" : "ARMA",
@@ -148,11 +153,13 @@ _arma_predict = _predict % {"Model" : "ARMA",
             params : array-like
             The fitted parameters of the model.""",
                             "extra_params" : "",
+                            "returns" : _predict_returns,
                             "extra_section" : _predict_notes}
 
 _arma_results_predict = _predict % {"Model" : "ARMA", "params" : "",
-                                    "extra_params" : "", "extra_section" :
-                                    _results_notes}
+                                    "extra_params" : "",
+                                    "returns" : _predict_returns,
+                                    "extra_section" : _results_notes}
 
 _arima_predict = _predict % {"Model" : "ARIMA",
                              "params" : """
@@ -163,7 +170,7 @@ _arima_predict = _predict % {"Model" : "ARIMA",
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
-              variables.""",
+            variables.\n\n""", "returns" : _predict_returns,
                              "extra_section" : _predict_notes}
 
 _arima_results_predict = _predict % {"Model" : "ARIMA",
@@ -173,9 +180,64 @@ _arima_results_predict = _predict % {"Model" : "ARIMA",
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
-              variables.
-""",
+              variables.\n\n""",
+                                     "returns" : _predict_returns,
                                      "extra_section" : _results_notes}
+
+_arima_plot_predict_example = """        Examples
+        --------
+        >>> import statsmodels.api as sm
+        >>> import matplotlib.pyplot as plt
+        >>> import pandas as pd
+        >>>
+        >>> dta = sm.datasets.sunspots.load_pandas().data[['SUNACTIVITY']]
+        >>> dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')
+        >>> res = sm.tsa.ARMA(dta, (3, 0)).fit()
+        >>> fig, ax = plt.subplots()
+        >>> ax = dta.ix['1950':].plot(ax=ax)
+        >>> fig = res.plot_predict('1990', '2012', dynamic=True, ax=ax,
+        ...                        plot_insample=False)
+        >>> plt.show()
+
+        .. plot:: plots/arma_predict_plot.py
+"""
+
+_plot_predict = ("""
+        Plot forecasts
+                      """ + '\n'.join(_predict.split('\n')[2:])) % {
+                      "params" : "",
+                          "extra_params" : """alpha : float, optional
+            The confidence intervals for the forecasts are (1 - alpha)%
+        plot_insample : bool, optional
+            Whether to plot the in-sample series. Default is True.
+        ax : matplotlib.Axes, optional
+            Existing axes to plot with.""",
+                      "returns" : """fig : matplotlib.Figure
+            The plotted Figure instance""",
+                      "extra_section" : ('\n' + _arima_plot_predict_example +
+                                         '\n' + _results_notes)
+                      }
+
+_arima_plot_predict = ("""
+        Plot forecasts
+                      """ + '\n'.join(_predict.split('\n')[2:])) % {
+                      "params" : "",
+                          "extra_params" : """alpha : float, optional
+            The confidence intervals for the forecasts are (1 - alpha)%
+        plot_insample : bool, optional
+            Whether to plot the in-sample series. Default is True.
+        ax : matplotlib.Axes, optional
+            Existing axes to plot with.""",
+                      "returns" : """fig : matplotlib.Figure
+            The plotted Figure instance""",
+                "extra_section" : ('\n' + _arima_plot_predict_example +
+                                   '\n' +
+                                   '\n'.join(_results_notes.split('\n')[:3]) +
+                              ("""
+        This is hard-coded to only allow plotting of the forecasts in levels.
+""") +
+                              '\n'.join(_results_notes.split('\n')[3:]))
+                      }
 
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
@@ -924,12 +986,16 @@ class ARIMA(ARMA):
         p, d, q = order
         super(ARIMA, self).__init__(endog, (p, q), exog, dates, freq, missing)
         self.k_diff = d
+        self._first_levels = self.endog[:d]
         self.endog = np.diff(self.endog, n=d)
         #NOTE: will check in ARMA but check again since differenced now
         _check_estimable(len(self.endog), p+q)
         if exog is not None:
             self.exog = self.exog[d:]
-        self.data.ynames = 'D.' + self.endog_names
+        if d == 1:
+            self.data.ynames = 'D.' + self.endog_names
+        else:
+            self.data.ynames = 'D{0:d}.'.format(d) + self.endog_names
         # what about exog, should we difference it automatically before
         # super call?
 
@@ -1372,6 +1438,21 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         return self.model.predict(self.params, start, end, exog, dynamic)
     predict.__doc__ = _arma_results_predict
 
+    def _forecast_error(self, steps):
+        sigma2 = self.sigma2
+        ma_rep = arma2ma(np.r_[1, -self.arparams],
+                         np.r_[1, self.maparams], nobs=steps)
+
+        fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
+        return fcasterr
+
+    def _forecast_conf_int(self, forecast, fcasterr, alpha):
+        const = norm.ppf(1 - alpha / 2.)
+        conf_int = np.c_[forecast - const * fcasterr,
+                         forecast + const * fcasterr]
+
+        return conf_int
+
     def forecast(self, steps=1, exog=None, alpha=.05):
         """
         Out-of-sample forecasts
@@ -1384,10 +1465,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         exog : array
             If the model is an ARMAX, you must provide out of sample
             values for the exogenous variables. This should not include
-            the constant. Note that you'll need to pass `k_ar` additional
-            lags for any exogenous variables. E.g., if you fit an ARMAX(2, q)
-            model and want to predict 5 steps, you need 7 observations
-            to do this.
+            the constant.
         alpha : float
             The confidence intervals for the forecasts are (1 - alpha) %
 
@@ -1405,7 +1483,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             # pattern elsewhere in the codebase
             exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
-                exog = exog[:,None]
+                exog = exog[:, None]
             elif exog.ndim == 1:
                 if len(exog) != self.k_exog:
                     raise ValueError("1d exog given and len(exog) != k_exog")
@@ -1416,23 +1494,15 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
                               exog))
 
-        arparams = self.arparams
-        maparams = self.maparams
         forecast = _arma_predict_out_of_sample(self.params,
                                                steps, self.resid, self.k_ar,
                                                self.k_ma, self.k_trend,
                                                self.k_exog, self.model.endog,
                                                exog, method=self.model.method)
+
         # compute the standard errors
-        sigma2 = self.sigma2
-        ma_rep = arma2ma(np.r_[1, -arparams],
-                         np.r_[1, maparams], nobs=steps)
-
-        fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
-
-        const = norm.ppf(1 - alpha / 2.)
-        conf_int = np.c_[forecast - const * fcasterr,
-                         forecast + const * fcasterr]
+        fcasterr = self._forecast_error(steps)
+        conf_int = self._forecast_conf_int(forecast, fcasterr, alpha)
 
         return forecast, fcasterr, conf_int
 
@@ -1626,6 +1696,48 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         return smry
 
+    def plot_predict(self, start=None, end=None, exog=None, dynamic=False,
+                     alpha=.05, plot_insample=True, ax=None):
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
+        _ = _import_mpl()
+        fig, ax = create_mpl_ax(ax)
+
+
+        # use predict so you set dates
+        forecast = self.predict(start, end, exog, dynamic)
+        # doing this twice. just add a plot keyword to predict?
+        start = self.model._get_predict_start(start, dynamic=False)
+        end, out_of_sample = self.model._get_predict_end(end, dynamic=False)
+
+        if out_of_sample:
+            steps = out_of_sample
+            fc_error = self._forecast_error(steps)
+            conf_int = self._forecast_conf_int(forecast[-steps:], fc_error,
+                                               alpha)
+
+
+        if hasattr(self.data, "predict_dates"):
+            from pandas import TimeSeries
+            forecast = TimeSeries(forecast, index=self.data.predict_dates)
+            ax = forecast.plot(ax=ax, label='forecast')
+        else:
+            ax.plot(forecast)
+
+        x = ax.get_lines()[-1].get_xdata()
+        if out_of_sample:
+            label = "{0:.0%} confidence interval".format(1 - alpha)
+            ax.fill_between(x[-out_of_sample:], conf_int[:, 0], conf_int[:, 1],
+                            color='gray', alpha=.5, label=label)
+
+        if plot_insample:
+            ax.plot(x[:end + 1 - start], self.model.endog[start:end+1],
+                    label=self.model.endog_names)
+
+        ax.legend(loc='best')
+
+        return fig
+    plot_predict.__doc__ = _plot_predict
+
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
@@ -1642,6 +1754,18 @@ class ARIMAResults(ARMAResults):
                 dynamic=False):
         return self.model.predict(self.params, start, end, exog, typ, dynamic)
     predict.__doc__ = _arima_results_predict
+
+    def _forecast_error(self, steps):
+        sigma2 = self.sigma2
+        ma_rep = arma2ma(np.r_[1, -self.arparams],
+                         np.r_[1, self.maparams], nobs=steps)
+        fcerr = np.sqrt(np.cumsum(np.cumsum(ma_rep)**2)*sigma2)
+        return fcerr
+
+    def _forecast_conf_int(self, forecast, fcerr, alpha):
+        const = norm.ppf(1 - alpha/2.)
+        conf_int = np.c_[forecast - const*fcerr, forecast + const*fcerr]
+        return conf_int
 
     def forecast(self, steps=1, exog=None, alpha=.05):
         """
@@ -1688,14 +1812,54 @@ class ARIMAResults(ARMAResults):
                                                exog, method=self.model.method)
         forecast = self.model.data.endog[-1] + np.cumsum(forecast)
         # get forecast errors
-        arparams = self.arparams
-        maparams = self.maparams
-        sigma2 = self.sigma2
-        ma_rep = arma2ma(np.r_[1, -arparams], np.r_[1, maparams], nobs=steps)
-        fcerr = np.sqrt(np.cumsum(np.cumsum(ma_rep)**2)*sigma2)
-        const = norm.ppf(1 - alpha/2.)
-        conf_int = np.c_[forecast - const*fcerr, forecast + const*fcerr]
+        fcerr = self._forecast_error(steps)
+        conf_int = self._forecast_conf_int(forecast, fcerr, alpha)
         return forecast, fcerr, conf_int
+
+    def plot_predict(self, start=None, end=None, exog=None, dynamic=False,
+                     alpha=.05, plot_insample=True, ax=None):
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
+        _ = _import_mpl()
+        fig, ax = create_mpl_ax(ax)
+
+        # use predict so you set dates
+        forecast = self.predict(start, end, exog, 'levels', dynamic)
+        # doing this twice. just add a plot keyword to predict?
+        start = self.model._get_predict_start(start, dynamic=dynamic)
+        end, out_of_sample = self.model._get_predict_end(end, dynamic=dynamic)
+
+        if out_of_sample:
+            steps = out_of_sample
+            fc_error = self._forecast_error(steps)
+            conf_int = self._forecast_conf_int(forecast[-steps:], fc_error,
+                                               alpha)
+
+        if hasattr(self.data, "predict_dates"):
+            from pandas import TimeSeries
+            forecast = TimeSeries(forecast, index=self.data.predict_dates)
+            ax = forecast.plot(ax=ax, label='forecast')
+        else:
+            ax.plot(forecast)
+
+        x = ax.get_lines()[-1].get_xdata()
+        if out_of_sample:
+            label = "{0:.0%} confidence interval".format(1 - alpha)
+            ax.fill_between(x[-out_of_sample:], conf_int[:, 0], conf_int[:, 1],
+                            color='gray', alpha=.5, label=label)
+
+        if plot_insample:
+            import re
+            k_diff = self.k_diff
+            label = re.sub("D\d*\.", "", self.model.endog_names)
+            levels = unintegrate(self.model.endog, self.model._first_levels)
+            ax.plot(x[:end + 1 - start],
+                    levels[start + k_diff:end + k_diff + 1], label=label)
+
+        ax.legend(loc='best')
+
+        return fig
+
+    plot_predict.__doc__ = _arima_plot_predict
 
 
 class ARIMAResultsWrapper(ARMAResultsWrapper):

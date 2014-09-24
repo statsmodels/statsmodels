@@ -53,3 +53,8 @@ help
 statsmodels/version.py
 cythonize.dat
 statsmodels.egg-info/
+iterate.dat
+hash_dict.pickle
+rehab.table
+salary.table
+.ipynb_checkpoints
