@@ -64,8 +64,6 @@ class R_Results(object):
         self.exog_re = data[:,ii]
 
 
-
-
 class TestMixedLM(object):
 
     # Test analytic scores using numeric differentiation
@@ -102,7 +100,8 @@ class TestMixedLM(object):
                         score = lambda x: -md.score_sqrt(x)
                         hessian = lambda x : -md.hessian_sqrt(x)
                     else:
-                        md = MixedLM(endog, exog_fe, groups, exog_re, use_sqrt=False)
+                        md = MixedLM(endog, exog_fe, groups, exog_re,
+                                     use_sqrt=False)
                         score = lambda x: -md.score_full(x)
                         hessian = lambda x: -md.hessian_full(x)
                     md.reml = reml
@@ -115,7 +114,8 @@ class TestMixedLM(object):
                         fe_params = np.random.normal(size=k_fe)
                         cov_re = np.random.normal(size=(k_re, k_re))
                         cov_re = np.dot(cov_re.T, cov_re)
-                        params = MixedLMParams.from_components(fe_params, cov_re)
+                        params = MixedLMParams.from_components(fe_params,
+                                                               cov_re)
                         if jl == 0:
                             params_vec = params.get_packed()
                         else:
