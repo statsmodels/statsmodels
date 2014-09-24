@@ -21,6 +21,9 @@ docs/source/examples/generated
 marks.git
 marks.bzr
 
+# virtualenv stuff
+.venv
+
 # Editor temporary/working/backup files
 *$
 .*.sw[nop]
