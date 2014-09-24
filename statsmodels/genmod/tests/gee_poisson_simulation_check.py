@@ -11,7 +11,7 @@ import numpy as np
 from statsmodels.genmod.families import Poisson
 from .gee_gaussian_simulation_check import GEE_simulator
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.dependence_structures import Exchangeable,Independence
+from statsmodels.genmod.cov_struct import Exchangeable,Independence
 
 
 class Exchangeable_simulator(GEE_simulator):

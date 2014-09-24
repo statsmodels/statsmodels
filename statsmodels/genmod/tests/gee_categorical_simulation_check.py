@@ -13,7 +13,7 @@ from statsmodels.genmod.generalized_estimating_equations import GEE,\
     gee_setup_ordinal, gee_setup_nominal,\
     gee_ordinal_starting_values, Multinomial
 from statsmodels.genmod.families import Binomial
-from statsmodels.genmod.dependence_structures import GlobalOddsRatio
+from statsmodels.genmod.cov_struct import GlobalOddsRatio
 from .gee_gaussian_simulation_check import GEE_simulator
 
 

@@ -269,10 +269,7 @@ class TestGenericGEEPoisson(CheckGenericMixin):
         # use start_params to speed up test, difficult convergence not tested
         start_params = np.array([0., 1., 1., 1.])
 
-        # no sm. import
-        # vi = sm.dependence_structures.Independence()
-        from statsmodels.genmod.dependence_structures import Independence
-        vi = Independence()
+        vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
         self.results = sm.GEE(y_count, self.exog, groups, family=family,
                                 cov_struct=vi).fit(start_params=start_params)
@@ -290,10 +287,7 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
         # use start_params to speed up test, difficult convergence not tested
         start_params = np.array([0., 1., 1., 1.])
 
-        # no sm. import
-        # vi = sm.dependence_structures.Independence()
-        from statsmodels.genmod.dependence_structures import Independence
-        vi = Independence()
+        vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
         self.results = sm.GEE(y_count, self.exog, groups, family=family,
                                 cov_struct=vi).fit(start_params=start_params,
@@ -313,10 +307,7 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
         start_params = np.array([0., 1., 1., 1.])
         # params_est = np.array([-0.0063238 ,  0.99463752,  1.02790201,  0.98080081])
 
-        # no sm. import
-        # vi = sm.dependence_structures.Independence()
-        from statsmodels.genmod.dependence_structures import Independence
-        vi = Independence()
+        vi = sm.cov_struct.Independence()
         family = sm.families.Poisson()
         mod = sm.GEE(y_count, self.exog, groups, family=family, cov_struct=vi)
         self.results = mod.fit(start_params=start_params,

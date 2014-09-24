@@ -12,8 +12,9 @@ import numpy as np
 from statsmodels.genmod.generalized_estimating_equations import GEE, GEEMargins
 
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
-from statsmodels.genmod.dependence_structures import (Exchangeable,
-    Independence, GlobalOddsRatio, Autoregressive, Nested)
+from statsmodels.genmod.cov_struct import (Exchangeable, Independence,
+                                           GlobalOddsRatio, Autoregressive,
+                                           Nested)
 
 from statsmodels.genmod.tests import gee_gaussian_simulation_check as gees
 
