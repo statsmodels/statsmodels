@@ -25,6 +25,12 @@ except:
     # the hessian imaginary part, so we use approx_hess and the the
     # resulting stats are slightly different.
 
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
@@ -1972,6 +1978,22 @@ def test_arma_missing():
     y = np.random.random(40)
     y[-1] = np.nan
     assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
+
+
+@dec.skipif(not have_matplotlib)
+def test_plot_predict():
+    from statsmodels.datasets.sunspots import load_pandas
+
+    dta = load_pandas().data[['SUNACTIVITY']]
+    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')
+    res = ARMA(dta, (3, 0)).fit(disp=-1)
+    fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
+    plt.close(fig)
+
+    res = ARIMA(dta, (3, 1, 0)).fit(disp=-1)
+    fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
+    plt.close(fig)
+
 
 if __name__ == "__main__":
     import nose
