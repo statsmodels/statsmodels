@@ -1012,7 +1012,8 @@ class Poisson(CountModel):
                                                   start_params=start_params,
                                                   fit_kwds=fit_kwds)
         #create dummy results Instance, TODO: wire up properly
-        res = self.fit(maxiter=0, method='nm', disp=0) # we get a wrapper back
+        res = self.fit(maxiter=0, method='nm', disp=0,
+                       warn_convergence=False) # we get a wrapper back
         res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
         res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
                                                         'iterations', np.nan)
@@ -2343,9 +2344,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         model = self.model
         kwds = model._get_init_kwds()
-        #TODO: what parameters to pass to fit?
+        # TODO: what parameters to pass to fit?
         mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
-        res_null = mod_null.fit(disp=0)
+        # TODO: consider catching and warning on convergence failure?
+        # in the meantime, try hard to converge. see
+        # TestPoissonConstrained1a.test_smoke
+        res_null = mod_null.fit(disp=0, warn_convergence=False,
+                                maxiter=10000)
         return res_null.llf
 
     @cache_readonly

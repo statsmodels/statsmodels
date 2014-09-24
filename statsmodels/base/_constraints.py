@@ -296,7 +296,8 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
                                               start_params=start_params,
                                               fit_kwds=fit_kwds)
     #create dummy results Instance, TODO: wire up properly
-    res = self.fit(start_params=params, maxiter=0) # we get a wrapper back
+    res = self.fit(start_params=params, maxiter=0,
+                   warn_convergence=False) # we get a wrapper back
     res._results.params = params
     res._results.normalized_cov_params = cov
     k_constr = len(q)

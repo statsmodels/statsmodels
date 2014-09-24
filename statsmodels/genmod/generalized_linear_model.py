@@ -626,7 +626,8 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(linpred)
 
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
-            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None):
+            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
+            **kwargs):
         """
         Fits a generalized linear model for a given family.
 
@@ -651,6 +652,10 @@ class GLM(base.LikelihoodModel):
             The default is family-specific and is given by the
             ``family.starting_mu(endog)``. If start_params is given then the
             initial mean will be calculated as ``np.dot(exog, start_params)``.
+
+        Notes
+        -----
+        This method does not take any extra undocumented ``kwargs``.
         """
         endog = self.endog
         if endog.ndim > 1 and endog.shape[1] == 2:
