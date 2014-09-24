@@ -2010,6 +2010,6 @@ class MixedLMResults(base.LikelihoodModelResults):
         likev = np.asarray(likev)
 
         # Restore the original exog
-        model.exog_re = exog_re_li_save
+        model.exog_re_li = exog_re_li_save
 
         return likev
