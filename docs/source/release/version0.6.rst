@@ -142,6 +142,7 @@ hope to implement these features for the next release.
 Other important new features
 ----------------------------
 
+* The AR(I)MA models now have a :func:`plot_predict <arima_model.ARMAResults.plot_predict>` method to plot forecasts and confidence intervals.
 * The Kalman filter Cython code underlying AR(I)MA estimation has been substantially optimized. You can expect speed-ups of one to two orders of magnitude.
 
 * Added :func:`sm.tsa.arma_order_select_ic`. A convenience function to quickly get the information criteria for use in tentative order selection of ARMA processes.
