@@ -17,7 +17,26 @@ class PerfectSeparationError(Exception):
 
 class MissingDataError(Exception):
     pass
+
+
+class X13NotFoundError(Exception):
+    pass
+
+
+class X13Error(Exception):
+    pass
+
+
 # Warning
+
+class X13Warning(Warning):
+    pass
+
+
+class IOWarning(RuntimeWarning):
+    pass
+
+
 class ModuleUnavailableWarning(Warning):
     pass
 

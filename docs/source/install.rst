@@ -118,5 +118,7 @@ Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
 * `Matplotlib <http://matplotlib.org/>`__ >= 1.1 is needed for plotting functions and running many of the examples. 
+* If installed, `X-12-ARIMA <http://www.census.gov/srd/www/x13as/>`__ or `X-13ARIMA-SEATS <http://www.census.gov/srd/www/x13as/>`__ can be used for time-series analysis.
+>>>>>>> DOC: Add note about X12/X13 optional dependency
 * `Nose <https://nose.readthedocs.org/en/latest>`__ is required to run the test suite.
 * `IPython <http://ipython.org>`__ >= 1.0 is required to build the docs locally.

@@ -62,7 +62,6 @@ forms of standard errors are provided, including robust standard
 errors that are approximately correct even if the working dependence
 structure is misspecified.
 
-
 Seasonality Plots
 -----------------
 
@@ -90,7 +89,8 @@ Seasonal Decomposition
 We added a naive seasonal decomposition tool in the same vein as R's ``decompose``. This function can be found as :func:`sm.tsa.seasonal_decompose <tsa.seasonal.seasonal_decompose>`.
 
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
     import statsmodels.api as sm
 
@@ -137,6 +137,29 @@ limitations of the current implementation are that it does not support
 structure more complex on the residual errors (they are always
 homoscedastic), and it does not support crossed random effects.  We
 hope to implement these features for the next release.
+
+Wrapping X-12-ARIMA/X-13-ARIMA
+------------------------------
+
+It is now possible to call out to X-12-ARIMA or X-13ARIMA-SEATS from statsmodels. These libraries must be installed separately.
+
+.. plot::
+   :include-source:
+
+    import statsmodels.api as sm
+
+    dta = sm.datasets.co2.load_pandas().data
+    dta.co2.interpolate(inplace=True)
+    dta = dta.resample('M')
+
+    res = sm.tsa.x13_arima_select_order(dta.co2)
+    print(res.order, res.sorder)
+
+    results = sm.tsa.x13_arima_analysis(dta.co2)
+
+    fig = results.plot()
+    fig.set_size_inches(12, 5)
+    fig.tight_layout()
 
 
 Other important new features

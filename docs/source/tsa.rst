@@ -75,6 +75,8 @@ Descriptive Statistics and Tests
    stattools.grangercausalitytests
    stattools.levinson_durbin
    stattools.arma_order_select_ic
+   x13.x13_arima_select_order
+   x13.x13_arima_analysis
 
 Estimation
 """"""""""
