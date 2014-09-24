@@ -170,7 +170,7 @@ _arima_predict = _predict % {"Model" : "ARIMA",
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
-            variables.""", "returns" : _predict_returns,
+            variables.\n\n""", "returns" : _predict_returns,
                              "extra_section" : _predict_notes}
 
 _arima_results_predict = _predict % {"Model" : "ARIMA",
@@ -180,8 +180,7 @@ _arima_results_predict = _predict % {"Model" : "ARIMA",
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
-              variables.
-""",
+              variables.\n\n""",
                                      "returns" : _predict_returns,
                                      "extra_section" : _results_notes}
 
