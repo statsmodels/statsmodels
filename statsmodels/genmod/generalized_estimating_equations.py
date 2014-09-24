@@ -869,12 +869,15 @@ class GEE(base.Model):
 
         if exog is None:
             exog = self.exog
-            offset_exposure = self._offset_exposure
-        else:
             if offset is None:
-                offset_exposure = 0
+                offset = self._offset_exposure
 
-        fitted = offset_exposure + np.dot(exog, params)
+        if (offset is not None) and (len(offset) != exog.shape[0]):
+            raise ValueError("the length of offset must equal the number of rows of exog")
+
+        fitted = np.dot(exog, params)
+        if offset is not None:
+            fitted += offset
 
         if not linear:
             fitted = self.family.link.inverse(fitted)
@@ -892,6 +895,8 @@ class GEE(base.Model):
 
         dm = self.exog.shape[1]
 
+        # For categorical models, use independence cov_struct to get
+        # starting values.
         if isinstance(self.cov_struct, GlobalOddsRatio):
 
             ind = Independence()
@@ -901,6 +906,7 @@ class GEE(base.Model):
             mdf = md.fit()
             return mdf.params
 
+        # TODO: use GLM to get Poisson starting values
         else:
             return np.zeros(dm, dtype=np.float64)
 
