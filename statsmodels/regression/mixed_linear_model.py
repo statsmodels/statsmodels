@@ -462,7 +462,7 @@ class MixedLM(base.LikelihoodModel):
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
         super(MixedLM, self).__init__(endog, exog, groups=groups,
-                                  exog_re=exog_re, missing=missing)
+                                      exog_re=exog_re, missing=missing)
 
         if exog_re is None:
             # Default random effects structure (random intercepts).
@@ -490,6 +490,8 @@ class MixedLM(base.LikelihoodModel):
 
         # Override the default value
         self.nparams = self.k_fe + self.k_re2
+
+        self.data.xnames = self._make_param_names()
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
@@ -519,11 +521,23 @@ class MixedLM(base.LikelihoodModel):
                                range(self.exog.shape[1])]
 
         # Set the random effect parameter names
-        if isinstance(self.exog_re, pd.DataFrame):
-            self.exog_re_names = list(self.exog_re.columns)
-        else:
-            self.exog_re_names = ["Z%d" % (k+1) for k in
-                                  range(self.exog_re.shape[1])]
+        #if isinstance(self.exog_re, pd.DataFrame):
+        #    self.exog_re_names = list(self.exog_re.columns)
+        #else:
+        #    self.exog_re_names = ["Z%d" % (k+1) for k in
+        #                          range(self.exog_re.shape[1])]
+
+    def _make_param_names(self):
+        names = list(self.exog_names)
+        jj = self.k_fe
+        for i in range(self.k_re):
+            for j in range(i + 1):
+                if i == j:
+                    names.append(self.exog_re_names[i] + " RE")
+                else:
+                    names.append(self.exog_re_names[j] + " x " +
+                                 self.exog_re_names[i] + " RE")
+                jj += 1
 
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, subset=None,
@@ -756,7 +770,7 @@ class MixedLM(base.LikelihoodModel):
         results.k_re = self.k_re
         results.k_re2 = self.k_re2
 
-        return results
+        return MixedLMResultsWrapper(results)
 
 
     def _reparam(self):
@@ -1685,7 +1699,7 @@ class MixedLM(base.LikelihoodModel):
         results.use_sqrt = self.use_sqrt
         results.freepat = self._freepat
 
-        return results
+        return MixedLMResultsWrapper(results)
 
 
 class MixedLMResults(base.LikelihoodModelResults):
@@ -1905,6 +1919,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         jj = self.k_fe
         for i in range(self.k_re):
             for j in range(i + 1):
+                import ipdb; ipdb.set_trace()
                 if i == j:
                     names.append(self.model.exog_re_names[i] + " RE")
                 else:
@@ -2013,3 +2028,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         model.exog_re_li = exog_re_li_save
 
         return likev
+
+
+class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
+    pass
