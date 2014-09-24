@@ -365,7 +365,9 @@ class TestGLSARGretl(object):
         assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=6) #FAIL
         assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
         #f-value is based on cov_hac I guess
-        #assert_almost_equal(res.fvalue, result_gretl_g1['fvalue'][1], decimal=0) #FAIL
+        #res2 = res.get_robustcov_results(cov_type='HC1')
+        # TODO: fvalue differs from Gretl, trying any of the HCx
+        #assert_almost_equal(res2.fvalue, result_gretl_g1['fvalue'][1], decimal=0) #FAIL
         #assert_approx_equal(res.f_pvalue, result_gretl_g1['f_pvalue'][1], significant=1) #FAIL
         #assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) #TODO
 

@@ -240,7 +240,7 @@ def _get_sandwich_arrays(results):
             xu = results.model.score_obs(results.params)
             hessian_inv = np.linalg.inv(results.model.hessian(results.params))
         else:
-            xu = results.model.exog * results.resid[:, None]
+            xu = results.model.wexog * results.wresid[:, None]
 
             hessian_inv = np.asarray(results.normalized_cov_params)
     else:

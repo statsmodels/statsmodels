@@ -637,7 +637,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
 
 
 # not available yet for WLS
-class T_estWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+class TestWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup(self):
@@ -661,7 +661,7 @@ class T_estWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
 
 
 # not available yet for WLS
-class T_estWLSRobustCluster2Large(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+class TestWLSRobustCluster2Large(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup(self):
@@ -744,10 +744,11 @@ class TestWLSOLSRobustSmall(object):
                    ('HC2', dict(use_t=True)),
                    ('HC3', dict(use_t=True))]
 
-        # fvalue are not the same
+        # fvalue are not the same, see #1212
         #res_ols = self.res_ols
         #res_wls = self.res_wls
         #assert_allclose(res_ols.fvalue, res_wls.fvalue, rtol=1e-13)
+        #assert_allclose(res_ols.f_pvalue, res_wls.f_pvalue, rtol=1e-13)
 
         for cov_type, kwds in all_cov:
             res1 = self.res_ols.get_robustcov_results(cov_type, **kwds)
@@ -759,7 +760,7 @@ class TestWLSOLSRobustSmall(object):
             #Note: Fvalue doesn't match up, difference in calculation ?
             #      The only difference should be in the constant detection
             #assert_allclose(res1.fvalue, res2.fvalue, rtol=1e-13)
-            #assert_allclose(res1.f_value, res2.f_pvalue, rtol=1e-13)
+            #assert_allclose(res1.f_pvalue, res2.f_pvalue, rtol=1e-13)
             mat = np.eye(len(res1.params))
             ft1 = res1.f_test(mat)
             ft2 = res2.f_test(mat)
