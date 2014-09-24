@@ -995,7 +995,7 @@ class ARIMA(ARMA):
         if d == 1:
             self.data.ynames = 'D.' + self.endog_names
         else:
-            self.data.ynames = 'D{:d}.'.format(d) + self.endog_names
+            self.data.ynames = 'D{0:d}.'.format(d) + self.endog_names
         # what about exog, should we difference it automatically before
         # super call?
 
@@ -1725,7 +1725,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         x = ax.get_lines()[-1].get_xdata()
         if out_of_sample:
-            label = "{:.0%} confidence interval".format(1 - alpha)
+            label = "{0:.0%} confidence interval".format(1 - alpha)
             ax.fill_between(x[-out_of_sample:], conf_int[:, 0], conf_int[:, 1],
                             color='gray', alpha=.5, label=label)
 
@@ -1843,7 +1843,7 @@ class ARIMAResults(ARMAResults):
 
         x = ax.get_lines()[-1].get_xdata()
         if out_of_sample:
-            label = "{:.0%} confidence interval".format(1 - alpha)
+            label = "{0:.0%} confidence interval".format(1 - alpha)
             ax.fill_between(x[-out_of_sample:], conf_int[:, 0], conf_int[:, 1],
                             color='gray', alpha=.5, label=label)
 
