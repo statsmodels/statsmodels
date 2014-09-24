@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
@@ -221,7 +222,9 @@ class TestMixedLM(object):
         # creation.
         exog_re = np.ones(len(endog), dtype=np.float64)
         mod4 = MixedLM(endog, exog, groups, exog_re)
-        rslt4 = mod4.fit(start_params=rslt2.params)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            rslt4 = mod4.fit(start_params=rslt2.params)
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
         rslt5 = mod5.fit(start_params=rslt2.params)
