@@ -99,6 +99,7 @@ optimization, which is much faster.
 import numpy as np
 import statsmodels.base.model as base
 from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
+from statsmodels.tools.decorators import cache_readonly
 from scipy.stats.distributions import norm
 import pandas as pd
 import patsy
@@ -107,6 +108,13 @@ from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
+
+
+def _get_exog_re_names(exog_re):
+    if isinstance(exog_re, (pd.Series, pd.DataFrame)):
+        return exog_re.columns.tolist()
+    return ["Z{0}".format(k + 1) for k in range(exog_re.shape[1])]
+
 
 class MixedLMParams(object):
     """
@@ -454,6 +462,7 @@ class MixedLM(base.LikelihoodModel):
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
         # TODO: Can this be moved up in the class hierarchy?
+        #       yes, it should be done up the hierarchy
         if exog is not None and exog.ndim == 1:
             exog = exog[:,None]
         if exog_re is not None and exog_re.ndim == 1:
@@ -464,34 +473,34 @@ class MixedLM(base.LikelihoodModel):
         super(MixedLM, self).__init__(endog, exog, groups=groups,
                                       exog_re=exog_re, missing=missing)
 
+        self.k_fe = exog.shape[1] # Number of fixed effects parameters
+
         if exog_re is None:
             # Default random effects structure (random intercepts).
+            self.k_re = 1
+            self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
+            self.data.param_names = self.exog_names + ['Intercept']
         else:
             # Process exog_re the same way that exog is handled
             # upstream
+            # TODO: this is wrong and should be handled upstream wholly
             self.data.exog_re = exog_re
             self.exog_re = np.asarray(exog_re)
-
-        # Model dimensions
-        self.k_fe = exog.shape[1] # Number of fixed effects parameters
-        if exog_re is not None:
-
+            if not self.data._param_names:
+                # HACK: could've been set in from_formula already
+                # needs refactor
+                (self.data.param_names,
+                 self.data.exog_re_names) = self._make_param_names(exog_re)
+            # Model dimensions
             # Number of random effect covariates
             self.k_re = exog_re.shape[1]
-
             # Number of covariance parameters
             self.k_re2 = self.k_re * (self.k_re + 1) // 2
 
-        else:
-            self.k_re = 1 # Default (random intercepts model)
-            self.k_re2 = 1
-
         # Override the default value
         self.nparams = self.k_fe + self.k_re2
-
-        self.data.xnames = self._make_param_names()
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
@@ -520,24 +529,22 @@ class MixedLM(base.LikelihoodModel):
             self.exog_names = ["FE%d" % (k + 1) for k in
                                range(self.exog.shape[1])]
 
-        # Set the random effect parameter names
-        #if isinstance(self.exog_re, pd.DataFrame):
-        #    self.exog_re_names = list(self.exog_re.columns)
-        #else:
-        #    self.exog_re_names = ["Z%d" % (k+1) for k in
-        #                          range(self.exog_re.shape[1])]
+    def _make_param_names(self, exog_re):
+        exog_names = list(self.exog_names)
+        exog_re_names = _get_exog_re_names(exog_re)
+        param_names = []
 
-    def _make_param_names(self):
-        names = list(self.exog_names)
         jj = self.k_fe
-        for i in range(self.k_re):
+        for i in range(exog_re.shape[1]):
             for j in range(i + 1):
                 if i == j:
-                    names.append(self.exog_re_names[i] + " RE")
+                    param_names.append(exog_re_names[i] + " RE")
                 else:
-                    names.append(self.exog_re_names[j] + " x " +
-                                 self.exog_re_names[i] + " RE")
+                    param_names.append(exog_re_names[j] + " x " +
+                                       exog_re_names[i] + " RE")
                 jj += 1
+
+        return exog_names + exog_re_names, exog_re_names
 
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, subset=None,
@@ -598,14 +605,15 @@ class MixedLM(base.LikelihoodModel):
         else:
             exog_re = np.ones((data.shape[0], 1),
                               dtype=np.float64)
-            exog_re_names = ["Intercept",]
+            exog_re_names = ["Intercept RE"]
 
         mod = super(MixedLM, cls).from_formula(formula, data,
                                                subset=None,
                                                exog_re=exog_re,
                                                *args, **kwargs)
 
-        mod.exog_re_names = exog_re_names
+        mod.data.param_names = mod.exog_names + exog_re_names
+        mod.data.exog_re_names = exog_re_names
 
         return mod
 
@@ -1740,6 +1748,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         super(MixedLMResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
 
+    @cache_readonly
     def bse_fe(self):
         """
         Returns the standard errors of the fixed effect regression
@@ -1748,6 +1757,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         p = self.model.exog.shape[1]
         return np.sqrt(np.diag(self.cov_params())[0:p])
 
+    @cache_readonly
     def bse_re(self):
         """
         Returns the standard errors of the variance parameters.  Note
@@ -1758,7 +1768,6 @@ class MixedLMResults(base.LikelihoodModelResults):
         """
         p = self.model.exog.shape[1]
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
-
 
     def ranef(self):
         """
@@ -1893,7 +1902,6 @@ class MixedLMResults(base.LikelihoodModelResults):
 
         float_fmt = "%.3f"
 
-        names = list(self.model.exog_names)
         sdf = np.nan * np.ones((self.k_fe + self.k_re2, 6),
                                dtype=np.float64)
 
@@ -1919,17 +1927,11 @@ class MixedLMResults(base.LikelihoodModelResults):
         jj = self.k_fe
         for i in range(self.k_re):
             for j in range(i + 1):
-                import ipdb; ipdb.set_trace()
-                if i == j:
-                    names.append(self.model.exog_re_names[i] + " RE")
-                else:
-                    names.append(self.model.exog_re_names[j] + " x " +
-                                 self.model.exog_re_names[i] + " RE")
                 sdf[jj, 0] = self.cov_re[i, j]
                 sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
                 jj += 1
 
-        sdf = pd.DataFrame(index=names, data=sdf)
+        sdf = pd.DataFrame(index=self.model.data.param_names, data=sdf)
         sdf.columns = ['Coef.', 'Std.Err.', 'z', 'P>|z|',
                           '[' + str(alpha/2), str(1-alpha/2) + ']']
         for col in sdf.columns:
@@ -1939,7 +1941,6 @@ class MixedLMResults(base.LikelihoodModelResults):
         smry.add_df(sdf, align='r')
 
         return smry
-
 
     def profile_re(self, re_ix, num_low=5, dist_low=1., num_high=5,
                    dist_high=1.):
@@ -2031,4 +2032,8 @@ class MixedLMResults(base.LikelihoodModelResults):
 
 
 class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
-    pass
+    _attrs = {'bse_re': ('generic_columns', 'exog_re_names'),
+              'bse_fe': ('generic_columns', 'xnames'),
+              }
+    _upstream_attrs = base.LikelihoodResultsWrapper._wrap_attrs
+    _wrap_attrs = base.wrap.union_dicts(_attrs, _upstream_attrs)
