@@ -877,9 +877,19 @@ class TestGEE(object):
         pred2 = result.predict(offset=data["offset"])
         pred3 = result.predict(exposure=data["exposure"])
         pred4 = result.predict(offset=data["offset"], exposure=data["exposure"])
+        pred5 = result.predict(exog=data[-10:],
+                               offset=data["offset"][-10:],
+                               exposure=data["exposure"][-10:])
+        # without patsy
+        pred6 = result.predict(exog=result.model.exog[-10:],
+                               offset=data["offset"][-10:],
+                               exposure=data["exposure"][-10:],
+                               transform=False)
         assert_allclose(pred1, pred2)
         assert_allclose(pred1, pred3)
         assert_allclose(pred1, pred4)
+        assert_allclose(pred1[-10:], pred5)
+        assert_allclose(pred1[-10:], pred6)
 
     def test_offset_formula(self):
         """
