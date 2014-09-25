@@ -1,5 +1,6 @@
 global-include *.csv *.py *.txt *.pyx *.pxd *.pxi *.c *.h
 include MANIFEST.in
+include README.rst
 
 recursive-exclude build *
 recursive-exclude dist *
