@@ -1769,6 +1769,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         p = self.model.exog.shape[1]
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
 
+    @cache_readonly
     def ranef(self):
         """
         Returns the conditional means of all random effects given the
@@ -1808,7 +1809,7 @@ class MixedLMResults(base.LikelihoodModelResults):
 
         return ranef_dict
 
-
+    @cache_readonly
     def ranef_cov(self):
         """
         Returns the conditional covariance matrix of the random
@@ -2034,6 +2035,11 @@ class MixedLMResults(base.LikelihoodModelResults):
 class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
     _attrs = {'bse_re': ('generic_columns', 'exog_re_names'),
               'bse_fe': ('generic_columns', 'xnames'),
+              'cov_re': ('generic_columns_2d', 'exog_re_names'),
               }
     _upstream_attrs = base.LikelihoodResultsWrapper._wrap_attrs
     _wrap_attrs = base.wrap.union_dicts(_attrs, _upstream_attrs)
+
+    _methods = {}
+    _upstream_methods = base.LikelihoodResultsWrapper._wrap_methods
+    _wrap_methods = base.wrap.union_dicts(_methods, _upstream_methods)
