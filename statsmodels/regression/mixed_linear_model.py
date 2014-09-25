@@ -109,6 +109,8 @@ import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
 
+from pandas import DataFrame
+
 
 def _get_exog_re_names(exog_re):
     if isinstance(exog_re, (pd.Series, pd.DataFrame)):
@@ -1782,7 +1784,6 @@ class MixedLMResults(base.LikelihoodModelResults):
             variable to the conditional means of the random effects
             given the data.
         """
-
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
         except np.linalg.LinAlgError:
@@ -1807,7 +1808,10 @@ class MixedLMResults(base.LikelihoodModelResults):
             ranef_dict[label] = np.dot(self.cov_re,
                                        np.dot(ex_r.T, vresid))
 
-        return ranef_dict
+        column_names = dict(zip(range(self.k_re),
+                                      self.model.data.exog_re_names))
+        df = DataFrame.from_dict(ranef_dict, orient='index')
+        return df.rename(columns=column_names).ix[self.model.group_labels]
 
     @cache_readonly
     def ranef_cov(self):
@@ -1829,10 +1833,9 @@ class MixedLMResults(base.LikelihoodModelResults):
             cov_re_inv = None
 
         ranef_dict = {}
+        #columns = self.model.data.exog_re_names
         for k in range(self.model.n_groups):
 
-            endog = self.model.endog_li[k]
-            exog = self.model.exog_li[k]
             ex_r = self.model.exog_re_li[k]
             ex2_r = self.model.exog_re2_li[k]
             label = self.model.group_labels[k]
@@ -1843,9 +1846,11 @@ class MixedLMResults(base.LikelihoodModelResults):
             mat2 = np.dot(mat1.T, mat2)
 
             ranef_dict[label] = self.cov_re - mat2
+            #ranef_dict[label] = DataFrame(self.cov_re - mat2,
+            #                              index=columns, columns=columns)
+
 
         return ranef_dict
-
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
                 title=None, alpha=.05):
