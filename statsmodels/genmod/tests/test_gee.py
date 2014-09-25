@@ -819,6 +819,118 @@ class TestGEE(object):
         assert_almost_equal(rslt1.params.values, rslt2.params.values,
                             decimal=10)
 
+    def test_predict(self):
+
+        n = 50
+        X1 = np.random.normal(size=n)
+        X2 = np.random.normal(size=n)
+        groups = np.kron(np.arange(25), np.r_[1, 1])
+        offset = np.random.uniform(1, 2, size=n)
+        Y = np.random.normal(0.1*(X1 + X2) + offset, size=n)
+        data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
+                             "offset": offset})
+
+        fml = "Y ~ X1 + X2"
+        model = GEE.from_formula(fml, groups, data, family=Gaussian(),
+                                 offset="offset")
+        result = model.fit()
+        assert_equal(result.converged, True)
+
+        pred1 = result.predict()
+        pred2 = result.predict(offset=data.offset)
+        pred3 = result.predict(exog=data[["X1", "X2"]], offset=data.offset)
+        pred4 = result.predict(exog=data[["X1", "X2"]], offset=0*data.offset)
+        pred5 = result.predict(offset=0*data.offset)
+
+        assert_allclose(pred1, pred2)
+        assert_allclose(pred1, pred3)
+        assert_allclose(pred1, pred4 + data.offset)
+        assert_allclose(pred1, pred5 + data.offset)
+
+        x1_new = np.random.normal(size=10)
+        x2_new = np.random.normal(size=10)
+        new_exog = pd.DataFrame({"X1": x1_new, "X2": x2_new})
+        pred6 = result.predict(exog=new_exog)
+        params = result.params
+        pred6_correct = params[0] + params[1]*x1_new + params[2]*x2_new
+        assert_allclose(pred6, pred6_correct)
+
+    def test_predict_exposure(self):
+
+        n = 50
+        X1 = np.random.normal(size=n)
+        X2 = np.random.normal(size=n)
+        groups = np.kron(np.arange(25), np.r_[1, 1])
+        offset = np.random.uniform(1, 2, size=n)
+        exposure = np.random.uniform(1, 2, size=n)
+        Y = np.random.poisson(0.1*(X1 + X2) + offset + np.log(exposure), size=n)
+        data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
+                             "offset": offset, "exposure": exposure})
+
+        fml = "Y ~ X1 + X2"
+        model = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                 offset="offset", exposure="exposure")
+        result = model.fit()
+        assert_equal(result.converged, True)
+
+        pred1 = result.predict()
+        pred2 = result.predict(offset=data["offset"])
+        pred3 = result.predict(exposure=data["exposure"])
+        pred4 = result.predict(offset=data["offset"], exposure=data["exposure"])
+        assert_allclose(pred1, pred2)
+        assert_allclose(pred1, pred3)
+        assert_allclose(pred1, pred4)
+
+    def test_offset_formula(self):
+        """
+        Test various ways of passing offset and exposure to `from_formula`.
+        """
+
+        n = 50
+        X1 = np.random.normal(size=n)
+        X2 = np.random.normal(size=n)
+        groups = np.kron(np.arange(25), np.r_[1, 1])
+        offset = np.random.uniform(1, 2, size=n)
+        exposure = np.exp(offset)
+        Y = np.random.poisson(0.1*(X1 + X2) + 2*offset, size=n)
+        data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
+                             "offset": offset, "exposure": exposure})
+
+        fml = "Y ~ X1 + X2"
+        model1 = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                  offset="offset")
+        result1 = model1.fit()
+        assert_equal(result1.converged, True)
+
+        model2 = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                  offset=offset)
+        result2 = model2.fit(start_params=result1.params)
+        assert_allclose(result1.params, result2.params)
+        assert_equal(result2.converged, True)
+
+        model3 = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                  exposure=exposure)
+        result3 = model3.fit(start_params=result1.params)
+        assert_allclose(result1.params, result3.params)
+        assert_equal(result3.converged, True)
+
+        model4 = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                  exposure="exposure")
+        result4 = model4.fit(start_params=result1.params)
+        assert_allclose(result1.params, result4.params)
+        assert_equal(result4.converged, True)
+
+        model5 = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                  exposure="exposure", offset="offset")
+        result5 = model5.fit()
+        assert_equal(result5.converged, True)
+
+        model6 = GEE.from_formula(fml, groups, data, family=Poisson(),
+                                  offset=2*offset)
+        result6 = model6.fit(start_params=result5.params)
+        assert_allclose(result5.params, result6.params)
+        assert_equal(result6.converged, True)
+
 
     def test_sensitivity(self):
 
