@@ -389,12 +389,12 @@ if __name__ == "__main__":
         # 3.3 needs numpy 1.7+
         min_versions.update({"numpy" : "1.7.0b2"})
 
-    if not no_frills:
-        (setup_requires,
-         install_requires) = check_dependency_versions(min_versions)
-        if _have_setuptools:
-            setuptools_kwargs['setup_requires'] = setup_requires
-            setuptools_kwargs['install_requires'] = install_requires
+    (setup_requires,
+     install_requires) = check_dependency_versions(min_versions)
+
+    if _have_setuptools:
+        setuptools_kwargs['setup_requires'] = setup_requires
+        setuptools_kwargs['install_requires'] = install_requires
 
         write_version_py()
 
