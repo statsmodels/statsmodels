@@ -501,8 +501,7 @@ class MixedLM(base.LikelihoodModel):
             # Number of covariance parameters
             self.k_re2 = self.k_re * (self.k_re + 1) // 2
 
-        # Override the default value
-        self.nparams = self.k_fe + self.k_re2
+        self.k_params = self.k_fe + self.k_re2
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
@@ -1751,7 +1750,7 @@ class MixedLMResults(base.LikelihoodModelResults):
            normalized_cov_params=cov_params)
 
     @cache_readonly
-    def bse_fe(self):
+    def standard_errors_fe(self):
         """
         Returns the standard errors of the fixed effect regression
         coefficients.
@@ -1760,7 +1759,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         return np.sqrt(np.diag(self.cov_params())[0:p])
 
     @cache_readonly
-    def bse_re(self):
+    def standard_errors_re(self):
         """
         Returns the standard errors of the variance parameters.  Note
         that the sampling distribution of variance parameters is
@@ -1772,17 +1771,17 @@ class MixedLMResults(base.LikelihoodModelResults):
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
 
     @cache_readonly
-    def ranef(self):
+    def random_effects(self):
         """
         Returns the conditional means of all random effects given the
         data.
 
         Returns
         -------
-        ranef_dict : dict
-            A dictionary mapping the distinct values of the `group`
-            variable to the conditional means of the random effects
-            given the data.
+        random_effects : DataFrame
+            A DataFrame with the distinct `group` values as the index
+            and the conditional means of the random effects
+            in the columns.
         """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
@@ -1814,14 +1813,14 @@ class MixedLMResults(base.LikelihoodModelResults):
         return df.rename(columns=column_names).ix[self.model.group_labels]
 
     @cache_readonly
-    def ranef_cov(self):
+    def random_effects_cov(self):
         """
         Returns the conditional covariance matrix of the random
         effects for each group given the data.
 
         Returns
         -------
-        ranef_dict : dict
+        random_effects_cov : dict
             A dictionary mapping the distinct values of the `group`
             variable to the conditional covariance matrix of the
             random effects given the data.
