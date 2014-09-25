@@ -52,6 +52,8 @@ class ModelData(object):
     Class responsible for handling input data and extracting metadata into the
     appropriate form
     """
+    _param_names = None
+
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
         if missing != 'none':
@@ -251,6 +253,15 @@ class ModelData(object):
             return list(xnames)
         return None
 
+    @property
+    def param_names(self):
+        # for handling names of 'extra' parameters in summary, etc.
+        return self._param_names or self.xnames
+
+    @param_names.setter
+    def param_names(self, values):
+        self._param_names = values
+
     @cache_readonly
     def row_labels(self):
         exog = self.orig_exog
@@ -383,9 +394,9 @@ class PandasData(ModelData):
         # don't squeeze because it might be a 2d row array
         # if it needs a squeeze, the bug is elsewhere
         if result.ndim <= 1:
-            return Series(result, index=self.xnames)
+            return Series(result, index=self.param_names)
         else:  # for e.g., confidence intervals
-            return DataFrame(result, index=self.xnames)
+            return DataFrame(result, index=self.param_names)
 
     def attach_columns_eq(self, result):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
