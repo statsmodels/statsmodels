@@ -12,6 +12,8 @@ from os.path import relpath, join as pjoin
 import sys
 import subprocess
 import re
+from distutils.version import StrictVersion
+
 
 # temporarily redirect config directory to prevent matplotlib importing
 # testing that for writeable directory which results in sandbox error in
@@ -34,21 +36,14 @@ except ImportError:
     from distutils.core import setup, Command
     _have_setuptools = False
 
-setuptools_kwargs = {}
-if sys.version_info[0] >= 3:
-    setuptools_kwargs = {'zip_safe': False}
-
-    if not _have_setuptools:
-        sys.exit("need setuptools/distribute for Py3k"
-                 "\n$ pip install distribute")
+if _have_setuptools:
+    setuptools_kwargs = {"zip_safe": False,
+                         "test_suite": "nose.collector"}
 else:
-    setuptools_kwargs = {
-        'install_requires': [],
-        'zip_safe': False,
-    }
-
-if not _have_setuptools:
     setuptools_kwargs = {}
+    if sys.version_info[0] >= 3:
+        sys.exit("Need setuptools to install statsmodels for Python 3.x")
+
 
 curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(pjoin(curdir, "README.rst")).read()
@@ -62,9 +57,9 @@ URL = 'http://statsmodels.sourceforge.net/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
+# These imports need to be here; setuptools needs to be imported first.
 from distutils.extension import Extension
 from distutils.command.build import build
-from distutils.command.sdist import sdist
 from distutils.command.build_ext import build_ext as _build_ext
 
 
@@ -96,54 +91,65 @@ def strip_rc(version):
 
 def check_dependency_versions(min_versions):
     """
-    Don't let setuptools do this. It's rude.
+    Don't let pip/setuptools do this all by itself.  It's rude.
 
-    Just makes sure it can import the packages and if not, stops the build
-    process.
+    For all dependencies, try to import them and check if the versions of
+    installed dependencies match the minimum version requirements.  If
+    installed but version too low, raise an error.  If not installed at all,
+    return the correct ``setup_requires`` and ``install_requires`` arguments to
+    be added to the setuptools kwargs.  This prevents upgrading installed
+    dependencies like numpy (that should be an explicit choice by the user and
+    never happen automatically), but make things work when installing into an
+    empty virtualenv for example.
+
     """
-    from distutils.version import StrictVersion
+    setup_requires = []
+    install_requires = []
+
     try:
         from numpy.version import short_version as npversion
     except ImportError:
-        raise ImportError("statsmodels requires numpy")
+        setup_requires.append('numpy')
+        install_requires.append('numpy')
+    else:
+        if not (StrictVersion(strip_rc(npversion)) >= min_versions['numpy']):
+            raise ImportError("Numpy version is %s. Requires >= %s" %
+                              (npversion, min_versions['numpy']))
+
     try:
-        from scipy.version import short_version as spversion
+        import scipy
     except ImportError:
-        try: # scipy 0.7.0
-            from scipy.version import version as spversion
+        install_requires.append('scipy')
+    else:
+        try:
+            from scipy.version import short_version as spversion
         except ImportError:
-            raise ImportError("statsmodels requires scipy")
+            from scipy.version import version as spversion  # scipy 0.7.0
+        if not (StrictVersion(strip_rc(spversion)) >= min_versions['scipy']):
+            raise ImportError("Scipy version is %s. Requires >= %s" %
+                              (spversion, min_versions['scipy']))
+
     try:
         from pandas.version import short_version as pversion
     except ImportError:
-        raise ImportError("statsmodels requires pandas")
+        install_requires.append('pandas')
+    else:
+        if not (StrictVersion(strip_rc(pversion)) >= min_versions['pandas']):
+            ImportError("Pandas version is %s. Requires >= %s" %
+                        (pversion, min_versions['pandas']))
+
     try:
         from patsy import __version__ as patsy_version
     except ImportError:
-        raise ImportError("statsmodels requires patsy. http://patsy.readthedocs.org")
-
-    try:
-        assert StrictVersion(strip_rc(npversion)) >= min_versions['numpy']
-    except AssertionError:
-        raise ImportError("Numpy version is %s. Requires >= %s" %
-                (npversion, min_versions['numpy']))
-    try:
-        assert StrictVersion(strip_rc(spversion)) >= min_versions['scipy']
-    except AssertionError:
-        raise ImportError("Scipy version is %s. Requires >= %s" %
-                (spversion, min_versions['scipy']))
-    try:
-        assert StrictVersion(strip_rc(pversion)) >= min_versions['pandas']
-    except AssertionError:
-        raise ImportError("Pandas version is %s. Requires >= %s" %
-                (pversion, min_versions['pandas']))
-
-    try: # patsy dev looks like 0.1.0+dev
+        install_requires.append('patsy')
+    else:
+        # patsy dev looks like 0.1.0+dev
         pversion = re.match("\d*\.\d*\.\d*", patsy_version).group()
-        assert StrictVersion(pversion) >= min_versions['patsy']
-    except AssertionError:
-        raise ImportError("Patsy version is %s. Requires >= %s" %
-                (pversion, min_versions["patsy"]))
+        if not (StrictVersion(pversion) >= min_versions['patsy']):
+            raise ImportError("Patsy version is %s. Requires >= %s" %
+                              (pversion, min_versions["patsy"]))
+
+    return setup_requires, install_requires
 
 
 MAJ = 0
@@ -210,6 +216,7 @@ def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
             from statsmodels.version import git_revision as GIT_REVISION
         except ImportError:
             dowrite = False
+            GIT_REVISION = "Unknown"
     else:
         GIT_REVISION = "Unknown"
 
@@ -342,10 +349,6 @@ for name, data in ext_data.items():
     extensions.append(obj)
 
 
-if _have_setuptools:
-    setuptools_kwargs["test_suite"] = "nose.collector"
-
-
 def get_data_files():
     sep = os.path.sep
     # install the datasets
@@ -385,7 +388,11 @@ if __name__ == "__main__":
     if not (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
             sys.argv[1] in ('--help-commands', 'egg_info', '--version',
                             'clean'))):
-        check_dependency_versions(min_versions)
+        setup_requires, install_requires = check_dependency_versions(min_versions)
+        if _have_setuptools:
+            setuptools_kwargs['setup_requires'] = setup_requires
+            setuptools_kwargs['install_requires'] = install_requires
+
         write_version_py()
 
     # this adds *.csv and *.dta files in datasets folders
