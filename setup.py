@@ -20,6 +20,10 @@ from distutils.version import StrictVersion
 # certain easy_install versions
 os.environ["MPLCONFIGDIR"] = "."
 
+no_frills = (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
+                                     sys.argv[1] in ('--help-commands',
+                                                     'egg_info', '--version',
+                                                     'clean')))
 
 # try bootstrapping setuptools if it doesn't exist
 try:
@@ -385,10 +389,9 @@ if __name__ == "__main__":
         # 3.3 needs numpy 1.7+
         min_versions.update({"numpy" : "1.7.0b2"})
 
-    if not (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
-            sys.argv[1] in ('--help-commands', 'egg_info', '--version',
-                            'clean'))):
-        setup_requires, install_requires = check_dependency_versions(min_versions)
+    if not no_frills:
+        (setup_requires,
+         install_requires) = check_dependency_versions(min_versions)
         if _have_setuptools:
             setuptools_kwargs['setup_requires'] = setup_requires
             setuptools_kwargs['install_requires'] = install_requires
@@ -423,7 +426,7 @@ if __name__ == "__main__":
     # 'statsmodels/statsmodelsdoc.chm')
 
     cwd = os.path.abspath(os.path.dirname(__file__))
-    if not os.path.exists(os.path.join(cwd, 'PKG-INFO')):
+    if not os.path.exists(os.path.join(cwd, 'PKG-INFO')) and not no_frills:
         # Generate Cython sources, unless building from source release
         generate_cython()
 
