@@ -298,9 +298,9 @@ class TestMixedLM(object):
 
         # Not supported in R
         if not irf:
-            assert_almost_equal(mdf.ranef()[0], rslt.ranef_postmean,
+            assert_almost_equal(mdf.ranef.ix[0], rslt.ranef_postmean,
                                 decimal=3)
-            assert_almost_equal(mdf.ranef_cov()[0],
+            assert_almost_equal(mdf.ranef_cov[0],
                                 rslt.ranef_condvar,
                                 decimal=3)
 
