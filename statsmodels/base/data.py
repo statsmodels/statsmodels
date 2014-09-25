@@ -313,7 +313,7 @@ class ModelData(object):
             if len(self.exog) != len(self.endog):
                 raise ValueError("endog and exog matrices are different sizes")
 
-    def wrap_output(self, obj, how='columns'):
+    def wrap_output(self, obj, how='columns', names=None):
         if how == 'columns':
             return self.attach_columns(obj)
         elif how == 'rows':
@@ -326,6 +326,8 @@ class ModelData(object):
             return self.attach_columns_eq(obj)
         elif how == 'cov_eq':
             return self.attach_cov_eq(obj)
+        elif how == 'generic_columns':
+            return self.attach_generic_columns(obj, names)
         else:
             return obj
 
@@ -345,6 +347,9 @@ class ModelData(object):
         return result
 
     def attach_dates(self, result):
+        return result
+
+    def attach_generic_columns(self, result, names):
         return result
 
 
@@ -388,6 +393,11 @@ class PandasData(ModelData):
             # if we've gotten here it's because endog is pandas and
             # exog is not, so just return the row labels from endog
             return self.orig_endog.index
+
+    def attach_generic_columns(self, result, names):
+        # get the attribute to use
+        column_names = getattr(self, names, None)
+        return Series(result, index=column_names)
 
     def attach_columns(self, result):
         # this can either be a 1d array or a scalar
