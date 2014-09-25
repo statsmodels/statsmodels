@@ -322,10 +322,11 @@ class RegressionModel(base.LikelihoodModel):
         # Fit the reduced model to get standard errors and other
         # post-estimation results.
         ii = np.flatnonzero(params)
-        model = self.__class__(self.wendog, self.wexog[:,ii])
-        rslt = model.fit()
         cov = np.zeros((k_exog, k_exog), dtype=np.float64)
-        cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
+        if len(ii) > 0:
+            model = self.__class__(self.wendog, self.wexog[:,ii])
+            rslt = model.fit()
+            cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
 
         lfit = RegressionResults(self, params,
                                  normalized_cov_params=cov)
