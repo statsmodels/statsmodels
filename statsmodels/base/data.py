@@ -328,6 +328,8 @@ class ModelData(object):
             return self.attach_cov_eq(obj)
         elif how == 'generic_columns':
             return self.attach_generic_columns(obj, names)
+        elif how == 'generic_columns_2d':
+            return self.attach_generic_columns_2d(obj, names)
         else:
             return obj
 
@@ -349,7 +351,10 @@ class ModelData(object):
     def attach_dates(self, result):
         return result
 
-    def attach_generic_columns(self, result, names):
+    def attach_generic_columns(self, result, *args, **kwargs):
+        return result
+
+    def attach_generic_columns_2d(self, result, *args, **kwargs):
         return result
 
 
@@ -399,6 +404,12 @@ class PandasData(ModelData):
         column_names = getattr(self, names, None)
         return Series(result, index=column_names)
 
+    def attach_generic_columns_2d(self, result, rownames, colnames=None):
+        colnames = colnames or rownames
+        rownames = getattr(self, rownames, None)
+        colnames = getattr(self, colnames, None)
+        return DataFrame(result, index=rownames, columns=colnames)
+
     def attach_columns(self, result):
         # this can either be a 1d array or a scalar
         # don't squeeze because it might be a 2d row array
@@ -412,7 +423,8 @@ class PandasData(ModelData):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
 
     def attach_cov(self, result):
-        return DataFrame(result, index=self.xnames, columns=self.xnames)
+        return DataFrame(result, index=self.param_names,
+                         columns=self.param_names)
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
