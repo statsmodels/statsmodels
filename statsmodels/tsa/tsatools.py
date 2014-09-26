@@ -547,6 +547,32 @@ def _ma_invtransparams(macoefs):
     invmacoefs = -np.log((1-macoefs)/(1+macoefs))
     return invmacoefs
 
+
+def unintegrate_levels(x, d):
+    """
+    Returns the successive differences needed to unintegrate the series.
+
+    Parameters
+    ----------
+    x : array-like
+        The original series
+    d : int
+        The number of differences of the differenced series.
+
+    Returns
+    -------
+    y : array-like
+        The increasing differences from 0 to d-1 of the first d elements
+        of x.
+
+    See Also
+    --------
+    unintegrate
+    """
+    x = x[:d]
+    return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
+
+
 def unintegrate(x, levels):
     """
     After taking n-differences of a series, return the original series
@@ -567,14 +593,16 @@ def unintegrate(x, levels):
     Examples
     --------
     >>> x = np.array([1, 3, 9., 19, 8.])
-    >>> levels = [x[0], np.diff(x, 1)[0]]
-    >>> _unintegrate(np.diff(x, 2), levels)
+    >>> levels = unintegrate_levels(x, 2)
+    >>> levels
+    array([ 1.,  2.])
+    >>> unintegrate(np.diff(x, 2), levels)
     array([  1.,   3.,   9.,  19.,   8.])
     """
-    levels = levels[:] # copy
+    levels = list(levels)[:] # copy
     if len(levels) > 1:
         x0 = levels.pop(-1)
-        return _unintegrate(np.cumsum(np.r_[x0, x]), levels)
+        return unintegrate(np.cumsum(np.r_[x0, x]), levels)
     x0 = levels[0]
     return np.cumsum(np.r_[x0, x])
 
