@@ -326,6 +326,12 @@ def test_arma_order_select_ic_failure():
     res = arma_order_select_ic(y)
 
 
+def test_acf_fft_dataframe():
+    # regression test #322
+
+    result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True)
+    assert_equal(result.ndim, 1)
+
 if __name__=="__main__":
     import nose
 #    nose.runmodule(argv=[__file__, '-vvs','-x','-pdb'], exit=False)
