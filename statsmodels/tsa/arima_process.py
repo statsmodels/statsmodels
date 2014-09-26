@@ -99,11 +99,11 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn,
     --------
     >>> import numpy as np
     >>> np.random.seed(12345)
-    >>> ar = np.array([.75, -.25])
-    >>> ma = np.array([.65, .35])
-    >>> arparams = np.r_[1, -ar] # add zero-lag and negate
-    >>> maparams = np.r_[1, ma] # add zero-lag
-    >>> y = sm.tsa.arma_generate_sample(arparams, maparams, 250)
+    >>> arparams = np.array([.75, -.25])
+    >>> maparams = np.array([.65, .35])
+    >>> ar = np.r_[1, -arparams] # add zero-lag and negate
+    >>> ma = np.r_[1, maparams] # add zero-lag
+    >>> y = sm.tsa.arma_generate_sample(ar, ma, 250)
     >>> model = sm.tsa.ARMA(y, (2, 2)).fit(trend='nc', disp=0)
     >>> model.params
     array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
@@ -624,11 +624,11 @@ class ArmaProcess(object):
     --------
     >>> import numpy as np
     >>> np.random.seed(12345)
-    >>> ar = np.array([.75, -.25])
-    >>> ma = np.array([.65, .35])
-    >>> arparams = np.r_[1, -ar] # add zero-lag and negate
-    >>> maparams = np.r_[1, ma] # add zero-lag
-    >>> arma_process = sm.tsa.ArmaProcess(arparams, maparams)
+    >>> arparams = np.array([.75, -.25])
+    >>> maparams = np.array([.65, .35])
+    >>> ar = np.r_[1, -ar] # add zero-lag and negate
+    >>> ma = np.r_[1, ma] # add zero-lag
+    >>> arma_process = sm.tsa.ArmaProcess(ar, ma)
     >>> arma_process.isstationary
     True
     >>> arma_process.isinvertible
