@@ -19,15 +19,14 @@ Examples
 The following illustrates a Poisson regression with exchangeable correlation
 within clusters using data on epilepsy seizures.
 
-::
+.. code-block:: python
 
     import statsmodels.api as sm
-    #from statsmodels.genmod.dependence_structures import Exchangeable
 
     data = sm.datasets.get_rdataset('epil', package='MASS').data
 
     fam = sm.families.Poisson()
-    ind = sm.genmod.cov_struct.Exchangeable()
+    ind = sm.cov_struct.Exchangeable()
     mod = sm.GEE.from_formula("y ~ age + trt + base", "subject", data,
                               cov_struct=ind, family=fam)
     res = mod.fit()
@@ -81,7 +80,7 @@ Dependence Structures
 
 The dependence structures currently implemented are
 
-.. currentmodule:: statsmodels.genmod.dependence_structures.covstruct
+.. currentmodule:: statsmodels.genmod.cov_struct
 
 .. autosummary::
    :toctree: generated/
