@@ -702,7 +702,7 @@ class VAR(tsbase.TimeSeriesModel):
         return VARResultsWrapper(varfit)
 
     @classmethod
-    def select_order(self, Y=None, maxlags=None, verbose=True, trend='c'):
+    def select_order(self, Y=None, maxlags=None, verbose=False, trend='c'):
         """
         Compute lag order selections based on each information criteria
 
@@ -1847,7 +1847,7 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         return table
 
     def test_causality(self, equation, variables, kind='F', signif=0.05,
-                       verbose=True):
+                       verbose=False):
         """Test for Granger causality
 
         Parameters
@@ -1929,7 +1929,8 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         }
 
         if verbose:
-            summ = output.causality_summary(results, variables, equation, kind)
+            summ = output.causality_summary(results, variables, equation,
+                                            kind)
 
             print(summ)
 
@@ -1968,7 +1969,7 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
             fig.suptitle(r"ACF plots with $2 / \sqrt{T}$ bounds "
                          "for testing whiteness assumption")
 
-    def test_normality(self, signif=0.05, verbose=True):
+    def test_normality(self, signif=0.05, verbose=False):
         """
         Test assumption of normal-distributed errors using Jarque-Bera-style
         omnibus Chi^2 test
