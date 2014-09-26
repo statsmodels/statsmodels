@@ -294,7 +294,7 @@ class TestMixedLM(object):
         assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:pf,0:pf],
                             decimal=3)
 
-        assert_almost_equal(mdf.likeval, rslt.loglike[0], decimal=2)
+        assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
 
         # Not supported in R
         if not irf:

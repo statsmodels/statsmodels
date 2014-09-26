@@ -774,7 +774,6 @@ class MixedLM(base.LikelihoodModel):
         results.method = mdf.method
         results.converged = True
         results.cov_pen = self.cov_pen
-        results.likeval = self.loglike(params_prof)
         results.k_fe = self.k_fe
         results.k_re = self.k_re
         results.k_re2 = self.k_re2
@@ -1701,7 +1700,6 @@ class MixedLM(base.LikelihoodModel):
         results.hist = hist
         results.reml = self.reml
         results.cov_pen = self.cov_pen
-        results.likeval = self.loglike(params)
         results.k_fe = self.k_fe
         results.k_re = self.k_re
         results.k_re2 = self.k_re2
@@ -1900,7 +1898,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         info["Dependent Variable:"] = yname
         info["Method:"] = self.method
         info["Scale:"] = self.scale
-        info["Likelihood:"] = self.likeval
+        info["Likelihood:"] = self.llf
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
         smry.add_title("Mixed Linear Model Regression Results")
@@ -2027,7 +2025,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             params.set_cov_re(cov_re)
             rslt = model.fit(start_params=params, free=free,
                              reml=self.reml, cov_pen=self.cov_pen)
-            likev.append([rslt.cov_re[0, 0], rslt.likeval])
+            likev.append([rslt.cov_re[0, 0], rslt.llf])
         likev = np.asarray(likev)
 
         # Restore the original exog
