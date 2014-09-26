@@ -122,13 +122,14 @@ other types of random effects models can all be fit.
 Here is an example of fitting a random intercepts model to data from a
 longitudinal study:
 
-data = pd.read_csv("http://vincentarelbundock.github.io/Rdatasets/csv/geepack/dietox.csv")
-md = MixedLM.from_formula("Weight ~ Time", data, groups=data["Pig"])
-mdf = md.fit()
-print mdf.summary()
+.. ipython:: python
 
-To extend this to a random slopes model, we would add the statement
-`md.set_random("Time", data)` before calling the `fit` method.
+    import statsmodels.api as sm
+    import statsmodels.formula.api as smf
+    data = sm.datasets.get_rdataset('dietox', 'geepack', cache=True).data
+    md = smf.mixedlm("Weight ~ Time", data, groups=data["Pig"])
+    mdf = md.fit()
+    print mdf.summary()
 
 The Statsmodels LME framework currently supports post-estimation
 inference via Wald tests and confidence intervals on the coefficients,

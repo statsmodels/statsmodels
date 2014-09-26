@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
+                           dec)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
 import os
@@ -69,6 +70,7 @@ class TestMixedLM(object):
 
     # Test analytic scores using numeric differentiation
     # TODO: better checks on Hessian
+    @dec.slow
     def test_compare_numdiff(self):
 
         import statsmodels.tools.numdiff as nd
@@ -294,13 +296,13 @@ class TestMixedLM(object):
         assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:pf,0:pf],
                             decimal=3)
 
-        assert_almost_equal(mdf.likeval, rslt.loglike[0], decimal=2)
+        assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
 
         # Not supported in R
         if not irf:
-            assert_almost_equal(mdf.ranef()[0], rslt.ranef_postmean,
+            assert_almost_equal(mdf.random_effects.ix[0], rslt.ranef_postmean,
                                 decimal=3)
-            assert_almost_equal(mdf.ranef_cov()[0],
+            assert_almost_equal(mdf.random_effects_cov[0],
                                 rslt.ranef_condvar,
                                 decimal=3)
 

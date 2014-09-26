@@ -35,7 +35,9 @@ class ResultsWrapper(object):
         obj = getattr(results, attr)
         data = results.model.data
         how = self._wrap_attrs.get(attr)
-        if how:
+        if how and isinstance(how, tuple):
+            obj = data.wrap_output(obj, how[0], *how[1:])
+        elif how:
             obj = data.wrap_output(obj, how=how)
 
         return obj

@@ -1136,7 +1136,8 @@ class LikelihoodModelResults(Results):
                  "in 0.6.0. See the documentation for the new API",
                  FutureWarning)
             r_matrix = (r_matrix, q_matrix)
-        LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
+        names = self.model.data.param_names
+        LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
@@ -1353,7 +1354,8 @@ class LikelihoodModelResults(Results):
                  "in 0.6.0. See the documentation for the new API",
                  FutureWarning)
             r_matrix = (r_matrix, q_matrix)
-        LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
+        names = self.model.data.param_names
+        LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants
 
         if (self.normalized_cov_params is None and cov_p is None and

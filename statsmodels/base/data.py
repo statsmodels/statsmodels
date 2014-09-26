@@ -52,6 +52,8 @@ class ModelData(object):
     Class responsible for handling input data and extracting metadata into the
     appropriate form
     """
+    _param_names = None
+
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
         if missing != 'none':
@@ -251,6 +253,15 @@ class ModelData(object):
             return list(xnames)
         return None
 
+    @property
+    def param_names(self):
+        # for handling names of 'extra' parameters in summary, etc.
+        return self._param_names or self.xnames
+
+    @param_names.setter
+    def param_names(self, values):
+        self._param_names = values
+
     @cache_readonly
     def row_labels(self):
         exog = self.orig_exog
@@ -302,7 +313,7 @@ class ModelData(object):
             if len(self.exog) != len(self.endog):
                 raise ValueError("endog and exog matrices are different sizes")
 
-    def wrap_output(self, obj, how='columns'):
+    def wrap_output(self, obj, how='columns', names=None):
         if how == 'columns':
             return self.attach_columns(obj)
         elif how == 'rows':
@@ -315,6 +326,10 @@ class ModelData(object):
             return self.attach_columns_eq(obj)
         elif how == 'cov_eq':
             return self.attach_cov_eq(obj)
+        elif how == 'generic_columns':
+            return self.attach_generic_columns(obj, names)
+        elif how == 'generic_columns_2d':
+            return self.attach_generic_columns_2d(obj, names)
         else:
             return obj
 
@@ -334,6 +349,12 @@ class ModelData(object):
         return result
 
     def attach_dates(self, result):
+        return result
+
+    def attach_generic_columns(self, result, *args, **kwargs):
+        return result
+
+    def attach_generic_columns_2d(self, result, *args, **kwargs):
         return result
 
 
@@ -378,20 +399,32 @@ class PandasData(ModelData):
             # exog is not, so just return the row labels from endog
             return self.orig_endog.index
 
+    def attach_generic_columns(self, result, names):
+        # get the attribute to use
+        column_names = getattr(self, names, None)
+        return Series(result, index=column_names)
+
+    def attach_generic_columns_2d(self, result, rownames, colnames=None):
+        colnames = colnames or rownames
+        rownames = getattr(self, rownames, None)
+        colnames = getattr(self, colnames, None)
+        return DataFrame(result, index=rownames, columns=colnames)
+
     def attach_columns(self, result):
         # this can either be a 1d array or a scalar
         # don't squeeze because it might be a 2d row array
         # if it needs a squeeze, the bug is elsewhere
         if result.ndim <= 1:
-            return Series(result, index=self.xnames)
+            return Series(result, index=self.param_names)
         else:  # for e.g., confidence intervals
-            return DataFrame(result, index=self.xnames)
+            return DataFrame(result, index=self.param_names)
 
     def attach_columns_eq(self, result):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
 
     def attach_cov(self, result):
-        return DataFrame(result, index=self.xnames, columns=self.xnames)
+        return DataFrame(result, index=self.param_names,
+                         columns=self.param_names)
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
