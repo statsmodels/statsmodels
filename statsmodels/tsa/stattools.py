@@ -418,6 +418,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         #acf = np.take(avf/avf[0], range(1,nlags+1))
         acf = avf[:nlags + 1] / avf[0]
     else:
+        x = np.squeeze(np.asarray(x))
         #JP: move to acovf
         x0 = x - x.mean()
         # ensure that we always use a power of 2 or 3 for zero-padding,
