@@ -25,7 +25,7 @@ from statsmodels.regression.linear_model import yule_walker, GLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
                                       _ma_transparams, _ma_invtransparams,
-                                      unintegrate)
+                                      unintegrate, unintegrate_levels)
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
@@ -238,6 +238,15 @@ _arima_plot_predict = ("""
 """) +
                               '\n'.join(_results_notes.split('\n')[3:]))
                       }
+
+
+def cumsum_n(x, n):
+    if n:
+        n -= 1
+        x = np.cumsum(x)
+        return cumsum_n(x, n)
+    else:
+        return x
 
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
@@ -984,9 +993,13 @@ class ARIMA(ARMA):
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
         p, d, q = order
+        if d > 2:
+            #NOTE: to make more general, need to address the d == 2 stuff
+            # in the predict method
+            raise ValueError("d > 2 is not supported")
         super(ARIMA, self).__init__(endog, (p, q), exog, dates, freq, missing)
         self.k_diff = d
-        self._first_levels = self.endog[:d]
+        self._first_unintegrate = unintegrate_levels(self.endog[:d], d)
         self.endog = np.diff(self.endog, n=d)
         #NOTE: will check in ARMA but check again since differenced now
         _check_estimable(len(self.endog), p+q)
@@ -1148,23 +1161,38 @@ class ARIMA(ARMA):
 
                 start = self._get_predict_start(start, dynamic)
                 end, out_of_sample = self._get_predict_end(end)
+                d = self.k_diff
                 if 'mle' in self.method:
+                    start += d - 1  # for case where d == 2
+                    end += d - 1
                     # add each predicted diff to lagged endog
                     if out_of_sample:
                         fv = predict[:-out_of_sample] + endog[start:end+1]
-                        fv = np.r_[fv, endog[-1] +
-                                   np.cumsum(predict[-out_of_sample:])]
+                        if d == 2:  #TODO: make a general solution to this
+                            fv += np.diff(endog[start - 1:end + 1])
+                        levels = unintegrate_levels(endog[-d:], d)
+                        fv = np.r_[fv,
+                                   unintegrate(predict[-out_of_sample:],
+                                               levels)[d:]]
                     else:
                         fv = predict + endog[start:end + 1]
+                        if d == 2:
+                            fv += np.diff(endog[start - 1:end + 1])
                 else:
                     k_ar = self.k_ar
                     if out_of_sample:
                         fv = (predict[:-out_of_sample] +
                               endog[max(start, self.k_ar-1):end+k_ar+1])
-                        fv = np.r_[fv, endog[-1] +
-                                   np.cumsum(predict[-out_of_sample:])]
+                        if d == 2:
+                            fv += np.diff(endog[start - 1:end + 1])
+                        levels = unintegrate_levels(endog[-d:], d)
+                        fv = np.r_[fv,
+                                   unintegrate(predict[-out_of_sample:],
+                                               levels)[d:]]
                     else:
                         fv = predict + endog[max(start, k_ar):end+k_ar+1]
+                        if d == 2:
+                            fv += np.diff(endog[start - 1:end + 1])
             else:
                 #IFF we need to use pre-sample values assume pre-sample
                 # residuals are zero, do this by a hack
@@ -1759,7 +1787,8 @@ class ARIMAResults(ARMAResults):
         sigma2 = self.sigma2
         ma_rep = arma2ma(np.r_[1, -self.arparams],
                          np.r_[1, self.maparams], nobs=steps)
-        fcerr = np.sqrt(np.cumsum(np.cumsum(ma_rep)**2)*sigma2)
+
+        fcerr = np.sqrt(np.cumsum(cumsum_n(ma_rep, self.k_diff)**2)*sigma2)
         return fcerr
 
     def _forecast_conf_int(self, forecast, fcerr, alpha):
@@ -1810,7 +1839,11 @@ class ARIMAResults(ARMAResults):
                                                self.k_trend, self.k_exog,
                                                self.model.endog,
                                                exog, method=self.model.method)
-        forecast = self.model.data.endog[-1] + np.cumsum(forecast)
+
+        d = self.k_diff
+        endog = self.model.data.endog[-d:]
+        forecast = unintegrate(forecast, unintegrate_levels(endog, d))[d:]
+
         # get forecast errors
         fcerr = self._forecast_error(steps)
         conf_int = self._forecast_conf_int(forecast, fcerr, alpha)
@@ -1851,7 +1884,8 @@ class ARIMAResults(ARMAResults):
             import re
             k_diff = self.k_diff
             label = re.sub("D\d*\.", "", self.model.endog_names)
-            levels = unintegrate(self.model.endog, self.model._first_levels)
+            levels = unintegrate(self.model.endog,
+                                 self.model._first_unintegrate)
             ax.plot(x[:end + 1 - start],
                     levels[start + k_diff:end + k_diff + 1], label=label)
 

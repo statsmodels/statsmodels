@@ -12,6 +12,8 @@ from statsmodels.tsa.base.datetools import dates_from_range
 from .results import results_arma, results_arima
 import os
 from statsmodels.tsa.arima_process import arma_generate_sample
+from statsmodels.datasets.macrodata import load as load_macrodata
+from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import pandas
 
 try:
@@ -551,8 +553,7 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
                     CheckDynamicForecastMixin):
     @classmethod
     def setupClass(cls):
-        from statsmodels.datasets.macrodata import load
-        cpi = load().data['cpi']
+        cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
         # make sure endog names changes to D.cpi
@@ -583,8 +584,7 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
                        CheckDynamicForecastMixin):
     @classmethod
     def setupClass(cls):
-        from statsmodels.datasets.macrodata import load
-        cpi = load().data['cpi']
+        cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1, method='css')
         cls.res2 = results_arima.ARIMA111(method='css')
         cls.res2.fittedvalues = - cpi[1:-1] + cls.res2.linear
@@ -615,8 +615,7 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
 class Test_ARIMA112CSS(CheckArimaResultsMixin):
     @classmethod
     def setupClass(cls):
-        from statsmodels.datasets.macrodata import load
-        cpi = load().data['cpi']
+        cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,2)).fit(disp=-1, method='css',
                                 start_params = [.905322, -.692425, 1.07366,
                                                 0.172024])
@@ -653,10 +652,9 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 #class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
 #    @classmethod
 #    def setupClass(cls):
-#        from statsmodels.datasets.macrodata import load
 #        from statsmodels.tsa.datetools import dates_from_range
 #
-#        cpi = load().data['cpi']
+#        cpi = load_macrodata().data['cpi']
 #        dates = dates_from_range('1959q1', length=203)
 #        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)
 #        cls.res2 = results_arima.ARIMA111()
@@ -670,8 +668,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 
 
 def test_arima_predict_mle_dates():
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1)
 
     arima_forecasts = np.genfromtxt(open(
@@ -723,8 +720,7 @@ def test_arma_predict_mle_dates():
 
 
 def test_arima_predict_css_dates():
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1,
             method='css', trend='nc')
 
@@ -772,8 +768,7 @@ def test_arma_predict_css_dates():
 
 
 def test_arima_predict_mle():
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1)
     # fit the model so that we get correct endog length but use
 
@@ -1001,8 +996,7 @@ def test_arma_predict_indices():
 
 
 def test_arima_predict_indices():
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     model = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q')
     model.method = 'mle'
 
@@ -1133,8 +1127,7 @@ def test_arima_predict_indices():
 
 
 def test_arima_predict_indices_css():
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
@@ -1148,8 +1141,7 @@ def test_arima_predict_indices_css():
 
 
 def test_arima_predict_css():
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
@@ -1288,8 +1280,7 @@ def test_arima_predict_css():
 
 def test_arima_predict_css_diffs():
 
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
@@ -1433,8 +1424,7 @@ def test_arima_predict_css_diffs():
 
 def test_arima_predict_mle_diffs():
 
-    from statsmodels.datasets.macrodata import load
-    cpi = load().data['cpi']
+    cpi = load_macrodata().data['cpi']
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
@@ -1573,9 +1563,8 @@ def test_arima_predict_mle_diffs():
 
 
 def test_arima_wrapper():
-    from statsmodels.datasets.macrodata import load_pandas
 
-    cpi = load_pandas().data['cpi']
+    cpi = load_macrodata_pandas().data['cpi']
     cpi.index = pandas.Index(cpi_dates)
     res = ARIMA(cpi, (4,1,1), freq='Q').fit(disp=-1)
     assert_equal(res.params.index, pandas.Index(['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
@@ -1586,8 +1575,7 @@ def test_arima_wrapper():
 
 def test_1dexog():
     # smoke test, this will raise an error if broken
-    from statsmodels.datasets.macrodata import load_pandas
-    dta = load_pandas().data
+    dta = load_macrodata_pandas().data
     endog = dta['realcons'].values
     exog = dta['m1'].values.squeeze()
     mod = ARMA(endog, (1,1), exog).fit(disp=-1)
@@ -1604,8 +1592,7 @@ def test_arima_predict_bug():
 
 def test_arima_predict_q2():
     # bug with q > 1 for arima predict
-    from statsmodels.datasets import macrodata
-    inv = macrodata.load().data['realinv']
+    inv = load_macrodata().data['realinv']
     arima_mod = ARIMA(np.log(inv), (1,1,2)).fit(start_params=[0,0,0,0], disp=-1)
     fc, stderr, conf_int = arima_mod.forecast(5)
     # values copy-pasted from gretl
@@ -1744,8 +1731,7 @@ def test_arima_predict_noma():
 
 
 def test_arimax():
-    from statsmodels.datasets.macrodata import load_pandas
-    dta = load_pandas().data
+    dta = load_macrodata_pandas().data
     dates = dates_from_range("1959Q1", length=len(dta))
     dta.index = cpi_dates
     dta = dta[["realdpi", "m1", "realgdp"]]
@@ -1806,8 +1792,7 @@ def test_bad_start_params():
     mod = ARMA(endog, (15, 0))
     assert_raises(ValueError, mod.fit)
 
-    from statsmodels.datasets.macrodata import load
-    inv = load().data['realinv']
+    inv = load_macrodata().data['realinv']
     arima_mod = ARIMA(np.log(inv), (1,1,2))
     assert_raises(ValueError, mod.fit)
 
@@ -2016,6 +2001,44 @@ def test_plot_predict():
     res = ARIMA(dta, (3, 1, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
     plt.close(fig)
+
+
+
+def test_arima_diff2():
+    dta = load_macrodata_pandas().data['cpi']
+    dates = dates_from_range("1959Q1", length=len(dta))
+    dta.index = cpi_dates
+    mod = ARIMA(dta, (3, 2, 1)).fit(disp=-1)
+    fc, fcerr, conf_int = mod.forecast(10)
+    # forecasts from gretl
+    conf_int_res = [ (216.139,  219.231),
+                     (216.472,  221.520),
+                     (217.064,  223.649),
+                     (217.586,  225.727),
+                     (218.119,  227.770),
+                     (218.703,  229.784),
+                     (219.306,  231.777),
+                     (219.924,  233.759),
+                     (220.559,  235.735),
+                     (221.206,  237.709)]
+
+
+    fc_res = [217.685, 218.996, 220.356, 221.656, 222.945, 224.243, 225.541,
+          226.841, 228.147, 229.457]
+    fcerr_res = [0.7888, 1.2878, 1.6798, 2.0768,  2.4620, 2.8269, 3.1816,
+                 3.52950, 3.8715, 4.2099]
+
+    assert_almost_equal(fc, fc_res, 3)
+    assert_almost_equal(fcerr, fcerr_res, 3)
+    assert_almost_equal(conf_int, conf_int_res, 3)
+
+    predicted = mod.predict('2008Q1', '2012Q1', typ='levels')
+
+    predicted_res = [214.464, 215.478, 221.277, 217.453, 212.419, 213.530,
+                     215.087, 217.685 , 218.996 , 220.356 , 221.656 ,
+                     222.945 , 224.243 , 225.541 , 226.841 , 228.147 ,
+                     229.457]
+    assert_almost_equal(predicted, predicted_res, 3)
 
 
 if __name__ == "__main__":
