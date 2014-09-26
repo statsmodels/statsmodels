@@ -108,6 +108,7 @@ from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
+from statsmodels.compat.numpy import np_matrix_rank
 
 from pandas import DataFrame
 
@@ -524,6 +525,8 @@ class MixedLM(base.LikelihoodModel):
 
         # The total number of observations, summed over all groups
         self.n_totobs = sum([len(y) for y in self.endog_li])
+        # why do it like the above?
+        self.nobs = len(self.endog)
 
         # Set the fixed effects parameter names
         if self.exog_names is None:
@@ -1745,7 +1748,9 @@ class MixedLMResults(base.LikelihoodModelResults):
     def __init__(self, model, params, cov_params):
 
         super(MixedLMResults, self).__init__(model, params,
-           normalized_cov_params=cov_params)
+                                             normalized_cov_params=cov_params)
+        self.nobs = self.model.nobs
+        self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
 
     @cache_readonly
     def bse_fe(self):
