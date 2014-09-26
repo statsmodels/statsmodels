@@ -1750,7 +1750,7 @@ class MixedLMResults(base.LikelihoodModelResults):
            normalized_cov_params=cov_params)
 
     @cache_readonly
-    def standard_errors_fe(self):
+    def bse_fe(self):
         """
         Returns the standard errors of the fixed effect regression
         coefficients.
@@ -1759,7 +1759,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         return np.sqrt(np.diag(self.cov_params())[0:p])
 
     @cache_readonly
-    def standard_errors_re(self):
+    def bse_re(self):
         """
         Returns the standard errors of the variance parameters.  Note
         that the sampling distribution of variance parameters is
