@@ -799,6 +799,18 @@ class TestHasConstantLogit(CheckHasConstant):
         self.fit_kwds = {'disp': False}
 
 
+def test_dtype_object():
+    # see #880
+
+    X = np.random.random((40,2))
+    df = pandas.DataFrame(X)
+    df[2] = np.random.randint(2, size=40).astype('object')
+    df['constant'] = 1
+
+    y = pandas.Series(np.random.randint(2, size=40))
+
+    np.testing.assert_raises(ValueError, sm_data.handle_data, y, df)
+
 if __name__ == "__main__":
     import nose
     #nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],

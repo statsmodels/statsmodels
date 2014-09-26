@@ -368,6 +368,15 @@ class PandasData(ModelData):
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
+
+    def _convert_endog_exog(self, endog, exog):
+        endog = np.asarray(endog)
+        exog = np.asarray(exog)
+        if endog.dtype == object or exog.dtype == object:
+            raise ValueError("Pandas data cast to numpy dtype of object. "
+                             "Check input data with np.asarray(data).")
+        return super(PandasData, self)._convert_endog_exog(endog, exog)
+
     @classmethod
     def _drop_nans(cls, x, nan_mask):
         if hasattr(x, 'ix'):
