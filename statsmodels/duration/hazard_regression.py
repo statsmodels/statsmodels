@@ -282,6 +282,68 @@ class PHReg(model.LikelihoodModel):
 
         self.ties = ties
 
+    @classmethod
+    def from_formula(cls, formula, data, status=None, entry=None,
+                     strata=None, offset=None, subset=None,
+                     ties='breslow', missing='drop', *args, **kwargs):
+        """
+        Create a proportional hazards regression model from a formula
+        and dataframe.
+
+        Parameters
+        ----------
+        formula : str or generic Formula object
+            The formula specifying the model
+        data : array-like
+            The data for the model. See Notes.
+        status : array-like
+            The censoring status values; status=1 indicates that an
+            event occured (e.g. failure or death), status=0 indicates
+            that the observation was right censored. If None, defaults
+            to status=1 for all cases.
+        entry : array-like
+            The entry times, if left truncation occurs
+        strata : array-like
+            Stratum labels.  If None, all observations are taken to be
+            in a single stratum.
+        offset : array-like
+            Array of offset values
+        subset : array-like
+            An array-like object of booleans, integers, or index
+            values that indicate the subset of df to use in the
+            model. Assumes df is a `pandas.DataFrame`
+        ties : string
+            The method used to handle tied times, must be either 'breslow'
+            or 'efron'.
+        missing : string
+            The method used to handle missing data
+        args : extra arguments
+            These are passed to the model
+        kwargs : extra keyword arguments
+            These are passed to the model.
+
+        Returns
+        -------
+        model : PHReg model instance
+        """
+
+        # Allow array arguments to be passed by column name.
+        if type(status) is str:
+            status = data[status]
+        if type(entry) is str:
+            entry = data[entry]
+        if type(strata) is str:
+            strata = data[strata]
+        if type(offset) is str:
+            offset = data[offset]
+
+        mod = super(PHReg, cls).from_formula(formula, data,
+                    status=status, entry=entry, strata=strata,
+                    offset=offset, subset=subset, ties=ties,
+                    missing=missing, *args, **kwargs)
+
+        return mod
+
     def fit(self, groups=None, **args):
         """
         Fit a proportional hazards regression model.
