@@ -1,29 +1,18 @@
-#
-# models - Statistical Models
-#
 from __future__ import print_function
 __docformat__ = 'restructuredtext'
 
-#from version import __version__
-#from info import __doc__
-
-#from regression import *
-#from genmod.glm import *
-#from robust.rlm import *
-#from discrete.discretemod import *
-#import tsa
-#from tools.tools import add_constant, chain_dot
-#import base.model
-#import tools.tools
-#import datasets
-#import glm.families
-#import stats.stattools
-#import iolib
-
 from numpy import errstate
-#__all__ = filter(lambda s:not s.startswith('_'),dir())
-
 from numpy.testing import Tester
+
+from warnings import simplefilter
+from .tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
+                                  IterationLimitWarning, InvalidTestWarning)
+
+
+simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
+                        IterationLimitWarning, InvalidTestWarning))
+
+
 class NoseWrapper(Tester):
     '''
     This is simply a monkey patch for numpy.testing.Tester.
@@ -32,8 +21,8 @@ class NoseWrapper(Tester):
     that the tests can be run the same across platforms.  It also takes kwargs
     that are passed to numpy.errstate to suppress floating point warnings.
     '''
-    def test(self, label='fast', verbose=1, extra_argv=['--exe'], doctests=False,
-            coverage=False, **kwargs):
+    def test(self, label='fast', verbose=1, extra_argv=['--exe'],
+             doctests=False, coverage=False, **kwargs):
         ''' Run tests for module using nose
 
         %(test_header)s
@@ -67,15 +56,13 @@ class NoseWrapper(Tester):
         argv, plugins = self.prepare_test_args(label, verbose, extra_argv,
                                                doctests, coverage)
         from numpy.testing.noseclasses import NumpyTestProgram
-        from warnings import simplefilter #, catch_warnings
         with errstate(**kwargs):
-##            with catch_warnings():
             simplefilter('ignore', category=DeprecationWarning)
             t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
         return t.result
 test = NoseWrapper().test
 
 try:
-	from .version import version as __version__
+    from .version import version as __version__
 except ImportError:
-	__version__ = 'not-yet-built'
+    __version__ = 'not-yet-built'

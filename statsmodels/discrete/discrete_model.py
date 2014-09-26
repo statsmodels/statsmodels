@@ -172,9 +172,10 @@ class DiscreteModel(base.LikelihoodModel):
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=True,
-            callback=None, alpha=0, trim_mode='auto', auto_trim_tol=0.01,
-            size_trim_tol=1e-4, qc_tol=0.03, qc_verbose=False, **kwargs):
+                        maxiter='defined_by_method', full_output=1, disp=True,
+                        callback=None, alpha=0, trim_mode='auto',
+                        auto_trim_tol=0.01, size_trim_tol=1e-4, qc_tol=0.03,
+                        qc_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.
         The regularization method AND the solver used is determined by the
@@ -272,8 +273,8 @@ class DiscreteModel(base.LikelihoodModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             cov_params_func = self.cov_params_func_l1
         else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+            raise Exception("argument method == %s, which is not handled"
+                            % method)
 
         ### Bundle up extra kwargs for the dictionary kwargs.  These are
         ### passed through super(...).fit() as kwargs and unpacked at
@@ -306,8 +307,8 @@ class DiscreteModel(base.LikelihoodModel):
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
-            message = """Attempt to use l1_cvxopt_cp failed since cvxopt
-            could not be imported"""
+            message = ("Attempt to use l1_cvxopt_cp failed since cvxopt "
+                        "could not be imported")
 
         if callback is None:
             callback = self._check_perfect_pred
@@ -1011,7 +1012,8 @@ class Poisson(CountModel):
                                                   start_params=start_params,
                                                   fit_kwds=fit_kwds)
         #create dummy results Instance, TODO: wire up properly
-        res = self.fit(maxiter=0, method='nm', disp=0) # we get a wrapper back
+        res = self.fit(maxiter=0, method='nm', disp=0,
+                       warn_convergence=False) # we get a wrapper back
         res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
         res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
                                                         'iterations', np.nan)
@@ -2342,9 +2344,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         model = self.model
         kwds = model._get_init_kwds()
-        #TODO: what parameters to pass to fit?
+        # TODO: what parameters to pass to fit?
         mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
-        res_null = mod_null.fit(disp=0)
+        # TODO: consider catching and warning on convergence failure?
+        # in the meantime, try hard to converge. see
+        # TestPoissonConstrained1a.test_smoke
+        res_null = mod_null.fit(disp=0, warn_convergence=False,
+                                maxiter=10000)
         return res_null.llf
 
     @cache_readonly

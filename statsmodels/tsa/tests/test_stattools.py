@@ -313,6 +313,7 @@ def test_arma_order_select_ic():
 def test_arma_order_select_ic_failure():
     # this should trigger an SVD convergence failure, smoke test that it
     # returns, likely platform dependent failure...
+    # looks like AR roots may be cancelling out for 4, 1?
     y = np.array([ 0.86074377817203640006,  0.85316549067906921611,
         0.87104653774363305363,  0.60692382068987393851,
         0.69225941967301307667,  0.73336177248909339976,
@@ -323,7 +324,11 @@ def test_arma_order_select_ic_failure():
        -0.15943768324388354896,  0.25169301564268781179,
         0.1762305709151877342 ,  0.12678133368791388857,
         0.89755829086753169399,  0.82667068795350151511])
-    res = arma_order_select_ic(y)
+    import warnings
+    with warnings.catch_warnings():
+        # catch a hessian inversion and convergence failure warning
+        warnings.simplefilter("ignore")
+        res = arma_order_select_ic(y)
 
 
 def test_acf_fft_dataframe():
