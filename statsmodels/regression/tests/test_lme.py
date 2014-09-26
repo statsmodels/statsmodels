@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
+                           dec)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
 import os
@@ -69,6 +70,7 @@ class TestMixedLM(object):
 
     # Test analytic scores using numeric differentiation
     # TODO: better checks on Hessian
+    @dec.slow
     def test_compare_numdiff(self):
 
         import statsmodels.tools.numdiff as nd
