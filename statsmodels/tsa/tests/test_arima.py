@@ -2003,6 +2003,38 @@ def test_plot_predict():
     plt.close(fig)
 
 
+
+def test_arima_diff2():
+    dta = load_macrodata_pandas().data['cpi']
+    dates = dates_from_range("1959Q1", length=len(dta))
+    dta.index = cpi_dates
+    mod = ARIMA(dta, (3, 2, 1)).fit(disp=-1)
+    fc, fcerr, conf_int = mod.forecast(10)
+    # forecasts from gretl
+    conf_int_res = [ (216.139,  219.231),
+                     (216.472,  221.520),
+                     (217.064,  223.649),
+                     (217.586,  225.727),
+                     (218.119,  227.770),
+                     (218.703,  229.784),
+                     (219.306,  231.777),
+                     (219.924,  233.759),
+                     (220.559,  235.735),
+                     (221.206,  237.709)]
+
+
+    fc_res = [217.685, 218.996, 220.356, 221.656, 222.945, 224.243, 225.541,
+          226.841, 228.147, 229.457]
+    fcerr_res = [0.7888, 1.2878, 1.6798, 2.0768,  2.4620, 2.8269, 3.1816,
+                 3.52950, 3.8715, 4.2099]
+
+    assert_almost_equal(fc, fc_res, 3)
+    assert_almost_equal(fcerr, fcerr_res, 3)
+    assert_almost_equal(conf_int, conf_int_res, 3)
+
+
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
