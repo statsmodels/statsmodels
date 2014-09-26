@@ -2032,7 +2032,13 @@ def test_arima_diff2():
     assert_almost_equal(fcerr, fcerr_res, 3)
     assert_almost_equal(conf_int, conf_int_res, 3)
 
+    predicted = mod.predict('2008Q1', '2012Q1', typ='levels')
 
+    predicted_res = [214.464, 215.478, 221.277, 217.453, 212.419, 213.530,
+                     215.087, 217.685 , 218.996 , 220.356 , 221.656 ,
+                     222.945 , 224.243 , 225.541 , 226.841 , 228.147 ,
+                     229.457]
+    assert_almost_equal(predicted, predicted_res, 3)
 
 
 if __name__ == "__main__":
