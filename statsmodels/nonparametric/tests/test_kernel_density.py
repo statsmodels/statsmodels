@@ -114,6 +114,13 @@ class TestKDEUnivariate(KDETestBase):
         npt.assert_allclose(kde_vals0, kde_expected,
                             atol=1e-6)
 
+    def test_all_samples_same_location_bw(self):
+        
+        X = np.ones(100)
+        kde = nparam.KDEUnivariate(X)
+        kde.fit()
+        assert(kde.bw != 0.0)
+
 
 
 class TestKDEMultivariate(KDETestBase):
