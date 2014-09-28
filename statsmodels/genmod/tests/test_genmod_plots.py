@@ -36,6 +36,8 @@ def test_glm_added_variable_plot():
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
         pdf = PdfPages("test_genmod_added_variable_plot.pdf")
+    else:
+        pdf = None
 
     n = 100
     p = 4
