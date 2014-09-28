@@ -1206,6 +1206,7 @@ class GEEResults(base.LikelihoodModelResults):
         # not added by super
         self.df_resid = model.df_resid
         self.df_model = model.df_model
+        self.family = model.family
 
         attr_kwds = kwds.pop('attr_kwds', {})
         self.__dict__.update(attr_kwds)
@@ -1234,6 +1235,138 @@ class GEEResults(base.LikelihoodModelResults):
             if self.cov_type != cov_type:
                 raise ValueError('cov_type in argument is different from '
                                  'already attached cov_type')
+
+    def added_variable_plot(self, focus_col, resid_type="resid_deviance",
+                            use_weights=True, ax=None):
+        """
+        Produces an added variable plot for a marginal regression
+        model fit using GEE.
+
+        Parameters
+        ----------
+        focus_col : integer
+            The column of results.model.exog that is residualized
+            against the other predictors.
+        resid_type : string
+            The type of residuals to use for the GLM dependent
+            variable.
+        use_weights : bool
+            If True, the residuals for the focus predictor are
+            computed using WLS, with the weights from the IRLS
+            calculations for fitting the GLM.  If False, unweighted
+            regression is used.
+        ax : matplotlib.Axes instance, optional
+            The axes on which to draw the plot. If not provided, a new
+            axes instance is created.
+
+        Returns
+        -------
+        fig : matplotlib.Figure instance
+            The figure on which the added variable plot is drawn.
+        """
+
+        from . import _genmod_plots
+
+        return _genmod_plots.added_variable_plot(self, focus_col,
+                                                 resid_type=resid_type,
+                                                 use_weights=use_weights,
+                                                 ax=ax)
+
+    def partial_residual_plot(self, focus_col, frac=0.3, ax=None):
+        """
+        Produces a partial residual or 'component plus residuals' plot
+        for a marginal regression model fit using GEE.
+
+        Parameters
+        ----------
+        focus_col : integer
+            The column of results.model.exog with respect to which the
+            partial residuals are calculated and plotted.
+        frac : float
+            Smoothing parameter for the lowess curve plotted with the
+            partial residuals; if <= 0 no lowess curve is shown.
+        ax : matplotlib.Axes instance, optional
+            The axes on which to draw the plot. If not provided, a new
+            axes instance is created.
+
+        Returns
+        -------
+        fig : matplotlib.Figure instance
+            The figure on which the partial residual plot is drawn.
+
+        References
+        ----------
+        RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
+        generalized linear models.  Journal of the American Statistical
+        Association, 93:442.
+
+        RD Cook (1993). Partial residual plots.  Technometrics 35:4.
+        """
+
+        from . import _genmod_plots
+
+        return _genmod_plots.partial_residual_plot(self, focus_col,
+                                                   frac=frac,
+                                                   ax=ax)
+
+    def ceres_plot(self, focus_col, ceres_frac={}, frac=0.3,
+                   cond_means=None, ax=None):
+        """
+        Produces a CERES plot for a marginal regression model fit
+        using GEE.
+
+        Parameters
+        ----------
+        focus_col : integer
+            The column of results.model.exog with respect to which the
+            CERES analysis is performed.
+        ceres_frac : dict
+            Map from column numbers to lowess tuning parameters for the
+            adjusted model used in the CERES analysis.
+        frac : float
+            Lowess tuning parameter for the smoothed curve plotted with
+            the CERES points.
+        cond_means : array-like, optional
+            If provided, the columns of this array are the conditional
+            means E[exog | focus exog], where exog ranges over some
+            or all of the columns of exog (other than focus exog).
+        ax : matplotlib.Axes instance, optional
+            The axes on which to draw the plot. If not provided, a new
+            axes instance is created.
+
+        Returns
+        -------
+        fig : matplotlib.Figure instance
+            The figure on which the partial residual plot is drawn.
+
+        References
+        ----------
+        RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
+        generalized linear models.  Journal of the American
+        Statistical Association, 93:442.
+
+        RD Cook (1993). Partial residual plots.  Technometrics 35:4.
+
+        Notes
+        -----
+        If `cond_means` is not provided, it is obtained by smoothing
+        each column of exog (except the focus column) against the
+        focus column.  The values of `ceres_frac` control these lowess
+        smooths.
+
+        If cond_means contains only the focus exog, the results should
+        be equivalent to a partial residual plot.
+
+        If the focus column is believed to be independent of the other
+        exog variables, `cond_means` can be set to an (empty) nx0
+        array.
+        """
+
+        from . import _genmod_plots
+
+        return _genmod_plots.ceres_plot(self, focus_col, ceres_frac,
+                                        frac, cond_means=cond_means,
+                                        ax=ax)
 
 
     def standard_errors(self, cov_type="robust"):
@@ -1316,12 +1449,34 @@ class GEEResults(base.LikelihoodModelResults):
             sresid.append(self.centered_resid[ii])
         return sresid
 
-
     # FIXME: alias to be removed, temporary backwards compatibility
     split_resid = resid_split
     centered_resid = resid_centered
     split_centered_resid = resid_centered_split
 
+    @cache_readonly
+    def resid_response(self):
+        return self.model.endog - self.fittedvalues
+
+    @cache_readonly
+    def resid_pearson(self):
+        val = self.model.endog - self.fittedvalues
+        val = val / np.sqrt(self.family.variance(self.fittedvalues))
+        return val
+
+    @cache_readonly
+    def resid_working(self):
+        val = self.resid_response
+        val = val / self.family.link.deriv(self.fittedvalues)
+        return val
+
+    @cache_readonly
+    def resid_anscombe(self):
+        return self.family.resid_anscombe(self.model.endog, self.fittedvalues)
+
+    @cache_readonly
+    def resid_deviance(self):
+        return self.family.resid_dev(self.model.endog, self.fittedvalues)
 
     @cache_readonly
     def fittedvalues(self):
