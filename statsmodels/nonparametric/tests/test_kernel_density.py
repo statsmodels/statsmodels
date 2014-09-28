@@ -118,8 +118,7 @@ class TestKDEUnivariate(KDETestBase):
         
         X = np.ones(100)
         kde = nparam.KDEUnivariate(X)
-        kde.fit()
-        assert(kde.bw != 0.0)
+        npt.assert_raises(RuntimeError, kde.fit)
 
 
 
