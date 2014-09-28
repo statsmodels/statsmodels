@@ -727,6 +727,89 @@ class Results(object):
 
         return self.model.predict(self.params, exog, *args, **kwargs)
 
+    def covariate_effect_plot(self, focus_col, exog=None,
+                              summary_type=None, show_hist=True,
+                              hist_kwargs=None, ax=None):
+        """
+        Plots the fitted mean function for a single 'focus' covariate,
+        holding the values of the other covariates fixed at specified
+        points; also plots a histogram of the distribution of this
+        covariate.
+
+        Parameters
+        ----------
+        results : Model results instance
+            A fitted model for which the covariate effects are
+            plotted.
+        focus_col : integer
+            The covariate against which the fitted means are plotted.
+        exog : array-like, optional
+            Values at which to fix the non-focus covariates, if
+            summary_type is not provided.
+        summary_type : list or nested list of floats
+            Describes the summarization of the non-focus covariates,
+            if exog is not provided.
+        show_hist : bool
+            If True, a histogram showing the marginal distribution of
+            the focus covariate is drawn on the plot.
+        hist_kwargs : dict, optional
+            Dictionary of keyword arguments for the histogram.
+        ax : matplotlib Axes instance, optional
+            An axes on which to draw the plot.  If not provided, one
+            is created.
+
+        Returns
+        -------
+        The matplotlib Figure instance on which the plot is drawn.
+
+        Notes
+        -----
+        The covariates other than the focus covariate are held fixed
+        at values determined either by `summary_type` or by the values
+        in `exog`.  The focus covariate is then varied over its
+        observed range, and the predicted values are plotted as
+        curves.
+
+        Only one of `summary_type` and `exog` should be provided.  If
+        neither is provided, it is equivalent to passing `summary_type
+        = -1`.
+
+        The values in `summary_type` are interpreted as follows: -1
+        corresponds to the mean, -2 corresponds to the mode, and real
+        numbers between 0 and 1 (inclusive) correspond to quantiles.
+
+        If `summary_type` is provided, it can have one of three
+        states:
+
+        * A single number, corresponding to a common summarization for
+          all covariates.
+
+        * A list of numbers: the list must be the same length as the
+          number of columns in `model.exog`, and defines separate
+          summary types for each exog column.  Note that a
+          place-holder value must be provided for the focus column,
+          but will not be called.
+
+        * A list of lists of numbers: each list defines summary types
+          for the columns of `model.exog`, as above.  Each element of
+          the list defines a distinct curve to be added to the plot.
+
+        If `exog` is provided, it defines one or more settings for the
+        non-focus predictor variables.
+
+        `fig.get_axes()[0]` returns the axes object containing the
+        mean curves, `fig.get_axes()[1]` returns the axes containing
+        the histogram (if present).
+        """
+
+        from . import _plots
+
+        return _plots.covariate_effect_plot(self, focus_col,
+                                            summary_type=summary_type,
+                                            show_hist=show_hist,
+                                            hist_kwargs=hist_kwargs,
+                                            ax=ax)
+
 
 #TODO: public method?
 class LikelihoodModelResults(Results):
