@@ -230,7 +230,6 @@ class ProbPlot(object):
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
 
-<<<<<<< HEAD
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -239,17 +238,6 @@ class ProbPlot(object):
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-=======
-              - '45' - 45-degree line
-              - 's' - standardized line, the expected order statistics are scaled
-                by the standard deviation of the given sample and have the mean
-                added to them
-              - 'r' - A regression line is fit
-              - 'q' - A line is fit through the quartiles.
-              - None - by default no reference line is added to the plot.
-              - If True a reference line is drawn on the graph. The default is to
-                fit a line via OLS regression.
->>>>>>> BUG: fixed ProbPlot class and tests to work better with general distributions
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
@@ -267,6 +255,7 @@ class ProbPlot(object):
         fig : Matplotlib figure instance
             If `ax` is None, the created figure. Otherwise the figure to which
             `ax` is connected.
+
         """
         if other is not None:
             check_other = isinstance(other, ProbPlot)
@@ -315,7 +304,6 @@ class ProbPlot(object):
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
 
-<<<<<<< HEAD
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -324,17 +312,6 @@ class ProbPlot(object):
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-=======
-              - '45' - 45-degree line
-              - 's' - standardized line, the expected order statistics are scaled
-                by the standard deviation of the given sample and have the mean
-                added to them
-              - 'r' - A regression line is fit
-              - 'q' - A line is fit through the quartiles.
-              - None - by default no reference line is added to the plot.
-              - If True a reference line is drawn on the graph. The default is to
-                fit a line via OLS regression.
->>>>>>> BUG: fixed ProbPlot class and tests to work better with general distributions
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
@@ -352,6 +329,7 @@ class ProbPlot(object):
         fig : Matplotlib figure instance
             If `ax` is None, the created figure. Otherwise the figure to which
             `ax` is connected.
+
         """
         if other is not None:
             check_other = isinstance(other, ProbPlot)
@@ -400,7 +378,6 @@ class ProbPlot(object):
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
 
-<<<<<<< HEAD
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -409,17 +386,6 @@ class ProbPlot(object):
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-=======
-              - '45' - 45-degree line
-              - 's' - standardized line, the expected order statistics are scaled
-                by the standard deviation of the given sample and have the mean
-                added to them
-              - 'r' - A regression line is fit
-              - 'q' - A line is fit through the quartiles.
-              - None - by default no reference line is added to the plot.
-              - If True a reference line is drawn on the graph. The default is to
-                fit a line via OLS regression.
->>>>>>> BUG: fixed ProbPlot class and tests to work better with general distributions
         exceed : boolean, optional
 
              - If False (default) the raw sample quantiles are plotted against
@@ -439,6 +405,7 @@ class ProbPlot(object):
         fig : Matplotlib figure instance
             If `ax` is None, the created figure. Otherwise the figure to which
             `ax` is connected.
+
         """
         scaled_quantiles = self.dist.dist.ppf(self.theoretical_percentiles, *self.distargs)
         if exceed:
@@ -590,7 +557,6 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
     line : str {'45', 's', 'r', q'} or None
         Options for the reference line to which the data is compared:
 
-<<<<<<< HEAD
         - '45' - 45-degree line
         - 's' - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
@@ -598,17 +564,6 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
         - 'r' - A regression line is fit
         - 'q' - A line is fit through the quartiles.
         - None - by default no reference line is added to the plot.
-=======
-          - '45' - 45-degree line
-          - 's' - standardized line, the expected order statistics are scaled
-            by the standard deviation of the given sample and have the mean
-            added to them
-          - 'r' - A regression line is fit
-          - 'q' - A line is fit through the quartiles.
-          - None - by default no reference line is added to the plot.
-          - If True a reference line is drawn on the graph. The default is to
-            fit a line via OLS regression.
->>>>>>> BUG: fixed ProbPlot class and tests to work better with general distributions
 
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
@@ -689,6 +644,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     Notes
     -----
     There is no return value. The line is plotted on the given `ax`.
+
     """
     if line == '45':
         end_pts = lzip(ax.get_xlim(), ax.get_ylim())
@@ -705,7 +661,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         # could use ax.lines[0].get_xdata(), get_ydata(),
         # but don't know axes are 'clean'
         y = OLS(y, add_constant(x)).fit().fittedvalues
-        lineartist, = ax.plot(x,y,fmt)
+        lineartist, = ax.plot(x, y, fmt)
 
     elif line == 's':
         m,b = y.std(), y.mean()
@@ -745,13 +701,14 @@ def plotting_pos(nobs, a):
     Notes
     -----
     The plotting positions are given by (i - a)/(nobs - 2*a + 1) for i in
-    range(0,nobs+1)
+    range(0, nobs+1)
 
     See also
     --------
     scipy.stats.mstats.plotting_positions
+
     """
-    return (np.arange(1.,nobs+1) - a)/(nobs- 2*a + 1)
+    return (np.arange(1., nobs+1) - a) / (nobs - 2*a + 1)
 
 
 def _fmt_probplot_axis(ax, dist, nobs, distargs=()):
@@ -772,6 +729,7 @@ def _fmt_probplot_axis(ax, dist, nobs, distargs=()):
     Returns
     -------
     There is no return value. This operates on `ax` in place
+
     """
     _check_for_ppf(dist)
 
