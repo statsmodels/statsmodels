@@ -130,7 +130,7 @@ class ProbPlot(object):
         self._distargs = distargs
 
         self._fit = fit
-        if isinstance(dist, basestring):
+        if isinstance(dist, string_types):
             self._userdist = getattr(stats, dist)
         else:
             self._userdist = dist
