@@ -778,7 +778,9 @@ def test_refit():
                   exposure=exposure, offset=offset)
     results = model.fit()
 
-    kwargs = {key: getattr(model, key) for key in model._init_keys}
+    kwargs = {}
+    for key in model._init_keys:
+        kwargs[key] = getattr(model, key)
     model_refit = sm.GLM(endog, exog, **kwargs)
     results_refit = model_refit.fit(start_params=results.params)
 
