@@ -93,6 +93,7 @@ def ceres_plot(results, focus_col,
 
     # Indices of non-focus columns
     ii = range(len(results.params))
+    ii = list(ii)
     ii.pop(focus_col)
 
     if cond_means is None:
@@ -202,6 +203,7 @@ def added_variable_resids(results, focus_col,
     exposure = model.exposure if hasattr(model, "exposure") else None
 
     ii = range(exog.shape[1])
+    ii = list(ii)
     ii.pop(focus_col)
     reduced_exog = exog[:, ii]
     start_params = results.params[ii]
