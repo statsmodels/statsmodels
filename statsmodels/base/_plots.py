@@ -8,12 +8,14 @@ are wrappers in RegressionResults that use these functions.
 
 import numpy as np
 from statsmodels.graphics import utils
-import statsmodels.regression.linear_model as lm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 def covariate_effect_plot(results, focus_col, exog=None,
                           summary_type=None, show_hist=True,
                           hist_kwargs=None, ax=None):
+    """
+    See base.model.results.covariate_effect_plot for documentation.
+    """
 
     fig, ax1 = utils.create_mpl_ax(ax)
 
