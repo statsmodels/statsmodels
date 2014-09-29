@@ -108,8 +108,10 @@ def ceres_plot(results, focus_col,
 
     # Refit the model using the adjusted exog values
     klass = model.__class__
-    kwargs = {key: getattr(model, key) for key in model._init_keys if
-              hasattr(model, key)}
+    kwargs = {}
+    for key in model._init_keys:
+        if hasattr(model, key):
+            kwargs[key] = getattr(model, key)
     new_model = klass(model.endog, new_exog, **kwargs)
     new_result = new_model.fit()
 
@@ -213,8 +215,10 @@ def added_variable_resids(results, focus_col,
     # TODO: should we be able to assume that if something is in
     # init_keys then it is an attribute of the model?  Currently we
     # can have exposure in init_keys but not in the model.
-    kwargs = {key: getattr(model, key) for key in model._init_keys if
-              hasattr(model, key)}
+    kwargs = {}
+    for key in model._init_keys:
+        if hasattr(model, key):
+            kwargs[key] = getattr(model, key)
 
     new_model = klass(endog, reduced_exog, **kwargs)
     new_result = new_model.fit(start_params=start_params)
