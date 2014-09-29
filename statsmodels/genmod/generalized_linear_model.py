@@ -191,6 +191,13 @@ class GLM(base.LikelihoodModel):
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                  missing='none'):
         self._check_inputs(family, offset, exposure, endog)
+
+        # TODO: may be better to handle this generically in base
+        if offset is not None:
+            offset = np.asarray(offset)
+        if exposure is not None:
+            exposure = np.asarray(exposure)
+
         super(GLM, self).__init__(endog, exog, missing=missing,
                                   offset=offset, exposure=exposure)
         if offset is None:

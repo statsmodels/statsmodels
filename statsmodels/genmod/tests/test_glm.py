@@ -597,7 +597,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         data = load()
         data.exog[:,3] = np.log(data.exog[:,3])
         data.exog = add_constant(data.exog, prepend=False)
-        exposure = 100 * np.ones(len(data.endog))
+        exposure = [100] * len(data.endog)
         cls.data = data
         cls.exposure = exposure
         cls.res1 = GLM(data.endog, data.exog, family=sm.families.Poisson(),
