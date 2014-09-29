@@ -85,6 +85,8 @@ def test_glm_partial_residual_plot():
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
         pdf = PdfPages("test_genmod_partial_residual_plot.pdf")
+    else:
+        pdf = None
 
     n = 200
     p = 3
@@ -130,6 +132,8 @@ def test_glm_ceres_plot():
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
         pdf = PdfPages("test_genmod_ceres_plot.pdf")
+    else:
+        pdf = None
 
     n = 200
     p = 3
