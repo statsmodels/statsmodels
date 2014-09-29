@@ -730,6 +730,7 @@ class GLM(base.LikelihoodModel):
 
         history['iteration'] = iteration + 1
         glm_results.fit_history = history
+        glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
 
 

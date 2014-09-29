@@ -229,6 +229,8 @@ def added_variable_resids(results, focus_col,
     if glm_fit_kwargs is not None:
         args.update(glm_fit_kwargs)
     new_result = new_model.fit(**args)
+    if not new_result.converged:
+        raise ValueError("fit did not converge when calculating added variable residuals")
 
     try:
         endog_resid = getattr(new_result, resid_type)
