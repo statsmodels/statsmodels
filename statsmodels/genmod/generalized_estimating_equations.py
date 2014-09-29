@@ -1237,7 +1237,8 @@ class GEEResults(base.LikelihoodModelResults):
                                  'already attached cov_type')
 
     def added_variable_plot(self, focus_col, resid_type="resid_deviance",
-                            use_weights=True, ax=None):
+                            use_weights=True, glm_fit_kwargs=None,
+                            ax=None):
         """
         Produces an added variable plot for a marginal regression
         model fit using GEE.
@@ -1255,6 +1256,9 @@ class GEEResults(base.LikelihoodModelResults):
             computed using WLS, with the weights from the IRLS
             calculations for fitting the GLM.  If False, unweighted
             regression is used.
+        glm_fit_kwargs : dict, optional
+            Keyword arguments to be passed to fit when refitting the
+            GLM.
         ax : matplotlib.Axes instance, optional
             The axes on which to draw the plot. If not provided, a new
             axes instance is created.
@@ -1270,6 +1274,7 @@ class GEEResults(base.LikelihoodModelResults):
         return _genmod_plots.added_variable_plot(self, focus_col,
                                                  resid_type=resid_type,
                                                  use_weights=use_weights,
+                                                 glm_fit_kwargs=glm_fit_kwargs,
                                                  ax=ax)
 
     def partial_residual_plot(self, focus_col, frac=0.3, ax=None):

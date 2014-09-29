@@ -12,14 +12,16 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 def added_variable_plot(results, focus_col,
                         resid_type="resid_deviance",
-                        use_weights=True, ax=None):
+                        use_weights=True,
+                        glm_fit_kwargs=None, ax=None):
 
     fig, ax = utils.create_mpl_ax(ax)
 
     endog_resid, focus_exog_resid =\
                  added_variable_resids(results, focus_col,
-                                       resid_type,
-                                       use_weights)
+                                       resid_type=resid_type,
+                                       use_weights=use_weights,
+                                       glm_fit_kwargs=glm_fit_kwargs)
 
     ax.plot(focus_exog_resid, endog_resid, 'o', alpha=0.6)
     ax.set_xlabel("exog residuals", size=15)
@@ -170,7 +172,7 @@ def partial_resids(results, focus_col):
 
 def added_variable_resids(results, focus_col,
                           resid_type="resid_deviance",
-                          use_weights=True):
+                          use_weights=True, glm_fit_kwargs=None):
     """
     Residualize the endog variable and a 'focus' exog variable in a
     GLM with respect to the other exog variables.
@@ -188,6 +190,8 @@ def added_variable_resids(results, focus_col,
         If True, the residuals for the focus predictor are computed
         using WLS, with the weights from the IRLS calculations for
         fitting the GLM.  If False, unweighted regression is used.
+    glm_fit_kwargs : dict, optional
+        Keyword arguments to be passed to fit when refitting the GLM.
 
     Returns
     -------
@@ -221,7 +225,10 @@ def added_variable_resids(results, focus_col,
             kwargs[key] = getattr(model, key)
 
     new_model = klass(endog, reduced_exog, **kwargs)
-    new_result = new_model.fit(start_params=start_params)
+    args = {"start_params": start_params}
+    if glm_fit_kwargs is not None:
+        args.update(glm_fit_kwargs)
+    new_result = new_model.fit(**args)
 
     try:
         endog_resid = getattr(new_result, resid_type)
