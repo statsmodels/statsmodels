@@ -20,7 +20,20 @@ def load_data():
 class TestMice(object):
     def __init__(self):
         self.formula = "X2~X3+X4"
-
+    
+    def test_new_imputer(self):
+        np.random.seed(1325)
+        data = np.random.normal(size=(10,4))
+        df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
+        imp_dat = mice.ImputedData(df)
+        imp_dat.implist = []
+        imp_dat.new_imputer("X1")
+        np.testing.assert_almost_equal(1, len(imp_dat.implist))
+        np.testing.assert_almost_equal("X1 ~ X2 + X3 + X4",imp_dat.implist[0].formula)
+        
+    def store_changes(self):
+        
+        
     def test_get_data_from_formula(self):
         np.random.seed(1325)
         data = np.random.normal(size=(10,4))
@@ -84,7 +97,7 @@ class TestMice(object):
         imputer = mice.Imputer(self.formula, sm.OLS, mice.ImputedData(df))
         imputer.impute_pmm()
         np.testing.assert_almost_equal(np.asarray(imputer.data.data['X2'][8:]),
-                                       np.asarray([ 0.50272064,  0.68366113]))
+                                       np.asarray([ 0.40624065, -0.30228407]))
 
     def test_combine(self):
         np.random.seed(1325)
@@ -92,19 +105,18 @@ class TestMice(object):
         data[8:, 1] = np.nan
         df = pd.DataFrame(data, columns=["X1", "X2", "X3", "X4"])
         impdata = mice.ImputedData(df)
-        impdata.new_imputer("X2", scale_method="perturb_chi2", method="pmm",
+        impdata.new_imputer("X2", scale_method="perturb_chi2", sampling_method="pmm",
                                 k_pmm=20)
         impcomb = mice.MICE("X2 ~ X1 + X3", sm.OLS, impdata)
         impcomb.run()
         p1 = impcomb.combine()
-        np.testing.assert_almost_equal(p1.params, np.asarray([0.38021906, 
-                                                              -0.0572892 , 
-                                                              -0.13245096 ]))
-        np.testing.assert_almost_equal(p1.scale, 0.44794708586717524)
-        np.testing.assert_almost_equal(p1.cov_params(), np.asarray([
-        [ 0.05769299,  0.02021915, -0.00322985],
-        [ 0.02021915,  0.05233605, -0.00184258],
-        [-0.00322985, -0.00184258,  0.05320861]]))
+        np.testing.assert_almost_equal(p1.params, np.asarray([ 0.33616504,  
+                                                              0.1341668 , 
+                                                              -0.04540733]))
+        np.testing.assert_almost_equal(p1.scale, 0.60428286643994222)
+        np.testing.assert_almost_equal(p1.cov_params(), np.asarray([[ 0.0784198 ,  0.02667974, -0.00663638],
+       [ 0.02667974,  0.07732572, -0.00363149],
+       [-0.00663638, -0.00363149,  0.08249355]]))
 
     def test_nomissing(self):
     
@@ -176,9 +188,9 @@ class TestMice(object):
         r_pooled_se = np.sqrt(np.asarray(np.mean(cov) + (1 + 1 / 20.) * np.var(params)))
         r_pooled_params = np.asarray(np.mean(params))
         impdata = mice.ImputedData(data)
-        impdata.new_imputer("x2", method="pmm", k_pmm=20)
-        impdata.new_imputer("x3", method="pmm", k_pmm=20)
-        impdata.new_imputer("x1", model_class=sm.Logit, method="pmm", k_pmm=20)
+        impdata.new_imputer("x2", sampling_method="pmm", k_pmm=20)
+        impdata.new_imputer("x3", sampling_method="pmm", k_pmm=20)
+        impdata.new_imputer("x1", model_class=sm.Logit, sampling_method="pmm", k_pmm=20)
         impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit, impdata)
         impcomb.run(20,10)
         p1 = impcomb.combine()
