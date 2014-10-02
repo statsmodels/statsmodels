@@ -731,10 +731,10 @@ class Results(object):
                               summary_type=None, show_hist=True,
                               hist_kwargs=None, ax=None):
         """
-        Plots the fitted mean function for a single 'focus' covariate,
+        Plot the fitted mean function for a single 'focus' covariate,
         holding the values of the other covariates fixed at specified
-        points; also plots a histogram of the distribution of this
-        covariate.
+        points; optionally superimposes a histogram of the
+        distribution of this covariate.
 
         Parameters
         ----------
@@ -762,6 +762,19 @@ class Results(object):
         -------
         The matplotlib Figure instance on which the plot is drawn.
 
+        Examples
+        --------
+        Create a covariate effect plot varying the third column of
+        `exog` throughout its range, and holding the other variables
+        fixed at three points, defined by the 25th, 50th, and 75th
+        percentiles of their observed distributions:
+
+        >>> model = sm.GLM(endog, exog, family=sm.families.Poisson())
+        >>> result = model.fit()
+        >>> fig = result.covariate_effect_plot(2, summary_type=
+                    [[0.25, 0.25, 0.25], [0.5, 0.5, 0.5],
+                     [0.75, .75, 0.75]])
+
         Notes
         -----
         The covariates other than the focus covariate are held fixed
@@ -779,16 +792,16 @@ class Results(object):
         numbers between 0 and 1 (inclusive) correspond to quantiles.
 
         If `summary_type` is provided, it can have one of three
-        states:
+        forms:
 
-        * A single number, corresponding to a common summarization for
-          all covariates.
+        * A single number, corresponding to a common summarization to
+          use for all covariates.
 
         * A list of numbers: the list must be the same length as the
           number of columns in `model.exog`, and defines separate
           summary types for each exog column.  Note that a
           place-holder value must be provided for the focus column,
-          but will not be called.
+          but will not be used.
 
         * A list of lists of numbers: each list defines summary types
           for the columns of `model.exog`, as above.  Each element of
@@ -798,8 +811,8 @@ class Results(object):
         non-focus predictor variables.
 
         `fig.get_axes()[0]` returns the axes object containing the
-        mean curves, `fig.get_axes()[1]` returns the axes containing
-        the histogram (if present).
+        pedicted mean curves, `fig.get_axes()[1]` returns the axes
+        containing the histogram (if present).
         """
 
         from . import _plots
