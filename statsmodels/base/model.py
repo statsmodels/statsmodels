@@ -812,9 +812,9 @@ class Results(object):
         containing the histogram (if present).
         """
 
-        from . import _plots
+        from statsmodels.graphics import regressionplots
 
-        return _plots.covariate_effect_plot(self, focus_col,
+        return regressionplots.covariate_effect_plot(self, focus_col,
                                             summary_type=summary_type,
                                             show_hist=show_hist,
                                             hist_kwargs=hist_kwargs,
