@@ -738,9 +738,6 @@ class Results(object):
 
         Parameters
         ----------
-        results : Model results instance
-            A fitted model for which the covariate effects are
-            plotted.
         focus_col : integer
             The covariate against which the fitted means are plotted.
         exog : array-like, optional
