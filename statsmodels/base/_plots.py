@@ -44,7 +44,7 @@ def covariate_effect_plot(results, focus_col, exog=None,
         exog = []
 
         # A common summary for all columns
-        if isinstance(summary_type, (int, float, long)):
+        if isinstance(summary_type, (int, float)):
             exog = [summarize(x, summary_type) for x in m_exog.T]
             exog = np.asarray(exog)[None, :]
 
