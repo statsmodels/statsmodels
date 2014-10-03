@@ -14,7 +14,7 @@ from pandas import Series, DataFrame
 from numpy.testing import dec
 
 # Set to False in master and releases
-pdf_output = True
+pdf_output = False
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
