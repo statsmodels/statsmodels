@@ -727,33 +727,30 @@ class Results(object):
 
         return self.model.predict(self.params, exog, *args, **kwargs)
 
-    def covariate_effect_plot(self, focus_col, exog=None,
-                              summary_type=None, show_hist=True,
-                              hist_kwargs=None, ax=None):
+    def covariate_effect_plot(self, focus_var, exog, n_points=50,
+                              ax=None):
         """
         Plot the fitted mean function for a single 'focus' covariate,
         holding the values of the other covariates fixed at specified
-        points; optionally superimposes a histogram of the
-        distribution of this covariate.
+        points.
 
         Parameters
         ----------
-        focus_col : integer
-            The covariate against which the fitted means are plotted.
-        exog : array-like, optional
-            Values at which to fix the non-focus covariates, if
-            summary_type is not provided.
-        summary_type : list or nested list of floats
-            Describes the summarization of the non-focus covariates,
-            if exog is not provided.
-        show_hist : bool
-            If True, a histogram showing the marginal distribution of
-            the focus covariate is drawn on the plot.
-        hist_kwargs : dict, optional
-            Dictionary of keyword arguments for the histogram.
-        ax : matplotlib Axes instance, optional
-            An axes on which to draw the plot.  If not provided, one
-            is created.
+        focus_var : int or string
+            The name or column index of the variable against which the
+            fitted mean values will be plotted.
+        exog : array-like
+            One or more specifications of the model variables.  Each
+            row of `exog` generates a curve in the plot.  If the model
+            was fit by a formula, may be a DataFrame or Series to be
+            converted to a design matrix using the formula.  Otherwise
+            must be a ndarray, with columns conformant to
+            `results.model.exog`.
+        n_points : int, optional
+            The number of points to plot on the horizontal axis.
+        ax : matplotlib axes instance
+            The axes on which to draw the plot.  If not provided, a new
+            axes instance is created.
 
         Returns
         -------
@@ -763,50 +760,29 @@ class Results(object):
         --------
         Create a covariate effect plot varying the third column of
         `exog` throughout its range, and holding the other variables
-        fixed at three points, defined by the 25th, 50th, and 75th
-        percentiles of their observed distributions:
+        fixed at two points, defined by the 25th, and 75th percentiles
+        of their observed distributions:
 
         >>> model = sm.GLM(endog, exog, family=sm.families.Poisson())
         >>> result = model.fit()
-        >>> fig = result.covariate_effect_plot(2, summary_type=
-                    [[0.25, 0.25, 0.25], [0.5, 0.5, 0.5],
-                     [0.75, .75, 0.75]])
+        >>> new_exog = []
+        >>> new_exog.append(np.percentile(exog, 25, axis=0)
+        >>> new_exog.append(np.percentile(exog, 75, axis=0)
+        >>> fig = result.covariate_effect_plot(2, new_exog)
+
+        Similar to the previous example, using formulas:
+
+        >>> fml = 'y ~ x1 + x1'
+        >>> model = sm.GLM.from_formula(fml, df, family=sm.families.Poisson())
+        >>> result = model.fit()
+        >>> new_exog = [None, None]
+        >>> new_exog[0] = [np.percentile(df[v], 25) for v in df.columns]
+        >>> new_exog[1] = [np.percentile(df[v], 75) for v in df.columns]
+        >>> new_exog = [Series(x, index=df.columns) for x in new_exog]
+        >>> fig = result.covariate_effect_plot('x2', new_exog)
 
         Notes
         -----
-        The covariates other than the focus covariate are held fixed
-        at values determined either by `summary_type` or by the values
-        in `exog`.  The focus covariate is then varied over its
-        observed range, and the predicted values are plotted as
-        curves.
-
-        Only one of `summary_type` and `exog` should be provided.  If
-        neither is provided, it is equivalent to passing `summary_type
-        = -1`.
-
-        The values in `summary_type` are interpreted as follows: -1
-        corresponds to the mean, -2 corresponds to the mode, and real
-        numbers between 0 and 1 (inclusive) correspond to quantiles.
-
-        If `summary_type` is provided, it can have one of three
-        forms:
-
-        * A single number, corresponding to a common summarization to
-          use for all covariates.
-
-        * A list of numbers: the list must be the same length as the
-          number of columns in `model.exog`, and defines separate
-          summary types for each exog column.  Note that a
-          place-holder value must be provided for the focus column,
-          but will not be used.
-
-        * A list of lists of numbers: each list defines summary types
-          for the columns of `model.exog`, as above.  Each element of
-          the list defines a distinct curve to be added to the plot.
-
-        If `exog` is provided, it defines one or more settings for the
-        non-focus predictor variables.
-
         `fig.get_axes()[0]` returns the axes object containing the
         pedicted mean curves, `fig.get_axes()[1]` returns the axes
         containing the histogram (if present).
@@ -814,11 +790,10 @@ class Results(object):
 
         from statsmodels.graphics import regressionplots
 
-        return regressionplots.covariate_effect_plot(self, focus_col,
-                                            summary_type=summary_type,
-                                            show_hist=show_hist,
-                                            hist_kwargs=hist_kwargs,
-                                            ax=ax)
+        return regressionplots.covariate_effect_plot(self, focus_var,
+                                                     exog,
+                                                     n_points=n_points,
+                                                     ax=ax)
 
 
 #TODO: public method?

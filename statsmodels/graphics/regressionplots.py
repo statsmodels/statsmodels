@@ -12,7 +12,7 @@ update
 '''
 from statsmodels.compat.python import lrange, string_types, lzip, range
 import numpy as np
-from patsy import dmatrix
+from patsy import dmatrix, dmatrices
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -59,6 +59,49 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
     ax.plot(lres[:, 0], lres[:, 1], 'r', lw=1.5)
     return ax.figure
+
+
+def add_hist(ax, data, **hist_kwargs):
+    """
+    Add a histogram to a plot.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes instance
+        The Axes to which to add the plot
+    data : array-like
+        The data for which the histogram is plotted.
+    hist_kwargs: dict, optional
+        Additional keyword arguments are passes to hist.
+
+    Returns
+    -------
+    fig : matplotlib Figure instance
+        The figure that holds the instance.
+
+    Notes
+    -----
+    This will mainly be useful when `data` is the same variable that
+    is plotted on the horizontal axis of the plot to which the
+    histogram is being added.
+
+    By default the histogram is normed and of the 'step' type.
+    """
+
+    # TODO: allow the histogram to be added vertically
+
+    # Draw the histogram
+    ax2 = ax.twinx()
+    ax2.set_yticks([])
+    ax2.set_yticklabels([])
+    ha = {"histtype": "step", "normed": True}
+    if hist_kwargs is not None:
+        ha.update(hist_kwargs)
+    _, _, pa = ax2.hist(data, **ha)
+    ymax = max([p.get_xy()[:, 1].max() for p in pa])
+    ax2.set_ylim(0, 1.2*ymax)
+    for p in pa:
+        p.set_color("grey")
 
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
@@ -833,104 +876,98 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     ax.margins(.075, .075)
     return fig
 
-def covariate_effect_plot(results, focus_col, exog=None,
-                          summary_type=None, show_hist=True,
-                          hist_kwargs=None, ax=None):
+def covariate_effect_plot(results, focus_var, exog, n_points=50,
+                          ax=None):
     """
-    See base.model.results.covariate_effect_plot for documentation.
+    Creates a plot showing a slice of the fitted mean function.
+
+    Arguments
+    ---------
+    results : model results instance
+        A results instance from any fitted model.
+    focus_var : int or string
+        The name or column index of the variable against which the
+        fitted mean values will be plotted.
+    exog : array-like
+        One or more specifications of the model variables.  Each row
+        of `exog` generates a curve in the plot.  If the model was fit
+        by a formula, may be a DataFrame or Series to be converted to
+        a design matrix using the formula.  Otherwise must be a
+        ndarray, with columns conformant to `results.model.exog`.
+    n_points : int, optional
+        The number of points to plot on the horizontal axis.
+    ax : matplotlib axes instance
+        The axes on which to draw the plot.  If not provided, a new
+        axes instance is created.
+
+    Returns
+    -------
+    fig : matplotlib Figure
+        A matplotlib figure instance.
     """
 
-    fig, ax1 = utils.create_mpl_ax(ax)
+    fig, ax = utils.create_mpl_ax(ax)
 
     model = results.model
 
-    if exog is None and summary_type is None:
-        summary_type = -1
-    elif exog is not None and summary_type is not None:
-        raise ValueError("Only one of `exog` and `summary_type` may be provided")
+    from pandas import Series, DataFrame
 
-    m_exog = model.exog
+    use_formula = hasattr(model, "formula")
 
-    # Construct exog from summary functions
-    if summary_type is not None:
-
-        from scipy.stats import mode
-
-        def summarize(x, tp):
-            if tp == -1:
-                return np.mean(x)
-            elif tp == -2:
-                return mode(x)[0][0]
-            else:
-                return np.percentile(x, 100 * tp)
-
-        exog = []
-
-        # A common summary for all columns
-        if isinstance(summary_type, (int, float)):
-            exog = [summarize(x, summary_type) for x in m_exog.T]
-            exog = np.asarray(exog)[None, :]
-
-        # A list of summary functions, one for each column
-        elif isinstance(summary_type, list) and not isinstance(summary_type[0], list):
-            if len(summary_type) != m_exog.shape[1]:
-                raise ValueError("wrong number of summary types")
-            for j, t in enumerate(summary_type):
-                if j != focus_col:
-                    exog.append(summarize(m_exog[:, j], t))
-                else:
-                    exog.append(0.)
-            exog = np.asarray(exog)[None, :]
-
-        # A list of lists of summary functions
+    if use_formula:
+        if type(focus_var) is str:
+            focus_var_vals = model.data.frame[focus_var]
         else:
-            for stype in summary_type:
-                if len(stype) != m_exog.shape[1]:
-                    raise ValueError("wrong number of summary types")
-                exog1 = []
-                for j, t in enumerate(stype):
-                    if j != focus_col:
-                        exog1.append(summarize(m_exog[:, j], t))
-                    else:
-                        exog1.append(0.)
-                exog.append(exog1)
-            exog = np.asarray(exog)
-
-    # exog is provided directly
+            raise ValueError("incompatible types for exog and focus_var")
     else:
-        if exog.ndim == 1:
-            exog = exog[None, :]
-        if exog.shape[1] != m_exog.shape[1]:
-            raise ValueError("wrong shape for exog")
+        if type(focus_var) is int:
+            focus_var_vals = model.exog[:, focus_var]
+        else:
+            raise ValueError("incompataible types for exog an focus_var")
 
-    npt = 50 # Number of points on each curve
-    focus_data = np.linspace(m_exog[:, focus_col].min(),
-                             m_exog[:, focus_col].max(), npt)
+    focus_data = np.linspace(focus_var_vals.min(),
+                             focus_var_vals.max(), n_points)
+
+    # Want a list of Series or a list of 1d ndarrays, depending
+    # on whether a formula is present
+    if use_formula:
+        if type(exog) is Series:
+            exog = [exog]
+        elif type(exog) is DataFrame:
+            exog = [exog.iloc[j, :] for j in range(exog.shape[0])]
+        elif type(exog) is list:
+            pass # assume the elements are OK
+        else:
+            raise ValueError("invalid type for exog")
+    else:
+        if type(exog) is np.ndarray and exog.ndim == 1:
+            exog = [exog]
+        elif type(exog) is np.ndarray:
+            exog = [exog[j, :] for j in range(exog.shape[0])]
+        elif type(exog) is list:
+            pass # assume the elements are OK
+        else:
+            raise ValueError("invalid type for exog")
 
     # Draw the mean curves
-    for j in range(exog.shape[0]):
-        new_exog = np.outer(np.ones(npt), exog[j, :])
-        new_exog[:, focus_col] = focus_data
+    for j, ex in enumerate(exog):
+
+        if hasattr(model, "formula"):
+            new_exog = DataFrame([ex for j in range(n_points)])
+            new_exog[focus_var] = focus_data
+        else:
+            new_exog = np.outer(np.ones(n_points), ex)
+            new_exog[:, focus_var] = focus_data
 
         pred_val = results.predict(exog=new_exog)
-        ax1.plot(focus_data, pred_val, '-', lw=7,
+        ax.plot(focus_data, pred_val, '-', lw=5,
                  label="mean_curve_%d" % j, alpha=0.7)
 
-    # Darw the histogram
-    if show_hist:
-        ax2 = ax1.twinx()
-        ax2.set_yticks([])
-        ax2.set_yticklabels([])
-        ha = {"histtype": "step", "normed": True}
-        if hist_kwargs is not None:
-            ha.update(hist_kwargs)
-        _, _, pa = ax2.hist(m_exog[:, focus_col], **ha)
-        for p in pa:
-            p.set_color("grey")
-
-
-    # TODO: Use the name of the variable if available
-    ax1.set_xlabel("Exog column %d" % focus_col, size=15)
-    ax1.set_ylabel("Fitted mean", size=15)
+    if type(focus_var) is str:
+        ax.set_xlabel(focus_var, size=15)
+    else:
+        exog_names = model.exog_names
+        ax.set_xlabel(exog_names[focus_var], size=15)
+    ax.set_ylabel("Fitted mean", size=15)
 
     return fig
