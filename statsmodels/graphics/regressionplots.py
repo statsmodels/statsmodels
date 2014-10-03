@@ -12,7 +12,7 @@ update
 '''
 from statsmodels.compat.python import lrange, string_types, lzip, range
 import numpy as np
-from patsy import dmatrix, dmatrices
+from patsy import dmatrix
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std

@@ -246,7 +246,7 @@ class TestCovariateEffectPlot(object):
                     close_or_save(pdf, fig)
 
 
-class TestCovariateEffectPlotPandas:
+class TestCovariateEffectPlotPandas(object):
 
     def __init__(self):
         self.setup() #temp: for testing without nose
