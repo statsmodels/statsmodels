@@ -23,8 +23,8 @@ from statsmodels.tools.tools import maybe_unwrap_results
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
-           'add_lowess', 'abline_plot', 'influence_plot',
-           'plot_leverage_resid2']
+           'add_lowess', 'add_hist', 'abline_plot', 'influence_plot',
+           'plot_leverage_resid2', 'covariate_effect_plot']
 
 
 #TODO: consider moving to influence module
@@ -72,7 +72,7 @@ def add_hist(ax, data, **hist_kwargs):
     data : array-like
         The data for which the histogram is plotted.
     hist_kwargs: dict, optional
-        Additional keyword arguments are passes to hist.
+        Additional keyword arguments passed to matplotlib hist.
 
     Returns
     -------
@@ -923,7 +923,7 @@ def covariate_effect_plot(results, focus_var, exog, n_points=50,
         if type(focus_var) is int:
             focus_var_vals = model.exog[:, focus_var]
         else:
-            raise ValueError("incompataible types for exog an focus_var")
+            raise ValueError("incompatible types for exog and focus_var")
 
     focus_data = np.linspace(focus_var_vals.min(),
                              focus_var_vals.max(), n_points)
