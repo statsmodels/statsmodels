@@ -11,6 +11,7 @@ Two other helper files are included to automate building across Python 2.7, 3.3 
 
  * `binstar_windows.bat`
  * `binstar_linux.sh`
+ * `binstar_osx.sh`
 
 Running either file from statsmodels/binstar will build all three versions and upload them, assuming the account has been authenticated using 
 
