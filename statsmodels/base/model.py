@@ -748,7 +748,7 @@ class Results(object):
 
         return self.model.predict(self.params, exog, *args, **kwargs)
 
-    def added_variable_plot(self, focus_col, resid_type=None,
+    def added_variable_plot(self, focus_exog, resid_type=None,
                             use_glm_weights=True, fit_kwargs=None,
                             ax=None):
         """
@@ -756,9 +756,10 @@ class Results(object):
 
         Parameters
         ----------
-        focus_col : integer
+        focus_exog : integer or string
             The column of results.model.exog that is residualized
-            against the other predictors.
+            against the other predictors.  If a string, the variable
+            is located by name.
         resid_type : string
             The type of residuals to use.  If None, uses
             `resid_deviance` for GLM/GEE and `resid` otherwise.
@@ -783,21 +784,24 @@ class Results(object):
 
         from statsmodels.graphics.regressionplots import added_variable_plot
 
-        return added_variable_plot(self, focus_col,
-                                   resid_type=resid_type,
-                                   use_glm_weights=use_glm_weights,
-                                   fit_kwargs=fit_kwargs, ax=ax)
+        fig = added_variable_plot(self, focus_exog,
+                                  resid_type=resid_type,
+                                  use_glm_weights=use_glm_weights,
+                                  fit_kwargs=fit_kwargs, ax=ax)
 
-    def partial_residual_plot(self, focus_col, ax=None):
+        return fig
+
+    def partial_residual_plot(self, focus_exog, ax=None):
         """
         Produces a partial residual plot, also known as a or
         'component plus residuals' plot.
 
         Parameters
         ----------
-        focus_col : integer
-            The column of results.model.exog with respect to which the
-            partial residuals are calculated and plotted.
+        focus_exog : integer or string
+            The variable for which the partial residual plot is shown.
+            If an integer, it is a column of model.exog.  If a string,
+            it is the name of a variable in the model.
         ax : matplotlib.Axes instance, optional
             The axes on which to draw the plot. If not provided, a new
             axes instance is created.
@@ -818,18 +822,18 @@ class Results(object):
 
         from statsmodels.graphics.regressionplots import partial_residual_plot
 
-        return partial_residual_plot(self, focus_col, ax=ax)
+        return partial_residual_plot(self, focus_exog, ax=ax)
 
-    def ceres_plot(self, focus_col, frac=None, cond_means=None,
+    def ceres_plot(self, focus_exog, frac=None, cond_means=None,
                    ax=None):
         """
         Produces a CERES plot for a fitted GLM.
 
         Parameters
         ----------
-        focus_col : integer
-            The column of results.model.exog with respect to which the
-            CERES analysis is performed.
+        focus_exog : integer or string
+            The column of results.model.exog for which the CERES plot
+            is shown.  If a string, the variable is identified by name.
         frac : float
             Map from column numbers to lowess tuning parameters for the
             adjusted model used in the CERES analysis.
@@ -864,14 +868,14 @@ class Results(object):
         If cond_means contains only the focus exog, the results should
         be equivalent to a partial residual plot.
 
-        If the focus column is believed to be independent of the other
-        exog variables, `cond_means` can be set to an (empty) nx0
-        array.
+        If the focus variable is believed to be independent of the
+        other exog variables, `cond_means` can be set to an (empty)
+        nx0 array.
         """
 
         from statsmodels.graphics.regressionplots import ceres_plot
 
-        return ceres_plot(self, focus_col, frac,
+        return ceres_plot(self, focus_exog, frac,
                           cond_means=cond_means, ax=ax)
 
 

@@ -837,7 +837,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     ax.margins(.075, .075)
     return fig
 
-def added_variable_plot(results, focus_col, resid_type="resid_deviance",
+def added_variable_plot(results, focus_exog, resid_type=None,
                         use_glm_weights=True, fit_kwargs=None, ax=None):
     """
     Create an added variable plot.
@@ -846,11 +846,12 @@ def added_variable_plot(results, focus_col, resid_type="resid_deviance",
     ----------
     results : results instance
         A regression results instance
-    focus_col : int
-        The column of exog whose role in the regression is assessed.
+    focus_exog : int or string
+        The column of exog, or variable name, for the variable whose
+        role in the regression is assessed.
     resid_type : string
-        The type of residual to use, must be an attribute name of
-        results.
+        The type of residuals to use for the dependent variable.  If
+        None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
     use_glm_weights : bool
         Only used if the model is a GLM or GEE.  If True, the
         residuals for the focus predictor are computed using WLS, with
@@ -873,20 +874,23 @@ def added_variable_plot(results, focus_col, resid_type="resid_deviance",
     fig, ax = utils.create_mpl_ax(ax)
 
     endog_resid, focus_exog_resid =\
-                 added_variable_resids(results, focus_col,
+                 added_variable_resids(results, focus_exog,
                                        resid_type=resid_type,
                                        use_glm_weights=use_glm_weights,
                                        fit_kwargs=fit_kwargs)
 
     ax.plot(focus_exog_resid, endog_resid, 'o', alpha=0.6)
 
-    xname = model.exog_names[focus_col]
+    if type(focus_exog) is str:
+        xname = focus_exog
+    else:
+        xname = model.exog_names[focus_exog]
     ax.set_xlabel(xname, size=15)
     ax.set_ylabel(model.endog_names + " residuals", size=15)
 
     return fig
 
-def partial_residual_plot(results, focus_col, ax=None):
+def partial_residual_plot(results, focus_exog, ax=None):
     """
     Create a partial residual, or 'component plus residual' plot.
 
@@ -894,8 +898,9 @@ def partial_residual_plot(results, focus_col, ax=None):
     ----------
     results : results instance
         A regression results instance
-    focus_col : int
-        The column of exog whose role in the regression is assessed.
+    focus_exog : int or string
+        The column of exog, or variable name, whose role in the
+        regression is assessed.
     ax : Axes instance
         Matplotlib Axes instance
 
@@ -906,19 +911,22 @@ def partial_residual_plot(results, focus_col, ax=None):
     """
 
     model = results.model
-    pr = partial_resids(results, focus_col)
-    focus_exog = results.model.exog[:, focus_col]
+    pr = partial_resids(results, focus_exog)
+    focus_exog_vals = results.model.exog[:, focus_exog]
 
     fig, ax = utils.create_mpl_ax(ax)
-    ax.plot(focus_exog, pr, 'o', alpha=0.6)
+    ax.plot(focus_exog_vals, pr, 'o', alpha=0.6)
 
-    xname = model.exog_names[focus_col]
+    if type(focus_exog) is str:
+        xname = focus_exog
+    else:
+        xname = model.exog_names[focus_exog]
     ax.set_xlabel(xname, size=15)
     ax.set_ylabel("Component plus residual", size=15)
 
     return fig
 
-def ceres_plot(results, focus_col, frac=None, cond_means=None,
+def ceres_plot(results, focus_exog, frac=None, cond_means=None,
                ax=None):
     """
     Construct a CERES plot for a fitted generalized linear model.
@@ -927,6 +935,9 @@ def ceres_plot(results, focus_col, frac=None, cond_means=None,
     ----------
     results : model instance
         The fitted model for which the CERES plot is constructed.
+    focus_exog : int or string
+        The column index of results.model.exog, or variable name,
+        whose role in the regression is assessed.
     frac : dict
         Map from column indices of results.model.exog to lowess
         smoothing parameters (frac keyword argument to lowess). Not
@@ -952,20 +963,27 @@ def ceres_plot(results, focus_col, frac=None, cond_means=None,
 
     model = results.model
 
-    presid = ceres_resids(results, focus_col, frac=frac,
+    presid = ceres_resids(results, focus_exog, frac=frac,
                           cond_means=cond_means)
 
-    fig, ax = utils.create_mpl_ax(ax)
-    ax.plot(model.exog[:, focus_col], presid, 'o', alpha=0.6)
+    if type(focus_exog) is str:
+        ix = model.exog_names.index(focus_exog)
+        xname = focus_exog
+    else:
+        ix = focus_exog
+        focus_exog_vals = model.exog[:, ix]
+        xname = model.exog_names[focus_exog]
 
-    xname = model.exog_names[focus_col]
+    fig, ax = utils.create_mpl_ax(ax)
+    ax.plot(focus_exog_vals, presid, 'o', alpha=0.6)
+
     ax.set_xlabel(xname, size=15)
     ax.set_ylabel("Component plus residual", size=15)
 
     return fig
 
 
-def ceres_resids(results, focus_col, frac=None, cond_means=None):
+def ceres_resids(results, focus_exog, frac=None, cond_means=None):
     """
     Calculate the CERES residuals (Conditional Expectation Partial
     Residuals) for a fitted model.
@@ -974,7 +992,7 @@ def ceres_resids(results, focus_col, frac=None, cond_means=None):
     ----------
     results : model results instance
         The fitted model for which the CERES residuals are calculated.
-    focus_col : int
+    focus_exog : int
         The column of results.model.exog used as the 'focus variable'.
     frac : dict, optional
         Map from column indices of results.model.exog to lowess
@@ -983,7 +1001,9 @@ def ceres_resids(results, focus_col, frac=None, cond_means=None):
     cond_means : array-like, optional
         If provided, the columns of this array are the conditional
         means E[exog | focus exog], where exog ranges over some
-        or all of the columns of exog other than focus exog.
+        or all of the columns of exog other than focus exog.  If
+        this is an empty nx0 array, the conditional means are
+        treated as being zero.
 
     Returns
     -------
@@ -1002,6 +1022,11 @@ def ceres_resids(results, focus_col, frac=None, cond_means=None):
 
     if frac is None:
         frac = {}
+
+    if type(focus_exog) is str:
+        focus_col = results.exog_names.index(focus_exog)
+    else:
+        focus_col = focus_exog
 
     # Indices of non-focus columns
     ii = range(len(results.params))
@@ -1041,7 +1066,7 @@ def ceres_resids(results, focus_col, frac=None, cond_means=None):
 
     return presid
 
-def partial_resids(results, focus_col):
+def partial_resids(results, focus_exog):
     """
     Returns partial residuals for a fitted model with respect to a
     'focus predictor'.
@@ -1078,13 +1103,18 @@ def partial_resids(results, focus_col):
         pass # No need to do anything
     else:
         raise ValueError("Partial residuals for '%s' not implemented."
-                         % type(results))
+                         % type(model))
+
+    if type(focus_exog) is str:
+        focus_col = results.exog_names.index(focus_exog)
+    else:
+        focus_col = focus_exog
 
     focus_val = results.params[focus_col] * model.exog[:, focus_col]
 
     return focus_val + resid
 
-def added_variable_resids(results, focus_col, resid_type=None,
+def added_variable_resids(results, focus_exog, resid_type=None,
                           use_glm_weights=True, fit_kwargs=None):
     """
     Residualize the endog variable and a 'focus' exog variable in a
@@ -1094,9 +1124,9 @@ def added_variable_resids(results, focus_col, resid_type=None,
     ----------
     results : regression results instance
         The fitted model incuding all predictors
-    focus_col : integer
-        The column of results.model.exog that is residualized against
-        the other predictors.
+    focus_exog : integer or string
+        The column of results.model.exog, or variable name, that is
+        residualized against the other predictors.
     resid_type : string
         The type of residuals to use for the dependent variable.  If
         None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
@@ -1120,7 +1150,13 @@ def added_variable_resids(results, focus_col, resid_type=None,
     model = results.model
     exog = model.exog
     endog = model.endog
-    focus_exog = exog[:, focus_col]
+
+    if type(focus_exog) is str:
+        focus_col = model.exog_names.index(focus_exog)
+    else:
+        focus_col = focus_exog
+
+    focus_exog_vals = exog[:, focus_col]
 
     if resid_type is None:
         if isinstance(model, (GEE, GLM)):
@@ -1161,13 +1197,13 @@ def added_variable_resids(results, focus_col, resid_type=None,
     from statsmodels.genmod.generalized_estimating_equations import GEEResults
     import statsmodels.regression.linear_model as lm
 
-    if isinstance(results, (GLMResults, GEEResults)) and use_glm_weights:
+    if isinstance(model, (GLM, GEE)) and use_glm_weights:
         weights = model.family.weights(results.fittedvalues)
         if hasattr(model, "data_weights"):
             weights = weights * model.data_weights
-        lm_results = lm.WLS(focus_exog, reduced_exog, weights).fit()
+        lm_results = lm.WLS(focus_exog_vals, reduced_exog, weights).fit()
     else:
-        lm_results = lm.OLS(focus_exog, reduced_exog).fit()
+        lm_results = lm.OLS(focus_exog_vals, reduced_exog).fit()
     focus_exog_resid = lm_results.resid
 
     return endog_resid, focus_exog_resid

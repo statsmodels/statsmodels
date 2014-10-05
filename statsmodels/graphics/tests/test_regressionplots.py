@@ -19,7 +19,7 @@ try:
 except:
     have_matplotlib = False
 
-pdf_output = False
+pdf_output = True
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
@@ -189,29 +189,30 @@ class TestAddedVariablePlot(object):
 
                     # Run directly and called as a results method.
                     for j in 0,1:
+
                         if j == 0:
                             fig = added_variable_plot(results, focus_col,
                                                       use_glm_weights=use_glm_weights,
                                                       resid_type=resid_type)
+                            ti = "Added variable plot"
                         else:
                             fig = results.added_variable_plot(focus_col,
                                                  use_glm_weights=use_glm_weights,
                                                  resid_type=resid_type)
+                            ti = "Added variable plot (called as method)"
                         ax = fig.get_axes()[0]
+
                         add_lowess(ax)
                         ax.set_position([0.1, 0.1, 0.8, 0.7])
                         effect_str = ["Linear effect, slope=1",
                                       "Quadratic effect", "No effect"][focus_col]
-                        if j == 0:
-                            ti = "Added variable plot"
-                        else:
-                            ti = "Added variable plot (called as method)"
                         ti += "\nPoisson regression\n"
                         ti += effect_str + "\n"
                         ti += weight_str + "\n"
                         ti += "Using '%s' residuals" % resid_type
                         ax.set_title(ti)
                         close_or_save(pdf, fig)
+
 
 class TestPartialResidualPlot(object):
 
