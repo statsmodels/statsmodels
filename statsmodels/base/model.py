@@ -861,13 +861,21 @@ class Results(object):
 
         Notes
         -----
-        If `cond_means` is not provided, it is obtained by smoothing
-        each column of exog (except the focus column) against the
-        focus column.  The values of `frac` control these lowess
-        smooths.
+        `cond_means` is intended to capture the behavior of E[x1 |
+        x2], where x2 is the focus exog and x1 are all the other exog
+        variables.  If all the conditional mean relationships are
+        linear, it is sufficient to set cond_means equal to the focus
+        exog.  Alternatively, cond_means may consist of one or more
+        columns containing functional transformations of the focus
+        exog (e.g. x2^2) that are thought to capture E[x1 | x2].
 
-        If cond_means contains only the focus exog, the results should
-        be equivalent to a partial residual plot.
+        If nothing is known or suspected about the form of E[x1 | x2],
+        set `cond_means` to None, and it will be estimated by
+        smoothing each non-focus exog against the focus exog.  The
+        values of `frac` control these lowess smooths.
+
+        If cond_means contains only the focus exog, the results are
+        equivalent to a partial residual plot.
 
         If the focus variable is believed to be independent of the
         other exog variables, `cond_means` can be set to an (empty)
