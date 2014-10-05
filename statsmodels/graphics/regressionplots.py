@@ -840,7 +840,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
 def added_variable_plot(results, focus_exog, resid_type=None,
                         use_glm_weights=True, fit_kwargs=None, ax=None):
     """
-    Create an added variable plot.
+    Create an added variable plot for a fitted regression model.
 
     Parameters
     ----------
@@ -892,7 +892,8 @@ def added_variable_plot(results, focus_exog, resid_type=None,
 
 def partial_residual_plot(results, focus_exog, ax=None):
     """
-    Create a partial residual, or 'component plus residual' plot.
+    Create a partial residual, or 'component plus residual' plot for a
+    fited regression model.
 
     Parameters
     ----------
@@ -929,7 +930,8 @@ def partial_residual_plot(results, focus_exog, ax=None):
 def ceres_plot(results, focus_exog, frac=None, cond_means=None,
                ax=None):
     """
-    Construct a CERES plot for a fitted generalized linear model.
+    Construct a CERES (conditional expectation patial residuals) plot
+    for a fitted regression model.
 
     Parameters
     ----------

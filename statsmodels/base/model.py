@@ -766,9 +766,9 @@ class Results(object):
         use_glm_weights : bool
             Only used for GLM/GEE.  If True, the residuals for the
             focus predictor relative to the other predictors are
-            computed using WLS, with the weights from the IRLS
-            calculations for fitting the GLM.  If False, unweighted
-            regression is used.
+            computed using WLS, with the weights obtained from the
+            IRLS calculations for fitting the GLM.  If False, or if
+            the model is not a GLM, unweighted regression is used.
         fit_kwargs : dict, optional
             Keyword arguments to be passed to `fit` when refitting the
             model.
@@ -793,8 +793,8 @@ class Results(object):
 
     def partial_residual_plot(self, focus_exog, ax=None):
         """
-        Produces a partial residual plot, also known as a or
-        'component plus residuals' plot.
+        Produces a partial residual plot, also known as a 'component
+        plus residuals' plot for a fitted regression model.
 
         Parameters
         ----------
@@ -827,7 +827,8 @@ class Results(object):
     def ceres_plot(self, focus_exog, frac=None, cond_means=None,
                    ax=None):
         """
-        Produces a CERES plot for a fitted GLM.
+        Produces a CERES (Conditional Expectation Partial Residuals)
+        plot for a fitted regression model.
 
         Parameters
         ----------
