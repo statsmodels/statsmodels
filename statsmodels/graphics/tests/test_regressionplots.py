@@ -19,7 +19,7 @@ try:
 except:
     have_matplotlib = False
 
-pdf_output = True
+pdf_output = False
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
