@@ -281,6 +281,19 @@ class Poisson(Family):
         self.variance = Poisson.variance
         self.link = link()
 
+
+    def _clean(self, x):
+        """
+        Helper function to trim the data so that is in (0,inf)
+
+        Notes
+        -----
+        The need for this function was discovered through usage and its
+        possible that other families might need a check for validity of the
+        domain.
+        """
+        return np.clip(x, FLOAT_EPS, np.inf)
+
     def resid_dev(self, endog, mu, scale=1.):
         """Poisson deviance residual
 
@@ -302,8 +315,9 @@ class Poisson(Family):
         -----
         resid_dev = sign(endog-mu)*sqrt(2*endog*log(endog/mu)-2*(endog-mu))
         """
+        endog_mu = self._clean(endog/mu)
         return np.sign(endog - mu) * np.sqrt(2 * endog *
-                                             np.log(endog/mu) -
+                                             np.log(endog_mu) -
                                              2 * (endog - mu))/scale
 
     def deviance(self, endog, mu, scale=1.):
@@ -330,17 +344,8 @@ class Poisson(Family):
 
         :math:`deviance = 2*\\sum_{i}(Y*\\log(Y/\\mu))`
         '''
-        if np.any(endog == 0):
-            retarr = np.zeros(endog.shape)
-            endog_mu = endog/mu
-            mask = endog_mu != 0
-            endog_mu_masked = endog_mu[mask]
-            endog_masked = endog[mask]
-            np.putmask(retarr, mask,
-                       endog_masked * np.log(endog_mu_masked)/scale)
-            return 2*np.sum(retarr)
-        else:
-            return 2*np.sum(endog*np.log(endog/mu))/scale
+        endog_mu = self._clean(endog/mu)
+        return 2*np.sum(endog*np.log(endog_mu))/scale
 
     def loglike(self, endog, mu, scale=1.):
         """
