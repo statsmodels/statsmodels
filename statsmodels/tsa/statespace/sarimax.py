@@ -1436,21 +1436,23 @@ class SARIMAXResults(StatespaceResults):
         _end, _out_of_sample = self.model._get_predict_end(end)
 
         # Handle exogenous parameters
-        if _out_of_sample and self.mle_regression or self.state_regression:
-            if exog is None:
-                raise ValueError('Out-of-sample forecasting in a model with'
-                                 ' a regression component requires additional'
-                                 ' exogenous values via the `exog` argument')
-            exog = np.array(exog)
-            required_exog_shape = (_out_of_sample, self.k_exog)
-            if not exog.shape == required_exog_shape:
-                raise ValueError('Provided exogenous values are not of the'
-                                 ' appropriate shape. Required %s, got %s.' %
-                                 (str(required_exog_shape), str(exog.shape)))
-
+        if _out_of_sample and (self.k_exog > 0 or self.k_trend > 0):
             # Create a new faux SARIMAX model for the extended dataset
             endog = np.zeros((self.model.orig_endog.shape[0]+_out_of_sample, self.k_endog))
-            exog = np.c_[self.model.orig_exog.T, exog.T].T
+
+            if self.k_exog > 0:
+                if exog is None:
+                    raise ValueError('Out-of-sample forecasting in a model with'
+                                     ' a regression component requires additional'
+                                     ' exogenous values via the `exog` argument')
+                exog = np.array(exog)
+                required_exog_shape = (_out_of_sample, self.k_exog)
+                if not exog.shape == required_exog_shape:
+                    raise ValueError('Provided exogenous values are not of the'
+                                     ' appropriate shape. Required %s, got %s.' %
+                                     (str(required_exog_shape), str(exog.shape)))
+                exog = np.c_[self.model.orig_exog.T, exog.T].T
+
             model = SARIMAX(
                 endog,
                 exog=exog,
@@ -1479,7 +1481,7 @@ class SARIMAXResults(StatespaceResults):
                         kwargs[name] = mat[:, -_out_of_sample:]
                     else:
                         kwargs[name] = mat[:, :, -_out_of_sample:]
-        elif exog is not None:
+        elif self.k_exog == 0 and exog is not None:
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.')
 
