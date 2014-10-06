@@ -331,7 +331,7 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
             sample = [dates[start].strftime('%m-%d-%Y')]
             sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
         else:
-            sample = str(start) + ' - ' + str(self.model.nobs)
+            sample = [str(start), + ' - ' + str(self.model.nobs)]
 
         top_left = [
             ('Dep. Variable:', None),
