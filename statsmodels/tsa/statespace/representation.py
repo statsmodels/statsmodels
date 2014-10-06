@@ -29,6 +29,7 @@ SOLVE_LU = 0x02
 INVERT_LU = 0x04
 SOLVE_CHOLESKY = 0x08
 INVERT_CHOLESKY = 0x10
+INVERT_NUMPY = 0x20
 
 STABILITY_FORCE_SYMMETRY = 0x01
 
@@ -57,9 +58,6 @@ class Representation(object):
         The dimension of a guaranteed positive definite covariance matrix
         describing the shocks in the measurement equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
-    time-invariant : bool, optional
-        In initializing model matrices, whether to assume the model is
-        time-invariant (all matrices can be resized later). Default is True.
     design : array_like, optional
         The design matrix, :math:`Z`. Default is set to zeros.
     obs_intercept : array_like, optional
@@ -79,15 +77,77 @@ class Representation(object):
         The covariance matrix for the state equation :math:`Q`. Default is set
         to zeros.
 
+    Attributes
+    ----------
+    nobs : int
+        The number of observations.
+    k_endog : int
+        The dimension of the observation series.
+    k_states : int
+        The dimension of the unobserved state process.
+    k_posdef : int
+        The dimension of a guaranteed positive definite covariance matrix
+        describing the shocks in the measurement equation.
+    dtype : dtype
+        Datatype of currently active representation matrices
+    prefix : str
+        BLAS prefix of currently active representation matrices
+    shapes : dictionary of name:tuple
+        A dictionary recording the initial shapes of each of the representation
+        matrices as tuples.
+    endog : array
+        The observation vector. Alias for `obs`.
+    obs : array
+        Observation vector: :math:`y~(k\_endog \times nobs)`
+    design : array
+        Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`
+    obs_intercept : array
+        Observation intercept: :math:`d~(k\_endog \times nobs)`
+    obs_cov : array
+        Observation covariance matrix: :math:`H~(k\_endog \times k\_endog \times nobs)`
+    transition : array
+        Transition matrix: :math:`T~(k\_states \times k\_states \times nobs)`
+    state_intercept : array
+        State intercept: :math:`c~(k\_states \times nobs)`
+    selection : array
+        Selection matrix: :math:`R~(k\_states \times k\_posdef \times nobs)`
+    state_cov : array
+        State covariance matrix: :math:`Q~(k\_posdef \times k\_posdef \times nobs)`
+    time_invariant : bool
+        Whether or not currently active representation matrices are time-invariant
+    initialization : str
+        Kalman filter initialization method. Default is unset.
+    initial_variance : float
+        Initial variance for approximate diffuse initialization. Default is
+        1e6.
+    loglikelihood_burn : int
+        The number of initial periods during which the loglikelihood is not
+        recorded. Default is 0.
+    filter_method : int
+        Bitmask representing the Kalman filtering method.
+    inversion_method : int
+        Bitmask representing the method used to invert the forecast error
+        covariance matrix.
+    stability_method : int
+        Bitmask representing the methods used to promote numerical stability in
+        the Kalman filter recursions.
+    conserve_memory : int
+        Bitmask representing the selected memory conservation method.
+    tolerance : float
+        The tolerance at which the Kalman filter determines convergence to
+        steady-state. Default is 1e-19.
+    filter_results_class : class
+        The class instantiated and returned as a result of the `filter` method.
+        Default is FilterResults.
+
     Notes
     -----
-
     A general state space model is of the form
 
     .. math::
 
-        y_t = Z_t \alpha_t + d_t + \varepsilon_t \\
-        \alpha_t = T_t \alpha_{t-1} + c_t + R_t \eta_t \\
+        y_t & = Z_t \alpha_t + d_t + \varepsilon_t \\
+        \alpha_t & = T_t \alpha_{t-1} + c_t + R_t \eta_t \\
 
     where :math:`y_t` refers to the observation vector at time :math:`t`,
     :math:`\alpha_t` refers to the (unobserved) state vector at time
@@ -102,19 +162,19 @@ class Representation(object):
     equations are matrices describing the process. Their variable names and
     dimensions are as follows
 
-    Z : `design`          :math:`(k_endog \times k_states \times nobs)`
+    Z : `design`          :math:`(k\_endog \times k\_states \times nobs)`
 
-    d : `obs_intercept`   :math:`(k_endog \times nobs)`
+    d : `obs_intercept`   :math:`(k\_endog \times nobs)`
 
-    H : `obs_cov`         :math:`(k_endog \times k_endog \times nobs)`
+    H : `obs_cov`         :math:`(k\_endog \times k\_endog \times nobs)`
 
-    T : `transition`      :math:`(k_states \times k_states \times nobs)`
+    T : `transition`      :math:`(k\_states \times k\_states \times nobs)`
 
-    c : `state_intercept` :math:`(k_states \times nobs)`
+    c : `state_intercept` :math:`(k\_states \times nobs)`
 
-    R : `selection`       :math:`(k_states \times k_posdef \times nobs)`
+    R : `selection`       :math:`(k\_states \times k\_posdef \times nobs)`
 
-    Q : `state_cov`       :math:`(k_posdef \times k_posdef \times nobs)`
+    Q : `state_cov`       :math:`(k\_posdef \times k\_posdef \times nobs)`
 
     In the case that one of the matrices is time-invariant (so that, for
     example, :math:`Z_t = Z_{t+1} ~ \forall ~ t`), its last dimension may
@@ -122,7 +182,6 @@ class Representation(object):
 
     References
     ----------
-
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
@@ -519,7 +578,7 @@ class Representation(object):
         ----------
         variance : float, optional
             The variance for approximating diffuse initial conditions. Default
-            is 1e3.
+            is 1e6.
         """
         if variance is None:
             variance = self.initial_variance
@@ -725,6 +784,11 @@ class Representation(object):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
+
+        Returns
+        -------
+        loglike : float
+            The joint loglikelihood.
         """
         if loglikelihood_burn is None:
             loglikelihood_burn = self.loglikelihood_burn
@@ -745,6 +809,94 @@ class FilterResults(object):
         A Statespace representation
     kalman_filter : _statespace.{'s','c','d','z'}KalmanFilter
         A Kalman filter object.
+
+    Attributes
+    ----------
+    nobs : int
+        Number of observations.
+    k_endog : int
+        The dimension of the observation series.
+    k_states : int
+        The dimension of the unobserved state process.
+    k_posdef : int
+        The dimension of a guaranteed positive definite covariance matrix
+        describing the shocks in the measurement equation.
+    dtype : dtype
+        Datatype of representation matrices
+    prefix : str
+        BLAS prefix of representation matrices
+    shapes : dictionary of name:tuple
+        A dictionary recording the shapes of each of the representation
+        matrices as tuples.
+    endog : array
+        The observation vector.
+    design : array
+        The design matrix, :math:`Z`.
+    obs_intercept : array
+        The intercept for the observation equation, :math:`d`.
+    obs_cov : array
+        The covariance matrix for the observation equation :math:`H`.
+    transition : array
+        The transition matrix, :math:`T`.
+    state_intercept : array
+        The intercept for the transition equation, :math:`c`.
+    selection : array
+        The selection matrix, :math:`R`.
+    state_cov : array
+        The covariance matrix for the state equation :math:`Q`.
+    missing : array of bool
+        An array of the same size as `endog`, filled with boolean values that
+        are True if the corresponding entry in `endog` is NaN and False
+        otherwise.
+    nmissing : array of int
+        An array of size `nobs`, where the ith entry is the number (between 0
+        and k_endog) of NaNs in the ith row of the `endog` array.
+    filtered_state : array
+        The filtered state vector at each time period.
+    filtered_state_cov : array
+        The filtered state covariance matrix at each time period.
+    predicted_state : array
+        The predicted state vector at each time period.
+    predicted_state_cov : array
+        The predicted state covariance matrix at each time period.
+    forecasts : array
+        The one-step-ahead forecasts of observations at each time period.
+    forecasts_error : array
+        The forecast errors at each time period.
+    forecasts_error_cov : array
+        The forecast error covariance matrices at each time period.
+    standardized_forecast_error : array
+        The standardized forecast errors
+    loglikelihood : array
+        The loglikelihood values at each time period.
+    time_invariant : bool
+        Whether or not the representation matrices are time-invariant
+    converged : bool
+        Whether or not the Kalman filter converged.
+    period_converged : int
+        The time period in which the Kalman filter converged.
+    initialization : str
+        Kalman filter initialization method.
+    initial_state : array_like
+        The state vector used to initialize the Kalamn filter.
+    initial_state_cov : array_like
+        The state covariance matrix used to initialize the Kalamn filter.
+    filter_method : int
+        Bitmask representing the Kalman filtering method
+    inversion_method : int
+        Bitmask representing the method used to invert the forecast error
+        covariance matrix.
+    stability_method : int
+        Bitmask representing the methods used to promote numerical stability in
+        the Kalman filter recursions.
+    conserve_memory : int
+        Bitmask representing the selected memory conservation method.
+    tolerance : float
+        The tolerance at which the Kalman filter determines convergence to
+        steady-state.
+    loglikelihood_burn : int
+        The number of initial periods during which the loglikelihood is not
+        recorded.
     """
     def __init__(self, model, kalman_filter):
         # Data type
@@ -814,6 +966,10 @@ class FilterResults(object):
         self.forecasts_error_cov = np.array(kalman_filter.forecast_error_cov, copy=True)
         self.loglikelihood = np.array(kalman_filter.loglikelihood, copy=True)
 
+        # Setup caches for uninitialized objects
+        self._kalman_gain = None
+        self._standardized_forecasts_error = None
+
         # Fill in missing values in the forecast, forecast error, and
         # forecast error covariance matrix (this is required due to how the
         # Kalman filter implements observations that are completely missing)
@@ -840,22 +996,44 @@ class FilterResults(object):
                 ) + self.obs_cov[:, :, obs_cov_t]
 
     @property
-    def standardized_forecast_error(self):
-        standardized_forecast_error = np.zeros(self.forecasts_error.shape,
-                                               dtype=self.dtype)
+    def kalman_gain(self):
+        if self._kalman_gain is None:
+            # k x n
+            self._kalman_gain = np.zeros(
+                (self.k_states, self.k_endog, self.nobs), dtype=self.dtype)
+            for t in range(self.nobs):
+                design_t = 0 if self.design.shape[2] == 1 else t
+                transition_t = 0 if self.transition.shape[2] == 1 else t
+                self._kalman_gain[:, :, t] = np.dot(
+                    np.dot(
+                        self.transition[:, :, transition_t],
+                        self.predicted_state_cov[:, :, t]
+                    ),
+                    np.dot(
+                        np.transpose(self.design[:, :, design_t]),
+                        np.linalg.inv(self.forecasts_error_cov[:, :, t])
+                    )
+                )
+        return self._kalman_gain
 
-        for t in range(self.forecasts_error_cov.shape[2]):
-            upper = np.linalg.cholesky(self.forecasts_error_cov[:, :, t]).T
-            standardized_forecast_error[:, t] = np.dot(
-                upper, self.forecasts_error[:, t]
-            )
+    @property
+    def standardized_forecasts_error(self):
+        if self._standardized_forecasts_error is None:
+            self.standardized_forecasts_error = np.zeros(
+                self.forecasts_error.shape, dtype=self.dtype)
 
-        return standardized_forecast_error
+            for t in range(self.forecasts_error_cov.shape[2]):
+                upper = np.linalg.cholesky(self.forecasts_error_cov[:, :, t]).T
+                self.standardized_forecasts_error[:, t] = np.dot(
+                    upper, self.forecasts_error[:, t]
+                )
+
+        return self.standardized_forecasts_error
 
     def predict(self, start=None, end=None, dynamic=None, full_results=False,
                 *args, **kwargs):
         """
-        Statespace model in-sample and out-of-sample prediction.
+        In-sample and out-of-sample prediction for state space models generally
 
         Parameters
         ----------
@@ -865,14 +1043,21 @@ class FilterResults(object):
         end : int, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast will be at end.
-        dynamic : int, optional
+        dynamic : int or boolean or None, optional
             Specifies the number of steps ahead for each in-sample prediction.
             If not specified, then in-sample predictions are one-step-ahead.
+            False and None are interpreted as 0. Default is False.
+        full_results : boolean, optional
+            If True, returns a FilterResults instance; if False returns a
+            tuple with forecasts, the forecast errors, and the forecast error
+            covariance matrices. Default is False.
 
         Returns
         -------
-        predict : array
-            The predicted values.
+        results : FilterResults or tuple
+            Either a FilterResults object (if `full_results=True`) or else a
+            tuple of forecasts, the forecast errors, and the forecast error
+            covariance matrices otherwise.
 
         Notes
         -----
@@ -893,7 +1078,7 @@ class FilterResults(object):
         if start is None:
             start = 0
         elif start < 0:
-            raise ValueError('Cannot predict values period to the sample.')
+            raise ValueError('Cannot predict values previous to the sample.')
         if end is None:
             end = self.nobs
 

@@ -1,5 +1,5 @@
 """
-ARMA Model
+SARIMAX Model
 
 Author: Chad Fulton
 License: Simplified-BSD
@@ -20,7 +20,7 @@ from statsmodels.tools.decorators import cache_readonly
 
 
 class SARIMAX(Model):
-    """
+    r"""
     Seasonal AutoRegressive Integrated Moving Average with eXogenous regressors
     model
 
@@ -29,7 +29,7 @@ class SARIMAX(Model):
     endog : array_like
         The observed time-series process :math:`y`
     exog : array_like, optional
-        Exogenous regressors, shaped nobs x k.
+        Array of exogenous regressors, shaped nobs x k.
     order : iterable or iterable of iterables, optional
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters. `d` must be an integer
@@ -82,12 +82,86 @@ class SARIMAX(Model):
         in the moving average component of the model. Default is True.
     hamilton_representation : boolean, optional
         Whether or not to use the Hamilton representation of an ARMA process
-        as a time series (if True) or the Harvey representation (if False).
-        Default is False.
+        (if True) or the Harvey representation (if False). Default is False.
+
+    Attributes
+    ----------
+    measurement_error : boolean
+        Whether or not to assume the observations were measured with error.
+    state_error : boolean
+        Whether or not the transition equation has an error component.
+    mle_regression : boolean
+        Whether or not to use estimate the regression coefficients as part of
+        maximum likelihood estimation.
+    state_regression : boolean
+        Whether or not to use estimate the regression coefficients via the
+        Kalman filter, by extending the state space.
+    time_varying_regression : boolean
+        Whether or not coefficients on the exogenous regressors are allowed to
+        vary over time. Not yet implemented.
+    simple_differencing : boolean
+        Whether or not to use conditional maximum likelihood estimation.
+    enforce_stationarity : boolean
+        Whether or not to transform the AR parameters to enforce stationarity
+        in the autoregressive component of the model.
+    enforce_invertibility : boolean
+        Whether or not to transform the MA parameters to enforce invertibility
+        in the moving average component of the model.
+    hamilton_representation : boolean
+        Whether or not to use the Hamilton representation of an ARMA process.
+    trend : str{'n','c','t','ct'} or iterable
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        See the class parameter documentation for more information.
+    polynomial_ar : array
+        Array containing autoregressive lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_ma : array
+        Array containing moving average lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_seasonal_ar : array
+        Array containing seasonal autoregressive lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_seasonal_ma : array
+        Array containing seasonal moving average lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_trend : array
+        Array containing trend polynomial coefficients, ordered from lowest
+        degree to highest. Initialized with ones, unless a coefficient is
+        constrained to be zero (in which case it is zero).
+    k_ar : int
+        Highest autoregressive order in the model, zero-indexed.
+    k_ar_params : int
+        Number of autoregressive parameters to be estimated.
+    k_diff : int
+        Order of intergration.
+    k_ma : int
+        Highest moving average order in the model, zero-indexed.
+    k_ma_params : int
+        Number of moving average parameters to be estimated.
+    k_seasonal_ar : int
+        Highest seasonal autoregressive order in the model, zero-indexed.
+    k_seasonal_ar_params : int
+        Number of seasonal autoregressive parameters to be estimated.
+    k_seasons : int
+        Number of seasons.
+    k_seasonal_diff : int
+        Order of seasonal intergration.
+    k_seasonal_ma : int
+        Highest seasonal moving average order in the model, zero-indexed.
+    k_seasonal_ma_params : int
+        Number of seasonal moving average parameters to be estimated.
+    k_trend : int
+        Order of the trend polynomial plus one (i.e. the constant polynomial
+        would have `k_trend=1`).
+    k_exog : int
+        Number of exogenous regressors.
 
     Notes
     -----
-
     The SARIMA model is specified :math:`(p, d, q) \times (P, D, Q)_s`.
 
     .. math::
@@ -154,7 +228,6 @@ class SARIMAX(Model):
 
     References
     ----------
-
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
@@ -398,6 +471,14 @@ class SARIMAX(Model):
             self.initialize_stationary()
 
     def initialize(self):
+        """
+        Initialize the SARIMAX model.
+
+        Notes
+        -----
+        These initialization steps must occur following the parent class
+        __init__ function calls.
+        """
         # Internal flag for whether the default mixed approximate diffuse /
         # stationary initialization has been overridden with a user-supplied
         # initialization
@@ -454,16 +535,37 @@ class SARIMAX(Model):
     def initialize_known(self, initial_state, initial_state_cov):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_known(initial_state, initial_state_cov)
+    initialize_known.__doc__ = Model.initialize_known.__doc__
 
     def initialize_approximate_diffuse(self, variance=None):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_approximate_diffuse(variance)
+    initialize_approximate_diffuse.__doc__ = Model.initialize_approximate_diffuse.__doc__
 
     def initialize_stationary(self):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_stationary()
+    initialize_stationary.__doc__ = Model.initialize_stationary.__doc__
 
     def initialize_state(self, variance=None):
+        """
+        Initialize state and state covariance arrays in preparation for the
+        Kalman filter.
+
+        Parameters
+        ----------
+        variance : float, optional
+            The variance for approximating diffuse initial conditions. Default
+            can be found in the Representation class documentation.
+
+        Notes
+        -----
+        Initializes the ARMA component of the state space to the typical
+        stationary values and the other components as approximate diffuse.
+
+        Can be overridden be calling one of the other initialization methods
+        before fitting the model.
+        """
         # Check if a manual initialization has already been specified
         if self._manual_initialization:
             return
@@ -512,6 +614,7 @@ class SARIMAX(Model):
 
     @property
     def initial_design(self):
+        """Initial design matrix"""
         # Basic design matrix
         design = np.r_[
             [1] * self._k_diff,
@@ -537,6 +640,7 @@ class SARIMAX(Model):
 
     @property
     def initial_state_intercept(self):
+        """Initial state intercept vector"""
         # TODO make this self.k_trend > 1 and adjust the update to take
         # into account that if the trend is a constant, it is not time-varying
         if self.k_trend > 0:
@@ -547,6 +651,7 @@ class SARIMAX(Model):
 
     @property
     def initial_transition(self):
+        """Initial transition matrix"""
         transition = np.zeros((self.k_states, self.k_states))
 
         # Exogenous regressors component
@@ -607,6 +712,7 @@ class SARIMAX(Model):
 
     @property
     def initial_selection(self):
+        """Initial selection matrix"""
         if not (self.state_regression and self.time_varying_regression):
             if self.k_posdef > 0:
                 selection = np.r_[
@@ -827,6 +933,9 @@ class SARIMAX(Model):
 
     @property
     def params_included(self):
+        """
+        List of parameters actually included in the model, in sorted order.
+        """
         model_orders = self.model_orders
         # Get basic list from model orders
         params = [
@@ -842,6 +951,10 @@ class SARIMAX(Model):
 
     @property
     def params_names(self):
+        """
+        List of human readable parameter names (for parameters actually
+        included in the model).
+        """
         params_sort_order = self.params_included
         model_names = self.model_names
         return [
@@ -850,6 +963,9 @@ class SARIMAX(Model):
 
     @property
     def model_orders(self):
+        """
+        The orders of each of the polynomials in the model.
+        """
         return {
             'trend': self.k_trend,
             'exog': self.k_exog,
@@ -867,10 +983,16 @@ class SARIMAX(Model):
 
     @property
     def model_names(self):
+        """
+        The plain text names of all possible model parameters.
+        """
         return self._get_model_names(latex=False)
 
     @property
     def model_latex_names(self):
+        """
+        The latex names of all possible model parameters.
+        """
         return self._get_model_names(latex=True)
 
     def _get_model_names(self, latex=False):
@@ -976,7 +1098,21 @@ class SARIMAX(Model):
     def transform_params(self, unconstrained):
         """
         Transform unconstrained parameters used by the optimizer to constrained
-        parameters used in likelihood evaluation
+        parameters used in likelihood evaluation.
+
+        Used primarily to enforce stationarity of the autoregressive lag
+        polynomial, invertibility of the moving average lag polynomial, and
+        positive variance parameters.
+
+        Parameters
+        ----------
+        unconstrained : array_like
+            Unconstrained parameters used by the optimizer.
+
+        Returns
+        -------
+        constrained : array_like
+            Constrained parameters used in likelihood evaluation.
 
         TODO need to modify to work with lag polynomials containing missing
              lag orders.
@@ -1053,6 +1189,23 @@ class SARIMAX(Model):
         """
         Transform constrained parameters used in likelihood evaluation
         to unconstrained parameters used by the optimizer
+
+        Used primarily to reverse enforcement of stationarity of the
+        autoregressive lag polynomial and invertibility of the moving average
+        lag polynomial.
+
+        Parameters
+        ----------
+        constrained : array_like
+            Constrained parameters used in likelihood evaluation.
+
+        Returns
+        -------
+        constrained : array_like
+            Unconstrained parameters used by the optimizer.
+
+        TODO need to modify to work with lag polynomials containing missing
+             lag orders.
         """
         unconstrained = np.zeros(constrained.shape, constrained.dtype)
 
@@ -1123,6 +1276,22 @@ class SARIMAX(Model):
         return unconstrained
 
     def update(self, params, *args, **kwargs):
+        """
+        Update the parameters of the model
+
+        Updates the representation matrices to fill in the new parameter
+        values.
+
+        Parameters
+        ----------
+        params : array_like
+            Array of new parameters.
+
+        Returns
+        -------
+        params : array_like
+            Array of parameters.
+        """
         params = super(SARIMAX, self).update(params, *args, **kwargs)
 
         params_trend = None
@@ -1343,8 +1512,136 @@ class SARIMAX(Model):
         if not self._manual_initialization:
             self.initialize_state()
 
+        return params
+
 
 class SARIMAXResults(StatespaceResults):
+    """
+    Class to hold results from fitting an SARIMAX model.
+
+    Parameters
+    ----------
+    model : Model instance
+        The fitted model instance
+    kalman_filter : Kalman filter instance
+        The underlying Kalman filter for the fitted model instance
+
+    Attributes
+    ----------
+    params_included : list of str
+        List of parameters actually included in the model, in sorted order.
+    k_ar : int
+        Highest autoregressive order in the model, zero-indexed.
+    k_ar_params : int
+        Number of autoregressive parameters to be estimated.
+    k_diff : int
+        Order of intergration.
+    k_ma : int
+        Highest moving average order in the model, zero-indexed.
+    k_ma_params : int
+        Number of moving average parameters to be estimated.
+    k_seasonal_ar : int
+        Highest seasonal autoregressive order in the model, zero-indexed.
+    k_seasonal_ar_params : int
+        Number of seasonal autoregressive parameters to be estimated.
+    k_seasons : int
+        Number of seasons.
+    k_seasonal_diff : int
+        Order of seasonal intergration.
+    k_seasonal_ma : int
+        Highest seasonal moving average order in the model, zero-indexed.
+    k_seasonal_ma_params : int
+        Number of seasonal moving average parameters to be estimated.
+    k_trend : int
+        Order of the trend polynomial plus one (i.e. the constant polynomial
+        would have `k_trend=1`).
+    k_exog : int
+        Number of exogenous regressors.
+    trend : str{'n','c','t','ct'} or iterable
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        See the class parameter documentation for more information.
+    model_orders : list of int
+        The orders of each of the polynomials in the model.
+    polynomial_ar : array
+        Array containing autoregressive lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_ma : array
+        Array containing moving average lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_seasonal_ar : array
+        Array containing seasonal autoregressive lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_seasonal_ma : array
+        Array containing seasonal moving average lag polynomial coefficients,
+        ordered from lowest degree to highest. Initialized with ones, unless
+        a coefficient is constrained to be zero (in which case it is zero).
+    polynomial_trend : array
+        Array containing trend polynomial coefficients, ordered from lowest
+        degree to highest. Initialized with ones, unless a coefficient is
+        constrained to be zero (in which case it is zero).
+    arroots : array
+        Roots of the reduced form autoregressive lag polynomial
+    maroots : array
+        Roots of the reduced form moving average lag polynomial
+    arfreq : array
+        Frequency of the roots of the reduced form autoregressive
+        lag polynomial
+    mafreq : array
+        Frequency of the roots of the reduced form moving average
+        lag polynomial
+    arparams : array
+        Autoregressive parameters actually estimated in the model.
+        Does not include parameters whose values are constrained to be zero.
+    maparams : array
+        Moving average parameters actually estimated in the model. Does not
+        include parameters whose values are constrained to be zero.
+    measurement_error : boolean
+        Whether or not to assume the observations were measured with error.
+    state_error : boolean
+        Whether or not the transition equation has an error component.
+    mle_regression : boolean
+        Whether or not to use estimate the regression coefficients as part of
+        maximum likelihood estimation.
+    state_regression : boolean
+        Whether or not to use estimate the regression coefficients via the
+        Kalman filter, by extending the state space.
+    time_varying_regression : boolean
+        Whether or not coefficients on the exogenous regressors are allowed to
+        vary over time. Not yet implemented.
+    simple_differencing : boolean
+        Whether or not to use conditional maximum likelihood estimation.
+    enforce_stationarity : boolean
+        Whether or not to transform the AR parameters to enforce stationarity
+        in the autoregressive component of the model.
+    enforce_invertibility : boolean
+        Whether or not to transform the MA parameters to enforce invertibility
+        in the moving average component of the model.
+    hamilton_representation : boolean
+        Whether or not to use the Hamilton representation of an ARMA process.
+
+    Methods
+    -------
+    conf_int
+    f_test
+    fittedvalues
+    forecast
+    load
+    predict
+    remove_data
+    resid
+    save
+    summary
+    t_test
+    wald_test
+
+    See Also
+    --------
+    dismalpy.ssm.representation.FilterResults : for additional attributes and methods
+    dismalpy.ssm.model.StatespaceResults : for additional attributes and methods
+    """
     def __init__(self, model, kalman_filter, *args, **kwargs):
         super(SARIMAXResults, self).__init__(model, kalman_filter, *args,
                                              **kwargs)
@@ -1433,6 +1730,50 @@ class SARIMAXResults(StatespaceResults):
 
     def predict(self, start=None, end=None, exog=None, dynamic=False,
                 alpha=.05, *args, **kwargs):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        exog : array_like, optional
+            If the model includes exogenous regressors, you must provide
+            exactly enough out-of-sample values for the exogenous variables if
+            end is beyond the last observation in the sample.
+        dynamic : int or boolean or None, optional
+            Specifies the number of steps ahead for each in-sample prediction.
+            If not specified, then in-sample predictions are one-step-ahead.
+            False and None are interpreted as 0. Default is False.
+        alpha : float, optional
+            The confidence intervals for the forecasts are (1 - alpha) %.
+            Default is 0.05.
+        full_results : boolean, optional
+            If True, returns a FilterResults instance; if False returns a
+            tuple with forecasts, the forecast errors, and the forecast error
+            covariance matrices. Default is False.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        forecasts_error_cov : array
+            Array of the covariance matrices of the forecasts.
+        confidence_intervals : array
+            Array (2-dim) of the confidence interval for the forecasts.
+        index : array or pandas.DateTimeIndex
+            Array of indices for forecasts; either integers or dates, depending
+            on the type of `endog`.
+        """
         if start is None:
                 start = 0
 
@@ -1496,6 +1837,34 @@ class SARIMAXResults(StatespaceResults):
         )
 
     def forecast(self, steps=1, exog=None, alpha=.05, *args, **kwargs):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of out of sample forecasts from the end of the
+            sample. Default is 1.
+        exog : array_like, optional
+            If the model includes exogenous regressors, you must provide
+            exactly enough out-of-sample values for the exogenous variables for
+            each step forecasted.
+        alpha : float, optional
+            The confidence intervals for the forecasts are (1 - alpha) %.
+            Default is 0.05.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        forecasts_error_cov : array
+            Array of the covariance matrices of the forecasts.
+        confidence_intervals : array
+            Array (2-dim) of the confidence interval for the forecasts.
+        index : array or pandas.DateTimeIndex
+            Array of indices for forecasts; either integers or dates, depending
+            on the type of `endog`.
+        """
         return super(SARIMAXResults, self).forecast(
             steps, exog=exog, alpha=alpha, *args, **kwargs
         )
@@ -1537,3 +1906,4 @@ class SARIMAXResults(StatespaceResults):
         return super(SARIMAXResults, self).summary(
             alpha=alpha, start=start, *args, **kwargs
         )
+    summary.__doc__ = StatespaceResults.summary.__doc__
