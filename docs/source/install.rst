@@ -108,10 +108,10 @@ Dependencies
 ~~~~~~~~~~~~
 
 * `Python <https://www.python.org>`__ >= 2.6, including Python 3.x 
-* `NumPy <http://www.scipy.org/>`__ >= 1.5.0
-* `SciPy <http://www.scipy.org/>`__ >= 0.7
+* `NumPy <http://www.scipy.org/>`__ >= 1.5.1
+* `SciPy <http://www.scipy.org/>`__ >= 0.9.0
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
-* `Patsy <https://patsy.readthedocs.org>`__ >= 0.1.0
+* `Patsy <https://patsy.readthedocs.org>`__ >= 0.3.0
 * `Cython <http://cython.org/>`__ >= 20.1, Needed if you want to build the code from github and not a source distribution. You must use Cython >= 0.20.1 if you're on Python 3.4. Earlier versions may work for Python < 3.4.
 
 Optional Dependencies
@@ -119,6 +119,5 @@ Optional Dependencies
 
 * `Matplotlib <http://matplotlib.org/>`__ >= 1.1 is needed for plotting functions and running many of the examples. 
 * If installed, `X-12-ARIMA <http://www.census.gov/srd/www/x13as/>`__ or `X-13ARIMA-SEATS <http://www.census.gov/srd/www/x13as/>`__ can be used for time-series analysis.
->>>>>>> DOC: Add note about X12/X13 optional dependency
 * `Nose <https://nose.readthedocs.org/en/latest>`__ is required to run the test suite.
 * `IPython <http://ipython.org>`__ >= 1.0 is required to build the docs locally.
