@@ -420,6 +420,7 @@ if __name__ == "__main__":
     # temporary, until moved:
     package_data.update({"statsmodels.sandbox.regression.tests" :
                          ["*.dta", "*.csv"]})
+    package_data.update({"statsmodels.miscmodels.tests" : ['*.csv']})
 
     #TODO: deal with this. Not sure if it ever worked for bdists
     #('docs/build/htmlhelp/statsmodelsdoc.chm',
