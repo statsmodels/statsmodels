@@ -670,7 +670,7 @@ class SARIMAX(Model):
         # Get the params
         offset = 0
         if k_trend > 0:
-            params_trend = params[offset]
+            params_trend = params[offset:k_trend+offset]
             offset += k_trend
         if k_ar > 0:
             params_ar = params[offset:k_ar+offset]
@@ -715,7 +715,12 @@ class SARIMAX(Model):
 
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
-        endog = endog[~np.isnan(endog)]
+        if np.any(np.isnan(endog)):
+            endog = endog[~np.isnan(endog)]
+            if exog is not None:
+                exog = exog[~np.isnan(endog)]
+            if trend_data is not None:
+                trend_data = trend_data[~np.isnan(endog)]
 
         # Non-seasonal ARMA component and trend
         (params_trend, params_ar, params_ma,
