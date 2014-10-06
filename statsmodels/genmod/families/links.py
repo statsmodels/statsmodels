@@ -165,8 +165,9 @@ class Logit(Link):
         -----
         g^(-1)(z) = exp(z)/(1+exp(z))
         """
-        t = np.exp(z)
-        return t / (1. + t)
+        z = np.asarray(z)
+        t = np.exp(-z)
+        return 1. / (1. + t)
 
     def deriv(self, p):
 
