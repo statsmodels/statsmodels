@@ -915,15 +915,18 @@ def covariate_effect_plot(results, focus_var, exog, n_points=50,
     use_formula = hasattr(model, "formula")
 
     if use_formula:
-        if type(focus_var) is str:
+        try:
             focus_var_vals = model.data.frame[focus_var]
-        else:
-            raise ValueError("incompatible types for exog and focus_var")
+        except:
+            raise ValueError("unable to find focus variable in exog frame")
     else:
-        if type(focus_var) is int:
+        try:
             focus_var_vals = model.exog[:, focus_var]
-        else:
-            raise ValueError("incompatible types for exog and focus_var")
+        except:
+            raise ValueError("unable to find focus variable in exog")
+
+    if focus_var_vals.dtype is np.dtype('O'):
+        raise ValueError("cannot create plot for non-numeric focus variable")
 
     focus_data = np.linspace(focus_var_vals.min(),
                              focus_var_vals.max(), n_points)
