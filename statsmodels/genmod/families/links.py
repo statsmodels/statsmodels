@@ -765,7 +765,7 @@ class NegativeBinomial(object):
         -----
         g^(-1)(z) = exp(z)/(alpha*(1-exp(z)))
         '''
-        return np.exp(z)/(self.alpha * (1 - np.exp(z)))
+        return -1/(self.alpha * (1 - np.exp(-z)))
 
     def deriv(self, p):
         '''
