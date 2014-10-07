@@ -642,8 +642,8 @@ class GLM(base.LikelihoodModel):
         maxiter : int, optional
             Default is 100.
         method : string
-            Default is 'IRLS' for iteratively reweighted least squares.  This
-            is currently the only method available for GLM fit.
+            Default is 'IRLS' for iteratively reweighted least squares.
+            Otherwise gradient optimization is used.
         scale : string or float, optional
             `scale` can be 'X2', 'dev', or a float
             The default value is None, which uses `X2` for Gamma, Gaussian,
