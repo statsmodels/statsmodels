@@ -38,14 +38,14 @@ def handle_formula_data(Y, X, formula, depth=0):
 
     if X is not None:
         if data_util._is_using_pandas(Y, X):
-            return dmatrices(formula, (Y, X), 2, return_type='dataframe')
+            return dmatrices(formula, (Y, X), depth, return_type='dataframe')
         else:
-            return dmatrices(formula, (Y, X), 2, return_type='dataframe')
+            return dmatrices(formula, (Y, X), depth, return_type='dataframe')
     else:
         if data_util._is_using_pandas(Y, None):
-            return dmatrices(formula, Y, 2, return_type='dataframe')
+            return dmatrices(formula, Y, depth, return_type='dataframe')
         else:
-            return dmatrices(formula, Y, 2, return_type='dataframe')
+            return dmatrices(formula, Y, depth, return_type='dataframe')
 
 
 def _remove_intercept_patsy(terms):

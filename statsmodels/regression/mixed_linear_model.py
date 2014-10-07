@@ -573,7 +573,12 @@ class MixedLM(base.LikelihoodModel):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model.
+            These are passed to the model with one exception. The
+            ``eval_env`` keyword is passed to patsy. It can be either a
+            :class:`patsy:patsy.EvalEnvironment` object or an integer
+            indicating the depth of the namespace to use. For example, the
+            default ``eval_env=0`` uses the calling namespace. If you wish
+            to use a "clean" environment set ``eval_env=-1``.
 
         Returns
         -------
@@ -603,7 +608,13 @@ class MixedLM(base.LikelihoodModel):
             kwargs["groups"] = np.asarray(data[kwargs["groups"]])
 
         if re_formula is not None:
-            exog_re = patsy.dmatrix(re_formula, data)
+            eval_env = kwargs.get('eval_env', None)
+            if eval_env is None:
+                eval_env = 1
+            elif eval_env == -1:
+                from patsy import EvalEnvironment
+                eval_env = EvalEnvironment({})
+            exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
             exog_re_names = exog_re.design_info.column_names
             exog_re = np.asarray(exog_re)
         else:
