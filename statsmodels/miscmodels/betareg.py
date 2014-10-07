@@ -13,6 +13,7 @@ Smithson, Michael, and Jay Verkuilen. "A better lemon squeezer?
 Maximum-likelihood regression with beta-distributed dependent variables."
 Psychological methods 11.1 (2006): 54.
 """
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -37,7 +38,7 @@ _init_example = """
 
     >>> mod = Beta(endog, exog)
     >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> print(rslt.summary())
 
     We can also specify a formula and a specific structure and use the
     identity-link for phi.
@@ -96,7 +97,8 @@ class Beta(GenericLikelihoodModel):
         :ref:`links`
 
         """.format(example=_init_example)
-        assert np.all((0 < endog) & (endog < 1))
+        etmp = np.array(endog)
+        assert np.all((0 < etmp) & (etmp < 1))
         if Z is None:
             extra_names = ['phi']
             Z = np.ones((len(endog), 1), dtype='f')
@@ -108,7 +110,7 @@ class Beta(GenericLikelihoodModel):
         super(Beta, self).__init__(endog, exog, **kwds)
         self.link = link
         self.link_phi = link_phi
-        
+
         self.Z = Z
         assert len(self.Z) == len(self.endog)
 
@@ -177,11 +179,11 @@ if __name__ == "__main__":
     # using other precison params with
     m = Beta.from_formula('iyield ~ C(batch, Treatment(10)) + temp', dat,
             Z=Z, link_phi=sm.families.links.identity())
-    print m.fit().summary()
+    print(m.fit().summary())
 
     fex = pd.read_csv('foodexpenditure.csv')
     m = Beta.from_formula(' I(food/income) ~ income + persons', fex)
-    print m.fit().summary()
+    print(m.fit().summary())
     #print GLM.from_formula('iyield ~ C(batch) + temp', dat, family=Binomial()).fit().summary()
 
     dev = pd.read_csv('methylation-test.csv')
@@ -189,4 +191,4 @@ if __name__ == "__main__":
     m = Beta.from_formula('methylation ~ gender + CpG', dev,
             Z=Z,
             link_phi=sm.families.links.identity())
-    print m.fit().summary()
+    print(m.fit().summary())
