@@ -216,6 +216,13 @@ Define a custom function:
     log_plus_1(Literacy)    -20.393959
 
 
+.. _patsy-namespaces:
+
+Namespaces
+----------
+
+Notice that all of the above examples use the calling namespace to look for the functions to apply. The namespace used can be controlled via the ``eval_env`` keyword. For example, you may want to give a custom namespace using the :class:`patsy:patsy.EvalEnvironment` or you may want to use a "clean" namespace, which we provide by passing ``eval_func=-1``. The default is to use the caller's namespace. This can have (un)expected consequences, if, for example, someone has a variable names ``C`` in the user namespace or in their data structure passed to ``patsy``, and ``C`` is used in the formula to handle a categorical variable. See the `Patsy API Reference <http://patsy.readthedocs.org/en/latest/API-reference.html>`_ for more information.
+
 Using formulas with models that do not (yet) support them
 ---------------------------------------------------------
 
