@@ -190,6 +190,7 @@ Other important new features
   Most tables that appear in research papers can be represented
   graphically as a dotplot.
 * Statsmodels has added custom warnings to ``statsmodels.tools.sm_exceptions``. By default all of these warnings will be raised whenever appropriate. Use ``warnings.simplefilter`` to turn them off, if desired.
+* Allow control over the namespace used to evaluate formulas with patsy via the ``eval_env`` keyword argument. See the :ref:`patsy-namespaces` documentation for more information.
 
 
 Major Bugs fixed
