@@ -925,11 +925,11 @@ def covariate_effect_plot(results, focus_var, exog, n_points=50,
         except:
             raise ValueError("unable to find focus variable in exog")
 
-    if focus_var_vals.dtype is np.dtype('O'):
+    try:
+        focus_data = np.linspace(focus_var_vals.min(),
+                                 focus_var_vals.max(), n_points)
+    except:
         raise ValueError("cannot create plot for non-numeric focus variable")
-
-    focus_data = np.linspace(focus_var_vals.min(),
-                             focus_var_vals.max(), n_points)
 
     # Want a list of Series or a list of 1d ndarrays, depending
     # on whether a formula is present
