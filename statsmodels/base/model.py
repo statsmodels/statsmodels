@@ -109,7 +109,13 @@ class Model(object):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model.
+            These are passed to the model with one exception. The
+            ``eval_env`` keyword is passed to patsy. It can be either a
+            :class:`patsy:patsy.EvalEnvironment` object or an integer
+            indicating the depth of the namespace to use. For example, the
+            default ``eval_env=0`` uses the calling namespace. If you wish
+            to use a "clean" environment set ``eval_env=-1``.
+
 
         Returns
         -------
@@ -125,7 +131,16 @@ class Model(object):
         #TODO: subset could use syntax. issue #469.
         if subset is not None:
             data = data.ix[subset]
-        endog, exog = handle_formula_data(data, None, formula)
+        eval_env = kwargs.pop('eval_env', None)
+        if eval_env is None:
+            eval_env = 2
+        elif eval_env == -1:
+            from patsy import EvalEnvironment
+            eval_env = EvalEnvironment({})
+        else:
+            eval_env += 1  # we're going down the stack again
+        endog, exog = handle_formula_data(data, None, formula,
+                                          depth=eval_env)
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
