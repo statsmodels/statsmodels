@@ -12,7 +12,7 @@ do
     for NPY in "${NPY_VERSIONS[@]}"
     do
         export CONDA_NPY=$NPY
-        binstar remove statsmodels/statsmodels/0.6.0_dev/osx/statsmodels-0.6.0_dev-np${NPY}py${PY}_0.tar.bz2 -f
+        binstar remove statsmodels/statsmodels/0.6.0_dev/osx-64/statsmodels-0.6.0_dev-np${NPY}py${PY}_0.tar.bz2 -f
         conda build ./tools/binstar
     done
 done
