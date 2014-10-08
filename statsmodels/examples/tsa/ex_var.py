@@ -20,7 +20,7 @@ res = model.fit(4)
 nobs_all = data.shape[0]
 
 #in-sample 1-step ahead forecasts
-fc_in = np.array([np.squeeze(res.forecast(model.y[t-20:t], 1))
+fc_in = np.array([np.squeeze(res.forecast(model.Y[t-20:t], 1))
                   for t in range(nobs_all-6,nobs_all)])
 
 print(fc_in - res.fittedvalues[-6:])
