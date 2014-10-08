@@ -247,7 +247,7 @@ class PHReg(model.LikelihoodModel):
 
     def __init__(self, endog, exog, status=None, entry=None,
                  strata=None, offset=None, ties='breslow',
-                 missing='drop'):
+                 missing='drop', **kwargs):
 
         # Default is no censoring
         if status is None:
@@ -255,7 +255,8 @@ class PHReg(model.LikelihoodModel):
 
         super(PHReg, self).__init__(endog, exog, status=status,
                                     entry=entry, strata=strata,
-                                    offset=offset, missing=missing)
+                                    offset=offset, missing=missing,
+                                    **kwargs)
 
         # endog and exog are automatically converted, but these are
         # not

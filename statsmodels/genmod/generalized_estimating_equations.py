@@ -407,7 +407,7 @@ class GEE(base.Model):
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
                  exposure=None, dep_data=None, constraint=None,
-                 update_dep=True):
+                 update_dep=True, **kwargs):
 
         self.missing = missing
         self.dep_data = dep_data
@@ -423,7 +423,8 @@ class GEE(base.Model):
         super(GEE, self).__init__(endog, exog, groups=groups,
                                   time=time, offset=offset,
                                   exposure=exposure,
-                                  dep_data=dep_data, missing=missing)
+                                  dep_data=dep_data, missing=missing,
+                                  **kwargs)
 
         self._init_keys.extend(["update_dep", "constraint", "family",
                                 "cov_struct"])

@@ -77,8 +77,8 @@ class QuantReg(RegressionModel):
     Regression, Robust Estimation.
     '''
 
-    def __init__(self, endog, exog):
-        super(QuantReg, self).__init__(endog, exog)
+    def __init__(self, endog, exog, **kwargs):
+        super(QuantReg, self).__init__(endog, exog, **kwargs)
 
     def whiten(self, data):
         """

@@ -453,7 +453,7 @@ class MixedLM(base.LikelihoodModel):
     """
 
     def __init__(self, endog, exog, groups, exog_re=None,
-                 use_sqrt=True, missing='none'):
+                 use_sqrt=True, missing='none', **kwargs):
 
         self.use_sqrt = use_sqrt
 
@@ -474,7 +474,8 @@ class MixedLM(base.LikelihoodModel):
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
         super(MixedLM, self).__init__(endog, exog, groups=groups,
-                                      exog_re=exog_re, missing=missing)
+                                      exog_re=exog_re, missing=missing,
+                                      **kwargs)
 
         self.k_fe = exog.shape[1] # Number of fixed effects parameters
 

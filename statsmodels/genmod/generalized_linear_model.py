@@ -189,10 +189,11 @@ class GLM(base.LikelihoodModel):
     """ % {'extra_params' : base._missing_param_doc}
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
-                 missing='none'):
+                 missing='none', **kwargs):
         self._check_inputs(family, offset, exposure, endog)
         super(GLM, self).__init__(endog, exog, missing=missing,
-                                  offset=self.offset, exposure=self.exposure)
+                                  offset=self.offset, exposure=self.exposure,
+                                  **kwargs)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:

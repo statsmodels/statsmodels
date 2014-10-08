@@ -153,7 +153,16 @@ class ModelData(object):
         """
         none_array_names = []
 
-        if exog is not None:
+        # patsy's already dropped NaNs in y/X
+        missing_idx = kwargs.pop('missing_idx', None)
+
+        if missing_idx is not None:
+            # y, X already handled by patsy. add back in later.
+            combined = ()
+            combined_names = []
+            if exog is None:
+                none_array_names += ['exog']
+        elif exog is not None:
             combined = (endog, exog)
             combined_names = ['endog', 'exog']
         else:
@@ -185,7 +194,11 @@ class ModelData(object):
                     raise ValueError("Arrays with more than 2 dimensions "
                                      "aren't yet handled")
 
-        nan_mask = _nan_rows(*combined)
+        if missing_idx is not None:
+            nan_mask = missing_idx | _nan_rows(*combined)
+        else:
+            nan_mask = _nan_rows(*combined)
+
         if combined_2d:
             nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
@@ -196,6 +209,11 @@ class ModelData(object):
             if none_array_names:
                 combined.update(dict(zip(none_array_names,
                                          [None] * len(none_array_names))))
+
+            if missing_idx is not None:
+                combined.update({'endog': endog})
+                if exog is not None:
+                    combined.update({'exog': exog})
 
             return combined, []
 
@@ -213,6 +231,12 @@ class ModelData(object):
             if none_array_names:
                 combined.update(dict(zip(none_array_names,
                                          [None] * len(none_array_names))))
+
+            if missing_idx is not None:
+                combined.update({'endog': endog})
+                if exog is not None:
+                    combined.update({'exog': exog})
+
             return combined, np.where(~nan_mask)[0].tolist()
         else:
             raise ValueError("missing option %s not understood" % missing)

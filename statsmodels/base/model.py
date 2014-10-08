@@ -139,8 +139,10 @@ class Model(object):
             eval_env = EvalEnvironment({})
         else:
             eval_env += 1  # we're going down the stack again
-        endog, exog = handle_formula_data(data, None, formula,
-                                          depth=eval_env)
+        (endog, exog), missing_idx = handle_formula_data(data, None, formula,
+                                                       depth=eval_env)
+        kwargs.update({'missing': 'drop'})  # hard-code drop bc patsy
+        kwargs.update({'missing_idx': missing_idx})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
