@@ -23,8 +23,10 @@ from statsmodels.genmod.cov_struct import (Exchangeable, Independence,
                                            GlobalOddsRatio, Autoregressive,
                                            Nested)
 import pandas as pd
-import statsmodels.formula.api as sm
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
 from scipy.stats.distributions import norm
+from patsy import dmatrices
 
 def load_data(fname, icept=True):
     """
@@ -712,7 +714,7 @@ class TestGEE(object):
                               family=family, cov_struct=vs)
         mdf = md.fit()
 
-        ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
+        ols = smf.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
         # don't use wrapper, asserts_xxx don't work
         ols = ols._results
@@ -789,7 +791,7 @@ class TestGEE(object):
                                 family=family, cov_struct=vs)
         rslt1 = mod1.fit()
 
-        mod2 = sm.logit("Y ~ X1 + X2 + X3", data=D)
+        mod2 = smf.logit("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
         assert_almost_equal(rslt1.params.values, rslt2.params.values,
@@ -813,7 +815,7 @@ class TestGEE(object):
                                 family=family, cov_struct=vs)
         rslt1 = mod1.fit()
 
-        mod2 = sm.poisson("Y ~ X1 + X2 + X3", data=D)
+        mod2 = smf.poisson("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
         assert_almost_equal(rslt1.params.values, rslt2.params.values,
@@ -1143,8 +1145,68 @@ class TestGEEMultinomialCovType(CheckConsistency):
         check_wrapper(rslt2)
 
 
+def test_missing():
+    # gh-1877
+    data = [['id', 'al', 'status', 'fake', 'grps'],
+            ['4A', 'A', 1, 1, 0],
+            ['5A', 'A', 1, 2.0, 1],
+            ['6A', 'A', 1, 3, 2],
+            ['7A', 'A', 1, 2.0, 3],
+            ['8A', 'A', 1, 1, 4],
+            ['9A', 'A', 1, 2.0, 5],
+            ['11A', 'A', 1, 1, 6],
+            ['12A', 'A', 1, 2.0, 7],
+            ['13A', 'A', 1, 1, 8],
+            ['14A', 'A', 1, 1, 9],
+            ['15A', 'A', 1, 1, 10],
+            ['16A', 'A', 1, 2.0, 11],
+            ['17A', 'A', 1, 3.0, 12],
+            ['18A', 'A', 1, 3.0, 13],
+            ['19A', 'A', 1, 2.0, 14],
+            ['20A', 'A', 1, 2.0, 15],
+            ['2C', 'C', 0, 3.0, 0],
+            ['3C', 'C', 0, 1, 1],
+            ['4C', 'C', 0, 1, 2],
+            ['5C', 'C', 0, 2.0, 3],
+            ['6C', 'C', 0, 1, 4],
+            ['9C', 'C', 0, 1, 5],
+            ['10C', 'C', 0, 3, 6],
+            ['12C', 'C', 0, 3, 7],
+            ['14C', 'C', 0, 2.5, 8],
+            ['15C', 'C', 0, 1, 9],
+            ['17C', 'C', 0, 1, 10],
+            ['22C', 'C', 0, 1, 11],
+            ['23C', 'C', 0, 1, 12],
+            ['24C', 'C', 0, 1, 13],
+            ['32C', 'C', 0, 2.0, 14],
+            ['35C', 'C', 0, 1, 15]]
 
-if  __name__=="__main__":
+    df = pd.DataFrame(data[1:], columns=data[0])
+    df.ix[df.fake == 1, 'fake'] = np.nan
+    mod = smf.gee('status ~ fake', data=df, groups='grps',
+                  cov_struct=sm.cov_struct.Independence(),
+                  family=sm.families.Binomial())
+
+    df = df.dropna()
+    df['constant'] = 1
+
+    mod2 = GEE(df.status, df[['constant', 'fake']], groups=df.grps,
+               cov_struct=sm.cov_struct.Independence(),
+               family=sm.families.Binomial())
+
+    assert_equal(mod.endog, mod2.endog)
+    assert_equal(mod.exog, mod2.exog)
+    assert_equal(mod.groups, mod2.groups)
+
+    res = mod.fit()
+    res2 = mod2.fit()
+
+    assert_almost_equal(res.params.values, res2.params.values)
+
+
+
+
+if __name__ == "__main__":
 
     import nose
 
