@@ -153,7 +153,7 @@ class TestGEE(object):
         assert_almost_equal(rslt1.params, rslt2.params)
         assert_almost_equal(rslt1.bse, rslt2.bse)
 
-    def t_est_missing_formula(self):
+    def test_missing_formula(self):
         # Test missing data handling for formulas.
 
         endog = np.random.normal(size=100)
@@ -174,16 +174,17 @@ class TestGEE(object):
         rslt1 = mod1.fit()
 
         assert_almost_equal(len(mod1.endog), 95)
-        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 3])
+        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
 
         data = data.dropna()
+        groups = groups[data.index.values]
 
         mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
                                 groups, data, missing='none')
         rslt2 = mod2.fit()
 
-        assert_almost_equal(rslt1.params, rslt2.params)
-        assert_almost_equal(rslt1.bse, rslt2.bse)
+        assert_almost_equal(rslt1.params.values, rslt2.params.values)
+        assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
 
     def test_default_time(self):
         # Check that the time defaults work correctly.
