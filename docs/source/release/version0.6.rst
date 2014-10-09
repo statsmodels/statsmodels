@@ -173,6 +173,9 @@ Other important new features
 
 * Plotting functions for timeseries is now imported under the ``sm.tsa.graphics`` namespace in addition to ``sm.graphics.tsa``.
 
+* New `distributions.ExpandedNormal` class implements the Edgeworth expansion
+for weakly non-normal distributions.
+
 * **New datasets**: Added new :ref:`datasets <datasets>` for examples. ``sm.datasets.co2`` is a univariate time-series dataset of weekly co2 readings. It exhibits a trend and seasonality and has missing values.
 
 * Added robust skewness and kurtosis estimators in :func:`sm.stats.stattools.robust_skewness` and :func:`sm.stats.stattools.robust_kurtosis`, respectively.  An alternative robust measure of skewness has been added in :func:`sm.stats.stattools.medcouple`.
