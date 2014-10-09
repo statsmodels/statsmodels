@@ -58,8 +58,7 @@ _arma_params = """\
         The endogenous variable.
     order : iterable
         The (p,q) order of the model for the number of AR parameters,
-        differences, and MA parameters to use. Though optional, the order
-        keyword in fit is deprecated and it is recommended to give order here.
+        differences, and MA parameters to use.
     exog : array-like, optional
         An optional arry of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
@@ -441,19 +440,14 @@ class ARMA(tsbase.TimeSeriesModel):
                                  "extra_sections" : _armax_notes %
                                  {"Model" : "ARMA"}}
 
-    def __init__(self, endog, order=None, exog=None, dates=None, freq=None,
+    def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
         super(ARMA, self).__init__(endog, exog, dates, freq, missing=missing)
         exog = self.data.exog  # get it after it's gone through processing
-        if order is None:
-            import warnings
-            warnings.warn("In the next release order will not be optional "
-                          "in the model constructor.", FutureWarning)
-        else:
-            _check_estimable(len(self.endog), sum(order))
-            self.k_ar = k_ar = order[0]
-            self.k_ma = k_ma = order[1]
-            self.k_lags = max(k_ar, k_ma+1)
+        _check_estimable(len(self.endog), sum(order))
+        self.k_ar = k_ar = order[0]
+        self.k_ma = k_ma = order[1]
+        self.k_lags = max(k_ar, k_ma+1)
         if exog is not None:
             if exog.ndim == 1:
                 exog = exog[:, None]
@@ -806,7 +800,7 @@ class ARMA(tsbase.TimeSeriesModel):
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
-    def fit(self, order=None, start_params=None, trend='c', method="css-mle",
+    def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
@@ -877,25 +871,6 @@ class ARMA(tsbase.TimeSeriesModel):
         r, order = 'F')
 
         """
-        if order is not None:
-            import warnings
-            warnings.warn("The order argument to fit is deprecated. "
-                          "Please use the model constructor argument order. "
-                          "This will overwrite any order given in the model "
-                          "constructor.", FutureWarning)
-
-            _check_estimable(len(self.endog), sum(order))
-            # get model order and constants
-            self.k_ar = int(order[0])
-            self.k_ma = int(order[1])
-            self.k_lags = max(k_ar, k_ma + 1)
-        else:
-            try:
-                assert hasattr(self, "k_ar")
-                assert hasattr(self, "k_ma")
-            except:
-                raise ValueError("Please give order to the model constructor "
-                                 "before calling fit.")
         k_ar = self.k_ar
         k_ma = self.k_ma
 
@@ -1123,7 +1098,7 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
-        arima_fit = super(ARIMA, self).fit(None, start_params, trend,
+        arima_fit = super(ARIMA, self).fit(start_params, trend,
                                            method, transparams, solver,
                                            maxiter, full_output, disp,
                                            callback, **kwargs)
