@@ -196,9 +196,7 @@ Other important new features
 Major Bugs fixed
 ----------------
 
-* Bullet list of major bugs
-* With a link to its github issue.
-* Use the syntax ``:ghissue:`###```.
+* NA-handling with formulas is now correctly handled. :ghissue:`805`, :ghissue:`1877`.
 
 .. currentmodule:: statsmodels.tsa
 
