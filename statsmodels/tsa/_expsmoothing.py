@@ -83,30 +83,31 @@ References
         Taylor. International Journal of Forecasting, 2003
 """
 
-#TODO: return an object and let forecast be a method?
-
 import numpy as np
 from pandas import Index
 from statsmodels.tools.tools import Bunch
-import statsmodels.tools.eval_measures as em
 from statsmodels.base.data import handle_data
 from statsmodels.tsa.base import datetools
-from statsmodels.base import data
+from statsmodels.base.model import LikelihoodModel
+#TODO: remove and replace with Optimizer
 from statsmodels.tsa.tsatools import freq_to_period
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.numdiff import approx_fprime_cs
 
 
 ### helper functions that do the smoothing ###
 # the general pattern is _seasonality_trend_
 
-def _mult_mult(y, sdata, bdata, cdata, alpha, gamma, damp, period, delta, nobs):
+def _mult_mult(y, sdata, bdata, cdata, alpha, gamma, damp, period, delta,
+               nobs):
     for i in range(nobs):
         s = sdata[i]
         b = bdata[i]
         period_i = cdata[i]
         sdata[i + 1] = alpha * (y[i] / period_i) + (1 - alpha) * s * (b**damp)
         bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b**damp)
-        cdata[i + period] = delta * (y[i] / (s*b**damp)) + (1 - delta) * period_i
+        cdata[i + period] = (delta * (y[i] / (s*b**damp)) +
+                             (1 - delta) * period_i)
     return sdata, bdata, cdata
 
 
@@ -182,15 +183,54 @@ _compute_fitted = {
 }
 
 
+def _simple_initial(y, trend, season, period):
+    initial = {}
+    if not period or period == 1:
+        initial.update({'st': y[0]})
+        if trend.startswith('m'):
+            initial.update({'bt': y[1] / y[0]})
+        else:
+            initial.update({'bt': y[1] - y[0]})
+    else:
+        initial.update({'st': y[:period].mean()})
+        initial.update({'bt': (np.mean((y[period:2 * period] - y[:period]))
+                               / float(period))})
+        if season.startswith('m'):
+            initial.update({'ct': y[:period] / y[:period].mean()})
+        else:
+            initial.update({'ct': y[:period] / y[:period].mean()})
+
+    return initial
+
+
+def _check_model(y, nobs, alpha, damp, trend, season, period):
+    if nobs <= 3:  # pragma : no cover
+        raise ValueError("Cannot implement model, must have at least 4 "
+                        "data points")
+    if alpha == 0:  # pragma : no cover
+        raise ValueError("Cannot fit model, alpha must not be 0")
+
+    if damp != 1 and trend.startswith('b'):
+        raise ValueError("Dampening not available for Brown's LES model")
+
+    if season.startswith('m') and trend.startswith('b'):
+        raise ValueError("Multiplicative seasonality not availbly for "
+                            "Brown's LES model")
+    if period is not None:
+        #Initialize to bypass delta function with 0
+        if nobs < 2 * period:  # pragma : no cover
+            raise ValueError("Cannot implement model, must be 2 at least "
+                                "periods long")
+
+    if season.startswith('m') and np.any(y < 0):
+        raise ValueError("Multiplicative seasonality requires positive y")
+
+
 def _init_nonseasonal_params(initial, sdata, bdata, y, gamma, trend):
     if isinstance(initial, dict):
         sdata[0] = initial.get('st', y[0])
         # no trend
-        if gamma == 0:  # pragma : no cover
-            if 'bt' in initial:
-                raise ValueError("Model does not contain a trend and got "
-                                 "initial value for one.")
-        else:
+        if gamma != 0:  # pragma : no cover
             if trend.startswith('m'):
                 bdata[0] = initial.get('bt', y[1] / y[0])
             else:
@@ -222,9 +262,6 @@ def _init_seasonal_params(initial, sdata, bdata, cdata, period, gamma, y,
                                     float(period)))
         if not 'ct' in initial:
             if season.startswith('m'):
-                if np.any(y < 0):
-                    raise ValueError("Multiplicative seasonality requires"
-                                     " positive y")
                 cdata[:period] = y[:period] / y[:period].mean()
             else:
                 cdata[:period] = y[:period] - y[:period].mean()
@@ -252,7 +289,22 @@ def _init_seasonal_params(initial, sdata, bdata, cdata, period, gamma, y,
     return sdata, bdata, cdata
 
 
-class ExpSmoothing(object):
+def _init_arrays(params, nobs, period):
+    alpha, gamma, delta, damp, s0, b0 = params[:6]
+    c0 = params[6:]
+    dtype = params.dtype
+    sdata = np.zeros(nobs + 1, dtype=dtype)
+    bdata = np.zeros(nobs + 1, dtype=dtype)
+    cdata = np.zeros(nobs + period if c0 is not None else nobs, dtype=dtype)
+    sdata[0] = s0
+    bdata[0] = b0
+    if c0 is not None:
+        cdata[:len(c0)] = c0
+
+    return sdata, bdata, cdata, alpha, gamma, delta, damp
+
+
+class ExpSmoothing(LikelihoodModel):
     """
     Exponential Smoothing
     This function handles 15 different Standard Exponential Smoothing models
@@ -351,51 +403,83 @@ class ExpSmoothing(object):
      * IBM SPSS Custom Exponential Smoothing Models
     """
     def __init__(self, y, alpha=None, gamma=None, delta=None, damp=1,
-                 trend='additive', season='additive',
-                 period=None, dates=None):
+                 trend='additive', season='additive', error='additive',
+                 initial=None, period=None, dates=None):
         self.data = self._handle_data(y, missing='none')
         self.nobs = nobs = len(self.data.endog)
-        if nobs <= 3:  # pragma : no cover
-            raise ValueError("Cannot implement model, must have at least 4 "
-                            "data points")
-        if alpha == 0:  # pragma : no cover
-            raise ValueError("Cannot fit model, alpha must not be 0")
 
-        season, trend = season[0].lower(), trend[0].lower()
-
-        if damp != 1 and trend.startswith('b'):
-            raise ValueError("Dampening not available for Brown's LES model")
-
-        if season.startswith('m') and trend.startswith('b'):
-            raise ValueError("Multiplicative seasonality not availbly for "
-                             "Brown's LES model")
-        if period is None:
-            #Initialize to bypass delta function with 0
-            period = 0
-            if nobs < 2 * period:  # pragma : no cover
-                raise ValueError("Cannot implement model, must be 2 at least "
-                                 "periods long")
-
+        self.y = self.data.endog
         self.seasontype = season
         self.trendtype = trend
-        self.alpha = alpha
-        self.gamma = gamma
-        self.delta = delta
-        self.damp = damp
+        self.initial = initial
 
         self._init_dates(dates, period)
         #NOTE: period vs. freq. We need period for estimation, freq for dates
         # handling in prediction
+        lower_first = lambda x : x[0].lower()
+        season, trend, error = map(lower_first, [season, trend, error])
+        self.seasontype = season
+        self.trendtype = trend
+        self.errortype = error
+        _check_model(y, nobs, alpha, damp, trend, season, self.period)
+
+        self._set_params_mask(alpha, gamma, delta, damp, initial)
 
     def _handle_data(self, X, missing='none'):
         data = handle_data(X, None, missing, 0)
+        self.exog = None  #TODO: remove this when we don't inherit from LLM
+        self.endog = data.endog #TODO: ditto
         return data
+
+    def _set_params_mask(self, alpha, gamma, delta, damp, initial):
+        params_mask = [alpha is not None,
+                       gamma is not None,
+                       delta is not None,
+                       damp is not None]
+        fixed_params = [alpha, gamma, delta, damp]
+
+        #if damp > 0 and damp != 1 or initial is None:
+        #TODO: uncomment above when optimization works
+        if damp is None or initial is None:
+            if isinstance(initial, dict):
+                from warnings import warn
+                warn("Damped model requires using optimal starting values."
+                     " Fixed initial values are being ignored.", UserWarning)
+            params_mask += [False]
+            if gamma != 0: # model has a trend
+                params_mask += [False]
+            else: # no trend, so fix at zero
+                params_mask += [True]
+            if delta != 0: # model has seasonality
+                params_mask += [False]*self.period
+
+        elif isinstance(initial, dict):
+            if 'st' in initial:
+                params_mask += [True]
+                fixed_params += [initial['st']]
+            else:
+                params_mask += [False]
+            if gamma != 0 and 'bt' in initial: # model has a trend
+                params_mask += [True]
+                fixed_params += [initial['bt']]
+            if delta != 0 and 'ct' in initial: # model has seasonality
+                params_mask += [True]*self.period
+                fixed_params += list(initial['ct'])
+
+        fixed_params = np.array(fixed_params, dtype=float)
+        finite = np.isfinite(fixed_params)
+        self._fixed_params = fixed_params[finite]
+        self._fixed_params_mask = np.array(params_mask)
+        if not np.all(params_mask):
+            self._to_optimize = True
+        else:  # should this just call fit and return?
+            self._to_optimize = False
 
     #TODO: move into a TimeSeriesOptimizer super class. Mostly copied from
     # TimeSeriesModel
     def _init_dates(self, dates, period):
         # maybe freq to period
-        self.period = period
+        self.period = period or 0
         if dates is None:
             dates = self.data.row_labels
 
@@ -423,26 +507,78 @@ class ExpSmoothing(object):
     def predict(self, params):
         pass
 
-    def loglike(self, params):
-        pass
+    def _transparams(self, params):
+        params[self._fixed_params_mask] = self._fixed_params
+        return params
 
-    def fit(self, initial=None):
+    def score(self, params):
+        return approx_fprime_cs(params, self.loglike)
+
+    def loglike(self, params):
+        nobs = self.nobs
+        y = self.y
+        params = self._transparams(params)
+        (sdata, bdata, cdata,
+         alpha, gamma, delta, damp) = _init_arrays(params, nobs, self.period)
+
+        trend = self.trendtype
+        season = self.seasontype
+        smooth_func = _compute_smoothing[(season, trend)]
+        sdata, bdata, cdata = smooth_func(y, sdata, bdata, cdata,
+                                          alpha, gamma, damp, self.period,
+                                          delta, nobs)
+
+        #Handles special case for Brown linear
+        if trend.startswith('b'):
+            at = 2 * sdata - bdata
+            bt = alpha / (1 - alpha) * (sdata - bdata)
+            sdata = at
+            bdata = bt
+
+        fitted_func = _compute_fitted[(season, trend)]
+        pdata = fitted_func(sdata[:nobs], bdata[:nobs], cdata[:nobs], damp)
+        # NOTE: could compute other residuals for the non-linear model
+
+        if self.errortype.startswith('a'):
+            resid = y - pdata
+            return np.log(np.sum(resid**2))
+        else:
+            resid = (y - pdata)/pdata
+            return nobs/2.*np.log(np.sum(resid**2)) + np.sum(np.log(pdata))
+
+
+    def fit(self, start_params=None, method='bfgs'):
         """
         Fit the exponential smoothing model
 
         Parameters
         ----------
         """
-        alpha = self.alpha
-        gamma = self.gamma
-        delta = self.delta
-        damp = self.damp
-        if alpha is None or gamma is None or delta is None:
-            self._optimize()
+        if self._to_optimize:
+            return self._fit_optimize(start_params, method)
         else:
-            return self._fit(initial, alpha, gamma, delta, damp)
+            return self._fit_once()
 
-    def _fit(self, initial, alpha, gamma, delta, damp):
+    def _fit_optimize(self, start_params, method):
+        if start_params is None:
+            start_params = [.1, .01, .01, .99]
+            if self.initial == 'simple' or self.initial is None:
+                initial = _simple_initial(self.y, self.trendtype,
+                                          self.seasontype, self.period)
+            start_params += [initial['st']]
+            start_params += [initial['bt']]
+            if 'ct' in initial:
+                start_params += list(initial['ct'])
+
+        start_params = np.asarray(start_params)
+        func = self.loglike
+        res = super(ExpSmoothing, self).fit(start_params=start_params,
+                                             method=method)
+
+    def _fit_once(self):
+        alpha, gamma, delta, damp = self._fixed_params[:4]
+        initial = self.initial
+
         trend = self.trendtype
         season = self.seasontype
 
@@ -483,11 +619,6 @@ class ExpSmoothing(object):
         # NOTE: could compute other residuals for the non-linear model
         resid = y - pdata
 
-        #Calculations for summary items (NOT USED YET)
-        x1 = y[2:]
-        x2 = pdata[2:nobs]
-        rmse = em.rmse(x1, x2)
-
         # go ahead and save the first forecast
         _forecast_level = sdata[-1]
         _forecast_trend = bdata[-1]
@@ -509,7 +640,7 @@ class ExpSmoothing(object):
 ########################################################
 
 
-def ses(y, alpha, forecast=None, dates=None, initial=None):
+def ses(y, alpha, forecast=None, dates=None, initial='simple'):
     """
     Simple Exponential Smoothing (SES)
     This function is a wrapper that performs simple exponential smoothing.
@@ -556,12 +687,13 @@ def ses(y, alpha, forecast=None, dates=None, initial=None):
      * IBM SPSS Custom Exponential Smoothing Models
     """
     s_es = ExpSmoothing(y=y, alpha=alpha, gamma=0, delta=0, damp=0,
-                        trend='additive', season='additive', dates=dates)
-    return s_es.fit(initial=initial)
+                        trend='additive', season='additive', dates=dates,
+                        initial=initial)
+    return s_es.fit()
 
 
 ################Double Exponential Smoothing###############
-def brown_linear(y, alpha, dates=None, initial=None):
+def brown_linear(y, alpha, dates=None, initial='simple'):
     """
     Brown's Linear (aka Double) Exponential Smoothing (LES)
     This function a special case of the Holt's Exponential smoothing
@@ -614,13 +746,13 @@ def brown_linear(y, alpha, dates=None, initial=None):
     """
     brown = ExpSmoothing(y=y, alpha=alpha, gamma=alpha, delta=0,
                          damp=1, period=None, trend='brown',
-                         season='additive', dates=dates)
+                         season='additive', dates=dates, initial=initial)
 
-    return brown.fit(initial=initial)
+    return brown.fit()
 
 
 #General Double Exponential Smoothing Models
-def holt_des(y, alpha, gamma, trend='additive', initial=None,
+def holt_des(y, alpha, gamma, trend='additive', initial='simple',
              dates=None):
     """
     Holt's Double Exponential Smoothing
@@ -683,14 +815,15 @@ def holt_des(y, alpha, gamma, trend='additive', initial=None,
        James W. Taylor. International Journal of Forecasting, 2003
     """
     holt = ExpSmoothing(y=y, alpha=alpha, gamma=gamma, delta=0, period=None,
-                        damp=1, trend=trend, season='additive')
+                        damp=1, trend=trend, season='additive',
+                        initial=initial)
 
-    return holt.fit(initial=initial)
+    return holt.fit()
 
 #NOTE: gamma < damp < 1 for damped models
 
 #Damped-Trend Linear Exponential Smoothing Models
-def damp_es(y, alpha, gamma, damp=1, trend='additive', initial=None,
+def damp_es(y, alpha, gamma, damp=1, trend='additive', initial='simple',
             dates=None):
     """
     Damped-Trend Linear Exponential Smoothing
@@ -752,14 +885,14 @@ def damp_es(y, alpha, gamma, damp=1, trend='additive', initial=None,
     """
     dampend = ExpSmoothing(y, alpha=alpha, gamma=gamma, delta=0, period=None,
                            damp=damp, trend=trend, season='additive',
-                           dates=dates)
+                           dates=dates, initial=initial)
 
-    return dampend.fit(initial=initial)
+    return dampend.fit()
 
 
 ################Seasonal Exponential Smoothing###############
 def seasonal_es(y, alpha, delta, period=None, damp=False,
-                season='additive', dates=None, initial=None):
+                season='additive', dates=None, initial='simple'):
     """
     Simple Seasonal Smoothing
     Use when there is a seasonal element but no trend
@@ -804,9 +937,9 @@ def seasonal_es(y, alpha, delta, period=None, damp=False,
 
     ssexp = ExpSmoothing(y, alpha=alpha, gamma=0, delta=delta, period=period,
                          damp=damp, trend='additive', season=season,
-                         dates=dates)
+                         dates=dates, initial=initial)
 
-    return ssexp.fit(initial=initial)
+    return ssexp.fit()
 
 
 class SmoothingResults(object):

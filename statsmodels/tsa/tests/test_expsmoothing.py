@@ -48,7 +48,7 @@ class TestExpSmoothing:
     def test_holt_des_ndarray(self):
         # model with trend for additive
         dta = (self.decomposed.resid + self.decomposed.trend).dropna()
-        results = holt_des(dta.values, .86, .523, initial=None)
+        results = holt_des(dta.values, .86, .523)
         expected_res = expected.holt_des()
 
         np.testing.assert_almost_equal(results.trend,
@@ -64,7 +64,7 @@ class TestExpSmoothing:
 
         # model with exponential trend for multiplicative
         expected_res = expected.holt_des_mult()
-        results = holt_des(dta.values, .86, .523, trend='mult', initial=None)
+        results = holt_des(dta.values, .86, .523, trend='mult')
         np.testing.assert_almost_equal(results.trend,
                                        expected_res.trend, 8)
         np.testing.assert_almost_equal(results.fitted,
@@ -186,9 +186,9 @@ class TestExpSmoothing:
         gamma = .0387/alpha
         delta = .01
         model = ExpSmoothing(dta.values, alpha=alpha,
-                                gamma=gamma, delta=delta, period=12,
-                                season='m', trend='m', damp=1)
-        results = model.fit(initial=init)
+                             gamma=gamma, delta=delta, period=12, season='m',
+                             trend='m', damp=1, initial=init)
+        results = model.fit()
 
         expected_res = expected.multmult()
         np.testing.assert_almost_equal(results.fitted,
@@ -209,7 +209,7 @@ class TestExpSmoothing:
                             0.994001023919, 0.990791351262, 0.991124074728,
                             0.996183466518, 1.002105875039, 1.006614389201,
                             1.008529917146, 1.007285317008, 1.004186354267])
-        init_ct = init_ct[::-1] # proper time order
+        init_ct = init_ct[::-1]  # proper time order
         init = {'st': 314.78888791602560104366,
                 'bt': 1.00024658183093162478,
                 'ct' : init_ct,
@@ -220,9 +220,12 @@ class TestExpSmoothing:
         gamma = .0387/alpha
         delta = .01
         model = ExpSmoothing(dta, alpha=alpha,
-                             gamma=gamma, delta=delta, period=12,
-                             season='m', trend='m', damp=1)
-        results = model.fit(initial=init)
+                             gamma=gamma, delta=delta,
+                             season='m', trend='m', error='m', damp=1,
+                             initial=init)
+        results = model.fit()
+        start_params = results.model._fixed_params
+        model.loglike(start_params)
 
         expected_res = expected.multmult_pandas()
         assert_series_equal(results.fitted,
@@ -237,3 +240,47 @@ class TestExpSmoothing:
                             expected_res.forecasts, 8)
         assert_series_equal(results.seasonal,
                             expected_res.seasonal, 8)
+
+    def test_exp_smoothing_fit(self):
+        dta = self.dta
+        model = ExpSmoothing(dta, season='m', trend='m', error='m', damp=1,
+                             period=12)
+        init_ct = np.array([1.001843291395, 0.999992706537, 0.997342232980,
+                            0.994001023919, 0.990791351262, 0.991124074728,
+                            0.996183466518, 1.002105875039, 1.006614389201,
+                            1.008529917146, 1.007285317008, 1.004186354267])
+        init_ct = init_ct[::-1]  # proper time order
+        alpha = .7198
+        gamma = .0387/alpha
+        delta = .01
+        params = np.r_[alpha, gamma, delta, 1,
+                       314.78888791602560104366, 1.00024658183093162478,
+                       init_ct]
+
+        params = np.r_[[0.5433352996306, 0.0790242145084, 0.0626611745614, .98,
+          314.8029212913417, 1.0004536842978],
+
+          [1.0021708817656,
+          0.9999064365630, 0.9974326241115, 0.9940508902388,
+          0.9909604953999, 0.9911568107134, 0.9964092694074,
+          1.0019246746939, 1.0061826489657, 1.0084295862958,
+           1.0073716744779, 1.004004007367][::-1]]
+
+        import ipdb; ipdb.set_trace()
+
+        results = model.fit()
+
+        expected_res = expected.multmult_pandas()
+        assert_series_equal(results.fitted,
+                            expected_res.fitted, 8)
+        assert_series_equal(results.trend,
+                            expected_res.trend, 8)
+        #NOTE: see commented out code for ets-matched residuals
+        #np.testing.assert_almost_equal(results.resid,
+        #                               expected_res.resid, 5)
+        assert_series_equal(results.level, expected_res.level, 8)
+        assert_series_equal(results.forecast(h=48),
+                            expected_res.forecasts, 8)
+        assert_series_equal(results.seasonal,
+                            expected_res.seasonal, 8)
+

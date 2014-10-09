@@ -6,7 +6,7 @@ co2.filt <- filter(dta$co2, filter=c(.75, .25))
 co2.filt.one <- filter(dta$co2, filter=c(.75, .25), sides=1)
 co2.filt.r <- filter(dta$co2, filter=c(.75, .25), method='recursive')
 co2.filt.r.init <- filter(dta$co2, filter=c(.75, .25), method='recursive', init=c(300,300))
-
+co2.filt.r.init <- filter(dta$co2, filter=c(.75, .25), method='recursive', init=c(300,200))
 
 
 
@@ -179,4 +179,7 @@ R2nparray(list(xhat=co2.multmult$fitted,
                forecasts=forecast(co2.multmult, 48)$mean),
                fname='/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/co2_mult_mult_results.py')
 
+# likelihood of multiplicatiev error model
+(526*log(sum((co2.multmult$residuals^2))) + 2*sum(log(abs(co2.multmult$fitted))))/2
 
+co2.multmult = ets(co2.ts, model="MMM", damped=FALSE)
