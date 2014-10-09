@@ -22,7 +22,7 @@ class NAAction(NAAction):
         return [v[good_mask, ...] for v in values]
 
 
-def handle_formula_data(Y, X, formula, depth=0):
+def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     """
     Returns endog, exog, and the model specification from arrays and formula
 
@@ -50,7 +50,7 @@ def handle_formula_data(Y, X, formula, depth=0):
     if isinstance(formula, tuple(iterkeys(formula_handler))):
         return formula_handler[type(formula)]
 
-    na_action = NAAction()
+    na_action = NAAction(on_NA=missing)
 
     if X is not None:
         if data_util._is_using_pandas(Y, X):
@@ -67,7 +67,8 @@ def handle_formula_data(Y, X, formula, depth=0):
             result = dmatrices(formula, Y, depth, return_type='dataframe',
                                NA_action=na_action)
 
-    missing_mask = na_action.missing_mask
+    # if missing == 'raise' there's not missing_mask
+    missing_mask = getattr(na_action, 'missing_mask', None)
     if not np.any(missing_mask):
         missing_mask = None
     return result, missing_mask

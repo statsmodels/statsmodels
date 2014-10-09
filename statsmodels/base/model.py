@@ -139,10 +139,14 @@ class Model(object):
             eval_env = EvalEnvironment({})
         else:
             eval_env += 1  # we're going down the stack again
+        missing = kwargs.get('missing', 'drop')
+        if missing == 'none':  # with patys it's drop or raise. let's raise.
+            missing = 'raise'
         (endog, exog), missing_idx = handle_formula_data(data, None, formula,
-                                                       depth=eval_env)
-        kwargs.update({'missing': 'drop'})  # hard-code drop bc patsy
-        kwargs.update({'missing_idx': missing_idx})
+                                                         depth=eval_env,
+                                                         missing=missing)
+        kwargs.update({'missing_idx': missing_idx,
+                       'missing': missing})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
