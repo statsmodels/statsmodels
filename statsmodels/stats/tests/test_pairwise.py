@@ -5,7 +5,7 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-
+import warnings
 from statsmodels.compat.python import BytesIO, asbytes, range
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
@@ -248,8 +248,10 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1] * 10)
 
         # group_order doesn't select all observations, only one group left
-        assert_raises(ValueError, MultiComparison, np.array([1] * 10),
-                     [1, 2] * 5, group_order=[1])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            assert_raises(ValueError, MultiComparison, np.array([1] * 10),
+                         [1, 2] * 5, group_order=[1])
 
         # group_order doesn't select all observations,
         # we do tukey_hsd with reduced set of observations
