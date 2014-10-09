@@ -571,7 +571,12 @@ class WLS(RegressionModel):
                  **kwargs):
         weights = np.array(weights)
         if weights.shape == ():
-            weights = np.repeat(weights, len(endog))
+            if (missing == 'drop' and 'missing_idx' in kwargs and
+                    kwargs['missing_idx'] is not None):
+                # patsy may have truncated endog
+                weights = np.repeat(weights, len(kwargs['missing_idx']))
+            else:
+                weights = np.repeat(weights, len(endog))
         # handle case that endog might be of len == 1
         if len(weights) == 1:
             weights = np.array([weights.squeeze()])
