@@ -610,15 +610,6 @@ class SVARResults(SVARProcess, VARResults):
         super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
                              B, names=names)
 
-    @cache_readonly
-    def coef_names(self):
-        """Coefficient names (deprecated)
-        """
-        from warnings import warn
-        warn("coef_names is deprecated and will be removed in 0.6.0."
-             "Use exog_names", FutureWarning)
-        return self.exog_names
-
     def irf(self, periods=10, var_order=None):
         """
         Analyze structural impulse responses to shocks in system

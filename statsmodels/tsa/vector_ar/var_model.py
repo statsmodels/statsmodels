@@ -846,15 +846,6 @@ class VARResults(VARProcess):
 
         super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
 
-    @cache_readonly
-    def coef_names(self):
-        """Coefficient names (deprecated)
-        """
-        from warnings import warn
-        warn("coef_names is deprecated and will be removed in 0.6.0."
-             "Use exog_names", FutureWarning)
-        return self.exog_names
-
     def plot(self):
         """Plot input time series
         """
