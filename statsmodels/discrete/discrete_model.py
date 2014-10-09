@@ -2438,17 +2438,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
 
-
-    def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
-            count=False):
-        """DEPRECATED: marginal effects, use get_margeff instead
-        """
-        import warnings
-        warnings.warn("This method is deprecated and will be removed in 0.6.0."
-                " Use get_margeff instead", FutureWarning)
-        return self.get_margeff(at, method, atexog, dummy, count)
-
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         """Summarize the Regression Results
@@ -2725,13 +2714,6 @@ class BinaryResults(DiscreteResults):
             smry.add_extra_txt(etext)
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
-
-    @cache_readonly
-    def resid(self):
-        import warnings
-        warnings.warn("This attribute is deprecated and will be removed in "
-                      "0.6.0. Use resid_dev instead.", FutureWarning)
-        return self.resid_dev
 
     @cache_readonly
     def resid_dev(self):
