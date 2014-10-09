@@ -164,9 +164,12 @@ class Beta(GenericLikelihoodModel):
 
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
-        # TODO: derive a and b and constrain to > 0?
 
-        if np.any(phi <= np.finfo(float).eps): return np.array(-np.inf)
+        alpha = mu * phi
+        beta = (1 - mu) * phi
+
+        if np.any(alpha <= np.finfo(float).eps): return np.array(-np.inf)
+        if np.any(beta <= np.finfo(float).eps): return np.array(-np.inf)
 
         ll = lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) \
                 + (mu * phi - 1) * np.log(y) + (((1 - mu) * phi) - 1) \
