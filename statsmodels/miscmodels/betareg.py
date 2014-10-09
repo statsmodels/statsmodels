@@ -122,6 +122,68 @@ class Beta(GenericLikelihoodModel):
         """
         return -self._ll_br(self.endog, self.exog, self.exog_precision, params)
 
+    def _ll_br(self, y, X, Z, params):
+        nz = Z.shape[1]
+
+        Xparams = params[:-nz]
+        Zparams = params[-nz:]
+
+        mu = self.link.inverse(np.dot(X, Xparams))
+        phi = self.link_precision.inverse(np.dot(Z, Zparams))
+
+        alpha = mu * phi
+        beta = (1 - mu) * phi
+
+        if np.any(alpha <= np.finfo(float).eps): return np.array(-np.inf)
+        if np.any(beta <= np.finfo(float).eps): return np.array(-np.inf)
+
+        ll = lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) \
+                + (mu * phi - 1) * np.log(y) + (((1 - mu) * phi) - 1) \
+                * np.log(1 - y)
+
+        return ll
+
+    def score(self, params):
+        """
+        Returns the score vector of the profile log-likelihood.
+
+        http://www.tandfonline.com/doi/pdf/10.1080/00949650903389993
+        """
+        #r = super(Beta, self).score(params)
+        #print(r.shape)
+        #1/0
+
+        y, X, Z = self.endog, self.exog, self.exog_precision
+        nz = Z.shape[1]
+        Xparams = params[:-nz]
+        Zparams = params[-nz:]
+
+        # NO LINKS
+        mu = np.dot(X, Xparams)
+        phi = np.dot(Z, Zparams)
+
+        plink = self.link_precision
+
+        # did they mean to force logit or should I use link here?
+        ystar = np.log(y / (1 - y))
+        mustar = plink(mu * phi) - plink((1 - mu) * phi)
+        yt = np.log(1 - y)
+
+        T = np.diag(self.link.inverse_deriv(mu))
+        H = np.diag(plink.inverse_deriv(phi))
+        #
+        UB = np.dot(np.dot(phi * X.T, T), ystar - mustar)
+        # mu vs mu*?
+        M = np.diag(mu)
+        P2 = np.dot(M, ystar - mustar) + (yt - mu)
+        UP = np.dot(np.dot(Z.T, H), P2)
+
+        U = np.append(UB, UP)
+        assert U.shape == params.shape
+        return U
+
+
+
     def fit(self, start_params=None, maxiter=100000, maxfun=5000, disp=False,
             method='bfgs', **kwds):
         """
@@ -145,32 +207,13 @@ class Beta(GenericLikelihoodModel):
                                   family=Binomial(link=self.link.__class__)
                                   ).fit(disp=False).params
             nz = self.exog_precision.shape[1]
+            # TODO: http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
+            # on page 8
             start_params = np.append(start_params, [1.0 / nz] * nz)
 
         return super(Beta, self).fit(start_params=start_params,
                                         maxiter=maxiter, maxfun=maxfun,
                                         method=method, disp=disp, **kwds)
-
-    def _ll_br(self, y, X, Z, params):
-        nz = Z.shape[1]
-
-        Xparams = params[:-nz]
-        Zparams = params[-nz:]
-
-        mu = self.link.inverse(np.dot(X, Xparams))
-        phi = self.link_precision.inverse(np.dot(Z, Zparams))
-
-        alpha = mu * phi
-        beta = (1 - mu) * phi
-
-        if np.any(alpha <= np.finfo(float).eps): return np.array(-np.inf)
-        if np.any(beta <= np.finfo(float).eps): return np.array(-np.inf)
-
-        ll = lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) \
-                + (mu * phi - 1) * np.log(y) + (((1 - mu) * phi) - 1) \
-                * np.log(1 - y)
-
-        return ll
 
 if __name__ == "__main__":
 
