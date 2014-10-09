@@ -177,19 +177,13 @@ class Beta(GenericLikelihoodModel):
 if __name__ == "__main__":
 
     import patsy
-    dat = pd.read_table('gasoline.txt')
-    Z = patsy.dmatrix('~ temp', dat, return_type='dataframe')
-    # using other precison params with
-    m = Beta.from_formula('iyield ~ C(batch, Treatment(10)) + temp', dat,
-            exog_precision=Z, link_precision=sm.families.links.identity())
-    print(m.fit().summary())
 
-    fex = pd.read_csv('foodexpenditure.csv')
+    fex = pd.read_csv('tests/foodexpenditure.csv')
     m = Beta.from_formula(' I(food/income) ~ income + persons', fex)
     print(m.fit().summary())
     #print GLM.from_formula('iyield ~ C(batch) + temp', dat, family=Binomial()).fit().summary()
 
-    dev = pd.read_csv('methylation-test.csv')
+    dev = pd.read_csv('tests/methylation-test.csv')
     Z = patsy.dmatrix('~ age', dev, return_type='dataframe')
     m = Beta.from_formula('methylation ~ gender + CpG', dev,
             exog_precision=Z,
