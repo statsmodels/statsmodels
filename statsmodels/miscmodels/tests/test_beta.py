@@ -75,7 +75,7 @@ def test_methylation_coefficients():
     model = "methylation ~ gender + CpG"
     Z = patsy.dmatrix("~ age", methylation)
 
-    mod = Beta.from_formula(model, methylation, Z=Z, link_phi=links.identity())
+    mod = Beta.from_formula(model, methylation, exog_precision=Z, link_precision=links.identity())
     rslt = mod.fit()
     yield check_same, rslt.params[:-2], expected_methylation_mean['Estimate'], 1e-2, "estimates"
     yield check_same, rslt.tvalues[:-2], expected_methylation_mean['zvalue'], 0.1, "z-scores"
@@ -85,7 +85,7 @@ def test_methylation_precision():
     model = "methylation ~ gender + CpG"
     Z = patsy.dmatrix("~ age", methylation)
 
-    mod = Beta.from_formula(model, methylation, Z=Z, link_phi=links.identity())
+    mod = Beta.from_formula(model, methylation, exog_precision=Z, link_precision=links.identity())
     rslt = mod.fit()
     #yield check_same, sm.families.links.logit()(rslt.params[-2:]), expected_methylation_precision['Estimate'], 1e-3, "estimate"
     #yield check_same, rslt.tvalues[-2:], expected_methylation_precision['zvalue'], 0.1, "z-score"
