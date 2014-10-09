@@ -74,22 +74,24 @@ class TestExpandedNormal(TestCase):
         assert_raises(ValueError, ExpandedNormal, [1])
 
     def test_coefficients(self):
-        # 3rd order in n**(1/2)
-        ne3 = ExpandedNormal([0., 1., 1.])
-        assert_allclose(ne3._coef, [1., 0., 0., 1./6])
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', UserWarning)
+            # 3rd order in n**(1/2)
+            ne3 = ExpandedNormal([0., 1., 1.])
+            assert_allclose(ne3._coef, [1., 0., 0., 1./6])
 
-        # 4th order in n**(1/2)
-        ne4 = ExpandedNormal([0., 1., 1., 1.])
-        assert_allclose(ne4._coef, [1., 0., 0., 1./6, 1./24, 0., 1./72])
+            # 4th order in n**(1/2)
+            ne4 = ExpandedNormal([0., 1., 1., 1.])
+            assert_allclose(ne4._coef, [1., 0., 0., 1./6, 1./24, 0., 1./72])
 
-        # 5th order
-        ne5 = ExpandedNormal([0., 1., 1., 1., 1.])
-        assert_allclose(ne5._coef, [1., 0., 0., 1./6, 1./24, 1./120,
-                1./72, 1./144, 0., 1./1296])
+            # 5th order
+            ne5 = ExpandedNormal([0., 1., 1., 1., 1.])
+            assert_allclose(ne5._coef, [1., 0., 0., 1./6, 1./24, 1./120,
+                    1./72, 1./144, 0., 1./1296])
 
-        # adding trailing zeroes increases the order
-        ne33 = ExpandedNormal([0., 1., 1., 0.])
-        assert_allclose(ne33._coef, [1., 0., 0., 1./6, 0., 0., 1./72])
+            # adding trailing zeroes increases the order
+            ne33 = ExpandedNormal([0., 1., 1., 0.])
+            assert_allclose(ne33._coef, [1., 0., 0., 1./6, 0., 0., 1./72])
 
     def test_normal(self):
         # with two cumulants, it's just a gaussian
@@ -101,7 +103,9 @@ class TestExpandedNormal(TestCase):
         # construct the expansion for \chi^2
         N, df = 6, 15
         cum = [_chi2_cumulant(n+1, df) for n in range(N)]
-        ne = ExpandedNormal(cum, name='edgw_chi2')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            ne = ExpandedNormal(cum, name='edgw_chi2')
 
         # compare the moments
         assert_allclose([_chi2_moment(n, df) for n in range(N)],
