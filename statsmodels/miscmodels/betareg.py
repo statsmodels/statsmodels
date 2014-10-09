@@ -23,13 +23,7 @@ from scipy.special import gammaln as lgamma
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.genmod.families import Binomial
 
-# this is only need while #2024 is open.
-class Logit(sm.families.links.Logit):
-
-    """Logit tranform that won't overflow with large numbers."""
-
-    def inverse(self, z):
-        return 1 / (1. + np.exp(-z))
+Logit = sm.families.links.logit
 
 _init_example = """
 
