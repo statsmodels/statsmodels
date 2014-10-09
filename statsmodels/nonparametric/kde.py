@@ -265,13 +265,6 @@ class KDEUnivariate(object):
         return self.kernel.density(self.endog, point)
 
 
-class KDE(KDEUnivariate):
-    def __init__(self, endog):
-        self.endog = np.asarray(endog)
-        warnings.warn("KDE is deprecated and will be removed in 0.6, "
-                      "use KDEUnivariate instead", FutureWarning)
-
-
 #### Kernel Density Estimator Functions ####
 
 def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None,
@@ -460,7 +453,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     X = np.asarray(X)
     X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
                                                 # will affect underlying data?
-    
+
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 

@@ -1074,7 +1074,7 @@ class LikelihoodModelResults(Results):
             return cov_p
 
     #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None,
+    def t_test(self, r_matrix, cov_p=None, scale=None,
                use_t=None):
         """
         Compute a t-test for a each linear hypothesis of the form Rb = q
@@ -1083,16 +1083,12 @@ class LikelihoodModelResults(Results):
         ----------
         r_matrix : array-like, str, tuple
             - array : If an array is given, a p x k 2d array or length k 1d
-              array specifying the linear restrictions.
+              array specifying the linear restrictions. It is assumed
+              that the linear combination is equal to zero.
             - str : The full hypotheses to test can be given as a string.
               See the examples.
-            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
-              deprecated.
-        q_matrix : array-like or scalar, optional
-            This is deprecated. See `r_matrix` and the examples for more
-            information on new usage. Can be either a scalar or a length p
-            row vector. If omitted and r_matrix is an array, `q_matrix` is
-            assumed to be a conformable array of zeros.
+            - tuple : A tuple of arrays in the form (R, q). If q is given,
+              can be either a scalar or a length p row vector.
         cov_p : array-like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
@@ -1158,12 +1154,6 @@ class LikelihoodModelResults(Results):
         patsy.DesignInfo.linear_constraint
         """
         from patsy import DesignInfo
-        if q_matrix is not None:
-            from warnings import warn
-            warn("The `q_matrix` keyword is deprecated and will be removed "
-                 "in 0.6.0. See the documentation for the new API",
-                 FutureWarning)
-            r_matrix = (r_matrix, q_matrix)
         names = self.model.data.param_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants
@@ -1212,8 +1202,7 @@ class LikelihoodModelResults(Results):
                                    df_denom=df_resid,
                                    distribution='norm')
 
-    def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
-               invcov=None):
+    def f_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None):
         """
         Compute the F-test for a joint linear hypothesis.
 
@@ -1224,16 +1213,12 @@ class LikelihoodModelResults(Results):
         ----------
         r_matrix : array-like, str, or tuple
             - array : An r x k array where r is the number of restrictions to
-              test and k is the number of regressors.
+              test and k is the number of regressors. It is assumed
+              that the linear combination is equal to zero.
             - str : The full hypotheses to test can be given as a string.
               See the examples.
-            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
-              deprecated.
-        q_matrix : array-like
-            This is deprecated. See `r_matrix` and the examples for more
-            information on new usage. Can be either a scalar or a length p
-            row vector. If omitted and r_matrix is an array, `q_matrix` is
-            assumed to be a conformable array of zeros.
+            - tuple : A tuple of arrays in the form (R, q), ``q`` can be
+              either a scalar or a length k row vector.
         cov_p : array-like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
@@ -1310,13 +1295,13 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
-        res = self.wald_test(r_matrix, q_matrix=q_matrix, cov_p=cov_p,
-                             scale=scale, invcov=invcov, use_f=True)
+        res = self.wald_test(r_matrix, cov_p=cov_p, scale=scale,
+                             invcov=invcov, use_f=True)
         return res
 
     #TODO: untested for GLMs?
-    def wald_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
-                  invcov=None, use_f=None):
+    def wald_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None,
+                  use_f=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
 
@@ -1324,16 +1309,12 @@ class LikelihoodModelResults(Results):
         ----------
         r_matrix : array-like, str, or tuple
             - array : An r x k array where r is the number of restrictions to
-              test and k is the number of regressors.
+              test and k is the number of regressors. It is assumed that the
+              linear combination is equal to zero.
             - str : The full hypotheses to test can be given as a string.
               See the examples.
-            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
-              deprecated.
-        q_matrix : array-like
-            This is deprecated. See `r_matrix` and the examples for more
-            information on new usage. Can be either a scalar or a length p
-            row vector. If omitted and r_matrix is an array, `q_matrix` is
-            assumed to be a conformable array of zeros.
+            - tuple : A tuple of arrays in the form (R, q), ``q`` can be
+              either a scalar or a length p row vector.
         cov_p : array-like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
@@ -1376,12 +1357,6 @@ class LikelihoodModelResults(Results):
             use_f = (hasattr(self, 'use_t') and self.use_t)
 
         from patsy import DesignInfo
-        if q_matrix is not None:
-            from warnings import warn
-            warn("The `q_matrix` keyword is deprecated and will be removed "
-                 "in 0.6.0. See the documentation for the new API",
-                 FutureWarning)
-            r_matrix = (r_matrix, q_matrix)
         names = self.model.data.param_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants

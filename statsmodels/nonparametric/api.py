@@ -1,4 +1,4 @@
-from .kde import KDE, KDEUnivariate
+from .kde import KDEUnivariate
 from .smoothers_lowess import lowess
 from . import bandwidths
 

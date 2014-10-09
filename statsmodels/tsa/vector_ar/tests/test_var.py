@@ -238,7 +238,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         cls.data = get_macrodata()
         cls.model = VAR(cls.data)
-        cls.names = cls.model.names
+        cls.names = cls.model.endog_names
 
         cls.ref = RResults()
         cls.k = len(cls.ref.names)
@@ -256,10 +256,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         res = model.fit(self.p)
 
     def test_names(self):
-        assert_equal(self.model.names, self.ref.names)
+        assert_equal(self.model.endog_names, self.ref.names)
 
-        model2 = VAR(self.data, names=self.names)
-        assert_equal(model2.names, self.ref.names)
+        model2 = VAR(self.data)
+        assert_equal(model2.endog_names, self.ref.names)
 
     def test_get_eq_index(self):
         assert(type(self.res.names) is list)
@@ -426,7 +426,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         names2.append(names[2])
         names2.append(names[0])
         names2.append(names[1])
-        res2 = VAR(data2,names=names2).fit(maxlags=self.p)
+        res2 = VAR(data2).fit(maxlags=self.p)
 
         #use reorder function
         res3 = self.res.reorder(['realinv','realgdp', 'realcons'])
@@ -509,13 +509,11 @@ class TestVARResultsLutkepohl(object):
         self.p = 2
         sdata, dates = get_lutkepohl_data('e1')
 
-        names = sdata.dtype.names
         data = data_util.struct_to_ndarray(sdata)
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], names=names,
-                freq='Q')
+        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='Q')
         self.res = self.model.fit(maxlags=self.p)
         self.irf = self.res.irf(10)
         self.lut = E1_Results()

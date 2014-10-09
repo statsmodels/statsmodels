@@ -320,8 +320,6 @@ class VAR(tsbase.TimeSeriesModel):
     ----------
     endog : array-like
         2-d endogenous response variable. The independent variable.
-    names : array-like
-        must match number of columns of endog
     dates : array-like
         must match number of rows of endog
 
@@ -329,18 +327,10 @@ class VAR(tsbase.TimeSeriesModel):
     ----------
     Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
-    def __init__(self, endog, dates=None, names=None, freq=None,
-            missing='none'):
+    def __init__(self, endog, dates=None, freq=None, missing='none'):
         super(VAR, self).__init__(endog, None, dates, freq, missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
-        if names is not None:
-            import warnings
-            warnings.warn("The names argument is deprecated and will be "
-                    "removed in the next release.", FutureWarning)
-            self.names = names
-        else:
-            self.names = self.endog_names
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
@@ -855,15 +845,6 @@ class VARResults(VARProcess):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
-
-    @cache_readonly
-    def coef_names(self):
-        """Coefficient names (deprecated)
-        """
-        from warnings import warn
-        warn("coef_names is deprecated and will be removed in 0.6.0."
-             "Use exog_names", FutureWarning)
-        return self.exog_names
 
     def plot(self):
         """Plot input time series
@@ -1558,7 +1539,7 @@ class FEVD(object):
 
         self.model = model
         self.neqs = model.neqs
-        self.names = model.names
+        self.names = model.model.endog_names
 
         self.irfobj = model.irf(var_decomp=P, periods=periods)
         self.orth_irfs = self.irfobj.orth_irfs

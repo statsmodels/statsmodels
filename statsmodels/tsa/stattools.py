@@ -359,8 +359,7 @@ def q_stat(x, nobs, type="ljungbox"):
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
-        alpha=None):
+def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -372,12 +371,6 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
        If True, then denominators for autocovariance are n-k, otherwise n
     nlags: int, optional
         Number of lags to return autocorrelation for.
-    confint : scalar, optional
-        The use of confint is deprecated. See `alpha`.
-        If a number is given, the confidence intervals for the given level are
-        returned. For instance if confint=95, 95 % confidence intervals are
-        returned where the standard deviation is computed according to
-        Bartlett\'s formula.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -431,20 +424,8 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         acf /= acf[0]
         #acf = np.take(np.real(acf), range(1,nlags+1))
         acf = np.real(acf[:nlags + 1])   # keep lag 0
-    if not (confint or qstat or alpha):
+    if not (qstat or alpha):
         return acf
-    if not confint is None:
-        import warnings
-        warnings.warn("confint is deprecated. Please use the alpha keyword",
-                      FutureWarning)
-        varacf = np.ones(nlags + 1) / nobs
-        varacf[0] = 0
-        varacf[1] = 1. / nobs
-        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1]**2)
-        interval = stats.norm.ppf(1 - (100 - confint) / 200.) * np.sqrt(varacf)
-        confint = np.array(lzip(acf - interval, acf + interval))
-        if not qstat:
-            return acf, confint
     if alpha is not None:
         varacf = np.ones(nlags + 1) / nobs
         varacf[0] = 0
@@ -456,7 +437,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
             return acf, confint
     if qstat:
         qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
-        if (confint is not None or alpha is not None):
+        if alpha is not None:
             return acf, confint, qstat, pvalue
         else:
             return acf, qstat, pvalue
