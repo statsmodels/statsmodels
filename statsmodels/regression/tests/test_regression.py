@@ -1034,6 +1034,7 @@ def test_formula_missing_cat():
 
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
+    from patsy import PatsyError
 
     dta = sm.datasets.grunfeld.load_pandas().data
     dta.ix[0, 'firm'] = np.nan
@@ -1047,6 +1048,9 @@ def test_formula_missing_cat():
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
+
+    assert_raises(PatsyError, ols, 'value ~ invest + capital + firm + year',
+                  data=dta, missing='raise')
 
 
 if __name__=="__main__":
