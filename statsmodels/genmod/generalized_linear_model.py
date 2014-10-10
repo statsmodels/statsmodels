@@ -633,7 +633,8 @@ class GLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, maxiter=100, method='IRLS',
             tol=1e-8, full_output=True, disp=False, scale=None,
-            cov_type='nonrobust', cov_kwds=None, use_t=None):
+            cov_type='nonrobust', cov_kwds=None, use_t=None,
+            **kwargs):
         """
         Fits a generalized linear model for a given family.
 
