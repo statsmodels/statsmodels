@@ -98,7 +98,7 @@ class Beta(GenericLikelihoodModel):
         else:
             extra_names = ['precision-%s' % zc for zc in \
                     (exog_precision.columns \
-                    if hasattr(exog_precision, 'columns') 
+                    if hasattr(exog_precision, 'columns')
                     else range(1, exog_precision.shape[1] + 1))]
 
         kwds['extra_params_names'] = extra_names
@@ -143,15 +143,33 @@ class Beta(GenericLikelihoodModel):
 
         return ll
 
+
     def score(self, params):
         """
         Returns the score vector of the profile log-likelihood.
 
         http://www.tandfonline.com/doi/pdf/10.1080/00949650903389993
         """
-        #r = super(Beta, self).score(params)
-        #print(r.shape)
-        #1/0
+        sf = self.score_factor(params)
+
+        d1 = np.dot(sf[:, 0], self.exog)
+        d2 = np.dot(sf[:, 1], self.exog_precision)
+        return np.concatenate((d1, d2))
+
+
+    def score_check(self, params):
+        """inherited score with finite differences
+        """
+        return super(Beta, self).score(params)
+
+
+    def score_factor(self, params):
+        """derivative of loglikelihood function without the exog
+
+        This needs to be multiplied with the exog to obtain the score_obs
+        """
+        from scipy import special
+        digamma = special.psi
 
         y, X, Z = self.endog, self.exog, self.exog_precision
         nz = Z.shape[1]
@@ -159,29 +177,30 @@ class Beta(GenericLikelihoodModel):
         Zparams = params[-nz:]
 
         # NO LINKS
-        mu = np.dot(X, Xparams)
-        phi = np.dot(Z, Zparams)
+        mu = self.link.inverse(np.dot(X, Xparams))
+        phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
-        plink = self.link_precision
+        ystar = self.link(y)
+        mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
+        yt = self.link_precision(1 - y)
+        mut = digamma((1 - mu) * phi) - digamma(phi)
 
-        # did they mean to force logit or should I use link here?
-        ystar = np.log(y / (1 - y))
-        mustar = plink(mu * phi) - plink((1 - mu) * phi)
-        yt = np.log(1 - y)
-
-        T = np.diag(self.link.inverse_deriv(mu))
-        H = np.diag(plink.inverse_deriv(phi))
+        t = 1. / self.link.deriv(mu)
+        h = 1. / self.link_precision.deriv(phi)
         #
-        UB = np.dot(np.dot(phi * X.T, T), ystar - mustar)
-        # mu vs mu*?
-        M = np.diag(mu)
-        P2 = np.dot(M, ystar - mustar) + (yt - mu)
-        UP = np.dot(np.dot(Z.T, H), P2)
+        sf1 = phi * t * (ystar - mustar)
+        sf2 = h * ( mu * (ystar - mustar) + yt - mut)
 
-        U = np.append(UB, UP)
-        assert U.shape == params.shape
-        return U
+        return np.column_stack((sf1, sf2))
 
+
+    def score_obs(self, params):
+        sf = self.score_factor(params)
+
+        # elementwise product for each row (observation)
+        d1 = sf[:, :1] * self.exog
+        d2 = sf[:, 1:2] * self.exog_precision
+        return np.column_stack((d1, d2))
 
 
     def fit(self, start_params=None, maxiter=100000, maxfun=5000, disp=False,
