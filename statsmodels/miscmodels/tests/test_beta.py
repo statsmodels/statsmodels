@@ -90,3 +90,18 @@ def test_methylation_precision():
     #yield check_same, sm.families.links.logit()(rslt.params[-2:]), expected_methylation_precision['Estimate'], 1e-3, "estimate"
     #yield check_same, rslt.tvalues[-2:], expected_methylation_precision['zvalue'], 0.1, "z-score"
 
+def test_scores():
+    model = "methylation ~ gender + CpG"
+    Z = patsy.dmatrix("~ age", methylation)
+
+    for link in (links.identity(), links.log()):
+        mod2 = Beta.from_formula(model, methylation, exog_precision=Z,
+                                 link_precision=link)
+        rslt_m = mod2.fit()
+
+        analytical = rslt_m.model.score(rslt_m.params)
+        numerical = rslt_m.model.score_check(rslt_m.params)
+        yield (check_same, analytical[:3], 
+                          numerical[:3], 1e-2, ("link:", link))
+        yield (check_same, link.inverse(analytical[3:]),
+                link.inverse(numerical[3:]), 1e-2, ("phi link:", link))
