@@ -700,7 +700,7 @@ class GLM(base.LikelihoodModel):
         if method.lower() == "irls":
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
-                                  cov_kwds=cov_kwds, use_t=use_t)
+                                  cov_kwds=cov_kwds, use_t=use_t, **kwargs)
         else:
             return self._fit_gradient(start_params=start_params,
                                       method=method,
@@ -708,12 +708,12 @@ class GLM(base.LikelihoodModel):
                                       tol=tol, scale=scale,
                                       full_output=full_output,
                                       disp=disp, cov_type=cov_type,
-                                      cov_kwds=cov_kwds, use_t=use_t)
+                                      cov_kwds=cov_kwds, use_t=use_t, **kwargs)
 
     def _fit_gradient(self, start_params=None, method="newton",
                       maxiter=100, tol=1e-8, full_output=True,
                       disp=True, scale=None, cov_type='nonrobust',
-                      cov_kwds=None, use_t=None):
+                      cov_kwds=None, use_t=None, **kwargs):
         """
         Fits a generalized linear model for a given family iteratively
         using the scipy gradient optimizers.
@@ -722,7 +722,7 @@ class GLM(base.LikelihoodModel):
         # TODO: pass more into fit here
         rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
                                     maxiter=maxiter, full_output=full_output,
-                                    method=method, disp=disp)
+                                    method=method, disp=disp, **kwargs)
         self.mu = self.predict(rslt.params)
         self.scale = self.estimate_scale(self.mu)
 
@@ -746,7 +746,7 @@ class GLM(base.LikelihoodModel):
 
     def _fit_irls(self, start_params=None, maxiter=100, tol=1e-8,
                   scale=None, cov_type='nonrobust', cov_kwds=None,
-                  use_t=None):
+                  use_t=None, **kwargs):
         """
         Fits a generalized linear model for a given family using
         iteratively reweighted least squares (IRLS).
