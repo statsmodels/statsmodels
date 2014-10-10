@@ -182,7 +182,7 @@ class Beta(GenericLikelihoodModel):
 
         ystar = self.link(y)
         mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
-        yt = self.link_precision(1 - y)
+        yt = np.log(1 - y)
         mut = digamma((1 - mu) * phi) - digamma(phi)
 
         t = 1. / self.link.deriv(mu)
