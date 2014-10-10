@@ -23,8 +23,10 @@ from statsmodels.genmod.cov_struct import (Exchangeable, Independence,
                                            GlobalOddsRatio, Autoregressive,
                                            Nested)
 import pandas as pd
-import statsmodels.formula.api as sm
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
 from scipy.stats.distributions import norm
+from patsy import dmatrices
 
 def load_data(fname, icept=True):
     """
@@ -125,10 +127,8 @@ class TestGEE(object):
         assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
     def test_missing(self):
-        """
-        Test missing data handling for calling from the api.  Missing
-        data handling does not currently work for formulas.
-        """
+        #Test missing data handling for calling from the api.  Missing
+        #data handling does not currently work for formulas.
 
         endog = np.random.normal(size=100)
         exog = np.random.normal(size=(100, 3))
@@ -153,10 +153,8 @@ class TestGEE(object):
         assert_almost_equal(rslt1.params, rslt2.params)
         assert_almost_equal(rslt1.bse, rslt2.bse)
 
-    def t_est_missing_formula(self):
-        """
-        Test missing data handling for formulas.
-        """
+    def test_missing_formula(self):
+        # Test missing data handling for formulas.
 
         endog = np.random.normal(size=100)
         exog1 = np.random.normal(size=100)
@@ -176,21 +174,20 @@ class TestGEE(object):
         rslt1 = mod1.fit()
 
         assert_almost_equal(len(mod1.endog), 95)
-        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 3])
+        assert_almost_equal(np.asarray(mod1.exog.shape), np.r_[95, 4])
 
         data = data.dropna()
+        groups = groups[data.index.values]
 
         mod2 = GEE.from_formula("endog ~ exog1 + exog2 + exog3",
                                 groups, data, missing='none')
         rslt2 = mod2.fit()
 
-        assert_almost_equal(rslt1.params, rslt2.params)
-        assert_almost_equal(rslt1.bse, rslt2.bse)
+        assert_almost_equal(rslt1.params.values, rslt2.params.values)
+        assert_almost_equal(rslt1.bse.values, rslt2.bse.values)
 
     def test_default_time(self):
-        """
-        Check that the time defaults work correctly.
-        """
+        # Check that the time defaults work correctly.
 
         endog,exog,group = load_data("gee_logistic_1.csv")
 
@@ -219,41 +216,39 @@ class TestGEE(object):
 
 
     def test_logistic(self):
-        """
-        R code for comparing results:
+        #R code for comparing results:
 
-        library(gee)
-        Z = read.csv("results/gee_logistic_1.csv", header=FALSE)
-        Y = Z[,2]
-        Id = Z[,1]
-        X1 = Z[,3]
-        X2 = Z[,4]
-        X3 = Z[,5]
+        #library(gee)
+        #Z = read.csv("results/gee_logistic_1.csv", header=FALSE)
+        #Y = Z[,2]
+        #Id = Z[,1]
+        #X1 = Z[,3]
+        #X2 = Z[,4]
+        #X3 = Z[,5]
 
-        mi = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
-                 corstr="independence")
-        smi = summary(mi)
-        u = coefficients(smi)
-        cfi = paste(u[,1], collapse=",")
-        sei = paste(u[,4], collapse=",")
+        #mi = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
+        #         corstr="independence")
+        #smi = summary(mi)
+        #u = coefficients(smi)
+        #cfi = paste(u[,1], collapse=",")
+        #sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
-                 corstr="exchangeable")
-        sme = summary(me)
-        u = coefficients(sme)
-        cfe = paste(u[,1], collapse=",")
-        see = paste(u[,4], collapse=",")
+        #me = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
+        #         corstr="exchangeable")
+        #sme = summary(me)
+        #u = coefficients(sme)
+        #cfe = paste(u[,1], collapse=",")
+        #see = paste(u[,4], collapse=",")
 
-        ma = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
-                 corstr="AR-M")
-        sma = summary(ma)
-        u = coefficients(sma)
-        cfa = paste(u[,1], collapse=",")
-        sea = paste(u[,4], collapse=",")
+        #ma = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
+        #         corstr="AR-M")
+        #sma = summary(ma)
+        #u = coefficients(sma)
+        #cfa = paste(u[,1], collapse=",")
+        #sea = paste(u[,4], collapse=",")
 
-        sprintf("cf = [[%s],[%s],[%s]]", cfi, cfe, cfa)
-        sprintf("se = [[%s],[%s],[%s]]", sei, see, sea)
-        """
+        #sprintf("cf = [[%s],[%s],[%s]]", cfi, cfe, cfa)
+        #sprintf("se = [[%s],[%s],[%s]]", sei, see, sea)
 
         endog,exog,group = load_data("gee_logistic_1.csv")
 
@@ -429,34 +424,32 @@ class TestGEE(object):
 
 
     def test_linear(self):
-        """
-        library(gee)
+        #library(gee)
 
-        Z = read.csv("results/gee_linear_1.csv", header=FALSE)
-        Y = Z[,2]
-        Id = Z[,1]
-        X1 = Z[,3]
-        X2 = Z[,4]
-        X3 = Z[,5]
-        mi = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian,
-                 corstr="independence", tol=1e-8, maxit=100)
-        smi = summary(mi)
-        u = coefficients(smi)
+        #Z = read.csv("results/gee_linear_1.csv", header=FALSE)
+        #Y = Z[,2]
+        #Id = Z[,1]
+        #X1 = Z[,3]
+        #X2 = Z[,4]
+        #X3 = Z[,5]
+        #mi = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian,
+        #         corstr="independence", tol=1e-8, maxit=100)
+        #smi = summary(mi)
+        #u = coefficients(smi)
 
-        cfi = paste(u[,1], collapse=",")
-        sei = paste(u[,4], collapse=",")
+        #cfi = paste(u[,1], collapse=",")
+        #sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian,
-                 corstr="exchangeable", tol=1e-8, maxit=100)
-        sme = summary(me)
-        u = coefficients(sme)
+        #me = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian,
+        #         corstr="exchangeable", tol=1e-8, maxit=100)
+        #sme = summary(me)
+        #u = coefficients(sme)
 
-        cfe = paste(u[,1], collapse=",")
-        see = paste(u[,4], collapse=",")
+        #cfe = paste(u[,1], collapse=",")
+        #see = paste(u[,4], collapse=",")
 
-        sprintf("cf = [[%s],[%s]]", cfi, cfe)
-        sprintf("se = [[%s],[%s]]", sei, see)
-        """
+        #sprintf("cf = [[%s],[%s]]", cfi, cfe)
+        #sprintf("se = [[%s],[%s]]", sei, see)
 
         family = Gaussian()
 
@@ -616,35 +609,33 @@ class TestGEE(object):
 
 
     def test_poisson(self):
-        """
-        library(gee)
-        Z = read.csv("results/gee_poisson_1.csv", header=FALSE)
-        Y = Z[,2]
-        Id = Z[,1]
-        X1 = Z[,3]
-        X2 = Z[,4]
-        X3 = Z[,5]
-        X4 = Z[,6]
-        X5 = Z[,7]
+        #library(gee)
+        #Z = read.csv("results/gee_poisson_1.csv", header=FALSE)
+        #Y = Z[,2]
+        #Id = Z[,1]
+        #X1 = Z[,3]
+        #X2 = Z[,4]
+        #X3 = Z[,5]
+        #X4 = Z[,6]
+        #X5 = Z[,7]
 
-        mi = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson,
-                corstr="independence", scale.fix=TRUE)
-        smi = summary(mi)
-        u = coefficients(smi)
-        cfi = paste(u[,1], collapse=",")
-        sei = paste(u[,4], collapse=",")
+        #mi = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson,
+        #        corstr="independence", scale.fix=TRUE)
+        #smi = summary(mi)
+        #u = coefficients(smi)
+        #cfi = paste(u[,1], collapse=",")
+        #sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson,
-                corstr="exchangeable", scale.fix=TRUE)
-        sme = summary(me)
+        #me = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson,
+        #        corstr="exchangeable", scale.fix=TRUE)
+        #sme = summary(me)
 
-        u = coefficients(sme)
-        cfe = paste(u[,1], collapse=",")
-        see = paste(u[,4], collapse=",")
+        #u = coefficients(sme)
+        #cfe = paste(u[,1], collapse=",")
+        #see = paste(u[,4], collapse=",")
 
-        sprintf("cf = [[%s],[%s]]", cfi, cfe)
-        sprintf("se = [[%s],[%s]]", sei, see)
-        """
+        #sprintf("cf = [[%s],[%s]]", cfi, cfe)
+        #sprintf("se = [[%s],[%s]]", sei, see)
 
         family = Poisson()
 
@@ -691,11 +682,9 @@ class TestGEE(object):
 
 
     def test_compare_OLS(self):
-        """
-        Gaussian GEE with independence correlation should agree
-        exactly with OLS for parameter estimates and standard errors
-        derived from the naive covariance estimate.
-        """
+        #Gaussian GEE with independence correlation should agree
+        #exactly with OLS for parameter estimates and standard errors
+        #derived from the naive covariance estimate.
 
         vs = Independence()
         family = Gaussian()
@@ -712,7 +701,7 @@ class TestGEE(object):
                               family=family, cov_struct=vs)
         mdf = md.fit()
 
-        ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
+        ols = smf.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
         # don't use wrapper, asserts_xxx don't work
         ols = ols._results
@@ -727,10 +716,8 @@ class TestGEE(object):
         assert_almost_equal(naive_tvalues, ols.tvalues, decimal=10)
 
     def test_formulas(self):
-        """
-        Check formulas, especially passing groups and time as either
-        variable names or arrays.
-        """
+        #Check formulas, especially passing groups and time as either
+        #variable names or arrays.
 
         n = 100
         Y = np.random.normal(size=n)
@@ -789,7 +776,7 @@ class TestGEE(object):
                                 family=family, cov_struct=vs)
         rslt1 = mod1.fit()
 
-        mod2 = sm.logit("Y ~ X1 + X2 + X3", data=D)
+        mod2 = smf.logit("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
         assert_almost_equal(rslt1.params.values, rslt2.params.values,
@@ -813,7 +800,7 @@ class TestGEE(object):
                                 family=family, cov_struct=vs)
         rslt1 = mod1.fit()
 
-        mod2 = sm.poisson("Y ~ X1 + X2 + X3", data=D)
+        mod2 = smf.poisson("Y ~ X1 + X2 + X3", data=D)
         rslt2 = mod2.fit(disp=False)
 
         assert_almost_equal(rslt1.params.values, rslt2.params.values,
@@ -892,9 +879,7 @@ class TestGEE(object):
         assert_allclose(pred1[-10:], pred6)
 
     def test_offset_formula(self):
-        """
-        Test various ways of passing offset and exposure to `from_formula`.
-        """
+        # Test various ways of passing offset and exposure to `from_formula`.
 
         n = 50
         X1 = np.random.normal(size=n)
@@ -1143,8 +1128,68 @@ class TestGEEMultinomialCovType(CheckConsistency):
         check_wrapper(rslt2)
 
 
+def test_missing():
+    # gh-1877
+    data = [['id', 'al', 'status', 'fake', 'grps'],
+            ['4A', 'A', 1, 1, 0],
+            ['5A', 'A', 1, 2.0, 1],
+            ['6A', 'A', 1, 3, 2],
+            ['7A', 'A', 1, 2.0, 3],
+            ['8A', 'A', 1, 1, 4],
+            ['9A', 'A', 1, 2.0, 5],
+            ['11A', 'A', 1, 1, 6],
+            ['12A', 'A', 1, 2.0, 7],
+            ['13A', 'A', 1, 1, 8],
+            ['14A', 'A', 1, 1, 9],
+            ['15A', 'A', 1, 1, 10],
+            ['16A', 'A', 1, 2.0, 11],
+            ['17A', 'A', 1, 3.0, 12],
+            ['18A', 'A', 1, 3.0, 13],
+            ['19A', 'A', 1, 2.0, 14],
+            ['20A', 'A', 1, 2.0, 15],
+            ['2C', 'C', 0, 3.0, 0],
+            ['3C', 'C', 0, 1, 1],
+            ['4C', 'C', 0, 1, 2],
+            ['5C', 'C', 0, 2.0, 3],
+            ['6C', 'C', 0, 1, 4],
+            ['9C', 'C', 0, 1, 5],
+            ['10C', 'C', 0, 3, 6],
+            ['12C', 'C', 0, 3, 7],
+            ['14C', 'C', 0, 2.5, 8],
+            ['15C', 'C', 0, 1, 9],
+            ['17C', 'C', 0, 1, 10],
+            ['22C', 'C', 0, 1, 11],
+            ['23C', 'C', 0, 1, 12],
+            ['24C', 'C', 0, 1, 13],
+            ['32C', 'C', 0, 2.0, 14],
+            ['35C', 'C', 0, 1, 15]]
 
-if  __name__=="__main__":
+    df = pd.DataFrame(data[1:], columns=data[0])
+    df.ix[df.fake == 1, 'fake'] = np.nan
+    mod = smf.gee('status ~ fake', data=df, groups='grps',
+                  cov_struct=sm.cov_struct.Independence(),
+                  family=sm.families.Binomial())
+
+    df = df.dropna()
+    df['constant'] = 1
+
+    mod2 = GEE(df.status, df[['constant', 'fake']], groups=df.grps,
+               cov_struct=sm.cov_struct.Independence(),
+               family=sm.families.Binomial())
+
+    assert_equal(mod.endog, mod2.endog)
+    assert_equal(mod.exog, mod2.exog)
+    assert_equal(mod.groups, mod2.groups)
+
+    res = mod.fit()
+    res2 = mod2.fit()
+
+    assert_almost_equal(res.params.values, res2.params.values)
+
+
+
+
+if __name__ == "__main__":
 
     import nose
 

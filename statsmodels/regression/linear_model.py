@@ -433,14 +433,15 @@ class GLS(RegressionModel):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
 
-    def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None):
+    def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None,
+                 **kwargs):
     #TODO: add options igls, for iterative fgls if sigma is None
     #TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
 
         super(GLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
-                                  cholsigmainv=cholsigmainv)
+                                  cholsigmainv=cholsigmainv, **kwargs)
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv'])
@@ -566,17 +567,23 @@ class WLS(RegressionModel):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
 
-    def __init__(self, endog, exog, weights=1., missing='none', hasconst=None):
+    def __init__(self, endog, exog, weights=1., missing='none', hasconst=None,
+                 **kwargs):
         weights = np.array(weights)
         if weights.shape == ():
-            weights = np.repeat(weights, len(endog))
+            if (missing == 'drop' and 'missing_idx' in kwargs and
+                    kwargs['missing_idx'] is not None):
+                # patsy may have truncated endog
+                weights = np.repeat(weights, len(kwargs['missing_idx']))
+            else:
+                weights = np.repeat(weights, len(endog))
         # handle case that endog might be of len == 1
         if len(weights) == 1:
             weights = np.array([weights.squeeze()])
         else:
             weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
-                                  weights=weights, hasconst=hasconst)
+                                  weights=weights, hasconst=hasconst, **kwargs)
         nobs = self.exog.shape[0]
         weights = self.weights
         # Experimental normalization of weights
@@ -678,9 +685,10 @@ class OLS(WLS):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
     #TODO: change example to use datasets.  This was the point of datasets!
-    def __init__(self, endog, exog=None, missing='none', hasconst=None):
+    def __init__(self, endog, exog=None, missing='none', hasconst=None,
+                 **kwargs):
         super(OLS, self).__init__(endog, exog, missing=missing,
-                                  hasconst=hasconst)
+                                  hasconst=hasconst, **kwargs)
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
 
@@ -762,7 +770,7 @@ class GLSAR(GLS):
     TODO
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
-    def __init__(self, endog, exog=None, rho=1, missing='none'):
+    def __init__(self, endog, exog=None, rho=1, missing='none', **kwargs):
         #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):
             self.order = rho
@@ -779,9 +787,10 @@ class GLSAR(GLS):
             #results for rho estimate now identical to yule-walker on y
             #super(AR, self).__init__(endog, add_constant(endog))
             super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)),
-                                        missing=missing)
+                                        missing=missing, **kwargs)
         else:
-            super(GLSAR, self).__init__(endog, exog, missing=missing)
+            super(GLSAR, self).__init__(endog, exog, missing=missing,
+                                        **kwargs)
 
     def iterative_fit(self, maxiter=3):
         """

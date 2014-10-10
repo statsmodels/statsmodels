@@ -648,10 +648,11 @@ class MultinomialModel(BinaryModel):
         return margeff.reshape(len(exog), -1, order='F')
 
 class CountModel(DiscreteModel):
-    def __init__(self, endog, exog, offset=None, exposure=None, missing='none'):
+    def __init__(self, endog, exog, offset=None, exposure=None, missing='none',
+                 **kwargs):
         self._check_inputs(offset, exposure, endog) # attaches if needed
         super(CountModel, self).__init__(endog, exog, missing=missing,
-                offset=self.offset, exposure=self.exposure)
+                offset=self.offset, exposure=self.exposure, **kwargs)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
@@ -1903,10 +1904,10 @@ class NegativeBinomial(CountModel):
 
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
-                       exposure=None, missing='none'):
+                       exposure=None, missing='none', **kwargs):
         super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
-                                               missing=missing)
+                                               missing=missing, **kwargs)
         self.loglike_method = loglike_method
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
