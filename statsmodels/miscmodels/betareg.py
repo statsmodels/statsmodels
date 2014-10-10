@@ -180,7 +180,7 @@ class Beta(GenericLikelihoodModel):
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
-        ystar = self.link(y)
+        ystar = np.log( y / (1. - y))
         mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
         yt = np.log(1 - y)
         mut = digamma((1 - mu) * phi) - digamma(phi)
