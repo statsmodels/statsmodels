@@ -191,8 +191,15 @@ class GLM(base.LikelihoodModel):
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                  missing='none'):
         self._check_inputs(family, offset, exposure, endog)
+
+        # TODO: may be better to handle this generically in base
+        if offset is not None:
+            offset = np.asarray(offset)
+        if exposure is not None:
+            exposure = np.asarray(exposure)
+
         super(GLM, self).__init__(endog, exog, missing=missing,
-                                  offset=self.offset, exposure=self.exposure)
+                                  offset=offset, exposure=exposure)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
@@ -230,17 +237,12 @@ class GLM(base.LikelihoodModel):
             raise ValueError("exposure can only be used with the log link function")
 
         if offset is not None:
-            offset = np.asarray(offset)
-            if offset.shape[0] != endog.shape[0]:
+            if len(offset) != len(endog):
                 raise ValueError("offset is not the same length as endog")
-        self.offset = offset
 
         if exposure is not None:
-            exposure = np.asarray(exposure)
-            if exposure.shape[0] != endog.shape[0]:
+            if len(exposure) != len(endog):
                 raise ValueError("exposure is not the same length as endog")
-            exposure = np.log(exposure)
-        self.exposure = exposure
 
 
     def loglike(self, *args):
@@ -609,17 +611,14 @@ class GLM(base.LikelihoodModel):
 
         # Use fit exposure if appropriate
         if exposure is None and exog is None and hasattr(self, 'exposure'):
-            # Already logged
             exposure = getattr(self, 'exposure')
-        elif exposure is None:
-            exposure = 0.
-        else:
-            exposure = np.log(exposure)
 
         if exog is None:
             exog = self.exog
 
-        linpred = np.dot(exog, params) + offset + exposure
+        linpred = np.dot(exog, params) + offset
+        if exposure is not None:
+            linpred += np.log(exposure)
         if linear:
             return linpred
         else:
@@ -672,13 +671,12 @@ class GLM(base.LikelihoodModel):
         # preprocessing
             self.endog = self.family.initialize(self.endog)
 
-        # Construct a combined offset/exposure term.  Note that
-        # exposure has already been logged if present.
+        # Construct a combined offset/exposure term.
         offset_exposure = 0.
         if hasattr(self, 'offset'):
             offset_exposure = self.offset
         if hasattr(self, 'exposure'):
-            offset_exposure = offset_exposure + self.exposure
+            offset_exposure = offset_exposure + np.log(self.exposure)
         self._offset_exposure = offset_exposure
 
         wlsexog = self.exog
