@@ -1,7 +1,7 @@
-
-# in R:
+from __future__ import print_function
 import io
 import os.path as op
+import sys
 from statsmodels.api import families
 links = families.links
 import pandas as pd
@@ -49,59 +49,56 @@ def check_same(a, b, eps, name):
     assert np.allclose(a, b, rtol=0.01, atol=eps), \
             ("different from expected", name, list(a), list(b))
 
+class TestBeta(object):
 
-def test_income_coefficients():
-    model = "I(food/income) ~ income + persons"
+    @classmethod
+    def setupClass(self):
+        model = "I(food/income) ~ income + persons"
+        self.income_fit =Beta.from_formula(model, income).fit()
 
-    mod = Beta.from_formula(model, income)
-    rslt = mod.fit()
-    yield check_same, rslt.params[:-1], expected_income_mean['Estimate'], 1e-3, "estimates"
-    yield check_same, rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1, "z-scores"
-    yield check_same, rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3, "p-values"
+        model = self.model = "methylation ~ gender + CpG"
+        Z = self.Z = patsy.dmatrix("~ age", methylation)
+        self.meth_fit = Beta.from_formula(model, methylation, exog_precision=Z,
+                                          link_precision=links.identity()).fit()
 
-
-def test_income_precision():
-    model = "I(food/income) ~ income + persons"
-
-    mod = Beta.from_formula(model, income)
-    rslt = mod.fit()
-    # note that we have to exp the phi results for now.
-    yield check_same, np.exp(rslt.params[-1:]), expected_income_precision['Estimate'], 1e-3, "estimate"
-    #yield check_same, rslt.tvalues[-1:], expected_income_precision['zvalue'], 0.1, "z-score"
-    yield check_same, rslt.pvalues[-1:], expected_income_precision['Pr(>|z|)'], 1e-3, "p-values"
+    def test_income_coefficients(self):
+        rslt = self.income_fit
+        yield check_same, rslt.params[:-1], expected_income_mean['Estimate'], 1e-3, "estimates"
+        yield check_same, rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1, "z-scores"
+        yield check_same, rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3, "p-values"
 
 
-def test_methylation_coefficients():
-    model = "methylation ~ gender + CpG"
-    Z = patsy.dmatrix("~ age", methylation)
+    def test_income_precision(self):
 
-    mod = Beta.from_formula(model, methylation, exog_precision=Z, link_precision=links.identity())
-    rslt = mod.fit()
-    yield check_same, rslt.params[:-2], expected_methylation_mean['Estimate'], 1e-2, "estimates"
-    yield check_same, rslt.tvalues[:-2], expected_methylation_mean['zvalue'], 0.1, "z-scores"
-    yield check_same, rslt.pvalues[:-2], expected_methylation_mean['Pr(>|z|)'], 1e-2, "p-values"
+        rslt = self.income_fit
+        # note that we have to exp the phi results for now.
+        yield check_same, np.exp(rslt.params[-1:]), expected_income_precision['Estimate'], 1e-3, "estimate"
+        #yield check_same, rslt.tvalues[-1:], expected_income_precision['zvalue'], 0.1, "z-score"
+        yield check_same, rslt.pvalues[-1:], expected_income_precision['Pr(>|z|)'], 1e-3, "p-values"
 
-def test_methylation_precision():
-    model = "methylation ~ gender + CpG"
-    Z = patsy.dmatrix("~ age", methylation)
 
-    mod = Beta.from_formula(model, methylation, exog_precision=Z, link_precision=links.identity())
-    rslt = mod.fit()
-    #yield check_same, sm.families.links.logit()(rslt.params[-2:]), expected_methylation_precision['Estimate'], 1e-3, "estimate"
-    #yield check_same, rslt.tvalues[-2:], expected_methylation_precision['zvalue'], 0.1, "z-score"
+    def test_methylation_coefficients(self):
+        rslt = self.meth_fit
+        yield check_same, rslt.params[:-2], expected_methylation_mean['Estimate'], 1e-2, "estimates"
+        yield check_same, rslt.tvalues[:-2], expected_methylation_mean['zvalue'], 0.1, "z-scores"
+        yield check_same, rslt.pvalues[:-2], expected_methylation_mean['Pr(>|z|)'], 1e-2, "p-values"
 
-def test_scores():
-    model = "methylation ~ gender + CpG"
-    Z = patsy.dmatrix("~ age", methylation)
+    def test_methylation_precision(self):
+        rslt = self.meth_fit
 
-    for link in (links.identity(), links.log()):
-        mod2 = Beta.from_formula(model, methylation, exog_precision=Z,
-                                 link_precision=link)
-        rslt_m = mod2.fit()
+        #yield check_same, links.logit()(rslt.params[-2:]), expected_methylation_precision['Estimate'], 1e-3, "estimate"
+        #yield check_same, rslt.tvalues[-2:], expected_methylation_precision['zvalue'], 0.1, "z-score"
 
-        analytical = rslt_m.model.score(rslt_m.params)
-        numerical = rslt_m.model.score_check(rslt_m.params)
-        yield (check_same, analytical[:3], 
-                          numerical[:3], 1e-2, ("link:", link))
-        yield (check_same, link.inverse(analytical[3:]),
-                link.inverse(numerical[3:]), 1e-2, ("phi link:", link))
+    def test_scores(self):
+        model, Z = self.model, self.Z
+        for link in (links.identity(), links.log()):
+            mod2 = Beta.from_formula(model, methylation, exog_precision=Z,
+                                     link_precision=link)
+            rslt_m = mod2.fit()
+
+            analytical = rslt_m.model.score(rslt_m.params)
+            numerical = rslt_m.model.score_check(rslt_m.params)
+            yield (check_same, analytical[:3], 
+                              numerical[:3], 1e-2, ("link:", link))
+            yield (check_same, link.inverse(analytical[3:]),
+                    link.inverse(numerical[3:]), 1e-2, ("phi link:", link))
