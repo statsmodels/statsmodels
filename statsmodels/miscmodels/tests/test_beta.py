@@ -49,6 +49,9 @@ def check_same(a, b, eps, name):
     assert np.allclose(a, b, rtol=0.01, atol=eps), \
             ("different from expected", name, list(a), list(b))
 
+def assert_close(a, b, eps):
+    assert np.allclose(a, b, rtol=0.01, atol=eps), (list(a), list(b))
+
 class TestBeta(object):
 
     @classmethod
@@ -63,25 +66,25 @@ class TestBeta(object):
 
     def test_income_coefficients(self):
         rslt = self.income_fit
-        yield check_same, rslt.params[:-1], expected_income_mean['Estimate'], 1e-3, "estimates"
-        yield check_same, rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1, "z-scores"
-        yield check_same, rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3, "p-values"
+        assert_close(rslt.params[:-1], expected_income_mean['Estimate'], 1e-3)
+        assert_close(rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1)
+        assert_close(rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3)
 
 
     def test_income_precision(self):
 
         rslt = self.income_fit
         # note that we have to exp the phi results for now.
-        yield check_same, np.exp(rslt.params[-1:]), expected_income_precision['Estimate'], 1e-3, "estimate"
+        assert_close(np.exp(rslt.params[-1:]), expected_income_precision['Estimate'], 1e-3)
         #yield check_same, rslt.tvalues[-1:], expected_income_precision['zvalue'], 0.1, "z-score"
-        yield check_same, rslt.pvalues[-1:], expected_income_precision['Pr(>|z|)'], 1e-3, "p-values"
+        assert_close(rslt.pvalues[-1:], expected_income_precision['Pr(>|z|)'], 1e-3)
 
 
     def test_methylation_coefficients(self):
         rslt = self.meth_fit
-        yield check_same, rslt.params[:-2], expected_methylation_mean['Estimate'], 1e-2, "estimates"
-        yield check_same, rslt.tvalues[:-2], expected_methylation_mean['zvalue'], 0.1, "z-scores"
-        yield check_same, rslt.pvalues[:-2], expected_methylation_mean['Pr(>|z|)'], 1e-2, "p-values"
+        assert_close(rslt.params[:-2], expected_methylation_mean['Estimate'], 1e-2)
+        assert_close(rslt.tvalues[:-2], expected_methylation_mean['zvalue'], 0.1)
+        assert_close(rslt.pvalues[:-2], expected_methylation_mean['Pr(>|z|)'], 1e-2)
 
     def test_methylation_precision(self):
         rslt = self.meth_fit
@@ -98,7 +101,5 @@ class TestBeta(object):
 
             analytical = rslt_m.model.score(rslt_m.params)
             numerical = rslt_m.model.score_check(rslt_m.params)
-            yield (check_same, analytical[:3], 
-                              numerical[:3], 1e-2, ("link:", link))
-            yield (check_same, link.inverse(analytical[3:]),
-                    link.inverse(numerical[3:]), 1e-2, ("phi link:", link))
+            assert_close(analytical[:3], numerical[:3], 1e-2)
+            assert_close(link.inverse(analytical[3:]), link.inverse(numerical[3:]), 1e-2)
