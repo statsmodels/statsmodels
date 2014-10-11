@@ -210,6 +210,65 @@ class Beta(GenericLikelihoodModel):
         return np.column_stack((sf1, sf2))
 
 
+    def score_hessian_factor(self, params, return_hessian=False, observed=True):
+        """derivatives of loglikelihood function without the exog
+
+        This needs to be multiplied with the exog to obtain the score_obs
+
+        This calculates score and hessian factors at the same time, since there
+        is a large overlap in calculations
+        """
+        from scipy import special
+        digamma = special.psi
+
+        y, X, Z = self.endog, self.exog, self.exog_precision
+        nz = Z.shape[1]
+        Xparams = params[:-nz]
+        Zparams = params[-nz:]
+
+        # NO LINKS
+        mu = self.link.inverse(np.dot(X, Xparams))
+        phi = self.link_precision.inverse(np.dot(Z, Zparams))
+
+        ystar = np.log( y / (1. - y))
+        mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
+        yt = np.log(1 - y)
+        mut = digamma((1 - mu) * phi) - digamma(phi)
+
+        t = 1. / self.link.deriv(mu)
+        h = 1. / self.link_precision.deriv(phi)
+
+        ymu_star = (ystar - mustar)
+        sf1 = phi * t * ymu_star
+        sf2 = h * ( mu * ymu_star + yt - mut)
+
+        if return_hessian:
+            trigamma = lambda x: special.polygamma(1, x)
+            var_star = trigamma(mu * phi) + trigamma((1 - mu) * phi)
+            var_t = trigamma((1 - mu) * phi) - trigamma(phi)
+
+            c = - trigamma((1 - mu) * phi)
+            s = self.link.deriv2(mu)
+            q = self.link_precision.deriv2(phi)
+
+
+            jbb = (phi * t) * var_star
+            if observed:
+                jbb += s * t**2 * ymu_star
+
+            jbb *= t * phi
+
+            jbg = phi * t * h * (mu * var_star + c)
+            if observed:
+                jbg -= ymu_star * t * h
+
+            jgg = h**2 * (mu**2 * var_star + 2 * mu * c + var_t)
+            if observed:
+                jgg += (mu * ymu_star + yt - mut) * q * h**3    # **3 ?
+
+        return np.column_stack((sf1, sf2)), (-jbb, -jbg, -jgg)
+
+
     def score_obs(self, params):
         sf = self.score_factor(params)
 
@@ -217,6 +276,20 @@ class Beta(GenericLikelihoodModel):
         d1 = sf[:, :1] * self.exog
         d2 = sf[:, 1:2] * self.exog_precision
         return np.column_stack((d1, d2))
+
+
+    def hessian_1(self, params, observed=True):
+        _, hf = self.score_hessian_factor(params, return_hessian=True,
+                                          observed=observed)
+
+        hf11, hf12, hf22 = hf
+
+        # elementwise product for each row (observation)
+        d11 = (self.exog.T * hf11).dot(self.exog)
+        d12 = (self.exog.T * hf12).dot(self.exog_precision)
+        d22 = (self.exog_precision.T * hf22).dot(self.exog_precision)
+        return np.bmat([[d11, d12], [d12.T, d22]]).A
+
 
 
     def fit(self, start_params=None, maxiter=100000, maxfun=5000, disp=False,
