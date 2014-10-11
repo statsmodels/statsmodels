@@ -78,7 +78,7 @@ class Heckman(base.LikelihoodModel):
         try:
             endog_nomissing = endog.copy()
             endog_nomissing[~treated] = -99999
-        except TypeError:
+        except (TypeError, AttributeError):
             endog_nomissing = [endog[i] if treated[i] else -99999 for i in range(len(treated))]
 
         # create 1-D array that will be np.nan for every row of exog_select that has any missing
@@ -283,9 +283,6 @@ class Heckman(base.LikelihoodModel):
 
 
     def _fit_mle(self, start_params_mle=None, method_mle=None, maxiter_mle=None, **kwargs_mle):
-        #NOTE: see
-        # http://www.econ.psu.edu/~hbierens/EasyRegTours/HECKMAN_Tourfiles/HECKMAN.PDF
-
         # get number of X parameters and number of Z parameters
         Y, X, Z = self.get_datamats()
         num_xvars = X.shape[1]
