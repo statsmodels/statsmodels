@@ -238,13 +238,13 @@ class Beta(GenericLikelihoodModel):
         """
 
         if start_params is None:
-            start_params = sm.GLM(self.endog, self.exog,
-                                  family=Binomial(link=self.link.__class__)
-                                  ).fit(disp=False).params
+            start_fit = sm.OLS(self.link(self.endog), self.exog,
+                                  ).fit(disp=False)
+            start_params = start_fit.params
             nz = self.exog_precision.shape[1]
-            # TODO: http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
+            # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
             # on page 8
-            start_params = np.append(start_params, [1.0 / nz] * nz)
+            start_params = np.append(start_params, [0.5 / nz] * nz)
 
         return super(Beta, self).fit(start_params=start_params,
                                         maxiter=maxiter, maxfun=maxfun,
