@@ -17,6 +17,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+import patsy
 
 from scipy.special import gammaln as lgamma
 
@@ -109,6 +110,21 @@ class Beta(GenericLikelihoodModel):
 
         self.exog_precision = exog_precision
         assert len(self.exog_precision) == len(self.endog)
+
+    @classmethod
+    def from_formula(cls, formula, data, exog_precision_formula=None,
+                     *args, **kwargs):
+        if exog_precision_formula is not None:
+            if 'subset' in kwargs:
+                d = data.ix[kwargs['subset']]
+                Z = patsy.dmatrix(exog_precision_formula, d)
+            else:
+                Z = patsy.dmatrix(exog_precision_formula, data)
+            kwargs['exog_precision'] = Z  
+
+        return super(Beta, cls).from_formula(formula, data, *args,
+                                      **kwargs)
+
 
     def nloglikeobs(self, params):
         """

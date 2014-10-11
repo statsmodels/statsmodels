@@ -92,6 +92,13 @@ class TestBeta(object):
         #yield check_same, links.logit()(rslt.params[-2:]), expected_methylation_precision['Estimate'], 1e-3, "estimate"
         #yield check_same, rslt.tvalues[-2:], expected_methylation_precision['zvalue'], 0.1, "z-score"
 
+    def test_precision_formula(self):
+        m = Beta.from_formula(self.model, methylation, exog_precision_formula='~ age',
+                                          link_precision=links.identity())
+        rslt = m.fit()
+        assert_close(rslt.params, self.meth_fit.params, 1e-10)
+
+
     def test_scores(self):
         model, Z = self.model, self.Z
         for link in (links.identity(), links.log()):
