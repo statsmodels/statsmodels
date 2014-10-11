@@ -287,7 +287,7 @@ class Heckman(base.LikelihoodModel):
         # http://www.econ.psu.edu/~hbierens/EasyRegTours/HECKMAN_Tourfiles/HECKMAN.PDF
 
         # get number of X parameters and number of Z parameters
-        Y, X, Z = self.get_datamats()  #TODO: implement this chunk of code a better way
+        Y, X, Z = self.get_datamats()
         num_xvars = X.shape[1]
         num_zvars = Z.shape[1]
         del Y, X, Z
@@ -318,8 +318,6 @@ class Heckman(base.LikelihoodModel):
 
         scale = results_mle.scale
         #TODO: I think these should be the sandwich estimates, but should confirm
-        #TODO: sometimes variance estimates are negative -- need to look into
-        # how to remedy this
         xbeta_ncov_hat = results_mle.normalized_cov_params[:num_xvars,:num_xvars]
         zbeta_ncov_hat = results_mle.normalized_cov_params[
             num_xvars:(num_xvars+num_zvars),num_xvars:(num_xvars+num_zvars)
@@ -401,38 +399,28 @@ class Heckman(base.LikelihoodModel):
         Y_aligned[:] = np.nan
         Y_aligned[D] = Y
 
-        # create an array where each row is the log likelihood contribution of
-        # the regression model for the corresponding observation
-        ll_contrib_regmod = np.multiply(D,
-            np.log(
-                (2*np.pi*sigma2)**(-1/2) * \
-                    np.exp(
-                        -(
-                            Y_aligned - X_xbeta_aligned -
-                                rho * norm.pdf(Z_zbeta_aligned)/norm.cdf(Z_zbeta_aligned)
-                        )**2 / (2*sigma2)
-                    )
-                )
-            )
-        ll_contrib_regmod[~D] = 0
+        # create an array where each row is the log likelihood for the corresponding observation
+        ll_obs_observed = \
+            np.multiply(D,
+                np.log(norm.cdf( (Z_zbeta_aligned+(Y_aligned-X_xbeta_aligned)*rho/np.sqrt(sigma2)) / np.sqrt(1-rho**2) )) - \
+                (1/2)*(Y_aligned-X_xbeta_aligned)**2/sigma2 - \
+                np.log(np.sqrt(2*np.pi*sigma2)))
+        ll_obs_observed[~D] = 0
+        ll_obs_notobserved = \
+            np.multiply(1-D,
+                np.log(norm.cdf(-Z_zbeta_aligned)))
 
-        # create an array where each row is the log likelihood contribution of
-        # the selection model for the corresponding observation
-        ll_contrib_selectmod = np.multiply(D, np.log(norm.cdf(Z_zbeta_aligned))) + \
-            np.multiply(1-D, np.log(1-norm.cdf(Z_zbeta_aligned)))
+        ll_obs = ll_obs_observed + ll_obs_notobserved
 
-        # compute the log likelihood given the data and inputted parameters
-        ll_obs = ll_contrib_regmod + ll_contrib_selectmod
-
+        # return log likelihood by observation vector
         return ll_obs
 
     def score(self, params):
         '''
         Gradient of log-likelihood evaluated at params
         '''
-        #TODO: this is the numerical approx func taken from
-        # base.model.GenericLikelihoodModel -- eventually should
-        # replace this with an analytic form
+        #this is the numerical approx func taken from
+        # base.model.GenericLikelihoodModel
 
         kwds = {}
         kwds.setdefault('centered', True)
@@ -443,9 +431,8 @@ class Heckman(base.LikelihoodModel):
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation.
         '''
-        #TODO: this is the numerical approx func taken from
-        # base.model.GenericLikelihoodModel -- eventually should
-        # replace this with an analytic form
+        #this is the numerical approx func taken from
+        # base.model.GenericLikelihoodModel
 
         #kwds.setdefault('epsilon', 1e-4)
         kwds.setdefault('centered', True)
@@ -455,9 +442,8 @@ class Heckman(base.LikelihoodModel):
         '''
         Hessian of log-likelihood evaluated at params
         '''
-        #TODO: this is the numerical approx func taken from
-        # base.model.GenericLikelihoodModel -- eventually should
-        # replace this with an analytic form
+        #this is the numerical approx func taken from
+        # base.model.GenericLikelihoodModel
 
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
@@ -520,8 +506,6 @@ class HeckmanResults(base.LikelihoodModelResults):
     method : string
         The method used to produce the estimates, i.e. 'twostep', 'mle'
     """
-
-    #TODO: better to inherit from RegressionResults?
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
         select_res=None,

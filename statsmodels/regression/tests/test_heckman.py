@@ -517,8 +517,8 @@ def test_heckman_mle(verbose=True):
         t = stderr_stata_list[i]
         e = stderr_est_list[i]
 
-        if not np.isnan(e):
-            assert_(e<=t+TOL)
+        assert_(not np.isnan(e))
+        assert_(e<=t+TOL)
 
 
 
