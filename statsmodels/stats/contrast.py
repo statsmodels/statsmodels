@@ -10,7 +10,7 @@ from statsmodels.compat.numpy import np_matrix_rank
 #TODO: should this be public if it's just a container?
 class ContrastResults(object):
     """
-    Class for results of tests oflinear restrictions on coefficients in a model.
+    Class for results of tests of linear restrictions on coefficients in a model.
 
     This class functions mainly as a container for `t_test`, `f_test` and
     `wald_test` for the parameters of a model.
@@ -205,7 +205,7 @@ class Contrast(object):
 
     Parameters
     ----------
-    term ; array-like
+    term : array-like
     design : array-like
 
     Attributes
