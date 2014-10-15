@@ -365,8 +365,8 @@ class BinaryModel(DiscreteModel):
     def __init__(self, endog, exog, **kwargs):
         super(BinaryModel, self).__init__(endog, exog, **kwargs)
         if (self.__class__.__name__ != 'MNLogit' and
-            not np.all(np.unique(self.endog) == [0, 1])):
-            raise ValueError("endog must contain 0s and 1s only.")
+                not np.all((self.endog >= 0) & (self.endog <= 1))):
+            raise ValueError("endog must be in the unit interval.")
 
 
     def predict(self, params, exog=None, linear=False):
