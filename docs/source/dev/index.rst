@@ -66,6 +66,6 @@ Contents
    naming_conventions
    dataset_notes
    examples
-   roadmap_todo
+   get_involved
    internal
    testing
