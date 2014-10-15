@@ -49,7 +49,7 @@ def test_compare_arma():
     #for now without random.seed
 
     np.random.seed(9876565)
-    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(size=200,
+    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
             burnin=1000)
 
     # this used kalman filter through descriptive
