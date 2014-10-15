@@ -35,13 +35,12 @@ covariates.
    import numpy as np
    import statsmodels.api as sm
    import statsmodels.formula.api as smf
-   from statsmodels.genmod.dependence_structures import Independence
 
    data = sm.datasets.get_rdataset("epil", "MASS").data
 
-   ind = Independence()
    md = smf.gee("y ~ age + trt + base", "subject", data,
-                cov_struct=ind, family=sm.families.Poisson())
+                cov_struct=sm.cov_struct.Independence(), 
+                family=sm.families.Poisson())
    mdf = md.fit()
    print mdf.summary()
 
@@ -120,7 +119,7 @@ other types of random effects models can all be fit.
 Here is an example of fitting a random intercepts model to data from a
 longitudinal study:
 
-.. ipython:: python
+.. code-block:: python
 
     import statsmodels.api as sm
     import statsmodels.formula.api as smf
@@ -198,6 +197,8 @@ Major Bugs fixed
 ----------------
 
 * NA-handling with formulas is now correctly handled. :ghissue:`805`, :ghissue:`1877`.
+* Better error messages when an array with an object dtype is used. :ghissue:`2013`.
+* ARIMA forecasts were hard-coded for order of integration with ``d = 1``. :ghissue:`1562`.
 
 .. currentmodule:: statsmodels.tsa
 
