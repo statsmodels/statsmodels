@@ -9,24 +9,25 @@ Models for Survival and Duration Analysis
 Examples
 --------
 
-..code-block:: python
+.. code-block:: python
 
-  import statsmodels.api as sm
-  import statsmodels.formula.api as smf
+   import statsmodels.api as sm
+   import statsmodels.formula.api as smf
 
-  data = sm.datasets.get_rdataset("flchain", "survival").data
-  del data["chapter"]
-  data = data.dropna()
-  data["lam"] = data["lambda"]
-  data["female"] = (data["sex"] == "F").astype(int)
-  data["year"] = data["sample.yr"] - min(data["sample.yr"])
-  status = data["death"].values
+   data = sm.datasets.get_rdataset("flchain", "survival").data
+   del data["chapter"]
+   data = data.dropna()
+   data["lam"] = data["lambda"]
+   data["female"] = (data["sex"] == "F").astype(int)
+   data["year"] = data["sample.yr"] - min(data["sample.yr"])
+   status = data["death"].values
 
-  mod = smf.phreg("futime ~ 0 + age + female + creatinine + "
-                  "np.sqrt(kappa) + np.sqrt(lam) + year + mgus",
-                  data, status=status, ties="efron")
-  rslt = mod.fit()
-  print(rslt.summary())
+   mod = smf.phreg("futime ~ 0 + age + female + creatinine + "
+                   "np.sqrt(kappa) + np.sqrt(lam) + year + mgus",
+                   data, status=status, ties="efron")
+   rslt = mod.fit()
+   print(rslt.summary())
+
 
 Detailed examples can be found here:
 
@@ -35,7 +36,8 @@ Detailed examples can be found here:
 
     examples/notebooks/generated/
 
-There some notebook examples on the Wiki:
+
+There are some notebook examples on the Wiki:
 `Wiki notebooks for PHReg and Survival Analysis <https://github.com/statsmodels/statsmodels/wiki/Examples#survival-analysis>`_
 
 
