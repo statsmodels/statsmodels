@@ -7,11 +7,12 @@
 Release 0.6.0
 =============
 
-Release summary.
+Statsmodels 0.6.0 is another large release. It is the result of the work of 37 authors over the last year and includes over 1500 commits. It contains many new features, improvements, and bug fixes detailed below.
 
-Major changes:
 
-Addition of Generalized Estimating Equations GEE
+See the :ref:`list of fixed issues <issues_list_06>` for specific closed issues.
+
+The following major new features appear in this version.
 
 Generalized Estimating Equations
 --------------------------------
@@ -212,9 +213,9 @@ Backwards incompatible changes and deprecations
 Development summary and credits
 -------------------------------
 
-The previous version (0.5.0) was released August 14, 2014. Since then we have closed a total of XXX issues, XXX pull requests, and XXX regular issues. Refer to the :ref:`detailed list<issues_list_06>` for more information.
+The previous version (0.5.0) was released August 14, 2014. Since then we have closed a total of 528 issues, 276 pull requests, and 252 regular issues. Refer to the :ref:`detailed list<issues_list_06>` for more information.
 
-This release is a result of the work of the following XXX authors who contributed a total of XXX commits. If for any reason we have failed to list your name in the below, please contact us:
+This release is a result of the work of the following 37 authors who contributed a total of 1531 commits. If for any reason we have failed to list your name in the below, please contact us:
 
 A blurb about the number of changes and the contributors list.
 
