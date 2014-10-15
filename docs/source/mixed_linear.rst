@@ -30,14 +30,14 @@ hope to implement these features for the next release.
 Examples
 --------
 
-::
+..code-block:: python
 
-  # Load the data from Spector and Mazzeo (1980)
-  spector_data = sm.datasets.spector.load()
-  spector_data.exog = sm.add_constant(spector_data.exog)
+  import statsmodels.api as sm
+  import statsmodels.formula.api as smf
 
-  data = pd.read_csv("http://vincentarelbundock.github.io/Rdatasets/csv/geepack/dietox.csv")
-  md = MixedLM.from_formula("Weight ~ Time", data, groups=data["Pig"])
+  data = sm.datasets.get_rdataset("dietox", "geepack").data
+  
+  md = smf.mixedlm("Weight ~ Time", data, groups=data["Pig"])
   mdf = md.fit()
   print(mdf.summary())
 

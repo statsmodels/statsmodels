@@ -328,8 +328,8 @@ class _Var(object):
     '''obsolete VAR class, use tsa.VAR instead, for internal use only
 
 
-    Example
-    -------
+    Examples
+    --------
 
     >>> v = Var(ar2s)
     >>> v.fit(1)

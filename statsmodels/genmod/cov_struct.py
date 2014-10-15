@@ -296,8 +296,8 @@ class Nested(CovStruct):
     columns j' < j (this only applies to observations in the same
     top-level cluster given by the `groups` argument to GEE).
 
-    Example
-    -------
+    Examples
+    --------
     Suppose our data are student test scores, and the students are in
     classrooms, nested in schools, nested in school districts.  The
     school district is the highest level of grouping, so the school
@@ -492,8 +492,8 @@ class Autoregressive(CovStruct):
        A function that computes the distance between the two
        observations based on their `time` values.
 
-    Reference
-    ---------
+    References
+    ----------
     B Rosner, A Munoz.  Autoregressive modeling for the analysis of
     longitudinal data with unequally spaced examinations.  Statistics
     in medicine. Vol 7, 59-71, 1988.
