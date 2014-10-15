@@ -280,9 +280,9 @@ class LikelihoodModel(Model):
             All kwargs are passed to the chosen solver with one exception. The
             following keyword controls what happens after the fit::
 
-            warn_convergence : bool, optional
-                If True, checks the model for the converged flag. If the
-                converged flag is False, a ConvergenceWarning is issued.
+                warn_convergence : bool, optional
+                    If True, checks the model for the converged flag. If the
+                    converged flag is False, a ConvergenceWarning is issued.
 
         Notes
         -----

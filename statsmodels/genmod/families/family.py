@@ -1178,14 +1178,17 @@ class NegativeBinomial(Family):
 
         where piecewise is defined as
 
-        if :math:`Y_{i} == 0:`
+        If :math:`Y_{i} == 0`:
 
-        piecewise_i = :math:`2\log\left(1+\alpha*\mu\right)/\alpha`
+        .. math::
 
-        if :math:`Y_{i} > 0`:
+           piecewise_i = 2\log(1+\alpha*\mu)/\alpha
 
-        piecewise_i = :math:`2 Y \log(Y/\mu)-2/\alpha(1+\alpha Y)*
-                            \log((1+\alpha Y)/(1+\alpha\mu))`
+        If :math:`Y_{i} > 0`:
+
+        .. math::
+
+           piecewise_i = math2 Y \log(Y/\mu)-2/\alpha(1+\alpha Y) * \log((1+\alpha Y)/(1+\alpha\mu))
         """
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero
@@ -1221,12 +1224,18 @@ class NegativeBinomial(Family):
         `resid_dev` = sign(endog-mu) * sqrt(piecewise)
 
         where piecewise is defined as
-        if :math:`Y_i = 0`:
-        :math:`piecewise_i = 2*log(1+alpha*mu)/alpha`
 
-        if :math:`Y_i > 0`:
-        :math:`piecewise_i = 2*Y*log(Y/\mu) - 2/\alpha * (1 + \alpha * Y) *
-                             \log((1 + \alpha * Y)/(1 + \alpha * \mu))`
+        If :math:`Y_i = 0`:
+
+        .. math::
+
+           piecewise_i = 2*log(1+alpha*mu)/alpha
+
+        If :math:`Y_i > 0`:
+
+        .. math::
+
+           piecewise_i = 2*Y*log(Y/\mu) - 2/\alpha * (1 + \alpha * Y) * \log((1 + \alpha * Y)/(1 + \alpha * \mu))
         '''
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero

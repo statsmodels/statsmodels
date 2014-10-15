@@ -161,25 +161,25 @@ _arma_results_predict = _predict % {"Model" : "ARMA", "params" : "",
                                     "extra_section" : _results_notes}
 
 _arima_predict = _predict % {"Model" : "ARIMA",
-                             "params" : """
-        params : array-like
+                             "params" : """params : array-like
             The fitted parameters of the model.""",
-                             "extra_params" : """
-        typ : str {'linear', 'levels'}
+                             "extra_params" : """typ : str {'linear', 'levels'}
+
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
-            variables.\n\n""", "returns" : _predict_returns,
+              variables.\n""", "returns" : _predict_returns,
                              "extra_section" : _predict_notes}
 
 _arima_results_predict = _predict % {"Model" : "ARIMA",
                                      "params" : "",
                                      "extra_params" :
                                      """typ : str {'linear', 'levels'}
+
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
-              variables.\n\n""",
+              variables.\n""",
                                      "returns" : _predict_returns,
                                      "extra_section" : _results_notes}
 
