@@ -47,14 +47,14 @@ def make_lag_names(names, lag_order, trendorder=1):
     """
     Produce list of lag-variable names. Constant / trends go at the beginning
 
-    Example
-    -------
+    Examples
+    --------
     >>> make_lag_names(['foo', 'bar'], 2, 1)
     ['const', 'L1.foo', 'L1.bar', 'L2.foo', 'L2.bar']
 
     """
     lag_names = []
-    if isinstance(names, string_types):     
+    if isinstance(names, string_types):
         names = [names]
 
     # take care of lagged endogenous names

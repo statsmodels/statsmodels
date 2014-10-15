@@ -477,8 +477,8 @@ def chain_dot(*arrs):
     -------
     Dot product of all arguments.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import numpy as np
     >>> from statsmodels.tools import chain_dot
     >>> A = np.arange(1,13).reshape(3,4)

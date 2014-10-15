@@ -263,8 +263,8 @@ def dates_from_range(start, end=None, length=None):
     length : int, optional
         The length of the returned array of end is None.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import statsmodels.api as sm
     >>> dates = sm.tsa.datetools.date_range('1960m1', length=nobs)
 
