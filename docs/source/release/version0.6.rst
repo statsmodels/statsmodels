@@ -212,7 +212,49 @@ Backwards incompatible changes and deprecations
 Development summary and credits
 -------------------------------
 
+The previous version (0.5.0) was released August 14, 2014. Since then we have closed a total of XXX issues, XXX pull requests, and XXX regular issues. Refer to the :ref:`detailed list<issues_list_06>` for more information.
+
+This release is a result of the work of the following XXX authors who contributed a total of XXX commits. If for any reason we have failed to list your name in the below, please contact us:
+
 A blurb about the number of changes and the contributors list.
+
+* Alex Griffing <argriffi-at-ncsu.edu>
+* Alex Parij <paris.alex-at-gmail.com>
+* Ana Martinez Pardo <anamartinezpardo-at-gmail.com>
+* Andrew Clegg <andrewclegg-at-users.noreply.github.com>
+* Ben Duffield <bduffield-at-palantir.com>
+* Chad Fulton <chad-at-chadfulton.com>
+* Chris Kerr <cjk34-at-cam.ac.uk>
+* Eric Chiang <eric.chiang.m-at-gmail.com>
+* Evgeni Burovski <evgeni-at-burovski.me>
+* gliptak <gliptak-at-gmail.com>
+* Hans-Martin von Gaudecker <hmgaudecker-at-uni-bonn.de>
+* Jan Schulz <jasc-at-gmx.net>
+* jfoo <jcjf1983-at-gmail.com>
+* Joe Hand <joe.a.hand-at-gmail.com>
+* Josef Perktold <josef.pktd-at-gmail.com>
+* jsphon <jonathanhon-at-hotmail.com>
+* Justin Grana <jg3705a-at-student.american.edu>
+* Kerby Shedden <kshedden-at-umich.edu>
+* Kevin Sheppard <kevin.sheppard-at-economics.ox.ac.uk>
+* Kyle Beauchamp <kyleabeauchamp-at-gmail.com>
+* Lars Buitinck <l.buitinck-at-esciencecenter.nl>
+* Max Linke <max_linke-at-gmx.de>
+* Miroslav Batchkarov <mbatchkarov-at-gmail.com>
+* m <mngu2382-at-gmail.com>
+* Padarn Wilson <padarn-at-gmail.com>
+* Paul Hobson <pmhobson-at-gmail.com>
+* Pietro Battiston <me-at-pietrobattiston.it>
+* Radim Řehůřek <radimrehurek-at-seznam.cz>
+* Ralf Gommers <ralf.gommers-at-googlemail.com>
+* Richard T. Guy <richardtguy84-at-gmail.com>
+* Roy Hyunjin Han <rhh-at-crosscompute.com>
+* Skipper Seabold <jsseabold-at-gmail.com>
+* Tom Augspurger <thomas-augspurger-at-uiowa.edu>
+* Trent Hauck <trent.hauck-at-gmail.com>
+* Valentin Haenel <valentin.haenel-at-gmx.de>
+* Vincent Arel-Bundock <varel-at-umich.edu>
+* Yaroslav Halchenko <debian-at-onerussian.com>
 
 .. note::
 
