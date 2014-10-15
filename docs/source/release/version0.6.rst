@@ -7,11 +7,12 @@
 Release 0.6.0
 =============
 
-Release summary.
+Statsmodels 0.6.0 is another large release. It is the result of the work of 37 authors over the last year and includes over 1500 commits. It contains many new features, improvements, and bug fixes detailed below.
 
-Major changes:
 
-Addition of Generalized Estimating Equations GEE
+See the :ref:`list of fixed issues <issues_list_06>` for specific closed issues.
+
+The following major new features appear in this version.
 
 Generalized Estimating Equations
 --------------------------------
@@ -32,18 +33,14 @@ covariates.
 .. code-block:: python
 
    import numpy as np
-   import pandas as pd
-   from statsmodels.genmod.generalized_estimating_equations import GEE
-   from statsmodels.genmod.dependence_structures import Independence
-   from statsmodels.genmod.families import Poisson
+   import statsmodels.api as sm
+   import statsmodels.formula.api as smf
 
-   data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
-   data = pd.read_csv(data_url)
+   data = sm.datasets.get_rdataset("epil", "MASS").data
 
-   fam = Poisson()
-   ind = Independence()
-   md = GEE.from_formula("y ~ age + trt + base", "subject", data,
-                          covstruct=ind, family=fam)
+   md = smf.gee("y ~ age + trt + base", "subject", data,
+                cov_struct=sm.cov_struct.Independence(), 
+                family=sm.families.Poisson())
    mdf = md.fit()
    print mdf.summary()
 
@@ -122,7 +119,7 @@ other types of random effects models can all be fit.
 Here is an example of fitting a random intercepts model to data from a
 longitudinal study:
 
-.. ipython:: python
+.. code-block:: python
 
     import statsmodels.api as sm
     import statsmodels.formula.api as smf
@@ -200,6 +197,8 @@ Major Bugs fixed
 ----------------
 
 * NA-handling with formulas is now correctly handled. :ghissue:`805`, :ghissue:`1877`.
+* Better error messages when an array with an object dtype is used. :ghissue:`2013`.
+* ARIMA forecasts were hard-coded for order of integration with ``d = 1``. :ghissue:`1562`.
 
 .. currentmodule:: statsmodels.tsa
 
@@ -212,7 +211,49 @@ Backwards incompatible changes and deprecations
 Development summary and credits
 -------------------------------
 
+The previous version (0.5.0) was released August 14, 2014. Since then we have closed a total of 528 issues, 276 pull requests, and 252 regular issues. Refer to the :ref:`detailed list<issues_list_06>` for more information.
+
+This release is a result of the work of the following 37 authors who contributed a total of 1531 commits. If for any reason we have failed to list your name in the below, please contact us:
+
 A blurb about the number of changes and the contributors list.
+
+* Alex Griffing <argriffi-at-ncsu.edu>
+* Alex Parij <paris.alex-at-gmail.com>
+* Ana Martinez Pardo <anamartinezpardo-at-gmail.com>
+* Andrew Clegg <andrewclegg-at-users.noreply.github.com>
+* Ben Duffield <bduffield-at-palantir.com>
+* Chad Fulton <chad-at-chadfulton.com>
+* Chris Kerr <cjk34-at-cam.ac.uk>
+* Eric Chiang <eric.chiang.m-at-gmail.com>
+* Evgeni Burovski <evgeni-at-burovski.me>
+* gliptak <gliptak-at-gmail.com>
+* Hans-Martin von Gaudecker <hmgaudecker-at-uni-bonn.de>
+* Jan Schulz <jasc-at-gmx.net>
+* jfoo <jcjf1983-at-gmail.com>
+* Joe Hand <joe.a.hand-at-gmail.com>
+* Josef Perktold <josef.pktd-at-gmail.com>
+* jsphon <jonathanhon-at-hotmail.com>
+* Justin Grana <jg3705a-at-student.american.edu>
+* Kerby Shedden <kshedden-at-umich.edu>
+* Kevin Sheppard <kevin.sheppard-at-economics.ox.ac.uk>
+* Kyle Beauchamp <kyleabeauchamp-at-gmail.com>
+* Lars Buitinck <l.buitinck-at-esciencecenter.nl>
+* Max Linke <max_linke-at-gmx.de>
+* Miroslav Batchkarov <mbatchkarov-at-gmail.com>
+* m <mngu2382-at-gmail.com>
+* Padarn Wilson <padarn-at-gmail.com>
+* Paul Hobson <pmhobson-at-gmail.com>
+* Pietro Battiston <me-at-pietrobattiston.it>
+* Radim Řehůřek <radimrehurek-at-seznam.cz>
+* Ralf Gommers <ralf.gommers-at-googlemail.com>
+* Richard T. Guy <richardtguy84-at-gmail.com>
+* Roy Hyunjin Han <rhh-at-crosscompute.com>
+* Skipper Seabold <jsseabold-at-gmail.com>
+* Tom Augspurger <thomas-augspurger-at-uiowa.edu>
+* Trent Hauck <trent.hauck-at-gmail.com>
+* Valentin Haenel <valentin.haenel-at-gmx.de>
+* Vincent Arel-Bundock <varel-at-umich.edu>
+* Yaroslav Halchenko <debian-at-onerussian.com>
 
 .. note::
 

@@ -13,6 +13,7 @@ except NameError:
 import os
 import re
 import sys
+from datetime import datetime
 
 import requests
 import getpass
@@ -63,11 +64,11 @@ def get_auth_token():
         "public_repo",
         "gist"
       ],
-      "note": "Statsmodels tools",
+      "note": "Statsmodels tools - {}".format(datetime.now().isoformat()),
       "note_url": "https://github.com/statsmodels/statsmodels/tree/master/tools",
     }
     response = requests.post('https://api.github.com/authorizations',
-                            auth=(user, pw), data=json.dumps(auth_request))
+                             auth=(user, pw), data=json.dumps(auth_request))
     response.raise_for_status()
     token = json.loads(response.text)['token']
     keyring.set_password('github', fake_username, token)
@@ -146,7 +147,7 @@ def get_pulls_list(project, auth=False, **params):
         headers = make_auth_header()
     else:
         headers = None
-    pages = get_paged_request(url, headers=headers, params=params)
+    pages = get_paged_request(url, headers=headers, **params)
     return pages
 
 def get_issues_list(project, auth=False, **params):
