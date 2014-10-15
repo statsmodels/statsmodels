@@ -45,8 +45,7 @@ and list-wise delete to remove missing observations:
 
 .. code:: python
 
-    url = "http://vincentarelbundock.github.com/Rdatasets/csv/HistData/Guerry.csv"
-    df = pandas.read_csv(url)
+    df = sm.datasets.get_rdataset("Guerry", "HistData").data
     df = df[['Lottery', 'Literacy', 'Wealth', 'Region']].dropna()
     df.head()
 

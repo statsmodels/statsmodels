@@ -14,7 +14,7 @@ Examples
   import statsmodels.api as sm
   import statsmodels.formula.api as smf
 
-  data = sm.datasets.get_rdataset("flchain", "survival")
+  data = sm.datasets.get_rdataset("flchain", "survival").data
   del data["chapter"]
   data = data.dropna()
   data["lam"] = data["lambda"]
