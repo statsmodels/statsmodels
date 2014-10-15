@@ -24,18 +24,3 @@ Contribute an Example
 ---------------------
 
 Contribute an :ref:`example <examples>`, add some technical documentation, or contribute a statistics tutorial.
-
-Roadmap to 0.6
-==============
-
-Work on any of the big picture ideas is very welcome. Implementing these ideas requires some thought and changes will likely affect all the codebase.
-
-Core Development
-----------------
-
-* Refactoring models structure to have consistent variable naming, methods, and signatures. Make sure `DRY <http://en.wikipedia.org/wiki/Don%27t_repeat_yourself>`__ is respected.
-
-Statistics
-----------
-
-* Bootstrapping, jackknifing, or re-sampling framework.
