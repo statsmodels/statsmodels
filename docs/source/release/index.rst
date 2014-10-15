@@ -16,6 +16,8 @@ What's new in Statsmodels
 .. toctree::
    :maxdepth: 1
 
+   version0.6
+   github-stats-0.6
    version0.5
    github-stats-0.5
 
