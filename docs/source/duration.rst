@@ -6,26 +6,25 @@
 Models for Survival and Duration Analysis
 =========================================
 
-currently contains Cox's Proportional Hazard Model.
-
-
 Examples
 --------
 
-::
+..code-block:: python
 
-  url = "http://vincentarelbundock.github.io/Rdatasets/csv/survival/flchain.csv"
-  data = pd.read_csv(url)
+  import statsmodels.api as sm
+  import statsmodels.formula.api as smf
+
+  data = sm.datasets.get_rdataset("flchain", "survival")
   del data["chapter"]
   data = data.dropna()
   data["lam"] = data["lambda"]
-  data["female"] = 1*(data["sex"] == "F")
+  data["female"] = (data["sex"] == "F").astype(int)
   data["year"] = data["sample.yr"] - min(data["sample.yr"])
+  status = data["death"].values
 
-  status = np.asarray(data["death"])
-  mod = PHreg.from_formula("futime ~ 0 + age + female + creatinine + " +
-                           "np.sqrt(kappa) + np.sqrt(lam) + year + mgus",
-                           data, status=status, ties="efron")
+  mod = smf.phreg("futime ~ 0 + age + female + creatinine + "
+                  "np.sqrt(kappa) + np.sqrt(lam) + year + mgus",
+                  data, status=status, ties="efron")
   rslt = mod.fit()
   print(rslt.summary())
 
