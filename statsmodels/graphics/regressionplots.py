@@ -19,7 +19,7 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.tools.tools import maybe_unwrap_results
-
+from statsmodels.base import model
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
@@ -878,33 +878,6 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
 
 def covariate_effect_plot(results, focus_var, exog, n_points=50,
                           ax=None):
-    """
-    Creates a plot showing a slice of the fitted mean function.
-
-    Arguments
-    ---------
-    results : model results instance
-        A results instance from any fitted model.
-    focus_var : int or string
-        The name or column index of the variable against which the
-        fitted mean values will be plotted.
-    exog : array-like
-        One or more specifications of the model variables.  Each row
-        of `exog` generates a curve in the plot.  If the model was fit
-        by a formula, may be a DataFrame or Series to be converted to
-        a design matrix using the formula.  Otherwise must be a
-        ndarray, with columns conformant to `results.model.exog`.
-    n_points : int, optional
-        The number of points to plot on the horizontal axis.
-    ax : matplotlib axes instance
-        The axes on which to draw the plot.  If not provided, a new
-        axes instance is created.
-
-    Returns
-    -------
-    fig : matplotlib Figure
-        A matplotlib figure instance.
-    """
 
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -974,3 +947,6 @@ def covariate_effect_plot(results, focus_var, exog, n_points=50,
     ax.set_ylabel("Fitted mean", size=15)
 
     return fig
+
+covariate_effect_plot.__doc__ = model._covariate_effect_plot_doc % {
+    'extra_params_doc': "results: object\n\tResults for a fitted regression model"}

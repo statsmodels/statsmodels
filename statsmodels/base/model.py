@@ -37,6 +37,76 @@ _extra_param_doc = """
         False, a constant is not checked for and k_constant is set to 0.
 """
 
+_covariate_effect_plot_doc ="""\
+    Plot the fitted mean function in terms of a single 'focus'
+    covariate, holding the values of the other covariates fixed at
+    specified points.
+
+    Parameters
+    ----------
+    %(extra_params_doc)sfocus_var : int or string
+        The name or column index of the variable against which the
+        fitted mean values will be plotted.
+    exog : list or array-like
+        One or more specifications for the values of the
+        independent variables in the regression model.  See
+        notes below for details.
+    n_points : int, optional
+        The number of points to plot on the horizontal axis.
+    ax : matplotlib axes instance
+        The axes on which to draw the plot.  If not provided, a
+        new axes instance is created.
+
+    Returns
+    -------
+    The matplotlib Figure instance on which the plot is drawn.
+
+    Examples
+    --------
+    Create a covariate effect plot varying the third column of
+    `exog` throughout its range, while holding the other variables
+    fixed at two points, defined by the 25th, and 75th percentiles
+    of their observed distributions:
+
+    >>> model = sm.GLM(endog, exog, family=sm.families.Poisson())
+    >>> result = model.fit()
+    >>> new_exog = []
+    >>> new_exog.append(np.percentile(exog, 25, axis=0)
+    >>> new_exog.append(np.percentile(exog, 75, axis=0)
+    >>> fig = result.covariate_effect_plot(2, new_exog)
+
+    Similar to the previous example, using formulas:
+
+    >>> fml = 'y ~ x1 + x1'
+    >>> model = sm.GLM.from_formula(fml, df, family=sm.families.Poisson())
+    >>> result = model.fit()
+    >>> new_exog = [None, None]
+    >>> new_exog[0] = [np.percentile(df[v], 25) for v in df.columns]
+    >>> new_exog[1] = [np.percentile(df[v], 75) for v in df.columns]
+    >>> new_exog = [Series(x, index=df.columns) for x in new_exog]
+    >>> fig = result.covariate_effect_plot('x2', new_exog)
+
+    Notes
+    -----
+    If the model was fit by a formula, `exog` must contain either
+    a single Series, a list of Series, or a DataFrame.  Each
+    Series (or each row of the DataFrame) specifies one setting of
+    the independent variables in the regression model, which
+    results in one curve being added to the plot.
+
+    If the model was fit without a formula, `exog` must contain
+    either a 1-d ndarray, a list of 1-d ndarrays, or a 2-d
+    ndarray.  Each 1-d ndarray (or each row of the 2-d ndarray)
+    specifies one setting of the independent variables in the
+    regression model, which results in one curve being added to
+    the plot.  The variable values must be in the same order as
+    the columns of model.exog.  Placeholder values must be give
+    for the focus variable.
+
+    `fig.get_axes()[0]` returns the axes object containing the
+    predicted mean curves.
+"""
+
 
 class Model(object):
     __doc__ = """
@@ -729,64 +799,6 @@ class Results(object):
 
     def covariate_effect_plot(self, focus_var, exog, n_points=50,
                               ax=None):
-        """
-        Plot the fitted mean function for a single 'focus' covariate,
-        holding the values of the other covariates fixed at specified
-        points.
-
-        Parameters
-        ----------
-        focus_var : int or string
-            The name or column index of the variable against which the
-            fitted mean values will be plotted.
-        exog : array-like
-            One or more specifications of the model variables.  Each
-            row of `exog` generates a curve in the plot.  If the model
-            was fit by a formula, may be a DataFrame or Series to be
-            converted to a design matrix using the formula.  Otherwise
-            must be a ndarray, with columns conformant to
-            `results.model.exog`.
-        n_points : int, optional
-            The number of points to plot on the horizontal axis.
-        ax : matplotlib axes instance
-            The axes on which to draw the plot.  If not provided, a new
-            axes instance is created.
-
-        Returns
-        -------
-        The matplotlib Figure instance on which the plot is drawn.
-
-        Examples
-        --------
-        Create a covariate effect plot varying the third column of
-        `exog` throughout its range, and holding the other variables
-        fixed at two points, defined by the 25th, and 75th percentiles
-        of their observed distributions:
-
-        >>> model = sm.GLM(endog, exog, family=sm.families.Poisson())
-        >>> result = model.fit()
-        >>> new_exog = []
-        >>> new_exog.append(np.percentile(exog, 25, axis=0)
-        >>> new_exog.append(np.percentile(exog, 75, axis=0)
-        >>> fig = result.covariate_effect_plot(2, new_exog)
-
-        Similar to the previous example, using formulas:
-
-        >>> fml = 'y ~ x1 + x1'
-        >>> model = sm.GLM.from_formula(fml, df, family=sm.families.Poisson())
-        >>> result = model.fit()
-        >>> new_exog = [None, None]
-        >>> new_exog[0] = [np.percentile(df[v], 25) for v in df.columns]
-        >>> new_exog[1] = [np.percentile(df[v], 75) for v in df.columns]
-        >>> new_exog = [Series(x, index=df.columns) for x in new_exog]
-        >>> fig = result.covariate_effect_plot('x2', new_exog)
-
-        Notes
-        -----
-        `fig.get_axes()[0]` returns the axes object containing the
-        pedicted mean curves, `fig.get_axes()[1]` returns the axes
-        containing the histogram (if present).
-        """
 
         from statsmodels.graphics import regressionplots
 
@@ -794,6 +806,9 @@ class Results(object):
                                                      exog,
                                                      n_points=n_points,
                                                      ax=ax)
+
+    covariate_effect_plot.__doc__ = _covariate_effect_plot_doc % {
+        'extra_params_doc': ''}
 
 
 #TODO: public method?
