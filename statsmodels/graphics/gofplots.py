@@ -122,12 +122,15 @@ class ProbPlot(object):
     .. plot:: plots/graphics_gofplots_qqplot.py
     """
 
-    def __init__(self, data, dist=stats.norm, fit=False, a=0, distargs=()):
+    def __init__(self, data, dist=stats.norm, fit=False, a=0,
+                 loc=0, scale=1, distargs=()):
 
         self.data = data
         self.a = a
         self.nobs = data.shape[0]
         self._distargs = distargs
+        self._loc = loc
+        self._scale = scale
 
         self._fit = fit
         if isinstance(dist, string_types):
@@ -149,6 +152,20 @@ class ProbPlot(object):
         self._distargs = value
 
     @property
+    def loc(self):
+        return self._loc
+    @loc.setter
+    def loc(self, value):
+        self._loc = value
+
+    @property
+    def scale(self):
+        return self._scale
+    @scale.setter
+    def scale(self, value):
+        self._scale = value
+
+    @property
     def fit(self):
         return self._fit
     @fit.setter
@@ -156,33 +173,26 @@ class ProbPlot(object):
         self._cache.clear()
         self._fit = value
 
-    @cache_readonly
-    def dist(self):
-        if self._dist is None:
-            if self._userdist_is_frozen:
-                self._dist = self._userdist
+    def _get_dist(self):
+        if self._userdist_is_frozen:
+            dist = self._userdist
+        else:
+            if self.fit:
+                dist = self._userdist(*self._userdist.fit(self.data))
             else:
-                if self.fit:
-                    self._dist = self._userdist(*self._userdist.fit(self.data))
-                else:
-                    self._dist = self._userdist(*self.distargs)
+                dist = self._userdist(
+                    *self.distargs, loc=self.loc, scale=self.scale
+                )
 
+        return dist
+
+    @property
+    def dist(self):
+        self._dist = self._get_dist()
         self.distargs = self._dist.args
+        self.loc = self._dist.kwds.get('loc', 0)
+        self.scale = self._dist.kwds.get('scale', 1)
         return self._dist
-
-    @cache_readonly
-    def loc(self):
-        if len(self.dist.args) == 0:
-            return 0
-        else:
-            return self.dist.args[0]
-
-    @cache_readonly
-    def scale(self):
-        if len(self.dist.args) == 0:
-            return 1
-        else:
-            return self.dist.args[1]
 
     @cache_readonly
     def theoretical_percentiles(self):
