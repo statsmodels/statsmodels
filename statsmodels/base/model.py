@@ -37,6 +37,110 @@ _extra_param_doc = """
         False, a constant is not checked for and k_constant is set to 0.
 """
 
+_added_variable_plot_doc = """\
+    Create an added variable plot for a fitted regression model.
+
+    Parameters
+    ----------
+    %(extra_params_doc)sfocus_exog : int or string
+        The column index of exog, or a variable name, indicating the
+        variable whose role in the regression is to be assessed.
+    resid_type : string
+        The type of residuals to use for the dependent variable.  If
+        None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
+    use_glm_weights : bool
+        Only used if the model is a GLM or GEE.  If True, the
+        residuals for the focus predictor are computed using WLS, with
+        the weights obtained from the IRLS calculations for fitting
+        the GLM. If False, unweighted regression is used.
+    fit_kwargs : dict, optional
+        Keyword arguments to be passed to fit when refitting the
+        model.
+    ax : Axes instance
+        Matplotlib Axes instance
+
+    Returns
+    -------
+    fig : matplotlib Figure
+        A matplotlib figure instance.
+"""
+
+_partial_residual_plot_doc = """\
+    Create a partial residual, or 'component plus residual' plot for a
+    fited regression model.
+
+    Parameters
+    ----------
+    %(extra_params_doc)sfocus_exog : int or string
+        The column index of exog, or variable name, indicating the
+        variable whose role in the regression is to be assessed.
+    ax : Axes instance
+        Matplotlib Axes instance
+
+    Returns
+    -------
+    fig : matplotlib Figure
+        A matplotlib figure instance.
+"""
+
+_ceres_plot_doc = """\
+    Produces a CERES (Conditional Expectation Partial Residuals)
+    plot for a fitted regression model.
+
+    Parameters
+    ----------
+    %(extra_params_doc)sfocus_exog : integer or string
+        The column index of results.model.exog, or the variable name,
+        indicating the variable whose role in the regression is to be
+        assessed.
+    frac : float
+        Map from column numbers to lowess tuning parameters for the
+        adjusted model used in the CERES analysis.  Not used if
+        `cond_means` is provided.
+    cond_means : array-like, optional
+        If provided, the columns of this array span the space of the
+        conditional means E[exog | focus exog], where exog ranges over
+        some or all of the columns of exog (other than the focus exog).
+    ax : matplotlib.Axes instance, optional
+        The axes on which to draw the plot. If not provided, a new
+        axes instance is created.
+
+    Returns
+    -------
+    fig : matplotlib.Figure instance
+        The figure on which the partial residual plot is drawn.
+
+    References
+    ----------
+    RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
+    generalized linear models.  Journal of the American
+    Statistical Association, 93:442.
+
+    RD Cook (1993). Partial residual plots.  Technometrics 35:4.
+
+    Notes
+    -----
+    `cond_means` is intended to capture the behavior of E[x1 |
+    x2], where x2 is the focus exog and x1 are all the other exog
+    variables.  If all the conditional mean relationships are
+    linear, it is sufficient to set cond_means equal to the focus
+    exog.  Alternatively, cond_means may consist of one or more
+    columns containing functional transformations of the focus
+    exog (e.g. x2^2) that are thought to capture E[x1 | x2].
+
+    If nothing is known or suspected about the form of E[x1 | x2],
+    set `cond_means` to None, and it will be estimated by
+    smoothing each non-focus exog against the focus exog.  The
+    values of `frac` control these lowess smooths.
+
+    If cond_means contains only the focus exog, the results are
+    equivalent to a partial residual plot.
+
+    If the focus variable is believed to be independent of the
+    other exog variables, `cond_means` can be set to an (empty)
+    nx0 array.
+"""
+
 
 class Model(object):
     __doc__ = """
@@ -751,36 +855,7 @@ class Results(object):
     def added_variable_plot(self, focus_exog, resid_type=None,
                             use_glm_weights=True, fit_kwargs=None,
                             ax=None):
-        """
-        Produces an added variable plot.
-
-        Parameters
-        ----------
-        focus_exog : integer or string
-            The column of results.model.exog that is residualized
-            against the other predictors.  If a string, the variable
-            is located by name.
-        resid_type : string
-            The type of residuals to use.  If None, uses
-            `resid_deviance` for GLM/GEE and `resid` otherwise.
-        use_glm_weights : bool
-            Only used for GLM/GEE.  If True, the residuals for the
-            focus predictor relative to the other predictors are
-            computed using WLS, with the weights obtained from the
-            IRLS calculations for fitting the GLM.  If False, or if
-            the model is not a GLM, unweighted regression is used.
-        fit_kwargs : dict, optional
-            Keyword arguments to be passed to `fit` when refitting the
-            model.
-        ax : matplotlib.Axes instance, optional
-            The axes on which to draw the plot. If not provided, a new
-            axes instance is created.
-
-        Returns
-        -------
-        fig : matplotlib.Figure instance
-            The figure on which the added variable plot is drawn.
-        """
+        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import added_variable_plot
 
@@ -791,101 +866,30 @@ class Results(object):
 
         return fig
 
+    added_variable_plot.__doc__ = _added_variable_plot_doc % {
+        'extra_params_doc' : ''}
+
     def partial_residual_plot(self, focus_exog, ax=None):
-        """
-        Produces a partial residual plot, also known as a 'component
-        plus residuals' plot for a fitted regression model.
-
-        Parameters
-        ----------
-        focus_exog : integer or string
-            The variable for which the partial residual plot is shown.
-            If an integer, it is a column of model.exog.  If a string,
-            it is the name of a variable in the model.
-        ax : matplotlib.Axes instance, optional
-            The axes on which to draw the plot. If not provided, a new
-            axes instance is created.
-
-        Returns
-        -------
-        fig : matplotlib.Figure instance
-            The figure on which the partial residual plot is drawn.
-
-        References
-        ----------
-        RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
-        generalized linear models.  Journal of the American Statistical
-        Association, 93:442.
-
-        RD Cook (1993). Partial residual plots.  Technometrics 35:4.
-        """
+        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import partial_residual_plot
 
         return partial_residual_plot(self, focus_exog, ax=ax)
 
+    partial_residual_plot.__doc = _partial_residual_plot_doc % {
+        'extra_params_doc' : ''}
+
     def ceres_plot(self, focus_exog, frac=None, cond_means=None,
                    ax=None):
-        """
-        Produces a CERES (Conditional Expectation Partial Residuals)
-        plot for a fitted regression model.
-
-        Parameters
-        ----------
-        focus_exog : integer or string
-            The column of results.model.exog for which the CERES plot
-            is shown.  If a string, the variable is identified by name.
-        frac : float
-            Map from column numbers to lowess tuning parameters for the
-            adjusted model used in the CERES analysis.
-        cond_means : array-like, optional
-            If provided, the columns of this array are the conditional
-            means E[exog | focus exog], where exog ranges over some
-            or all of the columns of exog (other than focus exog).
-        ax : matplotlib.Axes instance, optional
-            The axes on which to draw the plot. If not provided, a new
-            axes instance is created.
-
-        Returns
-        -------
-        fig : matplotlib.Figure instance
-            The figure on which the partial residual plot is drawn.
-
-        References
-        ----------
-        RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
-        generalized linear models.  Journal of the American
-        Statistical Association, 93:442.
-
-        RD Cook (1993). Partial residual plots.  Technometrics 35:4.
-
-        Notes
-        -----
-        `cond_means` is intended to capture the behavior of E[x1 |
-        x2], where x2 is the focus exog and x1 are all the other exog
-        variables.  If all the conditional mean relationships are
-        linear, it is sufficient to set cond_means equal to the focus
-        exog.  Alternatively, cond_means may consist of one or more
-        columns containing functional transformations of the focus
-        exog (e.g. x2^2) that are thought to capture E[x1 | x2].
-
-        If nothing is known or suspected about the form of E[x1 | x2],
-        set `cond_means` to None, and it will be estimated by
-        smoothing each non-focus exog against the focus exog.  The
-        values of `frac` control these lowess smooths.
-
-        If cond_means contains only the focus exog, the results are
-        equivalent to a partial residual plot.
-
-        If the focus variable is believed to be independent of the
-        other exog variables, `cond_means` can be set to an (empty)
-        nx0 array.
-        """
+        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import ceres_plot
 
         return ceres_plot(self, focus_exog, frac,
                           cond_means=cond_means, ax=ax)
+
+    ceres_plot.__doc = _ceres_plot_doc % {
+        'extra_params_doc' : ''}
 
 
 #TODO: public method?

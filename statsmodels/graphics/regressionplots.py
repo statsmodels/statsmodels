@@ -21,7 +21,7 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.tools.tools import maybe_unwrap_results
-
+from statsmodels.base import model
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
@@ -839,35 +839,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
 
 def added_variable_plot(results, focus_exog, resid_type=None,
                         use_glm_weights=True, fit_kwargs=None, ax=None):
-    """
-    Create an added variable plot for a fitted regression model.
-
-    Parameters
-    ----------
-    results : results instance
-        A regression results instance
-    focus_exog : int or string
-        The column of exog, or variable name, for the variable whose
-        role in the regression is assessed.
-    resid_type : string
-        The type of residuals to use for the dependent variable.  If
-        None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
-    use_glm_weights : bool
-        Only used if the model is a GLM or GEE.  If True, the
-        residuals for the focus predictor are computed using WLS, with
-        the weights from the IRLS calculations for fitting the GLM.
-        If False, unweighted regression is used.
-    fit_kwargs : dict, optional
-        Keyword arguments to be passed to fit when refitting the
-        model.
-    ax : Axes instance
-        Matplotlib Axes instance
-
-    Returns
-    -------
-    fig : matplotlib Figure
-        A matplotlib figure instance.
-    """
+    # Docstring attached below
 
     model = results.model
 
@@ -890,26 +862,11 @@ def added_variable_plot(results, focus_exog, resid_type=None,
 
     return fig
 
+added_variable_plot.__doc__ = model._added_variable_plot_doc % {
+    'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
+
 def partial_residual_plot(results, focus_exog, ax=None):
-    """
-    Create a partial residual, or 'component plus residual' plot for a
-    fited regression model.
-
-    Parameters
-    ----------
-    results : results instance
-        A regression results instance
-    focus_exog : int or string
-        The column of exog, or variable name, whose role in the
-        regression is assessed.
-    ax : Axes instance
-        Matplotlib Axes instance
-
-    Returns
-    -------
-    fig : matplotlib Figure
-        A matplotlib figure instance.
-    """
+    # Docstring attached below
 
     model = results.model
     pr = partial_resids(results, focus_exog)
@@ -927,41 +884,12 @@ def partial_residual_plot(results, focus_exog, ax=None):
 
     return fig
 
+partial_residual_plot.__doc__ = model._partial_residual_plot_doc % {
+    'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
+
 def ceres_plot(results, focus_exog, frac=None, cond_means=None,
                ax=None):
-    """
-    Construct a CERES (conditional expectation patial residuals) plot
-    for a fitted regression model.
-
-    Parameters
-    ----------
-    results : model instance
-        The fitted model for which the CERES plot is constructed.
-    focus_exog : int or string
-        The column index of results.model.exog, or variable name,
-        whose role in the regression is assessed.
-    frac : dict
-        Map from column indices of results.model.exog to lowess
-        smoothing parameters (frac keyword argument to lowess). Not
-        used if `cond_means` is provided.
-    cond_means : array-like, optional
-        If provided, the columns of this array are the conditional
-        means E[exog | focus exog], where exog ranges over some
-        or all of the columns of exog other than focus exog.
-    ax : matplotlib Axes instance, optional
-        The axes on which the CERES plot is drawn.  If not provided,
-        a new axes is created.
-
-    Returns
-    -------
-    The matplotlib figure on which the CERES plot is drawn.
-
-    Notes
-    -----
-    If `cond_means` is not provided, it is obtained by smoothing each
-    column of exog (except the focus column) against the focus column.
-    The values of `frac` control these lowess smooths.
-    """
+    # Docstring attached below
 
     model = results.model
 
@@ -984,6 +912,8 @@ def ceres_plot(results, focus_exog, frac=None, cond_means=None,
 
     return fig
 
+ceres_plot.__doc__ = model._ceres_plot_doc % {
+    'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
 def ceres_resids(results, focus_exog, frac=None, cond_means=None):
     """
@@ -1125,18 +1055,19 @@ def added_variable_resids(results, focus_exog, resid_type=None,
     Parameters
     ----------
     results : regression results instance
-        The fitted model incuding all predictors
+        A fitted model including the focus exog and all other
+        predictors of interest.
     focus_exog : integer or string
-        The column of results.model.exog, or variable name, that is
-        residualized against the other predictors.
+        The column of results.model.exog or a variable name that is
+        to be residualized against the other predictors.
     resid_type : string
         The type of residuals to use for the dependent variable.  If
         None, uses `resid_deviance` for GLM/GEE and `resid` otherwise.
     use_glm_weights : bool
         Only used if the model is a GLM or GEE.  If True, the
         residuals for the focus predictor are computed using WLS, with
-        the weights from the IRLS calculations for fitting the GLM.
-        If False, unweighted regression is used.
+        the weights obtained from the IRLS calculations for fitting
+        the GLM.  If False, unweighted regression is used.
     fit_kwargs : dict, optional
         Keyword arguments to be passed to fit when refitting the
         model.
