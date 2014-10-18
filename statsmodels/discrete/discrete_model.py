@@ -23,6 +23,7 @@ import numpy as np
 from scipy.special import gammaln
 from scipy import stats, special, optimize  # opt just for nbin
 import statsmodels.tools.tools as tools
+from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from statsmodels.regression.linear_model import OLS
@@ -32,9 +33,11 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 import statsmodels.base.model as base
+from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.compat.numpy import np_matrix_rank
+from pandas.core.api import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:
@@ -465,20 +468,66 @@ class BinaryModel(DiscreteModel):
         return margeff
 
 class MultinomialModel(BinaryModel):
+
+    def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
+        if data_tools._is_using_ndarray_type(endog, None):
+            if endog.dtype.kind in ['S', 'O']:
+                endog_dummies, ynames = tools.categorical(endog, drop=True,
+                                                          dictnames=True)
+            elif endog.ndim == 2:
+                endog_dummies = endog
+                ynames = range(endog.shape[1])
+            else:
+                endog_dummies, ynames = tools.categorical(endog, drop=True,
+                                                          dictnames=True)
+            yname = 'y'
+        elif data_tools._is_using_pandas(endog, None):
+            if endog.ndim == 2:
+                if endog.shape[1] == 1:
+                    yname = endog.columns[0]
+                    endog_dummies = get_dummies(endog.icol(0))
+                else:  # series
+                    yname = 'y'
+                    endog_dummies = endog
+            else:
+                yname = endog.name
+                endog_dummies = get_dummies(endog)
+            ynames = endog_dummies.columns.tolist()
+
+        else:
+            endog = np.asarray(endog)
+            endog_dummies, ynames = tools.categorical(endog, drop=True,
+                                                      dictnames=True)
+            yname = 'y'
+
+        if not isinstance(ynames, dict):
+            ynames = dict(zip(range(endog_dummies.shape[1]), ynames))
+
+        self._ynames_map = ynames
+        data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
+        data.ynames = yname  # overwrite this to single endog name
+        data.orig_endog = endog
+        self.wendog = data.endog
+
+        # repeating from upstream...
+        for key in kwargs:
+            try:
+                setattr(self, key, data.__dict__.pop(key))
+            except KeyError:
+                pass
+        return data
+
     def initialize(self):
         """
         Preprocesses the data for MNLogit.
-
-        Turns the endogenous variable into an array of dummies and assigns
-        J and K.
         """
         super(MultinomialModel, self).initialize()
-        #This is also a "whiten" method as used in other models (eg regression)
-        wendog, ynames = tools.categorical(self.endog, drop=True,
-                dictnames=True)
-        self._ynames_map = ynames
-        self.wendog = wendog    # don't drop first category
-        self.J = float(wendog.shape[1])
+        ##This is also a "whiten" method as used in other models (eg regression)
+        #wendog, ynames = tools.categorical(self.endog, drop=True,
+        #        dictnames=True)
+        #self._ynames_map = ynames
+        self.endog = self.endog.argmax(1) # turn it into an array of col idx
+        self.J = float(self.wendog.shape[1])
         self.K = float(self.exog.shape[1])
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
