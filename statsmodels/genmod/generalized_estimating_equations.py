@@ -261,9 +261,8 @@ _gee_family_doc = """\
         statsmodels.family.family for more information."""
 
 _gee_ordinal_family_doc = """\
-        The default is `Binomial`.  Any family intended for use with
-        binary responses may be specified.  The only other current
-        option is `Probit`."""
+        The only family supported is `Binomial`.  The default `Logit`
+        link may be replaced with `probit` if desired."""
 
 _gee_nominal_family_doc = """\
         The default value `None` uses a multinomial logit family
@@ -358,47 +357,84 @@ _gee_results_doc = """
 _gee_example = """
     Logistic regression with autoregressive working dependence:
 
-    >>> family = Binomial()
-    >>> va = Autoregressive()
-    >>> mod = GEE(endog, exog, group, family=family, cov_struct=va)
-    >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> import statsmodels.api as sm
+    >>> family = sm.families.Binomial()
+    >>> va = sm.cov_struct.Autoregressive()
+    >>> model = sm.GEE(endog, exog, group, family=family, cov_struct=va)
+    >>> result = model.fit()
+    >>> print result.summary()
 
     Use formulas to fit a Poisson GLM with independent working
     dependence:
 
-    >>> fam = Poisson()
-    >>> ind = Independence()
-    >>> mod = GEE.from_formula("y ~ age + trt + base", "subject",
-                               data, cov_struct=ind, family=fam)
-    >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> import statsmodels.api as sm
+    >>> fam = sm.families.Poisson()
+    >>> ind = sm.cov_struct.Independence()
+    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject",
+                                 data, cov_struct=ind, family=fam)
+    >>> result = model.fit()
+    >>> print result.summary()
+
+    Equivalent, using the formula API:
+
+    >>> import statsmodels.formula.api as sm
+    >>> fam = sm.families.Poisson()
+    >>> ind = sm.cov_struct.Independence()
+    >>> model = sm.gee("y ~ age + trt + base", "subject",
+                    data, cov_struct=ind, family=fam)
+    >>> result = model.fit()
+    >>> print result.summary()
 """
 
 _gee_ordinal_example = """
-    >>> gor = GlobalOddsRatio("ordinal")
-    >>> model = OrdinalGEE(endog, exog, groups, cov_struct=gor)
+    Fit an ordinal regression model using GEE, with "global
+    odds ratio" dependence:
+
+    >>> import statsmodels.api as sm
+    >>> gor = sm.families.GlobalOddsRatio("ordinal")
+    >>> model = sm.OrdinalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
 
     Using formulas:
 
-    >>> model = GEE.from_formula("y ~ x1 + x2", groups, data,
-                                 cov_struct=gor)
+    >>> import statsmodels.api as sm
+    >>> model = sm.OrdinalGEE.from_formula("y ~ x1 + x2", groups,
+                       data, cov_struct=gor)
+    >>> result = model.fit()
+    >>> print result.summary()
+
+    Equivalent, using the formula API:
+
+    >>> import statsmodels.formula.api as sm
+    >>> model = sm.ordinal_gee("y ~ x1 + x2", groups, data,
+                                    cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
 """
 
 _gee_nominal_example = """
-    >>> gor = GlobalOddsRatio("nominal")
-    >>> model = NominalGEE(endog, exog, groups, cov_struct=gor)
+    Fit a nominal regression model using GEE:
+
+    >>> import statsmodels.api as sm
+    >>> gor = sm.families.GlobalOddsRatio("nominal")
+    >>> model = sm.NominalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
 
     Using formulas:
 
-    >>> model = GEE.from_formula("y ~ x1 + x2", groups, data,
-                                 cov_struct=gor)
+    >>> import statsmodels.api as sm
+    >>> model = sm.NominalGEE.from_formula("y ~ x1 + x2", groups,
+                     data, cov_struct=gor)
+    >>> result = model.fit()
+    >>> print result.summary()
+
+    Using the formula API:
+
+    >>> import statsmodels.formula.api as sm
+    >>> model = sm.nominal_gee("y ~ x1 + x2", groups, data,
+                               cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
 """
@@ -1626,6 +1662,9 @@ class OrdinalGEE(GEE):
 
         if family is None:
             family = families.Binomial()
+        else:
+            if not isinstance(family, families.Binomial):
+                raise ValueError("ordinal GEE must use a Binomial family")
 
         endog, exog, groups, time, offset = self.setup_ordinal(endog,
                                        exog, groups, time, offset)
