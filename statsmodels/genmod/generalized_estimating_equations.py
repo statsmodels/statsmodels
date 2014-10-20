@@ -377,10 +377,11 @@ _gee_example = """
 
     Equivalent, using the formula API:
 
-    >>> import statsmodels.formula.api as sm
+    >>> import statsmodels.api as sm
+    >>> import statsmodels.formula.api as smf
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = sm.gee("y ~ age + trt + base", "subject",
+    >>> model = smf.gee("y ~ age + trt + base", "subject",
                     data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print result.summary()
@@ -406,8 +407,8 @@ _gee_ordinal_example = """
 
     Equivalent, using the formula API:
 
-    >>> import statsmodels.formula.api as sm
-    >>> model = sm.ordinal_gee("y ~ x1 + x2", groups, data,
+    >>> import statsmodels.formula.api as smf
+    >>> model = smf.ordinal_gee("y ~ x1 + x2", groups, data,
                                     cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
@@ -417,6 +418,7 @@ _gee_nominal_example = """
     Fit a nominal regression model using GEE:
 
     >>> import statsmodels.api as sm
+    >>> import statsmodels.formula.api as smf
     >>> gor = sm.families.GlobalOddsRatio("nominal")
     >>> model = sm.NominalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
@@ -432,9 +434,9 @@ _gee_nominal_example = """
 
     Using the formula API:
 
-    >>> import statsmodels.formula.api as sm
-    >>> model = sm.nominal_gee("y ~ x1 + x2", groups, data,
-                               cov_struct=gor)
+    >>> import statsmodels.formula.api as smf
+    >>> model = smf.nominal_gee("y ~ x1 + x2", groups, data,
+                                cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
 """
