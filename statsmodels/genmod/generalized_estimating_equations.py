@@ -40,7 +40,6 @@ from statsmodels.genmod.cov_struct import (Independence,
                                            CovStruct)
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
-from statsmodels.genmod.families import Family
 
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              IterationLimitWarning)
@@ -195,10 +194,7 @@ _gee_init_doc = """
         dependence structures to define similarity relationships among
         observations within a cluster.
     family : family class instance
-        The default is Gaussian.  To specify the binomial
-        distribution family = sm.family.Binomial(). Each family can
-        take a link instance as an argument.  See
-        statsmodels.family.family for more information.
+%(family_doc)s
     cov_struct : CovStruct class instance
         The default is Independence.  To specify an exchangeable
         structure use cov_struct = Exchangeable().  See
@@ -257,6 +253,22 @@ _gee_init_doc = """
     --------
     %(example)s
 """
+
+_gee_family_doc = """\
+        The default is Gaussian.  To specify the binomial
+        distribution use `family=sm.family.Binomial()`. Each family
+        can take a link instance as an argument.  See
+        statsmodels.family.family for more information."""
+
+_gee_ordinal_family_doc = """\
+        The default is `Binomial`.  Any family intended for use with
+        binary responses may be specified.  The only other current
+        option is `Probit`."""
+
+_gee_nominal_family_doc = """\
+        The default value `None` uses a multinomial logit family
+        specifically designed for use with GEE.  Setting this
+        argument to a non-default value is not currently supported."""
 
 _gee_fit_doc = """
     Fits a marginal regression model using generalized estimating
@@ -364,33 +376,31 @@ _gee_example = """
 """
 
 _gee_ordinal_example = """
-    >>> family = Binomial()
     >>> gor = GlobalOddsRatio("ordinal")
-    >>> mod = OrdinalGEE(endog, exog, groups, None, family, gor)
-    >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> model = OrdinalGEE(endog, exog, groups, cov_struct=gor)
+    >>> result = model.fit()
+    >>> print result.summary()
 
-    Use formulas:
+    Using formulas:
 
-    >>> mod = GEE.from_formula("y ~ x1 + x2", groups, data,
-                               cov_struct=gor, family=family)
-    >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> model = GEE.from_formula("y ~ x1 + x2", groups, data,
+                                 cov_struct=gor)
+    >>> result = model.fit()
+    >>> print result.summary()
 """
 
 _gee_nominal_example = """
-    >>> family = Multinomial(3)
     >>> gor = GlobalOddsRatio("nominal")
-    >>> mod = NominalGEE(endog, exog, groups, None, family, gor)
-    >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> model = NominalGEE(endog, exog, groups, cov_struct=gor)
+    >>> result = model.fit()
+    >>> print result.summary()
 
-    Use formulas:
+    Using formulas:
 
-    >>> mod = GEE.from_formula("y ~ x1 + x2", groups, data,
-                               cov_struct=gor, family=family)
-    >>> rslt = mod.fit()
-    >>> print rslt.summary()
+    >>> model = GEE.from_formula("y ~ x1 + x2", groups, data,
+                                 cov_struct=gor)
+    >>> result = model.fit()
+    >>> print result.summary()
 """
 
 
@@ -400,6 +410,7 @@ class GEE(base.Model):
         "    Estimation of marginal regression models using Generalized\n"
         "    Estimating Equations (GEE).\n" + _gee_init_doc %
         {'extra_params': base._missing_param_doc,
+         'family_doc': _gee_family_doc,
          'example': _gee_example})
 
     cached_means = None
@@ -1606,11 +1617,15 @@ class OrdinalGEE(GEE):
         "    Estimation of ordinal response marginal regression models\n"
         "    using Generalized Estimating Equations (GEE).\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
+                         'family_doc': _gee_ordinal_family_doc,
                          'example': _gee_ordinal_example})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
                        dep_data=None, constraint=None):
+
+        if family is None:
+            family = families.Binomial()
 
         endog, exog, groups, time, offset = self.setup_ordinal(endog,
                                        exog, groups, time, offset)
@@ -1821,6 +1836,7 @@ class NominalGEE(GEE):
         "    Estimation of nominal response marginal regression models\n"
         "    using Generalized Estimating Equations (GEE).\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
+                         'family_doc': _gee_nominal_family_doc,
                          'example': _gee_nominal_example})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
@@ -1829,6 +1845,9 @@ class NominalGEE(GEE):
 
         endog, exog, groups, time, offset = self.setup_nominal(endog,
                                        exog, groups, time, offset)
+
+        if family is None:
+            family = _Multinomial(self.ncut+1)
 
         super(NominalGEE, self).__init__(endog, exog, groups,
                  time, family, cov_struct, missing, offset, dep_data,
@@ -1864,6 +1883,7 @@ class NominalGEE(GEE):
         self.endog_values = np.unique(endog)
         endog_cuts = self.endog_values[0:-1]
         ncut = len(endog_cuts)
+        self.ncut = ncut
 
         nrows = len(endog_cuts) * exog.shape[0]
         ncols = len(endog_cuts) * exog.shape[1]
@@ -2027,7 +2047,7 @@ class NominalGEEResultsWrapper(GEEResultsWrapper):
 wrap.populate_wrapper(NominalGEEResultsWrapper, NominalGEEResults)
 
 
-class MultinomialLogit(Link):
+class _MultinomialLogit(Link):
     """
     The multinomial logit transform, only for use with GEE.
 
@@ -2163,13 +2183,13 @@ class MultinomialLogit(Link):
         return dmat
 
 
-class Multinomial(Family):
+class _Multinomial(families.Family):
     """
     Pseudo-link function for fitting nominal multinomial models with
     GEE.  Not for use outside the GEE class.
     """
 
-    links = [MultinomialLogit,]
+    links = [_MultinomialLogit,]
     variance = varfuncs.binary
 
     def __init__(self, nlevels):
@@ -2180,9 +2200,11 @@ class Multinomial(Family):
             The number of distinct categories for the multinomial
             distribution.
         """
+        self.initialize(nlevels)
 
+    def initialize(self, nlevels):
         self.ncut = nlevels - 1
-        self.link = MultinomialLogit(self.ncut)
+        self.link = _MultinomialLogit(self.ncut)
 
 
 

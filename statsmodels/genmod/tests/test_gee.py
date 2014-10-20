@@ -15,7 +15,7 @@ import os
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
-     OrdinalGEE, NominalGEE, GEEMargins, Multinomial,
+     OrdinalGEE, NominalGEE, GEEMargins,
      NominalGEEResults, OrdinalGEEResults,
      NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
@@ -576,14 +576,12 @@ class TestGEE(object):
 
     def test_nominal(self):
 
-        family = Multinomial(3)
-
         endog, exog, groups = load_data("gee_nominal_1.csv",
                                         icept=False)
 
         # Test with independence correlation
         va = Independence()
-        mod1 = NominalGEE(endog, exog, groups, None, family, va)
+        mod1 = NominalGEE(endog, exog, groups, cov_struct=va)
         rslt1 = mod1.fit()
 
         # Regression test
@@ -594,7 +592,7 @@ class TestGEE(object):
 
         # Test with global odds ratio dependence
         va = GlobalOddsRatio("nominal")
-        mod2 = NominalGEE(endog, exog, groups, None, family, va)
+        mod2 = NominalGEE(endog, exog, groups, cov_struct=va)
         rslt2 = mod2.fit(start_params=rslt1.params)
 
         # Regression test
@@ -1100,14 +1098,12 @@ class TestGEEMultinomialCovType(CheckConsistency):
     @classmethod
     def setup_class(cls):
 
-        family = Multinomial(3)
-
         endog, exog, groups = load_data("gee_nominal_1.csv",
                                         icept=False)
 
         # Test with independence correlation
         va = Independence()
-        cls.mod = NominalGEE(endog, exog, groups, None, family, va)
+        cls.mod = NominalGEE(endog, exog, groups, cov_struct=va)
         cls.start_params = np.array([0.44944752,  0.45569985, -0.92007064,
                                      -0.46766728])
 
@@ -1120,9 +1116,8 @@ class TestGEEMultinomialCovType(CheckConsistency):
         exog = pd.DataFrame(exog)
         groups = pd.Series(groups, name='the_group')
 
-        family = Multinomial(3)
         va = Independence()
-        mod = NominalGEE(endog, exog, groups, None, family, va)
+        mod = NominalGEE(endog, exog, groups, cov_struct=va)
         rslt2 = mod.fit()
 
         check_wrapper(rslt2)
