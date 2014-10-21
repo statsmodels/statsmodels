@@ -7,7 +7,7 @@ from .regression.linear_model import OLS, GLS, WLS, GLSAR
 from .regression.quantile_regression import QuantReg
 from .regression.mixed_linear_model import MixedLM
 from .genmod import api as genmod
-from .genmod.api import GLM, GEE, families, cov_struct
+from .genmod.api import GLM, GEE, OrdinalGEE, NominalGEE, families, cov_struct
 from . import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
