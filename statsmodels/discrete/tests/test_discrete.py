@@ -19,6 +19,7 @@ from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                  Poisson, NegativeBinomial)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
+import statsmodels.formula.api as smf
 from nose import SkipTest
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
@@ -1367,6 +1368,25 @@ def test_non_binary():
     y = [1, 2, 1, 2, 1, 2]
     X = np.random.randn(6, 2)
     np.testing.assert_raises(ValueError, Logit, y, X)
+
+
+def test_mnlogit_factor():
+    dta = sm.datasets.anes96.load_pandas()
+    dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG')))
+    dta.exog['constant'] = 1
+    mod = sm.MNLogit(dta.endog, dta.exog)
+    res = mod.fit(disp=0)
+    # smoke tests
+    params = res.params
+    summary = res.summary()
+
+    # with patsy
+    del dta.exog['constant']
+    mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)
+    res2 = mod.fit(disp=0)
+    res2.params
+    summary = res2.summary()
+
 
 if __name__ == "__main__":
     import nose
