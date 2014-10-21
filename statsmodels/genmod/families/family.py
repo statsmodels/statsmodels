@@ -214,8 +214,7 @@ class Family(object):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The log-likelihood function expressed as a function of the
-        fitted mean response.
+        The log-likelihood function expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -353,8 +352,7 @@ class Poisson(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The log-likelihood function for the Poisson exponential family
-        expressed as a function of the fitted mean response.
+        The log-likelihood function for the Poisson exponential family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -488,8 +486,7 @@ class Gaussian(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The log-likelihood function for the Gaussian exponential
-        family expressed as a function of the fitted mean response.
+        The log-likelihood function for the Gaussian exponential family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -654,8 +651,7 @@ class Gamma(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The log-likelihood function for the Gamma exponential family
-        expressed as a function of the fitted mean response.
+        The log-likelihood function for the Gamma exponential family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -877,8 +873,7 @@ class Binomial(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The log-likelihood function for the Binomial exponential
-        family expressed as a function of the fitted mean response.
+        The log-likelihood function for the Binomial exponential family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -1055,9 +1050,7 @@ class InverseGaussian(Family):
 
     def loglike(self, endog, mu, scale=1.):
         """
-        The log-likelihood function for the inverse Gaussian
-        distribution expressed as a function of the fitted mean
-        response.
+        The log-likelihood function for the inverse Gaussian distribution expressed as a function of the fitted mean response.
 
         Parameters
         ----------
@@ -1259,8 +1252,7 @@ class NegativeBinomial(Family):
 
     def loglike(self, endog, mu, scale):
         """
-        The log-likelihood function for the negative binomial family
-        expressed as a function of the fitted mean response.
+        The log-likelihood function for the negative binomial family expressed as a function of the fitted mean response.
 
         Parameters
         ----------
