@@ -145,12 +145,13 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
                                         start_params=start_params,
-                                        fit_kwds={'method':'bfgs'})
+                                        fit_kwds={'method': 'bfgs',
+                                                  'disp': 0})
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
         cls.res1m = mod.fit_constrained(constr, start_params=start_params,
-                                        method='bfgs')
+                                        method='bfgs', disp=0)
 
     def test_smoke(self):
         # trailing text in summary, assumes it's the first extra string
@@ -179,11 +180,13 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method':'newton'})
+                                   fit_kwds={'method': 'newton',
+                                             'disp': 0})
         cls.constraints = lc
         # TODO: bfgs fails
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='newton')
+        cls.res1m = mod.fit_constrained(constr, method='newton',
+                                        disp=0)
 
 
 class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
@@ -203,12 +206,13 @@ class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method':'newton'})
+                                   fit_kwds={'method': 'newton',
+                                             'disp': 0})
         cls.constraints = lc
         # TODO: bfgs fails
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr, method='newton')
+        cls.res1m = mod.fit_constrained(constr, method='newton', disp=0)
 
 
 class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
@@ -224,7 +228,7 @@ class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    #exposure=data['pyears'].values)
                                    offset=np.log(data['pyears'].values))
-        res1 = mod.fit()._results
+        res1 = mod.fit(disp=0)._results
         # res1 is duplicate check, so we can follow the same pattern
         cls.res1 = (res1.params, res1.cov_params())
         cls.res1m = res1
@@ -254,12 +258,12 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
                                    start_params=start_params,
-                                   fit_kwds={'method':'bfgs'})
+                                   fit_kwds={'method': 'bfgs', 'disp': 0})
         # TODO: Newton fails
 
         # test method of Poisson, not monkey patched
         cls.res1m = mod.fit_constrained(constr, start_params=start_params,
-                                        method='bfgs')
+                                        method='bfgs', disp=0)
 
 
 class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
@@ -280,13 +284,14 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                   fit_kwds={'method':'newton'})
+                                   fit_kwds={'method': 'newton',
+                                             'disp': 0})
         cls.constraints = lc
-        # TODO: bfgs fails
+        # TODO: bfgs fails to converge. overflow somewhere?
 
         # test method of Poisson, not monkey patched
-        cls.res1m = mod.fit_constrained(constr,
-                                        fit_kwds={'method':'bfgs'})
+        cls.res1m = mod.fit_constrained(constr, method='bfgs', disp=0,
+                                        start_params=cls.res1[0])
 
 
 class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
@@ -306,21 +311,21 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
-                                       fit_kwds={'method':'newton'})
+                                       fit_kwds={'method':'newton',
+                                                 'disp': 0})
         cls.constraints = lc
         # TODO: bfgs fails
 
         # test method of Poisson, not monkey patched
         cls.res1m = mod.fit_constrained(constr,
-                                        fit_kwds={'method':'bfgs'})
+                                        method='bfgs', disp=0,
+                                        start_params=cls.res1[0])
 
 
 class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.genmod.generalized_linear_model import GLM
-        from statsmodels.genmod import families
         from statsmodels.base._constraints import fit_constrained
 
         cls.res2 = results.results_noexposure_constraint
@@ -372,7 +377,8 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         res2 = mod.fit_constrained(constr, start_params=self.res1m.params,
-                                   method='newton', warn_convergence=False)
+                                   method='newton', warn_convergence=False,
+                                   disp=0)
 
         # we get high precision because we use the params as start_params
 
