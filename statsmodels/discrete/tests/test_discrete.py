@@ -1375,7 +1375,7 @@ def test_mnlogit_factor():
     dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG')))
     dta.exog['constant'] = 1
     mod = sm.MNLogit(dta.endog, dta.exog)
-    res = mod.fit()
+    res = mod.fit(disp=0)
     # smoke tests
     params = res.params
     summary = res.summary()
@@ -1383,7 +1383,7 @@ def test_mnlogit_factor():
     # with patsy
     del dta.exog['constant']
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)
-    res2 = mod.fit()
+    res2 = mod.fit(disp=0)
     res2.params
     summary = res2.summary()
 
