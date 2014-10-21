@@ -534,16 +534,12 @@ class MultinomialModel(BinaryModel):
         Preprocesses the data for MNLogit.
         """
         super(MultinomialModel, self).initialize()
-        ##This is also a "whiten" method as used in other models (eg regression)
-        #wendog, ynames = tools.categorical(self.endog, drop=True,
-        #        dictnames=True)
-        #self._ynames_map = ynames
-        self.endog = self.endog.argmax(1) # turn it into an array of col idx
+        # This is also a "whiten" method in other models (eg regression)
+        self.endog = self.endog.argmax(1)  # turn it into an array of col idx
         self.J = float(self.wendog.shape[1])
         self.K = float(self.exog.shape[1])
-        self.df_model *= (self.J-1) # for each J - 1 equation.
+        self.df_model *= (self.J-1)  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
-
 
     def predict(self, params, exog=None, linear=False):
         """
