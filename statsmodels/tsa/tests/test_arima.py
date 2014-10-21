@@ -273,15 +273,15 @@ class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
         cls.res2 = results_arma.Y_arma14c()
 
 
-@dec.slow
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,8]
-        cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1)
+        cls.res2 = results_arma.Y_arma41c()
+        cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1,
+                                                start_params=cls.res2.params)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
-        cls.res2 = results_arma.Y_arma41c()
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_fittedvalues = DECIMAL_3
         cls.decimal_resid = DECIMAL_3
