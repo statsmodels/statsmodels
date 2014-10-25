@@ -54,7 +54,7 @@ class BaseIRAnalysis(object):
         if svar:
             self.svar_irfs = model.svar_ma_rep(periods, P=P)
         else:
-            self.orth_irfs = model.orth_ma_rep(periods)
+            self.orth_irfs = model.orth_ma_rep(periods, P=P)
 
         self.cum_effects = self.irfs.cumsum(axis=0)
         if svar:
