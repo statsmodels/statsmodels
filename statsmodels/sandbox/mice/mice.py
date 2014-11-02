@@ -136,16 +136,17 @@ class _multivariate_normal(object):
 
 
 
-_mice_data_example_1 = """\
->>> imp = mice.MICE_data(data)
->>> imp.set_imputer('x1', formula='x2 + np.square(x2) + x3')
->>> for j in range(20):
->>>     imp.update_all()
->>>     imp.data.to_csv('data%02d.csv' % j)
+_mice_data_example_1 = """
+    >>> imp = mice.MICE_data(data)
+    >>> imp.set_imputer('x1', formula='x2 + np.square(x2) + x3')
+    >>> for j in range(20):
+            imp.update_all()
+            imp.data.to_csv('data%02d.csv' % j)
 """
 
 class MICE_data(object):
-    """
+
+    __doc__ = """\
     Wrap a data set to allow missing data handling for MICE.
 
     Parameters
@@ -168,9 +169,7 @@ class MICE_data(object):
     mean structures containing main effects of all other variables in
     `data`.  The variable named `x1` has a condtional mean structure
     that includes an additional term for x2^2.
-
     %(_mice_data_example_1)s
-
     Notes
     -----
     Allowed perturbation methods are 'gaussian' (the model parameters
@@ -955,33 +954,34 @@ class MICE_model(object):
         return result
 
 
-_mice_example_1 = """\
->>> imp = mice.MICE_data(data)
->>> fml = 'y ~ x1 + x2 + x3 + x4'
->>> mice = mice.MICE_model(fml, sm.OLS, imp)
->>> mice.burnin(10)
->>> mice.run(10, 5)
->>> results = mice.combine()
->>> print results.summary()
+_mice_example_1 = """
+    >>> imp = mice.MICE_data(data)
+    >>> fml = 'y ~ x1 + x2 + x3 + x4'
+    >>> mice = mice.MICE_model(fml, sm.OLS, imp)
+    >>> mice.burnin(10)
+    >>> mice.run(10, 5)
+    >>> results = mice.combine()
+    >>> print results.summary()
 
-                          Results: MICE
-=================================================================
-Method:                    MICE       Sample size:           1000
-Model:                     OLS        Scale                  1.00
-Dependent variable:        y          Num. imputations       10
------------------------------------------------------------------
-           Coef.  Std.Err.    t     P>|t|   [0.025  0.975]  FMI
------------------------------------------------------------------
-Intercept -0.0234   0.0318  -0.7345 0.4626 -0.0858  0.0390 0.0128
-x1         1.0305   0.0578  17.8342 0.0000  0.9172  1.1437 0.0309
-x2        -0.0134   0.0162  -0.8282 0.4076 -0.0451  0.0183 0.0236
-x3        -1.0260   0.0328 -31.2706 0.0000 -1.0903 -0.9617 0.0169
-x4        -0.0253   0.0336  -0.7520 0.4521 -0.0911  0.0406 0.0269
-=================================================================
+                              Results: MICE
+    =================================================================
+    Method:                    MICE       Sample size:           1000
+    Model:                     OLS        Scale                  1.00
+    Dependent variable:        y          Num. imputations       10
+    -----------------------------------------------------------------
+               Coef.  Std.Err.    t     P>|t|   [0.025  0.975]  FMI
+    -----------------------------------------------------------------
+    Intercept -0.0234   0.0318  -0.7345 0.4626 -0.0858  0.0390 0.0128
+    x1         1.0305   0.0578  17.8342 0.0000  0.9172  1.1437 0.0309
+    x2        -0.0134   0.0162  -0.8282 0.4076 -0.0451  0.0183 0.0236
+    x3        -1.0260   0.0328 -31.2706 0.0000 -1.0903 -0.9617 0.0169
+    x4        -0.0253   0.0336  -0.7520 0.4521 -0.0911  0.0406 0.0269
+    =================================================================
 """
 
 class MICE(object):
-    """
+
+    __doc__ = """\
     Use Multiple Imputation with Chained Equations to fit a model when
     some data values are missing.
 
@@ -995,10 +995,9 @@ class MICE(object):
         MICE_data object containing the data set for which
         missing values will be imputed
 
-    Example
+    Examples
     --------
     Simple example using defaults:
-
     %(mice_example_1)s
     """ % {'mice_example_1' : _mice_example_1}
 
