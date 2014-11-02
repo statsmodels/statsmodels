@@ -902,14 +902,24 @@ class MICE_data(object):
         self.store_changes(vname, imputed_miss)
 
 
+_mice_model_example_1 = """
+    >>> imodel = mice.MICE_model(data, 'y ~ x1 + x2 + x3', sm.OLS)
+    >>> results = []
+    >>> for j in range(100):
+            results.append(imodel.next())
+    >>> params1 = [x.params[1] for x in results]
+    >>> plt.hist(params1)
+"""
+
 class MICE_model(object):
-    """
+
+    __doc__ = """\
     An iterator that returns models fit to imputed data sets.
 
     Parameters
     ----------
     data : MICE_data instance
-        The data set, in the form of an MICE_data object
+        The data set, in the form of a MICE_data object.
     analysis_formula : string
         Formula for the analysis model.
     analysis_class : statsmodels model
@@ -921,7 +931,13 @@ class MICE_model(object):
         Additional parameters for statsmodels model instance.
     fit_args : dict-like
         Additional parameters for statsmodels fit instance.
-    """
+
+    Examples
+    --------
+    Fit the model to 100 imputed data sets, then make a histogram
+    of the parameter value in position 1.
+    %(mice_model_example_1)s
+    """ % {'mice_model_example_1': _mice_model_example_1}
 
     def __init__(self, data, analysis_formula, analysis_class,
                  n_skip=10, init_args={}, fit_args={}):
