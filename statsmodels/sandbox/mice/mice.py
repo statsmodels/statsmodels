@@ -47,11 +47,52 @@ remaining variables, using main effects, transformations,
 interactions, etc. as desired.
 
 A 'perturbation method' is a method for setting the parameter estimate
-in a conditional model.  The 'gaussian' perturbation method sets the
-parameter vector equal to a draw from the Gaussian approximation to
-the sampling distribution.  The 'bootstrap' perturbation method sets
-the parameter vector equal to a vector obtained when fitting the
+in a conditional model.  The 'gaussian' perturbation method first fits
+the model (usually using maximum likelihood, but it could use any
+statsmodels fit procedure), then sets the parameter vector equal to a
+draw from the Gaussian approximation to the sampling distribution for
+the fit.  The 'bootstrap' perturbation method sets the parameter
+vector equal to a fitted parameter vector obtained when fitting the
 conditional model to a bootstrapped version of the data set.
+
+Class structure
+---------------
+There are three main classes in the module:
+
+* 'MICE_data' wraps a dataframe (or comparable data container),
+  incorporating information about the conditional models for each
+  variable with missing values. It can be used to produce multiply
+  imputed data sets that are to be further processed or distributed to
+  other researchers.  A number of plotting procedures are provided to
+  visualize the imputations.  The `history_func` hook allows any
+  features of interest of the imputed data sets to be saved for
+  further analysis.
+
+* 'MICE_model' takes a MICE_data object along with a specification for
+  an additional 'analysis model' which is the central model of
+  interest (it may or may not be identical to the conditional model
+  for the same outcome variable).  MICE_model carries out multiple
+  imputation using the conditional models, and fits the analysis model
+  to a subset of these imputed data sets.  It returns the fitted model
+  results for these analysis models.  It is structured as an iterator,
+  so the analysis model results are obtained using `next` or via any
+  standard python iterator pattern.
+
+* 'MICE' takes both a 'MICE_data' object and an analysis model
+  specification.  It runs the multiple imputation, fits the analysis
+  models, and combines the results to produce a `MICEResults` object.
+  The summary method of this results object can be used to see the key
+  estimands and inferential quantities..
+
+Notes
+-----
+By default, to conserve memory 'MICE_data' saves very little
+information from one iteration to the next.  The data set passed by
+the user is copied on entry, but then is over-written each time new
+imputations are produced.  If using 'MICE_model' or 'MICE', the fitted
+analysis models and results are saved.  MICE_data includes a
+`history_func` hook that allows arbitrary information from the
+intermediate datasets to be saved for future use.
 
 References
 ----------
@@ -104,9 +145,10 @@ class MICE_data(object):
     perturbation_method : string
         The default perturbation method
     history_func : function
-        A function that is called after each complete cycle.  The
-        return value is appended to `history`.  The MICE_data
-        object is passed as the sole argument to `history_func`.
+        A function that is called after each complete imputation
+        cycle.  The return value is appended to `history`.  The
+        MICE_data object is passed as the sole argument to
+        `history_func`.
 
     Notes
     -----
@@ -205,7 +247,7 @@ class MICE_data(object):
             Conditional formula for imputation. Defaults to a formula
             with main effects for all other variables in dataset.  The
             formula should only include an expression for the mean,
-            e.g. use 'x1 + x2' not 'x4 ~ x1 + x2'.
+            structure, e.g. use 'x1 + x2' not 'x4 ~ x1 + x2'.
         model_class : statsmodels model
             Conditional model for imputation. Defaults to OLS.
         init_args : Dictionary
@@ -213,16 +255,22 @@ class MICE_data(object):
         fit_args : Dictionary
             Keyword arguments passed to the model fit method.
         perturbation_method : string
-            May take on values 'gaussian' or 'bootstrap'. Determines
-            the method for perturbing parameters in the conditional
-            model.  If None, uses the default specified in init.
+            Either 'gaussian' or 'bootstrap'. Determines the method
+            for perturbing parameters in the conditional model.  If
+            None, uses the default specified in init.
         k_pmm : int
-            Determines number of observations from which to draw
-            imputation when using predictive mean matching.
+            Determines number of neighboring observations from which
+            to randomly sample when using predictive mean matching.
         scale_method : string
-            Governs the type of perturbation given to the scale
-            parameter.
+            Either 'fix' or 'perturb_chi2'.  Governs the type of
+            perturbation given to the scale parameter.  Will have no
+            effect unless the fitted values depend on the scale
+            parameter.  If 'fix', the estimated scale parameter is
+            used; if 'perturb_chi2', the scale parameter is updated
+            from an approximate chi^2 sampling distribution.
         """
+
+        # TODO: if we only use pmm, do we need scale_method?
 
         if formula is None:
             main_effects = [x for x in self.data.columns
