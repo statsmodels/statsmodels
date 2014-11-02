@@ -112,7 +112,7 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 """
 
 #TODO: Add reference http://biomet.oxfordjournals.org/content/86/4/948.full.pdf
-#TODO: Change md to mod, mdf to rslt
+
 
 import pandas as pd
 import numpy as np
@@ -134,6 +134,16 @@ class _multivariate_normal(object):
         z = np.random.normal(size=p)
         return self.mean + np.dot(self.cov_sqrt, z)
 
+
+
+_mice_data_example_1 = """\
+>>> imp = mice.MICE_data(data)
+>>> imp.set_imputer('x1', formula='x2 + np.square(x2) + x3')
+>>> for j in range(20):
+>>>     imp.update_all()
+>>>     imp.data.to_csv('data%02d.csv' % j)
+"""
+
 class MICE_data(object):
     """
     Wrap a data set to allow missing data handling for MICE.
@@ -150,6 +160,17 @@ class MICE_data(object):
         MICE_data object is passed as the sole argument to
         `history_func`.
 
+    Examples
+    --------
+    Draw 20 imputations from a data set called `data` and save them in
+    separate files with filename pattern `dataXX.csv`.  The variables
+    other than `x1` are imputed using linear models fit with OLS, with
+    mean structures containing main effects of all other variables in
+    `data`.  The variable named `x1` has a condtional mean structure
+    that includes an additional term for x2^2.
+
+    %(_mice_data_example_1)s
+
     Notes
     -----
     Allowed perturbation methods are 'gaussian' (the model parameters
@@ -160,7 +181,7 @@ class MICE_data(object):
 
     `history_func` can be implemented to have side effects such as
     saving the current imputed data set to disk.
-    """
+    """ % {'_mice_data_example_1': _mice_data_example_1}
 
     def __init__(self, data, perturbation_method='gaussian',
                  history_func=None):
@@ -210,8 +231,8 @@ class MICE_data(object):
         for vname in data.columns:
             self.set_imputer(vname)
 
-        # Variable order for imputations.  Impute variables with
-        # fewest missing values first.
+        # The order in which variables are imputed in each cycle.
+        # Impute variables with the fewest missing values first.
         vnames = data.columns.tolist()
         nmiss = [len(self.ix_miss[v]) for v in vnames]
         nmiss = np.asarray(nmiss)
@@ -767,7 +788,7 @@ class MICE_data(object):
         Perturbs the model's parameters by sampling from the Gaussian
         approximation to the sampling distribution of the parameter
         estimates.  Optionally, the scale parameter is perturbed by
-        sampling from it's asymptotic Chi^2 sampling distribution.
+        sampling from its asymptotic Chi^2 sampling distribution.
         """
 
         endog_obs, exog_obs, exog_miss =\
@@ -924,7 +945,7 @@ class MICE_model(object):
 
     def next(self):
 
-        self.data.update_all(n_iter=self.n_skip)
+        self.data.update_all(n_iter=self.n_skip + 1)
 
         model = self.analysis_class.from_formula(self.analysis_formula,
                                                  self.data.data,
@@ -962,7 +983,7 @@ x4        -0.0253   0.0336  -0.7520 0.4521 -0.0911  0.0406 0.0269
 class MICE(object):
     """
     Use Multiple Imputation with Chained Equations to fit a model when
-    some data are missing.
+    some data values are missing.
 
     Parameters
     ----------
@@ -997,6 +1018,13 @@ class MICE(object):
     def burnin(self, n_burnin):
         """
         Impute a given number of data sets and discard the results.
+
+        Parameters
+        ----------
+        n_burnin : int
+            The number of update cycles to perform.  Each update cycle
+            updates each variable in the data set with one or more
+            missing values.
         """
 
         self.data.update_all(n_iter=n_burnin)
