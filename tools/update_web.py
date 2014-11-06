@@ -288,7 +288,7 @@ def upload_docs(branch):
     else:
         remote_dir = 'stable'
     os.chdir(os.path.join(gitdname, 'docs'))
-    retcode = subprocess.call(['rsync', '-avPrzh', '--inplace', '-e ssh',
+    retcode = subprocess.call(['rsync', '-avPzh', '--inplace', '-e ssh',
                                'build/html/', sf_account + ':htdocs/' +
                                remote_dir],
                               stderr=sys.stderr, stdout=sys.stdout)
@@ -306,7 +306,7 @@ def upload_pdf(branch):
     else:
         remote_dir = 'stable'
     os.chdir(os.path.join(dname, new_branch_dir, 'statsmodels','docs'))
-    retcode = subprocess.call(['rsync', '-avPr', '-e ssh',
+    retcode = subprocess.call(['rsync', '-avP', '-e ssh',
                                'build/latex/statsmodels.pdf',
                                sf_account + ':htdocs/' + remote_dir + 'pdf/'])
     if retcode != 0:
