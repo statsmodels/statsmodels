@@ -15,6 +15,8 @@ from pandas import read_csv, DataFrame, Index
 
 def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     """
+    Download and return an example dataset from Stata.
+
     Parameters
     ----------
     data : str
