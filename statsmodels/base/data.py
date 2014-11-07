@@ -195,7 +195,9 @@ class ModelData(object):
                                      "aren't yet handled")
 
         if missing_idx is not None:
-            nan_mask = missing_idx | _nan_rows(*combined)
+            nan_mask = missing_idx
+            if combined:  # there were extra arrays not handled by patsy
+                nan_mask |= _nan_rows(*combined)
         else:
             nan_mask = _nan_rows(*combined)
 
