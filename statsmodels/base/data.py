@@ -180,15 +180,15 @@ class ModelData(object):
                     continue
                 # grab 1d arrays
                 if value_array.ndim == 1:
-                    combined += (value_array,)
+                    combined += (np.asarray(value_array),)
                     combined_names += [key]
                 elif value_array.squeeze().ndim == 1:
-                    combined += (value_array,)
+                    combined += (np.asarray(value_array),)
                     combined_names += [key]
 
                 # grab 2d arrays that are _assumed_ to be symmetric
                 elif value_array.ndim == 2:
-                    combined_2d += (value_array,)
+                    combined_2d += (np.asarray(value_array),)
                     combined_2d_names += [key]
                 else:
                     raise ValueError("Arrays with more than 2 dimensions "
