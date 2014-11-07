@@ -777,11 +777,11 @@ def test_formula_missing_exposure():
 
     mod = smf.glm("Foo ~ Bar", data=df, exposure=df.exposure,
                   family=family)
-    exposure = pd.Series(np.random.uniform(size=5))
-    mod2 = smf.glm("Foo ~ Bar", data=df, exposure=exposure,
-                   family=family)
-    assert_(type(mod2.exposure) is np.ndarray, msg='Exposure is not ndarray')
+    assert_(type(mod.exposure) is np.ndarray, msg='Exposure is not ndarray')
 
+    exposure = pd.Series(np.random.uniform(size=5))
+    assert_raises(ValueError, smf.glm, "Foo ~ Bar", data=df,
+                  exposure=exposure, family=family)
     assert_raises(ValueError, GLM, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure, family=family)
 

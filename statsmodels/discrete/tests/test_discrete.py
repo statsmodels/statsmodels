@@ -1400,13 +1400,10 @@ def test_formula_missing_exposure():
 
     # should work
     mod1 = smf.poisson('Foo ~ Bar', data=df, exposure=df['exposure'])
-
-    # should work, lines up on index, exposure should be array after
-    exposure = pd.Series(np.random.uniform(size=5))
-    mod2 = smf.poisson('Foo ~ Bar', data=df, exposure=exposure)
-    assert_(type(mod2.exposure) is np.ndarray, msg='Exposure is not ndarray')
+    assert_(type(mod1.exposure) is np.ndarray, msg='Exposure is not ndarray')
 
     # make sure this raises
+    exposure = pd.Series(np.random.randn(5))
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
 
