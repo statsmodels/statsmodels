@@ -190,11 +190,13 @@ class GLM(base.LikelihoodModel):
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                  missing='none', **kwargs):
+        if exposure is not None:
+            exposure = np.log(exposure)
+        if offset is not None:  # this should probably be done upstream
+            offset = np.asarray(offset)
         super(GLM, self).__init__(endog, exog, missing=missing,
                                   offset=offset, exposure=exposure,
                                   **kwargs)
-        if exposure is not None:
-            self.exposure = np.log(self.exposure)
         self._check_inputs(family, self.offset, self.exposure, self.endog)
         if offset is None:
             delattr(self, 'offset')
