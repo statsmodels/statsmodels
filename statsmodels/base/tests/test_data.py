@@ -1,9 +1,10 @@
 import numpy as np
-from numpy.testing import assert_equal, assert_
+from numpy.testing import assert_equal, assert_, assert_raises
 import pandas
 import pandas.util.testing as ptesting
 
 from statsmodels.base import data as sm_data
+from statsmodels.formula import handle_formula_data
 
 #class TestDates(object):
 #    @classmethod
@@ -810,6 +811,80 @@ def test_dtype_object():
     y = pandas.Series(np.random.randint(2, size=40))
 
     np.testing.assert_raises(ValueError, sm_data.handle_data, y, df)
+
+
+def test_formula_missing_extra_arrays():
+    np.random.seed(1)
+    # because patsy can't turn off missing data-handling as of 0.3.0, we need
+    # separate tests to make sure that missing values are handled correctly
+    # when going through formulas
+
+    # there is a handle_formula_data step
+    # then there is the regular handle_data step
+    # see 2083
+
+    # the untested cases are endog/exog have missing. extra has missing.
+    # endog/exog are fine. extra has missing.
+    # endog/exog do or do not have missing and extra has wrong dimension
+    y = np.random.randn(10)
+    y_missing = y.copy()
+    y_missing[[2, 5]] = np.nan
+    X = np.random.randn(10)
+    X_missing = X.copy()
+    X_missing[[1, 3]] = np.nan
+
+    weights = np.random.uniform(size=10)
+    weights_missing = weights.copy()
+    weights_missing[[6]] = np.nan
+
+    weights_wrong_size = np.random.randn(12)
+
+    data = {'y': y,
+            'X': X,
+            'y_missing': y_missing,
+            'X_missing': X_missing,
+            'weights': weights,
+            'weights_missing': weights_missing}
+    data = pandas.DataFrame.from_dict(data)
+    data['constant'] = 1
+
+    formula = 'y_missing ~ X_missing'
+
+    (endog, exog), missing_idx = handle_formula_data(data, None, formula,
+                                                     depth=2,
+                                                     missing='drop')
+
+    kwargs = {'missing_idx': missing_idx, 'missing': 'drop',
+              'weights': data['weights_missing']}
+
+    model_data = sm_data.handle_data(endog, exog, **kwargs)
+    data_nona = data.dropna()
+    assert_equal(data_nona['y'].values, model_data.endog)
+    assert_equal(data_nona[['constant', 'X']].values, model_data.exog)
+    assert_equal(data_nona['weights'].values, model_data.weights)
+
+    (endog, exog), missing_idx = handle_formula_data(data, None, formula,
+                                                     depth=2,
+                                                     missing='drop')
+    weights_2d = np.random.randn(10, 10)
+    weights_2d[[8, 7], [7, 8]] = np.nan  #symmetric missing values
+    kwargs.update({'weights': weights_2d,
+                   'missing_idx': missing_idx})
+
+    model_data2 = sm_data.handle_data(endog, exog, **kwargs)
+
+    good_idx = [0, 4, 6, 9]
+    assert_equal(data.ix[good_idx, 'y'], model_data2.endog)
+    assert_equal(data.ix[good_idx, ['constant', 'X']], model_data2.exog)
+    assert_equal(weights_2d[good_idx][:, good_idx], model_data2.weights)
+
+    (endog, exog), missing_idx = handle_formula_data(data, None, formula,
+                                                     depth=2,
+                                                     missing='drop')
+    kwargs.update({'weights': weights_wrong_size,
+                   'missing_idx': missing_idx})
+    assert_raises(ValueError, sm_data.handle_data, endog, exog, **kwargs)
+
 
 if __name__ == "__main__":
     import nose

@@ -190,10 +190,14 @@ class GLM(base.LikelihoodModel):
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                  missing='none', **kwargs):
-        self._check_inputs(family, offset, exposure, endog)
+        if exposure is not None:
+            exposure = np.log(exposure)
+        if offset is not None:  # this should probably be done upstream
+            offset = np.asarray(offset)
         super(GLM, self).__init__(endog, exog, missing=missing,
-                                  offset=self.offset, exposure=self.exposure,
+                                  offset=offset, exposure=exposure,
                                   **kwargs)
+        self._check_inputs(family, self.offset, self.exposure, self.endog)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
@@ -227,22 +231,16 @@ class GLM(base.LikelihoodModel):
             family = families.Gaussian()
         self.family = family
 
-        if exposure is not None and not isinstance(self.family.link, families.links.Log):
-            raise ValueError("exposure can only be used with the log link function")
+        if exposure is not None:
+            if not isinstance(self.family.link, families.links.Log):
+                raise ValueError("exposure can only be used with the log "
+                                 "link function")
+            elif exposure.shape[0] != endog.shape[0]:
+                raise ValueError("exposure is not the same length as endog")
 
         if offset is not None:
-            offset = np.asarray(offset)
             if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
-        self.offset = offset
-
-        if exposure is not None:
-            exposure = np.asarray(exposure)
-            if exposure.shape[0] != endog.shape[0]:
-                raise ValueError("exposure is not the same length as endog")
-            exposure = np.log(exposure)
-        self.exposure = exposure
-
 
     def loglike(self, *args):
         """

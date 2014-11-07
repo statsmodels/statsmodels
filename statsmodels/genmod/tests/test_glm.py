@@ -762,6 +762,30 @@ def test_loglike_no_opt():
         like = llf(params)
         assert_almost_equal(like, res.llf)
 
+
+def test_formula_missing_exposure():
+    # see 2083
+    import statsmodels.formula.api as smf
+    import pandas as pd
+
+    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan],
+         'constant': [1] * 4, 'exposure' : np.random.uniform(size=4),
+         'x': [1, 3, 2, 1.5]}
+    df = pd.DataFrame(d)
+
+    family = sm.families.Gaussian(link=sm.families.links.log)
+
+    mod = smf.glm("Foo ~ Bar", data=df, exposure=df.exposure,
+                  family=family)
+    assert_(type(mod.exposure) is np.ndarray, msg='Exposure is not ndarray')
+
+    exposure = pd.Series(np.random.uniform(size=5))
+    assert_raises(ValueError, smf.glm, "Foo ~ Bar", data=df,
+                  exposure=exposure, family=family)
+    assert_raises(ValueError, GLM, df.Foo, df[['constant', 'Bar']],
+                  exposure=exposure, family=family)
+
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:

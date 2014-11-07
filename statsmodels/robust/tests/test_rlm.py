@@ -305,3 +305,11 @@ class TestRlmSresid(CheckRlmResultsMixin):
 #                        r.rlm, psi="psi.huber")
         from .results.results_rlm import Huber
         self.res2 = Huber()
+
+
+def test_missing():
+    # see 2083
+    import statsmodels.formula.api as smf
+
+    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]}
+    mod = smf.rlm('Foo ~ Bar', data=d)

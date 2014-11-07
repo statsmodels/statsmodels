@@ -1388,6 +1388,25 @@ def test_mnlogit_factor():
     summary = res2.summary()
 
 
+def test_formula_missing_exposure():
+    # see 2083
+    import statsmodels.formula.api as smf
+    import pandas as pd
+
+    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan],
+         'constant': [1] * 4, 'exposure' : np.random.uniform(size=4),
+         'x': [1, 3, 2, 1.5]}
+    df = pd.DataFrame(d)
+
+    # should work
+    mod1 = smf.poisson('Foo ~ Bar', data=df, exposure=df['exposure'])
+    assert_(type(mod1.exposure) is np.ndarray, msg='Exposure is not ndarray')
+
+    # make sure this raises
+    exposure = pd.Series(np.random.randn(5))
+    assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
+                  exposure=exposure)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
