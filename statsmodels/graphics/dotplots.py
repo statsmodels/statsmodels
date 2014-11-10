@@ -7,7 +7,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
              styles=None, marker_props=None, line_props=None,
              split_names=None, section_order=None, line_order=None,
              stacked=False, styles_order=None, striped=False,
-             horizontal=True, ax=None):
+             horizontal=True, show_names="both",
+             left_name_fmt=None, right_name_fmt=None, ax=None):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  These are also known as "forest plots".
@@ -68,6 +69,18 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     horizontal : boolean
         If True (default), the lines are drawn horizontally, otherwise
         they are drawn vertically.
+    show_names : string
+        Determines whether labels (names) are shown in the left and/or
+        right margins (top/bottom margins if `horizontal` is True).
+        If `both`, labels are drawn in both margins, if 'left', labels
+        are drawn in the left or top margin.  If `right`, labels are
+        drawn in the right or bottom margin.
+    left_name_fmt : function
+        The left names are passed through this function before
+        drawing on the plot.
+    right_name_fmt : function
+        The right names are passed through this function before
+        drawing on the plot.
     ax : matplotlib.axes
         The axes on which the dotplot is drawn.  If None, a new axes
         is created.
@@ -88,8 +101,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     >>> dot_plot(points=point_values)
 
     This dotplot has labels on the lines (if elements in
-    `label_values` are repeated, the correponding points appear on the
-    same line):
+    `label_values` are repeated, the corresponding points appear on
+    the same line):
     >>> dot_plot(points=point_values, lines=label_values)
 
     References
@@ -326,6 +339,12 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             else:
                 left_label, right_label = k1, None
 
+            if left_name_fmt is not None:
+                left_label = left_name_fmt(left_label)
+
+            if right_name_fmt is not None:
+                right_label = right_name_fmt(right_label)
+
             # Draw the stripe
             if striped and jrow % 2 == 0:
                 if horizontal:
@@ -344,31 +363,35 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             jrow += 1
 
             # Draw the left margin label
-            if horizontal:
-                ax.text(-0.1/awidth, pos, left_label,
-                           horizontalalignment="right",
-                           verticalalignment='center',
-                           transform=ax.transAxes, family='monospace')
-            else:
-                ax.text(pos, -0.1/aheight, left_label,
-                           horizontalalignment="center",
-                           verticalalignment='top',
-                           transform=ax.transAxes, family='monospace')
-
-            # Draw the right margin label
-            if right_label is not None:
+            if show_names.lower() in ("left", "both"):
                 if horizontal:
-                    ax.text(1 + 0.1/awidth, pos, right_label,
-                            horizontalalignment="left",
+                    ax.text(-0.1/awidth, pos, left_label,
+                            horizontalalignment="right",
                             verticalalignment='center',
                             transform=ax.transAxes,
                             family='monospace')
                 else:
-                    ax.text(pos, 1 + 0.1/aheight, right_label,
+                    ax.text(pos, -0.1/aheight, left_label,
                             horizontalalignment="center",
-                            verticalalignment='bottom',
+                            verticalalignment='top',
                             transform=ax.transAxes,
                             family='monospace')
+
+            # Draw the right margin label
+            if show_names.lower() in ("right", "both"):
+                if right_label is not None:
+                    if horizontal:
+                        ax.text(1 + 0.1/awidth, pos, right_label,
+                                horizontalalignment="left",
+                                verticalalignment='center',
+                                transform=ax.transAxes,
+                                family='monospace')
+                    else:
+                        ax.text(pos, 1 + 0.1/aheight, right_label,
+                                horizontalalignment="center",
+                                verticalalignment='bottom',
+                                transform=ax.transAxes,
+                                family='monospace')
 
             # Save the vertical position so that we can place the
             # tick marks
