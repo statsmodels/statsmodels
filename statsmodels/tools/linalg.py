@@ -9,16 +9,10 @@ from __future__ import print_function
 from statsmodels.compat.python import lmap, range
 import numpy as np
 from scipy.linalg import svd as decomp_svd
-#decomp_svd
-
-#check which imports we need here:
-from scipy.linalg.flinalg import get_flinalg_funcs
 from scipy.linalg.lapack import get_lapack_funcs
-from numpy import asarray,zeros,sum,newaxis,greater_equal,subtract,arange,\
-     conjugate,ravel,r_,mgrid,take,ones,dot,transpose,sqrt,add,real
+from numpy import asarray, zeros, sum, conjugate, dot, transpose
 import numpy
-from numpy import asarray_chkfinite, outer, concatenate, reshape, single
-#from numpy import matrix as Matrix
+from numpy import asarray_chkfinite, single
 from numpy.linalg import LinAlgError
 from scipy.linalg import calc_lwork
 
