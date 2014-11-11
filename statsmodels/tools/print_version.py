@@ -4,6 +4,7 @@ from statsmodels.compat.python import reduce
 import sys
 from os.path import dirname
 
+
 def safe_version(module, attr='__version__'):
     if not isinstance(attr, list):
         attr = [attr]
@@ -20,15 +21,13 @@ def _show_versions_only():
     try:
         import os
         (sysname, nodename, release, version, machine) = os.uname()
-        print("OS: %s %s %s %s" % (sysname, release, version,machine))
+        print("OS: %s %s %s %s" % (sysname, release, version, machine))
         print("byteorder: %s" % sys.byteorder)
-        print("LC_ALL: %s" % os.environ.get('LC_ALL',"None"))
-        print("LANG: %s" % os.environ.get('LANG',"None"))
+        print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
+        print("LANG: %s" % os.environ.get('LANG', "None"))
     except:
         pass
-
     try:
-        import statsmodels
         from statsmodels import version
         has_sm = True
     except ImportError:
@@ -140,10 +139,10 @@ def show_versions(show_dirs=True):
     try:
         import os
         (sysname, nodename, release, version, machine) = os.uname()
-        print("OS: %s %s %s %s" % (sysname, release, version,machine))
+        print("OS: %s %s %s %s" % (sysname, release, version, machine))
         print("byteorder: %s" % sys.byteorder)
-        print("LC_ALL: %s" % os.environ.get('LC_ALL',"None"))
-        print("LANG: %s" % os.environ.get('LANG',"None"))
+        print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
+        print("LANG: %s" % os.environ.get('LANG', "None"))
     except:
         pass
 
@@ -194,7 +193,7 @@ def show_versions(show_dirs=True):
     try:
         import dateutil
         print("    dateutil: %s (%s)" % (safe_version(dateutil),
-                                     dirname(dateutil.__file__)))
+                                         dirname(dateutil.__file__)))
     except ImportError:
         print("    dateutil: not installed")
 

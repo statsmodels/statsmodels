@@ -56,7 +56,6 @@ class StandardizeTransform(object):
             self.mean[const_idx] = 0
             self.scale[const_idx] = 1
 
-
         if demean is False:
             self.mean = None
 
@@ -83,7 +82,8 @@ class StandardizeTransform(object):
         Returns
         -------
         params_new : ndarray
-            parameters transformed to the parameterization of the original model
+            parameters transformed to the parameterization of the original
+            model
 
         """
 
@@ -93,6 +93,4 @@ class StandardizeTransform(object):
 
         return params_new
 
-
     __call__ = transform
-

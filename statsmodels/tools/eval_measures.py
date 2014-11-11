@@ -7,12 +7,11 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
-
 import numpy as np
 
+
 def mse(x1, x2, axis=0):
-    '''mean squared error
+    """mean squared error
 
     Parameters
     ----------
@@ -34,13 +33,14 @@ def mse(x1, x2, axis=0):
     desired result or not depends on the array subclass, for example
     numpy matrices will silently produce an incorrect result.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.mean((x1-x2)**2, axis=axis)
 
+
 def rmse(x1, x2, axis=0):
-    '''root mean squared error
+    """root mean squared error
 
     Parameters
     ----------
@@ -62,13 +62,14 @@ def rmse(x1, x2, axis=0):
     desired result or not depends on the array subclass, for example
     numpy matrices will silently produce an incorrect result.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.sqrt(mse(x1, x2, axis=axis))
 
+
 def maxabs(x1, x2, axis=0):
-    '''maximum absolute error
+    """maximum absolute error
 
     Parameters
     ----------
@@ -89,13 +90,14 @@ def maxabs(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.max(np.abs(x1-x2), axis=axis)
 
+
 def meanabs(x1, x2, axis=0):
-    '''mean absolute error
+    """mean absolute error
 
     Parameters
     ----------
@@ -116,13 +118,14 @@ def meanabs(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.mean(np.abs(x1-x2), axis=axis)
 
+
 def medianabs(x1, x2, axis=0):
-    '''median absolute error
+    """median absolute error
 
     Parameters
     ----------
@@ -143,13 +146,14 @@ def medianabs(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.median(np.abs(x1-x2), axis=axis)
 
+
 def bias(x1, x2, axis=0):
-    '''bias, mean error
+    """bias, mean error
 
     Parameters
     ----------
@@ -170,13 +174,14 @@ def bias(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.mean(x1-x2, axis=axis)
 
+
 def medianbias(x1, x2, axis=0):
-    '''median bias, median error
+    """median bias, median error
 
     Parameters
     ----------
@@ -197,13 +202,14 @@ def medianbias(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.median(x1-x2, axis=axis)
 
+
 def vare(x1, x2, ddof=0, axis=0):
-    '''variance of error
+    """variance of error
 
     Parameters
     ----------
@@ -224,13 +230,14 @@ def vare(x1, x2, ddof=0, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.var(x1-x2, ddof=ddof, axis=axis)
 
+
 def stde(x1, x2, ddof=0, axis=0):
-    '''standard deviation of error
+    """standard deviation of error
 
     Parameters
     ----------
@@ -251,13 +258,14 @@ def stde(x1, x2, ddof=0, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
 
-    '''
+    """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
     return np.std(x1-x2, ddof=ddof, axis=axis)
 
+
 def iqr(x1, x2, axis=0):
-    '''interquartile range of error
+    """interquartile range of error
 
     rounded index, no interpolations
 
@@ -283,7 +291,7 @@ def iqr(x1, x2, axis=0):
     This uses ``numpy.asarray`` to convert the input, in contrast to the other
     functions in this category.
 
-    '''
+    """
     x1 = np.asarray(x1)
     x2 = np.asarray(x2)
     if axis is None:
@@ -296,18 +304,15 @@ def iqr(x1, x2, axis=0):
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
     iqr = np.diff(xdiff[sl], axis=axis)
-    iqr = np.squeeze(iqr) #drop reduced dimension
-    if iqr.size == 1:
-        return iqr #[0]
-    else:
-        return iqr
+    iqr = np.squeeze(iqr)  # drop reduced dimension
+    return iqr
 
 
 # Information Criteria
-#---------------------
+# ---------------------
 
 def aic(llf, nobs, df_modelwc):
-    '''Akaike information criterion
+    """Akaike information criterion
 
     Parameters
     ----------
@@ -327,11 +332,12 @@ def aic(llf, nobs, df_modelwc):
     ----------
     http://en.wikipedia.org/wiki/Akaike_information_criterion
 
-    '''
+    """
     return -2. * llf + 2. * df_modelwc
 
+
 def aicc(llf, nobs, df_modelwc):
-    '''Akaike information criterion (AIC) with small sample correction
+    """Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
@@ -351,12 +357,12 @@ def aicc(llf, nobs, df_modelwc):
     ----------
     http://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
-    '''
+    """
     return -2. * llf + 2. * df_modelwc * nobs / (nobs - df_modelwc - 1.)
-    #float division
+
 
 def bic(llf, nobs, df_modelwc):
-    '''Bayesian information criterion (BIC) or Schwarz criterion
+    """Bayesian information criterion (BIC) or Schwarz criterion
 
     Parameters
     ----------
@@ -376,11 +382,12 @@ def bic(llf, nobs, df_modelwc):
     ----------
     http://en.wikipedia.org/wiki/Bayesian_information_criterion
 
-    '''
+    """
     return -2. * llf + np.log(nobs) * df_modelwc
 
+
 def hqic(llf, nobs, df_modelwc):
-    '''Hannan-Quinn information criterion (HQC)
+    """Hannan-Quinn information criterion (HQC)
 
     Parameters
     ----------
@@ -400,14 +407,14 @@ def hqic(llf, nobs, df_modelwc):
     ----------
     Wikipedia doesn't say much
 
-    '''
+    """
     return -2. * llf + 2 * np.log(np.log(nobs)) * df_modelwc
 
 
-#IC based on residual sigma
+# IC based on residual sigma
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    '''Akaike information criterion
+    """Akaike information criterion
 
     Parameters
     ----------
@@ -457,14 +464,14 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     ----------
     http://en.wikipedia.org/wiki/Akaike_information_criterion
 
-    '''
+    """
     if not islog:
         sigma2 = np.log(sigma2)
     return sigma2 + aic(0, nobs, df_modelwc) / nobs
 
 
 def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
-    '''Akaike information criterion (AIC) with small sample correction
+    """Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
@@ -485,21 +492,21 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
     Notes
     -----
     A constant has been dropped in comparison to the loglikelihood base
-    information criteria. These should be used to compare for comparable models.
+    information criteria. These should be used to compare for comparable
+    models.
 
     References
     ----------
     http://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
-    '''
+    """
     if not islog:
         sigma2 = np.log(sigma2)
     return sigma2 + aicc(0, nobs, df_modelwc) / nobs
-    #float division
 
 
 def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    '''Bayesian information criterion (BIC) or Schwarz criterion
+    """Bayesian information criterion (BIC) or Schwarz criterion
 
     Parameters
     ----------
@@ -520,20 +527,21 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
     Notes
     -----
     A constant has been dropped in comparison to the loglikelihood base
-    information criteria. These should be used to compare for comparable models.
+    information criteria. These should be used to compare for comparable
+    models.
 
     References
     ----------
     http://en.wikipedia.org/wiki/Bayesian_information_criterion
 
-    '''
+    """
     if not islog:
         sigma2 = np.log(sigma2)
     return sigma2 + bic(0, nobs, df_modelwc) / nobs
 
 
 def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    '''Hannan-Quinn information criterion (HQC)
+    """Hannan-Quinn information criterion (HQC)
 
     Parameters
     ----------
@@ -554,21 +562,22 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     Notes
     -----
     A constant has been dropped in comparison to the loglikelihood base
-    information criteria. These should be used to compare for comparable models.
+    information criteria. These should be used to compare for comparable
+    models.
 
     References
     ----------
     xxx
 
-    '''
+    """
     if not islog:
         sigma2 = np.log(sigma2)
     return sigma2 + hqic(0, nobs, df_modelwc) / nobs
 
 
-#from var_model.py, VAR only? separates neqs and k_vars per equation
-#def fpe_sigma():
-#    ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
+# from var_model.py, VAR only? separates neqs and k_vars per equation
+# def fpe_sigma():
+#     ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
 
 __all__ = [maxabs, meanabs, medianabs, medianbias, mse, rmse, stde, vare,

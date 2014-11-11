@@ -1,16 +1,10 @@
 """
 Compatibility tools for various data structure inputs
 """
-
-#TODO: question: interpret_data
-# looks good and could/should be merged with other check convertion functions we also have
-# similar also to what Nathaniel mentioned for Formula
-# good: if ndarray check passes then loading pandas is not triggered,
-
-
 from statsmodels.compat.python import range
 import numpy as np
 import pandas as pd
+
 
 def _check_period_index(x, freq="M"):
     from pandas import PeriodIndex, DatetimeIndex
@@ -23,15 +17,19 @@ def _check_period_index(x, freq="M"):
         raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
                                                                 freq))
 
+
 def is_data_frame(obj):
     return isinstance(obj, pd.DataFrame)
+
 
 def is_design_matrix(obj):
     from patsy import DesignMatrix
     return isinstance(obj, DesignMatrix)
 
+
 def _is_structured_ndarray(obj):
     return isinstance(obj, np.ndarray) and obj.dtype.names is not None
+
 
 def interpret_data(data, colnames=None, rownames=None):
     """
@@ -64,7 +62,7 @@ def interpret_data(data, colnames=None, rownames=None):
         values = data.values
         colnames = data.columns
         rownames = data.index
-    else: # pragma: no cover
+    else:  # pragma: no cover
         raise Exception('cannot handle other input types at the moment')
 
     if not isinstance(colnames, list):
@@ -81,31 +79,36 @@ def interpret_data(data, colnames=None, rownames=None):
 
     return values, colnames, rownames
 
+
 def struct_to_ndarray(arr):
     return arr.view((float, len(arr.dtype.names)))
+
 
 def _is_using_ndarray_type(endog, exog):
     return (type(endog) is np.ndarray and
             (type(exog) is np.ndarray or exog is None))
 
+
 def _is_using_ndarray(endog, exog):
     return (isinstance(endog, np.ndarray) and
             (isinstance(exog, np.ndarray) or exog is None))
+
 
 def _is_using_pandas(endog, exog):
     klasses = (pd.Series, pd.DataFrame, pd.WidePanel)
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
+
 def _is_array_like(endog, exog):
-    try: # do it like this in case of mixed types, ie., ndarray and list
+    try:  # do it like this in case of mixed types, ie., ndarray and list
         endog = np.asarray(endog)
         exog = np.asarray(exog)
         return True
     except:
         return False
 
+
 def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
-
