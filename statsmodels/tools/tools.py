@@ -6,8 +6,6 @@ import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 from scipy.linalg import svdvals
-from statsmodels.distributions import (ECDF, monotone_fn_inverter,
-                                       StepFunction)
 from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.compat.numpy import np_matrix_rank
