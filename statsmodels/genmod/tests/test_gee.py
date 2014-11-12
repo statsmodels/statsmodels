@@ -186,6 +186,34 @@ class TestGEE(object):
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
         assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
 
+    def test_weighted(self):
+
+        # Simple check where the answer can be computed by hand.
+        exog = np.ones(20)
+        weights = np.ones(20)
+        weights[0:10] = 2
+        endog = np.zeros(20)
+        endog[0:10] += 1
+        groups = np.kron(np.arange(10), np.r_[1, 1])
+        model = GEE(endog, exog, groups, weights=weights)
+        result = model.fit()
+        assert_allclose(result.params, np.r_[2/3.])
+
+        # Comparison against stata
+        weights = np.ones(20)
+        weights[10:] = 2
+        endog = np.r_[1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 6, 5, 6, 7, 6,
+                      7, 8, 7, 8]
+        exog1 = np.r_[1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4,
+                      5, 5, 5, 5]
+        groups = np.r_[1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,
+                       8, 8, 9, 9, 10, 10]
+        exog = np.column_stack((np.ones(20), exog1))
+        model = GEE(endog, exog, groups, weights=weights,
+                    cov_struct=sm.cov_struct.Exchangeable())
+        result = model.fit()
+        assert_allclose(result.params, np.r_[0.8333333, 1.3333333])
+
 
     # This is in the release announcement for version 0.6.
     def test_poisson_epil(self):
@@ -1325,7 +1353,7 @@ def test_missing():
                   family=sm.families.Binomial())
 
     df = df.dropna()
-    df['constant'] = 1
+    df.loc[:, 'constant'] = 1
 
     mod2 = GEE(df.status, df[['constant', 'fake']], groups=df.grps,
                cov_struct=sm.cov_struct.Independence(),

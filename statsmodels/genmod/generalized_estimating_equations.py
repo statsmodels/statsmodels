@@ -203,6 +203,9 @@ _gee_init_doc = """
     update_dep : bool
         If true, the dependence parameters are optimized, otherwise
         they are held fixed at their starting values.
+    weights : array-like
+        An array of weights to use in the analysis.  The weights must
+        be constant within each group.
     %(extra_params)s
 
     See Also
@@ -436,7 +439,7 @@ class GEE(base.Model):
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
                  exposure=None, dep_data=None, constraint=None,
-                 update_dep=True, **kwargs):
+                 update_dep=True, weights=None, **kwargs):
 
         self.missing = missing
         self.dep_data = dep_data
@@ -451,7 +454,7 @@ class GEE(base.Model):
         # self.data.endog, etc.
         super(GEE, self).__init__(endog, exog, groups=groups,
                                   time=time, offset=offset,
-                                  exposure=exposure,
+                                  exposure=exposure, weights=weights,
                                   dep_data=dep_data, missing=missing,
                                   **kwargs)
 
@@ -511,7 +514,7 @@ class GEE(base.Model):
             self.exog = self.constraint.reduced_exog()
 
         # Convert the data to the internal representation, which is a
-        # list of arrays, corresponding to the clusters.
+        # list of arrays, corresponding to the groups.
         group_labels = sorted(set(self.groups))
         group_indices = dict((s, []) for s in group_labels)
         for i in range(len(self.endog)):
@@ -523,6 +526,11 @@ class GEE(base.Model):
 
         self.endog_li = self.cluster_list(self.endog)
         self.exog_li = self.cluster_list(self.exog)
+
+        if self.weights is not None:
+            self.weights_li = self.cluster_list(self.weights)
+            self.weights_li = [x[0] for x in self.weights_li]
+            self.weights_li = np.asarray(self.weights_li)
 
         self.num_group = len(self.endog_li)
 
@@ -788,8 +796,10 @@ class GEE(base.Model):
                 return None, None
             vinv_d, vinv_resid = tuple(rslt)
 
-            bmat += np.dot(dmat.T, vinv_d)
-            score += np.dot(dmat.T, vinv_resid)
+            f = self.weights_li[i] if self.weights is not None else 1.
+
+            bmat += f * np.dot(dmat.T, vinv_d)
+            score += f * np.dot(dmat.T, vinv_resid)
 
         update = np.linalg.solve(bmat, score)
 
