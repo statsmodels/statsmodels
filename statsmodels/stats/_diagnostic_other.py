@@ -48,6 +48,8 @@ Poisson:
 import numpy as np
 from scipy import stats
 
+
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
 
 
@@ -677,3 +679,164 @@ def conditional_moment_test_regression(mom_test, mom_test_deriv=None,
         pval = tres.pvalue
 
     return statistic, pval
+
+
+
+class CMTNewey(object):
+    """generic moment test for GMM
+
+    This is a class to calculate and hold the various results
+
+    Newey
+    Lemma 1:
+    Theorem 1
+
+    """
+
+    def __init__(self, moments, cov_moments, moments_deriv,
+                 weights, transf_mt):
+        """
+
+        moments, g :
+        cov_moments, V :
+        moments_deriv, H :
+        weights, W :
+        transf_mt, L :
+            linear transformation to get the test condition from the moments
+
+        not used, add as argument to methods or __init__?
+        K cov for misspecification
+        or mispecification_deriv
+
+        """
+        self.moments = moments
+        self.cov_moments = cov_moments
+        self.moments_deriv = moments_deriv
+        self.weights = weights
+        self.transf_mt = transf_mt
+
+        # derived quantities
+        self.moments_constraint = transf_mt.dot(moments)
+        self.htw = moments_deriv.T.dot(weights)   # H'W
+
+        # TODO check these
+        self.k_moments = self.moments.shape[-1]  # in this case only 1-D
+        # assuming full rank of L'
+        self.k_constraints = self.transf_mt.shape[0]
+
+
+    @cache_readonly
+    def asy_transf_params(self):
+
+        moments_deriv = self.moments_deriv  # H
+        #weights = self.weights  # W
+
+        htw = self.htw  # moments_deriv.T.dot(weights)   # H'W
+        res = np.linalg.solve(htw.dot(moments_deriv), htw)
+        #res = np.linalg.pinv(htw.dot(moments_deriv)).dot(htw)
+        return -res
+
+
+    @cache_readonly
+    def project_w(self):
+        # P_w = I - H (H' W H)^{-1} H' W
+        moments_deriv = self.moments_deriv  # H
+
+        res = moments_deriv.dot(self.asy_transf_params)
+        res += np.eye(res.shape[0])
+        return res
+
+
+    @cache_readonly
+    def asy_transform_mom_constraints(self):
+        # L P_w
+        res = self.transf_mt.dot(self.project_w)
+        return res
+
+    @cache_readonly
+    def asy_cov_moments(self):
+        """
+
+        `sqrt(T) * g_T(b_0) asy N(K delta, V)`
+
+        mean is not implemented,
+        V is the same as cov_moments in __init__ argument
+        """
+
+        return self.cov_moments
+
+    @cache_readonly
+    def cov_mom_constraints(self):
+
+        # linear transformation
+        transf = self.asy_transform_mom_constraints
+
+        return transf.dot(self.asy_cov_moments).dot(transf.T)
+
+
+    @cache_readonly
+    def rank_cov_mom_constraints(self):
+        return np.linalg.matrix_rank(self.cov_mom_constraints)
+
+
+    @cache_readonly
+    def chisquare(self):
+        diff = self.moments_constraint
+        cov = self.cov_mom_constraints
+
+        # Newey uses a generalized inverse
+        stat = diff.T.dot(np.linalg.pinv(cov).dot(diff))
+        df = self.rank_cov_mom_constraints
+        from scipy import stats
+        pval = stats.chi2.sf(stat, df)  # Theorem 1
+        return stat, pval, df
+
+
+class CMTTauchen(object):
+
+    def __init__(self, score, score_deriv, moments, moments_deriv, cov_moments):
+        self.score = score
+        self.score_deriv = score_deriv
+        self.moments = moments
+        self.moments_deriv = moments_deriv
+        self.cov_moments_all = cov_moments
+
+        self.k_moments_test = moments.shape[-1]
+        self.k_params = score.shape[-1]
+        self.k_moments_all = self.k_params + self.k_moments_test
+
+
+    @cache_readonly
+    def cov_params_all(self):
+        m_deriv = np.zeros((self.k_moments_all, self.k_moments_all))
+        m_deriv[:self.k_params, :self.k_params] = self.score_deriv
+        m_deriv[self.k_params:, :self.k_params] = self.moments_deriv
+        m_deriv[self.k_params:, self.k_params:] = np.eye(self.k_moments_test)
+
+        m_deriv_inv = np.linalg.inv(m_deriv)
+        cov = m_deriv_inv.dot(self.cov_moments_all.dot(m_deriv_inv.T)) # K_inv J K_inv
+        return cov
+
+    @cache_readonly
+    def cov_mom_constraints(self):
+        return self.cov_params_all[self.k_params:, self.k_params:]
+
+
+    @cache_readonly
+    def rank_cov_mom_constraints(self):
+        return np.linalg.matrix_rank(self.cov_mom_constraints)
+
+
+    @cache_readonly
+    def chisquare(self):
+        diff = self.moments #_constraints
+        cov = self.cov_mom_constraints
+
+        # Newey uses a generalized inverse, we use it also here
+        stat = diff.T.dot(np.linalg.pinv(cov).dot(diff))
+        #df = self.k_moments_test
+        # We allow for redundant mom_constraints:
+        df = self.rank_cov_mom_constraints
+        from scipy import stats
+        pval = stats.chi2.sf(stat, df)
+        return stat, pval, df
