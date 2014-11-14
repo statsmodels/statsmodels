@@ -3,7 +3,8 @@ Test VAR Model
 """
 from __future__ import print_function
 # pylint: disable=W0612,W0231
-from statsmodels.compat.python import iteritems, StringIO, lrange, BytesIO, range
+from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
+                                       range)
 from nose.tools import assert_raises
 import nose
 import os
@@ -12,7 +13,6 @@ import sys
 import numpy as np
 
 import statsmodels.api as sm
-import statsmodels.tsa.vector_ar.var_model as model
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
 from statsmodels.tsa.vector_ar.var_model import VAR
@@ -554,6 +554,27 @@ def test_get_trendorder():
 
     for t, trendorder in iteritems(results):
         assert(util.get_trendorder(t) == trendorder)
+
+
+def test_var_constant():
+    # see 2043
+    import datetime
+    from pandas import DataFrame, DatetimeIndex
+
+    series = np.array([[2., 2.], [1, 2.], [1, 2.], [1, 2.], [1., 2.]])
+    data = DataFrame(series)
+
+    d = datetime.datetime.now()
+    delta = datetime.timedelta(days=1)
+    index = []
+    for i in range(data.shape[0]):
+        index.append(d)
+        d += delta
+
+    data.index = DatetimeIndex(index)
+
+    model = VAR(data)
+    assert_raises(ValueError, model.fit, 1)
 
 if __name__ == '__main__':
     import nose
