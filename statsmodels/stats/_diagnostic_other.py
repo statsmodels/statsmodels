@@ -687,28 +687,56 @@ class CMTNewey(object):
 
     This is a class to calculate and hold the various results
 
-    Newey
+    This is based on Newey 1985.
     Lemma 1:
     Theorem 1
+
+
+    The main method is `chisquare` which returns the result of the
+    conditional moment test.
+
+    Warning: name of class and methods will likely be changed
+
+    Parameters
+    ----------
+    moments : ndarray, 1-D
+        moments that are tested to be zero. They don't need to be derived
+        from a likelihood function.
+    moments_deriv : ndarray
+        derivative of the moment function with respect to the parameters that
+        are estimated
+    cov_moments : ndarray
+        An estimate for the joint (expected) covariance of all moments. This
+        can be a heteroscedasticity or correlation robust covariance estimate,
+        i.e. the inner part of a sandwich covariance.
+    weights : ndarray
+        Weights used in the GMM estimation.
+    transf_mt : ndarray
+        This defines the test moments where `transf_mt` is the matrix that
+        defines a Linear combination of moments that have expected value equal
+        to zero under the Null hypothesis.
+
+
+    Notes
+    -----
+    The one letter names in Newey 1985 are
+
+    moments, g :
+    cov_moments, V :
+    moments_deriv, H :
+    weights, W :
+    transf_mt, L :
+        linear transformation to get the test condition from the moments
+
+    not used, add as argument to methods or __init__?
+    K cov for misspecification
+    or mispecification_deriv
 
     """
 
     def __init__(self, moments, cov_moments, moments_deriv,
                  weights, transf_mt):
-        """
 
-        moments, g :
-        cov_moments, V :
-        moments_deriv, H :
-        weights, W :
-        transf_mt, L :
-            linear transformation to get the test condition from the moments
-
-        not used, add as argument to methods or __init__?
-        K cov for misspecification
-        or mispecification_deriv
-
-        """
         self.moments = moments
         self.cov_moments = cov_moments
         self.moments_deriv = moments_deriv
@@ -779,8 +807,27 @@ class CMTNewey(object):
         return np.linalg.matrix_rank(self.cov_mom_constraints)
 
 
+    def ztest(self):
+        """statistic, p-value and degrees of freedom of separate moment test
+
+        currently two sided test only
+
+        TODO: This can use generic ztest/ttest features and return
+        ContrastResults
+        """
+        diff = self.moments_constraint
+        bse = np.sqrt(np.diag(self.cov_mom_constraints))
+
+        # Newey uses a generalized inverse
+        stat = diff / bse
+        pval = stats.norm.sf(np.abs(stat))*2
+        return stat, pval
+
+
     @cache_readonly
     def chisquare(self):
+        """statistic, p-value and degrees of freedom of joint moment test
+        """
         diff = self.moments_constraint
         cov = self.cov_mom_constraints
 
@@ -793,6 +840,35 @@ class CMTNewey(object):
 
 
 class CMTTauchen(object):
+    """generic moment tests or conditional moment tests for Quasi-MLE
+
+    This is a generic class based on Tauchen 1985
+
+    The main method is `chisquare` which returns the result of the
+    conditional moment test.
+
+    Warning: name of class and of methods will likely be changed
+
+
+    Parameters
+    ----------
+    score : ndarray, 1-D
+        moment condition used in estimation, score of log-likelihood function
+    score_deriv : ndarray
+        derivative of score function with respect to the parameters that are
+        estimated. This is the Hessian in quasi-maximum likelihood
+    moments : ndarray, 1-D
+        moments that are tested to be zero. They don't need to be derived
+        from a likelihood function.
+    moments_deriv : ndarray
+        derivative of the moment function with respect to the parameters that
+        are estimated
+    cov_moments : ndarray
+        An estimate for the joint (expected) covariance of score and test
+        moments. This can be a heteroscedasticity or correlation robust
+        covariance estimate, i.e. the inner part of a sandwich covariance.
+
+    """
 
     def __init__(self, score, score_deriv, moments, moments_deriv, cov_moments):
         self.score = score
@@ -826,9 +902,28 @@ class CMTTauchen(object):
     def rank_cov_mom_constraints(self):
         return np.linalg.matrix_rank(self.cov_mom_constraints)
 
+    # TODO: not DRY, just copied from CMTNewey
+    def ztest(self):
+        """statistic, p-value and degrees of freedom of separate moment test
+
+        currently two sided test only
+
+        TODO: This can use generic ztest/ttest features and return
+        ContrastResults
+        """
+        diff = self.moments_constraint
+        bse = np.sqrt(np.diag(self.cov_mom_constraints))
+
+        # Newey uses a generalized inverse
+        stat = diff / bse
+        pval = stats.norm.sf(np.abs(stat))*2
+        return stat, pval
+
 
     @cache_readonly
     def chisquare(self):
+        """statistic, p-value and degrees of freedom of joint moment test
+        """
         diff = self.moments #_constraints
         cov = self.cov_mom_constraints
 
