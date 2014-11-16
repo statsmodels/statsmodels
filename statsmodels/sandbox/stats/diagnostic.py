@@ -35,7 +35,8 @@ import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
-from statsmodels.tsa.stattools import acf, adfuller
+from statsmodels.tsa.stattools import acf
+from statsmodels.tsa.unitroot import adfuller
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.compat.numpy import np_matrix_rank
 
