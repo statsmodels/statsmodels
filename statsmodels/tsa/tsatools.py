@@ -6,7 +6,7 @@ from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
 
-def add_trend(X, trend="c", prepend=False):
+def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     """
     Adds a trend and/or constant to an array.
 
@@ -21,11 +21,17 @@ def add_trend(X, trend="c", prepend=False):
         "ctt" add constant and linear and quadratic trend.
     prepend : bool
         If True, prepends the new data to the columns of X.
+    has_constant : str {'raise', 'add', 'skip'}
+        Controls what happens when trend is 'c' and a constant already
+        exists in X. Has no effect for 'ctt' and 'ct'. 'raise' will raise an
+        error. 'add' will duplicate a constant. 'skip' will return the data
+        without change. 'skip' is the default.
 
     Notes
     -----
-    Returns columns as ["ctt","ct","c"] whenever applicable.  There is currently
-    no checking for an existing constant or trend.
+    Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
+    no checking for an existing constant or trend unless trend='c'. In this
+    case what happens is controlled by the `has_constant` keyword.
 
     See also
     --------
@@ -34,7 +40,7 @@ def add_trend(X, trend="c", prepend=False):
     #TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
     if trend == "c":    # handles structured arrays
-        return add_constant(X, prepend=prepend)
+        return add_constant(X, prepend=prepend, has_constant=has_constant)
     elif trend == "ct" or trend == "t":
         trendorder = 1
     elif trend == "ctt":
