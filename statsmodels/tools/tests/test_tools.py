@@ -33,7 +33,7 @@ class TestTools(TestCase):
         x = tools.add_constant(x, has_constant='skip')
         assert_equal(x, np.ones(5))
 
-        assert_raises(ValueError, tools.add_constant, x)
+        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.ones((5, 2)))
@@ -43,7 +43,7 @@ class TestTools(TestCase):
         y = tools.add_constant(x, has_constant='skip')
         assert_equal(x, y)
 
-        assert_raises(ValueError, tools.add_constant, x)
+        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.column_stack((np.ones(4), x)))

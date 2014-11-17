@@ -283,7 +283,7 @@ def _pandas_add_constant(data, prepend, has_constant):
 
 
 # TODO: add an axis argument to this for sysreg
-def add_constant(data, prepend=True, has_constant='raise'):
+def add_constant(data, prepend=True, has_constant='skip'):
     '''
     This appends a column of ones to an array if prepend==False.
 
@@ -294,10 +294,11 @@ def add_constant(data, prepend=True, has_constant='raise'):
     prepend : bool
         True and the constant is prepended rather than appended.
     has_constant : str {'raise', 'add', 'skip'}
-        Behavior if ``data'' already has a constant. The default is to raise
-        an error. Using 'add' will duplicate the constant, if one is present.
-        Using 'skip' will return data without adding a constant. Does not
-        check for a constant if a structured or recarray is given.
+        Behavior if ``data'' already has a constant. The default will return
+        data without adding another constant. If 'raise', will raise an
+        error if a constant is present. Using 'add' will duplicate the
+        constant, if one is present. Has no effect for structured or
+        recarrays. There is no checking for a constant in this case.
 
     Returns
     -------
