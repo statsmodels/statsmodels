@@ -361,7 +361,7 @@ class VAR(tsbase.TimeSeriesModel):
             predictedvalues += intercept
 
         y = self.y
-        X = util.get_var_endog(y, lags, trend=trend)
+        X = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
         fittedvalues = np.dot(X, params)
 
         fv_start = start - k_ar
@@ -450,7 +450,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         y = self.y[offset:]
 
-        z = util.get_var_endog(y, lags, trend=trend)
+        z = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula

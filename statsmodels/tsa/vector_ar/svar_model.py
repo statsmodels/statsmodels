@@ -224,7 +224,7 @@ class SVAR(tsbase.TimeSeriesModel):
         """
         k_trend = util.get_trendorder(trend)
         y = self.endog
-        z = util.get_var_endog(y, lags, trend=trend)
+        z = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula

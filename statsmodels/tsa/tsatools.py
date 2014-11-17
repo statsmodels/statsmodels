@@ -6,7 +6,7 @@ from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
 
-def add_trend(X, trend="c", prepend=False):
+def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     """
     Adds a trend and/or constant to an array.
 
@@ -21,11 +21,16 @@ def add_trend(X, trend="c", prepend=False):
         "ctt" add constant and linear and quadratic trend.
     prepend : bool
         If True, prepends the new data to the columns of X.
+    has_constant : str {'raise', 'add', 'skip'}
+        Controls what happens when trend is 'c' and a constant already
+        exists in X. 'raise' will raise an error. 'add' will duplicate a
+        constant. 'skip' will return the data without change. 'skip' is the
+        default.
 
     Notes
     -----
-    Returns columns as ["ctt","ct","c"] whenever applicable.  There is currently
-    no checking for an existing constant or trend.
+    Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
+    no checking for an existing trend.
 
     See also
     --------
@@ -34,13 +39,14 @@ def add_trend(X, trend="c", prepend=False):
     #TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
     if trend == "c":    # handles structured arrays
-        return add_constant(X, prepend=prepend)
+        return add_constant(X, prepend=prepend, has_constant=has_constant)
     elif trend == "ct" or trend == "t":
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
     else:
         raise ValueError("trend %s not understood" % trend)
+
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
@@ -49,6 +55,15 @@ def add_trend(X, trend="c", prepend=False):
     if trend == "t":
         trendarr = trendarr[:,1]
     if not X.dtype.names:
+        # check for constant
+        if "c" in trend and np.any(np.ptp(X, axis=0) == 0):
+            if has_constant == 'raise':
+                raise ValueError("X already contains a constant")
+            elif has_constant == 'add':
+                pass
+            elif has_constant == 'skip' and trend == "ct":
+                trendarr = trendarr[:, 1]
+
         if not prepend:
             X = np.column_stack((X, trendarr))
         else:
@@ -65,10 +80,10 @@ def add_trend(X, trend="c", prepend=False):
         trendarr = trendarr.view(dt)
         if prepend:
             X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in data.dtype.names], usemask=False, asrecarray=return_rec)
+                in X.dtype.names], usemask=False, asrecarray=return_rec)
         else:
             X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
+                in trendarr.dtype.names], usemask=False, asrecarray=return_rec)
     return X
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
