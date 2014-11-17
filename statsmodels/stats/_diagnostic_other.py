@@ -192,6 +192,92 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
 
 
 
+def cm_test_robust(resid, resid_deriv, instruments, weights=1):
+    '''score/lagrange multiplier of Wooldridge
+
+    generic version of Wooldridge procedure for test of conditional moments
+
+    Limitation: This version allows only for one unconditional moment
+    restriction, i.e. resid is scalar for each observation.
+    Another limitation is that it assumes independent observations, no
+    correlation in residuals and weights cannot be replaced by cross-observation
+    whitening.
+
+    Parameters
+    ----------
+    resid : ndarray, (nobs, )
+        conditional moment restriction, E(r | x, params) = 0
+    resid_deriv : ndarray, (nobs, k_params)
+        derivative of conditional moment restriction with respect to parameters
+    instruments : ndarray, (nobs, k_instruments)
+        indicator variables of Wooldridge, multiplies the conditional momen
+        restriction
+    weights : ndarray
+        This is a weights function as used in WLS. The moment
+        restrictions are multiplied by weights. This corresponds to the
+        inverse of the variance in a heteroscedastic model.
+
+    Returns
+    -------
+    test_results : Results instance
+        ???  TODO
+
+    Notes
+    -----
+
+    This implements the auxiliary regression procedure of Wooldridge,
+    implemented based on procedure 2.1 in Wooldridge 1990.
+
+    Wooldridge allows for multivariate conditional moments (`resid`)
+    TODO: check dimensions for multivariate case for extension
+
+
+    References
+    ----------
+    Wooldridge
+    Wooldridge
+    and more Wooldridge
+
+    '''
+    # notation: Wooldridge uses too mamny Greek letters
+    # instruments is capital lambda
+    # resid is small phi
+    # resid_deriv is capital phi
+    # weights is C
+
+
+    nobs = resid.shape[0]
+
+
+    from statsmodels.stats.multivariate_tools import partial_project
+
+    w_sqrt = np.sqrt(weights)
+    if np.size(weights) > 1:
+        w_sqrt = w_sqrt[:,None]
+    pp = partial_project(instruments * w_sqrt, resid_deriv * w_sqrt)
+    mom_resid = pp.resid
+
+    moms_test = mom_resid * resid[:, None] * w_sqrt
+
+    # we get this here in case we extend resid to be more than 1-D
+    k_constraint = moms_test.shape[1]
+
+    # use OPG variance as in Wooldridge 1990. This might generalize
+    cov = moms_test.T.dot(moms_test)
+    diff = moms_test.sum(0)
+
+    # see Wooldridge last page in appendix
+    stat = diff.dot(np.linalg.solve(cov, diff))
+
+    # for checking, this corresponds to nobs * rsquared of auxiliary regression
+    stat2 = OLS(np.ones(nobs), moms_test).fit().ess
+
+
+    pval = stats.chi2.sf(stat, k_constraint)
+
+    return stat, pval, stat2
+
+
 def lm_robust(score, R, Ainv, B, V=None):
     '''general formula for score/LM test
 
@@ -304,16 +390,19 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
 
     #k_params = len(score)
 
+    # Note: I reverse order between constraint and unconstrained compared to Boos
+
     # submatrices of score_deriv/hessian
     # these are I22 and I12 in Boos
-    h_uu = score_deriv[-k_constraints:, -k_constraints:]
-    h_cu = score_deriv[:k_constraints, -k_constraints:]
+    #h_uu = score_deriv[-k_constraints:, -k_constraints:]
+    h_uu = score_deriv[:-k_constraints, :-k_constraints]
+    h_cu = score_deriv[-k_constraints:, :-k_constraints]
 
     # TODO: pinv or solve ?
     tmp_proj = h_cu.dot(np.linalg.inv(h_uu))
-    tmp = np.column_stack(np.eye(k_constraints), tmp_proj)
+    tmp = np.column_stack((-tmp_proj, np.eye(k_constraints))) #, tmp_proj))
 
-    cov_score_constraints = tmp.dot(cov_score.dot(tmp))
+    cov_score_constraints = tmp.dot(cov_score.dot(tmp.T))
 
 
     #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
@@ -321,17 +410,17 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
     lm_stat = score.dot(np.linalg.solve(cov_score_constraints, score))
     pval = stats.chi2.sf(lm_stat, k_constraints)
 
-    # check second calculation Boos referencing Kent 1982 and Engle 1984
-    # we can use this when robust_cov_params of full model is available
-    h_inv = np.linalg.inv(score_deriv)
-    v = h_inv.dot(cov_score.dot(h_inv)) # this is robust cov_params
-    v_cc = v[:k_constraints, :k_constraints]
-    h_cc = score_deriv[:k_constraints, :k_constraints]
-    # brute force calculation:
-    h_resid_cu = h_cc - h_cu.dot(np.linalg.solve(h_uu, h_cu))
-    cov_s_c = h_resid_cu.dot(v_cc.dot(h_resid_cu))
-    diff = np.max(np.abs(cov_s_c - cov_score_constraints))
-    return lm_stat, pval, diff#, lm_stat2
+#     # check second calculation Boos referencing Kent 1982 and Engle 1984
+#     # we can use this when robust_cov_params of full model is available
+#     h_inv = np.linalg.inv(score_deriv)
+#     v = h_inv.dot(cov_score.dot(h_inv)) # this is robust cov_params
+#     v_cc = v[:k_constraints, :k_constraints]
+#     h_cc = score_deriv[:k_constraints, :k_constraints]
+#     # brute force calculation:
+#     h_resid_cu = h_cc - h_cu.dot(np.linalg.solve(h_uu, h_cu))
+#     cov_s_c = h_resid_cu.dot(v_cc.dot(h_resid_cu))
+#     diff = np.max(np.abs(cov_s_c - cov_score_constraints))
+    return lm_stat, pval  #, lm_stat2
 
 
 def lm_robust_subset_parts(score, k_constraints,
@@ -615,9 +704,9 @@ def conditional_moment_test_generic(mom_test, mom_test_deriv,
             var_mom_all = mom_all.T.dot(mom_all)
 
         tmp = mom_test_deriv.dot(np.linalg.pinv(mom_incl_deriv))
-        h = np.column_stack((np.eye(k_constraints, tmp)))
+        h = np.column_stack((np.eye(k_constraints), -tmp))
 
-    var_cm = h.dot(var_mom_all.dot(h.T))
+        var_cm = h.dot(var_mom_all.dot(h.T))
 
     # calculate test results with chisquare
     var_cm_inv = np.linalg.pinv(var_cm)
@@ -687,7 +776,7 @@ class CMTNewey(object):
 
     This is a class to calculate and hold the various results
 
-    This is based on Newey 1985.
+    This is based on Newey 1985 on GMM.
     Lemma 1:
     Theorem 1
 
@@ -731,6 +820,23 @@ class CMTNewey(object):
     not used, add as argument to methods or __init__?
     K cov for misspecification
     or mispecification_deriv
+
+    This follows the GMM version in Newey 1985a, not the MLE version in
+    Newey 1985b. Newey uses the generalized information matrix equality in the
+    MLE version Newey (1985b).
+
+    Newey 1985b Lemma 1 does not impose correctly specified likelihood, but
+    assumes it in the following. Lemma 1 in both articles are essentially the
+    same assuming D = H' W.
+
+
+    References
+    ----------
+    - Newey 1985a, Generalized Method of Moment specification testing,
+      Journal of Econometrics
+    - Newey 1985b, Maximum Likelihood Specification Testing and Conditional
+      Moment Tests, Econometrica
+
 
     """
 
