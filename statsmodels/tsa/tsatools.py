@@ -23,15 +23,14 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
         If True, prepends the new data to the columns of X.
     has_constant : str {'raise', 'add', 'skip'}
         Controls what happens when trend is 'c' and a constant already
-        exists in X. Has no effect for 'ctt' and 'ct'. 'raise' will raise an
-        error. 'add' will duplicate a constant. 'skip' will return the data
-        without change. 'skip' is the default.
+        exists in X. 'raise' will raise an error. 'add' will duplicate a
+        constant. 'skip' will return the data without change. 'skip' is the
+        default.
 
     Notes
     -----
     Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
-    no checking for an existing constant or trend unless trend='c'. In this
-    case what happens is controlled by the `has_constant` keyword.
+    no checking for an existing trend.
 
     See also
     --------
@@ -47,6 +46,7 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
         trendorder = 2
     else:
         raise ValueError("trend %s not understood" % trend)
+
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
@@ -55,6 +55,15 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     if trend == "t":
         trendarr = trendarr[:,1]
     if not X.dtype.names:
+        # check for constant
+        if "c" in trend and np.any(np.ptp(X, axis=0) == 0):
+            if has_constant == 'raise':
+                raise ValueError("X already contains a constant")
+            elif has_constant == 'add':
+                pass
+            elif has_constant == 'skip' and trend == "ct":
+                trendarr = trendarr[:, 1]
+
         if not prepend:
             X = np.column_stack((X, trendarr))
         else:
