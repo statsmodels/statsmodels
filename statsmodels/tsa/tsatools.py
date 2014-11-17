@@ -71,10 +71,10 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
         trendarr = trendarr.view(dt)
         if prepend:
             X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in data.dtype.names], usemask=False, asrecarray=return_rec)
+                in X.dtype.names], usemask=False, asrecarray=return_rec)
         else:
             X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
+                in trendarr.dtype.names], usemask=False, asrecarray=return_rec)
     return X
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
