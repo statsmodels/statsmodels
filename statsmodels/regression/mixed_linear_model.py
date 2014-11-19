@@ -2043,6 +2043,9 @@ class MixedLMResults(base.LikelihoodModelResults):
         # Define the sequence of values to which the parameter of
         # interest will be constrained.
         ru0 = cov_re[0, 0]
+        if dist_low > ru0:
+            raise ValueError("dist_low is too large and would result in a "
+                             "negative number. Try a smaller value.")
         left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
         right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
         rvalues = np.concatenate((left, right))
