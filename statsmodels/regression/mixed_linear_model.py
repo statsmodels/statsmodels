@@ -100,6 +100,7 @@ import numpy as np
 import statsmodels.base.model as base
 from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools import data as data_tools
 from scipy.stats.distributions import norm
 import pandas as pd
 import patsy
@@ -114,8 +115,16 @@ from pandas import DataFrame
 
 
 def _get_exog_re_names(exog_re):
-    if isinstance(exog_re, (pd.Series, pd.DataFrame)):
+    """
+    Passes through if given a list of names. Otherwise, gets pandas names
+    or creates some generic variable names as needed.
+    """
+    if isinstance(exog_re, pd.DataFrame):
         return exog_re.columns.tolist()
+    elif isinstance(exog_re, pd.Series) and exog_re.name is not None:
+        return [exog_re.name]
+    elif isinstance(exog_re, list):
+        return exog_re
     return ["Z{0}".format(k + 1) for k in range(exog_re.shape[1])]
 
 
@@ -152,8 +161,7 @@ class MixedLMParams(object):
 
     def from_packed(params, k_fe, use_sqrt):
         """
-        Factory method to create a MixedLMParams object based on the
-        given packed parameter vector.
+        Create a MixedLMParams object from packed parameter vector.
 
         Parameters
         ----------
@@ -186,8 +194,7 @@ class MixedLMParams(object):
     def from_components(fe_params, cov_re=None, cov_re_sqrt=None,
                         use_sqrt=True):
         """
-        Factory method to create a MixedLMParams object from given
-        values for each parameter component.
+        Create a MixedLMParams object from each parameter component.
 
         Parameters
         ----------
@@ -466,10 +473,14 @@ class MixedLM(base.LikelihoodModel):
         # vector, convert these to 2d arrays.
         # TODO: Can this be moved up in the class hierarchy?
         #       yes, it should be done up the hierarchy
-        if exog is not None and exog.ndim == 1:
-            exog = exog[:,None]
-        if exog_re is not None and exog_re.ndim == 1:
-            exog_re = exog_re[:,None]
+        if (exog is not None and
+                data_tools._is_using_ndarray_type(exog, None) and
+                exog.ndim == 1):
+            exog = exog[:, None]
+        if (exog_re is not None and
+                data_tools._is_using_ndarray_type(exog_re, None) and
+                exog_re.ndim == 1):
+            exog_re = exog_re[:, None]
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
@@ -485,21 +496,27 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
-            self.data.param_names = self.exog_names + ['Intercept']
+            self.data.param_names = self.exog_names + ['Intercept RE']
         else:
             # Process exog_re the same way that exog is handled
             # upstream
             # TODO: this is wrong and should be handled upstream wholly
             self.data.exog_re = exog_re
             self.exog_re = np.asarray(exog_re)
+            if self.exog_re.ndim == 1:
+                self.exog_re = self.exog_re[:, None]
             if not self.data._param_names:
                 # HACK: could've been set in from_formula already
                 # needs refactor
-                (self.data.param_names,
-                 self.data.exog_re_names) = self._make_param_names(exog_re)
+                (param_names,
+                 exog_re_names,
+                 exog_re_names_full) = self._make_param_names(exog_re)
+                self.data.param_names = param_names
+                self.data.exog_re_names = exog_re_names
+                self.data.exog_re_names_full = exog_re_names_full
             # Model dimensions
             # Number of random effect covariates
-            self.k_re = exog_re.shape[1]
+            self.k_re = self.exog_re.shape[1]
             # Number of covariance parameters
             self.k_re2 = self.k_re * (self.k_re + 1) // 2
 
@@ -535,21 +552,26 @@ class MixedLM(base.LikelihoodModel):
                                range(self.exog.shape[1])]
 
     def _make_param_names(self, exog_re):
+        """
+        Returns the full parameter names list, just the exogenous random
+        effects variables, and the exogenous random effects variables with
+        the interaction terms.
+        """
         exog_names = list(self.exog_names)
         exog_re_names = _get_exog_re_names(exog_re)
         param_names = []
 
         jj = self.k_fe
-        for i in range(exog_re.shape[1]):
+        for i in range(len(exog_re_names)):
             for j in range(i + 1):
                 if i == j:
                     param_names.append(exog_re_names[i] + " RE")
                 else:
-                    param_names.append(exog_re_names[j] + " x " +
+                    param_names.append(exog_re_names[j] + " RE x " +
                                        exog_re_names[i] + " RE")
                 jj += 1
 
-        return exog_names + exog_re_names, exog_re_names
+        return exog_names + param_names, exog_re_names, param_names
 
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, subset=None,
@@ -621,15 +643,20 @@ class MixedLM(base.LikelihoodModel):
         else:
             exog_re = np.ones((data.shape[0], 1),
                               dtype=np.float64)
-            exog_re_names = ["Intercept RE"]
+            exog_re_names = ["Intercept"]
 
         mod = super(MixedLM, cls).from_formula(formula, data,
                                                subset=None,
                                                exog_re=exog_re,
                                                *args, **kwargs)
 
-        mod.data.param_names = mod.exog_names + exog_re_names
+        # expand re names to account for pairs of RE
+        (param_names,
+         exog_re_names,
+         exog_re_names_full) = mod._make_param_names(exog_re_names)
+        mod.data.param_names = param_names
         mod.data.exog_re_names = exog_re_names
+        mod.data.exog_re_names_full = exog_re_names_full
 
         return mod
 
@@ -2016,6 +2043,9 @@ class MixedLMResults(base.LikelihoodModelResults):
         # Define the sequence of values to which the parameter of
         # interest will be constrained.
         ru0 = cov_re[0, 0]
+        if dist_low > ru0:
+            raise ValueError("dist_low is too large and would result in a "
+                             "negative number. Try a smaller value.")
         left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
         right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
         rvalues = np.concatenate((left, right))
@@ -2041,7 +2071,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             cov_re[0, 0] = x
             params.set_cov_re(cov_re)
             rslt = model.fit(start_params=params, free=free,
-                             reml=self.reml, cov_pen=self.cov_pen)
+                             reml=self.reml, cov_pen=self.cov_pen)._results
             likev.append([rslt.cov_re[0, 0], rslt.llf])
         likev = np.asarray(likev)
 
@@ -2052,9 +2082,11 @@ class MixedLMResults(base.LikelihoodModelResults):
 
 
 class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
-    _attrs = {'bse_re': ('generic_columns', 'exog_re_names'),
+    _attrs = {'bse_re': ('generic_columns', 'exog_re_names_full'),
+              'fe_params': ('generic_columns', 'xnames'),
               'bse_fe': ('generic_columns', 'xnames'),
               'cov_re': ('generic_columns_2d', 'exog_re_names'),
+              'cov_re_unscaled': ('generic_columns_2d', 'exog_re_names'),
               }
     _upstream_attrs = base.LikelihoodResultsWrapper._wrap_attrs
     _wrap_attrs = base.wrap.union_dicts(_attrs, _upstream_attrs)

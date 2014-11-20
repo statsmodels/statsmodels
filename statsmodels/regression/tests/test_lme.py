@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           dec)
+                           dec, assert_)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
 import os
@@ -187,7 +187,6 @@ class TestMixedLM(object):
                                num_high=1)
 
     def test_formulas(self):
-
         np.random.seed(2410)
         exog = np.random.normal(size=(300,4))
         exog_re = np.random.normal(size=300)
@@ -197,6 +196,11 @@ class TestMixedLM(object):
         endog = exog.sum(1) + g_errors + np.random.normal(size=300)
 
         mod1 = MixedLM(endog, exog, groups, exog_re)
+        # test the names
+        assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
+        assert_(mod1.data.exog_re_names == ["Z1"])
+        assert_(mod1.data.exog_re_names_full == ["Z1 RE"])
+
         rslt1 = mod1.fit()
 
         # Fit with a formula, passing groups as the actual values.
@@ -208,6 +212,11 @@ class TestMixedLM(object):
         re_fml = "0 + exog_re"
         mod2 = MixedLM.from_formula(fml, df, re_formula=re_fml,
                                     groups=groups)
+
+        assert_(mod2.data.xnames == ["exog0", "exog1", "exog2", "exog3"])
+        assert_(mod2.data.exog_re_names == ["exog_re"])
+        assert_(mod2.data.exog_re_names_full == ["exog_re RE"])
+
         rslt2 = mod2.fit()
         assert_almost_equal(rslt1.params, rslt2.params)
 
@@ -215,6 +224,10 @@ class TestMixedLM(object):
         df["groups"] = groups
         mod3 = MixedLM.from_formula(fml, df, re_formula=re_fml,
                                     groups="groups")
+        assert_(mod3.data.xnames == ["exog0", "exog1", "exog2", "exog3"])
+        assert_(mod3.data.exog_re_names == ["exog_re"])
+        assert_(mod3.data.exog_re_names_full == ["exog_re RE"])
+
         rslt3 = mod3.fit(start_params=rslt2.params)
         assert_allclose(rslt1.params, rslt3.params, rtol=1e-4)
 
@@ -227,6 +240,8 @@ class TestMixedLM(object):
             rslt4 = mod4.fit(start_params=rslt2.params)
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
+        assert_(mod5.data.exog_re_names == ["Intercept"])
+        assert_(mod5.data.exog_re_names_full == ["Intercept RE"])
         rslt5 = mod5.fit(start_params=rslt2.params)
         assert_almost_equal(rslt4.params, rslt5.params)
 
@@ -324,6 +339,61 @@ class TestMixedLM(object):
                     ds_ix = int(fname[3:5])
 
                     yield self.do1, reml, irf, ds_ix
+
+
+def test_mixed_lm_wrapper():
+    # a bit more complicated model to test
+    np.random.seed(2410)
+    exog = np.random.normal(size=(300, 4))
+    exog_re = np.random.normal(size=300)
+    groups = np.kron(np.arange(100), [1, 1, 1])
+    g_errors = exog_re * np.kron(np.random.normal(size=100),
+                                 [1, 1, 1])
+    endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+
+    # Fit with a formula, passing groups as the actual values.
+    df = pd.DataFrame({"endog": endog})
+    for k in range(exog.shape[1]):
+        df["exog%d" % k] = exog[:, k]
+    df["exog_re"] = exog_re
+    fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
+    re_fml = "~ exog_re"
+    mod2 = MixedLM.from_formula(fml, df, re_formula=re_fml,
+                                groups=groups)
+    result = mod2.fit()
+    smoke = result.summary()
+
+    xnames = ["exog0", "exog1", "exog2", "exog3"]
+    re_names = ["Intercept", "exog_re"]
+    re_names_full = ["Intercept RE", "Intercept RE x exog_re RE",
+                     "exog_re RE"]
+
+    assert_(mod2.data.xnames == xnames)
+    assert_(mod2.data.exog_re_names == re_names)
+    assert_(mod2.data.exog_re_names_full == re_names_full)
+
+    params = result.params
+    assert_(params.index.tolist() == xnames + re_names_full)
+    bse = result.bse
+    assert_(bse.index.tolist() == xnames + re_names_full)
+    tvalues = result.tvalues
+    assert_(tvalues.index.tolist() == xnames + re_names_full)
+    cov_params = result.cov_params()
+    assert_(cov_params.index.tolist() == xnames + re_names_full)
+    assert_(cov_params.columns.tolist() == xnames + re_names_full)
+    fe = result.fe_params
+    assert_(fe.index.tolist() == xnames)
+    bse_fe = result.bse_fe
+    assert_(bse_fe.index.tolist() == xnames)
+    cov_re = result.cov_re
+    assert_(cov_re.index.tolist() == re_names)
+    assert_(cov_re.columns.tolist() == re_names)
+    cov_re_u = result.cov_re_unscaled
+    assert_(cov_re_u.index.tolist() == re_names)
+    assert_(cov_re_u.columns.tolist() == re_names)
+    bse_re = result.bse_re
+    assert_(bse_re.index.tolist() == re_names_full)
+
 
 
 
