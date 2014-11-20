@@ -8,7 +8,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
              split_names=None, section_order=None, line_order=None,
              stacked=False, styles_order=None, striped=False,
              horizontal=True, show_names="both",
-             left_name_fmt=None, right_name_fmt=None, ax=None):
+             fmt_left_name=None, fmt_right_name=None,
+             show_section_titles=None, ax=None):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  These are also known as "forest plots".
@@ -75,12 +76,16 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
         If `both`, labels are drawn in both margins, if 'left', labels
         are drawn in the left or top margin.  If `right`, labels are
         drawn in the right or bottom margin.
-    left_name_fmt : function
-        The left names are passed through this function before
-        drawing on the plot.
-    right_name_fmt : function
-        The right names are passed through this function before
-        drawing on the plot.
+    fmt_left_name : function
+        The left/top margin names are passed through this function
+        before drawing on the plot.
+    fmt_right_name : function
+        The right/bottom marginnames are passed through this function
+        before drawing on the plot.
+    show_section_titles : bool or None
+        If None, section titles are drawn only if there is more than
+        one section.  If False/True, section titles are never/always
+        drawn, respectively.
     ax : matplotlib.axes
         The axes on which the dotplot is drawn.  If None, a new axes
         is created.
@@ -120,14 +125,11 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # Convert to numpy arrays if that is not what we are given.
     points = np.asarray(points)
-    if intervals is not None:
-        intervals = np.asarray(intervals)
-    if lines is not None:
-        lines = np.asarray(lines)
-    if sections is not None:
-        sections = np.asarray(sections)
-    if styles is not None:
-        styles = np.asarray(styles)
+    asarray_or_none = lambda x : None if x is None else np.asarray(x)
+    intervals = asarray_or_none(intervals)
+    lines = asarray_or_none(lines)
+    sections = asarray_or_none(sections)
+    styles = asarray_or_none(styles)
 
     # Total number of points
     npoint = len(points)
@@ -149,9 +151,19 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # The number of sections
     nsect = len(set(sections))
+    if section_order is not None:
+        nsect = len(set(section_order))
 
     # The number of section titles
-    nsect_title = nsect if nsect > 1 else 0
+    if show_section_titles == False:
+        draw_section_titles = Fale
+        nsect_title = 0
+    elif show_section_titles == True:
+        draw_section_titles = True
+        nsect_title = nsect
+    else:
+        draw_section_titles = nsect > 1
+        nsect_title = nsect if nsect > 1 else 0
 
     # The total vertical space devoted to section titles.
     section_space_total = section_title_space * nsect_title
@@ -176,6 +188,10 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     # A map from (section,line) codes to index positions.
     lines_map = {}
     for i in range(npoint):
+        if section_order is not None and sections[i] not in section_order:
+            continue
+        if line_order is not None and lines[i] not in line_order:
+            continue
         ky = (sections[i], lines[i])
         if ky not in lines_map:
             lines_map[ky] = []
@@ -279,7 +295,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     for k0 in lines0:
 
         # Draw a section title
-        if nsect_title > 0:
+        if draw_section_titles:
 
             if horizontal:
 
@@ -339,11 +355,11 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             else:
                 left_label, right_label = k1, None
 
-            if left_name_fmt is not None:
-                left_label = left_name_fmt(left_label)
+            if fmt_left_name is not None:
+                left_label = fmt_left_name(left_label)
 
-            if right_name_fmt is not None:
-                right_label = right_name_fmt(right_label)
+            if fmt_right_name is not None:
+                right_label = fmt_right_name(right_label)
 
             # Draw the stripe
             if striped and jrow % 2 == 0:
