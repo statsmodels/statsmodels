@@ -191,7 +191,7 @@ class GLM(base.LikelihoodModel):
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                  missing='none', **kwargs):
         if exposure is not None:
-            exposure = np.log(exposure)
+            exposure = np.asarray(exposure)
         if offset is not None:  # this should probably be done upstream
             offset = np.asarray(offset)
         super(GLM, self).__init__(endog, exog, missing=missing,
@@ -608,8 +608,7 @@ class GLM(base.LikelihoodModel):
 
         # Use fit exposure if appropriate
         if exposure is None and exog is None and hasattr(self, 'exposure'):
-            # Already logged
-            exposure = getattr(self, 'exposure')
+            exposure = np.log(getattr(self, 'exposure'))
         elif exposure is None:
             exposure = 0.
         else:
@@ -671,13 +670,12 @@ class GLM(base.LikelihoodModel):
         # preprocessing
             self.endog = self.family.initialize(self.endog)
 
-        # Construct a combined offset/exposure term.  Note that
-        # exposure has already been logged if present.
+        # Construct a combined offset/exposure term.
         offset_exposure = 0.
         if hasattr(self, 'offset'):
             offset_exposure = self.offset
         if hasattr(self, 'exposure'):
-            offset_exposure = offset_exposure + self.exposure
+            offset_exposure = offset_exposure + np.log(self.exposure)
         self._offset_exposure = offset_exposure
 
         wlsexog = self.exog
