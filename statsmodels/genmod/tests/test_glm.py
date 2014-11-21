@@ -786,6 +786,31 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
+def test_refit():
+    # see 2019
+
+    n = 50
+    exog = np.random.normal(size=(n, 2))
+    exog[:, 0] = 1
+    exposure = np.random.uniform(1, 2, size=n)
+    offset = np.random.uniform(1, 2, size=n)
+    lin_pred = 3 + 0.2 * exog[:,1] + offset + np.log(exposure)
+    expval = np.exp(lin_pred)
+    endog = np.random.poisson(expval, size=n)
+
+    model = sm.GLM(endog, exog, family=sm.families.Poisson(),
+                  exposure=exposure, offset=offset)
+    results = model.fit()
+
+    kwargs = {}
+    for key in model._init_keys:
+        kwargs[key] = getattr(model, key)
+    model_refit = sm.GLM(endog, exog, **kwargs)
+    results_refit = model_refit.fit(start_params=results.params)
+
+    assert_allclose(results.params, results_refit.params)
+    assert_allclose(results.bse, results_refit.bse)
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:
