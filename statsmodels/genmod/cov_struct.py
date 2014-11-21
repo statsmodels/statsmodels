@@ -221,28 +221,39 @@ class Exchangeable(CovStruct):
         endog = self.model.endog_li
 
         nobs = self.model.nobs
-        dim = len(params)
 
         varfunc = self.model.family.variance
 
         cached_means = self.model.cached_means
 
-        residsq_sum, scale, nterm = 0, 0, 0
+        has_weights = self.model.weights is not None
+        weights_li = self.model.weights
+
+        residsq_sum, scale = 0, 0
+        fsum1, fsum2, n_pairs = 0., 0., 0.
         for i in range(self.model.num_group):
 
             expval, _ = cached_means[i]
             stdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / stdev
 
+            f = weights_li[i] if has_weights else 1.
+
             ngrp = len(resid)
             residsq = np.outer(resid, resid)
-            scale += np.trace(residsq)
-            residsq = np.tril(residsq, -1)
-            residsq_sum += residsq.sum()
-            nterm += 0.5 * ngrp * (ngrp - 1)
+            scale += f * np.trace(residsq)
+            fsum1 += f * len(endog[i])
 
-        scale /= (nobs - dim)
-        self.dep_params = residsq_sum / (scale * (nterm - dim))
+            residsq = np.tril(residsq, -1)
+            residsq_sum += f * residsq.sum()
+            npr = 0.5 * ngrp * (ngrp - 1)
+            fsum2 += f * npr
+            n_pairs += npr
+
+        ddof = self.model.scale_dof
+        scale /= (fsum1 * (nobs - ddof) / float(nobs))
+        residsq_sum /= scale
+        self.dep_params = residsq_sum / (fsum2 * (n_pairs - ddof) / float(n_pairs))
 
     def covariance_matrix(self, expval, index):
         dim = len(expval)
