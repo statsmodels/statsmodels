@@ -192,12 +192,34 @@ def pinv2(a, cond=None, rcond=None):
     return transpose(conjugate(dot(dot(u,psigma),vh)))
 
 
+def logdet_symm(m, check_symm=False):
+    """
+    Return log(det(m)) asserting positive definiteness of m.
+
+    Parameters
+    ----------
+    m : array-like
+        2d array that is positive-definite (and symmetric)
+
+    Returns
+    -------
+    logdet : float
+        The log-determinant of m.
+    """
+    from scipy import linalg
+    if check_symm:
+        if not np.all(m == m.T):  # would be nice to short-circuit check
+            raise ValueError("m is not symmetric.")
+    c, _ = linalg.cho_factor(m, lower=True)
+    return 2*np.sum(np.log(c.diagonal()))
+
+
 if __name__ == '__main__':
     #for checking only,
     #Note on Windows32:
     #    linalg doesn't always produce the same results in each call
     a0 = np.random.randn(100,10)
-    b0 = a0.sum(1)[:,None] + np.random.randn(100,3)
+    b0 = a0.sum(1)[:, None] + np.random.randn(100,3)
     lstsq(a0,b0)
     pinv(a0)
     pinv2(a0)

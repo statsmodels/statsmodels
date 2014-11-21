@@ -20,6 +20,7 @@ import scipy.linalg as L
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
+from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tsa.tsatools import vec, unvec
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
@@ -263,7 +264,7 @@ def var_loglike(resid, omega, nobs):
         -\left(\frac{T}{2}\right)
         \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
     """
-    logdet = util.get_logdet(np.asarray(omega))
+    logdet = logdet_symm(np.asarray(omega))
     neqs = len(omega)
     part1 = - (nobs * neqs / 2) * np.log(2 * np.pi)
     part2 = - (nobs / 2) * (logdet + neqs)
@@ -1464,7 +1465,7 @@ class VARResults(VARProcess):
         lag_order = self.k_ar
         free_params = lag_order * neqs ** 2 + neqs * self.k_trend
 
-        ld = util.get_logdet(self.sigma_u_mle)
+        ld = logdet_symm(self.sigma_u_mle)
 
         # See Lutkepohl pp. 146-150
 
