@@ -4,7 +4,8 @@ from numpy.testing import assert_equal
 from statsmodels.compat.python import get_function_name
 import warnings
 
-__all__ = ['resettable_cache','cache_readonly', 'cache_writable']
+__all__ = ['resettable_cache', 'cache_readonly', 'cache_writable']
+
 
 class ResettableCache(dict):
     """
@@ -48,7 +49,7 @@ class ResettableCache(dict):
 
     def __setitem__(self, key, value):
         dict.__setitem__(self, key, value)
-        #if hasattr needed for unpickling with protocol=2
+        # if hasattr needed for unpickling with protocol=2
         if hasattr(self, '_resetdict'):
             for mustreset in self._resetdict.get(key, []):
                 self[mustreset] = None
@@ -66,7 +67,9 @@ class ResettableCache(dict):
 #        print('unpickling wrapper', dict_)
 #        self.__dict__.update(dict_)
 
+
 resettable_cache = ResettableCache
+
 
 class CachedAttribute(object):
 
@@ -88,12 +91,12 @@ class CachedAttribute(object):
         # Get the name of the attribute to set and cache
         name = self.name
         _cachedval = _cache.get(name, None)
-#        print("[_cachedval=%s]" % _cachedval)
+        # print("[_cachedval=%s]" % _cachedval)
         if _cachedval is None:
             # Call the "fget" function
             _cachedval = self.fget(obj)
             # Set the attribute in obj
-#            print("Setting %s in cache to %s" % (name, _cachedval))
+            # print("Setting %s in cache to %s" % (name, _cachedval))
             try:
                 _cache[name] = _cachedval
             except KeyError:
@@ -105,16 +108,16 @@ class CachedAttribute(object):
                     _cache._resetdict[name] = self.resetlist
                 except AttributeError:
                     pass
-#        else:
-#            print("Reading %s from cache (%s)" % (name, _cachedval))
+        # else:
+        # print("Reading %s from cache (%s)" % (name, _cachedval))
         return _cachedval
 
     def __set__(self, obj, value):
         errmsg = "The attribute '%s' cannot be overwritten" % self.name
         warnings.warn(errmsg, CacheWriteWarning)
 
+
 class CachedWritableAttribute(CachedAttribute):
-    #
     def __set__(self, obj, value):
         _cache = getattr(obj, self.cachename)
         name = self.name
@@ -122,6 +125,7 @@ class CachedWritableAttribute(CachedAttribute):
             _cache[name] = value
         except KeyError:
             setattr(_cache, name, value)
+
 
 class _cache_readonly(object):
     """
@@ -139,6 +143,7 @@ class _cache_readonly(object):
                                resetlist=self.resetlist)
 cache_readonly = _cache_readonly()
 
+
 class cache_writable(_cache_readonly):
     """
     Decorator for CachedWritableAttribute
@@ -149,17 +154,16 @@ class cache_writable(_cache_readonly):
                                        resetlist=self.resetlist)
 
 
-#this has been copied from nitime a long time ago
-#TODO: ceck whether class has change in nitime
+# this has been copied from nitime a long time ago
+# TODO: ceck whether class has change in nitime
 class OneTimeProperty(object):
-
-
-    """A descriptor to make special properties that become normal attributes.
+    """
+    A descriptor to make special properties that become normal attributes.
 
     This is meant to be used mostly by the auto_attr decorator in this module.
     Author: Fernando Perez, copied from nitime
     """
-    def __init__(self,func):
+    def __init__(self, func):
 
         """Create a OneTimeProperty instance.
 
@@ -174,18 +178,20 @@ class OneTimeProperty(object):
         self.getter = func
         self.name = get_function_name(func)
 
-    def __get__(self,obj,type=None):
-        """This will be called on attribute access on the class or instance. """
+    def __get__(self, obj, type=None):
+        """
+        This will be called on attribute access on the class or instance.
+        """
 
         if obj is None:
-            # Being called on the class, return the original function. This way,
-            # introspection works on the class.
-            #return func
-            #print('class access')
+            # Being called on the class, return the original function.
+            # This way, introspection works on the class.
+            # return func
+            # print('class access')
             return self.getter
 
         val = self.getter(obj)
-        #print("** auto_attr - loading '%s'" % self.name  # dbg)
+        # print("** auto_attr - loading '%s'" % self.name  # dbg)
         setattr(obj, self.name, val)
         return val
 
@@ -199,7 +205,7 @@ except ImportError:
 
 
 if __name__ == "__main__":
-### Tests resettable_cache ----------------------------------------------------
+    # Tests resettable_cache --------------------------------------------
     reset = dict(a=('b',), b=('c',))
     cache = resettable_cache(a=0, b=1, c=2, reset=reset)
     assert_equal(cache, dict(a=0, b=1, c=2))
@@ -215,28 +221,29 @@ if __name__ == "__main__":
     print("Try deleting b")
     del(cache['a'])
     assert_equal(cache, {})
-### ---------------------------------------------------------------------------
-
+    # --------------------------------------------------------------------
 
     class Example(object):
-        #
         def __init__(self):
             self._cache = resettable_cache()
             self.a = 0
-        #
+
         @cache_readonly
         def b(self):
             return 1
+
         @cache_writable(resetlist='d')
         def c(self):
             return 2
+
         @cache_writable(resetlist=('e', 'f'))
         def d(self):
             return self.c + 1
-        #
+
         @cache_readonly
         def e(self):
             return 4
+
         @cache_readonly
         def f(self):
             return self.e + 1
@@ -251,7 +258,7 @@ if __name__ == "__main__":
     b = ex.b
     assert_equal(b, 1)
     assert_equal(ex.__dict__, dict(a=0, _cache=dict(b=1,)))
-#   assert_equal(ex.__dict__, dict(a=0, b=1, _cache=dict(b=1)))
+    # assert_equal(ex.__dict__, dict(a=0, b=1, _cache=dict(b=1)))
     ex.b = -1
     print("Try dict", ex.__dict__)
     assert_equal(ex._cache, dict(b=1,))

@@ -14,6 +14,7 @@ import pandas.util.testing as pdt
 def strip_rc(version):
     return re.sub(r"rc\d+$", "", version)
 
+
 def is_pandas_min_version(min_version):
     '''check whether pandas is at least min_version
     '''

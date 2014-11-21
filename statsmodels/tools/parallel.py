@@ -12,7 +12,7 @@ changes for statsmodels (Josef Perktold)
 from __future__ import print_function
 
 from statsmodels.tools.sm_exceptions import (ModuleUnavailableWarning,
-                                           module_unavailable_doc)
+                                             module_unavailable_doc)
 
 
 def parallel_func(func, n_jobs, verbose=5):
