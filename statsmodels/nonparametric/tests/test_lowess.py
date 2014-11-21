@@ -143,6 +143,13 @@ class TestLowess(object):
         assert_almost_equal(yhat, actual_lowess2[:,1], decimal=13)
 
 
+def test_returns_inputs():
+    # see 1960
+    y = [0] * 10 + [1] * 10
+    x = np.arange(20)
+    result = lowess(y, x, frac=.4)
+    assert_almost_equal(result, np.column_stack((x, y)))
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
