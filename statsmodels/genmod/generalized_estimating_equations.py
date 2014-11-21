@@ -205,7 +205,14 @@ _gee_init_doc = """
         they are held fixed at their starting values.
     weights : array-like
         An array of weights to use in the analysis.  The weights must
-        be constant within each group.
+        be constant within each group.  These correspond to
+        probability weights (pweights) in Stata.
+    scale_dof : scalar or None
+        The scale parameter is estimated as the sum of squared
+        Pearson residuals divided by `N - scale_dof`, where N
+        is the total sample size.  If `scale_dof` is None, the
+        number of covariates (including an intercept if present)
+        is used.
     %(extra_params)s
 
     See Also
@@ -239,6 +246,11 @@ _gee_init_doc = """
     is correctly specified.  The "bias reduced" estimator of Mancl and
     DeRouen (Biometrics, 2001) reduces the downard bias of the robust
     estimator.
+
+    The robust covariance provided here follows Liang and Zeger (1986)
+    and agrees with R's gee implementation.  To obtain the robust
+    standard errors reported in Stata, multiply by sqrt(N / (N - g)),
+    where N is the total sample size, and g is the average group size.
 
     Examples
     --------
@@ -439,7 +451,8 @@ class GEE(base.Model):
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
                  exposure=None, dep_data=None, constraint=None,
-                 update_dep=True, weights=None, **kwargs):
+                 update_dep=True, weights=None, scale_dof=None,
+                 **kwargs):
 
         self.missing = missing
         self.dep_data = dep_data
@@ -571,6 +584,16 @@ class GEE(base.Model):
         if maxgroup == 1:
             self.update_dep = False
 
+        # Subtract this number from the total sample size when
+        # normalizing the scale parameter estimate.
+        if scale_dof is None:
+            self.scale_dof = self.exog.shape[1]
+        else:
+            if not scale_dof >= 0:
+                raise ValueError("scale_dof must be a non-negative number or None")
+            self.scale_dof = scale_dof
+
+
     # Override to allow groups and time to be passed as variable
     # names.
     @classmethod
@@ -685,11 +708,11 @@ class GEE(base.Model):
         cached_means = self.cached_means
 
         nobs = self.nobs
-        exog_dim = exog[0].shape[1]
 
         varfunc = self.family.variance
 
         scale = 0.
+        fsum = 0.
         for i in range(self.num_group):
 
             if len(endog[i]) == 0:
@@ -697,12 +720,15 @@ class GEE(base.Model):
 
             expval, _ = cached_means[i]
 
+            f = self.weights_li[i] if self.weights is not None else 1.
+
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / sdev
 
-            scale += np.sum(resid**2)
+            scale += f * np.sum(resid**2)
+            fsum += f * len(endog[i])
 
-        scale /= (nobs - exog_dim)
+        scale /= (fsum * (nobs - self.scale_dof) / float(nobs))
 
         return scale
 
@@ -881,8 +907,10 @@ class GEE(base.Model):
                 return None, None, None, None
             vinv_d, vinv_resid = tuple(rslt)
 
-            bmat += np.dot(dmat.T, vinv_d)
-            dvinv_resid = np.dot(dmat.T, vinv_resid)
+            f = self.weights_li[i] if self.weights is not None else 1.
+
+            bmat += f * np.dot(dmat.T, vinv_d)
+            dvinv_resid = f * np.dot(dmat.T, vinv_resid)
             cmat += np.outer(dvinv_resid, dvinv_resid)
 
         scale = self.estimate_scale()
@@ -912,13 +940,15 @@ class GEE(base.Model):
             hmat = np.dot(vinv_d, cov_naive)
             hmat = np.dot(hmat, dmat.T).T
 
+            f = self.weights_li[i] if self.weights is not None else 1.
+
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
             rslt = self.cov_struct.covariance_matrix_solve(expval, i,
                                                      sdev, (aresid,))
             if rslt is None:
                 return None, None, None, None
             srt = rslt[0]
-            srt = np.dot(dmat.T, srt) / scale
+            srt = f * np.dot(dmat.T, srt) / scale
             bcm += np.outer(srt, srt)
 
         cov_robust_bc = np.dot(cov_naive, np.dot(bcm, cov_naive))
@@ -1041,6 +1071,9 @@ class GEE(base.Model):
                              'score': [],
                              'dep_params': [],
                              'cov_adjust': []}
+
+        if self.weights is not None and cov_type == 'naive':
+            raise ValueError("when using weights, cov_type may not be naive")
 
         if start_params is None:
             mean_params = self._starting_params()

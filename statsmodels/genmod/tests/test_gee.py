@@ -199,20 +199,31 @@ class TestGEE(object):
         result = model.fit()
         assert_allclose(result.params, np.r_[2/3.])
 
-        # Comparison against stata
+        # Comparison against stata using groups with different sizes.
         weights = np.ones(20)
         weights[10:] = 2
         endog = np.r_[1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 6, 5, 6, 7, 6,
                       7, 8, 7, 8]
         exog1 = np.r_[1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4,
                       5, 5, 5, 5]
-        groups = np.r_[1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,
+        groups = np.r_[1, 1, 2, 2, 2, 2, 4, 4, 5, 5, 6, 6, 6, 6,
                        8, 8, 9, 9, 10, 10]
         exog = np.column_stack((np.ones(20), exog1))
+
+        # Comparison using independence model
         model = GEE(endog, exog, groups, weights=weights,
-                    cov_struct=sm.cov_struct.Exchangeable())
+                    cov_struct=sm.cov_struct.Independence(),
+                    scale_dof=0)
         result = model.fit()
+
         assert_allclose(result.params, np.r_[0.8333333, 1.3333333])
+        assert_allclose(result.scale, 0.4277778)
+
+        # Stata multiples robust SE by sqrt(N / (N - g)), where N is
+        # the total sample size and g is the average group size.
+        g = np.mean([2, 4, 2, 2, 4, 2, 2, 2])
+        fac = np.sqrt(20 / float(20 - g))
+        assert_allclose(fac * result.bse, np.r_[0.3404634, 0.0879477], atol=1e-5)
 
 
     # This is in the release announcement for version 0.6.
