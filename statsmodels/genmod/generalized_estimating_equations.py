@@ -392,20 +392,12 @@ _gee_ordinal_example = """
     odds ratio" dependence:
 
     >>> import statsmodels.api as sm
-    >>> gor = sm.families.GlobalOddsRatio("ordinal")
+    >>> gor = sm.cov_struct.GlobalOddsRatio("ordinal")
     >>> model = sm.OrdinalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
 
     Using formulas:
-
-    >>> import statsmodels.api as sm
-    >>> model = sm.OrdinalGEE.from_formula("y ~ x1 + x2", groups,
-                       data, cov_struct=gor)
-    >>> result = model.fit()
-    >>> print result.summary()
-
-    Equivalent, using the formula API:
 
     >>> import statsmodels.formula.api as smf
     >>> model = smf.ordinal_gee("y ~ x1 + x2", groups, data,
@@ -419,7 +411,7 @@ _gee_nominal_example = """
 
     >>> import statsmodels.api as sm
     >>> import statsmodels.formula.api as smf
-    >>> gor = sm.families.GlobalOddsRatio("nominal")
+    >>> gor = sm.cov_struct.GlobalOddsRatio("nominal")
     >>> model = sm.NominalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
     >>> print result.summary()
