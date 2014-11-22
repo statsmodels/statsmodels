@@ -27,8 +27,8 @@ __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
            'add_lowess', 'abline_plot', 'influence_plot',
            'plot_leverage_resid2', 'added_variable_resids',
-           'partial_resids', 'ceres_resids', 'added_variable_plot',
-           'partial_residual_plot']
+           'partial_resids', 'ceres_resids', 'plot_added_variable',
+           'plot_partial_residuals', 'plot_ceres_residuals']
 
 
 #TODO: consider moving to influence module
@@ -837,7 +837,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     ax.margins(.075, .075)
     return fig
 
-def added_variable_plot(results, focus_exog, resid_type=None,
+def plot_added_variable(results, focus_exog, resid_type=None,
                         use_glm_weights=True, fit_kwargs=None, ax=None):
     # Docstring attached below
 
@@ -862,10 +862,10 @@ def added_variable_plot(results, focus_exog, resid_type=None,
 
     return fig
 
-added_variable_plot.__doc__ = model._added_variable_plot_doc % {
+plot_added_variable.__doc__ = model._plot_added_variable_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
-def partial_residual_plot(results, focus_exog, ax=None):
+def plot_partial_residuals(results, focus_exog, ax=None):
     # Docstring attached below
 
     model = results.model
@@ -884,10 +884,10 @@ def partial_residual_plot(results, focus_exog, ax=None):
 
     return fig
 
-partial_residual_plot.__doc__ = model._partial_residual_plot_doc % {
+plot_partial_residuals.__doc__ = model._plot_partial_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
-def ceres_plot(results, focus_exog, frac=None, cond_means=None,
+def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
                ax=None):
     # Docstring attached below
 
@@ -912,7 +912,7 @@ def ceres_plot(results, focus_exog, frac=None, cond_means=None,
 
     return fig
 
-ceres_plot.__doc__ = model._ceres_plot_doc % {
+plot_ceres_residuals.__doc__ = model._plot_ceres_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
 def ceres_resids(results, focus_exog, frac=None, cond_means=None):
@@ -1078,6 +1078,11 @@ def added_variable_resids(results, focus_exog, resid_type=None,
         The residuals for the original exog
     focus_exog_resid : array-like
         The residuals for the focus predictor
+
+    Notes
+    -----
+    The 'focus variable' residuals are always obtained using linear
+    regression.
     """
 
     model = results.model
@@ -1091,6 +1096,7 @@ def added_variable_resids(results, focus_exog, resid_type=None,
 
     focus_exog_vals = exog[:, focus_col]
 
+    # Default residuals
     if resid_type is None:
         if isinstance(model, (GEE, GLM)):
             resid_type = "resid_deviance"

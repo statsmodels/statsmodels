@@ -37,7 +37,7 @@ _extra_param_doc = """
         False, a constant is not checked for and k_constant is set to 0.
 """
 
-_added_variable_plot_doc = """\
+_plot_added_variable_doc = """\
     Create an added variable plot for a fitted regression model.
 
     Parameters
@@ -65,7 +65,7 @@ _added_variable_plot_doc = """\
         A matplotlib figure instance.
 """
 
-_partial_residual_plot_doc = """\
+_plot_partial_residuals_doc = """\
     Create a partial residual, or 'component plus residual' plot for a
     fited regression model.
 
@@ -83,7 +83,7 @@ _partial_residual_plot_doc = """\
         A matplotlib figure instance.
 """
 
-_ceres_plot_doc = """\
+_plot_ceres_residuals_doc = """\
     Produces a CERES (Conditional Expectation Partial Residuals)
     plot for a fitted regression model.
 
@@ -852,43 +852,43 @@ class Results(object):
 
         return self.model.predict(self.params, exog, *args, **kwargs)
 
-    def added_variable_plot(self, focus_exog, resid_type=None,
+    def plot_added_variable(self, focus_exog, resid_type=None,
                             use_glm_weights=True, fit_kwargs=None,
                             ax=None):
         # Docstring attached below
 
-        from statsmodels.graphics.regressionplots import added_variable_plot
+        from statsmodels.graphics.regressionplots import plot_added_variable
 
-        fig = added_variable_plot(self, focus_exog,
+        fig = plot_added_variable(self, focus_exog,
                                   resid_type=resid_type,
                                   use_glm_weights=use_glm_weights,
                                   fit_kwargs=fit_kwargs, ax=ax)
 
         return fig
 
-    added_variable_plot.__doc__ = _added_variable_plot_doc % {
+    plot_added_variable.__doc__ = _plot_added_variable_doc % {
         'extra_params_doc' : ''}
 
-    def partial_residual_plot(self, focus_exog, ax=None):
+    def plot_partial_residuals(self, focus_exog, ax=None):
         # Docstring attached below
 
-        from statsmodels.graphics.regressionplots import partial_residual_plot
+        from statsmodels.graphics.regressionplots import plot_partial_residuals
 
-        return partial_residual_plot(self, focus_exog, ax=ax)
+        return plot_partial_residuals(self, focus_exog, ax=ax)
 
-    partial_residual_plot.__doc = _partial_residual_plot_doc % {
+    plot_partial_residuals.__doc = _plot_partial_residuals_doc % {
         'extra_params_doc' : ''}
 
-    def ceres_plot(self, focus_exog, frac=None, cond_means=None,
-                   ax=None):
+    def plot_ceres_residuals(self, focus_exog, frac=None, cond_means=None,
+                             ax=None):
         # Docstring attached below
 
-        from statsmodels.graphics.regressionplots import ceres_plot
+        from statsmodels.graphics.regressionplots import plot_ceres_residuals
 
-        return ceres_plot(self, focus_exog, frac,
-                          cond_means=cond_means, ax=ax)
+        return plot_ceres_residuals(self, focus_exog, frac,
+                                    cond_means=cond_means, ax=ax)
 
-    ceres_plot.__doc = _ceres_plot_doc % {
+    plot_ceres_residuals.__doc = _plot_ceres_residuals_doc % {
         'extra_params_doc' : ''}
 
 

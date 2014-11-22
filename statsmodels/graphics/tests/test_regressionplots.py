@@ -9,8 +9,8 @@ import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
-                  added_variable_plot, partial_residual_plot,
-                  ceres_plot)
+                  plot_added_variable, plot_partial_residuals,
+                  plot_ceres_residuals)
 from pandas import Series, DataFrame
 
 try:
@@ -191,12 +191,12 @@ class TestAddedVariablePlot(object):
                     for j in 0,1:
 
                         if j == 0:
-                            fig = added_variable_plot(results, focus_col,
+                            fig = plot_added_variable(results, focus_col,
                                                       use_glm_weights=use_glm_weights,
                                                       resid_type=resid_type)
                             ti = "Added variable plot"
                         else:
-                            fig = results.added_variable_plot(focus_col,
+                            fig = results.plot_added_variable(focus_col,
                                                  use_glm_weights=use_glm_weights,
                                                  resid_type=resid_type)
                             ti = "Added variable plot (called as method)"
@@ -234,9 +234,9 @@ class TestPartialResidualPlot(object):
         for focus_col in 1, 2:
             for j in 0,1:
                 if j == 0:
-                    fig = partial_residual_plot(results, focus_col)
+                    fig = plot_partial_residuals(results, focus_col)
                 else:
-                    fig = results.partial_residual_plot(focus_col)
+                    fig = results.plot_partial_residuals(focus_col)
                 ax = fig.get_axes()[0]
                 add_lowess(ax)
                 ax.set_position([0.1, 0.1, 0.8, 0.77])
@@ -269,9 +269,9 @@ class TestCERESPlot(object):
         for focus_col in 1, 2:
             for j in 0, 1:
                 if j == 0:
-                    fig = ceres_plot(results, focus_col)
+                    fig = plot_ceres_residuals(results, focus_col)
                 else:
-                    fig = results.ceres_plot(focus_col)
+                    fig = results.plot_ceres_residuals(focus_col)
                 ax = fig.get_axes()[0]
                 add_lowess(ax)
                 ax.set_position([0.1, 0.1, 0.8, 0.77])
