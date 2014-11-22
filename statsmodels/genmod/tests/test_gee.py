@@ -212,25 +212,23 @@ class TestGEE(object):
 
         # Comparison using independence model
         model = GEE(endog, exog, groups, weights=weights,
-                    cov_struct=sm.cov_struct.Independence(),
-                    scale_ddof=0)
-        result = model.fit()
+                    cov_struct=sm.cov_struct.Independence())
+        g = np.mean([2, 4, 2, 2, 4, 2, 2, 2])
+        fac = 20 / float(20 - g)
+        result = model.fit(ddof_scale=0, scaling_factor=fac)
 
         assert_allclose(result.params, np.r_[1.247573, 1.436893], atol=1e-6)
         assert_allclose(result.scale, 1.808576)
 
         # Stata multiples robust SE by sqrt(N / (N - g)), where N is
         # the total sample size and g is the average group size.
-        g = np.mean([2, 4, 2, 2, 4, 2, 2, 2])
-        fac = np.sqrt(20 / float(20 - g))
-        assert_allclose(fac * result.bse, np.r_[0.895366, 0.3425498], atol=1e-5)
+        assert_allclose(result.bse, np.r_[0.895366, 0.3425498], atol=1e-5)
 
         # Comparison using exchangeable model
         # Smoke test for now
         model = GEE(endog, exog, groups, weights=weights,
-                    cov_struct=sm.cov_struct.Exchangeable(),
-                    scale_ddof=0)
-        result = model.fit()
+                    cov_struct=sm.cov_struct.Exchangeable())
+        result = model.fit(ddof_scale=0)
 
 
     # This is in the release announcement for version 0.6.

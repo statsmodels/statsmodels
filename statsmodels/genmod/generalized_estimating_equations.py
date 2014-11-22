@@ -207,12 +207,6 @@ _gee_init_doc = """
         An array of weights to use in the analysis.  The weights must
         be constant within each group.  These correspond to
         probability weights (pweights) in Stata.
-    scale_ddof : scalar or None
-        The scale parameter is estimated as the sum of squared
-        Pearson residuals divided by `N - scale_ddof`, where N
-        is the total sample size.  If `scale_ddof` is None, the
-        number of covariates (including an intercept if present)
-        is used.
     %(extra_params)s
 
     See Also
@@ -295,6 +289,17 @@ _gee_fit_doc = """
         iteration number.
     cov_type : string
         One of "robust", "naive", or "bias_reduced".
+    ddof_scale : scalar or None
+        The scale parameter is estimated as the sum of squared
+        Pearson residuals divided by `N - ddof_scale`, where N
+        is the total sample size.  If `ddof_scale` is None, the
+        number of covariates (including an intercept if present)
+        is used.
+    scaling_factor : scalar
+        The estimated covariance of the parameter estimates is
+        scaled by this value.  Default is 1, Stata uses N / (N - g),
+        where N is the total sample size and g is the average group
+        size.
 
     Returns
     -------
@@ -451,8 +456,7 @@ class GEE(base.Model):
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
                  exposure=None, dep_data=None, constraint=None,
-                 update_dep=True, weights=None, scale_ddof=None,
-                 **kwargs):
+                 update_dep=True, weights=None, **kwargs):
 
         self.missing = missing
         self.dep_data = dep_data
@@ -583,16 +587,6 @@ class GEE(base.Model):
         maxgroup = max([len(x) for x in self.endog_li])
         if maxgroup == 1:
             self.update_dep = False
-
-        # Subtract this number from the total sample size when
-        # normalizing the scale parameter estimate.
-        if scale_ddof is None:
-            self.scale_ddof = self.exog.shape[1]
-        else:
-            if not scale_ddof >= 0:
-                raise ValueError("scale_ddof must be a non-negative number or None")
-            self.scale_ddof = scale_ddof
-
 
     # Override to allow groups and time to be passed as variable
     # names.
@@ -728,7 +722,7 @@ class GEE(base.Model):
             scale += f * np.sum(resid**2)
             fsum += f * len(endog[i])
 
-        scale /= (fsum * (nobs - self.scale_ddof) / float(nobs))
+        scale /= (fsum * (nobs - self.ddof_scale) / float(nobs))
 
         return scale
 
@@ -953,6 +947,10 @@ class GEE(base.Model):
 
         cov_robust_bc = np.dot(cov_naive, np.dot(bcm, cov_naive))
 
+        cov_naive *= self.scaling_factor
+        cov_robust *= self.scaling_factor
+        cov_robust_bc *= self.scaling_factor
+
         return (cov_robust, cov_naive, cov_robust_bc, cmat)
 
     def predict(self, params, exog=None, offset=None,
@@ -1065,7 +1063,18 @@ class GEE(base.Model):
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
-            cov_type='robust'):
+            cov_type='robust', ddof_scale=None, scaling_factor=1.):
+
+        # Subtract this number from the total sample size when
+        # normalizing the scale parameter estimate.
+        if ddof_scale is None:
+            self.ddof_scale = self.exog.shape[1]
+        else:
+            if not ddof_scale >= 0:
+                raise ValueError("ddof_scale must be a non-negative number or None")
+            self.ddof_scale = ddof_scale
+
+        self.scaling_factor = scaling_factor
 
         self._fit_history = {'params': [],
                              'score': [],

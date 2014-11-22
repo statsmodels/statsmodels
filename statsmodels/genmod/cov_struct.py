@@ -256,7 +256,7 @@ class Exchangeable(CovStruct):
             fsum2 += f * npr
             n_pairs += npr
 
-        ddof = self.model.scale_ddof
+        ddof = self.model.ddof_scale
         scale /= (fsum1 * (nobs - ddof) / float(nobs))
         residsq_sum /= scale
         self.dep_params = residsq_sum / (fsum2 * (n_pairs - ddof) / float(n_pairs))
