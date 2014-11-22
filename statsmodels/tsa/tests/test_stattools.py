@@ -1,13 +1,13 @@
 from statsmodels.compat.python import lrange
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf, grangercausalitytests,
-                                               coint, acovf,
-                                               arma_order_select_ic)
+from statsmodels.tsa.stattools import (acf, pacf_yw, pacf,
+                                       grangercausalitytests, acovf,
+                                       arma_order_select_ic, cov_nw)
+from statsmodels.tsa.cointegration import coint
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            dec, assert_)
-from numpy import genfromtxt#, concatenate
+from numpy import genfromtxt, log, diff
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
 import os
@@ -21,92 +21,6 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
-class CheckADF(object):
-    """
-    Test Augmented Dickey-Fuller
-
-    Test values taken from Stata.
-    """
-    levels = ['1%', '5%', '10%']
-    data = macrodata.load()
-    x = data.data['realgdp']
-    y = data.data['infl']
-
-    def test_teststat(self):
-        assert_almost_equal(self.res1[0], self.teststat, DECIMAL_5)
-
-    def test_pvalue(self):
-        assert_almost_equal(self.res1[1], self.pvalue, DECIMAL_5)
-
-    def test_critvalues(self):
-        critvalues = [self.res1[4][lev] for lev in self.levels]
-        assert_almost_equal(critvalues, self.critvalues, DECIMAL_2)
-
-class TestADFConstant(CheckADF):
-    """
-    Dickey-Fuller test for unit root
-    """
-    def __init__(self):
-        self.res1 = adfuller(self.x, regression="c", autolag=None,
-                maxlag=4)
-        self.teststat = .97505319
-        self.pvalue = .99399563
-        self.critvalues = [-3.476, -2.883, -2.573]
-
-class TestADFConstantTrend(CheckADF):
-    """
-    """
-    def __init__(self):
-        self.res1 = adfuller(self.x, regression="ct", autolag=None,
-                maxlag=4)
-        self.teststat = -1.8566374
-        self.pvalue = .67682968
-        self.critvalues = [-4.007, -3.437, -3.137]
-
-#class TestADFConstantTrendSquared(CheckADF):
-#    """
-#    """
-#    pass
-#TODO: get test values from R?
-
-class TestADFNoConstant(CheckADF):
-    """
-    """
-    def __init__(self):
-        self.res1 = adfuller(self.x, regression="nc", autolag=None,
-                maxlag=4)
-        self.teststat = 3.5227498
-        self.pvalue = .99999 # Stata does not return a p-value for noconstant.
-                        # Tau^max in MacKinnon (1994) is missing, so it is
-                        # assumed that its right-tail is well-behaved
-        self.critvalues = [-2.587, -1.950, -1.617]
-
-# No Unit Root
-
-class TestADFConstant2(CheckADF):
-    def __init__(self):
-        self.res1 = adfuller(self.y, regression="c", autolag=None,
-                maxlag=1)
-        self.teststat = -4.3346988
-        self.pvalue = .00038661
-        self.critvalues = [-3.476, -2.883, -2.573]
-
-class TestADFConstantTrend2(CheckADF):
-    def __init__(self):
-        self.res1 = adfuller(self.y, regression="ct", autolag=None,
-                maxlag=1)
-        self.teststat = -4.425093
-        self.pvalue = .00199633
-        self.critvalues = [-4.006, -3.437, -3.137]
-
-class TestADFNoConstant2(CheckADF):
-    def __init__(self):
-        self.res1 = adfuller(self.y, regression="nc", autolag=None,
-                maxlag=1)
-        self.teststat = -2.4511596
-        self.pvalue = 0.013747 # Stata does not return a p-value for noconstant
-                               # this value is just taken from our results
-        self.critvalues = [-2.587,-1.950,-1.617]
 
 class CheckCorrGram(object):
     """
@@ -313,7 +227,6 @@ def test_arma_order_select_ic():
 def test_arma_order_select_ic_failure():
     # this should trigger an SVD convergence failure, smoke test that it
     # returns, likely platform dependent failure...
-    # looks like AR roots may be cancelling out for 4, 1?
     y = np.array([ 0.86074377817203640006,  0.85316549067906921611,
         0.87104653774363305363,  0.60692382068987393851,
         0.69225941967301307667,  0.73336177248909339976,
@@ -324,18 +237,57 @@ def test_arma_order_select_ic_failure():
        -0.15943768324388354896,  0.25169301564268781179,
         0.1762305709151877342 ,  0.12678133368791388857,
         0.89755829086753169399,  0.82667068795350151511])
-    import warnings
-    with warnings.catch_warnings():
-        # catch a hessian inversion and convergence failure warning
-        warnings.simplefilter("ignore")
-        res = arma_order_select_ic(y)
-
+    res = arma_order_select_ic(y)
 
 def test_acf_fft_dataframe():
     # regression test #322
 
     result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True)
     assert_equal(result.ndim, 1)
+
+class TestVarNW(object):
+    @classmethod
+    def setupClass(cls):
+        from statsmodels.datasets.macrodata import load
+
+        cls.cpi = log(load().data['cpi'])
+        cls.inflation = diff(cls.cpi)
+
+    def test_cov_nw(self):
+        y = self.inflation
+        simple_cov = cov_nw(y, lags=0)
+        e = y - y.mean()
+        assert_almost_equal(e.dot(e) / e.shape[0], simple_cov)
+
+    def test_cov_nw_ddof(self):
+        y = self.inflation
+        simple_cov = cov_nw(y, lags=0, ddof=1)
+        e = y - y.mean()
+        n = e.shape[0]
+        assert_almost_equal(e.dot(e) / (n - 1), simple_cov)
+
+    def test_cov_nw_no_demean(self):
+        y = self.inflation
+        simple_cov = cov_nw(y, lags=0, demean=False)
+        assert_almost_equal(y.dot(y) / y.shape[0], simple_cov)
+
+    def test_cov_nw_2d(self):
+        y = np.random.randn(100, 2)
+        simple_cov = cov_nw(y, lags=0)
+        e = y - y.mean(0)
+        assert_almost_equal(e.T.dot(e) / e.shape[0], simple_cov)
+
+    def test_cov_nw_2d_2lags(self):
+        y = np.random.randn(100, 2)
+        e = y - y.mean(0)
+        gamma_0 = e.T.dot(e)
+        gamma_1 = e[1:].T.dot(e[:-1])
+        gamma_2 = e[2:].T.dot(e[:-2])
+        w1, w2 = 1.0 - (1.0 / 3.0), 1.0 - (2.0 / 3.0)
+        expected = (gamma_0 + w1 * (gamma_1 + gamma_1.T) + w2 * (
+        gamma_2 + gamma_2.T)) / 100.0
+        assert_almost_equal(cov_nw(y, lags=2), expected)
+
 
 if __name__=="__main__":
     import nose

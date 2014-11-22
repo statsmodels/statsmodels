@@ -1,26 +1,95 @@
 from statsmodels.compat.python import range, lrange, lzip
 import numpy as np
-import numpy.lib.recfunctions as nprf
-from statsmodels.tools.tools import add_constant
+from statsmodels.compat import string_types
+import numpy as np
+import pandas as pd
+
+from statsmodels.compat import string_types
+
+import pandas as pd
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
+from warnings import warn
 
 
-def add_trend(X, trend="c", prepend=False, has_constant='skip'):
+__all__ = ['lagmat', 'lagmat2ds', 'add_trend', 'duplication_matrix',
+           'elimination_matrix', 'commutation_matrix',
+           'vec', 'vech', 'unvec', 'unvech', 'reintegrate', 'coint',
+           'adfuller']
+
+
+def adfuller(*args, **kwargs):
+    """See statsmodels.tsa.tsatools.adfuller"""
+    import unitroot
+
+    func = np.deprecate(unitroot.adfuller,
+                        old_name='statsmodels.tsa.tsatools.adfuller',
+                        new_name='statsmodels.tsa.unitroot.ADF')
+    return func(*args, **kwargs)
+
+
+def coint(*args, **kwargs):
+    """See statsmodels.tsa.cointegration.coint"""
+    import cointegration
+
+    func = np.deprecate(cointegration.coint,
+                        old_name='statsmodels.tsa.tsatools.coint',
+                        new_name='statsmodels.tsa.cointegration.coint')
+    return func(*args, **kwargs)
+
+
+class ColumnNameConflict(Warning):
+    pass
+
+
+column_name_conflict_doc = """
+Some of the column named being added were not unique and have been renamed.
+
+             {0}
+"""
+
+
+def _enforce_unique_col_name(existing, new):
+    converted_names = []
+    unique_names = list(new[:])
+    for i, n in enumerate(new):
+        if n in existing:
+            original_name = n
+            fixed_name = n
+            duplicate_count = 0
+            while fixed_name in existing:
+                fixed_name = n + '_' + str(duplicate_count)
+                duplicate_count += 1
+            unique_names[i] = fixed_name
+            converted_names.append(
+                '{0}   ->   {1}'.format(original_name, fixed_name))
+    if converted_names:
+        import warnings
+
+        ws = column_name_conflict_doc.format('\n    '.join(converted_names))
+        warnings.warn(ws, ColumnNameConflict)
+
+    return unique_names
+
+
+def add_trend(x=None, trend="c", prepend=False, nobs=None, has_constant='skip'):
     """
     Adds a trend and/or constant to an array.
 
     Parameters
     ----------
-    X : array-like
-        Original array of data.
+    x : array-like or None
+        Original array of data. If None, then nobs must be a positive integer
     trend : str {"c","t","ct","ctt"}
         "c" add constant only
         "t" add trend only
         "ct" add constant and linear trend
         "ctt" add constant and linear and quadratic trend.
     prepend : bool
-        If True, prepends the new data to the columns of X.
+        If True, prepends the new data to the columns of x.
+    n : int, positive
+        Positive integer containing the length of the trend series.  Only used
+        if x is none.
     has_constant : str {'raise', 'add', 'skip'}
         Controls what happens when trend is 'c' and a constant already
         exists in X. 'raise' will raise an error. 'add' will duplicate a
@@ -29,62 +98,66 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
 
     Notes
     -----
-    Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
+    Returns columns as ["ctt","ct","t","c"] whenever applicable. There is currently
     no checking for an existing trend.
 
     See also
     --------
-    statsmodels.add_constant
+    statsmodels.tools.tools.add_constant
     """
     #TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
-    if trend == "c":    # handles structured arrays
-        return add_constant(X, prepend=prepend, has_constant=has_constant)
+    if trend == "c":  # handles structured arrays
+        trend_order = 0
     elif trend == "ct" or trend == "t":
-        trendorder = 1
+        trend_order = 1
     elif trend == "ctt":
-        trendorder = 2
+        trend_order = 2
     else:
         raise ValueError("trend %s not understood" % trend)
-
-    X = np.asanyarray(X)
-    nobs = len(X)
-    trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    if x is not None:
+        nobs = len(np.asanyarray(x))
+    elif nobs <= 0:
+        raise ValueError("nobs must be a positive integer if x is None")
+    trend_array = np.vander(np.arange(1, nobs + 1, dtype=np.float64),
+                            trend_order + 1)
     # put in order ctt
-    trendarr = np.fliplr(trendarr)
+    trend_array = np.fliplr(trend_array)
     if trend == "t":
-        trendarr = trendarr[:,1]
-    if not X.dtype.names:
+        trend_array = trend_array[:, 1:]
         # check for constant
-        if "c" in trend and np.any(np.ptp(X, axis=0) == 0):
-            if has_constant == 'raise':
-                raise ValueError("X already contains a constant")
-            elif has_constant == 'add':
-                pass
-            elif has_constant == 'skip' and trend == "ct":
-                trendarr = trendarr[:, 1]
-
-        if not prepend:
-            X = np.column_stack((X, trendarr))
+    if x is None:
+        return trend_array
+    x_array = np.asarray(x)
+    if "c" in trend and \
+            np.any(np.logical_and(np.ptp(x_array, axis=0) == 0,
+                                  np.all(x_array != 0, axis=0))):
+        if has_constant == 'raise':
+            raise ValueError("x already contains a constant")
+        elif has_constant == 'add':
+            pass
+        elif has_constant == 'skip' and trend == "ct":
+            trend_array = trend_array[:, 1]
+    if isinstance(x, pd.DataFrame):
+        columns = ('const', 'trend', 'quadratic_trend')
+        if trend == 't':
+            columns = (columns[1],)
         else:
-            X = np.column_stack((trendarr, X))
-    else:
-        return_rec = data.__clas__ is np.recarray
-        if trendorder == 1:
-            if trend == "ct":
-                dt = [('const',float),('trend',float)]
-            else:
-                dt = [('trend', float)]
-        elif trendorder == 2:
-            dt = [('const',float),('trend',float),('trend_squared', float)]
-        trendarr = trendarr.view(dt)
+            columns = columns[0:trend_order + 1]
+        columns = _enforce_unique_col_name(x.columns, columns)
+        trend_array = pd.DataFrame(trend_array, index=x.index, columns=columns)
         if prepend:
-            X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in X.dtype.names], usemask=False, asrecarray=return_rec)
+            x = trend_array.join(x)
         else:
-            X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=False, asrecarray=return_rec)
-    return X
+            x = x.join(trend_array)
+    else:
+        if prepend:
+            x = np.column_stack((trend_array, x))
+        else:
+            x = np.column_stack((x, trend_array))
+
+    return x
+
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
@@ -96,10 +169,9 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
         observations in columns.
     col : 'string', int, or None
-        If data is a structured array or a recarray, `col` can be a string
-        that is the name of the column containing the variable. Or `col` can
-        be an int of the zero-based column index. If it's a 1d array `col`
-        can be None.
+        If data is a pandas DataFrame, `col` can be a string that is the name
+        of the column containing the variable. Or `col` can be an int of the
+        zero-based column index. If it's a 1d array `col` can be None.
     lags : int
         The number of lags desired.
     drop : bool
@@ -127,138 +199,118 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     so that the length of the returned array is len(`X`) - lags. The lags are
     returned in increasing order, ie., t-1,t-2,...,t-lags
     """
-    if x.dtype.names:
-        names = x.dtype.names
-        if not col and np.squeeze(x).ndim > 1:
-            raise IndexError("col is None and the input array is not 1d")
-        elif len(names) == 1:
-            col = names[0]
-        if isinstance(col, int):
-            col = x.dtype.names[col]
-        contemp = x[col]
+    df = None
+    is_rec_array = False
+    try:
+        if x.dtype.fields:
+            is_rec_array = True
+            x = pd.DataFrame(x)
+    except:
+        pass
 
-        # make names for lags
-        tmp_names = [col + '_'+'L(%i)' % i for i in range(1,lags+1)]
-        ndlags = lagmat(contemp, maxlag=lags, trim='Both')
+    if isinstance(x, pd.DataFrame):
+        df = x
+        if isinstance(col, string_types):
+            col = list(df.columns).index(col)
 
-        # get index for return
-        if insert is True:
-            ins_idx = list(names).index(col) + 1
-        elif insert is False:
-            ins_idx = len(names) + 1
-        else: # insert is an int
-            if insert > len(names):
-                import warnings
-                warnings.warn("insert > number of variables, inserting at the"
-                              " last position",
-                              UserWarning)
-            ins_idx = insert
+    x = np.asarray(x)
+    if x.ndim == 1:  # make 2d if 1d
+        x = x[:, None]
+    if col is None:
+        col = 0
+    # handle negative index
+    if col < 0:
+        col = x.shape[1] + col
+    contemporary = x[:, col]
 
-        first_names = list(names[:ins_idx])
-        last_names = list(names[ins_idx:])
+    if insert is True:
+        ins_idx = col + 1
+    elif insert is False:
+        ins_idx = x.shape[1]
+    else:
+        if insert < 0:  # handle negative index
+            insert = x.shape[1] + insert + 1
+        if insert > x.shape[1]:
+            raise ValueError("insert greater than the number of variables")
+        ins_idx = insert
 
-        if drop:
-            if col in first_names:
-                first_names.pop(first_names.index(col))
-            else:
-                last_names.pop(last_names.index(col))
-
-        if first_names: # only do this if x isn't "empty"
-            first_arr = nprf.append_fields(x[first_names][lags:],tmp_names,
-                        ndlags.T, usemask=False)
+    ndlags = lagmat(contemporary, lags, trim='Both')
+    first_cols = lrange(ins_idx)
+    last_cols = lrange(ins_idx, x.shape[1])
+    if drop:
+        if col in first_cols:
+            first_cols.pop(first_cols.index(col))
         else:
-            first_arr = np.zeros(len(x)-lags, dtype=lzip(tmp_names,
-                (x[col].dtype,)*lags))
-            for i,name in enumerate(tmp_names):
-                first_arr[name] = ndlags[:,i]
-        if last_names:
-            return nprf.append_fields(first_arr, last_names,
-                    [x[name][lags:] for name in last_names], usemask=False)
-        else: # lags for last variable
-            return first_arr
+            last_cols.pop(last_cols.index(col))
+    out = np.column_stack((x[lags:, first_cols], ndlags, x[lags:, last_cols]))
+    if df is not None:
+        columns = list(df.columns)
+        index = df.index
+        # Create new column labels
+        lag_columns = [str(columns[col]) + '_L_' + str(i + 1) for i in
+                       range(lags)]
+        out_columns = [columns[col_idx] for col_idx in first_cols]
+        out_columns.extend(lag_columns)
+        for col_idx in last_cols:
+            out_columns.append(columns[col_idx])
+        # Alter index for correct length
+        index = index[lags:]
+        lag_columns = _enforce_unique_col_name(df.columns, lag_columns)
+        ndlags = pd.DataFrame(ndlags, columns=lag_columns, index=index)
+        df = df.join(ndlags)
+        out = df[out_columns].reindex(index)
+    if is_rec_array:
+        out = out.to_records(index=False)
 
-    else: # we have an ndarray
+    return out
 
-        if x.ndim == 1: # make 2d if 1d
-            x = x[:,None]
-        if col is None:
-            col = 0
-
-        # handle negative index
-        if col < 0:
-            col = x.shape[1] + col
-
-        contemp = x[:,col]
-
-        if insert is True:
-            ins_idx = col + 1
-        elif insert is False:
-            ins_idx = x.shape[1]
-        else:
-            if insert < 0: # handle negative index
-                insert = x.shape[1] + insert + 1
-            if insert > x.shape[1]:
-                insert = x.shape[1]
-                import warnings
-                warnings.warn("insert > number of variables, inserting at the"
-                              " last position",
-                              UserWarning)
-            ins_idx = insert
-
-        ndlags = lagmat(contemp, lags, trim='Both')
-        first_cols = lrange(ins_idx)
-        last_cols = lrange(ins_idx,x.shape[1])
-        if drop:
-            if col in first_cols:
-                first_cols.pop(first_cols.index(col))
-            else:
-                last_cols.pop(last_cols.index(col))
-        return np.column_stack((x[lags:,first_cols],ndlags,
-                    x[lags:,last_cols]))
 
 def detrend(x, order=1, axis=0):
-    '''detrend an array with a trend of given order along axis 0 or 1
+    """
+    Detrend an array with a trend of given order along axis 0 or 1
 
     Parameters
     ----------
     x : array_like, 1d or 2d
         data, if 2d, then each row or column is independently detrended with the
-        same trendorder, but independent trend estimates
+        same trend order, but independent trend estimates
     order : int
         specifies the polynomial order of the trend, zero is constant, one is
         linear trend, two is quadratic trend
     axis : int
-        for detrending with order > 0, axis can be either 0 observations by rows,
-        or 1, observations by columns
+        for detrending with order > 0, axis can be either 0 observations by
+        rows, or 1, observations by columns
 
     Returns
     -------
-    detrended data series : ndarray
+    y : array
         The detrended series is the residual of the linear regression of the
         data on the trend of given order.
-
-
-    '''
+    """
     x = np.asarray(x)
-    nobs = x.shape[0]
+    ndim = x.ndim
     if order == 0:
-        return x - np.expand_dims(x.mean(ax), x)
-    else:
-        if x.ndim == 2 and lrange(2)[axis]==1:
-            x = x.T
-        elif x.ndim > 2:
-            raise NotImplementedError('x.ndim>2 is not implemented until it is needed')
-        #could use a polynomial, but this should work also with 2d x, but maybe not yet
-        trends = np.vander(np.arange(nobs).astype(float), N=order+1)
-        beta = np.linalg.lstsq(trends, x)[0]
-        resid = x - np.dot(trends, beta)
-        if x.ndim == 2 and lrange(2)[axis]==1:
-            resid = resid.T
-        return resid
+        return x - np.expand_dims(x.mean(axis), axis)
+    if ndim > 2:
+        raise NotImplementedError('x must be 1d or 2d')
+    if ndim == 2 and axis == 1:
+        x = x.T
+    elif ndim == 1:
+        x = x[:, None]
+    nobs = x.shape[0]
+    trends = np.vander(np.arange(nobs).astype(np.float64), N=order + 1)
+    beta = np.linalg.pinv(trends).dot(x)
+    resid = x - np.dot(trends, beta)
+    if x.ndim == 2 and axis == 1:
+        resid = resid.T
+    elif ndim == 1:
+        resid = resid.ravel()
+
+    return resid
 
 
-def lagmat(x, maxlag, trim='forward', original='ex'):
-    '''create 2d array of lags
+def lagmat(x, maxlag, trim='forward', original='ex', fill_value=np.nan):
+    """create 2d array of lags
 
     Parameters
     ----------
@@ -278,6 +330,8 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
         * 'sep' : returns a tuple (original array, lagged values). The original
                   array is truncated to have the same number of rows as
                   the returned lagmat.
+    fill_value : float
+        the value to use for filling missing values.  Default is np.nan
 
     Returns
     -------
@@ -313,22 +367,24 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
 
     Notes
     -----
-    TODO:
-    * allow list of lags additional to maxlag
-    * create varnames for columns
-    '''
+    If trim is not 'both', new values are 0-filled
+    """
+    # TODO: allow list of lags additional to maxlag
+    # TODO: create varnames for columns
     x = np.asarray(x)
     dropidx = 0
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     nobs, nvar = x.shape
-    if original in ['ex','sep']:
+    if original in ['ex', 'sep']:
         dropidx = nvar
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
-    lm = np.zeros((nobs+maxlag, nvar*(maxlag+1)))
-    for k in range(0, int(maxlag+1)):
-        lm[maxlag-k:nobs+maxlag-k, nvar*(maxlag-k):nvar*(maxlag-k+1)] = x
+    lm = np.empty((nobs + maxlag, nvar * (maxlag + 1)))
+    lm.fill(fill_value)
+    for k in range(0, int(maxlag + 1)):
+        lm[maxlag - k:nobs + maxlag - k,
+        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = x
     if trim:
         trimlower = trim.lower()
     else:
@@ -338,10 +394,10 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
         stopobs = len(lm)
     elif trimlower == 'forward':
         startobs = 0
-        stopobs = nobs+maxlag-k
+        stopobs = nobs + maxlag - k
     elif trimlower == 'both':
         startobs = maxlag
-        stopobs = nobs+maxlag-k
+        stopobs = nobs + maxlag - k
     elif trimlower == 'backward':
         startobs = maxlag
         stopobs = len(lm)
@@ -349,12 +405,13 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
     else:
         raise ValueError('trim option not valid')
     if original == 'sep':
-        return lm[startobs:stopobs,dropidx:], x[startobs:stopobs]
+        return lm[startobs:stopobs, dropidx:], x[startobs:stopobs]
     else:
-        return lm[startobs:stopobs,dropidx:]
+        return lm[startobs:stopobs, dropidx:]
+
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
-    '''generate lagmatrix for 2d array, columns arranged by variables
+    """Generate lagmatrix for 2d array, columns arranged by variables
 
     Parameters
     ----------
@@ -363,7 +420,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     maxlag0 : int
         for first variable all lags from zero to maxlag are included
     maxlagex : None or int
-        max lag for all other variables all lags from zero to maxlag are included
+        max lag for all other variables; all lags from zero to maxlag are included
     dropex : int (default is 0)
         exclude first dropex lags from other variables
         for all variables, except the first, lags from dropex to maxlagex are
@@ -382,41 +439,49 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     Notes
     -----
     very inefficient for unequal lags, just done for convenience
-    '''
+    """
     if maxlagex is None:
         maxlagex = maxlag0
     maxlag = max(maxlag0, maxlagex)
     nobs, nvar = x.shape
-    lagsli = [lagmat(x[:,0], maxlag, trim=trim, original='in')[:,:maxlag0+1]]
-    for k in range(1,nvar):
-        lagsli.append(lagmat(x[:,k], maxlag, trim=trim, original='in')[:,dropex:maxlagex+1])
+    lagsli = [
+        lagmat(x[:, 0], maxlag, trim=trim, original='in')[:, :maxlag0 + 1]]
+    for k in range(1, nvar):
+        lagsli.append(lagmat(x[:, k], maxlag, trim=trim, original='in')[:,
+                      dropex:maxlagex + 1])
     return np.column_stack(lagsli)
+
 
 def vec(mat):
     return mat.ravel('F')
+
 
 def vech(mat):
     # Gets Fortran-order
     return mat.T.take(_triu_indices(len(mat)))
 
-# tril/triu/diag, suitable for ndarray.take
 
+# tril/triu/diag, suitable for ndarray.take
 def _tril_indices(n):
     rows, cols = np.tril_indices(n)
     return rows * n + cols
+
 
 def _triu_indices(n):
     rows, cols = np.triu_indices(n)
     return rows * n + cols
 
+
 def _diag_indices(n):
     rows, cols = np.diag_indices(n)
     return rows * n + cols
 
+
 def unvec(v):
     k = int(np.sqrt(len(v)))
-    assert(k * k == len(v))
+    assert (k * k == len(v))
     return v.reshape((k, k), order='F')
+
 
 def unvech(v):
     # quadratic formula, correct fp error
@@ -432,17 +497,25 @@ def unvech(v):
 
     return result
 
+
 def duplication_matrix(n):
     """
     Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
     symmetric matrix S
 
+    Parameters
+    ----------
+    n : int
+        The length of vech(S)
+
     Returns
     -------
-    D_n : ndarray
+    D_n : array
+        The duplication array
     """
     tmp = np.eye(n * (n + 1) / 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
+
 
 def elimination_matrix(n):
     """
@@ -451,13 +524,18 @@ def elimination_matrix(n):
 
     Parameters
     ----------
+    n : int
+        The length of vec(M)
 
     Returns
     -------
+    L : array
+        The commutation matrix
 
     """
     vech_indices = vec(np.tril(np.ones((n, n))))
     return np.eye(n * n)[vech_indices != 0]
+
 
 def commutation_matrix(p, q):
     """
@@ -465,16 +543,16 @@ def commutation_matrix(p, q):
 
     Parameters
     ----------
-    p : int
-    q : int
+    p, q : int
 
     Returns
     -------
-    K : ndarray (pq x pq)
+    K : ndarray, (pq, pq)
     """
     K = np.eye(p * q)
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
+
 
 def _ar_transparams(params):
     """
@@ -489,16 +567,15 @@ def _ar_transparams(params):
     ---------
     Jones(1980)
     """
-    newparams = ((1-np.exp(-params))/
-                (1+np.exp(-params))).copy()
-    tmp = ((1-np.exp(-params))/
-               (1+np.exp(-params))).copy()
-    for j in range(1,len(params)):
-        a = newparams[j]
-        for kiter in range(j):
-            tmp[kiter] -= a * newparams[j-kiter-1]
-        newparams[:j] = tmp[:j]
-    return newparams
+    trans_params = ((1 - np.exp(-params)) / (1 + np.exp(-params)))
+    tmp = trans_params.copy()
+    for j in range(1, len(params)):
+        a = trans_params[j]
+        for k in range(j):
+            tmp[k] -= a * trans_params[j - k - 1]
+        trans_params[:j] = tmp[:j]
+    return trans_params
+
 
 def _ar_invtransparams(params):
     """
@@ -509,16 +586,17 @@ def _ar_invtransparams(params):
     params : array
         The transformed AR coefficients
     """
-    # AR coeffs
+    # AR coefficients
     tmp = params.copy()
-    for j in range(len(params)-1,0,-1):
+    for j in range(len(params) - 1, 0, -1):
         a = params[j]
-        for kiter in range(j):
-            tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/\
-                    (1-a**2)
+        for k in range(j):
+            tmp[k] = (params[k] + a * params[j - k - 1]) / \
+                     (1 - a ** 2)
         params[:j] = tmp[:j]
-    invarcoefs = -np.log((1-params)/(1+params))
-    return invarcoefs
+    inv_ar_coefs = -np.log((1 - params) / (1 + params))
+    return inv_ar_coefs
+
 
 def _ma_transparams(params):
     """
@@ -527,22 +605,23 @@ def _ma_transparams(params):
     Parameters
     ----------
     params : array
-        The ma coeffecients of an (AR)MA model.
+        The MA coeffecients of an (AR)MA model.
 
     Reference
     ---------
     Jones(1980)
     """
-    newparams = ((1-np.exp(-params))/(1+np.exp(-params))).copy()
-    tmp = ((1-np.exp(-params))/(1+np.exp(-params))).copy()
+    trans_params = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
+    tmp = trans_params.copy()
 
     # levinson-durbin to get macf
-    for j in range(1,len(params)):
-        b = newparams[j]
-        for kiter in range(j):
-            tmp[kiter] += b * newparams[j-kiter-1]
-        newparams[:j] = tmp[:j]
-    return newparams
+    for j in range(1, len(params)):
+        b = trans_params[j]
+        for k in range(j):
+            tmp[k] += b * trans_params[j - k - 1]
+        trans_params[:j] = tmp[:j]
+    return trans_params
+
 
 def _ma_invtransparams(macoefs):
     """
@@ -554,18 +633,19 @@ def _ma_invtransparams(macoefs):
         The transformed MA coefficients
     """
     tmp = macoefs.copy()
-    for j in range(len(macoefs)-1,0,-1):
+    for j in range(len(macoefs) - 1, 0, -1):
         b = macoefs[j]
-        for kiter in range(j):
-            tmp[kiter] = (macoefs[kiter]-b *macoefs[j-kiter-1])/(1-b**2)
+        scale = (1 - b ** 2)
+        for k in range(j):
+            tmp[k] = (macoefs[k] - b * macoefs[j - k - 1]) / scale
         macoefs[:j] = tmp[:j]
-    invmacoefs = -np.log((1-macoefs)/(1+macoefs))
-    return invmacoefs
+    inv_ma_coefs = -np.log((1 - macoefs) / (1 + macoefs))
+    return inv_ma_coefs
 
 
-def unintegrate_levels(x, d):
+def reintegrate_levels(x, d):
     """
-    Returns the successive differences needed to unintegrate the series.
+    Returns the successive differences needed to reintegrate the series.
 
     Parameters
     ----------
@@ -582,13 +662,12 @@ def unintegrate_levels(x, d):
 
     See Also
     --------
-    unintegrate
+    reintegrate
     """
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
 
-
-def unintegrate(x, levels):
+def reintegrate(x, levels):
     """
     After taking n-differences of a series, return the original series
 
@@ -597,27 +676,29 @@ def unintegrate(x, levels):
     x : array-like
         The n-th differenced series
     levels : list
-        A list of the first-value in each differenced series, for
+        A list of the initial-value in each differenced series, for
         [first-difference, second-difference, ..., n-th difference]
 
     Returns
     -------
     y : array-like
-        The original series de-differenced
+        The original series, reintegrated
+
+    See Also
+    --------
+    reintegrate_levels
 
     Examples
     --------
     >>> x = np.array([1, 3, 9., 19, 8.])
-    >>> levels = unintegrate_levels(x, 2)
-    >>> levels
-    array([ 1.,  2.])
-    >>> unintegrate(np.diff(x, 2), levels)
+    >>> levels = [x[0], np.diff(x, 1)[0]]
+    >>> reintegrate(np.diff(x, 2), levels)
     array([  1.,   3.,   9.,  19.,   8.])
     """
-    levels = list(levels)[:] # copy
+    levels = list(levels[:])  # copy
     if len(levels) > 1:
         x0 = levels.pop(-1)
-        return unintegrate(np.cumsum(np.r_[x0, x]), levels)
+        return reintegrate(np.cumsum(np.r_[x0, x]), levels)
     x0 = levels[0]
     return np.cumsum(np.r_[x0, x])
 
@@ -657,13 +738,5 @@ def freq_to_period(freq):
                          "think this in error.".format(freq))
 
 
-__all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
-           'elimination_matrix', 'commutation_matrix',
-           'vec', 'vech', 'unvec', 'unvech']
-
 if __name__ == '__main__':
-    # sanity check, mainly for imports
-    x = np.random.normal(size=(100,2))
-    tmp = lagmat(x,2)
-    tmp = lagmat2ds(x,2)
-#    grangercausalitytests(x, 2)
+    pass

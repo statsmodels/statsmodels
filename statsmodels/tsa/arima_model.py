@@ -25,7 +25,7 @@ from statsmodels.regression.linear_model import yule_walker, GLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
                                       _ma_transparams, _ma_invtransparams,
-                                      unintegrate, unintegrate_levels)
+                                      reintegrate, reintegrate_levels)
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
@@ -974,7 +974,7 @@ class ARIMA(ARMA):
             raise ValueError("d > 2 is not supported")
         super(ARIMA, self).__init__(endog, (p, q), exog, dates, freq, missing)
         self.k_diff = d
-        self._first_unintegrate = unintegrate_levels(self.endog[:d], d)
+        self._first_unintegrate = reintegrate_levels(self.endog[:d], d)
         self.endog = np.diff(self.endog, n=d)
         #NOTE: will check in ARMA but check again since differenced now
         _check_estimable(len(self.endog), p+q)
@@ -1145,9 +1145,9 @@ class ARIMA(ARMA):
                         fv = predict[:-out_of_sample] + endog[start:end+1]
                         if d == 2:  #TODO: make a general solution to this
                             fv += np.diff(endog[start - 1:end + 1])
-                        levels = unintegrate_levels(endog[-d:], d)
+                        levels = reintegrate_levels(endog[-d:], d)
                         fv = np.r_[fv,
-                                   unintegrate(predict[-out_of_sample:],
+                                   reintegrate(predict[-out_of_sample:],
                                                levels)[d:]]
                     else:
                         fv = predict + endog[start:end + 1]
@@ -1160,9 +1160,9 @@ class ARIMA(ARMA):
                               endog[max(start, self.k_ar-1):end+k_ar+1])
                         if d == 2:
                             fv += np.diff(endog[start - 1:end + 1])
-                        levels = unintegrate_levels(endog[-d:], d)
+                        levels = reintegrate_levels(endog[-d:], d)
                         fv = np.r_[fv,
-                                   unintegrate(predict[-out_of_sample:],
+                                   reintegrate(predict[-out_of_sample:],
                                                levels)[d:]]
                     else:
                         fv = predict + endog[max(start, k_ar):end+k_ar+1]
@@ -1817,7 +1817,7 @@ class ARIMAResults(ARMAResults):
 
         d = self.k_diff
         endog = self.model.data.endog[-d:]
-        forecast = unintegrate(forecast, unintegrate_levels(endog, d))[d:]
+        forecast = reintegrate(forecast, reintegrate_levels(endog, d))[d:]
 
         # get forecast errors
         fcerr = self._forecast_error(steps)
@@ -1859,8 +1859,7 @@ class ARIMAResults(ARMAResults):
             import re
             k_diff = self.k_diff
             label = re.sub("D\d*\.", "", self.model.endog_names)
-            levels = unintegrate(self.model.endog,
-                                 self.model._first_unintegrate)
+            levels = reintegrate(self.model.endog, self.model._first_unintegrate)
             ax.plot(x[:end + 1 - start],
                     levels[start + k_diff:end + k_diff + 1], label=label)
 

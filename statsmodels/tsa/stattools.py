@@ -1,21 +1,20 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import division
 from statsmodels.compat.python import (iteritems, range, lrange, string_types, lzip,
-                                zip, map)
+                                zip, map, range)
 import numpy as np
 from numpy.linalg import LinAlgError
 from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant, Bunch
 from .tsatools import lagmat, lagmat2ds, add_trend
-from .adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.compat.scipy import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller']
+           'periodogram', 'q_stat', 'arma_order_select_ic', 'cov_nw']
 
 
 #NOTE: now in two places to avoid circular import
@@ -23,6 +22,62 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
 class ResultsStore(object):
     def __str__(self):
         return self._str  # pylint: disable=E1101
+
+
+def cov_nw(y, lags=0, demean=True, axis=0, ddof=0):
+    """
+    Computes Newey-West covariance for 1-d and 2-d arrays
+
+    Parameters
+    ----------
+    y : array-like, 1d or 2d
+        Values to use when computing the Newey-West covariance estimator.
+        When u is 2d, default behavior is to treat columns as variables and
+        rows as observations.
+    lags : int, non-negative
+        Number of lags to include in the Newey-West covariance estimator
+    demean : bool
+        Indicates whether to subtract the mean.  Default is True
+    axis : int, (0, 1)
+        The axis to use when y is 2d
+    ddof : int, non-negative
+        Degree of freedom correction for compatability with simple covariance
+        estimators.  Default is 0.
+
+    Returns
+    -------
+    cov : array
+        The estimated covariance
+
+    """
+    z = y
+    is_1d = False
+    if axis > z.ndim:
+        raise ValueError('axis must be less than the dimension of y')
+    if z.ndim == 1:
+        is_1d = True
+        z = z[:, None]
+    if axis == 1:
+        z = z.T
+    n = z.shape[0]
+    if ddof > n:
+        raise ValueError("ddof must be strictly smaller than the number of "
+                         "observations")
+    if lags > n:
+        error = 'lags must be weakly smaller than the number of observations'
+        raise ValueError(error)
+
+    if demean:
+        z = z - z.mean(0)
+    cov = z.T.dot(z)
+    for j in range(1, lags + 1):
+        w = (1 - j / (lags + 1))
+        gamma = z[j:].T.dot(z[:-j])
+        cov += w * (gamma + gamma.T)
+    cov = cov / (n - ddof)
+    if is_1d:
+        cov = float(cov)
+    return cov
 
 
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
@@ -52,7 +107,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     icbest : float
         Best information criteria.
     bestlag : int
-        The lag length that maximizes the information criterion.
+        The lag length that minimizes the information criterion.
 
 
     Notes
@@ -92,195 +147,6 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         return icbest, bestlag
     else:
         return icbest, bestlag, results
-
-
-#this needs to be converted to a class like HetGoldfeldQuandt,
-# 3 different returns are a mess
-# See:
-#Ng and Perron(2001), Lag length selection and the construction of unit root
-#tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
-#TODO: include drift keyword, only valid with regression == "c"
-# just changes the distribution of the test statistic to a t distribution
-#TODO: autolag is untested
-def adfuller(x, maxlag=None, regression="c", autolag='AIC',
-             store=False, regresults=False):
-    '''
-    Augmented Dickey-Fuller unit root test
-
-    The Augmented Dickey-Fuller test can be used to test for a unit root in a
-    univariate process in the presence of serial correlation.
-
-    Parameters
-    ----------
-    x : array_like, 1d
-        data series
-    maxlag : int
-        Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
-    regression : str {'c','ct','ctt','nc'}
-        Constant and trend order to include in regression
-        * 'c' : constant only (default)
-        * 'ct' : constant and trend
-        * 'ctt' : constant, and linear and quadratic trend
-        * 'nc' : no constant, no trend
-    autolag : {'AIC', 'BIC', 't-stat', None}
-        * if None, then maxlag lags are used
-        * if 'AIC' (default) or 'BIC', then the number of lags is chosen
-          to minimize the corresponding information criterium
-        * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
-          lag until the t-statistic on the last lag length is significant at
-          the 95 % level.
-    store : bool
-        If True, then a result instance is returned additionally to
-        the adf statistic (default is False)
-    regresults : bool
-        If True, the full regression results are returned (default is False)
-
-    Returns
-    -------
-    adf : float
-        Test statistic
-    pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994)
-    usedlag : int
-        Number of lags used.
-    nobs : int
-        Number of observations used for the ADF regression and calculation of
-        the critical values.
-    critical values : dict
-        Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels. Based on MacKinnon (2010)
-    icbest : float
-        The maximized information criterion if autolag is not None.
-    regresults : RegressionResults instance
-        The
-    resstore : (optional) instance of ResultStore
-        an instance of a dummy class with results attached as attributes
-
-    Notes
-    -----
-    The null hypothesis of the Augmented Dickey-Fuller is that there is a unit
-    root, with the alternative that there is no unit root. If the pvalue is
-    above a critical size, then we cannot reject that there is a unit root.
-
-    The p-values are obtained through regression surface approximation from
-    MacKinnon 1994, but using the updated 2010 tables.
-    If the p-value is close to significant, then the critical values should be
-    used to judge whether to accept or reject the null.
-
-    The autolag option and maxlag for it are described in Greene.
-
-    Examples
-    --------
-    see example script
-
-    References
-    ----------
-    Greene
-    Hamilton
-
-
-    P-Values (regression surface approximation)
-    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-    unit-root and cointegration tests.  `Journal of Business and Economic
-    Statistics` 12, 167-76.
-
-    Critical values
-    MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
-    University, Dept of Economics, Working Papers.  Available at
-    http://ideas.repec.org/p/qed/wpaper/1227.html
-
-    '''
-
-    if regresults:
-        store = True
-
-    trenddict = {None: 'nc', 0: 'c', 1: 'ct', 2: 'ctt'}
-    if regression is None or isinstance(regression, int):
-        regression = trenddict[regression]
-    regression = regression.lower()
-    if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood") % regression
-    x = np.asarray(x)
-    nobs = x.shape[0]
-
-    if maxlag is None:
-        #from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
-
-    xdiff = np.diff(x)
-    xdall = lagmat(xdiff[:, None], maxlag, trim='both', original='in')
-    nobs = xdall.shape[0]  # pylint: disable=E1103
-
-    xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
-    xdshort = xdiff[-nobs:]
-
-    if store:
-        resstore = ResultsStore()
-    if autolag:
-        if regression != 'nc':
-            fullRHS = add_trend(xdall, regression, prepend=True)
-        else:
-            fullRHS = xdall
-        startlag = fullRHS.shape[1] - xdall.shape[1] + 1  # 1 for level  # pylint: disable=E1103
-        #search for lag length with smallest information criteria
-        #Note: use the same number of observations to have comparable IC
-        #aic and bic: smaller is better
-
-        if not regresults:
-            icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
-                                       maxlag, autolag)
-        else:
-            icbest, bestlag, alres = _autolag(OLS, xdshort, fullRHS, startlag,
-                                              maxlag, autolag,
-                                              regresults=regresults)
-            resstore.autolag_results = alres
-
-        bestlag -= startlag  # convert to lag not column index
-
-        #rerun ols with best autolag
-        xdall = lagmat(xdiff[:, None], bestlag, trim='both', original='in')
-        nobs = xdall.shape[0]   # pylint: disable=E1103
-        xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
-        xdshort = xdiff[-nobs:]
-        usedlag = bestlag
-    else:
-        usedlag = maxlag
-        icbest = None
-    if regression != 'nc':
-        resols = OLS(xdshort, add_trend(xdall[:, :usedlag + 1],
-                     regression)).fit()
-    else:
-        resols = OLS(xdshort, xdall[:, :usedlag + 1]).fit()
-
-    adfstat = resols.tvalues[0]
-#    adfstat = (resols.params[0]-1.0)/resols.bse[0]
-    # the "asymptotically correct" z statistic is obtained as
-    # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
-    # I think this is the statistic that is used for series that are integrated
-    # for orders higher than I(1), ie., not ADF but cointegration tests.
-
-    # Get approx p-value and critical values
-    pvalue = mackinnonp(adfstat, regression=regression, N=1)
-    critvalues = mackinnoncrit(N=1, regression=regression, nobs=nobs)
-    critvalues = {"1%" : critvalues[0], "5%" : critvalues[1],
-                  "10%" : critvalues[2]}
-    if store:
-        resstore.resols = resols
-        resstore.maxlag = maxlag
-        resstore.usedlag = usedlag
-        resstore.adfstat = adfstat
-        resstore.critvalues = critvalues
-        resstore.nobs = nobs
-        resstore.H0 = ("The coefficient on the lagged level equals 1 - "
-                       "unit root")
-        resstore.HA = "The coefficient on the lagged level < 1 - stationary"
-        resstore.icbest = icbest
-        return adfstat, pvalue, critvalues, resstore
-    else:
-        if not autolag:
-            return adfstat, pvalue, usedlag, nobs, critvalues
-        else:
-            return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
 def acovf(x, unbiased=False, demean=True, fft=False):
@@ -870,66 +736,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         resli[mxlg] = (result, [res2down, res2djoint, rconstr])
 
     return resli
-
-
-def coint(y1, y2, regression="c"):
-    """
-    This is a simple cointegration test. Uses unit-root test on residuals to
-    test for cointegrated relationship
-
-    See Hamilton (1994) 19.2
-
-    Parameters
-    ----------
-    y1 : array_like, 1d
-        first element in cointegrating vector
-    y2 : array_like
-        remaining elements in cointegrating vector
-    c : str {'c'}
-        Included in regression
-        * 'c' : Constant
-
-    Returns
-    -------
-    coint_t : float
-        t-statistic of unit-root test on residuals
-    pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994)
-    crit_value : dict
-        Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels.
-
-    Notes
-    -----
-    The Null hypothesis is that there is no cointegration, the alternative
-    hypothesis is that there is cointegrating relationship. If the pvalue is
-    small, below a critical size, then we can reject the hypothesis that there
-    is no cointegrating relationship.
-
-    P-values are obtained through regression surface approximation from
-    MacKinnon 1994.
-
-    References
-    ----------
-    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-        unit-root and cointegration tests.  `Journal of Business and Economic
-        Statistics` 12, 167-76.
-
-    """
-    regression = regression.lower()
-    if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood") % regression
-    y1 = np.asarray(y1)
-    y2 = np.asarray(y2)
-    if regression == 'c':
-        y2 = add_constant(y2, prepend=False)
-    st1_resid = OLS(y1, y2).fit().resid  # stage one residuals
-    lgresid_cons = add_constant(st1_resid[0:-1], prepend=False)
-    uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
-    coint_t = (uroot_reg.params[0] - 1) / uroot_reg.bse[0]
-    pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
-    crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
-    return coint_t, pvalue, crit_value
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
