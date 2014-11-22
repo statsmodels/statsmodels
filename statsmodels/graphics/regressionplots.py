@@ -24,7 +24,7 @@ from statsmodels.base import model
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
            'add_lowess', 'add_hist', 'abline_plot', 'influence_plot',
-           'plot_leverage_resid2', 'covariate_effect_plot']
+           'plot_leverage_resid2', 'plot_covariate_effects']
 
 
 #TODO: consider moving to influence module
@@ -876,8 +876,8 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     ax.margins(.075, .075)
     return fig
 
-def covariate_effect_plot(results, focus_var, exog, n_points=50,
-                          ax=None):
+def plot_covariate_effects(results, focus_var, exog, n_points=50,
+                           ax=None):
 
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -948,5 +948,5 @@ def covariate_effect_plot(results, focus_var, exog, n_points=50,
 
     return fig
 
-covariate_effect_plot.__doc__ = model._covariate_effect_plot_doc % {
+plot_covariate_effects.__doc__ = model._plot_covariate_effects_doc % {
     'extra_params_doc': "results: object\n\tResults for a fitted regression model"}

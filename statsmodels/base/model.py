@@ -37,7 +37,7 @@ _extra_param_doc = """
         False, a constant is not checked for and k_constant is set to 0.
 """
 
-_covariate_effect_plot_doc ="""\
+_plot_covariate_effects_doc ="""\
     Plot the fitted mean function in terms of a single 'focus'
     covariate, holding the values of the other covariates fixed at
     specified points.
@@ -73,7 +73,7 @@ _covariate_effect_plot_doc ="""\
     >>> new_exog = []
     >>> new_exog.append(np.percentile(exog, 25, axis=0)
     >>> new_exog.append(np.percentile(exog, 75, axis=0)
-    >>> fig = result.covariate_effect_plot(2, new_exog)
+    >>> fig = result.plot_covariate_effecs(2, new_exog)
 
     Similar to the previous example, using formulas:
 
@@ -84,7 +84,7 @@ _covariate_effect_plot_doc ="""\
     >>> new_exog[0] = [np.percentile(df[v], 25) for v in df.columns]
     >>> new_exog[1] = [np.percentile(df[v], 75) for v in df.columns]
     >>> new_exog = [Series(x, index=df.columns) for x in new_exog]
-    >>> fig = result.covariate_effect_plot('x2', new_exog)
+    >>> fig = result.plot_covariate_effects('x2', new_exog)
 
     Notes
     -----
@@ -797,17 +797,17 @@ class Results(object):
 
         return self.model.predict(self.params, exog, *args, **kwargs)
 
-    def covariate_effect_plot(self, focus_var, exog, n_points=50,
-                              ax=None):
+    def plot_covariate_effects(self, focus_var, exog, n_points=50,
+                               ax=None):
 
         from statsmodels.graphics import regressionplots
 
-        return regressionplots.covariate_effect_plot(self, focus_var,
-                                                     exog,
-                                                     n_points=n_points,
-                                                     ax=ax)
+        return regressionplots.plot_covariate_effects(self, focus_var,
+                                                      exog,
+                                                      n_points=n_points,
+                                                      ax=ax)
 
-    covariate_effect_plot.__doc__ = _covariate_effect_plot_doc % {
+    plot_covariate_effects.__doc__ = _plot_covariate_effects_doc % {
         'extra_params_doc': ''}
 
 

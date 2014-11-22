@@ -9,7 +9,7 @@ import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
-                  covariate_effect_plot, add_hist)
+                  plot_covariate_effects, add_hist)
 from pandas import Series, DataFrame
 from numpy.testing import dec
 
@@ -231,8 +231,8 @@ class TestCovariateEffectPlot(object):
 
                     exog_str, new_exog = self.get_new_exog(new_exog_type)
 
-                    fig = covariate_effect_plot(self.results, focus_var,
-                                                exog=new_exog)
+                    fig = plot_covariate_effects(self.results, focus_var,
+                                                 exog=new_exog)
 
                     ax = fig.get_axes()[0]
                     if show_hist:
@@ -306,8 +306,8 @@ class TestCovariateEffectPlotPandas(object):
 
                     exog_str, new_exog = self.get_new_exog(new_exog_type)
 
-                    fig = covariate_effect_plot(self.results, focus_var,
-                                                exog=new_exog)
+                    fig = plot_covariate_effects(self.results, focus_var,
+                                                 exog=new_exog)
 
                     ax = fig.get_axes()[0]
                     if show_hist:
