@@ -207,10 +207,10 @@ _gee_init_doc = """
         An array of weights to use in the analysis.  The weights must
         be constant within each group.  These correspond to
         probability weights (pweights) in Stata.
-    scale_dof : scalar or None
+    scale_ddof : scalar or None
         The scale parameter is estimated as the sum of squared
-        Pearson residuals divided by `N - scale_dof`, where N
-        is the total sample size.  If `scale_dof` is None, the
+        Pearson residuals divided by `N - scale_ddof`, where N
+        is the total sample size.  If `scale_ddof` is None, the
         number of covariates (including an intercept if present)
         is used.
     %(extra_params)s
@@ -451,7 +451,7 @@ class GEE(base.Model):
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
                  exposure=None, dep_data=None, constraint=None,
-                 update_dep=True, weights=None, scale_dof=None,
+                 update_dep=True, weights=None, scale_ddof=None,
                  **kwargs):
 
         self.missing = missing
@@ -586,12 +586,12 @@ class GEE(base.Model):
 
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
-        if scale_dof is None:
-            self.scale_dof = self.exog.shape[1]
+        if scale_ddof is None:
+            self.scale_ddof = self.exog.shape[1]
         else:
-            if not scale_dof >= 0:
-                raise ValueError("scale_dof must be a non-negative number or None")
-            self.scale_dof = scale_dof
+            if not scale_ddof >= 0:
+                raise ValueError("scale_ddof must be a non-negative number or None")
+            self.scale_ddof = scale_ddof
 
 
     # Override to allow groups and time to be passed as variable
@@ -728,7 +728,7 @@ class GEE(base.Model):
             scale += f * np.sum(resid**2)
             fsum += f * len(endog[i])
 
-        scale /= (fsum * (nobs - self.scale_dof) / float(nobs))
+        scale /= (fsum * (nobs - self.scale_ddof) / float(nobs))
 
         return scale
 

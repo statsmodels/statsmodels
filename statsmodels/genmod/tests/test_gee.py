@@ -213,7 +213,7 @@ class TestGEE(object):
         # Comparison using independence model
         model = GEE(endog, exog, groups, weights=weights,
                     cov_struct=sm.cov_struct.Independence(),
-                    scale_dof=0)
+                    scale_ddof=0)
         result = model.fit()
 
         assert_allclose(result.params, np.r_[1.247573, 1.436893], atol=1e-6)
@@ -229,7 +229,7 @@ class TestGEE(object):
         # Smoke test for now
         model = GEE(endog, exog, groups, weights=weights,
                     cov_struct=sm.cov_struct.Exchangeable(),
-                    scale_dof=0)
+                    scale_ddof=0)
         result = model.fit()
 
 

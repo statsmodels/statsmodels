@@ -7,6 +7,12 @@ from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              IterationLimitWarning)
 import warnings
 
+"""
+Some details for the covariance calculations can be found in the Stata
+docs:
+
+http://www.stata.com/manuals13/xtxtgee.pdf
+"""
 
 class CovStruct(object):
     """
@@ -250,7 +256,7 @@ class Exchangeable(CovStruct):
             fsum2 += f * npr
             n_pairs += npr
 
-        ddof = self.model.scale_dof
+        ddof = self.model.scale_ddof
         scale /= (fsum1 * (nobs - ddof) / float(nobs))
         residsq_sum /= scale
         self.dep_params = residsq_sum / (fsum2 * (n_pairs - ddof) / float(n_pairs))
@@ -258,7 +264,8 @@ class Exchangeable(CovStruct):
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
-        return  dp + (1. - self.dep_params) * np.eye(dim), True
+        np.fill_diagonal(dp, 1)
+        return  dp, True
 
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
@@ -357,6 +364,9 @@ class Nested(CovStruct):
         """
 
         super(Nested, self).initialize(model)
+
+        if self.model.weights is not None:
+            warnings.warn("weights not implemented for nested cov_struct, using unweighted covariance estimate")
 
         # A bit of processing of the nest data
         id_matrix = np.asarray(self.model.dep_data)
@@ -526,6 +536,9 @@ class Autoregressive(CovStruct):
         self.dep_params = 0.
 
     def update(self, params):
+
+        if self.model.weights is not None:
+            warnings.warn("weights not implemented for autoregressive cov_struct, using unweighted covariance estimate")
 
         endog = self.model.endog_li
         time = self.model.time_li
@@ -717,6 +730,9 @@ class GlobalOddsRatio(CovStruct):
     def initialize(self, model):
 
         super(GlobalOddsRatio, self).initialize(model)
+
+        if self.model.weights is not None:
+            warnings.warn("weights not implemented for GlobalOddsRatio cov_struct, using unweighted covariance estimate")
 
         self.nlevel = len(model.endog_values)
         self.ncut = self.nlevel - 1
