@@ -632,19 +632,25 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(linpred)
 
     def fit(self, start_params=None, maxiter=100, method='IRLS',
-            tol=1e-8, full_output=True, disp=False, scale=None,
-            cov_type='nonrobust', cov_kwds=None, use_t=None,
-            **kwargs):
+            tol=1e-8, scale=None, cov_type='nonrobust', cov_kwds=None,
+            use_t=None, full_output=True, disp=False, **kwargs):
         """
         Fits a generalized linear model for a given family.
 
         parameters
         ----------
+        start_params : array-like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is family-specific and is given by the
+            ``family.starting_mu(endog)``. If start_params is given then the
+            initial mean will be calculated as ``np.dot(exog, start_params)``.
         maxiter : int, optional
             Default is 100.
         method : string
             Default is 'IRLS' for iteratively reweighted least squares.
             Otherwise gradient optimization is used.
+        tol : float
+            Convergence tolerance.  Default is 1e-8.
         scale : string or float, optional
             `scale` can be 'X2', 'dev', or a float
             The default value is None, which uses `X2` for Gamma, Gaussian,
@@ -652,8 +658,13 @@ class GLM(base.LikelihoodModel):
             `X2` is Pearson's chi-square divided by `df_resid`.
             The default is 1 for the Binomial and Poisson families.
             `dev` is the deviance divided by df_resid
-        tol : float
-            Convergence tolerance.  Default is 1e-8.
+        cov_type : string
+            The type of parameter estimate covariance matrix to compute.
+        cov_kwds : dict-like
+            Extra arguments for calculating the covariance of the parameter
+            estimates.
+        use_t : bool
+            If True, the Student t-distribution is used for inference.
         full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
@@ -662,11 +673,6 @@ class GLM(base.LikelihoodModel):
         disp : bool, optional
             Set to True to print convergence messages.  Not used if method is
             IRLS.
-        start_params : array-like, optional
-            Initial guess of the solution for the loglikelihood maximization.
-            The default is family-specific and is given by the
-            ``family.starting_mu(endog)``. If start_params is given then the
-            initial mean will be calculated as ``np.dot(exog, start_params)``.
 
         Notes
         -----
