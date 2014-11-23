@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/statsmodels_fork/statsmodels")
+
 '''Tests for regressionplots, entire module is skipped
 
 '''
@@ -19,7 +22,7 @@ try:
 except:
     have_matplotlib = False
 
-pdf_output = False
+pdf_output = True
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
@@ -169,6 +172,8 @@ class TestABLinePandas(TestABLine):
 class TestAddedVariablePlot(object):
 
     def test_added_variable_poisson(self):
+
+        1/0
 
         np.random.seed(3446)
 

@@ -1353,6 +1353,46 @@ class GEEResults(base.LikelihoodModelResults):
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
 
+
+    def plot_added_variable(self, focus_exog, resid_type=None,
+                            use_glm_weights=True, fit_kwargs=None,
+                            ax=None):
+        # Docstring attached below
+
+        from statsmodels.graphics.regressionplots import plot_added_variable
+
+        fig = plot_added_variable(self, focus_exog,
+                                  resid_type=resid_type,
+                                  use_glm_weights=use_glm_weights,
+                                  fit_kwargs=fit_kwargs, ax=ax)
+
+        return fig
+
+    plot_added_variable.__doc__ = _plot_added_variable_doc % {
+        'extra_params_doc' : ''}
+
+    def plot_partial_residuals(self, focus_exog, ax=None):
+        # Docstring attached below
+
+        from statsmodels.graphics.regressionplots import plot_partial_residuals
+
+        return plot_partial_residuals(self, focus_exog, ax=ax)
+
+    plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
+        'extra_params_doc' : ''}
+
+    def plot_ceres_residuals(self, focus_exog, frac=None, cond_means=None,
+                             ax=None):
+        # Docstring attached below
+
+        from statsmodels.graphics.regressionplots import plot_ceres_residuals
+
+        return plot_ceres_residuals(self, focus_exog, frac,
+                                    cond_means=cond_means, ax=ax)
+
+    plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
+        'extra_params_doc' : ''}
+
     def conf_int(self, alpha=.05, cols=None, cov_type=None):
         """
         Returns confidence intervals for the fitted parameters.

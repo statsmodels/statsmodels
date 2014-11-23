@@ -23,13 +23,17 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.tools.tools import maybe_unwrap_results
 from statsmodels.base import model
 
+from ._regressionplots_doc import (
+    _plot_added_variable_doc,
+    _plot_partial_residuals_doc,
+    _plot_ceres_residuals_doc)
+
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
            'add_lowess', 'abline_plot', 'influence_plot',
            'plot_leverage_resid2', 'added_variable_resids',
            'partial_resids', 'ceres_resids', 'plot_added_variable',
            'plot_partial_residuals', 'plot_ceres_residuals']
-
 
 #TODO: consider moving to influence module
 def _high_leverage(results):
@@ -862,7 +866,7 @@ def plot_added_variable(results, focus_exog, resid_type=None,
 
     return fig
 
-plot_added_variable.__doc__ = model._plot_added_variable_doc % {
+plot_added_variable.__doc__ = _plot_added_variable_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
 def plot_partial_residuals(results, focus_exog, ax=None):
@@ -884,7 +888,7 @@ def plot_partial_residuals(results, focus_exog, ax=None):
 
     return fig
 
-plot_partial_residuals.__doc__ = model._plot_partial_residuals_doc % {
+plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
 def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
@@ -912,7 +916,7 @@ def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
 
     return fig
 
-plot_ceres_residuals.__doc__ = model._plot_ceres_residuals_doc % {
+plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
 def ceres_resids(results, focus_exog, frac=None, cond_means=None):
