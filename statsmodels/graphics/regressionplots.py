@@ -950,9 +950,16 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
     If `cond_means` is not provided, it is obtained by smoothing each
     column of exog (except the focus column) against the focus column.
     The values of `frac` control these lowess smooths.
+
+    Currently only supports GLM, GEE, and OLS models.
     """
 
     model = results.model
+
+    if not isinstance(model, (GLM, GEE, OLS)):
+        raise ValueError("ceres residuals not available for %s" %
+                         type(model))
+
     n = model.exog.shape[0]
     m = model.exog.shape[1] - 1
 
@@ -981,10 +988,7 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
 
     # Refit the model using the adjusted exog values
     klass = model.__class__
-    init_kwargs = {}
-    for key in model._init_keys:
-        if hasattr(model, key):
-            init_kwargs[key] = getattr(model, key)
+    init_kwargs = model._get_init_kwds()
     new_model = klass(model.endog, new_exog, **init_kwargs)
     new_result = new_model.fit()
 
@@ -992,11 +996,6 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
     presid = model.endog - new_result.fittedvalues
     if isinstance(model, (GLM, GEE)):
         presid *= model.family.link.deriv(new_result.fittedvalues)
-    elif isinstance(model, (OLS, GLS, WLS)):
-        pass # nothing to do
-    else:
-        raise ValueError("ceres residuals not available for %s" %
-                         type(model))
     if cond_means.shape[1] > 0:
         presid += np.dot(cond_means, new_result.params[m:])
 
@@ -1031,7 +1030,7 @@ def partial_resids(results, focus_exog):
 
     # The calculation follows equation (8) from Cook's paper.
     model = results.model
-    resid = model.endog - results.fittedvalues
+    resid = model.endog - results.predict()
 
     if isinstance(model, (GLM, GEE)):
         resid *= model.family.link.deriv(results.fittedvalues)
@@ -1087,9 +1086,14 @@ def added_variable_resids(results, focus_exog, resid_type=None,
     -----
     The 'focus variable' residuals are always obtained using linear
     regression.
+
+    Currently only GLM, GEE, and OLS models are supported.
     """
 
     model = results.model
+    if not isinstance(model, (GEE, GLM, OLS)):
+        raise ValueError("model type not supported for added variable residuals")
+
     exog = model.exog
     endog = model.endog
 
@@ -1115,14 +1119,7 @@ def added_variable_resids(results, focus_exog, resid_type=None,
 
     klass = model.__class__
 
-    # TODO: should we be able to assume that if something is in
-    # init_keys then it is an attribute of the model?  Currently we
-    # can have exposure in init_keys but not in the model.
-    kwargs = {}
-    for key in model._init_keys:
-        if hasattr(model, key):
-            kwargs[key] = getattr(model, key)
-
+    kwargs = model._get_init_kwds()
     new_model = klass(endog, reduced_exog, **kwargs)
     args = {"start_params": start_params}
     if fit_kwargs is not None:
@@ -1136,8 +1133,6 @@ def added_variable_resids(results, focus_exog, resid_type=None,
     except AttributeError:
         raise ValueError("'%s' residual type not available" % resid_type)
 
-    from statsmodels.genmod.generalized_linear_model import GLMResults
-    from statsmodels.genmod.generalized_estimating_equations import GEEResults
     import statsmodels.regression.linear_model as lm
 
     if isinstance(model, (GLM, GEE)) and use_glm_weights:
