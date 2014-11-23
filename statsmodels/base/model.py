@@ -37,6 +37,7 @@ _extra_param_doc = """
         False, a constant is not checked for and k_constant is set to 0.
 """
 
+
 class Model(object):
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
@@ -746,7 +747,6 @@ class Results(object):
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
         return self.model.predict(self.params, exog, *args, **kwargs)
-
 
 
 #TODO: public method?

@@ -990,7 +990,7 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
 
     # The partial residual, with respect to l(x2) (notation of Cook 1998)
     presid = model.endog - new_result.fittedvalues
-    if isinstance(model, GLM):
+    if isinstance(model, (GLM, GEE)):
         presid *= model.family.link.deriv(new_result.fittedvalues)
     elif isinstance(model, (OLS, GLS, WLS)):
         pass # nothing to do
@@ -1033,7 +1033,7 @@ def partial_resids(results, focus_exog):
     model = results.model
     resid = model.endog - results.fittedvalues
 
-    if isinstance(model, GLM):
+    if isinstance(model, (GLM, GEE)):
         resid *= model.family.link.deriv(results.fittedvalues)
     elif isinstance(model, (OLS, GLS, WLS)):
         pass # No need to do anything

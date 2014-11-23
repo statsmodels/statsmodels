@@ -46,6 +46,10 @@ from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              IterationLimitWarning)
 import warnings
 
+from statsmodels.graphics._regressionplots_doc import (
+    _plot_added_variable_doc,
+    _plot_partial_residuals_doc,
+    _plot_ceres_residuals_doc)
 
 # Workaround for block_diag, not available until scipy version
 # 0.11. When the statsmodels scipy dependency moves to version 0.11,

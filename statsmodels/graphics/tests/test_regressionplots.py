@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/statsmodels_fork/statsmodels")
-
 '''Tests for regressionplots, entire module is skipped
 
 '''
@@ -22,7 +19,7 @@ try:
 except:
     have_matplotlib = False
 
-pdf_output = True
+pdf_output = False
 
 if pdf_output:
     from matplotlib.backends.backend_pdf import PdfPages
@@ -37,8 +34,7 @@ def setup():
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    else:
-        plt.close(fig)
+    plt.close(fig)
 
 def teardown_module():
     plt.close('all')

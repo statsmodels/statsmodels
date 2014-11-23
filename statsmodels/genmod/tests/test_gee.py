@@ -1127,6 +1127,20 @@ class TestGEEMultinomialCovType(CheckConsistency):
 
         check_wrapper(rslt2)
 
+def test_plots():
+
+    np.random.seed(378)
+    exog = np.random.normal(size=100)
+    endog = np.random.normal(size=(100, 2))
+    groups = np.kron(np.arange(50), np.r_[1, 1])
+
+    model = sm.GEE(exog, endog, groups)
+    result = model.fit()
+
+    # Smoke tests
+    result.plot_added_variable(1)
+    result.plot_partial_residuals(1)
+    result.plot_ceres_residuals(1)
 
 def test_missing():
     # gh-1877
