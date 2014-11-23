@@ -169,8 +169,6 @@ class TestAddedVariablePlot(object):
 
     def test_added_variable_poisson(self):
 
-        1/0
-
         np.random.seed(3446)
 
         n = 100
