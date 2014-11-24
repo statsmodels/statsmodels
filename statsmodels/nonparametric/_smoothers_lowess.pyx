@@ -199,7 +199,6 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         if robiter < it - 1:
             resid_weights = calculate_residual_weights(y, y_fit)
 
-
     return np.array([x, y_fit]).T
 
 
@@ -338,7 +337,10 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
 
     sum_weights = np.sum(weights[left_end:right_end])
 
-    if sum_weights <= 0.0:
+    if sum_weights <= 0.0 or (np.sum(weights[left_end:right_end] != 0) == 1):
+        # 2nd condition checks if only 1 local weight is non-zero, which
+        # will give a divisor of zero in calculate_y_fit
+        # see 1960
         reg_ok = False
     else:
         weights[left_end:right_end] = weights[left_end:right_end] / sum_weights
@@ -534,7 +536,11 @@ def calculate_residual_weights(np.ndarray[DTYPE_t, ndim = 1] y,
     '''
 
     std_resid = np.abs(y - y_fit)
-    std_resid /= 6.0 * np.median(std_resid)
+    median = np.median(std_resid)
+    if median == 0:
+        std_resid[std_resid > 0] = 1
+    else:
+        std_resid /= 6.0 * median
 
     # Some trimming of outlier residuals.
     std_resid[std_resid >= 1.0] = 1.0
