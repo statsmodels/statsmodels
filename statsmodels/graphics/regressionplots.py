@@ -857,6 +857,8 @@ def plot_added_variable(results, focus_exog, resid_type=None,
 
     ax.plot(focus_exog_resid, endog_resid, 'o', alpha=0.6)
 
+    ax.set_title('Added variable plot', fontsize='large')
+
     if type(focus_exog) is str:
         xname = focus_exog
     else:
@@ -878,6 +880,8 @@ def plot_partial_residuals(results, focus_exog, ax=None):
 
     fig, ax = utils.create_mpl_ax(ax)
     ax.plot(focus_exog_vals, pr, 'o', alpha=0.6)
+
+    ax.set_title('Partial residuals plot', fontsize='large')
 
     if type(focus_exog) is str:
         xname = focus_exog
@@ -910,6 +914,8 @@ def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
 
     fig, ax = utils.create_mpl_ax(ax)
     ax.plot(focus_exog_vals, presid, 'o', alpha=0.6)
+
+    ax.set_title('CERES residuals plot', fontsize='large')
 
     ax.set_xlabel(xname, size=15)
     ax.set_ylabel("Component plus residual", size=15)

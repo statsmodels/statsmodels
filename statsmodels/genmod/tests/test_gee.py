@@ -1138,9 +1138,12 @@ def test_plots():
     result = model.fit()
 
     # Smoke tests
-    result.plot_added_variable(1)
-    result.plot_partial_residuals(1)
-    result.plot_ceres_residuals(1)
+    fig = result.plot_added_variable(1)
+    fig.close()
+    fig = result.plot_partial_residuals(1)
+    fig.close()
+    fig = result.plot_ceres_residuals(1)
+    fig.close()
 
 def test_missing():
     # gh-1877
