@@ -794,13 +794,15 @@ def test_plots():
     model = sm.GLM(exog, endog)
     result = model.fit()
 
+    import matplotlib.pyplot as plt
+
     # Smoke tests
     fig = result.plot_added_variable(1)
-    fig.close()
+    plt.close(fig)
     fig = result.plot_partial_residuals(1)
-    fig.close()
+    plt.close(fig)
     fig = result.plot_ceres_residuals(1)
-    fig.close()
+    plt.close(fig)
 
 
 if __name__=="__main__":

@@ -1137,13 +1137,15 @@ def test_plots():
     model = sm.GEE(exog, endog, groups)
     result = model.fit()
 
+    import matplotlib.pyplot as plt
+
     # Smoke tests
     fig = result.plot_added_variable(1)
-    fig.close()
+    plt.close(fig)
     fig = result.plot_partial_residuals(1)
-    fig.close()
+    plt.close(fig)
     fig = result.plot_ceres_residuals(1)
-    fig.close()
+    plt.close(fig)
 
 def test_missing():
     # gh-1877
