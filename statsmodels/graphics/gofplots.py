@@ -1,6 +1,8 @@
-from statsmodels.compat.python import lzip, string_types
 import numpy as np
 from scipy import stats
+import matplotlib.scale as mscale
+
+from statsmodels.compat.python import lzip, string_types
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.decorators import (resettable_cache,
@@ -8,6 +10,8 @@ from statsmodels.tools.decorators import (resettable_cache,
                                           cache_writable)
 
 from . import utils
+from ._probscale import ProbScale
+mscale.register_scale(ProbScale)
 
 __all__ = ['qqplot', 'qqplot_2samples', 'qqline', 'ProbPlot']
 
@@ -128,11 +132,12 @@ class ProbPlot(object):
         self.data = data
         self.a = a
         self.nobs = data.shape[0]
-        self._distargs = distargs
-        self._loc = loc
-        self._scale = scale
+        self.distargs = distargs
+        self.loc = loc
+        self.scale = scale
 
-        self._fit = fit
+        self.fit = fit
+
         if isinstance(dist, string_types):
             self._userdist = getattr(stats, dist)
         else:
@@ -143,35 +148,6 @@ class ProbPlot(object):
 
         self._dist = None
         self._cache = resettable_cache()
-
-    @property
-    def distargs(self):
-        return self._distargs
-    @distargs.setter
-    def distargs(self, value):
-        self._distargs = value
-
-    @property
-    def loc(self):
-        return self._loc
-    @loc.setter
-    def loc(self, value):
-        self._loc = value
-
-    @property
-    def scale(self):
-        return self._scale
-    @scale.setter
-    def scale(self, value):
-        self._scale = value
-
-    @property
-    def fit(self):
-        return self._fit
-    @fit.setter
-    def fit(self, value):
-        self._cache.clear()
-        self._fit = value
 
     def _get_dist(self):
         if self._userdist_is_frozen:
@@ -417,30 +393,25 @@ class ProbPlot(object):
             `ax` is connected.
 
         """
-        scaled_quantiles = self.dist.dist.ppf(self.theoretical_percentiles, *self.distargs)
-        if exceed:
-            fig, ax = _do_plot(scaled_quantiles[::-1],
-                               self.sorted_data,
-                               self.dist, ax=ax, line=line,
-                               plot_options=plot_options)
-            if xlabel is None:
-                xlabel = 'Probability of Exceedance (%)'
-
-        else:
-            fig, ax = _do_plot(scaled_quantiles,
-                               self.sorted_data,
-                               self.dist, ax=ax, line=line,
-                               plot_options=plot_options)
-            if xlabel is None:
-                xlabel = 'Non-exceedance Probability (%)'
 
         if ylabel is None:
             ylabel = "Sample Quantiles"
 
+        if exceed:
+            pcnts = self.theoretical_percentiles[::-1]
+            if xlabel is None:
+                xlabel = 'Probability of Exceedance (%)'
+        else:
+            pcnts = self.theoretical_percentiles
+            if xlabel is None:
+                xlabel = 'Non-exceedance Probability (%)'
+
+
+        fig, ax = _do_plot(pcnts * 100, self.sorted_data, self.dist, ax=ax,
+                           line=line, plot_options=plot_options)
+        ax.set_xscale('prob', dist=self.dist)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        dist = self.dist.dist #if (self.fit or self._userdist_is_frozen) else self.dist
-        _fmt_probplot_axis(ax, dist, self.nobs, distargs=self.distargs)
 
         return fig
 
@@ -719,46 +690,6 @@ def plotting_pos(nobs, a):
 
     """
     return (np.arange(1., nobs+1) - a) / (nobs - 2*a + 1)
-
-
-def _fmt_probplot_axis(ax, dist, nobs, distargs=()):
-    """
-    Formats a theoretical quantile axis to display the corresponding
-    probabilities on the quantiles' scale.
-
-    Parameteters
-    ------------
-    ax : Matplotlib AxesSubplot instance, optional
-        The axis to be formatted
-    nobs : scalar
-        Numbero of observations in the sample
-    dist : scipy.stats.distribution
-        A scipy.stats distribution sufficiently specified to impletment its
-        ppf() method.
-
-    Returns
-    -------
-    There is no return value. This operates on `ax` in place
-
-    """
-    _check_for_ppf(dist)
-
-    if nobs < 50:
-        axis_probs = np.array([1,2,5,10,20,30,40,50,60,
-                               70,80,90,95,98,99,])
-    elif nobs < 500:
-        axis_probs = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
-                               80,90,95,98,99,99.5,99.8,99.9])
-    else:
-        axis_probs = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,
-                               20,30,40,50,60,70,80,90,95,98,99,99.5,
-                               99.8,99.9,99.95,99.98,99.99])
-
-    axis_qntls = dist.ppf(axis_probs/100.0, *distargs)
-    ax.set_xticks(axis_qntls)
-    ax.set_xticklabels(axis_probs, rotation=45, horizontalalignment='right',
-                       verticalalignment='center', rotation_mode='anchor')
-    ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
 
 
 def _do_plot(x, y, dist=None, line=None, ax=None, plot_options={}):

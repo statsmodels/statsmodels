@@ -120,13 +120,14 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.prbplt = sm.ProbPlot(
-            self.mod_fit.resid, 
-            dist=stats.t, 
-            distargs=(4,), 
+            self.mod_fit.resid,
+            dist=stats.t,
+            distargs=(4,),
             fit=False
         )
         self.line = 'r'
         self.base_setup()
+
 
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
     def setup(self):
@@ -135,9 +136,9 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.prbplt = sm.ProbPlot(
-            self.mod_fit.resid, 
-            dist=stats.t, 
-            distargs=(4,), 
+            self.mod_fit.resid,
+            dist=stats.t,
+            distargs=(4,),
             fit=True
         )
         self.line = 'r'
