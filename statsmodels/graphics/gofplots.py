@@ -34,7 +34,7 @@ class ProbPlot(object):
         so dist.ppf may be called.
     loc : float
         Location parameter for dist
-    a : float
+    a, b : optional float (default = 0)
         Offset for the plotting position of an expected order
         statistic, for example. The plotting positions are given
         by (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1)
@@ -126,7 +126,7 @@ class ProbPlot(object):
     .. plot:: plots/graphics_gofplots_qqplot.py
     """
 
-    def __init__(self, data, dist=stats.norm, fit=False, a=0,
+    def __init__(self, data, dist=stats.norm, fit=False, a=0, b=0,
                  loc=0, scale=1, distargs=()):
 
         self.data = data
@@ -159,6 +159,8 @@ class ProbPlot(object):
                 dist = self._userdist(
                     *self.distargs, loc=self.loc, scale=self.scale
                 )
+
+        _check_dist(dist)
 
         return dist
 
@@ -592,7 +594,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
     return fig
 
 
-def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
+def qqline(ax, line, x=None, y=None, dist=None, fmt='r-', **lineoptions):
     """
     Plot a reference line for a qqplot.
 
@@ -627,42 +629,51 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     There is no return value. The line is plotted on the given `ax`.
 
     """
+
+    valid_lines = ['45', 'q', 'r', 's']
+    if line not in valid_lines:
+        raise ValueError('`line` must be one of {0}'.format(valid_lines))
+
     if line == '45':
         end_pts = lzip(ax.get_xlim(), ax.get_ylim())
         end_pts[0] = min(end_pts[0])
         end_pts[1] = max(end_pts[1])
-        lineartist, = ax.plot(end_pts, end_pts, fmt)
+        lineartist, = ax.plot(end_pts, end_pts, fmt, **lineoptions)
         ax.set_xlim(end_pts)
         ax.set_ylim(end_pts)
 
-    if x is None and y is None:
-        raise ValueError("If line is not 45, x and y cannot be None.")
+    else:
+        if x is None or y is None:
+            raise ValueError("If line is not 45, x and y cannot be None.")
+        else:
+            x = np.array(x)
+            y = np.array(y)
 
-    elif line == 'r':
-        # could use ax.lines[0].get_xdata(), get_ydata(),
-        # but don't know axes are 'clean'
-        y = OLS(y, add_constant(x)).fit().fittedvalues
-        lineartist, = ax.plot(x, y, fmt)
+        if line == 'r':
+            # could use ax.lines[0].get_xdata(), get_ydata(),
+            # but don't know axes are 'clean'
+            y = OLS(y, add_constant(x)).fit().fittedvalues
+            lineartist, = ax.plot(x, y, fmt, **lineoptions)
 
-    elif line == 's':
-        m,b = y.std(), y.mean()
-        ref_line = x*m + b
-        lineartist, = ax.plot(x, ref_line, fmt)
+        elif line == 's':
+            m, b = np.std(y), np.mean(y)
+            ref_line = x*m + b
+            lineartist, = ax.plot(x, ref_line, fmt, **lineoptions)
 
-    elif line == 'q':
-        _check_for_ppf(dist)
-        q25 = stats.scoreatpercentile(y, 25)
-        q75 = stats.scoreatpercentile(y, 75)
-        theoretical_quartiles = dist.ppf([0.25, 0.75])
-        m = (q75 - q25) / np.diff(theoretical_quartiles)
-        b = q25 - m*theoretical_quartiles[0]
-        lineartist, = ax.plot(x, m*x + b, fmt)
+        elif line == 'q':
+            _check_dist(dist)
+            q25 = stats.scoreatpercentile(y, 25)
+            q75 = stats.scoreatpercentile(y, 75)
+            theoretical_quartiles = dist.ppf([0.25, 0.75])
+            m = (q75 - q25) / np.diff(theoretical_quartiles)
+            b = q25 - m*theoretical_quartiles[0]
+            lineartist, = ax.plot(x, m*x + b, fmt, **lineoptions)
 
     return lineartist
 
 
 #about 10x faster than plotting_position in sandbox and mstats
-def plotting_pos(nobs, a):
+def plotting_pos(nobs, a=0, b=0):
     """
     Generates sequence of plotting positions
 
@@ -670,9 +681,9 @@ def plotting_pos(nobs, a):
     ----------
     nobs : int
         Number of probability points to plot
-    a : float
-        Offset for the plotting position of an expected order statistic, for
-        example.
+    a, b : optional float (defaults are 0)
+        alpha and beta parameters for the plotting position of an expected
+        order statistic, for example.
 
     Returns
     -------
@@ -681,18 +692,20 @@ def plotting_pos(nobs, a):
 
     Notes
     -----
-    The plotting positions are given by (i - a)/(nobs - 2*a + 1) for i in
-    range(0, nobs+1)
+    The plotting positions are given by (i - a)/(nobs + 1 - a - b) for i in
+    range(1, nobs+1)
 
     See also
     --------
-    scipy.stats.mstats.plotting_positions
+    scipy.stats.mstats.plotting_positions for more info on alpha and beta
 
     """
-    return (np.arange(1., nobs+1) - a) / (nobs - 2*a + 1)
+    #mstats:(i-alpha)/(n+1-alpha-beta)
+    return (np.arange(1., nobs+1) - a) / (nobs + 1 - a - b)
 
 
-def _do_plot(x, y, dist=None, line=None, ax=None, plot_options={}):
+def _do_plot(x, y, dist=None, line=None, ax=None, step=False,
+             plot_options={}):
     """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and
     `probplot` methods of the `ProbPlot` class
@@ -726,11 +739,15 @@ def _do_plot(x, y, dist=None, line=None, ax=None, plot_options={}):
     }
 
     plot_style.update(**plot_options)
+    where = plot_style.pop('where', 'pre')
 
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
 
-    ax.plot(x, y, **plot_style)
+    if step:
+        ax.step(x, y, where=where, **plot_style)
+    else:
+        ax.plot(x, y, **plot_style)
     if line is not None:
         if line not in ['r', 'q', '45', 's']:
             msg = "'%s' option for line not understood" % line
@@ -741,6 +758,6 @@ def _do_plot(x, y, dist=None, line=None, ax=None, plot_options={}):
     return fig, ax
 
 
-def _check_for_ppf(dist):
-    if not hasattr(dist, 'ppf'):
-        raise ValueError("distribution must have a ppf method")
+def _check_dist(dist):
+    if not hasattr(dist, 'ppf') or not hasattr(dist, 'cdf'):
+        raise ValueError("distribution must have ppf and cdf methods")

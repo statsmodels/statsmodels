@@ -86,7 +86,6 @@ def _sig_figs(val, nsf, expthresh=5):
         else:
             out = str(round(val, nsf))
 
-
     return out
 
 
