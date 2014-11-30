@@ -2018,6 +2018,11 @@ class MixedLMResults(base.LikelihoodModelResults):
         An array with two columns.  The first column contains the
         values to which the parameter of interest is constrained.  The
         second column contains the corresponding likelihood values.
+
+        Notes
+        -----
+        Only variance parameters can be profiled.  `re_ix` is the index
+        of the random effect that is profiled.
         """
 
         model = self.model
@@ -2036,18 +2041,24 @@ class MixedLMResults(base.LikelihoodModelResults):
         # Permute the covariance structure to match the permuted
         # design matrix.
         params = self.params_object.copy()
-        cov_re = params.get_cov_re()
-        cov_re = cov_re[np.ix_(ix, ix)]
-        params.set_cov_re(cov_re)
+        cov_re_unscaled = params.get_cov_re()
+        cov_re_unscaled = cov_re_unscaled[np.ix_(ix, ix)]
+        params.set_cov_re(cov_re_unscaled)
+
+        # Convert dist_low and dist_high to the profile
+        # parameterization
+        cov_re = self.scale * cov_re_unscaled
+        low = (cov_re[0, 0] - dist_low) / self.scale
+        high = (cov_re[0, 0] + dist_high) / self.scale
 
         # Define the sequence of values to which the parameter of
         # interest will be constrained.
-        ru0 = cov_re[0, 0]
-        if dist_low > ru0:
+        ru0 = cov_re_unscaled[0, 0]
+        if low <= 0:
             raise ValueError("dist_low is too large and would result in a "
-                             "negative number. Try a smaller value.")
-        left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
-        right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
+                             "negative variance. Try a smaller value.")
+        left = np.linspace(low, ru0, num_low + 1)
+        right = np.linspace(ru0, high, num_high+1)[1:]
         rvalues = np.concatenate((left, right))
 
         # Indicators of which parameters are free and fixed.
@@ -2069,6 +2080,21 @@ class MixedLMResults(base.LikelihoodModelResults):
         for x in rvalues:
             cov_re = params.get_cov_re()
             cov_re[0, 0] = x
+
+            # Shrink the covariance parameters until a PSD covariance matrix is obtained.
+            dg = np.diag(cov_re)
+            success = False
+            for ks in range(50):
+                try:
+                    np.linalg.cholesky(cov_re)
+                    success = True
+                    break
+                except np.linalg.LinAlgError:
+                    cov_re /= 2
+                    np.fill_diagonal(cov_re, dg)
+            if not success:
+                raise ValueError("unable to find PSD covariance matrix along likelihood profile")
+
             params.set_cov_re(cov_re)
             rslt = model.fit(start_params=params, free=free,
                              reml=self.reml, cov_pen=self.cov_pen)._results
