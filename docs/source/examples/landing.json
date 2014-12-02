@@ -27,6 +27,11 @@
           "text": "Weighted Least Squares",
           "target": "notebooks/generated/wls.html",
           "img": "../_static/images/wls.png"
+        },
+        {
+          "text": "Linear Mixed-Effects",
+          "target": "notebooks/generated/mixed_lm_example.html",
+          "img": "../_static/images/mixed_lm.png"
         }
         ]
   },
