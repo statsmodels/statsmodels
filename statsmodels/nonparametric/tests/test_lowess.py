@@ -9,6 +9,7 @@ The delta tests utilize Silverman's motorcycle collision data,
 available in R's MASS package.
 '''
 
+from functools import partial
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_raises,
@@ -19,11 +20,12 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 # Number of decimals to test equality with.
 # The default is 7.
 testdec = 7
+assert_equal_at_testdec = partial(assert_almost_equal, decimal=testdec)
 curdir = os.path.dirname(os.path.abspath(__file__))
 rpath = os.path.join(curdir, 'results')
 
 
-class  TestLowess(object):
+class TestLowess(object):
 
     def test_import(self):
         #this doesn't work
@@ -32,65 +34,50 @@ class  TestLowess(object):
         lowess1 = sm.nonparametric.lowess
         assert_(lowess is lowess1)
 
-
-    def test_simple(self):
-        rfile = os.path.join(rpath, 'test_lowess_simple.csv')
-        test_data = np.genfromtxt(open(rfile, 'rb'),
-                                  delimiter = ',', names = True)
+    def test_flat(self):
+        test_data = {
+            'x': np.arange(20), 'y': np.zeros(20), 'out': np.zeros(20)}
         expected_lowess = np.array([test_data['x'], test_data['out']]).T
-
         actual_lowess = lowess(test_data['y'], test_data['x'])
+        assert_equal_at_testdec(expected_lowess, actual_lowess)
 
-        assert_almost_equal(expected_lowess, actual_lowess, decimal = testdec)
+    def test_range(self):
+        test_data = {
+            'x': np.arange(20), 'y': np.arange(20), 'out': np.arange(20)}
+        expected_lowess = np.array([test_data['x'], test_data['out']]).T
+        actual_lowess = lowess(test_data['y'], test_data['x'])
+        assert_equal_at_testdec(expected_lowess, actual_lowess)
 
+    def test_all(self):
+        def generate(name, fname,
+                     x='x', y='y', out='out', kwargs={}, decimal=7):
+            data = np.genfromtxt(
+                os.path.join(rpath, fname), delimiter=',', names=True)
+            assert_equal_at_testdec = partial(
+                assert_almost_equal, decimal=decimal)
+            assert_equal_at_testdec.description = name
+            if callable(kwargs):
+                kwargs = kwargs(data)
+            result = lowess(data[y], data[x], **kwargs)
+            expect = np.array([data[x], data[out]]).T
+            return assert_equal_at_testdec, result, expect
 
-    def test_iter(self):
-        rfile = os.path.join(rpath, 'test_lowess_iter.csv')
-        test_data = np.genfromtxt(open(rfile, 'rb'),
-                                  delimiter = ',', names = True)
-
-        expected_lowess_no_iter = np.array([test_data['x'], test_data['out_0']]).T
-        expected_lowess_3_iter = np.array([test_data['x'], test_data['out_3']]).T
-
-        actual_lowess_no_iter = lowess(test_data['y'], test_data['x'], it = 0)
-        actual_lowess_3_iter = lowess(test_data['y'], test_data['x'], it = 3)
-
-        assert_almost_equal(expected_lowess_no_iter, actual_lowess_no_iter, decimal = testdec)
-        assert_almost_equal(expected_lowess_3_iter, actual_lowess_3_iter, decimal = testdec)
-
-
-    def test_frac(self):
-        rfile = os.path.join(rpath, 'test_lowess_frac.csv')
-        test_data = np.genfromtxt(open(rfile, 'rb'),
-                                  delimiter = ',', names = True)
-
-        expected_lowess_23 = np.array([test_data['x'], test_data['out_2_3']]).T
-        expected_lowess_15 = np.array([test_data['x'], test_data['out_1_5']]).T
-
-        actual_lowess_23 = lowess(test_data['y'], test_data['x'] ,frac = 2./3)
-        actual_lowess_15 = lowess(test_data['y'], test_data['x'] ,frac = 1./5)
-
-        assert_almost_equal(expected_lowess_23, actual_lowess_23, decimal = testdec-1)
-        assert_almost_equal(expected_lowess_15, actual_lowess_15, decimal = testdec)
-
-
-    def test_delta(self):
-        rfile = os.path.join(rpath, 'test_lowess_delta.csv')
-        test_data = np.genfromtxt(open(rfile, 'rb'),
-                                  delimiter = ',', names = True)
-
-        expected_lowess_del0 = np.array([test_data['x'], test_data['out_0']]).T
-        expected_lowess_delRdef = np.array([test_data['x'], test_data['out_Rdef']]).T
-        expected_lowess_del1 = np.array([test_data['x'], test_data['out_1']]).T
-
-        actual_lowess_del0    = lowess(test_data['y'], test_data['x'], frac=0.1)
-        actual_lowess_delRdef = lowess(test_data['y'], test_data['x'], frac=0.1,
-                       delta = 0.01 * np.ptp(test_data['x']))
-        actual_lowess_del1    = lowess(test_data['y'], test_data['x'], frac = 0.1, delta = 1.0 + 1e-10)
-
-        assert_almost_equal(expected_lowess_del0, actual_lowess_del0, decimal = testdec)
-        assert_almost_equal(expected_lowess_delRdef, actual_lowess_delRdef, decimal = testdec)
-        assert_almost_equal(expected_lowess_del1, actual_lowess_del1, decimal = 10) #testdec)
+        yield generate('test_simple', 'test_lowess_simple.csv')
+        yield generate('test_iter_0', 'test_lowess_iter.csv', out='out_0',
+                       kwargs={'it': 0})
+        yield generate('test_iter_0', 'test_lowess_iter.csv', out='out_3',
+                       kwargs={'it': 3})
+        yield generate('test_frac_2_3', 'test_lowess_frac.csv', out='out_2_3',
+                       kwargs={'frac': 2. / 3})
+        yield generate('test_frac_1_5', 'test_lowess_frac.csv', out='out_1_5',
+                       kwargs={'frac': 1. / 5})
+        yield generate('test_delta_0', 'test_lowess_delta.csv', out='out_0',
+                       kwargs={'frac': 0.1})
+        yield generate('test_delta_Rdef', 'test_lowess_delta.csv', out='out_Rdef',
+                       kwargs=lambda data: {'frac': .1,
+                                            'delta': .01 * data['x'].ptp()})
+        yield generate('test_delta_1', 'test_lowess_delta.csv', out='out_1',
+                       kwargs={'frac': 0.1, 'delta': 1 + 1e-10}, decimal=10)
 
     def test_options(self):
         rfile = os.path.join(rpath, 'test_lowess_simple.csv')
@@ -156,8 +143,13 @@ class  TestLowess(object):
         assert_almost_equal(yhat, actual_lowess2[:,1], decimal=13)
 
 
+def test_returns_inputs():
+    # see 1960
+    y = [0] * 10 + [1] * 10
+    x = np.arange(20)
+    result = lowess(y, x, frac=.4)
+    assert_almost_equal(result, np.column_stack((x, y)))
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    nose.runmodule()
