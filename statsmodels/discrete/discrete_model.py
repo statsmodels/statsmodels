@@ -707,27 +707,23 @@ class MultinomialModel(BinaryModel):
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none',
                  **kwargs):
-        self._check_inputs(offset, exposure, endog) # attaches if needed
         super(CountModel, self).__init__(endog, exog, missing=missing,
-                offset=self.offset, exposure=self.exposure, **kwargs)
+                                         offset=offset,
+                                         exposure=exposure, **kwargs)
+        if exposure is not None:
+            self.exposure = np.log(self.exposure)
+        self._check_inputs(self.offset, self.exposure, self.endog)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
             delattr(self, 'exposure')
 
     def _check_inputs(self, offset, exposure, endog):
-        if offset is not None:
-            offset = np.asarray(offset)
-            if offset.shape[0] != endog.shape[0]:
-                raise ValueError("offset is not the same length as endog")
-        self.offset = offset
+        if offset is not None and offset.shape[0] != endog.shape[0]:
+            raise ValueError("offset is not the same length as endog")
 
-        if exposure is not None:
-            exposure = np.log(exposure)
-            if exposure.shape[0] != endog.shape[0]:
-                raise ValueError("exposure is not the same length as endog")
-        self.exposure = exposure
-
+        if exposure is not None and exposure.shape[0] != endog.shape[0]:
+            raise ValueError("exposure is not the same length as endog")
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
@@ -736,7 +732,6 @@ class CountModel(DiscreteModel):
         if 'exposure' in kwds and kwds['exposure'] is not None:
             kwds['exposure'] = np.exp(kwds['exposure'])
         return kwds
-
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
