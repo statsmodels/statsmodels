@@ -488,6 +488,8 @@ class MixedLM(base.LikelihoodModel):
                                       exog_re=exog_re, missing=missing,
                                       **kwargs)
 
+        self._init_keys.extend(["use_sqrt"])
+
         self.k_fe = exog.shape[1] # Number of fixed effects parameters
 
         if exog_re is None:
@@ -2018,36 +2020,46 @@ class MixedLMResults(base.LikelihoodModelResults):
         An array with two columns.  The first column contains the
         values to which the parameter of interest is constrained.  The
         second column contains the corresponding likelihood values.
+
+        Notes
+        -----
+        Only variance parameters can be profiled.  `re_ix` is the index
+        of the random effect that is profiled.
         """
 
-        model = self.model
-        k_fe = model.exog.shape[1]
-        k_re = model.exog_re.shape[1]
+        pmodel = self.model
+        k_fe = pmodel.exog.shape[1]
+        k_re = pmodel.exog_re.shape[1]
+        endog, exog, groups = pmodel.endog, pmodel.exog, pmodel.groups
 
         # Need to permute the columns of the random effects design
         # matrix so that the profiled variable is in the first column.
-        exog_re_li_save = [x.copy() for x in model.exog_re_li]
         ix = np.arange(k_re)
         ix[0] = re_ix
         ix[re_ix] = 0
-        for k in range(self.model.n_groups):
-            model.exog_re_li[k] = model.exog_re_li[k][:, ix]
+        exog_re = pmodel.exog_re.copy()[:, ix]
 
         # Permute the covariance structure to match the permuted
         # design matrix.
         params = self.params_object.copy()
-        cov_re = params.get_cov_re()
-        cov_re = cov_re[np.ix_(ix, ix)]
-        params.set_cov_re(cov_re)
+        cov_re_unscaled = params.get_cov_re()
+        cov_re_unscaled = cov_re_unscaled[np.ix_(ix, ix)]
+        params.set_cov_re(cov_re_unscaled)
+
+        # Convert dist_low and dist_high to the profile
+        # parameterization
+        cov_re = self.scale * cov_re_unscaled
+        low = (cov_re[0, 0] - dist_low) / self.scale
+        high = (cov_re[0, 0] + dist_high) / self.scale
 
         # Define the sequence of values to which the parameter of
         # interest will be constrained.
-        ru0 = cov_re[0, 0]
-        if dist_low > ru0:
+        ru0 = cov_re_unscaled[0, 0]
+        if low <= 0:
             raise ValueError("dist_low is too large and would result in a "
-                             "negative number. Try a smaller value.")
-        left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
-        right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
+                             "negative variance. Try a smaller value.")
+        left = np.linspace(low, ru0, num_low + 1)
+        right = np.linspace(ru0, high, num_high+1)[1:]
         rvalues = np.concatenate((left, right))
 
         # Indicators of which parameters are free and fixed.
@@ -2065,18 +2077,40 @@ class MixedLMResults(base.LikelihoodModelResults):
         else:
             free.set_cov_re(cov_re=mat)
 
+        klass = self.model.__class__
+        init_kwargs = pmodel._get_init_kwds()
+        init_kwargs['exog_re'] = exog_re
+
         likev = []
         for x in rvalues:
+
+            model = klass(endog, exog, **init_kwargs)
+
             cov_re = params.get_cov_re()
             cov_re[0, 0] = x
+
+            # Shrink the covariance parameters until a PSD covariance
+            # matrix is obtained.
+            dg = np.diag(cov_re)
+            success = False
+            for ks in range(50):
+                try:
+                    np.linalg.cholesky(cov_re)
+                    success = True
+                    break
+                except np.linalg.LinAlgError:
+                    cov_re /= 2
+                    np.fill_diagonal(cov_re, dg)
+            if not success:
+                raise ValueError("unable to find PSD covariance matrix along likelihood profile")
+
             params.set_cov_re(cov_re)
+            # TODO should use fit_kwargs
             rslt = model.fit(start_params=params, free=free,
                              reml=self.reml, cov_pen=self.cov_pen)._results
             likev.append([rslt.cov_re[0, 0], rslt.llf])
-        likev = np.asarray(likev)
 
-        # Restore the original exog
-        model.exog_re_li = exog_re_li_save
+        likev = np.asarray(likev)
 
         return likev
 
