@@ -26,5 +26,8 @@ from statsmodels.regression.quantile_regression import QuantReg
 quantreg = QuantReg.from_formula
 from statsmodels.duration.hazard_regression import PHReg
 phreg = PHReg.from_formula
-from statsmodels.genmod.generalized_estimating_equations import GEE
+from statsmodels.genmod.generalized_estimating_equations import (GEE,
+     OrdinalGEE, NominalGEE)
 gee = GEE.from_formula
+ordinal_gee = OrdinalGEE.from_formula
+nominal_gee = NominalGEE.from_formula
