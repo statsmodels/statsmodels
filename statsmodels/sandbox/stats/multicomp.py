@@ -1346,7 +1346,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
     if (ng > 2):
         w = ((ng-1.) * sum2 - sum1) / ((ng - 1.) * (ng - 2.))
     else:
-        w = sum1 * ones(2, 1) / 2.
+        w = sum1 * np.ones(2, 1) / 2.
 
     return (q_crit / np.sqrt(2))*w
 
