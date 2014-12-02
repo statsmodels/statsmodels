@@ -4,6 +4,13 @@
 0.6 Release
 ===========
 
+Release 0.6.1
+=============
+
+Statsmodels 0.6.1 is a bugfix release. All users are encouraged to upgrade to 0.6.1. 
+
+See the :ref:`list of fixed issues <issues_list_06>` for specific backported fixes.
+
 Release 0.6.0
 =============
 

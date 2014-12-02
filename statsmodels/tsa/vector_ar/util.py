@@ -12,7 +12,7 @@ from scipy.linalg import cholesky
 
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
-def get_var_endog(y, lags, trend='c'):
+def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
     Make predictor matrix for VAR(p) process
 
@@ -20,6 +20,8 @@ def get_var_endog(y, lags, trend='c'):
     Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
 
     Ref: Lutkepohl p.70 (transposed)
+
+    has_constant can be 'raise', 'add', or 'skip'. See add_constant.
     """
     nobs = len(y)
     # Ravel C order, need to put in descending order
@@ -27,7 +29,8 @@ def get_var_endog(y, lags, trend='c'):
 
     # Add constant, trend, etc.
     if trend != 'nc':
-        Z = tsa.add_trend(Z, prepend=True, trend=trend)
+        Z = tsa.add_trend(Z, prepend=True, trend=trend,
+                          has_constant=has_constant)
 
     return Z
 

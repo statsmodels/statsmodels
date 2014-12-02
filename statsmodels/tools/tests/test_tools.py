@@ -30,13 +30,23 @@ class TestTools(TestCase):
 
     def test_add_constant_has_constant1d(self):
         x = np.ones(5)
-        x = tools.add_constant(x)
+        x = tools.add_constant(x, has_constant='skip')
         assert_equal(x, np.ones(5))
 
+        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
+
+        assert_equal(tools.add_constant(x, has_constant='add'),
+                     np.ones((5, 2)))
+
     def test_add_constant_has_constant2d(self):
-        x = np.asarray([[1,1,1,1],[1,2,3,4.]])
-        y = tools.add_constant(x)
-        assert_equal(x,y)
+        x = np.asarray([[1,1,1,1],[1,2,3,4.]]).T
+        y = tools.add_constant(x, has_constant='skip')
+        assert_equal(x, y)
+
+        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
+
+        assert_equal(tools.add_constant(x, has_constant='add'),
+                     np.column_stack((np.ones(4), x)))
 
     def test_recipr(self):
         X = np.array([[2,1],[-1,0]])
