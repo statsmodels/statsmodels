@@ -43,7 +43,7 @@ def test_full_output_false():
         else:
             xopts, retvals = func(dummy_func, dummy_score, [1], (), {},
                 full_output=False, disp=0)
-        assert_(xopts == None)
+        assert_(xopts is None)
         if method == "powell":
             #NOTE: I think I reported this? Might be version/optimize API
             # dependent
