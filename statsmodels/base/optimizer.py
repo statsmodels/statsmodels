@@ -183,12 +183,6 @@ class Optimizer(object):
                             retall=retall, full_output=full_output,
                             hess=hessian)
 
-        # this is stupid TODO: just change this to something sane
-        # no reason to copy scipy here
-        if not full_output: # xopt should be None and retvals is argmin
-            xopt = retvals
-            retvals = None
-
         optim_settings = {'optimizer': method, 'start_params': start_params,
                         'maxiter': maxiter, 'full_output': full_output,
                         'disp': disp, 'fargs': fargs, 'callback': callback,
@@ -381,20 +375,17 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
                                          bounds=bounds, disp=disp,
                                          **extra_kwargs)
 
-    if full_output:
-        xopt, fopt, d = retvals
-        # The warnflag is
-        # 0 if converged
-        # 1 if too many function evaluations or too many iterations
-        # 2 if stopped for another reason, given in d['task']
-        warnflag = d['warnflag']
-        converged = (warnflag == 0)
-        gopt = d['grad']
-        fcalls = d['funcalls']
-        retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
-                   'warnflag': warnflag, 'converged': converged}
-    else:
-        xopt = None
+    xopt, fopt, d = retvals
+    # The warnflag is
+    # 0 if converged
+    # 1 if too many function evaluations or too many iterations
+    # 2 if stopped for another reason, given in d['task']
+    warnflag = d['warnflag']
+    converged = (warnflag == 0)
+    gopt = d['grad']
+    fcalls = d['funcalls']
+    retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
+               'warnflag': warnflag, 'converged': converged}
 
     return xopt, retvals
 
