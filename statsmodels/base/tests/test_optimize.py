@@ -12,8 +12,13 @@ fit_funcs = {
     'ncg': _fit_ncg,
     'powell': _fit_powell,
     'lbfgs': _fit_lbfgs,
-    'basinhopping': _fit_basinhopping,
             }
+
+try:
+    from scipy.optimize import basinhopping
+    fit_funcs.update({'basinhopping': _fit_basinhopping})
+except ImportError:
+    pass
 
 
 def dummy_func(x):
