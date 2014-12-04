@@ -426,9 +426,7 @@ class LikelihoodModel(Model):
 
         #NOTE: this is for fit_regularized and should be generalized
         cov_params_func = kwargs.setdefault('cov_params_func', None)
-        if not full_output: # xopt should be None and retvals is argmin
-            xopt = retvals
-        elif cov_params_func:
+        if cov_params_func:
             Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
