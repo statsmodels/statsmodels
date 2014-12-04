@@ -1,7 +1,8 @@
 from numpy.testing import assert_
 from statsmodels.base.optimizer import (_fit_newton, _fit_nm,
                                         _fit_bfgs, _fit_cg,
-                                        _fit_ncg, _fit_powell)
+                                        _fit_ncg, _fit_powell,
+                                        _fit_lbfgs, _fit_basinhopping)
 
 fit_funcs = {
     'newton': _fit_newton,
@@ -9,7 +10,9 @@ fit_funcs = {
     'bfgs': _fit_bfgs,
     'cg': _fit_cg,
     'ncg': _fit_ncg,
-    'powell': _fit_powell
+    'powell': _fit_powell,
+    'lbfgs': _fit_lbfgs,
+    'basinhopping': _fit_basinhopping,
             }
 
 
