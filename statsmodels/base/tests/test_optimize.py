@@ -50,3 +50,26 @@ def test_full_output_false():
             assert_(xopt.shape == () and xopt.size == 1)
         else:
             assert_(len(xopt) == 1)
+
+
+def test_full_output():
+    for method in fit_funcs:
+        func = fit_funcs[method]
+        if method == "newton":
+            xopt, retvals = func(dummy_func, dummy_score, [1], (), {},
+                                 hess=dummy_hess, full_output=True, disp=0)
+
+        else:
+            xopt, retvals = func(dummy_func, dummy_score, [1], (), {},
+                                 full_output=True, disp=0)
+
+        assert_(retvals is not None)
+        assert_('converged' in retvals)
+
+        if method == "powell":
+            #NOTE: I think I reported this? Might be version/optimize API
+            # dependent
+            assert_(xopt.shape == () and xopt.size == 1)
+        else:
+            assert_(len(xopt) == 1)
+
