@@ -37,16 +37,16 @@ def test_full_output_false():
     for method in fit_funcs:
         func = fit_funcs[method]
         if method == "newton":
-            xopts, retvals = func(dummy_func, dummy_score, [1], (), {},
+            xopt, retvals = func(dummy_func, dummy_score, [1], (), {},
                     hess=dummy_hess, full_output=False, disp=0)
 
         else:
-            xopts, retvals = func(dummy_func, dummy_score, [1], (), {},
+            xopt, retvals = func(dummy_func, dummy_score, [1], (), {},
                 full_output=False, disp=0)
-        assert_(xopts is None)
+        assert_(retvals is None)
         if method == "powell":
             #NOTE: I think I reported this? Might be version/optimize API
             # dependent
-            assert_(retvals.shape == () and retvals.size == 1)
+            assert_(xopt.shape == () and xopt.size == 1)
         else:
-            assert_(len(retvals)==1)
+            assert_(len(xopt) == 1)

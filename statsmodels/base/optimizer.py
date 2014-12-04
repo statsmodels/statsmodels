@@ -268,8 +268,8 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
             retvals.update({'allvecs': history})
 
     else:
-        retvals = newparams
-        xopt = None
+        xopt = newparams
+        retvals = None
 
     return xopt, retvals
 
@@ -297,7 +297,8 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
         if retall:
             retvals.update({'allvecs': allvecs})
     else:
-        xopt = None
+        xopt = retvals
+        retvals = None
 
     return xopt, retvals
 
@@ -375,17 +376,21 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
                                          bounds=bounds, disp=disp,
                                          **extra_kwargs)
 
-    xopt, fopt, d = retvals
-    # The warnflag is
-    # 0 if converged
-    # 1 if too many function evaluations or too many iterations
-    # 2 if stopped for another reason, given in d['task']
-    warnflag = d['warnflag']
-    converged = (warnflag == 0)
-    gopt = d['grad']
-    fcalls = d['funcalls']
-    retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
-               'warnflag': warnflag, 'converged': converged}
+    if full_output:
+        xopt, fopt, d = retvals
+        # The warnflag is
+        # 0 if converged
+        # 1 if too many function evaluations or too many iterations
+        # 2 if stopped for another reason, given in d['task']
+        warnflag = d['warnflag']
+        converged = (warnflag == 0)
+        gopt = d['grad']
+        fcalls = d['funcalls']
+        retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
+                   'warnflag': warnflag, 'converged': converged}
+    else:
+        xopt = retvals[0]
+        retvals = None
 
     return xopt, retvals
 
@@ -412,7 +417,8 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
         if retall:
             retvals.update({'allvecs': allvecs})
     else:
-        xopt = None
+        xopt = retvals
+        retvals = None
 
     return xopt, retvals
 
@@ -439,7 +445,8 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
             retvals.update({'allvecs': allvecs})
 
     else:
-        xopt = None
+        xopt = retvals
+        retvals = None
 
     return xopt, retvals
 
@@ -468,7 +475,8 @@ def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
         if retall:
             retvals.update({'allvecs': allvecs})
     else:
-        xopt = None
+        xopt = retvals
+        retvals = None
 
     return xopt, retvals
 
@@ -498,7 +506,8 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
         if retall:
             retvals.update({'allvecs': allvecs})
     else:
-        xopt = None
+        xopt = retvals
+        retvals = None
 
     return xopt, retvals
 
@@ -524,18 +533,20 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
     if method and method != 'L-BFGS-B': # l_bfgs_b doesn't take a hessian
         minimizer_kwargs['hess'] = hess
 
-    res = optimize.basinhopping(f, start_params,
-                                minimizer_kwargs=minimizer_kwargs,
-                                niter=niter, niter_success=niter_success,
-                                T=T, stepsize=stepsize, disp=disp,
-                                callback=callback, interval=interval)
+    retvals = optimize.basinhopping(f, start_params,
+                                    minimizer_kwargs=minimizer_kwargs,
+                                    niter=niter, niter_success=niter_success,
+                                    T=T, stepsize=stepsize, disp=disp,
+                                    callback=callback, interval=interval)
     if full_output:
-        xopt, fopt, niter, fcalls = res.x, res.fun, res.nit, res.nfev
-        converged = 'completed successfully' in res.message[0]
+        xopt, fopt, niter, fcalls = map(lambda x : getattr(retvals, x),
+                                        ['x', 'fun', 'nit', 'nfev'])
+        converged = 'completed successfully' in retvals.message[0]
         retvals = {'fopt': fopt, 'iterations': niter,
                    'fcalls': fcalls, 'converged': converged}
 
     else:
-        xopt = None
+        xopt = retvals.x
+        retvals = None
 
     return xopt, retvals
