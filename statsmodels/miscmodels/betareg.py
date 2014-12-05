@@ -21,7 +21,8 @@ import patsy
 
 from scipy.special import gammaln as lgamma
 
-from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.base.model import (GenericLikelihoodModel,
+                                    GenericLikelihoodModelResults)
 from statsmodels.genmod.families import Binomial
 
 Logit = sm.families.links.logit
@@ -406,9 +407,15 @@ class Beta(GenericLikelihoodModel):
 #           # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
 #           # on page 8
 
+        self.results_class = BetaRegressionResults
         return super(Beta, self).fit(start_params=start_params,
                                         maxiter=maxiter, maxfun=maxfun,
                                         method=method, disp=disp, **kwds)
+
+
+class BetaRegressionResults(GenericLikelihoodModelResults):
+    pass
+
 
 if __name__ == "__main__":
 

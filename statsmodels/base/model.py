@@ -734,7 +734,10 @@ class GenericLikelihoodModel(LikelihoodModel):
                             method=method, maxiter=maxiter,
                             full_output=full_output,
                             disp=disp, callback=callback, **kwargs)
-        genericmlefit = GenericLikelihoodModelResults(self, mlefit)
+
+        results_class = getattr(self, 'results_class',
+                                GenericLikelihoodModelResults)
+        genericmlefit = results_class(self, mlefit)
 
         #amend param names
         exog_names = [] if (self.exog_names is None) else self.exog_names
