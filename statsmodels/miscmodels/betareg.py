@@ -126,6 +126,47 @@ class Beta(GenericLikelihoodModel):
                                       **kwargs)
 
 
+    def predict(self, params, exog=None):
+        """predict values for mean, conditional expectation E(endog | exog)
+
+        """
+        if exog is None:
+            exog = self.exog
+        k_mean = self.exog.shape[1]
+
+        params_mean = params[:k_mean]
+        Zparams = params[k_mean:]
+        mu = self.link.inverse(np.dot(exog, params_mean))
+        return mu
+
+
+    def predict_precision(self, params, exog_precision=None):
+        """predict values for precision parameter for given exog_precision
+
+        """
+        if exog_precision is None:
+            exog_precision = self.exog_precision
+
+        k_mean = self.exog.shape[1]
+        params_precision = params[k_mean:]
+        linpred = np.dot(exog_precision, params_precision)
+        phi = self.link_precision.inverse(linpred)
+
+        return phi
+
+
+    def predict_var(self, params, exog=None, exog_precision=None):
+        """predict values for conditional variance V(endog | exog)
+
+        """
+        mean = self.predict(params, exog=exog)
+        precision = self.predict_precision(params,
+                                           exog_precision=exog_precision)
+
+        var_endog = mean * (1 - mean) / (1 + precision)
+        return var_endog
+
+
     def nloglikeobs(self, params):
         """
         Negative log-likelihood.
@@ -338,6 +379,7 @@ class Beta(GenericLikelihoodModel):
 
         if return_intermediate:
             return sp2, res_m2, res_p2
+
         return sp2
 
 
