@@ -120,7 +120,7 @@ class Beta(GenericLikelihoodModel):
                 Z = patsy.dmatrix(exog_precision_formula, d)
             else:
                 Z = patsy.dmatrix(exog_precision_formula, data)
-            kwargs['exog_precision'] = Z  
+            kwargs['exog_precision'] = Z
 
         return super(Beta, cls).from_formula(formula, data, *args,
                                       **kwargs)
@@ -291,6 +291,53 @@ class Beta(GenericLikelihoodModel):
         return np.bmat([[d11, d12], [d12.T, d22]]).A
 
 
+    def _start_params(self):
+        """find starting values
+
+        Returns
+        -------
+        sp : ndarray
+            start parameters for the optimization
+
+        Notes
+        -----
+        This calculates a few iteration of weighted least squares. This is not
+        a full scoring algorithm.
+
+        """
+        # WLS of the mean equation uses the implied weights (inverse variance),
+        # WLS for the precision equations uses weights that only take
+        # account of the link transformation of the precision endog.
+        from statsmodels.regression.linear_model import OLS, WLS
+        res_m = OLS(self.link(self.endog), self.exog).fit()
+        fitted = self.link.inverse(res_m.fittedvalues)
+        resid = self.endog - fitted
+
+        prec_i = fitted * (1 - fitted) / np.maximum(np.abs(resid), 1e-3)**2 - 1
+        res_p = OLS(self.link_precision(prec_i), self.exog_precision).fit()
+        prec_fitted = self.link_precision.inverse(res_p.fittedvalues)
+        #sp = np.concatenate((res_m.params, res_p.params))
+
+        for _ in range(2):
+            y_var_inv = (1 + prec_fitted) / (fitted * (1 - fitted))
+            #y_var = fitted * (1 - fitted) / (1 + prec_fitted)
+
+            ylink_var_inv = y_var_inv / self.link.deriv(fitted)**2
+            res_m2 = WLS(self.link(self.endog), self.exog,
+                         weights=ylink_var_inv).fit()
+            fitted = self.link.inverse(res_m2.fittedvalues)
+            resid2 = self.endog - fitted
+
+            prec_i2 = (fitted * (1 - fitted) /
+                       np.maximum(np.abs(resid2), 1e-4)**2 - 1)
+            w_p = 1. / self.link_precision.deriv(prec_fitted)**2
+            res_p2 = WLS(self.link_precision(prec_i2), self.exog_precision,
+                         weights=w_p).fit()
+            prec_fitted = self.link_precision.inverse(res_p2.fittedvalues)
+            sp2 = np.concatenate((res_m2.params, res_p2.params))
+
+        return sp2
+
 
     def fit(self, start_params=None, maxiter=100000, maxfun=5000, disp=False,
             method='bfgs', **kwds):
@@ -311,13 +358,9 @@ class Beta(GenericLikelihoodModel):
         """
 
         if start_params is None:
-            start_fit = sm.OLS(self.link(self.endog), self.exog,
-                                  ).fit(disp=False)
-            start_params = start_fit.params
-            nz = self.exog_precision.shape[1]
-            # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
-            # on page 8
-            start_params = np.append(start_params, [0.5 / nz] * nz)
+            start_params = self._start_params()
+#           # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
+#           # on page 8
 
         return super(Beta, self).fit(start_params=start_params,
                                         maxiter=maxiter, maxfun=maxfun,
