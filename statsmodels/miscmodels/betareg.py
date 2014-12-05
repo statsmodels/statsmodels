@@ -291,7 +291,7 @@ class Beta(GenericLikelihoodModel):
         return np.bmat([[d11, d12], [d12.T, d22]]).A
 
 
-    def _start_params(self):
+    def _start_params(self, niter=2, return_intermediate=False):
         """find starting values
 
         Returns
@@ -313,12 +313,12 @@ class Beta(GenericLikelihoodModel):
         fitted = self.link.inverse(res_m.fittedvalues)
         resid = self.endog - fitted
 
-        prec_i = fitted * (1 - fitted) / np.maximum(np.abs(resid), 1e-3)**2 - 1
+        prec_i = fitted * (1 - fitted) / np.maximum(np.abs(resid), 1e-2)**2 - 1
         res_p = OLS(self.link_precision(prec_i), self.exog_precision).fit()
         prec_fitted = self.link_precision.inverse(res_p.fittedvalues)
         #sp = np.concatenate((res_m.params, res_p.params))
 
-        for _ in range(2):
+        for _ in range(niter):
             y_var_inv = (1 + prec_fitted) / (fitted * (1 - fitted))
             #y_var = fitted * (1 - fitted) / (1 + prec_fitted)
 
@@ -329,13 +329,15 @@ class Beta(GenericLikelihoodModel):
             resid2 = self.endog - fitted
 
             prec_i2 = (fitted * (1 - fitted) /
-                       np.maximum(np.abs(resid2), 1e-4)**2 - 1)
+                       np.maximum(np.abs(resid2), 1e-2)**2 - 1)
             w_p = 1. / self.link_precision.deriv(prec_fitted)**2
             res_p2 = WLS(self.link_precision(prec_i2), self.exog_precision,
                          weights=w_p).fit()
             prec_fitted = self.link_precision.inverse(res_p2.fittedvalues)
             sp2 = np.concatenate((res_m2.params, res_p2.params))
 
+        if return_intermediate:
+            return sp2, res_m2, res_p2
         return sp2
 
 
