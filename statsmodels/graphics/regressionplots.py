@@ -19,12 +19,12 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.tools.tools import maybe_unwrap_results
-
+from statsmodels.base import model
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
-           'add_lowess', 'abline_plot', 'influence_plot',
-           'plot_leverage_resid2']
+           'add_lowess', 'add_hist', 'abline_plot', 'influence_plot',
+           'plot_leverage_resid2', 'plot_covariate_effects']
 
 
 #TODO: consider moving to influence module
@@ -59,6 +59,49 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
     ax.plot(lres[:, 0], lres[:, 1], 'r', lw=1.5)
     return ax.figure
+
+
+def add_hist(ax, data, **hist_kwargs):
+    """
+    Add a histogram to a plot.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes instance
+        The Axes to which to add the plot
+    data : array-like
+        The data for which the histogram is plotted.
+    hist_kwargs: dict, optional
+        Additional keyword arguments passed to matplotlib hist.
+
+    Returns
+    -------
+    fig : matplotlib Figure instance
+        The figure that holds the instance.
+
+    Notes
+    -----
+    This will mainly be useful when `data` is the same variable that
+    is plotted on the horizontal axis of the plot to which the
+    histogram is being added.
+
+    By default the histogram is normed and of the 'step' type.
+    """
+
+    # TODO: allow the histogram to be added vertically
+
+    # Draw the histogram
+    ax2 = ax.twinx()
+    ax2.set_yticks([])
+    ax2.set_yticklabels([])
+    ha = {"histtype": "step", "normed": True}
+    if hist_kwargs is not None:
+        ha.update(hist_kwargs)
+    _, _, pa = ax2.hist(data, **ha)
+    ymax = max([p.get_xy()[:, 1].max() for p in pa])
+    ax2.set_ylim(0, 1.2*ymax)
+    for p in pa:
+        p.set_color("grey")
 
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
@@ -832,3 +875,78 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
                              ax=ax, ha="center", va="bottom")
     ax.margins(.075, .075)
     return fig
+
+def plot_covariate_effects(results, focus_var, exog, n_points=50,
+                           ax=None):
+
+    fig, ax = utils.create_mpl_ax(ax)
+
+    model = results.model
+
+    from pandas import Series, DataFrame
+
+    use_formula = hasattr(model, "formula")
+
+    if use_formula:
+        try:
+            focus_var_vals = model.data.frame[focus_var]
+        except:
+            raise ValueError("unable to find focus variable in exog frame")
+    else:
+        try:
+            focus_var_vals = model.exog[:, focus_var]
+        except:
+            raise ValueError("unable to find focus variable in exog")
+
+    try:
+        focus_data = np.linspace(focus_var_vals.min(),
+                                 focus_var_vals.max(), n_points)
+    except:
+        raise ValueError("cannot create plot for non-numeric focus variable")
+
+    # Want a list of Series or a list of 1d ndarrays, depending
+    # on whether a formula is present
+    if use_formula:
+        if type(exog) is Series:
+            exog = [exog]
+        elif type(exog) is DataFrame:
+            exog = [exog.iloc[j, :] for j in range(exog.shape[0])]
+        elif type(exog) is list:
+            pass # assume the elements are OK
+        else:
+            raise ValueError("invalid type for exog")
+    else:
+        if type(exog) is np.ndarray and exog.ndim == 1:
+            exog = [exog]
+        elif type(exog) is np.ndarray:
+            exog = [exog[j, :] for j in range(exog.shape[0])]
+        elif type(exog) is list:
+            pass # assume the elements are OK
+        else:
+            raise ValueError("invalid type for exog")
+
+    # Draw the mean curves
+    for j, ex in enumerate(exog):
+
+        if hasattr(model, "formula"):
+            new_exog = DataFrame([ex for j in range(n_points)])
+            new_exog[focus_var] = focus_data
+        else:
+            new_exog = np.outer(np.ones(n_points), ex)
+            new_exog[:, focus_var] = focus_data
+
+        pred_val = results.predict(exog=new_exog)
+        ax.plot(focus_data, pred_val, '-', lw=5,
+                 label="mean_curve_%d" % j, alpha=0.7)
+
+    if type(focus_var) is str:
+        ax.set_xlabel(focus_var, size=15)
+    else:
+        exog_names = model.exog_names
+        ax.set_xlabel(exog_names[focus_var], size=15)
+    ax.set_ylabel("Fitted mean", size=15)
+
+    return fig
+
+plot_covariate_effects.__doc__ = model._plot_covariate_effects_doc % {
+    'extra_params_doc': "results: object\n\tResults for a fitted regression model"}
