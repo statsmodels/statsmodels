@@ -17,6 +17,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from statsmodels.tools.decorators import cache_readonly
 import patsy
 
 from scipy.special import gammaln as lgamma
@@ -414,7 +415,37 @@ class Beta(GenericLikelihoodModel):
 
 
 class BetaRegressionResults(GenericLikelihoodModelResults):
-    pass
+
+    # GenericLikeihoodmodel doesn't define fittedvalues, residuals and similar
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params)
+
+    @cache_readonly
+    def fitted_precision(self):
+        return self.model.predict_precision(self.params)
+
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.fittedvalues
+
+
+    @cache_readonly
+    def resid_pearson(self):
+        return self.resid / np.sqrt(self.model.predict_var(self.params))
+
+
+    def get_distribution_params(self):
+        mean = self.fittedvalues
+        precision = self.fitted_precision
+        return precision * mean, precision * (1 - mean)
+
+
+    def get_distribution(self):
+        from scipy import stats
+        distr = stats.beta(*self.get_distribution_params())
+        return distr
 
 
 if __name__ == "__main__":
