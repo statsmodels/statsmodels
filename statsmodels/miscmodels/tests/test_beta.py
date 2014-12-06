@@ -8,6 +8,7 @@ import pandas as pd
 import patsy
 from statsmodels.miscmodels.betareg import Beta
 import numpy as np
+from numpy.testing import assert_allclose
 
 HERE = op.abspath(op.dirname(__file__))
 
@@ -110,3 +111,14 @@ class TestBeta(object):
             numerical = rslt_m.model.score_check(rslt_m.params)
             assert_close(analytical[:3], numerical[:3], 1e-2)
             assert_close(link.inverse(analytical[3:]), link.inverse(numerical[3:]), 1e-2)
+
+    def test_results_other(self):
+
+        rslt = self.meth_fit
+        distr = rslt.get_distribution()
+        mean, var = distr.stats()
+        assert_allclose(rslt.fittedvalues, mean, rtol=1e-13)
+        assert_allclose(rslt.model.predict_var(rslt.params), var, rtol=1e-13)
+        resid = rslt.model.endog - mean
+        assert_allclose(rslt.resid, resid, rtol=1e-12)
+        assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
