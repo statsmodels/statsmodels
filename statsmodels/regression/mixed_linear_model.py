@@ -2091,7 +2091,7 @@ class MixedLMResults(base.LikelihoodModelResults):
 
             # Shrink the covariance parameters until a PSD covariance
             # matrix is obtained.
-            dg = np.diag(cov_re)
+            dg = np.diag(cov_re).copy()
             success = False
             for ks in range(50):
                 try:
