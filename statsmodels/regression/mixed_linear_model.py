@@ -56,15 +56,16 @@ Notation:
   + Z * cov_re * Z', where Z is the design matrix for the random
   effects in one group.
 
-Note on profile lilkelihoods:
+Note on profile likelihoods:
 
 The internal calculations always profile the scale parameter out of
-the model.  A keyword argument to `fit` named `profile_fe_params` uses
-GLS to profile the fixed effects parameters (a.k.a. beta) out of the
-likelihood.  When this parameter is set to True, the state of the
-fixed effects parameters on entry to the likelihood, score, and
-hessian functions is ignored, and it is updated with the exact optimal
-value for the current random effects parameters.
+the model.  A keyword argument to `fit` named `profile_fe_params`
+triggers use of GLS to profile the fixed effects parameters
+(a.k.a. beta) out of the likelihood.  When this parameter is set to
+True, the state of the fixed effects parameters on entry to the
+likelihood, score, and hessian functions is ignored, and is updated
+with the exact optimal value for the current random effects
+parameters.
 
 Note on parameterizations:
 
@@ -85,10 +86,6 @@ parameterizations are:
 * The square root parameterization in which we work with the
   Cholesky factor of cov_re_unscaled instead of cov_re_unscaled
   directly.
-
-All three parameterizations can be packed by concatenating fe_params
-together with the lower triangle of `cov_re`.  This is handled by the
-MixedLMParams.
 
 2. The situation where the random effects covariance matrix is
 singular is numerically challenging.  Small changes in the covariance
@@ -563,7 +560,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Usually this is set in `fit`, but in case someone wants to
         # calculate likelihoods and scores without fitting a model, we
-        # give this a default.
+        # give this a default value.
         self._profile_fe_params = False
 
     def _make_param_names(self, exog_re):
