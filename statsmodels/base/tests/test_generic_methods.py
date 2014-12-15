@@ -374,6 +374,18 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
         cls.res = mod.fit(use_t=False)
 
 
+class TestWaldAnovaOLSF(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.formula.api import ols, glm, poisson
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit()  # default use_t=True
+
+
+
 class TestWaldAnovaGLM(CheckAnovaMixin):
 
     @classmethod

@@ -27,6 +27,7 @@ class ContrastResults(object):
         if F is not None:
             self.distribution = 'F'
             self.fvalue = F
+            self.statistic = self.fvalue
             self.df_denom = df_denom
             self.df_num = df_num
             self.dist = fdist
