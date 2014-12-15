@@ -1427,7 +1427,7 @@ class LikelihoodModelResults(Results):
             raise ValueError('no constraints, nothing to do')
 
 
-        identity = np.eye(result.model.exog.shape[1])
+        identity = np.eye(len(result.params))
         constraints = []
         combined = defaultdict(list)
         for term in design_info.terms:

@@ -337,7 +337,7 @@ class CheckAnovaMixin(object):
         c_w = eye[[2,3]]
         c_d = eye[1]
         c_dw = eye[[4,5]]
-        c_weight = eye[2:]
+        c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
 
         compare_waldres(res, wa, [c_const, c_d, c_w, c_dw, c_duration, c_weight])
@@ -391,8 +391,33 @@ class TestWaldAnovaPoisson(CheckAnovaMixin):
     def initialize(cls):
         from statsmodels.discrete.discrete_model import Poisson
 
-        mod = Poisson.from_formula("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(cov_type='HC0')
+
+
+class TestWaldAnovaNegBin(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.discrete.discrete_model import NegativeBinomial
+
+        formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
+        mod = NegativeBinomial.from_formula(formula, cls.data,
+                                            loglike_method='nb2')
+        cls.res = mod.fit()
+
+
+class TestWaldAnovaNegBin1(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.discrete.discrete_model import NegativeBinomial
+
+        formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
+        mod = NegativeBinomial.from_formula(formula, cls.data,
+                                            loglike_method='nb1')
+        cls.res = mod.fit(cov_type='HC0')
+
 
 
 if __name__ == '__main__':
