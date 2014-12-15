@@ -107,10 +107,12 @@ class TestBeta(object):
                                      link_precision=link)
             rslt_m = mod2.fit()
 
-            analytical = rslt_m.model.score(rslt_m.params)
-            numerical = rslt_m.model.score_check(rslt_m.params)
-            assert_close(analytical[:3], numerical[:3], 1e-2)
-            assert_close(link.inverse(analytical[3:]), link.inverse(numerical[3:]), 1e-2)
+            # evaluate away from optimum to get larger score
+            analytical = rslt_m.model.score(rslt_m.params * 1.01)
+            numerical = rslt_m.model.score_check(rslt_m.params * 1.01)
+            assert_allclose(analytical, numerical, rtol=1e-6, atol=1e-6)
+            assert_allclose(link.inverse(analytical[3:]),
+                            link.inverse(numerical[3:]), rtol=5e-7, atol=5e-6)
 
     def test_results_other(self):
 
