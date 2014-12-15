@@ -374,6 +374,21 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
         cls.res = mod.fit(use_t=False)
 
 
+    def test_noformula(self):
+        endog = self.res.model.endog
+        exog = self.res.model.data.orig_exog
+        del exog.design_info
+
+        res = sm.OLS(endog, exog).fit()
+        wa = res.wald_anova(skip_single=True,
+                            combine_terms=['Duration', 'Weight'])
+        eye = np.eye(len(res.params))
+        c_weight = eye[2:6]
+        c_duration = eye[[1, 4, 5]]
+
+        compare_waldres(res, wa, [c_duration, c_weight])
+
+
 class TestWaldAnovaOLSF(CheckAnovaMixin):
 
     @classmethod
@@ -383,7 +398,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
 
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
-
 
 
 class TestWaldAnovaGLM(CheckAnovaMixin):
@@ -430,6 +444,16 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
                                             loglike_method='nb1')
         cls.res = mod.fit(cov_type='HC0')
 
+
+class T_estWaldAnovaOLSNoFormula(object):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.formula.api import ols, glm, poisson
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit()  # default use_t=True
 
 
 if __name__ == '__main__':

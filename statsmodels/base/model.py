@@ -1430,26 +1430,46 @@ class LikelihoodModelResults(Results):
         identity = np.eye(len(result.params))
         constraints = []
         combined = defaultdict(list)
-        for term in design_info.terms:
-            cols = design_info.slice(term)
-            name = term.name()
-            constraint_matrix = identity[cols]
+        if design_info is not None:
+            for term in design_info.terms:
+                cols = design_info.slice(term)
+                name = term.name()
+                constraint_matrix = identity[cols]
 
-            # check if in combined
+                # check if in combined
+                for cname in combine_terms:
+                    if cname in name:
+                        combined[cname].append(constraint_matrix)
+
+                k_constraint = constraint_matrix.shape[0]
+                if skip_single:
+                    if k_constraint == 1:
+                        continue
+
+                constraints.append((name, constraint_matrix))
+
+            combined_constraints = []
             for cname in combine_terms:
-                if cname in name:
-                    combined[cname].append(constraint_matrix)
+                combined_constraints.append((cname, np.vstack(combined[cname])))
+        else:
+            # check by exog/params names if there is no formula info
+            for col, name in enumerate(result.model.exog_names):
+                constraint_matrix = identity[col]
 
-            k_constraint = constraint_matrix.shape[0]
-            if skip_single:
-                if k_constraint == 1:
+                # check if in combined
+                for cname in combine_terms:
+                    if cname in name:
+                        combined[cname].append(constraint_matrix)
+
+                if skip_single:
                     continue
 
-            constraints.append((name, constraint_matrix))
+                constraints.append((name, constraint_matrix))
 
-        combined_constraints = []
-        for cname in combine_terms:
-            combined_constraints.append((cname, np.vstack(combined[cname])))
+            combined_constraints = []
+            for cname in combine_terms:
+                combined_constraints.append((cname, np.vstack(combined[cname])))
+
 
         res_wald = []
         index = []
