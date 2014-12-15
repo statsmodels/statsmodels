@@ -1131,7 +1131,7 @@ class ARIMA(ARMA):
         elif typ == 'levels':
             endog = self.data.endog
             if not dynamic:
-                predict = super(ARIMA, self).predict(params, start, end,
+                predict = super(ARIMA, self).predict(params, start, end, exog,
                                                      dynamic)
 
                 start = self._get_predict_start(start, dynamic)
