@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
 from statsmodels.tools.tools import recipr, nan_dot
-from statsmodels.stats.contrast import ContrastResults
+from statsmodels.stats.contrast import ContrastResults, ANOVAWaldResult
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
@@ -1405,6 +1405,77 @@ class LikelihoodModelResults(Results):
         else:
             return ContrastResults(chi2=F, df_denom=J, statistic=F,
                                    distribution='chi2', distargs=(J,))
+
+
+    def wald_anova(self, skip_single=False, extra_constraints=None,
+                   combine_terms=None):
+        """create a sequence of wald tests similar to ANOVA type 3 tables
+
+
+        """
+        # lazy import
+        from collections import defaultdict
+
+        result = self
+        if extra_constraints is None:
+            extra_constraints = []
+        if combine_terms is None:
+            combine_terms = []
+        design_info = getattr(result.model.data.orig_exog, 'design_info', None)
+
+        if design_info is None and extra_constraints is None:
+            raise ValueError('no constraints, nothing to do')
+
+
+        identity = np.eye(result.model.exog.shape[1])
+        constraints = []
+        combined = defaultdict(list)
+        for term in design_info.terms:
+            cols = design_info.slice(term)
+            name = term.name()
+            constraint_matrix = identity[cols]
+
+            # check if in combined
+            for cname in combine_terms:
+                if cname in name:
+                    combined[cname].append(constraint_matrix)
+
+            k_constraint = constraint_matrix.shape[0]
+            if skip_single:
+                if k_constraint == 1:
+                    continue
+
+            constraints.append((name, constraint_matrix))
+
+        combined_constraints = []
+        for cname in combine_terms:
+            combined_constraints.append((cname, np.vstack(combined[cname])))
+
+        res_wald = []
+        index = []
+        for name, constraint in constraints + combined_constraints + extra_constraints:
+            wt = result.wald_test(constraint)
+            res_wald.append([wt.statistic.item(), wt.pvalue, constraint.shape[0]])
+            index.append(name)
+
+        # TODO: clean up wald_test results so we can access this directly from it
+        use_t = result.use_t
+        if use_t:
+            test = 'F'
+        else:
+            test = 'chi2'
+
+        pr_test = "PR(>%s)" % test
+
+        col_names = [test, pr_test, 'df']
+        # TODO: maybe move DataFrame creation to results class
+        from pandas import DataFrame
+        table = DataFrame(res_wald, index=index, columns=col_names)
+        res = ANOVAWaldResult(table)
+        # TODO: remove temp again, added for testing
+        res.temp = constraints + combined_constraints + extra_constraints
+        return res
+
 
     def conf_int(self, alpha=.05, cols=None, method='default'):
         """

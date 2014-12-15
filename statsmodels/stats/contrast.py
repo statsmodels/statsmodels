@@ -343,3 +343,16 @@ def contrastfromcols(L, D, pseudo=None):
         C = np.dot(pseudo, Lp).T
 
     return np.squeeze(C)
+
+
+# TODO: this is currently a minimal version, stub
+class ANOVAWaldResult(object):
+
+    def __init__(self, table):
+        self.table = table
+
+    def __str__(self):
+        return self.table.to_string()
+
+    def __repr__(self):
+        return str(self.__class__) + '\n' + self.__str__()
