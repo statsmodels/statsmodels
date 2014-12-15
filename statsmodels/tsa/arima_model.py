@@ -718,6 +718,7 @@ class ARMA(tsbase.TimeSeriesModel):
         k_ar = self.k_ar
 
         if out_of_sample != 0 and self.k_exog > 0:
+            exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
                 # we need the last k_ar exog for the lag-polynomial
