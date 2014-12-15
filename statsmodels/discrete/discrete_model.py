@@ -399,7 +399,7 @@ class BinaryModel(DiscreteModel):
 
     def __init__(self, endog, exog, **kwargs):
         super(BinaryModel, self).__init__(endog, exog, **kwargs)
-        if (self.__class__.__name__ != 'MNLogit' and
+        if (not issubclass(self.__class__, MultinomialModel) and
                 not np.all((self.endog >= 0) & (self.endog <= 1))):
             raise ValueError("endog must be in the unit interval.")
 
