@@ -247,8 +247,8 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
         r = L1.shape[0]
 
         if test == 'F':
-            f = model.f_test(L12, cov_p=cov)
-            table.ix[i, test] = test_value = f.fvalue
+            f = model.wald_test(L12, cov_p=cov)
+            table.ix[i, test] = test_value = f.statistic.item() #fvalue
             table.ix[i, pr_test] = f.pvalue
 
         # need to back out SSR from f_test
