@@ -1407,7 +1407,7 @@ class LikelihoodModelResults(Results):
                                    distribution='chi2', distargs=(J,))
 
 
-    def wald_anova(self, skip_single=False, extra_constraints=None,
+    def wald_test_terms(self, skip_single=False, extra_constraints=None,
                    combine_terms=None):
         """create a sequence of wald tests similar to ANOVA type 3 tables
 

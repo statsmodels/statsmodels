@@ -331,7 +331,7 @@ class CheckAnovaMixin(object):
 
     def test_combined(self):
         res = self.res
-        wa = res.wald_anova(skip_single=False, combine_terms=['Duration', 'Weight'])
+        wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
         eye = np.eye(len(res.params))
         c_const = eye[0]
         c_w = eye[[2,3]]
@@ -346,7 +346,7 @@ class CheckAnovaMixin(object):
     def test_categories(self):
         # test only multicolumn terms
         res = self.res
-        wa = res.wald_anova(skip_single=True)
+        wa = res.wald_test_terms(skip_single=True)
         eye = np.eye(len(res.params))
         c_w = eye[[2,3]]
         c_dw = eye[[4,5]]
@@ -380,8 +380,8 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
         del exog.design_info
 
         res = sm.OLS(endog, exog).fit()
-        wa = res.wald_anova(skip_single=True,
-                            combine_terms=['Duration', 'Weight'])
+        wa = res.wald_test_terms(skip_single=True,
+                                 combine_terms=['Duration', 'Weight'])
         eye = np.eye(len(res.params))
         c_weight = eye[2:6]
         c_duration = eye[[1, 4, 5]]
