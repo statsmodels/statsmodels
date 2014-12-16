@@ -1409,8 +1409,58 @@ class LikelihoodModelResults(Results):
 
     def wald_test_terms(self, skip_single=False, extra_constraints=None,
                    combine_terms=None):
-        """create a sequence of wald tests similar to ANOVA type 3 tables
+        """
+        Compute a sequence of Wald tests for terms over multiple columns
 
+        This computes joined Wald tests for the hypothesis that all
+        coefficients corresponding to a `term` are zero.
+
+        `Terms` are defined by the underlying formula or by string matching.
+
+        Parameters
+        ----------
+        skip_single : boolean
+            If true, then terms that consist only of a single column and,
+            therefore, refers only to a single parameter is skipped.
+            If false, then all terms are included.
+        extra_constraints : ndarray
+            not tested yet
+        combine_terms : None or list of strings
+            Each string in this list is matched to the name of the terms or
+            the name of the exogenous variables. All columns whose name
+            includes that string are combined in one joint test.
+
+        Returns
+        -------
+        test_result : result instance
+            The result instance contains `table` which is a pandas DataFrame
+            with the test results: test statistic, degrees of freedom and
+            pvalues.
+
+        Examples
+        --------
+        >>> res_ols = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
+                          data).fit()
+        >>> res_ols.wald_test_terms()
+        <class 'statsmodels.stats.contrast.ANOVAWaldResult'>
+                                                  F             PR(>F)  df
+        Intercept                        279.754525  2.37985521351e-22   1
+        C(Duration, Sum)                   5.367071    0.0245738436636   1
+        C(Weight, Sum)                    12.432445  3.99943118767e-05   2
+        C(Duration, Sum):C(Weight, Sum)    0.176002      0.83912310946   2
+
+        >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)",
+                                           data).fit(cov_type='HC0')
+        >>> wt = res_poi.wald_test_terms(skip_single=False,
+                                         combine_terms=['Duration', 'Weight'])
+        >>> print(wt)
+                                    chi2          PR(>chi2)  df
+        Intercept              15.695625  7.43960374424e-05   1
+        C(Weight)              16.132616  0.000313940174705   2
+        C(Duration)             1.009147     0.315107378931   1
+        C(Weight):C(Duration)   0.216694     0.897315972824   2
+        Duration               11.187849     0.010752286833   3
+        Weight                 30.263368  4.32586407145e-06   4
 
         """
         # lazy import
