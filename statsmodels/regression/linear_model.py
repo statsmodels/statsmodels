@@ -1778,7 +1778,13 @@ class RegressionResults(base.LikelihoodModelResults):
         # TODO: this should be outsourced in a function so we can reuse it in
         #       other models
         # TODO: make it DRYer   repeated code for checking kwds
-        if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+        if cov_type in ['fixed scale', 'fixed_scale']:
+            res.cov_kwds['description'] = ('Standard Errors are based on ' +
+                                           'fixed scale')
+
+            res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
+            res.cov_params_default = scale * res.normalized_cov_params
+        elif cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
                 raise ValueError('heteroscedasticity robust covarians ' +
                                  'does not use keywords')
