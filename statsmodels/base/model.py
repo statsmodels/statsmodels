@@ -962,7 +962,10 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def llf(self):
-        return self.model.loglike(self.params)
+        if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
+            return np.nan
+        else:
+            return self.model.loglike(self.params)
 
     @cache_readonly
     def bse(self):
