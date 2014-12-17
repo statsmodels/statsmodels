@@ -1636,10 +1636,8 @@ class RegressionResults(base.LikelihoodModelResults):
                           'robust covariance, proceeding anyway',
                           InvalidTestWarning)
 
-        llf_full = (self.llf if not np.isnan(self.llf) else
-                    self.model.loglike(self.params))
-        llf_restr = (restricted.llf if not np.isnan(restricted.llf) else
-                    restricted.model.loglike(restricted.params))
+        llf_full = self.llf
+        llf_restr = restricted.llf
         df_full = self.df_resid
         df_restr = restricted.df_resid
 
