@@ -798,3 +798,27 @@ class TestWLSOLSRobustSmall(object):
         assert_allclose(res3.tvalues, tt.tvalue, rtol=1e-13)
 
 
+def test_cov_type_fixed_scale():
+    # this is a unit test from scipy curvefit for `absolute_sigma` keyword
+    xdata = np.array([0, 1, 2, 3, 4, 5])
+    ydata = np.array([1, 1, 5, 7, 8, 12])
+    sigma = np.array([1, 2, 1, 2, 1, 2])
+
+    xdata = np.column_stack((xdata, np.ones(len(xdata))))
+    weights = 1. / sigma**2
+
+    res = WLS(ydata, xdata, weights=weights).fit()
+    assert_allclose(res.bse, [0.20659803, 0.57204404], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights).fit()
+    assert_allclose(res.bse, [0.20659803, 0.57204404], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights).fit(cov_type='fixed scale')
+    assert_allclose(res.bse, [0.30714756, 0.85045308], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights / 9.).fit(cov_type='fixed scale')
+    assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights).fit(cov_type='fixed scale',
+                                                  cov_kwds={'scale':9})
+    assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
