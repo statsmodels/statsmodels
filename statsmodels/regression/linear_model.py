@@ -1658,6 +1658,8 @@ class RegressionResults(base.LikelihoodModelResults):
         use_t : bool
             If true, then the t distribution is used for inference.
             If false, then the normal distribution is used.
+            If `use_t` is None, then an appropriate default is used, which is
+            `true` if the cov_type is nonrobust, and `false` in all other cases.
         kwds : depends on cov_type
             Required or optional arguments for robust covariance calculation.
             see Notes below
@@ -1675,6 +1677,8 @@ class RegressionResults(base.LikelihoodModelResults):
         The following covariance types and required or optional arguments are
         currently available:
 
+        - 'fixed scale' and optional keyword argument 'scale' which uses
+            a predefined scale estimate with default equal to one.
         - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
             heteroscedasticity robust covariance
         - 'HAC' and keywords
