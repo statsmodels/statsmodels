@@ -7,8 +7,11 @@ author: Josef Perktold
 """
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
+
 from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.regression._prediction import get_prediction
 
 
 def test_predict_se():
@@ -101,3 +104,56 @@ def test_predict_se():
 
         sew = wls_prediction_std(res3, x2[-3:,:], weights=1. / wv)[0]**2
         np.testing.assert_allclose(sew, sew1 + res3.scale * (wv - 1))
+
+
+class TestWLSPrediction(object):
+
+    @classmethod
+    def setup_class(cls):
+
+        # from example wls.py
+
+        nsample = 50
+        x = np.linspace(0, 20, nsample)
+        X = np.column_stack((x, (x - 5)**2))
+        from statsmodels.tools.tools import add_constant
+        X = add_constant(X)
+        beta = [5., 0.5, -0.01]
+        sig = 0.5
+        w = np.ones(nsample)
+        w[nsample * 6/10:] = 3
+        y_true = np.dot(X, beta)
+        e = np.random.normal(size=nsample)
+        y = y_true + sig * w * e
+        X = X[:,[0,1]]
+
+
+        # ### WLS knowing the true variance ratio of heteroscedasticity
+
+        mod_wls = WLS(y, X, weights=1./w)
+        cls.res_wls = mod_wls.fit()
+
+
+    def test_ci(self):
+        res_wls = self.res_wls
+        prstd, iv_l, iv_u = wls_prediction_std(res_wls)
+        pred_res = get_prediction(res_wls)
+        ci = pred_res.conf_int(obs=True)
+
+        assert_allclose(pred_res.se_obs, prstd, rtol=1e-13)
+        assert_allclose(ci, np.column_stack((iv_l, iv_u)), rtol=1e-13)
+
+        sf = pred_res.summary_frame()
+
+        col_names = ['mean', 'mean_se', 'mean_ci_lower', 'mean_ci_upper',
+                      'obs_ci_lower', 'obs_ci_upper']
+        assert_equal(sf.columns.tolist(), col_names)
+
+        pred_res2 = res_wls.get_prediction()
+        ci2 = pred_res2.conf_int(obs=True)
+
+        assert_allclose(pred_res2.se_obs, prstd, rtol=1e-13)
+        assert_allclose(ci2, np.column_stack((iv_l, iv_u)), rtol=1e-13)
+
+        sf2 = pred_res2.summary_frame()
+        assert_equal(sf2.columns.tolist(), col_names)

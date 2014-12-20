@@ -55,6 +55,8 @@ from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
+from . import _prediction as pred
+
 def _get_sigma(sigma, nobs):
     """
     Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
@@ -1900,6 +1902,15 @@ class RegressionResults(base.LikelihoodModelResults):
             res.df_resid_inference = n_groups - 1
 
         return res
+
+
+    def get_prediction(self, exog=None, transform=True, weights=None,
+                       row_labels=None, **kwds):
+
+        return pred.get_prediction(self, exog=exog, transform=transform,
+                              weights=weights, row_labels=row_labels, **kwds)
+
+    get_prediction.__doc__ = pred.get_prediction.__doc__
 
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
