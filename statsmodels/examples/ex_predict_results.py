@@ -12,6 +12,7 @@ from statsmodels.regression.linear_model import OLS, WLS
 
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.regression._prediction import get_prediction
+from statsmodels.genmod._prediction import params_transform_univariate
 
 
 # from example wls.py
@@ -72,3 +73,24 @@ print(pred_glm.summary_frame().head())
 res_glm_t = mod_glm.fit(use_t=True)
 pred_glm_t = res_glm_t.get_prediction()
 print(pred_glm_t.summary_frame().head())
+
+rates = params_transform_univariate(res_glm.params, res_glm.cov_params())
+print('\nRates exp(params)')
+print(rates.summary_frame())
+
+rates2 = np.column_stack((np.exp(res_glm.params),
+                          res_glm.bse * np.exp(res_glm.params),
+                          np.exp(res_glm.conf_int())))
+assert_allclose(rates.summary_frame().values, rates2, rtol=1e-13)
+
+from statsmodels.genmod.families import links
+
+# with identity transform
+pt = params_transform_univariate(res_glm.params, res_glm.cov_params(), link=links.identity())
+print(pt.tvalues)
+
+assert_allclose(pt.tvalues, res_glm.tvalues, rtol=1e-13)
+assert_allclose(pt.se_mean, res_glm.bse, rtol=1e-13)
+ptt = pt.t_test()
+assert_allclose(ptt[0], res_glm.tvalues, rtol=1e-13)
+assert_allclose(ptt[1], res_glm.pvalues, rtol=1e-13)

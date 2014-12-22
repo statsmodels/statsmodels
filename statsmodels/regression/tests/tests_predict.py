@@ -192,3 +192,24 @@ class TestWLSPrediction(object):
         sf_wls = pred_res_wls.summary_frame()
         assert_allclose(sf_glm.values[:n_compare],
                         sf_wls.values[:n_compare, :4])
+
+        # function for parameter transformation
+        # should be separate test method
+        from statsmodels.genmod._prediction import params_transform_univariate
+        rates = params_transform_univariate(res_glm.params, res_glm.cov_params())
+
+        rates2 = np.column_stack((np.exp(res_glm.params),
+                                  res_glm.bse * np.exp(res_glm.params),
+                                  np.exp(res_glm.conf_int())))
+        assert_allclose(rates.summary_frame().values, rates2, rtol=1e-13)
+
+        from statsmodels.genmod.families import links
+
+        # with identity transform
+        pt = params_transform_univariate(res_glm.params, res_glm.cov_params(), link=links.identity())
+
+        assert_allclose(pt.tvalues, res_glm.tvalues, rtol=1e-13)
+        assert_allclose(pt.se_mean, res_glm.bse, rtol=1e-13)
+        ptt = pt.t_test()
+        assert_allclose(ptt[0], res_glm.tvalues, rtol=1e-13)
+        assert_allclose(ptt[1], res_glm.pvalues, rtol=1e-13)

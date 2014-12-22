@@ -13,8 +13,9 @@ from scipy import stats
 # this is similar to ContrastResults after t_test, partially copied and adjusted
 class PredictionResults(object):
 
-    def __init__(self, predicted_mean, var_pred_mean, var_resid,
+    def __init__(self, predicted_mean, var_pred_mean, var_resid=None,
                  df=None, dist=None, row_labels=None, linpred=None, link=None):
+        # TODO: is var_resid used? drop from arguments?
         self.predicted_mean = predicted_mean
         self.var_pred_mean = var_pred_mean
         self.df = df
@@ -42,7 +43,48 @@ class PredictionResults(object):
     def se_mean(self):
         return np.sqrt(self.var_pred_mean)
 
-    def conf_int(self, method='endpoint', alpha=0.05):
+    @property
+    def tvalues(self):
+        return self.predicted_mean / self.se_mean
+
+
+    def t_test(self, value=0, alternative='two-sided'):
+        '''z- or t-test for hypothesis that mean is equal to value
+
+        Parameters
+        ----------
+        value : array_like
+            value under the null hypothesis
+        alternative : string
+            'two-sided', 'larger', 'smaller'
+
+        Returns
+        -------
+        stat : ndarray
+            test statistic
+        pvalue : ndarray
+            p-value of the hypothesis test, the distribution is given by
+            the attribute of the instance, specified in `__init__`. Default
+            if not specified is the normal distribution.
+
+        '''
+        # from statsmodels.stats.weightstats
+
+        # assumes symmetric distribution
+        stat = (self.predicted_mean - value) / self.se_mean
+
+        if alternative in ['two-sided', '2-sided', '2s']:
+            pvalue = self.dist.sf(np.abs(stat), *self.dist_args)*2
+        elif alternative in ['larger', 'l']:
+            pvalue = self.dist.sf(stat, *self.dist_args)
+        elif alternative in ['smaller', 's']:
+            pvalue = self.dist.cdf(stat, *self.dist_args)
+        else:
+            raise ValueError('invalid alternative')
+        return stat, pvalue
+
+
+    def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         """
         Returns the confidence interval of the value, `effect` of the constraint.
 
@@ -54,6 +96,9 @@ class PredictionResults(object):
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
 
+        kwds : extra keyword arguments
+            currently ignored, only for compatibility, consistent signature
+
         Returns
         -------
         ci : ndarray, (k_constraints, 2)
@@ -61,9 +106,19 @@ class PredictionResults(object):
             interval in the columns.
 
         """
-
-        ci_linear = self.linpred.conf_int(alpha=alpha, obs=False)
-        ci = self.link.inverse(ci_linear)
+        tmp = np.linspace(0, 1, 6)
+        is_linear = (self.link.inverse(tmp) == tmp).all()
+        if method == 'endpoint' and not is_linear:
+            ci_linear = self.linpred.conf_int(alpha=alpha, obs=False)
+            ci = self.link.inverse(ci_linear)
+        elif method == 'delta' or is_linear:
+            se = self.se_mean
+            q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
+            lower = self.predicted_mean - q * se
+            upper = self.predicted_mean + q * se
+            ci = np.column_stack((lower, upper))
+            # if we want to stack at a new last axis, for lower.ndim > 1
+            # np.concatenate((lower[..., None], upper[..., None]), axis=-1)
 
         return ci
 
@@ -176,3 +231,41 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,
                              df=self.df_resid, dist=dist,
                              row_labels=row_labels, linpred=linpred, link=link)
+
+
+def params_transform_univariate(params, cov_params, link=None, transform=None,
+                     row_labels=None):
+    """
+    results for univariate, nonlinear, monotonicaly transformed parameters
+
+    This provides transformed values, standard errors and confidence interval
+    for transformations of parameters, for example in calculating rates with
+    `exp(params)` in the case of Poisson or other models with exponential
+    mean function.
+
+    """
+
+    from statsmodels.genmod.families import links
+    if link is None and transform is None:
+        link = links.Log()
+
+    if row_labels is None and hasattr(params, 'index'):
+        row_labels = params.index
+
+    params = np.asarray(params)
+
+    predicted_mean = link.inverse(params)
+    link_deriv = link.inverse_deriv(params)
+    var_pred_mean = link_deriv**2 * np.diag(cov_params)
+    # TODO: do we want covariance also, or just var/se
+
+    dist = stats.norm
+
+    # TODO: need ci for linear prediction, method of `lin_pred
+    linpred = PredictionResults(params, np.diag(cov_params), dist=dist,
+                             row_labels=row_labels, link=links.identity())
+
+    res = PredictionResults(predicted_mean, var_pred_mean, dist=dist,
+                             row_labels=row_labels, linpred=linpred, link=link)
+
+    return res
