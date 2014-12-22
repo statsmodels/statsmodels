@@ -55,6 +55,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
+# need import in module instead of lazily to copy `__doc__`
 from . import _prediction as pred
 
 def _get_sigma(sigma, nobs):

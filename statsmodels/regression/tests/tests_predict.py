@@ -157,3 +157,38 @@ class TestWLSPrediction(object):
 
         sf2 = pred_res2.summary_frame()
         assert_equal(sf2.columns.tolist(), col_names)
+
+
+    def test_glm(self):
+        # prelimnimary, getting started with basic test for GLM.get_prediction
+        from statsmodels.genmod.generalized_linear_model import GLM
+
+        res_wls = self.res_wls
+        mod_wls = res_wls.model
+        y, X, wi = mod_wls.endog, mod_wls.exog, mod_wls.weights
+
+        w_sqrt = np.sqrt(wi)  # notation wi is weights, `w` is var
+        mod_glm = GLM(y * w_sqrt, X * w_sqrt[:,None])
+
+        # compare using t distribution
+        res_glm = mod_glm.fit(use_t=True)
+        pred_glm = res_glm.get_prediction()
+        sf_glm = pred_glm.summary_frame()
+
+        pred_res_wls = res_wls.get_prediction()
+        sf_wls = pred_res_wls.summary_frame()
+        n_compare = 30   # in glm with predict wendog
+        assert_allclose(sf_glm.values[:n_compare],
+                        sf_wls.values[:n_compare, :4])
+
+        # compare using normal distribution
+
+        res_glm = mod_glm.fit() # default use_t=False
+        pred_glm = res_glm.get_prediction()
+        sf_glm = pred_glm.summary_frame()
+
+        res_wls = mod_wls.fit(use_t=False)
+        pred_res_wls = res_wls.get_prediction()
+        sf_wls = pred_res_wls.summary_frame()
+        assert_allclose(sf_glm.values[:n_compare],
+                        sf_wls.values[:n_compare, :4])

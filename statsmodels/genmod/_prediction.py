@@ -14,12 +14,14 @@ from scipy import stats
 class PredictionResults(object):
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid,
-                 df=None, dist=None, row_labels=None):
+                 df=None, dist=None, row_labels=None, linpred=None, link=None):
         self.predicted_mean = predicted_mean
         self.var_pred_mean = var_pred_mean
         self.df = df
         self.var_resid = var_resid
         self.row_labels = row_labels
+        self.linpred = linpred
+        self.link = link
 
         if dist is None or dist == 'norm':
             self.dist = stats.norm
@@ -33,13 +35,14 @@ class PredictionResults(object):
 
     @property
     def se_obs(self):
+        raise NotImplementedError
         return np.sqrt(self.var_pred_mean + self.var_resid)
 
     @property
     def se_mean(self):
         return np.sqrt(self.var_pred_mean)
 
-    def conf_int(self, obs=False, alpha=0.05):
+    def conf_int(self, method='endpoint', alpha=0.05):
         """
         Returns the confidence interval of the value, `effect` of the constraint.
 
@@ -59,27 +62,24 @@ class PredictionResults(object):
 
         """
 
-        se = self.se_obs if obs else self.se_mean
+        ci_linear = self.linpred.conf_int(alpha=alpha, obs=False)
+        ci = self.link.inverse(ci_linear)
 
-        q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
-        lower = self.predicted_mean - q * se
-        upper = self.predicted_mean + q * se
-        return np.column_stack((lower, upper))
+        return ci
 
 
     def summary_frame(self, what='all', alpha=0.05):
         # TODO: finish and cleanup
         import pandas as pd
         from statsmodels.compat.collections import OrderedDict
-        ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
-        ci_mean = self.conf_int(alpha=alpha, obs=False)
+        #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
+        ci_mean = self.conf_int(alpha=alpha)
         to_include = OrderedDict()
         to_include['mean'] = self.predicted_mean
         to_include['mean_se'] = self.se_mean
         to_include['mean_ci_lower'] = ci_mean[:, 0]
         to_include['mean_ci_upper'] = ci_mean[:, 1]
-        to_include['obs_ci_lower'] = ci_obs[:, 0]
-        to_include['obs_ci_upper'] = ci_obs[:, 1]
+
 
         self.table = to_include
         #OrderedDict doesn't work to preserve sequence
@@ -91,8 +91,8 @@ class PredictionResults(object):
         return res
 
 
-def get_prediction(self, exog=None, transform=True, weights=None,
-                   row_labels=None, pred_kwds=None):
+def get_prediction_glm(self, exog=None, transform=True, weights=None,
+                   row_labels=None, linpred=None, link=None, pred_kwds=None):
     """
     compute prediction results
 
@@ -158,12 +158,13 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     ### end
 
-    if pred_kwds is None:
-        pred_kwds = {}
+    pred_kwds['linear'] = False
     predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
 
     covb = self.cov_params()
-    var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
+
+    link_deriv = self.model.family.link.inverse_deriv(linpred.predicted_mean)
+    var_pred_mean = link_deriv**2 * (exog * np.dot(covb, exog.T).T).sum(1)
 
     # TODO: check that we have correct scale, Refactor scale #???
     var_resid = self.scale / weights # self.mse_resid / weights
@@ -174,4 +175,4 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     dist = ['norm', 't'][self.use_t]
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,
                              df=self.df_resid, dist=dist,
-                             row_labels=row_labels)
+                             row_labels=row_labels, linpred=linpred, link=link)
