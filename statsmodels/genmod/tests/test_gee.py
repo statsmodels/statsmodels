@@ -15,8 +15,7 @@ import os
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
-     OrdinalGEE, NominalGEE, GEEMargins,
-     NominalGEEResults, OrdinalGEEResults,
+     OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
      NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
 from statsmodels.genmod.cov_struct import (Exchangeable, Independence,
@@ -94,7 +93,7 @@ class TestGEE(object):
         model = sm.GEE(endog, exog, groups)
         result = model.fit()
 
-        marg = sm.GEEMargins(result, ())
+        marg = result.get_margeff()
 
         assert_allclose(marg.margeff, result.params[1:])
         assert_allclose(marg.margeff_se, result.bse[1:])
@@ -115,7 +114,7 @@ class TestGEE(object):
         model = sm.GEE(endog, exog, groups, family=sm.families.Binomial())
         result = model.fit(cov_type='naive')
 
-        marg = sm.GEEMargins(result, ())
+        marg = result.get_margeff()
 
         assert_allclose(marg.margeff, np.r_[0.4119796])
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
@@ -138,7 +137,7 @@ class TestGEE(object):
         model = sm.NominalGEE(endog, exog, groups)
         result = model.fit(cov_type='naive')
 
-        marg = sm.GEEMargins(result, ())
+        marg = result.get_margeff()
 
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
@@ -158,7 +157,7 @@ class TestGEE(object):
         model = sm.GEE(endog, exog, groups, family=sm.families.Poisson())
         result = model.fit(cov_type='naive')
 
-        marg = sm.GEEMargins(result, ())
+        marg = result.get_margeff()
 
         assert_allclose(marg.margeff, np.r_[11.0928], rtol=1e-6)
         assert_allclose(marg.margeff_se, np.r_[3.269015], rtol=1e-6)
