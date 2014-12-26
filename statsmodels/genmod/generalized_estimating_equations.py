@@ -153,6 +153,8 @@ class ParameterConstraint(object):
 
 
 _gee_init_doc = """
+    Marginal regression model fit using Generalized Estimating Equations.
+
     GEE can be used to fit Generalized Linear Models (GLMs) when the
     data have a grouped structure, and the observations are possibly
     correlated within groups but not between groups.
@@ -164,8 +166,8 @@ _gee_init_doc = """
         dependent variables, or 'Y' values).
     exog : array-like
         2d array of exogeneous values (i.e. covariates, predictors,
-        independent variables, regressors, or 'X' values). A nobs x k
-        array where `nobs` is the number of observations and `k` is
+        independent variables, regressors, or 'X' values). A `nobs x
+        k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
         default and should be added by the user. See
         `statsmodels.tools.add_constant`.
