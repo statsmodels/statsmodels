@@ -39,7 +39,6 @@ from statsmodels.genmod.cov_struct import (Independence,
                                            GlobalOddsRatio,
                                            CovStruct)
 import statsmodels.genmod.families.varfuncs as varfuncs
-import statsmodels.genmod.families.links as links
 from statsmodels.genmod.families.links import Link
 
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
@@ -291,11 +290,6 @@ _gee_fit_doc = """
     For the Gaussian family, there is no benefit to setting
     `params_niter` to a value greater than 1, since the mean
     structure parameters converge in one step.
-
-    Stata sets the Poisson scale parameter to 1 by default.  The point
-    estimates are not affected, but to obtain agreement in the
-    standard errors and other inferential quantities, use the
-    `scale(x2)`option in Stata glm.
 """
 
 _gee_results_doc = """
