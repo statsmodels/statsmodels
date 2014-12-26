@@ -120,6 +120,7 @@ class TestGEE(object):
         assert_allclose(marg.margeff, np.r_[0.4119796])
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
+    #TODO: fails unpredictably
     def t_est_margins_multinomial(self):
         """
         Check marginal effects for a 2-class multinomial GEE fit,
