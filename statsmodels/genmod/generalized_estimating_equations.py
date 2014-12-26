@@ -39,29 +39,12 @@ from statsmodels.genmod.cov_struct import (Independence,
                                            GlobalOddsRatio,
                                            CovStruct)
 import statsmodels.genmod.families.varfuncs as varfuncs
+import statsmodels.genmod.families.links as links
 from statsmodels.genmod.families.links import Link
 
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              IterationLimitWarning)
 import warnings
-
-
-# Workaround for block_diag, not available until scipy version
-# 0.11. When the statsmodels scipy dependency moves to version 0.11,
-# we can remove this function and use:
-# from scipy.sparse import block_diag
-def block_diag(dblocks, format=None):
-
-    from scipy.sparse import bmat
-
-    n = len(dblocks)
-    blocks = []
-    for i in range(n):
-        b = [None,] * n
-        b[i] = dblocks[i]
-        blocks.append(b)
-
-    return bmat(blocks, format)
 
 
 class ParameterConstraint(object):
@@ -308,6 +291,11 @@ _gee_fit_doc = """
     For the Gaussian family, there is no benefit to setting
     `params_niter` to a value greater than 1, since the mean
     structure parameters converge in one step.
+
+    Stata sets the Poisson scale parameter to 1 by default.  The point
+    estimates are not affected, but to obtain agreement in the
+    standard errors and other inferential quantities, use the
+    `scale(x2)`option in Stata glm.
 """
 
 _gee_results_doc = """
@@ -560,39 +548,6 @@ class GEE(base.Model):
         self.df_model = self.exog.shape[1] - 1  # assumes constant
         self.df_resid = self.nobs - self.exog.shape[1]
 
-        # mean_deriv is the derivative of E[endog|exog] with respect
-        # to params
-        try:
-            # This custom mean_deriv is currently only used for the
-            # multinomial logit model
-            self.mean_deriv = self.family.link.mean_deriv
-        except AttributeError:
-            # Otherwise it can be obtained easily from inverse_deriv
-            mean_deriv_lpr = self.family.link.inverse_deriv
-
-            def mean_deriv(exog, lpr):
-                dmat = exog * mean_deriv_lpr(lpr)[:, None]
-                return dmat
-
-            self.mean_deriv = mean_deriv
-
-        # mean_deriv_exog is the derivative of E[endog|exog] with
-        # respect to exog
-        try:
-            # This custom mean_deriv_exog is currently only used for
-            # the multinomial logit model
-            self.mean_deriv_exog = self.family.link.mean_deriv_exog
-        except AttributeError:
-            # Otherwise it can be obtained easily from inverse_deriv
-            mean_deriv_lpr = self.family.link.inverse_deriv
-
-            def mean_deriv_exog(exog, params):
-                lpr = np.dot(exog, params)
-                dmat = np.outer(mean_deriv_lpr(lpr), params)
-                return dmat
-
-            self.mean_deriv_exog = mean_deriv_exog
-
         # Skip the covariance updates if all groups have a single
         # observation (reduces to fitting a GLM).
         maxgroup = max([len(x) for x in self.endog_li])
@@ -699,9 +654,13 @@ class GEE(base.Model):
 
     def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter `phi` at the
-        current parameter value.
+        Returns an estimate of the scale parameter at the current
+        parameter value.
         """
+
+        if isinstance(self.family, (families.Binomial, families.Poisson,
+                                    _Multinomial)):
+            return 1.
 
         endog = self.endog_li
         exog = self.exog_li
@@ -730,6 +689,44 @@ class GEE(base.Model):
         scale /= (nobs - exog_dim)
 
         return scale
+
+    def mean_deriv(self, exog, lin_pred):
+        """
+        Derivative of the expected endog with respect to param.
+
+        Parameters
+        ----------
+        exog : array-like
+           The exogeneous data at which the derivative is computed.
+        lin_pred : array-like
+           The values of the linear predictor.
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+
+        idl = self.family.link.inverse_deriv(lin_pred)
+        dmat = exog * idl[:, None]
+        return dmat
+
+
+    def mean_deriv_exog(self, exog, params):
+        """
+        Derivative of the expected endog with respect to exog.
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to exog.
+        """
+
+        lin_pred = np.dot(exog, params)
+        idl = self.family.link.inverse_deriv(lin_pred)
+        dmat = np.outer(idl, params)
+        return dmat
+
 
     def _update_mean_params(self):
         """
@@ -1209,10 +1206,6 @@ class GEE(base.Model):
         if exog is None:
             exog = self.exog
         margeff = self.mean_deriv_exog(exog, params)
-#        lpr = np.dot(exog, params)
-#        margeff = (self.mean_deriv(exog, lpr) / exog) * params
-#        margeff = np.dot(self.pdf(np.dot(exog, params))[:, None],
-#                                                          params[None,:])
 
         if 'ex' in transform:
             margeff *= exog
@@ -1961,6 +1954,102 @@ class NominalGEE(GEE):
 
         return endog_out, exog_out, groups_out, time_out, offset_out
 
+
+    def mean_deriv(self, exog, lin_pred):
+        """
+        Derivative of the expected endog with respect to param.
+
+        Parameters
+        ----------
+        exog : array-like
+           The exogeneous data at which the derivative is computed,
+           number of rows must be a multiple of `ncut`.
+        lin_pred : array-like
+           The values of the linear predictor, length must be multiple
+           of `ncut`.
+
+        Returns
+        -------
+        The derivative of the expected endog with respect to the
+        parameters.
+        """
+
+        expval = np.exp(lin_pred)
+
+        # Reshape so that each row contains all the indicators
+        # corresponding to one multinomial observation.
+        expval_m = np.reshape(expval, (len(expval) / self.ncut,
+                                       self.ncut))
+
+        # The normalizing constant for the multinomial probabilities.
+        denom = 1 + expval_m.sum(1)
+        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
+
+        # The multinomial probabilities
+        mprob = expval / denom
+
+        # First term of the derivative: denom * expval' / denom^2 =
+        # expval' / denom.
+        dmat = mprob[:, None] * exog
+
+        # Second term of the derivative: -expval * denom' / denom^2
+        ddenom = expval[:, None] * exog
+        dmat -= mprob[:, None] * ddenom / denom[:, None]
+
+        return dmat
+
+    # Minimally tested
+    def mean_deriv_exog(self, exog, params):
+        """
+        Derivative of the expected endog with respect to exog for the
+        multinomial model, used in analyzing marginal effects.
+
+        Parameters
+        ----------
+        exog : array-like
+           The exogeneous data at which the derivative is computed,
+           number of rows must be a multiple of `ncut`.
+        lpr : array-like
+           The linear predictor values, length must be multiple of
+           `ncut`.
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to exog.
+        """
+
+        lpr = np.dot(exog, params)
+        expval = np.exp(lpr)
+
+        expval_m = np.reshape(expval, (len(expval) / self.ncut,
+                                       self.ncut))
+
+        denom = 1 + expval_m.sum(1)
+        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
+
+        bmat0 = np.outer(np.ones(exog.shape[0]), params)
+
+        # Masking matrix
+        qmat = []
+        for j in range(self.ncut):
+            ee = np.zeros(self.ncut, dtype=np.float64)
+            ee[j] = 1
+            qmat.append(np.kron(ee, np.ones(len(params) / self.ncut)))
+        qmat = np.array(qmat)
+        qmat = np.kron(np.ones((exog.shape[0]/self.ncut, 1)), qmat)
+        bmat = bmat0 * qmat
+
+        dmat = expval[:, None] * bmat / denom[:, None]
+
+        expval_mb = np.kron(expval_m, np.ones((self.ncut, 1)))
+        expval_mb = np.kron(expval_mb, np.ones((1, self.ncut)))
+
+        dmat -= expval[:, None] * (bmat * expval_mb) / denom[:, None]**2
+
+        return dmat
+
+
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
@@ -2128,93 +2217,6 @@ class _MultinomialLogit(Link):
 
         return prob
 
-    def mean_deriv(self, exog, lpr):
-        """
-        Derivative of the expected endog with respect to param.
-
-        Parameters
-        ----------
-        exog : array-like
-           The exogeneous data at which the derivative is computed,
-           number of rows must be a multiple of `ncut`.
-        lpr : array-like
-           The linear predictor values, length must be multiple of
-           `ncut`.
-
-        Returns
-        -------
-        The value of the derivative of the expected endog with respect
-        to param
-        """
-
-        expval = np.exp(lpr)
-
-        expval_m = np.reshape(expval, (len(expval) / self.ncut,
-                                       self.ncut))
-
-        denom = 1 + expval_m.sum(1)
-        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
-
-        dmat = expval[:, None] * exog / denom[:, None]
-
-        ones = np.ones(self.ncut, dtype=np.float64)
-        cmat = block_diag([np.outer(ones, x) for x in expval_m], "csr")
-        rmat = cmat.dot(exog)
-        dmat -= expval[:, None] * rmat / denom[:, None]**2
-
-        return dmat
-
-    # Minimally tested
-    def mean_deriv_exog(self, exog, params):
-        """
-        Derivative of the expected endog with respect to exog for the
-        multinomial model, used in analyzing marginal effects.
-
-        Parameters
-        ----------
-        exog : array-like
-           The exogeneous data at which the derivative is computed,
-           number of rows must be a multiple of `ncut`.
-        lpr : array-like
-           The linear predictor values, length must be multiple of
-           `ncut`.
-
-        Returns
-        -------
-        The value of the derivative of the expected endog with respect
-        to exog.
-        """
-
-        lpr = np.dot(exog, params)
-        expval = np.exp(lpr)
-
-        expval_m = np.reshape(expval, (len(expval) / self.ncut,
-                                       self.ncut))
-
-        denom = 1 + expval_m.sum(1)
-        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
-
-        bmat0 = np.outer(np.ones(exog.shape[0]), params)
-
-        # Masking matrix
-        qmat = []
-        for j in range(self.ncut):
-            ee = np.zeros(self.ncut, dtype=np.float64)
-            ee[j] = 1
-            qmat.append(np.kron(ee, np.ones(len(params) / self.ncut)))
-        qmat = np.array(qmat)
-        qmat = np.kron(np.ones((exog.shape[0]/self.ncut, 1)), qmat)
-        bmat = bmat0 * qmat
-
-        dmat = expval[:, None] * bmat / denom[:, None]
-
-        expval_mb = np.kron(expval_m, np.ones((self.ncut, 1)))
-        expval_mb = np.kron(expval_mb, np.ones((1, self.ncut)))
-
-        dmat -= expval[:, None] * (bmat * expval_mb) / denom[:, None]**2
-
-        return dmat
-
 
 class _Multinomial(families.Family):
     """
@@ -2242,17 +2244,16 @@ class _Multinomial(families.Family):
 
 
 
-from statsmodels.discrete.discrete_margins import \
-    _get_margeff_exog, _get_const_index, _check_margeff_args, \
-    _effects_at, margeff_cov_with_se, _check_at_is_all, \
-    _transform_names, \
-    _check_discrete_args, _get_dummy_index, _get_count_index
+from statsmodels.discrete.discrete_margins import (_get_margeff_exog,
+    _get_const_index, _check_margeff_args, _effects_at,
+    margeff_cov_with_se, _check_at_is_all, _transform_names,
+    _check_discrete_args, _get_dummy_index, _get_count_index)
 
 
 
 class GEEMargins(object):
-    """Estimate the marginal effects of a model fit using generalized
-    estimating equations.
+    """
+    Estimated marginal effects for a regression model fit with GEE.
 
     Parameters
     ----------

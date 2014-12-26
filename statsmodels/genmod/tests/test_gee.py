@@ -72,30 +72,117 @@ def check_wrapper(results):
 class TestGEE(object):
 
 
-    def test_margins(self):
+    def test_margins_gaussian(self):
+        """
+        Check marginal effects for a Gaussian GEE fit.  Marginal
+        effects and ordinary effects should be equal.
+        """
 
-        n = 300
-        exog = np.random.normal(size=(n, 4))
-        exog[:,0] = 1
-        exog[:,1] = 1*(exog[:,2] < 0)
+        n = 40
+        np.random.seed(34234)
+        exog = np.random.normal(size=(n, 3))
+        exog[:, 0] = 1
 
-        group = np.kron(np.arange(n/4), np.ones(4))
-        time = np.zeros((n, 1))
+        groups = np.kron(np.arange(n/4), np.r_[1, 1, 1, 1])
 
-        beta = np.r_[0, 1, -1, 0.5]
-        lpr = np.dot(exog, beta)
-        prob = 1 / (1 + np.exp(-lpr))
+        params = np.r_[0, 1, -1]
+        lin_pred = np.dot(exog, params)
+        prob = 1 / (1 + np.exp(-lin_pred))
 
-        endog = 1*(np.random.uniform(size=n) < prob)
+        endog = exog[:, 1] + np.random.normal(size=n)
 
-        fa = Binomial()
-        ex = Exchangeable()
+        model = sm.GEE(endog, exog, groups)
+        result = model.fit()
 
-        md = GEE(endog, exog, group, time, fa, ex)
-        mdf = md.fit()
+        marg = sm.GEEMargins(result, ())
 
-        marg = GEEMargins(mdf, ())
-        marg.summary()
+        assert_allclose(marg.margeff, result.params[1:])
+        assert_allclose(marg.margeff_se, result.bse[1:])
+
+    def test_margins_logistic(self):
+        """
+        Check marginal effects for a binomial GEE fit.  Comparison
+        comes from Stata.
+        """
+
+        np.random.seed(34234)
+        endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
+        exog = np.ones((8, 2))
+        exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
+
+        groups = np.arange(8)
+
+        model = sm.GEE(endog, exog, groups, family=sm.families.Binomial())
+        result = model.fit(cov_type='naive')
+
+        marg = sm.GEEMargins(result, ())
+
+        assert_allclose(marg.margeff, np.r_[0.4119796])
+        assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
+
+    def test_margins_multinomial(self):
+        """
+        Check marginal effects for a 2-class multinomial GEE fit,
+        which should be equivalent to logistic regression.  Comparison
+        comes from Stata.
+        """
+
+        np.random.seed(34234)
+        endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
+        exog = np.ones((8, 2))
+        exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
+
+        groups = np.arange(8)
+
+        model = sm.NominalGEE(endog, exog, groups)
+        result = model.fit(cov_type='naive')
+
+        marg = sm.GEEMargins(result, ())
+
+        assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
+        assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
+
+    def test_margins_poisson(self):
+        """
+        Check marginal effects for a Poisson GEE fit.
+        """
+
+        np.random.seed(34234)
+        endog = np.r_[10, 15, 12, 13, 20, 18, 26, 29]
+        exog = np.ones((8, 2))
+        exog[:, 1] = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
+
+        groups = np.arange(8)
+
+        model = sm.GEE(endog, exog, groups, family=sm.families.Poisson())
+        result = model.fit(cov_type='naive')
+
+        marg = sm.GEEMargins(result, ())
+
+        assert_allclose(marg.margeff, np.r_[11.0928], rtol=1e-6)
+        assert_allclose(marg.margeff_se, np.r_[3.269015], rtol=1e-6)
+
+    def test_multinomial(self):
+        """
+        Check the 2-class multinomial (nominal) GEE fit against
+        logistic regression.
+        """
+
+        np.random.seed(34234)
+        endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
+        exog = np.ones((8, 2))
+        exog[:, 1] = np.r_[1, 2, 1, 1, 2, 1, 2, 2]
+
+        groups = np.arange(8)
+
+        model = sm.NominalGEE(endog, exog, groups)
+        results = model.fit(cov_type='naive')
+
+        logit_model = sm.GEE(endog, exog, groups, family=sm.families.Binomial())
+        logit_results = logit_model.fit(cov_type='naive')
+
+        assert_allclose(results.params, -logit_results.params, rtol=1e-5)
+        assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
 
 
     # This is in the release announcement for version 0.6.
@@ -124,7 +211,6 @@ class TestGEE(object):
         rslt2 = rslt2._results
 
         assert_almost_equal(rslt1.params, rslt2.params, decimal=6)
-        assert_almost_equal(rslt1.scale, rslt2.scale, decimal=6)
 
     def test_missing(self):
         #Test missing data handling for calling from the api.  Missing
@@ -585,10 +671,10 @@ class TestGEE(object):
         rslt1 = mod1.fit()
 
         # Regression test
-        cf1 = np.r_[0.44944752,  0.45569985, -0.92007064, -0.46766728]
-        se1 = np.r_[0.09801821,  0.07718842,  0.13229421,  0.08544553]
-        assert_almost_equal(rslt1.params, cf1, decimal=5)
-        assert_almost_equal(rslt1.standard_errors(), se1, decimal=5)
+        cf1 = np.r_[0.450009, 0.451959, -0.918825, -0.468266]
+        se1 = np.r_[0.08915936, 0.07005046, 0.12198139, 0.08281258]
+        assert_allclose(rslt1.params, cf1, rtol=1e-5, atol=1e-5)
+        assert_allclose(rslt1.standard_errors(), se1, rtol=1e-5, atol=1e-5)
 
         # Test with global odds ratio dependence
         va = GlobalOddsRatio("nominal")
@@ -596,10 +682,10 @@ class TestGEE(object):
         rslt2 = mod2.fit(start_params=rslt1.params)
 
         # Regression test
-        cf2 = np.r_[0.45448248,  0.41945568, -0.92008924, -0.50485758]
-        se2 = np.r_[0.09632274,  0.07433944,  0.13264646,  0.0911768]
-        assert_almost_equal(rslt2.params, cf2, decimal=5)
-        assert_almost_equal(rslt2.standard_errors(), se2, decimal=5)
+        cf2 = np.r_[0.455365, 0.415334, -0.916589, -0.502116]
+        se2 = np.r_[0.08803614, 0.06628179, 0.12259726, 0.08411064]
+        assert_allclose(rslt2.params, cf2, rtol=1e-5, atol=1e-5)
+        assert_allclose(rslt2.standard_errors(), se2, rtol=1e-5, atol=1e-5)
 
         # Make sure we get the correct results type
         assert_equal(type(rslt1), NominalGEEResultsWrapper)
