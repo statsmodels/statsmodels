@@ -961,13 +961,15 @@ class GEE(base.Model):
             if not isinstance(self.family.link, families.links.Log):
                 # Don't need to worry about exposure
                 if offset is None:
-                    _offset = self._offset_exposure
+                    if self._offset_exposure is not None:
+                        _offset = self._offset_exposure.copy()
                 else:
                     _offset = offset
 
             else:
                 if offset is None and exposure is None:
-                    _offset = self._offset_exposure
+                    if self._offset_exposure is not None:
+                        _offset = self._offset_exposure
                 elif offset is None and exposure is not None:
                     _offset = np.log(exposure)
                     if hasattr(self, "offset"):
@@ -983,7 +985,7 @@ class GEE(base.Model):
         # never use model exog or exposure if exog is provided.
         else:
             if offset is not None:
-                _offset += offset
+                _offset = _offset + offset
             if exposure is not None:
                 _offset += np.log(exposure)
 
@@ -2056,7 +2058,7 @@ class NominalGEE(GEE):
 
     def mean_deriv(self, exog, lin_pred):
         """
-        Derivative of the expected endog with respect to param.
+        Derivative of the expected endog with respect to the parameters.
 
         Parameters
         ----------
@@ -2535,7 +2537,7 @@ class GEEMargins(object):
         model = results.model
         params = results.params
         exog = model.exog.copy() # copy because values are changed
-        effects_idx, const_idx =  _get_const_index(exog)
+        effects_idx, const_idx = _get_const_index(exog)
 
         if dummy:
             _check_discrete_args(at, method)

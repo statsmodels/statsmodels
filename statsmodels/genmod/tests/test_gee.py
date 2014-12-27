@@ -1,11 +1,12 @@
 """
 Test functions for GEE
 
-External comparisons are to R.  The statmodels GEE implementation
-should generally agree with the R GEE implementation for the
-independence and exchangeable correlation structures.  For other
-correlation structures, the details of the correlation estimation
-differ among implementations and the results will not agree exactly.
+External comparisons are to R and Stata.  The statmodels GEE
+implementation should generally agree with the R GEE implementation
+for the independence and exchangeable correlation structures.  For
+other correlation structures, the details of the correlation
+estimation differ among implementations and the results will not agree
+exactly.
 """
 
 from statsmodels.compat import lrange
@@ -197,7 +198,7 @@ class TestGEE(object):
         ind = Independence()
         mod1 = GEE.from_formula("y ~ age + trt + base", data["subject"],
                                 data, cov_struct=ind, family=fam)
-        rslt1 = mod1.fit()
+        rslt1 = mod1.fit(cov_type='naive')
 
         # Coefficients should agree with GLM
         from statsmodels.genmod.generalized_linear_model import GLM
@@ -205,13 +206,14 @@ class TestGEE(object):
 
         mod2 = GLM.from_formula("y ~ age + trt + base", data,
                                family=families.Poisson())
-        rslt2 = mod2.fit(scale="X2")
+        rslt2 = mod2.fit()
 
         # don't use wrapper, asserts_xxx don't work
         rslt1 = rslt1._results
         rslt2 = rslt2._results
 
-        assert_almost_equal(rslt1.params, rslt2.params, decimal=6)
+        assert_allclose(rslt1.params, rslt2.params,rtol=1e-6, atol=1e-6)
+        assert_allclose(rslt1.bse, rslt2.bse, rtol=1e-6, atol=1e-6)
 
     def test_missing(self):
         #Test missing data handling for calling from the api.  Missing
