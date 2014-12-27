@@ -14,7 +14,6 @@ from numpy import asarray, zeros, sum, conjugate, dot, transpose
 import numpy
 from numpy import asarray_chkfinite, single
 from numpy.linalg import LinAlgError
-from scipy.linalg import calc_lwork
 
 
 ### Linear Least Squares
@@ -75,11 +74,16 @@ def lstsq(a, b, cond=None, overwrite_a=0, overwrite_b=0):
         b1 = b2
     overwrite_a = overwrite_a or (a1 is not a and not hasattr(a, '__array__'))
     overwrite_b = overwrite_b or (b1 is not b and not hasattr(b, '__array__'))
+
     if gelss.module_name[:7] == 'flapack':
-        lwork = calc_lwork.gelss(gelss.prefix, m, n, nrhs)[1]
-        v, x, s, rank, info = gelss(a1, b1, cond=cond, lwork=lwork,
-                                    overwrite_a=overwrite_a,
-                                    overwrite_b=overwrite_b)
+
+        # get optimal work array
+        work = gelss(a1, b1, lwork=-1)[4]
+        lwork = work[0].real.astype(np.int)
+        v, x, s, rank, work, info = gelss(
+            a1, b1, cond=cond, lwork=lwork, overwrite_a=overwrite_a,
+            overwrite_b=overwrite_b)
+
     else:
         raise NotImplementedError('calling gelss from %s' %
                                   gelss.module_name)
