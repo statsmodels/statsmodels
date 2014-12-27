@@ -614,7 +614,7 @@ class TestFilters(object):
         cls.datana = DataFrame(data, DatetimeIndex(start='1/1/1951',
                                                   periods=len(data),
                                                   freq='Q'))
-        from .results import filter_results
+        from statsmodels.tsa.filters.tests.results import filter_results
         cls.expected = filter_results
 
     def test_convolution(self):
@@ -676,8 +676,8 @@ class TestFilters(object):
         expected = self.expected.recurse_init_na
         np.testing.assert_almost_equal(res, expected)
 
-        np.testing.assert_raises(ValueError, recursive_filter, x,
-                                 [.75, .25, .5], [150, 100])
+        assert_raises(ValueError, recursive_filter, x,
+                      [.75, .25, .5], [150, 100])
 
     def test_pandas(self):
         start = datetime(1951, 3, 31)

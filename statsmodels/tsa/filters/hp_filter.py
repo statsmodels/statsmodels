@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
 from scipy import sparse
-from scipy.sparse import dia_matrix, eye as speye
 from scipy.sparse.linalg import spsolve
 import numpy as np
 from ._utils import _maybe_get_pandas_wrapper
+
 
 def hpfilter(X, lamb=1600):
     """
@@ -82,10 +82,10 @@ def hpfilter(X, lamb=1600):
     if X.ndim > 1:
         X = X.squeeze()
     nobs = len(X)
-    I = speye(nobs,nobs)
+    I = sparse.eye(nobs,nobs)
     offsets = np.array([0,1,2])
     data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
-    K = dia_matrix((data, offsets), shape=(nobs-2,nobs))
+    K = sparse.dia_matrix((data, offsets), shape=(nobs-2,nobs))
 
     import scipy
     if (X.dtype != np.dtype('<f8') and
@@ -101,6 +101,7 @@ def hpfilter(X, lamb=1600):
         trend = spsolve(I+lamb*K.T.dot(K), X)
     else:
         trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
+
     cycle = X-trend
     if _pandas_wrapper is not None:
         return _pandas_wrapper(cycle), _pandas_wrapper(trend)
