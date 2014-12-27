@@ -91,7 +91,7 @@ class TestGEE(object):
         endog = exog[:, 1] + np.random.normal(size=n)
 
         model = sm.GEE(endog, exog, groups)
-        result = model.fit()
+        result = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
 
         marg = result.get_margeff()
 
@@ -112,15 +112,15 @@ class TestGEE(object):
         groups = np.arange(8)
 
         model = sm.GEE(endog, exog, groups, family=sm.families.Binomial())
-        result = model.fit(cov_type='naive')
+        result = model.fit(cov_type='naive', start_params=[-3.29583687,  2.19722458])
 
         marg = result.get_margeff()
 
         assert_allclose(marg.margeff, np.r_[0.4119796])
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
-    #TODO: fails unpredictably
-    def t_est_margins_multinomial(self):
+
+    def test_margins_multinomial(self):
         """
         Check marginal effects for a 2-class multinomial GEE fit,
         which should be equivalent to logistic regression.  Comparison
@@ -135,7 +135,7 @@ class TestGEE(object):
         groups = np.arange(8)
 
         model = sm.NominalGEE(endog, exog, groups)
-        result = model.fit(cov_type='naive')
+        result = model.fit(cov_type='naive', start_params=[3.295837, -2.197225])
 
         marg = result.get_margeff()
 
@@ -155,7 +155,7 @@ class TestGEE(object):
         groups = np.arange(8)
 
         model = sm.GEE(endog, exog, groups, family=sm.families.Poisson())
-        result = model.fit(cov_type='naive')
+        result = model.fit(cov_type='naive', start_params=[2.52572864, 0.62057649])
 
         marg = result.get_margeff()
 
@@ -176,7 +176,8 @@ class TestGEE(object):
         groups = np.arange(8)
 
         model = sm.NominalGEE(endog, exog, groups)
-        results = model.fit(cov_type='naive')
+        results = model.fit(cov_type='naive', start_params=[3.295837, -2.197225])
+
 
         logit_model = sm.GEE(endog, exog, groups, family=sm.families.Binomial())
         logit_results = logit_model.fit(cov_type='naive')
@@ -893,9 +894,10 @@ class TestGEE(object):
     def test_predict(self):
 
         n = 50
+        np.random.seed(4324)
         X1 = np.random.normal(size=n)
         X2 = np.random.normal(size=n)
-        groups = np.kron(np.arange(25), np.r_[1, 1])
+        groups = np.kron(np.arange(n / 2), np.r_[1, 1])
         offset = np.random.uniform(1, 2, size=n)
         Y = np.random.normal(0.1*(X1 + X2) + offset, size=n)
         data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
@@ -904,7 +906,7 @@ class TestGEE(object):
         fml = "Y ~ X1 + X2"
         model = GEE.from_formula(fml, groups, data, family=Gaussian(),
                                  offset="offset")
-        result = model.fit()
+        result = model.fit(start_params=[0, 0.1, 0.1])
         assert_equal(result.converged, True)
 
         pred1 = result.predict()
@@ -1016,6 +1018,7 @@ class TestGEE(object):
         va = Exchangeable()
         family = Gaussian()
 
+        np.random.seed(34234)
         n = 100
         Y = np.random.normal(size=n)
         X1 = np.random.normal(size=n)
@@ -1034,7 +1037,7 @@ class TestGEE(object):
 
         # Regression test
         assert_almost_equal([x.params[0] for x in ps],
-                            np.r_[-0.1256575, -0.126747036])
+                            [0.1696214707458818, 0.17836097387799127])
 
 
 class CheckConsistency(object):

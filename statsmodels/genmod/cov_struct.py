@@ -395,7 +395,6 @@ class Nested(CovStruct):
     def update(self, params):
 
         endog = self.model.endog_li
-        offset = self.model.offset_li
 
         nobs = self.model.nobs
         dim = len(params)
@@ -414,7 +413,7 @@ class Nested(CovStruct):
             expval, _ = cached_means[i]
 
             stdev = np.sqrt(varfunc(expval))
-            resid = (endog[i] - offset[i] - expval) / stdev
+            resid = (endog[i] - expval) / stdev
 
             ix1, ix2 = np.tril_indices(len(resid), -1)
             dvmat.append(resid[ix1] * resid[ix2])

@@ -474,14 +474,17 @@ class GEE(base.Model):
         self.cov_struct = cov_struct
 
         # Handle the offset and exposure
-        self._offset_exposure = np.zeros(len(self.endog))
+        self._offset_exposure = None
         if offset is not None:
-            self._offset_exposure += self.offset
+            self._offset_exposure = self.offset.copy()
             self.offset = offset
         if exposure is not None:
             if not isinstance(self.family.link, families.links.Log):
                 raise ValueError("exposure can only be used with the log link function")
-            self._offset_exposure += np.log(exposure)
+            if self._offset_exposure is not None:
+                self._offset_exposure += np.log(exposure)
+            else:
+                self._offset_exposure = np.log(exposure)
             self.exposure = exposure
 
         # Handle the constraint
@@ -497,7 +500,10 @@ class GEE(base.Model):
                                                   constraint[1],
                                                   self.exog)
 
-            self._offset_exposure += self.constraint.offset_increment()
+            if self._offset_exposure is not None:
+                self._offset_exposure += self.constraint.offset_increment()
+            else:
+                self._offset_exposure = self.constraint.offset_increment().copy()
             self.exog = self.constraint.reduced_exog()
 
         # Convert the data to the internal representation, which is a
@@ -528,7 +534,10 @@ class GEE(base.Model):
                  for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
-        self.offset_li = self.cluster_list(self._offset_exposure)
+        if self._offset_exposure is not None:
+            self.offset_li = self.cluster_list(self._offset_exposure)
+        else:
+            self.offset_li = None
         if constraint is not None:
             self.constraint.exog_fulltrans_li = \
                 self.cluster_list(self.constraint.exog_fulltrans)
@@ -660,7 +669,6 @@ class GEE(base.Model):
 
         endog = self.endog_li
         exog = self.exog_li
-        offset = self.offset_li
 
         cached_means = self.cached_means
 
@@ -678,7 +686,7 @@ class GEE(base.Model):
             expval, _ = cached_means[i]
 
             sdev = np.sqrt(varfunc(expval))
-            resid = (endog[i] - offset[i] - expval) / sdev
+            resid = (endog[i] - expval) / sdev
 
             scale += np.sum(resid**2)
 
@@ -688,7 +696,7 @@ class GEE(base.Model):
 
     def mean_deriv(self, exog, lin_pred):
         """
-        Derivative of the expected endog with respect to param.
+        Derivative of the expected endog with respect to the parameters.
 
         Parameters
         ----------
@@ -701,6 +709,11 @@ class GEE(base.Model):
         -------
         The value of the derivative of the expected endog with respect
         to the parameter vector.
+
+        Notes
+        -----
+        If there is an offset or exposure, it should be added to
+        `lin_pred` prior to calling this function.
         """
 
         idl = self.family.link.inverse_deriv(lin_pred)
@@ -708,17 +721,29 @@ class GEE(base.Model):
         return dmat
 
 
-    def mean_deriv_exog(self, exog, params):
+    def mean_deriv_exog(self, exog, params, offset_exposure=None):
         """
         Derivative of the expected endog with respect to exog.
 
+        Parameters
+        ----------
+        exog : array-like
+            Values of the independent variables at which the derivative
+            is calculated.
+        params : array-like
+            Parameter values at which the derivative is calculated.
+        offset_exposure : array-like, optional
+            Combined offset and exposure.
+
         Returns
         -------
-        The value of the derivative of the expected endog with respect
-        to exog.
+        The derivative of the expected endog with respect to exog.
         """
 
         lin_pred = np.dot(exog, params)
+        if offset_exposure is not None:
+            lin_pred += offset_exposure
+
         idl = self.family.link.inverse_deriv(lin_pred)
         dmat = np.outer(idl, params)
         return dmat
@@ -790,7 +815,9 @@ class GEE(base.Model):
             if len(endog[i]) == 0:
                 continue
 
-            lpr = offset[i] + np.dot(exog[i], mean_params)
+            lpr = np.dot(exog[i], mean_params)
+            if offset is not None:
+                lpr += offset[i]
             expval = linkinv(lpr)
 
             self.cached_means.append((expval, lpr))
@@ -1002,6 +1029,7 @@ class GEE(base.Model):
         if start_params is None:
             mean_params = self._starting_params()
         else:
+            start_params = np.asarray(start_params)
             mean_params = start_params.copy()
 
         self.update_cached_means(mean_params)
@@ -1086,6 +1114,11 @@ class GEE(base.Model):
         results.first_dep_update = first_dep_update
         results.ctol = ctol
         results.maxiter = maxiter
+
+        if hasattr(self, "offset"):
+            results.offset = self.offset
+        if hasattr(self, "exposure"):
+            results.exposure = self.exposure
 
         # These will be copied over to subclasses when upgrading.
         results._props = ["cov_type", "use_t",
@@ -1189,19 +1222,22 @@ class GEE(base.Model):
     def _derivative_exog(self, params, exog=None, transform='dydx',
             dummy_idx=None, count_idx=None):
         """
-        For computing marginal effects returns dF(XB) / dX where F(.) is
-        the predicted probabilities
+        For computing marginal effects, returns dF(XB) / dX where F(.)
+        is the fitted mean.
 
         transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
 
         Not all of these make sense in the presence of discrete regressors,
         but checks are done in the results in get_margeff.
         """
-        #note, this form should be appropriate for
-        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        # This form should be appropriate for group 1 probit, logit,
+        # logistic, cloglog, heckprob, xtprobit.
         if exog is None:
             exog = self.exog
-        margeff = self.mean_deriv_exog(exog, params)
+            offset_exposure = self._offset_exposure
+
+        offset_exposure = None
+        margeff = self.mean_deriv_exog(exog, params, offset_exposure)
 
         if 'ex' in transform:
             margeff *= exog
@@ -1511,7 +1547,7 @@ class GEEResults(base.LikelihoodModelResults):
             - 'mean', The marginal effects at the mean of each regressor.
             - 'median', The marginal effects at the median of each regressor.
             - 'zero', The marginal effects at zero for each regressor.
-            - 'all', The marginal effects at each observation. If `at` is all
+            - 'all', The marginal effects at each observation. If `at` is 'all'
               only margeff will be available.
 
             Note that if `exog` is specified, then marginal effects for all
@@ -1557,6 +1593,10 @@ class GEEResults(base.LikelihoodModelResults):
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
         """
+
+        if self.model.constraint is not None:
+            warnings.warn("marginal effects ignore constraints")
+
         return GEEMargins(self, (at, method, atexog, dummy, count))
 
 
@@ -2057,8 +2097,8 @@ class NominalGEE(GEE):
 
         return dmat
 
-    # Minimally tested
-    def mean_deriv_exog(self, exog, params):
+
+    def mean_deriv_exog(self, exog, params, offset_exposure=None):
         """
         Derivative of the expected endog with respect to exog for the
         multinomial model, used in analyzing marginal effects.
@@ -2076,7 +2116,14 @@ class NominalGEE(GEE):
         -------
         The value of the derivative of the expected endog with respect
         to exog.
+
+        Notes
+        -----
+        offset_exposure must be set at None for the multinoial family.
         """
+
+        if offset_exposure is not None:
+            warnings.warn("Offset/exposure ignored for the multinomial family")
 
         lpr = np.dot(exog, params)
         expval = np.exp(lpr)
@@ -2507,37 +2554,20 @@ class GEEMargins(object):
 
         # get base marginal effects, handled by sub-classes
         effects = model._derivative_exog(params, exog, method,
-                                                    dummy_idx, count_idx)
-
-        J = getattr(model, 'J', 1)
-        effects_idx = np.tile(effects_idx, J) # adjust for multi-equation.
-
+                                         dummy_idx, count_idx)
         effects = _effects_at(effects, at)
 
         if at == 'all':
-            if J > 1:
-                K = model.K - np.any(~effects_idx) # subtract constant
-                self.margeff = effects[:, effects_idx].reshape(-1, K, J,
-                                                                order='F')
-            else:
-                self.margeff = effects[:, effects_idx]
+            self.margeff = effects[:, effects_idx]
         else:
             # Set standard error of the marginal effects by Delta method.
             margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,
                                                 results.cov_params(), at,
                                                 model._derivative_exog,
                                                 dummy_idx, count_idx,
-                                                method, J)
+                                                method, 1)
 
-            # reshape for multi-equation
-            if J > 1:
-                K = model.K - np.any(~effects_idx) # subtract constant
-                self.margeff = effects[effects_idx].reshape(K, J, order='F')
-                self.margeff_se = margeff_se[effects_idx].reshape(K, J,
-                                                                  order='F')
-                self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
-            else:
-                # don't care about at constant
-                self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
-                self.margeff_se = margeff_se[effects_idx]
-                self.margeff = effects[effects_idx]
+            # don't care about at constant
+            self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
+            self.margeff_se = margeff_se[effects_idx]
+            self.margeff = effects[effects_idx]
