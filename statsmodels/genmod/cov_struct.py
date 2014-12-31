@@ -919,13 +919,14 @@ class EqClass(CovStruct):
     Parameters
     ----------
     pairs : dict-like
-      A dictionary of dictionaries, where `pairs[group][label]` is all
-      pairs of observations in the group that have the same covariance
-      value.  Specifically, `pairs[group][label]` is a tuple `(j1,
-      j2)`, where `j1` and `j2` are integer arrays of the same length.
-      `j1[i], j2[i]` contains one pair that belong to the `label`
-      equivalence class.  Only one triangle of each covariance matrix
-      should be included.  Positions where j1 == j2 are variance
+      A dictionary of dictionaries, where `pairs[group][label]`
+      provides the indices of all pairs of observations in the group
+      that have the same covariance value.  Specifically,
+      `pairs[group][label]` is a tuple `(j1, j2)`, where `j1` and `j2`
+      are integer arrays of the same length.  `j1[i], j2[i]` is one
+      index pair that belongs to the `label` equivalence class.  Only
+      one triangle of each covariance matrix should be included.
+      Positions where j1 and j2 have the same value are variance
       parameters.
 
     Notes
@@ -954,10 +955,9 @@ class EqClass(CovStruct):
                 if np.any(j1 == j2):
                     self.dep_params[lb] = 1
 
-
     def initialize(self, model):
         """
-        Start indices from 0 within each group.
+        Start indexing from 0 within each group.
         """
 
         super(EqClass, self).initialize(model)
@@ -972,7 +972,6 @@ class EqClass(CovStruct):
             for lb in self.pairs[gp].keys():
                 a, b = self.pairs[gp][lb]
                 self.pairs[gp][lb] = (rx[a], rx[b])
-
 
     def update(self, params):
 
