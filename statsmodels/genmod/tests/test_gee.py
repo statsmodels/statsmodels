@@ -951,6 +951,44 @@ class TestGEE(object):
                             np.r_[-0.1256575, -0.126747036])
 
 
+    def test_eqclass(self):
+        """
+        The EqClass covariance structure can represent an exchangebale
+        covariance structure.  Here we check that the results are
+        identical using the two approaches.
+        """
+
+        np.random.seed(3424)
+        endog = np.random.normal(size=20)
+        exog = np.random.normal(size=(20, 2))
+        exog[:, 0] = 1
+        groups = np.kron(np.arange(5), np.ones(4))
+
+        # Set up an EqClass covariance structure to mimic an
+        # exchangeable covariance structure.
+        pairs = {}
+        for k in range(5):
+            pairs[k] = {}
+
+            # Diagonal
+            pairs[k][0] = (np.r_[0, 1, 2, 3], np.r_[0, 1, 2, 3])
+
+            # Off-diagonal
+            pairs[k][1] = (np.r_[1, 2, 2, 3, 3, 3],
+                           np.r_[0, 0, 1, 0, 1, 2])
+
+        ec = sm.cov_struct.EqClass(pairs)
+        model1 = sm.GEE(endog, exog, groups, cov_struct=ec)
+        result1 = model1.fit()
+
+        ex = sm.cov_struct.Exchangeable()
+        model2 = sm.GEE(endog, exog, groups, cov_struct=ex)
+        result2 = model2.fit()
+
+        assert_allclose(result1.params, result2.params, atol=1e-6, rtol=1e-6)
+        assert_allclose(result1.bse, result2.bse, atol=1e-6, rtol=1e-6)
+        assert_allclose(result1.scale, result2.scale, atol=1e-6, rtol=1e-6)
+
 class CheckConsistency(object):
 
     start_params = None
@@ -1121,6 +1159,8 @@ class TestGEEMultinomialCovType(CheckConsistency):
         rslt2 = mod.fit()
 
         check_wrapper(rslt2)
+
+
 
 
 def test_missing():
