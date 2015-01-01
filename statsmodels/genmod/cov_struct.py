@@ -938,6 +938,18 @@ class EqClass(CovStruct):
     matrix.  They are not updated if missing data are present.  When
     using this covariance structure, missing data should be removed
     before constructing the model.
+
+    Examples
+    --------
+    The following sets up the `pairs` dictionary for a model with two
+    groups, equal variance for all observations, and constant
+    covariance for all pairs of observations within each group.
+
+    >> pairs = {0: {}, 1: {}}
+    >> pairs[0][0] = (np.r_[0, 1, 2], np.r_[0, 1, 2])
+    >> pairs[0][1] = np.tril_indices(3, -1)
+    >> pairs[1][0] = (np.r_[3, 4, 5], np.r_[3, 4, 5])
+    >> pairs[1][2] = 3 + np.tril_indices(3, -1)
     """
 
     def __init__(self, pairs):
