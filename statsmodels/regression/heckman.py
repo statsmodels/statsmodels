@@ -261,8 +261,10 @@ class Heckman(base.LikelihoodModel):
 
         Q = rhoHat**2 * (W.T.dot(D).dot(Z[self.treated])).dot(step1_varcov).dot(Z[self.treated].T.dot(D).dot(W))
 
-        normalized_varcov_all = np.linalg.inv(W.T.dot(W)).dot(W.T.dot(R).dot(W)+Q).dot(np.linalg.inv(W.T.dot(W)))
+        WT_W_inv = np.linalg.inv(W.T.dot(W))
+        normalized_varcov_all = WT_W_inv.dot(W.T.dot(R).dot(W)+Q).dot(WT_W_inv)
         normalized_varcov = normalized_varcov_all[:-1,:-1]
+        del WT_W_inv
 
         varcov_all = sigma2Hat * normalized_varcov_all
         varcov = varcov_all[:-1,:-1]
