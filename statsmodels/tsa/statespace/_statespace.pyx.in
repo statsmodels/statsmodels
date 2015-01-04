@@ -1314,6 +1314,14 @@ cdef class {{prefix}}KalmanFilter(object):
         self.converged = 0
         self.period_converged = 0
 
+    cpdef set_filter_method(self, int filter_method, int force_reset=True):
+        """
+        set_filter_method(self, filter_method, force_reset=True)
+
+        Change the filter method.
+        """
+        self.filter_method = filter_method
+
     cpdef seek(self, unsigned int t, int reset_convergence = True):
         """
         seek(self, t, reset_convergence = True)
