@@ -9,7 +9,7 @@ from __future__ import division, absolute_import, print_function
 from warnings import warn
 
 import numpy as np
-from .model import Model, StatespaceResults
+from .mlemodel import MLEModel, MLEResults
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
     unconstrain_stationary_univariate
@@ -19,7 +19,7 @@ from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.decorators import cache_readonly
 
 
-class SARIMAX(Model):
+class SARIMAX(MLEModel):
     r"""
     Seasonal AutoRegressive Integrated Moving Average with eXogenous regressors
     model
@@ -429,13 +429,13 @@ class SARIMAX(Model):
         if (simple_differencing and
            (self._k_diff > 0 or self._k_seasonal_diff > 0)):
             # Save the originals
-            self.orig_endog = np.copy(endog)
-            self.orig_exog = np.copy(exog)
+            self.orig_endog = endog
+            self.orig_exog = exog
             # Perform simple differencing
-            endog = diff(endog, self._k_diff, self._k_seasonal_diff,
+            endog = diff(np.copy(endog), self._k_diff, self._k_seasonal_diff,
                          self.k_seasons)
             if exog is not None:
-                exog = diff(exog, self._k_diff, self._k_seasonal_diff,
+                exog = diff(np.copy(exog), self._k_diff, self._k_seasonal_diff,
                             self.k_seasons)
             self._k_diff = 0
             self._k_seasonal_diff = 0
@@ -451,7 +451,7 @@ class SARIMAX(Model):
         kwargs.setdefault('loglikelihood_burn', k_diffuse_states)
 
         # Set the default results class to be SARIMAXResults
-        kwargs.setdefault('filter_results_class', SARIMAXResults)
+        kwargs.setdefault('results_class', SARIMAXResults)
 
         # Initialize the statespace
         super(SARIMAX, self).__init__(
@@ -535,17 +535,17 @@ class SARIMAX(Model):
     def initialize_known(self, initial_state, initial_state_cov):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_known(initial_state, initial_state_cov)
-    initialize_known.__doc__ = Model.initialize_known.__doc__
+    initialize_known.__doc__ = MLEModel.initialize_known.__doc__
 
     def initialize_approximate_diffuse(self, variance=None):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_approximate_diffuse(variance)
-    initialize_approximate_diffuse.__doc__ = Model.initialize_approximate_diffuse.__doc__
+    initialize_approximate_diffuse.__doc__ = MLEModel.initialize_approximate_diffuse.__doc__
 
     def initialize_stationary(self):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_stationary()
-    initialize_stationary.__doc__ = Model.initialize_stationary.__doc__
+    initialize_stationary.__doc__ = MLEModel.initialize_stationary.__doc__
 
     def initialize_state(self, variance=None):
         """
@@ -806,6 +806,8 @@ class SARIMAX(Model):
             if self.exog is not None:
                 exog = diff(self.exog, self._k_diff,
                             self._k_seasonal_diff, self.k_seasons)
+            else:
+                exog = None
             trend_data = trend_data[:endog.shape[0], :]
         else:
             endog = self.endog.copy()[0, :]
@@ -1515,16 +1517,14 @@ class SARIMAX(Model):
         return params
 
 
-class SARIMAXResults(StatespaceResults):
+class SARIMAXResults(MLEResults):
     """
     Class to hold results from fitting an SARIMAX model.
 
     Parameters
     ----------
-    model : Model instance
+    model : MLEModel instance
         The fitted model instance
-    kalman_filter : Kalman filter instance
-        The underlying Kalman filter for the fitted model instance
 
     Attributes
     ----------
@@ -1639,12 +1639,11 @@ class SARIMAXResults(StatespaceResults):
 
     See Also
     --------
-    dismalpy.ssm.representation.FilterResults : for additional attributes and methods
-    dismalpy.ssm.model.StatespaceResults : for additional attributes and methods
+    statsmodels.tsa.statespace.FilterResults
+    statsmodels.tsa.statespace.MLEResults
     """
-    def __init__(self, model, kalman_filter, *args, **kwargs):
-        super(SARIMAXResults, self).__init__(model, kalman_filter, *args,
-                                             **kwargs)
+    def __init__(self, model, *args, **kwargs):
+        super(SARIMAXResults, self).__init__(model, *args, **kwargs)
 
         # Set additional model parameters
         self.k_seasons = self.model.k_seasons
@@ -1682,12 +1681,12 @@ class SARIMAXResults(StatespaceResults):
         self.polynomial_ma = self.model.polynomial_ma
         self.polynomial_seasonal_ar = self.model.polynomial_seasonal_ar
         self.polynomial_seasonal_ma = self.model.polynomial_seasonal_ma
-        self.polynomial_reduced_ar = np.r_[1, -np.polymul(
+        self.polynomial_reduced_ar = np.polymul(
             self.polynomial_ar, self.polynomial_seasonal_ar
-        )]
-        self.polynomial_reduced_ma = np.r_[1, np.polymul(
+        )
+        self.polynomial_reduced_ma = np.polymul(
             self.polynomial_ma, self.polynomial_seasonal_ma
-        )]
+        )
 
         # Distinguish parameters
         self.model_orders = self.model.model_orders
@@ -1883,7 +1882,10 @@ class SARIMAXResults(StatespaceResults):
                 order_ma = self.k_ma
             else:
                 order_ma = tuple(self.polynomial_ma.nonzero()[0][1:])
-            order = '(%s, %d, %s)' % (order_ar, self.k_diff, order_ma)
+            # If there is simple differencing, then that is reflected in the
+            # dependent variable name
+            k_diff = 0 if self.simple_differencing else self.k_diff
+            order = '(%s, %d, %s)' % (order_ar, k_diff, order_ma)
         # See if we have an SARIMA component
         seasonal_order = ''
         if self.k_seasonal_ar + self.k_seasonal_diff + self.k_seasonal_ma > 0:
@@ -1895,8 +1897,11 @@ class SARIMAXResults(StatespaceResults):
                 order_seasonal_ma = int(self.k_seasonal_ma / self.k_seasons)
             else:
                 order_seasonal_ma = tuple(self.polynomial_seasonal_ma.nonzero()[0][1:])
+            # If there is simple differencing, then that is reflected in the
+            # dependent variable name
+            k_seasonal_diff = 0 if self.simple_differencing else self.k_seasonal_diff
             seasonal_order = ('(%s, %d, %s, %d)' %
-                              (str(order_seasonal_ar), self.k_seasonal_diff,
+                              (str(order_seasonal_ar), k_seasonal_diff,
                                str(order_seasonal_ma), self.k_seasons))
             if not order == '':
                 order += 'x'
@@ -1906,4 +1911,4 @@ class SARIMAXResults(StatespaceResults):
         return super(SARIMAXResults, self).summary(
             alpha=alpha, start=start, *args, **kwargs
         )
-    summary.__doc__ = StatespaceResults.summary.__doc__
+    summary.__doc__ = MLEResults.summary.__doc__

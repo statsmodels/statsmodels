@@ -7,14 +7,12 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
-import pandas as pd
 import os
 
 from statsmodels.tsa.statespace import sarimax
 from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_almost_equal
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

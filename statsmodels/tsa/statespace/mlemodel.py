@@ -9,14 +9,14 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from .representation import Representation, FilterResults
+from .representation import Representation
+from .kalman_filter import KalmanFilter, FilterResults
 
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 
-
-class Model(Representation, tsbase.TimeSeriesModel):
+class MLEModel(KalmanFilter, Representation, tsbase.TimeSeriesModel):
     """
     State space model
 
@@ -50,26 +50,46 @@ class Model(Representation, tsbase.TimeSeriesModel):
 
     See Also
     --------
-    dismalpy.ssm.representation.Representation : for additional attributes and methods
+    statsmodels.tsa.statespace.KalmanFilter
     """
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  *args, **kwargs):
-        self.i = 0
+        # Set the default results class to be MLEResults
+        kwargs.setdefault('results_class', MLEResults)
+
         # Initialize the model base
         tsbase.TimeSeriesModel.__init__(self, endog=endog, exog=exog,
                                         dates=dates, freq=freq, missing='none')
 
-        # Set the default results class to be StatespaceResults
-        kwargs.setdefault('filter_results_class', StatespaceResults)
+        # Need to modify the endog variable
+        endog = self.endog
+
+        # Base class may allow 1-dim data, whereas we need 2-dim
+        if endog.ndim == 1:
+            endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
+        
+        # Base classes data may be either C-ordered or F-ordered - we want it
+        # to be C-ordered since it will also be in shape (nobs, k_endog), and
+        # then we can just transpose it.
+        if not endog.flags['C_CONTIGUOUS']:
+            # TODO this breaks the reference link between the model endog
+            # variable and the original object - do we need a warn('')?
+            # This will happen often with Pandas DataFrames, which are often
+            # Fortran-ordered and in the long format
+            endog = np.ascontiguousarray(endog)
+
+        # Now endog is C-ordered and in long format (nobs x k_endog). To get
+        # F-ordered and in wide format just need to transpose.
+        endog = endog.T
 
         # Initialize the statespace representation
-        super(Model, self).__init__(self.endog, k_states, *args, **kwargs)
+        super(MLEModel, self).__init__(endog.shape[0], k_states,
+                                       *args, **kwargs)
+        # Bind the data to the model
+        self.bind(endog)
 
         # Initialize the parameters
         self.params = None
-
-        # Set additional parameters
-        self.nobs = self.endog.shape[1]
 
     def fit(self, start_params=None, transformed=True,
             method='lbfgs', maxiter=50, full_output=1,
@@ -124,13 +144,13 @@ class Model(Representation, tsbase.TimeSeriesModel):
 
         Returns
         -------
-        StatespaceResults
+        MLEResults
 
         See also
         --------
         statsmodels.base.model.LikelihoodModel.fit : for more information
             on using the solvers.
-        StatespaceResults : results class returned by fit
+        MLEResults : results class returned by fit
         """
 
         if start_params is None:
@@ -149,7 +169,7 @@ class Model(Representation, tsbase.TimeSeriesModel):
         # Set the optional arguments for the loglikelihood function to
         # maximize the average loglikelihood, by default.
         fargs = (kwargs.get('average_loglike', True), False, False)
-        mlefit = super(Model, self).fit(start_params, method=method,
+        mlefit = super(MLEModel, self).fit(start_params, method=method,
                                         fargs=fargs,
                                         maxiter=maxiter,
                                         full_output=full_output, disp=disp,
@@ -161,7 +181,7 @@ class Model(Representation, tsbase.TimeSeriesModel):
             kwargs['approx_grad'] = False
             del kwargs['epsilon']
             fargs = (kwargs.get('average_loglike', True), False, False)
-            mlefit = super(Model, self).fit(mlefit.params, method=method,
+            mlefit = super(MLEModel, self).fit(mlefit.params, method=method,
                                             fargs=fargs,
                                             maxiter=maxiter,
                                             full_output=full_output, disp=disp,
@@ -227,7 +247,7 @@ class Model(Representation, tsbase.TimeSeriesModel):
         # will be changing and not dimensions of matrices.
         kwargs.setdefault('recreate', False)
 
-        loglike = super(Model, self).loglike(*args, **kwargs)
+        loglike = super(MLEModel, self).loglike(*args, **kwargs)
 
         # Koopman, Shephard, and Doornik recommend maximizing the average
         # likelihood to avoid scale issues.
@@ -293,7 +313,13 @@ class Model(Representation, tsbase.TimeSeriesModel):
 
     @property
     def start_params(self):
-        raise NotImplementedError
+        if hasattr(self, '_start_params'):
+            return self._start_params
+        else:
+            raise NotImplementedError
+    @start_params.setter
+    def start_params(self, values):
+        self._start_params = np.asarray(values)
 
     @property
     def params_names(self):
@@ -412,6 +438,8 @@ class Model(Representation, tsbase.TimeSeriesModel):
         Since Model is a base class, this method should be overridden by
         subclasses to perform actual updating steps.
         """
+        params = np.array(params)
+
         if not transformed:
             params = self.transform_params(params)
         if set_params:
@@ -426,7 +454,7 @@ class Model(Representation, tsbase.TimeSeriesModel):
         raise NotImplementedError
 
 
-class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
+class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     """
     Class to hold results from fitting a state space model.
 
@@ -434,8 +462,6 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
     ----------
     model : Model instance
         The fitted model instance
-    kalman_filter : Kalman filter instance
-        The underlying Kalman filter for the fitted model instance
 
     Attributes
     ----------
@@ -482,7 +508,7 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
     t_test
     wald_test
     """
-    def __init__(self, model, kalman_filter, *args, **kwargs):
+    def __init__(self, model, *args, **kwargs):
         self.data = model.data
 
         # Save the model output
@@ -502,8 +528,7 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
                                                scale=1., *args, **kwargs)
 
         # Initialize the statespace representation
-        super(StatespaceResults, self).__init__(model, kalman_filter, *args,
-                                                **kwargs)
+        super(MLEResults, self).__init__(model)
 
         # Setup the cache
         self._cache = resettable_cache()
@@ -608,7 +633,7 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
         end, out_of_sample = self.model._get_predict_end(end)
 
         # Perform the prediction
-        res = super(StatespaceResults, self).predict(
+        res = super(MLEResults, self).predict(
             start, end+out_of_sample+1, dynamic, full_results, *args, **kwargs
         )
 
@@ -629,6 +654,8 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
         index = np.arange(start, end+out_of_sample+1)
         if hasattr(self.data, 'predict_dates'):
             index = self.data.predict_dates
+            if(isinstance(index, pd.DatetimeIndex)):
+                index = index._mpl_repr()
 
         return forecasts, forecasts_error_cov, confidence_intervals, index
 
@@ -689,8 +716,10 @@ class StatespaceResults(FilterResults, tsbase.TimeSeriesModelResults):
             start = 0
         if self.data.dates is not None:
             dates = self.data.dates
-            sample = [dates[start].strftime('%m-%d-%Y')]
-            sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
+            d = dates[start]
+            sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
+            d = dates[-1]
+            sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]                
         else:
             sample = [str(start), ' - ' + str(self.model.nobs)]
 

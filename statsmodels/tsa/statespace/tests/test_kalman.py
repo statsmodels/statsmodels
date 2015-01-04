@@ -32,7 +32,7 @@ except ImportError:
         dtype, index = max(
             [(ar.dtype, i) for i, ar in enumerate(arrays)])
         prefix = _type_conv.get(dtype.char, 'd')
-        return prefix
+        return (prefix, dtype, None)
 
 
 from statsmodels.tsa.statespace import _statespace as ss
@@ -124,7 +124,7 @@ class Clark1987(object):
         ]
 
         # Initialization: modification
-        # Due to the difference in the way Kim and Nelson (1999) and Drubin
+        # Due to the difference in the way Kim and Nelson (1999) and Durbin
         # and Koopman (2012) define the order of the Kalman filter routines,
         # we need to modify the initial state covariance matrix to match
         # Kim and Nelson's results, since the *Statespace models follow Durbin

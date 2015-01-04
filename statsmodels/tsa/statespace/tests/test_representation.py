@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import os
 
-import statsmodels.tsa.statespace as ss
+from statsmodels.tsa.statespace import MLEModel
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal
 from nose.exc import SkipTest
@@ -50,8 +50,7 @@ class Clark1987(object):
 
         # Construct the statespace representation
         k_states = 4
-        self.model = ss.Representation(data['lgdp'], k_states=k_states,
-                                       **kwargs)
+        self.model = MLEModel(data['lgdp'], k_states=k_states, **kwargs)
 
         self.model.design[:, :, 0] = [1, 1, 0, 0]
         self.model.transition[([0, 0, 1, 1, 2, 3],
@@ -79,6 +78,9 @@ class Clark1987(object):
             self.model.transition[:, :, 0].T
         )
         self.model.initialize_known(initial_state, initial_state_cov)
+
+        # Give the model starting parameters
+        self.model.start_params = [0]*5
 
     def run_filter(self):
         # Filter the data
@@ -269,14 +271,6 @@ class Clark1989(object):
     found at http://econ.korea.ac.kr/~cjkim/SSMARKOV.htm
 
     See `results.results_kalman_filter` for more information.
-
-    Notes
-    -----
-
-    There was an error in the loglikelihood computation in the GAUSS code from
-    Kim and Nelson omitting the exponent term on ``2 pi''. Therefore the
-    loglikelihood in the test results is instead from the FKF R library,
-    which can be replicated using the ``test_clark1989_r.R'' file.
     """
     def __init__(self, dtype=float, **kwargs):
         self.true = results_kalman_filter.uc_bi
@@ -292,7 +286,7 @@ class Clark1989(object):
         data['UNEMP'] = (data['UNEMP']/100)
 
         k_states = 6
-        self.model = ss.Representation(data, k_states=k_states, **kwargs)
+        self.model = MLEModel(data, k_states=k_states, **kwargs)
 
         # Statespace representation
         self.model.design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
@@ -328,6 +322,9 @@ class Clark1989(object):
             self.model.transition[:, :, 0].T
         )
         self.model.initialize_known(initial_state, initial_state_cov)
+
+        # Give the model starting parameters
+        self.model.start_params = [0]*9
 
     def run_filter(self):
         # Filter the data

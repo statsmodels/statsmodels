@@ -1,8 +1,10 @@
 from statsmodels import NoseWrapper as Tester
 test = Tester().test
 
-from .representation import (
-    Representation, FilterResults,
+from .representation import Representation, FrozenRepresentation
+
+from .kalman_filter import (
+    KalmanFilter, FilterResults,
 
     FILTER_CONVENTIONAL,
     FILTER_EXACT_INITIAL,
@@ -29,7 +31,7 @@ from .representation import (
     MEMORY_CONSERVE
 )
 
-from .model import Model, StatespaceResults
+from .mlemodel import MLEModel, MLEResults
 from .sarimax import SARIMAX
 from .tools import (
     find_best_blas_type, prefix_dtype_map,
