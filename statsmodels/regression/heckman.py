@@ -249,22 +249,19 @@ class Heckman(base.LikelihoodModel):
         rhoHat = betaHat_inverse_mills / sigmaHat
 
         # compute standard errors of beta estimates of censored regression
-        R = np.zeros([self.nobs_uncensored, self.nobs_uncensored])
-        for i in range(self.nobs_uncensored):
-            R[i,i] = 1 - rhoHat**2 * delta[i]
+        delta_1d = delta.T[0]
 
-        D = np.zeros([self.nobs_uncensored, self.nobs_uncensored])
-        for i in range(self.nobs_uncensored):
-            D[i,i] = delta[i]
-
-
-
-        Q = rhoHat**2 * (W.T.dot(D).dot(Z[self.treated])).dot(step1_varcov).dot(Z[self.treated].T.dot(D).dot(W))
+        Q = rhoHat**2 * ((W.T*delta_1d).dot(Z[self.treated])).dot(step1_varcov).dot((Z[self.treated].T*delta_1d).dot(W))
 
         WT_W_inv = np.linalg.inv(W.T.dot(W))
-        normalized_varcov_all = WT_W_inv.dot(W.T.dot(R).dot(W)+Q).dot(WT_W_inv)
-        normalized_varcov = normalized_varcov_all[:-1,:-1]
+        WT_R = W.T*(1 - rhoHat**2 * delta_1d)
+        normalized_varcov_all = WT_W_inv.dot(WT_R.dot(W)+Q).dot(WT_W_inv)
         del WT_W_inv
+        del WT_R
+
+        del delta_1d
+
+        normalized_varcov = normalized_varcov_all[:-1,:-1]
 
         varcov_all = sigma2Hat * normalized_varcov_all
         varcov = varcov_all[:-1,:-1]
