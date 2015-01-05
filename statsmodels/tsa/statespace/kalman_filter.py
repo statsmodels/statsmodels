@@ -38,11 +38,9 @@ MEMORY_NO_FORECAST = 0x01
 MEMORY_NO_PREDICTED = 0x02
 MEMORY_NO_FILTERED = 0x04
 MEMORY_NO_LIKELIHOOD = 0x08
-MEMORY_NO_GAIN = 0x10
-MEMORY_NO_SMOOTHING = 0x20
 MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
+    MEMORY_NO_LIKELIHOOD
 )
 
 class KalmanFilter(Representation):
@@ -230,7 +228,9 @@ class KalmanFilter(Representation):
         loglike : float
             The joint loglikelihood.
         """
-        # TODO will give wrong result if TODONO_LIKELIHOOD used
+        if self.filter_method & MEMORY_NO_LIKELIHOOD:
+            raise RuntimeError('Cannot compute loglikelihood if'
+                               ' MEMORY_NO_LIKELIHOOD option is selected.')
         if loglikelihood_burn is None:
             loglikelihood_burn = self.loglikelihood_burn
         kwargs['results'] = 'loglikelihood'
