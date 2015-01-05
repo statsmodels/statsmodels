@@ -1116,8 +1116,13 @@ class SARIMAX(MLEModel):
         constrained : array_like
             Constrained parameters used in likelihood evaluation.
 
-        TODO need to modify to work with lag polynomials containing missing
-             lag orders.
+        Notes
+        -----
+        If the lag polynomial has non-consecutive powers (so that the
+        coefficient is zero on some element of the polynomial), then the
+        constraint function is not onto the entire space of invertible
+        polynomials, although it only excludes a very small portion very close
+        to the invertibility boundary. 
         """
         constrained = np.zeros(unconstrained.shape, unconstrained.dtype)
 
@@ -1206,8 +1211,13 @@ class SARIMAX(MLEModel):
         constrained : array_like
             Unconstrained parameters used by the optimizer.
 
-        TODO need to modify to work with lag polynomials containing missing
-             lag orders.
+        Notes
+        -----
+        If the lag polynomial has non-consecutive powers (so that the
+        coefficient is zero on some element of the polynomial), then the
+        constraint function is not onto the entire space of invertible
+        polynomials, although it only excludes a very small portion very close
+        to the invertibility boundary. 
         """
         unconstrained = np.zeros(constrained.shape, constrained.dtype)
 
