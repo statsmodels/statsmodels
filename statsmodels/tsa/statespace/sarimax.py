@@ -250,6 +250,10 @@ class SARIMAX(MLEModel):
         self.enforce_invertibility = enforce_invertibility
         self.hamilton_representation = hamilton_representation
 
+        # Save given orders
+        self.order = order
+        self.seasonal_order = seasonal_order
+
         # Enforce non-MLE coefficients if time varying coefficients is
         # specified
         if self.time_varying_regression and self.mle_regression:
@@ -1665,6 +1669,9 @@ class SARIMAXResults(MLEResults):
         self.enforce_invertibility = self.model.enforce_invertibility
         self.hamilton_representation = self.model.hamilton_representation
 
+        self.order = self.model.order
+        self.seasonal_order = self.model.seasonal_order
+
         # Model order
         self.k_diff = self.model.k_diff
         self.k_seasonal_diff = self.model.k_seasonal_diff
@@ -1811,9 +1818,8 @@ class SARIMAXResults(MLEResults):
             model = SARIMAX(
                 endog,
                 exog=exog,
-                order=(self.k_ar, self.k_diff, self.k_ma),
-                seasonal_order=(self.k_seasonal_ar, self.k_seasonal_diff,
-                                self.k_seasonal_ma, self.k_seasons),
+                order=self.order,
+                seasonal_order=self.seasonal_order,
                 trend=self.trend,
                 measurement_error=self.measurement_error,
                 time_varying_regression=self.time_varying_regression,
