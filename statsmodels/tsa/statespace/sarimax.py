@@ -1745,7 +1745,7 @@ class SARIMAXResults(MLEResults):
         return self._params_ma
 
     def predict(self, start=None, end=None, exog=None, dynamic=False,
-                alpha=.05, *args, **kwargs):
+                *args, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1770,9 +1770,6 @@ class SARIMAXResults(MLEResults):
             Specifies the number of steps ahead for each in-sample prediction.
             If not specified, then in-sample predictions are one-step-ahead.
             False and None are interpreted as 0. Default is False.
-        alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha) %.
-            Default is 0.05.
         full_results : boolean, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
@@ -1782,13 +1779,6 @@ class SARIMAXResults(MLEResults):
         -------
         forecast : array
             Array of out of sample forecasts.
-        forecasts_error_cov : array
-            Array of the covariance matrices of the forecasts.
-        confidence_intervals : array
-            Array (2-dim) of the confidence interval for the forecasts.
-        index : array or pandas.DateTimeIndex
-            Array of indices for forecasts; either integers or dates, depending
-            on the type of `endog`.
         """
         if start is None:
                 start = 0
@@ -1847,11 +1837,11 @@ class SARIMAXResults(MLEResults):
                  ' required. `exog` argument ignored.')
 
         return super(SARIMAXResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, alpha=alpha,
+            start=start, end=end, exog=exog, dynamic=dynamic,
             *args, **kwargs
         )
 
-    def forecast(self, steps=1, exog=None, alpha=.05, *args, **kwargs):
+    def forecast(self, steps=1, exog=None, *args, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -1864,24 +1854,14 @@ class SARIMAXResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables for
             each step forecasted.
-        alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha) %.
-            Default is 0.05.
 
         Returns
         -------
         forecast : array
             Array of out of sample forecasts.
-        forecasts_error_cov : array
-            Array of the covariance matrices of the forecasts.
-        confidence_intervals : array
-            Array (2-dim) of the confidence interval for the forecasts.
-        index : array or pandas.DateTimeIndex
-            Array of indices for forecasts; either integers or dates, depending
-            on the type of `endog`.
         """
         return super(SARIMAXResults, self).forecast(
-            steps, exog=exog, alpha=alpha, *args, **kwargs
+            steps, exog=exog, *args, **kwargs
         )
 
     def summary(self, alpha=.05, start=None, *args, **kwargs):

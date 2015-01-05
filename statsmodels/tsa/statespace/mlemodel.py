@@ -556,8 +556,8 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     def zvalues(self):
         return self.params / self.bse
 
-    def predict(self, start=None, end=None, dynamic=False, alpha=.05,
-                full_results=False, *args, **kwargs):
+    def predict(self, start=None, end=None, dynamic=False, full_results=False,
+                *args, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -578,9 +578,6 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             Specifies the number of steps ahead for each in-sample prediction.
             If not specified, then in-sample predictions are one-step-ahead.
             False and None are interpreted as 0. Default is False.
-        alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha) %.
-            Default is 0.05.
         full_results : boolean, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
@@ -590,13 +587,6 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         -------
         forecast : array
             Array of out of sample forecasts.
-        forecasts_error_cov : array
-            Array of the covariance matrices of the forecasts.
-        confidence_intervals : array
-            Array (2-dim) of the confidence interval for the forecasts.
-        index : array or pandas.DateTimeIndex
-            Array of indices for forecasts; either integers or dates, depending
-            on the type of `endog`.
         """
         if start is None:
             start = 0
@@ -606,33 +596,38 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         end, out_of_sample = self.model._get_predict_end(end)
 
         # Perform the prediction
-        res = super(MLEResults, self).predict(
+        results = super(MLEResults, self).predict(
             start, end+out_of_sample+1, dynamic, full_results, *args, **kwargs
         )
 
+        # Note: to be consistent with Statsmodels, return only the forecasts
+        # unless full_results is specified. Confidence intervals and the date
+        # indices are left out for now, but will likely be moved to a separate
+        # function in the future.
         if full_results:
-            return res
+            return results
         else:
-            (forecasts, forecasts_error, forecasts_error_cov) = res
+            # (forecasts, forecasts_error, forecasts_error_cov) = results
+            forecasts = results
 
         # Calculate the confidence intervals
-        critical_value = norm.ppf(1 - alpha / 2.)
-        std_errors = np.sqrt(forecasts_error_cov.diagonal().T)
-        confidence_intervals = np.c_[
-            (forecasts - critical_value*std_errors)[:, :, None],
-            (forecasts + critical_value*std_errors)[:, :, None],
-        ]
+        # critical_value = norm.ppf(1 - alpha / 2.)
+        # std_errors = np.sqrt(forecasts_error_cov.diagonal().T)
+        # confidence_intervals = np.c_[
+        #     (forecasts - critical_value*std_errors)[:, :, None],
+        #     (forecasts + critical_value*std_errors)[:, :, None],
+        # ]
 
         # Return the dates if we have them
-        index = np.arange(start, end+out_of_sample+1)
-        if hasattr(self.data, 'predict_dates'):
-            index = self.data.predict_dates
-            if(isinstance(index, pd.DatetimeIndex)):
-                index = index._mpl_repr()
+        # index = np.arange(start, end+out_of_sample+1)
+        # if hasattr(self.data, 'predict_dates'):
+        #     index = self.data.predict_dates
+        #     if(isinstance(index, pd.DatetimeIndex)):
+        #         index = index._mpl_repr()
 
-        return forecasts, forecasts_error_cov, confidence_intervals, index
+        return forecasts
 
-    def forecast(self, steps=1, alpha=.05, *args, **kwargs):
+    def forecast(self, steps=1, *args, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -641,23 +636,13 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         steps : int, optional
             The number of out of sample forecasts from the end of the
             sample. Default is 1.
-        alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha) %.
-            Default is 0.05.
 
         Returns
         -------
         forecast : array
             Array of out of sample forecasts.
-        forecasts_error_cov : array
-            Array of the covariance matrices of the forecasts.
-        confidence_intervals : array
-            Array (2-dim) of the confidence interval for the forecasts.
-        index : array or pandas.DateTimeIndex
-            Array of indices for forecasts; either integers or dates, depending
-            on the type of `endog`.
         """
-        return self.predict(start=self.nobs, end=self.nobs+steps-1, alpha=alpha,
+        return self.predict(start=self.nobs, end=self.nobs+steps-1,
                             *args, **kwargs)
 
     def summary(self, alpha=.05, start=None, *args, **kwargs):

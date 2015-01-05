@@ -652,11 +652,7 @@ class FilterResults(FrozenRepresentation):
         if full_results:
             return result
         else:
-            return (
-                result.forecasts[:, npadded:],
-                result.forecasts_error[:, npadded:],
-                result.forecasts_error_cov[:, :, npadded:]
-            )
+            return result.forecasts[:, npadded:]
 
     def _predict(self, ninsample, ndynamic, nforecast, model, *args, **kwargs):
         # Get the underlying filter
