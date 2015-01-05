@@ -9,16 +9,16 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from .representation import Representation
-from .kalman_filter import KalmanFilter, FilterResults
+from .kalman_filter import FilterResults
 
 import statsmodels.tsa.base.tsa_model as tsbase
+from .model import Model
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 
-class MLEModel(KalmanFilter, Representation, tsbase.TimeSeriesModel):
+class MLEModel(Model):
     """
-    State space model
+    State space maximum likelihood model
 
     Parameters
     ----------
@@ -50,6 +50,7 @@ class MLEModel(KalmanFilter, Representation, tsbase.TimeSeriesModel):
 
     See Also
     --------
+    statsmodels.tsa.statespace.Model
     statsmodels.tsa.statespace.KalmanFilter
     """
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
@@ -57,37 +58,9 @@ class MLEModel(KalmanFilter, Representation, tsbase.TimeSeriesModel):
         # Set the default results class to be MLEResults
         kwargs.setdefault('results_class', MLEResults)
 
-        # Initialize the model base
-        tsbase.TimeSeriesModel.__init__(self, endog=endog, exog=exog,
-                                        dates=dates, freq=freq, missing='none')
-
-        # Need to modify the endog variable
-        endog = self.endog
-
-        # Base class may allow 1-dim data, whereas we need 2-dim
-        if endog.ndim == 1:
-            endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
-        
-        # Base classes data may be either C-ordered or F-ordered - we want it
-        # to be C-ordered since it will also be in shape (nobs, k_endog), and
-        # then we can just transpose it.
-        if not endog.flags['C_CONTIGUOUS']:
-            # TODO this breaks the reference link between the model endog
-            # variable and the original object - do we need a warn('')?
-            # This will happen often with Pandas DataFrames, which are often
-            # Fortran-ordered and in the long format
-            endog = np.ascontiguousarray(endog)
-
-        # Now endog is C-ordered and in long format (nobs x k_endog). To get
-        # F-ordered and in wide format just need to transpose.
-        endog = endog.T
-
-        # Initialize the statespace representation
-        super(MLEModel, self).__init__(endog.shape[0], k_states,
+        super(MLEModel, self).__init__(endog, k_states, exog, dates, freq,
                                        *args, **kwargs)
-        # Bind the data to the model
-        self.bind(endog)
-
+        
         # Initialize the parameters
         self.params = None
 

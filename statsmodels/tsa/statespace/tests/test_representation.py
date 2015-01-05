@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from statsmodels.tsa.statespace import MLEModel
+from statsmodels.tsa.statespace.model import Model
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal
 from nose.exc import SkipTest
@@ -50,7 +50,7 @@ class Clark1987(object):
 
         # Construct the statespace representation
         k_states = 4
-        self.model = MLEModel(data['lgdp'], k_states=k_states, **kwargs)
+        self.model = Model(data['lgdp'], k_states=k_states, **kwargs)
 
         self.model.design[:, :, 0] = [1, 1, 0, 0]
         self.model.transition[([0, 0, 1, 1, 2, 3],
@@ -78,9 +78,6 @@ class Clark1987(object):
             self.model.transition[:, :, 0].T
         )
         self.model.initialize_known(initial_state, initial_state_cov)
-
-        # Give the model starting parameters
-        self.model.start_params = [0]*5
 
     def run_filter(self):
         # Filter the data
@@ -286,7 +283,7 @@ class Clark1989(object):
         data['UNEMP'] = (data['UNEMP']/100)
 
         k_states = 6
-        self.model = MLEModel(data, k_states=k_states, **kwargs)
+        self.model = Model(data, k_states=k_states, **kwargs)
 
         # Statespace representation
         self.model.design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
@@ -322,9 +319,6 @@ class Clark1989(object):
             self.model.transition[:, :, 0].T
         )
         self.model.initialize_known(initial_state, initial_state_cov)
-
-        # Give the model starting parameters
-        self.model.start_params = [0]*9
 
     def run_filter(self):
         # Filter the data
