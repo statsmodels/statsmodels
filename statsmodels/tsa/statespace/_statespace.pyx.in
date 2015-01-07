@@ -1692,8 +1692,7 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
             predicted_t = 1
 
-        #  and self.model.nmissing[self.t] == 0
-        if self.time_invariant and not self.converged:
+        if self.time_invariant and not self.converged and self.model.nmissing[self.t] == 0:
             # #### Check for steady-state convergence
             # 
             # `tmp0` array used here, dimension $(m \times m)$  
