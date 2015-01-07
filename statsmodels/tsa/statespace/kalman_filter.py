@@ -9,20 +9,13 @@ from __future__ import division, absolute_import, print_function
 from warnings import warn
 
 import numpy as np
-from .representation import Representation, FrozenRepresentation
+from .representation import OptionWrapper, Representation, FrozenRepresentation
 from .tools import (
     prefix_kalman_filter_map, validate_vector_shape, validate_matrix_shape
 )
 
 # Define constants
 FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4
-FILTER_EXACT_INITIAL = 0x02    # ibid., Chapter 5.6
-FILTER_AUGMENTED = 0x04        # ibid., Chapter 5.7
-FILTER_SQUARE_ROOT = 0x08      # ibid., Chapter 6.3
-FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
-FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
-FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
-FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
 
 INVERT_UNIVARIATE = 0x01
 SOLVE_LU = 0x02
@@ -46,7 +39,61 @@ MEMORY_CONSERVE = (
 class KalmanFilter(Representation):
     r"""
     State space representation of a time series process, with Kalman filter
+
+    The `filter_method` and `inversion_method` options intentionally allow
+    the possibility that multiple methods will be indicated. In the case that
+    multiple methods are selected, the underlying Kalman filter will attempt to
+    select the optional method given the input data.
+
+    For example, it may be that INVERT_UNIVARIATE and SOLVE_CHOLESKY are
+    indicated (this is in fact the default case). In this case, if the
+    endogenous vector is 1-dimensional (`k_endog` = 1), then INVERT_UNIVARIATE
+    is used and inversion reduces to simple division, and if it has a larger
+    dimension, the Cholesky decomposition along with linear solving (rather
+    than explicit matrix inversion) is used. If only SOLVE_CHOLESKY had been
+    set, then the Cholesky decomposition method would *always* be used, even in
+    the case of 1-dimensional data.
     """
+
+    filter_methods = [
+        'filter_conventional'
+    ]
+
+    filter_conventional = OptionWrapper('filter_method', FILTER_CONVENTIONAL)
+
+    inversion_methods = [
+        'invert_univariate', 'solve_lu', 'invert_lu', 'solve_cholesky',
+        'invert_cholesky', 'invert_numpy',
+    ]
+
+    invert_univariate = OptionWrapper('inversion_method', INVERT_UNIVARIATE)
+    solve_lu = OptionWrapper('inversion_method', SOLVE_LU)
+    invert_lu = OptionWrapper('inversion_method', INVERT_LU)
+    solve_cholesky = OptionWrapper('inversion_method', SOLVE_CHOLESKY)
+    invert_cholesky = OptionWrapper('inversion_method', INVERT_CHOLESKY)
+    invert_numpy = OptionWrapper('inversion_method', INVERT_NUMPY)
+
+    stability_methods = ['stability_force_symmetry']
+
+    stability_force_symmetry = OptionWrapper('stability_method', STABILITY_FORCE_SYMMETRY)
+
+    memory_options = [
+        'memory_store_all', 'memory_no_forecast', 'memory_no_predicted',
+        'memory_no_filtered', 'memory_no_likelihood', 'memory_conserve'
+    ]
+
+    memory_store_all = OptionWrapper('conserve_memory', MEMORY_STORE_ALL)
+    memory_no_forecast = OptionWrapper('conserve_memory', MEMORY_NO_FORECAST)
+    memory_no_predicted = OptionWrapper('conserve_memory', MEMORY_NO_PREDICTED)
+    memory_no_filtered = OptionWrapper('conserve_memory', MEMORY_NO_FILTERED)
+    memory_no_likelihood = OptionWrapper('conserve_memory', MEMORY_NO_LIKELIHOOD)
+    memory_conserve = OptionWrapper('conserve_memory', MEMORY_CONSERVE)
+
+    # Default filter options
+    filter_method = FILTER_CONVENTIONAL
+    inversion_method = INVERT_UNIVARIATE | SOLVE_CHOLESKY
+    stability_method = STABILITY_FORCE_SYMMETRY
+    conserve_memory = MEMORY_STORE_ALL
 
     def __init__(self, *args, **kwargs):
         super(KalmanFilter, self).__init__(*args, **kwargs)
@@ -58,16 +105,11 @@ class KalmanFilter(Representation):
         self.loglikelihood_burn = kwargs.get('loglikelihood_burn', 0)
         self.results_class = kwargs.get('results_class', FilterResults)
 
-        self.filter_method = kwargs.get(
-            'filter_method', FILTER_CONVENTIONAL
-        )
-        self.inversion_method = kwargs.get(
-            'inversion_method', INVERT_UNIVARIATE | SOLVE_CHOLESKY
-        )
-        self.stability_method = kwargs.get(
-            'stability_method', STABILITY_FORCE_SYMMETRY
-        )
-        self.conserve_memory = kwargs.get('conserve_memory', 0)
+        self.set_filter_method(**kwargs)
+        self.set_inversion_method(**kwargs)
+        self.set_stability_method(**kwargs)
+        self.set_conserve_memory(**kwargs)
+
         self.tolerance = kwargs.get('tolerance', 1e-19)
 
     @property
@@ -136,6 +178,34 @@ class KalmanFilter(Representation):
             # re-created filters
 
         return prefix, dtype, create_filter, create_statespace
+
+    def set_filter_method(self, filter_method=None, reset=True, **kwargs):
+        if filter_method is not None:
+            self.filter_method = filter_method
+        for name in KalmanFilter.filter_methods:
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
+
+    def set_inversion_method(self, inversion_method=None, reset=True, **kwargs):
+        if inversion_method is not None:
+            self.inversion_method = inversion_method
+        for name in KalmanFilter.inversion_methods:
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
+
+    def set_stability_method(self, stability_method=None, **kwargs):
+        if stability_method is not None:
+            self.stability_method = stability_method
+        for name in KalmanFilter.stability_methods:
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
+
+    def set_conserve_memory(self, conserve_memory=None, **kwargs):
+        if conserve_memory is not None:
+            self.conserve_memory = conserve_memory
+        for name in KalmanFilter.memory_options:
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, tolerance=None,

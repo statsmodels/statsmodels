@@ -13,6 +13,26 @@ from .tools import (
 )
 
 
+class OptionWrapper(object):
+    def __init__(self, mask_attribute, mask_value):
+        # Name of the class-level bitmask attribute
+        self.mask_attribute = mask_attribute
+        # Value of this option
+        self.mask_value = mask_value
+
+    def __get__(self, obj, objtype):
+        # Return True / False based on whether the bit is set in the bitmask
+        return bool(getattr(obj, self.mask_attribute, 0) & self.mask_value)
+
+    def __set__(self, obj, value):
+        mask_attribute_value = getattr(obj, self.mask_attribute, 0)
+        if bool(value):
+            value = mask_attribute_value | self.mask_value
+        else:
+            value = mask_attribute_value & ~self.mask_value
+        setattr(obj, self.mask_attribute, value)
+
+
 class MatrixWrapper(object):
     def __init__(self, name, attribute):
         self.name = name
