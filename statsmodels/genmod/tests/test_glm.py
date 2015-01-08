@@ -785,6 +785,25 @@ def test_formula_missing_exposure():
     assert_raises(ValueError, GLM, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure, family=family)
 
+def test_plots():
+
+    np.random.seed(378)
+    exog = np.random.normal(size=100)
+    endog = np.random.normal(size=(100, 2))
+
+    model = sm.GLM(exog, endog)
+    result = model.fit()
+
+    import matplotlib.pyplot as plt
+
+    # Smoke tests
+    fig = result.plot_added_variable(1)
+    plt.close(fig)
+    fig = result.plot_partial_residuals(1)
+    plt.close(fig)
+    fig = result.plot_ceres_residuals(1)
+    plt.close(fig)
+
 
 if __name__=="__main__":
     #run_module_suite()

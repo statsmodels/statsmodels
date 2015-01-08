@@ -45,6 +45,10 @@ from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              IterationLimitWarning)
 import warnings
 
+from statsmodels.graphics._regressionplots_doc import (
+    _plot_added_variable_doc,
+    _plot_partial_residuals_doc,
+    _plot_ceres_residuals_doc)
 
 # Workaround for block_diag, not available until scipy version
 # 0.11. When the statsmodels scipy dependency moves to version 0.11,
@@ -1247,6 +1251,7 @@ class GEEResults(base.LikelihoodModelResults):
         # not added by super
         self.df_resid = model.df_resid
         self.df_model = model.df_model
+        self.family = model.family
 
         attr_kwds = kwds.pop('attr_kwds', {})
         self.__dict__.update(attr_kwds)
@@ -1275,7 +1280,6 @@ class GEEResults(base.LikelihoodModelResults):
             if self.cov_type != cov_type:
                 raise ValueError('cov_type in argument is different from '
                                  'already attached cov_type')
-
 
     def standard_errors(self, cov_type="robust"):
         """
@@ -1357,12 +1361,34 @@ class GEEResults(base.LikelihoodModelResults):
             sresid.append(self.centered_resid[ii])
         return sresid
 
-
     # FIXME: alias to be removed, temporary backwards compatibility
     split_resid = resid_split
     centered_resid = resid_centered
     split_centered_resid = resid_centered_split
 
+    @cache_readonly
+    def resid_response(self):
+        return self.model.endog - self.fittedvalues
+
+    @cache_readonly
+    def resid_pearson(self):
+        val = self.model.endog - self.fittedvalues
+        val = val / np.sqrt(self.family.variance(self.fittedvalues))
+        return val
+
+    @cache_readonly
+    def resid_working(self):
+        val = self.resid_response
+        val = val / self.family.link.deriv(self.fittedvalues)
+        return val
+
+    @cache_readonly
+    def resid_anscombe(self):
+        return self.family.resid_anscombe(self.model.endog, self.fittedvalues)
+
+    @cache_readonly
+    def resid_deviance(self):
+        return self.family.resid_dev(self.model.endog, self.fittedvalues)
 
     @cache_readonly
     def fittedvalues(self):
@@ -1371,6 +1397,46 @@ class GEEResults(base.LikelihoodModelResults):
         """
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
+
+
+    def plot_added_variable(self, focus_exog, resid_type=None,
+                            use_glm_weights=True, fit_kwargs=None,
+                            ax=None):
+        # Docstring attached below
+
+        from statsmodels.graphics.regressionplots import plot_added_variable
+
+        fig = plot_added_variable(self, focus_exog,
+                                  resid_type=resid_type,
+                                  use_glm_weights=use_glm_weights,
+                                  fit_kwargs=fit_kwargs, ax=ax)
+
+        return fig
+
+    plot_added_variable.__doc__ = _plot_added_variable_doc % {
+        'extra_params_doc' : ''}
+
+    def plot_partial_residuals(self, focus_exog, ax=None):
+        # Docstring attached below
+
+        from statsmodels.graphics.regressionplots import plot_partial_residuals
+
+        return plot_partial_residuals(self, focus_exog, ax=ax)
+
+    plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
+        'extra_params_doc' : ''}
+
+    def plot_ceres_residuals(self, focus_exog, frac=None, cond_means=None,
+                             ax=None):
+        # Docstring attached below
+
+        from statsmodels.graphics.regressionplots import plot_ceres_residuals
+
+        return plot_ceres_residuals(self, focus_exog, frac,
+                                    cond_means=cond_means, ax=ax)
+
+    plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
+        'extra_params_doc' : ''}
 
     def conf_int(self, alpha=.05, cols=None, cov_type=None):
         """
