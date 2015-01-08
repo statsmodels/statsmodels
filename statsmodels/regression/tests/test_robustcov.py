@@ -766,3 +766,59 @@ class TestWLSOLSRobustSmall(object):
             ft2 = res2.f_test(mat)
             assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-13)
             assert_allclose(ft1.pvalue, ft2.pvalue, rtol=1e-12)
+
+    def test_fixed_scale(self):
+        cov_type = 'fixed_scale'
+        kwds = {}
+        res1 = self.res_ols.get_robustcov_results(cov_type, **kwds)
+        res2 = self.res_wls.get_robustcov_results(cov_type, **kwds)
+        assert_allclose(res1.params, res2.params, rtol=1e-13)
+        assert_allclose(res1.cov_params(), res2.cov_params(), rtol=1e-13)
+        assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+        assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-13)
+
+        tt = res2.t_test(np.eye(len(res2.params)),
+                         cov_p=res2.normalized_cov_params)
+        assert_allclose(res2.cov_params(), res2.normalized_cov_params,
+                        rtol=1e-13)
+        assert_allclose(res2.bse, tt.sd, rtol=1e-13)
+        assert_allclose(res2.pvalues, tt.pvalue, rtol=1e-13)
+        assert_allclose(res2.tvalues, tt.tvalue, rtol=1e-13)
+
+        # using cov_type in fit
+        mod = self.res_wls.model
+        mod3 = WLS(mod.endog, mod.exog, weights=mod.weights)
+        res3 = mod3.fit(cov_type=cov_type, cov_kwds=kwds)
+        tt = res3.t_test(np.eye(len(res3.params)),
+                         cov_p=res3.normalized_cov_params)
+        assert_allclose(res3.cov_params(), res3.normalized_cov_params,
+                        rtol=1e-13)
+        assert_allclose(res3.bse, tt.sd, rtol=1e-13)
+        assert_allclose(res3.pvalues, tt.pvalue, rtol=1e-13)
+        assert_allclose(res3.tvalues, tt.tvalue, rtol=1e-13)
+
+
+def test_cov_type_fixed_scale():
+    # this is a unit test from scipy curvefit for `absolute_sigma` keyword
+    xdata = np.array([0, 1, 2, 3, 4, 5])
+    ydata = np.array([1, 1, 5, 7, 8, 12])
+    sigma = np.array([1, 2, 1, 2, 1, 2])
+
+    xdata = np.column_stack((xdata, np.ones(len(xdata))))
+    weights = 1. / sigma**2
+
+    res = WLS(ydata, xdata, weights=weights).fit()
+    assert_allclose(res.bse, [0.20659803, 0.57204404], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights).fit()
+    assert_allclose(res.bse, [0.20659803, 0.57204404], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights).fit(cov_type='fixed scale')
+    assert_allclose(res.bse, [0.30714756, 0.85045308], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights / 9.).fit(cov_type='fixed scale')
+    assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
+
+    res = WLS(ydata, xdata, weights=weights).fit(cov_type='fixed scale',
+                                                  cov_kwds={'scale':9})
+    assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
