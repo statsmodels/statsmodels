@@ -908,12 +908,12 @@ class GlobalOddsRatio(CovStruct):
         return "Global odds ratio: %.3f\n" % self.dep_params
 
 
-class EqClass(CovStruct):
+class Equivalence(CovStruct):
     """
     A covariance structure defined in terms of equivalence classes.
 
     An 'equivalence class' is a set of pairs of observations such that
-    the covariance of every pair within an equivalence class has a
+    the covariance of every pair within the equivalence class has a
     common value.
 
     Parameters
@@ -954,7 +954,7 @@ class EqClass(CovStruct):
 
     def __init__(self, pairs):
 
-        super(EqClass, self).__init__()
+        super(Equivalence, self).__init__()
 
         self.pairs = pairs
 
@@ -972,14 +972,15 @@ class EqClass(CovStruct):
         Start indexing from 0 within each group.
         """
 
-        super(EqClass, self).initialize(model)
+        super(Equivalence, self).initialize(model)
 
+        # rx maps olds indices to new indices
         rx = -1 * np.ones(len(self.model.endog), dtype=np.int32)
-
         for gp in self.model.group_labels:
             ii = self.model.group_indices[gp]
             rx[ii] = np.arange(len(ii), dtype=np.int32)
 
+        # Reindex
         for gp in self.pairs.keys():
             for lb in self.pairs[gp].keys():
                 a, b = self.pairs[gp][lb]

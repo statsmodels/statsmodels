@@ -951,11 +951,11 @@ class TestGEE(object):
                             np.r_[-0.1256575, -0.126747036])
 
 
-    def test_eqclass(self):
+    def test_equivalence(self):
         """
-        The EqClass covariance structure can represent an exchangebale
-        covariance structure.  Here we check that the results are
-        identical using the two approaches.
+        The Equivalence covariance structure can represent an
+        exchangeable covariance structure.  Here we check that the
+        results are identical using the two approaches.
         """
 
         np.random.seed(3424)
@@ -965,8 +965,8 @@ class TestGEE(object):
         groups = np.kron(np.arange(5), np.ones(4))
         groups[12:] = 3 # Create unequal size groups
 
-        # Set up an EqClass covariance structure to mimic an
-        # exchangeable covariance structure.
+        # Set up an Equivalence covariance structure to mimic an
+        # Exchangeable covariance structure.
         pairs = {}
         start = [0, 4, 8, 12]
         for k in range(4):
@@ -988,7 +988,7 @@ class TestGEE(object):
                 a, b = np.tril_indices(8, -1)
                 pairs[k][1] = (start[k] + a, start[k] + b)
 
-        ec = sm.cov_struct.EqClass(pairs)
+        ec = sm.cov_struct.Equivalence(pairs)
         model1 = sm.GEE(endog, exog, groups, cov_struct=ec)
         result1 = model1.fit()
 
