@@ -36,6 +36,17 @@ class SARIMAXTests(sarimax.SARIMAX):
             self.true['bic'], 3
         )
 
+    def test_hqic(self):
+        hqic = (
+            -2*self.result.llf +
+            2*np.log(np.log(self.result.nobs)) *
+            self.result.params.shape[0]
+        )
+        assert_almost_equal(
+            self.result.hqic,
+            hqic, 3
+        )
+
 
 class TestAR3(SARIMAXTests):
     def __init__(self, *args, **kwargs):
