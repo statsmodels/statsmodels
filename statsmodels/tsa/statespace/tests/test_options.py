@@ -45,6 +45,8 @@ class Options(Model):
 
 class TestOptions(Options):
     def test_filter_methods(self):
+        # TODO test FilterResults for accurante boolean versions of options
+        
         # Clear the filter method
         self.filter_method = 0
 
