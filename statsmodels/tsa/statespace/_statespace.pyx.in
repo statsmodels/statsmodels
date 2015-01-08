@@ -393,7 +393,7 @@ cdef class {{prefix}}Statespace(object):
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
         self.initial_state_cov = solve_discrete_lyapunov(
             np.array(self.transition[:,:,0], dtype={{dtype}}),
-            np.array(self.selected_state_cov[:,:,0], dtype={{dtype}}),
+            np.array(self.selected_state_cov[:,:,0], dtype={{dtype}})
         ).T
 
         self.initialized = True
@@ -570,6 +570,7 @@ cdef int {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
     if not kfilter.converged:
         # $\\# = H_t$
         {{prefix}}copy(&kfilter.k_endog2, kfilter._obs_cov, &inc, kfilter._forecast_error_cov, &inc)
+
         # $F_t = 1.0 * Z_t \\#_1 + 1.0 * \\#$
         {{prefix}}gemm("N", "N", &kfilter.k_endog, &kfilter.k_endog, &kfilter.k_states,
               &alpha, kfilter._design, &kfilter.k_endog,
@@ -672,7 +673,7 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
-    loglikelihood = -0.5*({{combined_prefix}}log((2*NPY_PI)**kfilter.k_endog * determinant))
+    loglikelihood = -0.5*(kfilter.k_endog*{{combined_prefix}}log(2*NPY_PI) + {{combined_prefix}}log(determinant))
 
     {{if combined_prefix == 'd'}}
     loglikelihood = loglikelihood - 0.5*{{prefix}}dot(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
