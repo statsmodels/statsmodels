@@ -2,6 +2,7 @@ from statsmodels.compat.python import iterkeys, itervalues, zip, range
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
 from scipy import linalg as spl
+from collections import defaultdict
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              IterationLimitWarning)
 import warnings
@@ -905,3 +906,121 @@ class GlobalOddsRatio(CovStruct):
     def summary(self):
 
         return "Global odds ratio: %.3f\n" % self.dep_params
+
+
+class Equivalence(CovStruct):
+    """
+    A covariance structure defined in terms of equivalence classes.
+
+    An 'equivalence class' is a set of pairs of observations such that
+    the covariance of every pair within the equivalence class has a
+    common value.
+
+    Parameters
+    ----------
+    pairs : dict-like
+      A dictionary of dictionaries, where `pairs[group][label]`
+      provides the indices of all pairs of observations in the group
+      that have the same covariance value.  Specifically,
+      `pairs[group][label]` is a tuple `(j1, j2)`, where `j1` and `j2`
+      are integer arrays of the same length.  `j1[i], j2[i]` is one
+      index pair that belongs to the `label` equivalence class.  Only
+      one triangle of each covariance matrix should be included.
+      Positions where j1 and j2 have the same value are variance
+      parameters.
+
+    Notes
+    -----
+    Any pair of values not contained in `pairs` will be assigned zero
+    covariance.
+
+    The index values in `pairs` are row indices into the `exog`
+    matrix.  They are not updated if missing data are present.  When
+    using this covariance structure, missing data should be removed
+    before constructing the model.
+
+    Examples
+    --------
+    The following sets up the `pairs` dictionary for a model with two
+    groups, equal variance for all observations, and constant
+    covariance for all pairs of observations within each group.
+
+    >> pairs = {0: {}, 1: {}}
+    >> pairs[0][0] = (np.r_[0, 1, 2], np.r_[0, 1, 2])
+    >> pairs[0][1] = np.tril_indices(3, -1)
+    >> pairs[1][0] = (np.r_[3, 4, 5], np.r_[3, 4, 5])
+    >> pairs[1][2] = 3 + np.tril_indices(3, -1)
+    """
+
+    def __init__(self, pairs):
+
+        super(Equivalence, self).__init__()
+
+        self.pairs = pairs
+
+        # Initialize so that any pair containing a variance parameter
+        # has value 1.
+        self.dep_params = defaultdict(lambda : 0.)
+        for gp in self.pairs:
+            for lb in self.pairs[gp]:
+                j1, j2 = self.pairs[gp][lb]
+                if np.any(j1 == j2):
+                    self.dep_params[lb] = 1
+
+    def initialize(self, model):
+        """
+        Start indexing from 0 within each group.
+        """
+
+        super(Equivalence, self).initialize(model)
+
+        # rx maps olds indices to new indices
+        rx = -1 * np.ones(len(self.model.endog), dtype=np.int32)
+        for gp in self.model.group_labels:
+            ii = self.model.group_indices[gp]
+            rx[ii] = np.arange(len(ii), dtype=np.int32)
+
+        # Reindex
+        for gp in self.pairs.keys():
+            for lb in self.pairs[gp].keys():
+                a, b = self.pairs[gp][lb]
+                self.pairs[gp][lb] = (rx[a], rx[b])
+
+    def update(self, params):
+
+        endog = self.model.endog_li
+        varfunc = self.model.family.variance
+        cached_means = self.model.cached_means
+        dep_params = defaultdict(lambda : [0., 0])
+        dim = len(params)
+
+        for gp in range(self.model.num_group):
+            expval, _ = cached_means[gp]
+            stdev = np.sqrt(varfunc(expval))
+            resid = (endog[gp] - expval) / stdev
+            for lb in self.pairs[gp].keys():
+                jj = self.pairs[gp][lb]
+                dep_params[lb][0] += np.sum(resid[jj[0]] * resid[jj[1]])
+                dep_params[lb][1] += len(jj[0])
+
+        for lb in dep_params.keys():
+            dep_params[lb] = dep_params[lb][0] / (dep_params[lb][1] - dim)
+
+        self.dep_params = dep_params
+
+    def covariance_matrix(self, expval, index):
+        dim = len(expval)
+        cmat = np.zeros((dim, dim))
+
+        for lb in self.pairs[index].keys():
+            j1, j2 = self.pairs[index][lb]
+            cmat[j1, j2] = self.dep_params[lb]
+
+        cmat = cmat + cmat.T
+        np.fill_diagonal(cmat, cmat.diagonal() / 2)
+
+        return cmat, False
+
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
+

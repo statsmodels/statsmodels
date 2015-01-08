@@ -951,6 +951,55 @@ class TestGEE(object):
                             np.r_[-0.1256575, -0.126747036])
 
 
+    def test_equivalence(self):
+        """
+        The Equivalence covariance structure can represent an
+        exchangeable covariance structure.  Here we check that the
+        results are identical using the two approaches.
+        """
+
+        np.random.seed(3424)
+        endog = np.random.normal(size=20)
+        exog = np.random.normal(size=(20, 2))
+        exog[:, 0] = 1
+        groups = np.kron(np.arange(5), np.ones(4))
+        groups[12:] = 3 # Create unequal size groups
+
+        # Set up an Equivalence covariance structure to mimic an
+        # Exchangeable covariance structure.
+        pairs = {}
+        start = [0, 4, 8, 12]
+        for k in range(4):
+            pairs[k] = {}
+
+            # Diagonal values (variance parameters)
+            if k < 3:
+                pairs[k][0] = (start[k] + np.r_[0, 1, 2, 3],
+                               start[k] + np.r_[0, 1, 2, 3])
+            else:
+                pairs[k][0] = (start[k] + np.r_[0, 1, 2, 3, 4, 5, 6, 7],
+                               start[k] + np.r_[0, 1, 2, 3, 4, 5, 6, 7])
+
+            # Off-diagonal pairs (covariance parameters)
+            if k < 3:
+                a, b = np.tril_indices(4, -1)
+                pairs[k][1] = (start[k] + a, start[k] + b)
+            else:
+                a, b = np.tril_indices(8, -1)
+                pairs[k][1] = (start[k] + a, start[k] + b)
+
+        ec = sm.cov_struct.Equivalence(pairs)
+        model1 = sm.GEE(endog, exog, groups, cov_struct=ec)
+        result1 = model1.fit()
+
+        ex = sm.cov_struct.Exchangeable()
+        model2 = sm.GEE(endog, exog, groups, cov_struct=ex)
+        result2 = model2.fit()
+
+        assert_allclose(result1.params, result2.params, atol=1e-6, rtol=1e-6)
+        assert_allclose(result1.bse, result2.bse, atol=1e-6, rtol=1e-6)
+        assert_allclose(result1.scale, result2.scale, atol=1e-6, rtol=1e-6)
+
 class CheckConsistency(object):
 
     start_params = None
