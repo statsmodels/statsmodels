@@ -1117,11 +1117,6 @@ class GEE(base.Model):
         results.ctol = ctol
         results.maxiter = maxiter
 
-        if hasattr(self, "offset"):
-            results.offset = self.offset
-        if hasattr(self, "exposure"):
-            results.exposure = self.exposure
-
         # These will be copied over to subclasses when upgrading.
         results._props = ["cov_type", "use_t",
                           "cov_params_default", "cov_robust",
@@ -1234,11 +1229,11 @@ class GEE(base.Model):
         """
         # This form should be appropriate for group 1 probit, logit,
         # logistic, cloglog, heckprob, xtprobit.
+        offset_exposure = None
         if exog is None:
             exog = self.exog
             offset_exposure = self._offset_exposure
 
-        offset_exposure = None
         margeff = self.mean_deriv_exog(exog, params, offset_exposure)
 
         if 'ex' in transform:
