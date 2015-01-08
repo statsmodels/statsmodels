@@ -229,7 +229,8 @@ class MLEModel(Model):
         else:
             return loglike
 
-    def score(self, params, *args, **kwargs):
+    def score(self, params, initial_state=None, initial_state_cov=None,
+              *args, **kwargs):
         """
         Compute the score function at params.
 
@@ -254,9 +255,30 @@ class MLEModel(Model):
             kwargs.setdefault('transformed', False)
         if nargs < 3:
             kwargs.setdefault('set_params', False)
-        return approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args, kwargs=kwargs)
 
-    def hessian(self, params, *args, **kwargs):
+        if initial_state is not None and initial_state_cov is not None:
+            # If initialization is stationary, we don't want to recalculate the
+            # initial_state_cov for each new set of parameters here
+            initialization = self.initialization
+            _initial_state = self._initial_state
+            _initial_state_cov = self._initial_state_cov
+            _initial_variance = self._initial_variance
+
+            self.initialize_known(initial_state, initial_state_cov)
+
+        score = approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args, kwargs=kwargs)
+
+        if initial_state is not None and initial_state_cov is not None:
+            # Reset the initialization
+            self.initialization = initialization
+            self._initial_state = _initial_state
+            self._initial_state_cov = _initial_state_cov
+            self._initial_variance = _initial_variance
+
+        return score
+
+    def hessian(self, params, initial_state=None, initial_state_cov=None,
+                *args, **kwargs):
         """
         Hessian matrix of the likelihood function, evaluated at the given
         parameters.
@@ -282,7 +304,27 @@ class MLEModel(Model):
             kwargs.setdefault('transformed', False)
         if nargs < 3:
             kwargs.setdefault('set_params', False)
-        return approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args, kwargs=kwargs)
+
+        if initial_state is not None and initial_state_cov is not None:
+            # If initialization is stationary, we don't want to recalculate the
+            # initial_state_cov for each new set of parameters here
+            initialization = self.initialization
+            _initial_state = self._initial_state
+            _initial_state_cov = self._initial_state_cov
+            _initial_variance = self._initial_variance
+
+            self.initialize_known(initial_state, initial_state_cov)
+
+        hessian = approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args, kwargs=kwargs)
+
+        if initial_state is not None and initial_state_cov is not None:
+            # Reset the initialization
+            self.initialization = initialization
+            self._initial_state = _initial_state
+            self._initial_state_cov = _initial_state_cov
+            self._initial_variance = _initial_variance
+
+        return hessian
 
     @property
     def start_params(self):
@@ -524,7 +566,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         unconstrained = self.model.untransform_params(self._params)
         jacobian = self.model.transform_jacobian(unconstrained)
-        hessian = self.model.hessian(unconstrained, set_params=False)
+        hessian = self.model.hessian(
+            unconstrained, set_params=False,
+            initial_state=self.initial_state,
+            initial_state_cov=self.initial_state_cov
+        )
 
         # Reset the matrices to the saved parameters (since they were
         # overwritten in the hessian call)
