@@ -12,7 +12,7 @@ import os
 from statsmodels.tsa.statespace import sarimax
 from .results import results_sarimax
 from statsmodels.tools import add_constant
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,6 +34,28 @@ class SARIMAXTests(sarimax.SARIMAX):
         assert_almost_equal(
             self.result.bic,
             self.true['bic'], 3
+        )
+
+
+class TestAR3(SARIMAXTests):
+    def __init__(self, *args, **kwargs):
+        self.true = results_sarimax.wpi1_ar3
+        endog = self.true['data']
+
+        kwargs.setdefault('simple_differencing', True)
+        kwargs.setdefault('hamilton_representation', True)
+
+        super(TestAR3, self).__init__(endog, order=(3, 1, 0), *args, **kwargs)
+
+        params = np.r_[self.true['params_ar'], self.true['params_variance']]
+
+        self.update(params)
+        self.result = self.filter()
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse, self.true['se_ar'] + self.true['se_variance'],
+            atol=1e-3
         )
 
 
