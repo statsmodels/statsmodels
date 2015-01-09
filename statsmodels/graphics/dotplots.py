@@ -156,7 +156,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # The number of section titles
     if show_section_titles == False:
-        draw_section_titles = Fale
+        draw_section_titles = False
         nsect_title = 0
     elif show_section_titles == True:
         draw_section_titles = True
