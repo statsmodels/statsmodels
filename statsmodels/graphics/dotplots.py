@@ -7,7 +7,9 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
              styles=None, marker_props=None, line_props=None,
              split_names=None, section_order=None, line_order=None,
              stacked=False, styles_order=None, striped=False,
-             horizontal=True, ax=None):
+             horizontal=True, show_names="both",
+             fmt_left_name=None, fmt_right_name=None,
+             show_section_titles=None, ax=None):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  These are also known as "forest plots".
@@ -68,6 +70,22 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     horizontal : boolean
         If True (default), the lines are drawn horizontally, otherwise
         they are drawn vertically.
+    show_names : string
+        Determines whether labels (names) are shown in the left and/or
+        right margins (top/bottom margins if `horizontal` is True).
+        If `both`, labels are drawn in both margins, if 'left', labels
+        are drawn in the left or top margin.  If `right`, labels are
+        drawn in the right or bottom margin.
+    fmt_left_name : function
+        The left/top margin names are passed through this function
+        before drawing on the plot.
+    fmt_right_name : function
+        The right/bottom marginnames are passed through this function
+        before drawing on the plot.
+    show_section_titles : bool or None
+        If None, section titles are drawn only if there is more than
+        one section.  If False/True, section titles are never/always
+        drawn, respectively.
     ax : matplotlib.axes
         The axes on which the dotplot is drawn.  If None, a new axes
         is created.
@@ -88,8 +106,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     >>> dot_plot(points=point_values)
 
     This dotplot has labels on the lines (if elements in
-    `label_values` are repeated, the correponding points appear on the
-    same line):
+    `label_values` are repeated, the corresponding points appear on
+    the same line):
     >>> dot_plot(points=point_values, lines=label_values)
 
     References
@@ -107,14 +125,11 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # Convert to numpy arrays if that is not what we are given.
     points = np.asarray(points)
-    if intervals is not None:
-        intervals = np.asarray(intervals)
-    if lines is not None:
-        lines = np.asarray(lines)
-    if sections is not None:
-        sections = np.asarray(sections)
-    if styles is not None:
-        styles = np.asarray(styles)
+    asarray_or_none = lambda x : None if x is None else np.asarray(x)
+    intervals = asarray_or_none(intervals)
+    lines = asarray_or_none(lines)
+    sections = asarray_or_none(sections)
+    styles = asarray_or_none(styles)
 
     # Total number of points
     npoint = len(points)
@@ -136,9 +151,19 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
 
     # The number of sections
     nsect = len(set(sections))
+    if section_order is not None:
+        nsect = len(set(section_order))
 
     # The number of section titles
-    nsect_title = nsect if nsect > 1 else 0
+    if show_section_titles == False:
+        draw_section_titles = False
+        nsect_title = 0
+    elif show_section_titles == True:
+        draw_section_titles = True
+        nsect_title = nsect
+    else:
+        draw_section_titles = nsect > 1
+        nsect_title = nsect if nsect > 1 else 0
 
     # The total vertical space devoted to section titles.
     section_space_total = section_title_space * nsect_title
@@ -163,6 +188,10 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     # A map from (section,line) codes to index positions.
     lines_map = {}
     for i in range(npoint):
+        if section_order is not None and sections[i] not in section_order:
+            continue
+        if line_order is not None and lines[i] not in line_order:
+            continue
         ky = (sections[i], lines[i])
         if ky not in lines_map:
             lines_map[ky] = []
@@ -266,7 +295,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     for k0 in lines0:
 
         # Draw a section title
-        if nsect_title > 0:
+        if draw_section_titles:
 
             if horizontal:
 
@@ -326,6 +355,12 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             else:
                 left_label, right_label = k1, None
 
+            if fmt_left_name is not None:
+                left_label = fmt_left_name(left_label)
+
+            if fmt_right_name is not None:
+                right_label = fmt_right_name(right_label)
+
             # Draw the stripe
             if striped and jrow % 2 == 0:
                 if horizontal:
@@ -344,31 +379,35 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             jrow += 1
 
             # Draw the left margin label
-            if horizontal:
-                ax.text(-0.1/awidth, pos, left_label,
-                           horizontalalignment="right",
-                           verticalalignment='center',
-                           transform=ax.transAxes, family='monospace')
-            else:
-                ax.text(pos, -0.1/aheight, left_label,
-                           horizontalalignment="center",
-                           verticalalignment='top',
-                           transform=ax.transAxes, family='monospace')
-
-            # Draw the right margin label
-            if right_label is not None:
+            if show_names.lower() in ("left", "both"):
                 if horizontal:
-                    ax.text(1 + 0.1/awidth, pos, right_label,
-                            horizontalalignment="left",
+                    ax.text(-0.1/awidth, pos, left_label,
+                            horizontalalignment="right",
                             verticalalignment='center',
                             transform=ax.transAxes,
                             family='monospace')
                 else:
-                    ax.text(pos, 1 + 0.1/aheight, right_label,
+                    ax.text(pos, -0.1/aheight, left_label,
                             horizontalalignment="center",
-                            verticalalignment='bottom',
+                            verticalalignment='top',
                             transform=ax.transAxes,
                             family='monospace')
+
+            # Draw the right margin label
+            if show_names.lower() in ("right", "both"):
+                if right_label is not None:
+                    if horizontal:
+                        ax.text(1 + 0.1/awidth, pos, right_label,
+                                horizontalalignment="left",
+                                verticalalignment='center',
+                                transform=ax.transAxes,
+                                family='monospace')
+                    else:
+                        ax.text(pos, 1 + 0.1/aheight, right_label,
+                                horizontalalignment="center",
+                                verticalalignment='bottom',
+                                transform=ax.transAxes,
+                                family='monospace')
 
             # Save the vertical position so that we can place the
             # tick marks
