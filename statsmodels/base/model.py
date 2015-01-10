@@ -84,6 +84,8 @@ class Model(object):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
+            if key == 'design_info':  # leave this attached to data
+                continue
             # pop so we don't start keeping all these twice or references
             try:
                 setattr(self, key, data.__dict__.pop(key))
@@ -142,11 +144,14 @@ class Model(object):
         missing = kwargs.get('missing', 'drop')
         if missing == 'none':  # with patys it's drop or raise. let's raise.
             missing = 'raise'
-        (endog, exog), missing_idx = handle_formula_data(data, None, formula,
-                                                         depth=eval_env,
-                                                         missing=missing)
+        ((endog, exog),
+         missing_idx,
+         design_info) = handle_formula_data(data, None, formula,
+                                            depth=eval_env,
+                                            missing=missing)
         kwargs.update({'missing_idx': missing_idx,
-                       'missing': missing})
+                       'missing': missing,
+                       'design_info': design_info})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
@@ -734,7 +739,7 @@ class Results(object):
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
-            exog = dmatrix(self.model.data.orig_exog.design_info.builder,
+            exog = dmatrix(self.model.data.design_info.builder,
                            exog)
 
         if exog is not None:
