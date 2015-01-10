@@ -56,6 +56,8 @@ class ModelData(object):
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
+        if 'design_info' in kwargs:
+            self.design_info = kwargs.pop('design_info')
         if missing != 'none':
             arrays, nan_idx = self.handle_missing(endog, exog, missing,
                                                   **kwargs)
