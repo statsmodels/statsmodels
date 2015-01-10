@@ -62,8 +62,9 @@ class Model(object):
         self.exog = self.data.exog
         self.endog = self.data.endog
         self._data_attr = []
-        self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
-                                'data.orig_endog', 'data.orig_exog'])
+        self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog'])
+        if 'formula' not in kwargs:  # won't be able to unpickle without these
+            self._data_attr.extend(['data.orig_endog', 'data.orig_exog'])
         # store keys for extras if we need to recreate model instance
         # we don't need 'missing', maybe we need 'hasconst'
         self._init_keys = list(kwargs.keys())
@@ -84,7 +85,7 @@ class Model(object):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
-            if key == 'design_info':  # leave this attached to data
+            if key in ['design_info', 'formula']:  # leave attached to data
                 continue
             # pop so we don't start keeping all these twice or references
             try:
@@ -151,6 +152,7 @@ class Model(object):
                                             missing=missing)
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
+                       'formula': formula,  # attach formula for unpckling
                        'design_info': design_info})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
