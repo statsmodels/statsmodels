@@ -1053,6 +1053,20 @@ def test_formula_missing_cat():
                   data=dta, missing='raise')
 
 
+def test_missing_formula_predict():
+    # see 2171
+    nsample = 30
+
+    data = pandas.DataFrame({'x': np.linspace(0, 10, nsample)})
+    null = pandas.DataFrame({'x': np.array([np.nan])})
+    data = pandas.concat([data, null])
+    beta = np.array([1, 0.1])
+    e = np.random.normal(size=nsample+1)
+    data['y'] = beta[0] + beta[1] * data['x'] + e
+    model = OLS.from_formula('y ~ x', data=data)
+    fit = model.fit()
+    pred = fit.predict(exog=data[:-1])
+
 if __name__=="__main__":
 
     import nose
