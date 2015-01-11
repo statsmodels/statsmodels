@@ -296,8 +296,10 @@ class Heckman(base.LikelihoodModel):
             xparams = np.asarray(twostep_res.params)
             zparams = np.asarray(twostep_res.select_res.params)
             params_all = np.append(xparams, zparams)
-            params_all = np.append(params_all, twostep_res.corr_eqnerrors)
-            params_all = np.append(params_all, twostep_res.var_reg_error)
+            params_all = np.append(params_all,
+                np.log(np.sqrt(twostep_res.var_reg_error)))
+            params_all = np.append(params_all,
+                (1./2.)*np.log((1+twostep_res.corr_eqnerrors)/(1-twostep_res.corr_eqnerrors)))
 
             start_params_mle = params_all
 
@@ -309,8 +311,12 @@ class Heckman(base.LikelihoodModel):
 
         xbeta_hat = np.asarray(results_mle.params[:num_xvars])  # reg eqn coefs
         zbeta_hat = np.asarray(results_mle.params[num_xvars:num_xvars+num_zvars])  # selection eqn coefs
-        rho_hat = results_mle.params[-2]
-        sigma2_hat = results_mle.params[-1]
+
+        log_sigma_hat = results_mle.params[-2]
+        atanh_rho_hat = results_mle.params[-1]
+
+        sigma_hat = np.exp(log_sigma_hat)
+        rho_hat = np.tanh(atanh_rho_hat)
 
         scale = results_mle.scale
         #TODO: I think these should be the sandwich estimates, but should confirm
@@ -319,19 +325,25 @@ class Heckman(base.LikelihoodModel):
             num_xvars:(num_xvars+num_zvars),num_xvars:(num_xvars+num_zvars)
             ]
 
-        rho_var_hat = results_mle.normalized_cov_params[-2,-2] * scale
-        sigma2_var_hat = results_mle.normalized_cov_params[-1,-1] * scale
 
-        imr_hat = rho_hat*np.sqrt(sigma2_hat)
+        imr_hat = rho_hat*sigma_hat
 
-        #NOTE: for two RVs:
-        # Var(XY) = Var(X)Var(Y) + Var(X)E(Y)^2 + Var(Y)E(X)^2
-        #TODO: check that this is an ok way to compute this std err,
-        # since we would need to assume that the MLE estimates are unbiased
-        # and independent
+        # use the Delta method to compute the variance of lambda (the inverse Mills ratio)
+        log_sigma_var_hat = results_mle.normalized_cov_params[-2,-2] * scale
+        atanh_rho_var_hat = results_mle.normalized_cov_params[-1,-1] * scale
+
+        def grad_lambda(log_sigma, atanh_rho):
+            return np.array([atanh_rho, log_sigma])
+
+        grad_lambda_hat = np.atleast_2d(grad_lambda(sigma_hat, rho_hat))
+        covmat = results_mle.normalized_cov_params[-2:,-2:] * scale
+
         imr_stderr_hat = np.sqrt(
-            rho_var_hat*sigma2_var_hat + rho_var_hat*(sigma2_hat**2) + sigma2_var_hat*(rho_hat**2)
+            grad_lambda_hat.dot(covmat).dot(grad_lambda_hat.T)[0,0]
             )
+
+        del grad_lambda_hat
+        del covmat
 
         # fill in results for this fit, and return
 
@@ -341,7 +353,7 @@ class Heckman(base.LikelihoodModel):
             xbeta_ncov_hat, scale,
             select_res=base.LikelihoodModelResults(None, zbeta_hat, zbeta_ncov_hat, scale),
             param_inverse_mills=imr_hat, stderr_inverse_mills=imr_stderr_hat,
-            var_reg_error=sigma2_hat, corr_eqnerrors=rho_hat,
+            var_reg_error=sigma_hat**2, corr_eqnerrors=rho_hat,
             method='mle')
 
         return results
@@ -361,7 +373,7 @@ class Heckman(base.LikelihoodModel):
         params_all : array-like
             Parameter estimates, with the parameters for the regression
             equation coming first, then the parameters for the
-            selection equation, then rho, then sigma2.
+            selection equation, then log sigma, then atanh rho.
 
         Returns
         -------
@@ -379,8 +391,10 @@ class Heckman(base.LikelihoodModel):
 
         xbeta = np.asarray(params_all[:num_xvars])  # reg eqn coefs
         zbeta = np.asarray(params_all[num_xvars:num_xvars+num_zvars])  # selection eqn coefs
-        rho = params_all[-2]
-        sigma2 = params_all[-1]
+        log_sigma = params_all[-2]
+        atanh_rho = params_all[-1]
+        sigma = np.exp(log_sigma)
+        rho = np.tanh(atanh_rho)
 
         # line the data vectors up
         Z_zbeta_aligned = Z.dot(zbeta)
@@ -398,9 +412,9 @@ class Heckman(base.LikelihoodModel):
         # create an array where each row is the log likelihood for the corresponding observation
         ll_obs_observed = \
             np.multiply(D,
-                np.log(norm.cdf( (Z_zbeta_aligned+(Y_aligned-X_xbeta_aligned)*rho/np.sqrt(sigma2)) / np.sqrt(1-rho**2) )) - \
-                (1/2)*(Y_aligned-X_xbeta_aligned)**2/sigma2 - \
-                np.log(np.sqrt(2*np.pi*sigma2)))
+                np.log(norm.cdf( (Z_zbeta_aligned+(Y_aligned-X_xbeta_aligned)*rho/sigma) / np.sqrt(1-rho**2) )) - \
+                (1./2.)*((Y_aligned-X_xbeta_aligned)/sigma)**2 - \
+                np.log(np.sqrt(2*np.pi)*sigma))
         ll_obs_observed[~D] = 0
         ll_obs_notobserved = \
             np.multiply(1-D,
@@ -444,8 +458,6 @@ class Heckman(base.LikelihoodModel):
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
-
-
 
 
 

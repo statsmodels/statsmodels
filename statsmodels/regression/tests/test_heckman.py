@@ -442,11 +442,7 @@ def test_heckman_mle(verbose=True):
     # specify the model
     heckman_model = heckman.Heckman(Y,X,Z)
 
-    # fit the model with proper bounds on the rho and sigma2 terms
-    bnds = [(0,None) for i in range(X.shape[1]+Z.shape[1])]
-    bnds.append((-1,1))
-    bnds.append((0,None))
-
+    # fit the model
     heckman_res = heckman_model.fit(method='mle', method_mle='ncg', disp=False)
 
     # produce the fitted model summary object
@@ -516,6 +512,7 @@ def test_heckman_mle(verbose=True):
     # check that all std err estimates are not nan
     assert_(not any(np.isnan(stderr_est_list)))
 
+    # check that MLE estimates are less than two-step estimates within a tolerance
     for i in range(len(stderr_stata_list)):
         t = stderr_stata_list[i]
         e = stderr_est_list[i]
