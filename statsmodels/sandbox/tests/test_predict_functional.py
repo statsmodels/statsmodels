@@ -261,7 +261,7 @@ def test_all():
 
     #scb_example(plt, pdf)
     #formula_example(plt, pdf)
-    glm_formula_example(plt, pdf)
+    #glm_formula_example(plt, pdf)
     noformula_example(plt, pdf)
 
     if pdf_output:
