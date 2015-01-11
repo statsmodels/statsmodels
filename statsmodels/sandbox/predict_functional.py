@@ -32,7 +32,11 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
     model = result.model
     exog = model.data.frame
 
+    if exog[focus_var].dtype is np.dtype('O'):
+        raise ValueError('focus variable may not have object type')
+
     colnames = list(summaries.keys()) + list(values.keys()) + [focus_var]
+    dtypes = [exog[x].dtype for x in colnames]
 
     # Check for variables whose values are not set either through
     # `values` or `summaries`.  Since the model data frame can contain
@@ -47,6 +51,8 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
                       % ", ".join(["'%s'" % x for x in unmatched]))
 
     fexog = pd.DataFrame(index=range(num_points), columns=colnames)
+    for d, x in zip(dtypes, colnames):
+        fexog[x] = fexog[x].astype(d)
 
     # The values of the 'focus variable' are a sequence of percentiles
     pctls = np.linspace(0, 100, num_points).tolist()

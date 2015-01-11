@@ -260,8 +260,8 @@ def test_all():
         pdf = None
 
     scb_example(plt, pdf) # travis OK
-    #formula_example(plt, pdf) # travis not OK
-    glm_formula_example(plt, pdf)
+    formula_example(plt, pdf) # travis not OK
+    glm_formula_example(plt, pdf) # travis not OK
     noformula_example(plt, pdf) # travis OK
 
     if pdf_output:
