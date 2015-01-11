@@ -32,7 +32,7 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
     model = result.model
     exog = model.data.frame
 
-    colnames = summaries.keys() + values.keys() + [focus_var]
+    colnames = list(summaries.keys()) + list(values.keys()) + [focus_var]
 
     # Check for variables whose values are not set either through
     # `values` or `summaries`.  Since the model data frame can contain
