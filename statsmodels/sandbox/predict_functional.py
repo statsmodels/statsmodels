@@ -354,7 +354,6 @@ def predict_functional_glm(result, focus_var, summaries=None, values=None, cvrg_
     kwargs_pred = kwargs.copy()
     kwargs_pred.update({"linear": True})
     pred = result.predict(exog=fexog, **kwargs_pred)
-    t_test = result.t_test(dexog)
 
     if simultaneous:
 
@@ -364,6 +363,7 @@ def predict_functional_glm(result, focus_var, summaries=None, values=None, cvrg_
         cb[:, 1] = pred + c*sigma
 
     else:
+        t_test = result.t_test(dexog)
         cb = t_test.conf_int(alpha=1-cvrg_prob)
 
     if not linear:
