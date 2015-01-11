@@ -513,11 +513,13 @@ def test_heckman_mle(verbose=True):
 
     assert len(stderr_stata_list) == len(stderr_est_list)
 
+    # check that all std err estimates are not nan
+    assert_(not any(np.isnan(stderr_est_list)))
+
     for i in range(len(stderr_stata_list)):
         t = stderr_stata_list[i]
         e = stderr_est_list[i]
 
-        assert_(not np.isnan(e))
         assert_(e<=t+TOL)
 
 
