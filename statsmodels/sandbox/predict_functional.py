@@ -5,11 +5,12 @@ import numpy as np
 import warnings
 
 """
-A predict-like function that constructs means and pointwise confidence
-bands for the function f(x) = E[Y | X*=x, X1=x1, ...], where X* is the
-focus variable and X1, X2, ... are non-focus variables.  This is
-especially useful when conducting a functional regression in which the
-role of x is modeled with b-splines or other basis functions.
+A predict-like function that constructs means and pointwise or
+simultaneous confidence bands for the function f(x) = E[Y | X*=x,
+X1=x1, ...], where X* is the focus variable and X1, X2, ... are
+non-focus variables.  This is especially useful when conducting a
+functional regression in which the role of x is modeled with b-splines
+or other basis functions.
 """
 
 
@@ -112,7 +113,8 @@ def _make_exog(result, focus_var, summaries, values, num_points):
 
 
 def predict_functional(result, focus_var, summaries=None, values=None,
-                       cvrg_prob=0.95, simultaneous=False, num_points=10, **kwargs):
+                       cvrg_prob=0.95, simultaneous=False, num_points=10,
+                       exog=None, **kwargs):
     """
     Returns predictions of a fitted model as a function of a given covariate.
 
@@ -142,6 +144,8 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     num_points : integer
         The number of equally-spaced quantile points where the
         prediction is made.
+    exog : array-like
+        Explicitly provide points to cover with the confidence band.
     kwargs :
         Arguments passed to the `predict` method.
 
@@ -159,10 +163,17 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     Notes
     -----
     All variables in the model except for the focus variable should be
-    included as a key in either `summaries` or `values`.
+    included as a key in either `summaries` or `values` (unless `exog`
+    is provided).
 
     These are conditional means, based on specified values of the
     non-focus variables.  They are not marginal (unconditional) means.
+
+    If `exog` is provided, then the rows should contain a sequence of
+    values approximating a continuous path through the domain of the
+    covariates.  For example, if Z(s) is the covariate expressed as a
+    function of s, then the rows of exog may approximate Z(g(s)) for
+    some continuous function g.
 
     Examples
     --------
@@ -190,22 +201,35 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     >>> pr, cb, x = predict_functional(result, 'x3', summaries, values)
     """
 
-    if summaries is None:
-        summaries = {}
-    if values is None:
-        values = {}
+    model = result.model
+    if exog is not None:
 
-    ky = set(values.keys()) & set(summaries.keys())
-    if len(ky) > 0:
-        raise ValueError("%s included in both `values` and `summaries`" %
-                         ", ".join(ky))
+        if (summaries is not None) or (values is not None):
+            raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
 
-    # Branch depending on whether the model was fit with a formula.
-    if hasattr(result.model.data, "frame"):
-        dexog, fexog, fvals = _make_formula_exog(result, focus_var, summaries, values, num_points)
+        fexog = exog
+        dexog = patsy.dmatrix(model.data.orig_exog.design_info.builder, fexog, return_type='dataframe')
+
     else:
-        exog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
-        dexog, fexog = exog, exog
+
+        if summaries is None:
+            summaries = {}
+        if values is None:
+            values = {}
+
+        ky = set(values.keys()) & set(summaries.keys())
+        if len(ky) > 0:
+            raise ValueError("%s included in both `values` and `summaries`" %
+                             ", ".join(ky))
+
+        # Branch depending on whether the model was fit with a formula.
+        if hasattr(result.model.data, "frame"):
+            dexog, fexog, fvals = _make_formula_exog(result, focus_var,
+                                           summaries, values, num_points)
+        else:
+            exog, fvals = _make_exog(result, focus_var, summaries,
+                                     values, num_points)
+            dexog, fexog = exog, exog
 
     pred = result.predict(exog=fexog, **kwargs)
     t_test = result.t_test(dexog)
@@ -232,6 +256,8 @@ def predict_functional(result, focus_var, summaries=None, values=None,
 def _glm_basic_scr(result, exog, cvrg_prob):
     """
     The basic SCR from (Sun et al. Annals of Statistics 2000).
+
+    Computes simultaneous confidence regions (SCR).
 
     Parameters
     ----------
@@ -294,24 +320,36 @@ def _glm_basic_scr(result, exog, cvrg_prob):
     return sigma, c
 
 def predict_functional_glm(result, focus_var, summaries=None, values=None, cvrg_prob=0.95,
-                           simultaneous=False, num_points=10, linear=False, **kwargs):
+                           simultaneous=False, num_points=10, exog=None, linear=False,
+                           **kwargs):
 
-    if summaries is None:
-        summaries = {}
-    if values is None:
-        values = {}
+    model = result.model
+    if exog is not None:
 
-    ky = set(values.keys()) & set(summaries.keys())
-    if len(ky) > 0:
-        raise ValueError("%s included in both `values` and `summaries`" %
-                         ", ".join(ky))
+        if (summaries is not None) or (values is not None):
+            raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
 
-    # Branch depending on whether the model was fit with a formula.
-    if hasattr(result.model.data, "frame"):
-        dexog, fexog, fvals = _make_formula_exog(result, focus_var, summaries, values, num_points)
+        fexog = exog
+        dexog = patsy.dmatrix(model.data.orig_exog.design_info.builder, fexog, return_type='dataframe')
+
     else:
-        exog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
-        dexog, fexog = exog, exog
+
+        if summaries is None:
+            summaries = {}
+        if values is None:
+            values = {}
+
+        ky = set(values.keys()) & set(summaries.keys())
+        if len(ky) > 0:
+            raise ValueError("%s included in both `values` and `summaries`" %
+                             ", ".join(ky))
+
+        # Branch depending on whether the model was fit with a formula.
+        if hasattr(result.model.data, "frame"):
+            dexog, fexog, fvals = _make_formula_exog(result, focus_var, summaries, values, num_points)
+        else:
+            exog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
+            dexog, fexog = exog, exog
 
     kwargs_pred = kwargs.copy()
     kwargs_pred.update({"linear": True})
