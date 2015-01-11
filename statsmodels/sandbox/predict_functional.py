@@ -54,11 +54,11 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
     fexog.loc[:, focus_var] = fvals
 
     # The values of the other variables may be given by summary functions...
-    for ky in summaries.iterkeys():
+    for ky in summaries.keys():
         fexog.loc[:, ky] = summaries[ky](exog.loc[:, ky])
 
     # or they may be provided as given values.
-    for ky in values.iterkeys():
+    for ky in values.keys():
         fexog.loc[:, ky] = values[ky]
 
     dexog = patsy.dmatrix(model.data.orig_exog.design_info.builder, fexog, return_type='dataframe')
@@ -86,7 +86,7 @@ def _make_exog(result, focus_var, summaries, values, num_points):
 
     # Check for variables whose values are not set either through
     # `values` or `summaries`.
-    colnames = values.keys() + summaries.keys() + [focus_var]
+    colnames = list(values.keys()) + list(summaries.keys()) + [focus_var]
     unmatched = set(exog_names) - set(colnames)
     unmatched = list(unmatched)
     if len(unmatched) > 0:
@@ -100,12 +100,12 @@ def _make_exog(result, focus_var, summaries, values, num_points):
     exog[:, ix] = fvals
 
     # The values of the other variables may be given by summary functions...
-    for ky in summaries.iterkeys():
+    for ky in summaries.keys():
         ix = exog_names.index(ky)
         exog[:, ix] = summaries[ky](model_exog[:, ix])
 
     # or they may be provided as given values.
-    for ky in values.iterkeys():
+    for ky in values.keys():
         ix = exog_names.index(ky)
         exog[:, ix] = values[ky]
 
