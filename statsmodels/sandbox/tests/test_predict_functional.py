@@ -259,8 +259,8 @@ def test_all():
     else:
         pdf = None
 
-    #scb_example(plt, pdf)
-    formula_example(plt, pdf)
+    scb_example(plt, pdf)
+    #formula_example(plt, pdf)
     #glm_formula_example(plt, pdf)
     noformula_example(plt, pdf)
 
