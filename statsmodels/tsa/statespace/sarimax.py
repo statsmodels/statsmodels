@@ -15,6 +15,7 @@ from .tools import (
     unconstrain_stationary_univariate
 )
 from scipy.linalg import solve_discrete_lyapunov
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.decorators import cache_readonly
 
@@ -427,19 +428,25 @@ class SARIMAX(MLEModel):
         if self.mle_regression:
             self.k_params += self.k_exog
 
-        # Perform simple differencing if requested
+        # We need to have an array or pandas at this point
         self.orig_endog = endog
         self.orig_exog = exog
+        if not _is_using_pandas(endog, None):
+            endog = np.asanyarray(endog)
+        if exog is not None and not _is_using_pandas(exog, None):
+            exog = np.asanyarray(exog)
+
+        # Perform simple differencing if requested
         if (simple_differencing and
            (self._k_diff > 0 or self._k_seasonal_diff > 0)):
             # Save the originals
             self.orig_endog = endog
             self.orig_exog = exog
             # Perform simple differencing
-            endog = diff(np.copy(endog), self._k_diff, self._k_seasonal_diff,
+            endog = diff(endog.copy(), self._k_diff, self._k_seasonal_diff,
                          self.k_seasons)
             if exog is not None:
-                exog = diff(np.copy(exog), self._k_diff, self._k_seasonal_diff,
+                exog = diff(exog.copy(), self._k_diff, self._k_seasonal_diff,
                             self.k_seasons)
             self._k_diff = 0
             self._k_seasonal_diff = 0
