@@ -624,10 +624,14 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : int or boolean or None, optional
-            Specifies the number of steps ahead for each in-sample prediction.
-            If not specified, then in-sample predictions are one-step-ahead.
-            False and None are interpreted as 0. Default is False.
+        dynamic : boolean, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
         full_results : boolean, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
@@ -644,6 +648,20 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # Handle start and end (e.g. dates)
         start = self.model._get_predict_start(start)
         end, out_of_sample = self.model._get_predict_end(end)
+
+        # Handle string dynamic
+        dates = self.data.dates
+        if isinstance(dynamic, str):
+            if dates is None:
+                raise ValueError("Got a string for dynamic and dates is None")
+            dtdynamic = self.model._str_to_date(dynamic)
+            try:
+                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
+
+                dynamic = dynamic_start - start
+            except KeyError:
+                raise ValueError("Dynamic must be in dates. Got %s | %s" %
+                        (str(dynamic), str(dtdynamic)))
 
         # Perform the prediction
         results = super(MLEResults, self).predict(

@@ -1773,10 +1773,14 @@ class SARIMAXResults(MLEResults):
             If the model includes exogenous regressors, you must provide
             exactly enough out-of-sample values for the exogenous variables if
             end is beyond the last observation in the sample.
-        dynamic : int or boolean or None, optional
-            Specifies the number of steps ahead for each in-sample prediction.
-            If not specified, then in-sample predictions are one-step-ahead.
-            False and None are interpreted as 0. Default is False.
+        dynamic : boolean, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
         full_results : boolean, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error

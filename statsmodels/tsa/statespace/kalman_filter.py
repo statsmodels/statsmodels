@@ -585,10 +585,12 @@ class FilterResults(FrozenRepresentation):
         end : int, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast will be at end.
-        dynamic : int or boolean or None, optional
-            Specifies the number of steps ahead for each in-sample prediction.
-            If not specified, then in-sample predictions are one-step-ahead.
-            False and None are interpreted as 0. Default is False.
+        dynamic : int, optional
+            Offset relative to `start` at which to begin dynamic prediction.
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
         full_results : boolean, optional
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
@@ -623,53 +625,61 @@ class FilterResults(FrozenRepresentation):
         if end is None:
             end = self.nobs
 
-        # Total number of predicted values
-        npredicted = end - start
+        # Prediction and forecasting is performed by iterating the Kalman
+        # Kalman filter through the entire range [0, end]
+        # Then, unless `full_results=True`, forecasts are returned
+        # corresponding to the range [start, end].
+        # In order to perform the calculations, the range is separately split
+        # up into the following categories:
+        # - static:   (in-sample) the Kalman filter is run as usual
+        # - dynamic:  (in-sample) the Kalman filter is run, but on missing data
+        # - forecast: (out-of-sample) the Kalman filter is run, but on missing
+        #             data
 
         # Short-circuit if end is before start
-        if npredicted < 0:
-            return (np.zeros((self.k_endog, 0)),
-                    np.zeros((self.k_endog, self.k_endog, 0)))
+        if end <= start:
+            raise ValueError('End of prediction must be after start.')
 
         # Get the number of forecasts to make after the end of the sample
-        # Note: this may be larger than npredicted if the predict command was
-        # called, for example, to calculate forecasts for nobs+10 through
-        # nobs+20, because the operations below will need to start forecasts no
-        # later than the end of the sample and go through `end`. Any
-        # calculations prior to `start` will be ignored.
         nforecast = max(0, end - self.nobs)
 
-        # Get the total size of the in-sample prediction component (whether via
-        # one-step-ahead or dynamic prediction)
-        nsample = npredicted - nforecast
+        # Get the number of dynamic prediction periods
 
-        # Get the number of periods until dynamic forecasting is used
-        if dynamic > nsample:
-            warn('Dynamic prediction specified for more steps-ahead (%d) than'
-                 ' there are observations in the specified range (%d).'
-                 ' `dynamic` has been automatically adjusted to %d. If'
-                 ' possible, you may want to set `start` to be earlier.'
-                 % (dynamic, nsample, nsample))
-            dynamic = nsample
+        # If `dynamic=True`, then assume that we want to begin dynamic
+        # prediction at the start of the sample prediction.
+        if dynamic is True:
+            dynamic = 0
+        # If `dynamic=False`, then assume we want no dynamic prediction
+        if dynamic is False:
+            dynamic = None
 
-        if dynamic is None or dynamic is False:
-            dynamic = nsample
-        ndynamic = nsample - dynamic
+        ndynamic = 0
+        if dynamic is not None:
+            # Replace the relative dynamic offset with an absolute offset
+            dynamic = start + dynamic
 
-        if dynamic < 0:
-            raise ValueError('Prediction cannot be specified with a negative'
-                             ' dynamic prediction offset.')
+            # Validate the `dynamic` parameter
+            if dynamic < 0:
+                raise ValueError('Dynamic prediction cannot begin prior to the'
+                                 ' first observation in the sample.')
+            if dynamic > end:
+                warn('Dynamic prediction specified to begin after the end of'
+                     ' prediction, and so has no effect.')
+                dynamic = None
+            if dynamic > self.nobs:
+                warn('Dynamic prediction specified to begin during'
+                     ' out-of-sample forecasting period, and so has no'
+                     ' effect.')
+                dynamic = None
 
-        # Get the number of in-sample, one-step-ahead predictions
-        ninsample = nsample - ndynamic
+            # Get the total size of the desired dynamic forecasting component
+            # Note: the first `dynamic` periods of prediction are actually *not*
+            # dynamic, because dynamic prediction begins at observation `dynamic`.
+            if dynamic is not None:
+                ndynamic = max(0, min(end, self.nobs) - dynamic)
 
-        # Total numer of left-padded zeros
-        # Two cases would have this as non-zero. Here are some examples:
-        # - If start = 4 and dynamic = 4, then npadded >= 4 so that even the
-        #   `start` observation has dynamic of 4
-        # - If start = 10 and nobs = 5, then npadded >= 5 because the
-        #   intermediate forecasts are required for the desired forecasts.
-        npadded = max(0, start - dynamic, start - self.nobs)
+        # Get the number of in-sample static predictions
+        nstatic = min(end, self.nobs) if dynamic is None else dynamic
 
         # Construct the design and observation intercept and covariance
         # matrices for start-npadded:end. If not time-varying in the original
@@ -679,13 +689,7 @@ class FilterResults(FrozenRepresentation):
         for name, shape in self.shapes.items():
             if name == 'obs':
                 continue
-            mat = getattr(self, name)
-            if shape[-1] == 1:
-                representation[name] = mat
-            elif len(shape) == 3:
-                representation[name] = mat[:, :, start-npadded:]
-            else:
-                representation[name] = mat[:, start-npadded:]
+            representation[name] = getattr(self, name)
 
         # Update the matrices from kwargs for forecasts
         warning = ('Model has time-invariant %s matrix, so the %s'
@@ -727,14 +731,10 @@ class FilterResults(FrozenRepresentation):
         if ndynamic == 0 and nforecast == 0:
             result = self
         else:
-            # Construct the new endogenous array - notice that it has
-            # npredicted + npadded values (rather than the entire start array,
-            # in case the number of observations is large and we don't want to
-            # re-run the entire filter just for forecasting)
-            endog = np.empty((self.k_endog, nforecast))
+            # Construct the new endogenous array.
+            endog = np.empty((self.k_endog, ndynamic + nforecast))
             endog.fill(np.nan)
-            endog = np.c_[self.endog[:, start-npadded:], endog]
-            endog = np.asfortranarray(endog)
+            endog = np.asfortranarray(np.c_[self.endog[:, :nstatic], endog])
 
             # Setup the new statespace representation
             model_kwargs = {
@@ -750,20 +750,20 @@ class FilterResults(FrozenRepresentation):
                 endog, self.k_states, self.k_posdef, **model_kwargs
             )
             model.initialize_known(
-                self.predicted_state[:, 0],
-                self.predicted_state_cov[:, :, 0]
+                self.initial_state,
+                self.initial_state_cov
             )
             model._initialize_filter(*args, **kwargs)
             model._initialize_state(*args, **kwargs)
 
-            result = self._predict(ninsample, ndynamic, nforecast, model)
+            result = self._predict(nstatic, ndynamic, nforecast, model)
 
         if full_results:
             return result
         else:
-            return result.forecasts[:, npadded:]
+            return result.forecasts[:, start:end]
 
-    def _predict(self, ninsample, ndynamic, nforecast, model, *args, **kwargs):
+    def _predict(self, nstatic, ndynamic, nforecast, model, *args, **kwargs):
         # Get the underlying filter
         kfilter = model._kalman_filter
 
@@ -772,22 +772,28 @@ class FilterResults(FrozenRepresentation):
         # with predicted data during dynamic forecasting
         endog = model._representations[model.prefix]['obs']
 
+        # print(nstatic, ndynamic, nforecast, model.nobs)
+
         for t in range(kfilter.model.nobs):
-            # Run the Kalman filter for the first `ninsample` periods (for
+            # Run the Kalman filter for the first `nstatic` periods (for
             # which dynamic computation will not be performed)
-            if t < ninsample:
+            if t < nstatic:
                 next(kfilter)
             # Perform dynamic prediction
-            elif t < ninsample+ndynamic:
+            elif t < nstatic+ndynamic:
                 design_t = 0 if model.design.shape[2] == 1 else t
                 obs_intercept_t = 0 if model.obs_intercept.shape[1] == 1 else t
 
-                # Predict endog[:, t] given `predicted_state` calculated in
-                # previous iteration (i.e. t-1)
-                endog[:, t] = np.dot(
-                    model.design[:, :, design_t],
-                    kfilter.predicted_state[:, t]
-                ) + model.obs_intercept[:, obs_intercept_t]
+                # Unconditional value is the intercept (often zeros)
+                endog[:, t] = model.obs_intercept[:, obs_intercept_t]
+                # If t > 0, then we can condition the forecast on the state
+                if t > 0:
+                    # Predict endog[:, t] given `predicted_state` calculated in
+                    # previous iteration (i.e. t-1)
+                    endog[:, t] += np.dot(
+                        model.design[:, :, design_t],
+                        kfilter.predicted_state[:, t]
+                    )
 
                 # Advance Kalman filter
                 next(kfilter)
