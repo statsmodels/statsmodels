@@ -246,3 +246,44 @@ else:
         if tol is None:
             tol = S.max() * max(M.shape) * np.finfo(S.dtype).eps
         return np.sum(S > tol)
+
+if NumpyVersion(np.__version__) >= '1.8.0':
+    nanmean = np.nanmean
+else:
+    def nanmean(a, axis=None):
+        """
+        Parameters
+        ----------
+        a : array_like
+            Array containing numbers whose mean is desired. If `a` is not an
+            array, a conversion is attempted.
+        axis : int, optional
+            Axis along which the means are computed. The default is to compute
+            the mean of the flattened array.
+
+        Returns
+        -------
+        m : ndarray, see dtype parameter above
+            If `out=None`, returns a new array containing the mean values,
+            otherwise a reference to the output array is returned. Nan is
+            returned for slices that contain only NaNs.
+
+        Notes
+        -----
+        Work around for nanmean which was introducted in 1.8.  Does not
+        support all features.
+        """
+        sum = np.nansum(a, axis=axis)
+        count = np.sum(np.logical_not(np.isnan(a)), axis=axis)
+        zero_count = count == 0
+
+        if zero_count.any():
+            avg = np.zeros_like(sum)
+            non_zero_count = np.logical_not(zero_count)
+            avg[zero_count] = np.nan
+            avg[non_zero_count] = sum[non_zero_count] / count[non_zero_count]
+        else:
+            avg = sum / count
+
+        return avg
+
