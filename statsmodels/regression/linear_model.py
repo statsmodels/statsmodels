@@ -1813,6 +1813,10 @@ class RegressionResults(base.LikelihoodModelResults):
             groups = kwds['groups']
             if not hasattr(groups, 'shape'):
                 groups = np.asarray(groups).T
+
+            if groups.ndim >= 2:
+                groups = groups.squeeze()
+
             res.cov_kwds['groups'] = groups
             use_correction = kwds.get('use_correction', True)
             res.cov_kwds['use_correction'] = use_correction
@@ -1825,6 +1829,9 @@ class RegressionResults(base.LikelihoodModelResults):
                                                  use_correction=use_correction)
 
             elif groups.ndim == 2:
+                if hasattr(groups, 'values'):
+                    groups = groups.values
+
                 if adjust_df:
                     # need to find number of groups
                     # duplicate work
