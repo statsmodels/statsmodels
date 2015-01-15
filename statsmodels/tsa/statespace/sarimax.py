@@ -582,6 +582,7 @@ class SARIMAX(MLEModel):
         # stationary component
         if not self.enforce_stationarity:
             self.initialize_approximate_diffuse(variance)
+            return
 
         # Otherwise, create the initial state and state covariance matrix
         # as from a combination of diffuse and stationary components
