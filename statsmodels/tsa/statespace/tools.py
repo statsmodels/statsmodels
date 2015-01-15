@@ -12,7 +12,7 @@ from . import _statespace
 
 try:
     from scipy.linalg.blas import find_best_blas_type
-except ImportError:
+except ImportError:  # pragma: no cover
     # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
     _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
 
@@ -36,9 +36,24 @@ prefix_kalman_filter_map = {
 }
 
 
-def companion_matrix(n, values=None):
+def companion_matrix(polynomial):
     r"""
     Create a companion matrix
+
+    Parameters
+    ----------
+    polynomial : array_like, optional.
+        If an iterable, interpreted as the coefficients of the polynomial from
+        which to form the companion matrix. Polynomial coefficients are in
+        order of increasing degree. If an integer, the size of the companion
+        matrix (the polynomial coefficients are then set to zeros).
+
+    Returns
+    -------
+    companion_matrix : array
+
+    Notes
+    -----
 
     Returns a matrix of the form
 
@@ -51,27 +66,27 @@ def companion_matrix(n, values=None):
             \phi_n & 0      & 0 & \cdots & 0 \\
         \end{bmatrix}
 
-    where some or all of the :math:`\phi_i` may be non-zero (if `values` is
+    where some or all of the :math:`\phi_i` may be non-zero (if `polynomial` is
     None, then all are equal to zero).
 
-    Parameters
-    ----------
-    n : int
-        The size of the companion matrix.
-    values : array_like, optional.
-        The values to use in the first column of the companion matrix. Default
-        is zeros.
-
-    Returns
-    -------
-    companion_matrix : array
+    If the coefficients provided are :math:`(c_0, c_1, \dots, c_{n})`,
+    then the companion matrix is an :math:`n \times n` matrix formed with the
+    elements in the first column defined as
+    :math:`\phi_i = -\frac{c_i}{c_0}, i \in 1, \dots, n`.
     """
+    if isinstance(polynomial, int):
+        n = polynomial
+        polynomial = None
+    else:
+        n = len(polynomial)-1
+        polynomial = np.asanyarray(polynomial)
+
     matrix = np.zeros((n, n))
     idx = np.diag_indices(n-1)
     idx = (idx[0], idx[1]+1)
     matrix[idx] = 1
-    if values is not None:
-        matrix[:, 0] = values
+    if polynomial is not None:
+        matrix[:, 0] = -polynomial[1:] / polynomial[0]
     return matrix
 
 
@@ -86,7 +101,7 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
         \Delta^d \Delta_s^D y_t
 
     where :math:`d = diff`, :math:`s = k\_seasons`, :math:`D = seasonal\_diff`,
-    and :math:`\Delta` is the lag operator.
+    and :math:`\Delta` is the difference operator.
 
     Parameters
     ----------
@@ -112,30 +127,74 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
     # Seasonal differencing
     if seasonal_diff is not None:
         while seasonal_diff > 0:
-            differenced = differenced[k_seasons:] - differenced[:-k_seasons]
+            if not pandas:
+                differenced = differenced[k_seasons:] - differenced[:-k_seasons]
+            else:
+                differenced = differenced.diff(k_seasons)[k_seasons:]
             seasonal_diff -= 1
 
     # Simple differencing
     if not pandas:
         differenced = np.diff(differenced, diff, axis=0)
     else:
-        differenced = differenced.diff(diff)[diff:]
+        while diff > 0:
+            differenced = differenced.diff()[1:]
+            diff -= 1
     return differenced
 
 
-def is_invertible(params):
+def is_invertible(polynomial):
     """
-    Determine if a set of parameters (corresponding to the coefficients to the
-    non-constant terms of a polynomial) represents an invertible lag
-    polynomial. Requires all roots of the polynomial to lie outside the unit
-    circle.
+    Determine if a polynomial is invertible.
+
+    Requires all roots of the polynomial lie inside the unit circle.
 
     Parameters
     ----------
-    params : array_like
-        Coefficients of the non-constant terms of a polynomial. For example,
-        `params=[0.5]` corresponds to the polynomial :math:`1 + 0.5x` which
-        has root :math:`-2`.
+    polynomial : array_like
+        Coefficients of a polynomial, in order of increasing degree.
+        For example, `polynomial=[1, -0.5]` corresponds to the polynomial
+        :math:`1 - 0.5x` which has root :math:`2`.
+
+    Notes
+    -----
+
+    If the coefficients provided are :math:`(c_0, c_1, \dots, c_n)`, then
+    the corresponding polynomial is :math:`c_0 + c_1 L + \dots + c_n L^n`.
+
+    There are three equivalent methods of determining if the polynomial
+    represented by the coefficients is invertible:
+
+    The first method factorizes the polynomial into:
+
+    .. math::
+
+        C(L) & = c_0 + c_1 L + \dots + c_n L^n \\
+             & = constant (1 - \lambda_1 L) (1 - \lambda_2 L) \dots (1 - \lambda_n L)
+
+    In order for :math:`C(L)` to be invertible, it must be that each factor
+    :math:`(1 - \lambda_i L)` is invertible; the condition is then that
+    :math:`|\lambda_i| < 1`, where :math:`\lambda_i` is a root of the
+    polynomial.
+
+    The second method factorizes the polynomial into:
+
+    .. math::
+
+        C(L) & = c_0 + c_1 L + \dots + c_n L^n \\
+             & = constant (L - \zeta_1 L) (L - \zeta_2) \dots (L - \zeta_3)
+
+    The condition is now :math:`|\zeta_i| > 1`, where :math:`\zeta_i` is a root
+    of the polynomial with reversed coefficients and
+    :math:`\lambda_i = \frac{1}{\zeta_i}`.
+
+    Finally, a companion matrix can be formed using the coefficients of the
+    polynomial. Then the eigenvalues of that matrix give the roots of the
+    polynomial. This last method is the one actually used.
+
+    See Also
+    --------
+    dismalpy.ssm.tools.companion_matrix
 
     Examples
     --------
@@ -144,7 +203,12 @@ def is_invertible(params):
     >>> dp.ssm.is_invertible([1])
     False
     """
-    return np.all(np.abs(np.roots(np.r_[1, params][::-1])) > 1)
+    # First method:
+    # np.all(np.abs(np.roots(np.r_[1, params])) < 1)
+    # Second method:
+    # np.all(np.abs(np.roots(np.r_[1, params][::-1])) > 1)
+    # Final method:
+    return np.all(np.abs(np.linalg.eigvals(companion_matrix(polynomial))) < 1)
 
 
 def constrain_stationary_univariate(unconstrained):
@@ -154,14 +218,14 @@ def constrain_stationary_univariate(unconstrained):
 
     Parameters
     ----------
-    unconstrained : array_like
+    unconstrained : array
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
         component.
 
     Returns
     -------
-    constrained : array_like
+    constrained : array
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
         optimizer.
@@ -192,14 +256,14 @@ def unconstrain_stationary_univariate(constrained):
 
     Parameters
     ----------
-    constrained : array_like
+    constrained : array
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
         optimizer.
 
     Returns
     -------
-    unconstrained : array_like
+    unconstrained : array
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
         component.
@@ -264,9 +328,10 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
     # If we don't yet know `nobs`, don't allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
-        raise ValueError('Time-varying state space matrices cannot be given'
-                         ' unless `nobs` is specified (implicitly when a'
-                         ' dataset is bound or else set explicity)')
+        raise ValueError('Invalid dimensions for %s matrix: time-varying'
+                         ' matrices cannot be given unless `nobs` is specified'
+                         ' (implicitly when a dataset is bound or else set'
+                         ' explicity)' % name)
 
     # Enforce time-varying array size
     if ndim == 3 and nobs is not None and not shape[-1] in [1, nobs]:
@@ -310,9 +375,10 @@ def validate_vector_shape(name, shape, nrows, nobs):
 
     # If we don't yet know `nobs`, don't allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
-        raise ValueError('Time-varying state space vectors cannot be given'
-                         ' unless `nobs` is specified (implicitly when a'
-                         ' dataset is bound or else set explicity)')
+        raise ValueError('Invalid dimensions for %s vector: time-varying'
+                         ' vectors cannot be given unless `nobs` is specified'
+                         ' (implicitly when a dataset is bound or else set'
+                         ' explicity)' % name)
 
     # Enforce time-varying array size
     if ndim == 2 and not shape[1] in [1, nobs]:

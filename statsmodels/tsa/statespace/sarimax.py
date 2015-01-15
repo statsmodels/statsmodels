@@ -850,14 +850,14 @@ class SARIMAX(MLEModel):
 
         # If we have estimated non-stationary start parameters but enforce
         # stationarity is on, raise an error
-        if self.k_ar > 0 and self.enforce_stationarity and not is_invertible(-params_ar):
+        if self.k_ar > 0 and self.enforce_stationarity and not is_invertible(np.r_[1, -params_ar]):
             raise ValueError('Non-stationary starting autoregressive'
                              ' parameters found with `enforce_stationarity`'
                              ' set to True.')
 
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
-        if self.k_ma > 0 and self.enforce_invertibility and not is_invertible(params_ma):
+        if self.k_ma > 0 and self.enforce_invertibility and not is_invertible(np.r_[1, params_ma]):
             raise ValueError('non-invertible starting MA parameters found'
                              ' with `enforce_invertibility` set to True.')
 
@@ -871,14 +871,14 @@ class SARIMAX(MLEModel):
 
         # If we have estimated non-stationary start parameters but enforce
         # stationarity is on, raise an error
-        if self.k_seasonal_ar > 0 and self.enforce_stationarity and not is_invertible(-params_seasonal_ar):
+        if self.k_seasonal_ar > 0 and self.enforce_stationarity and not is_invertible(np.r_[1, -params_seasonal_ar]):
             raise ValueError('Non-stationary starting autoregressive'
                              ' parameters found with `enforce_stationarity`'
                              ' set to True.')
 
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
-        if self.k_seasonal_ma > 0 and self.enforce_invertibility and not is_invertible(params_seasonal_ma):
+        if self.k_seasonal_ma > 0 and self.enforce_invertibility and not is_invertible(np.r_[1, params_seasonal_ma]):
             raise ValueError('non-invertible starting seasonal moving average'
                              ' parameters found with `enforce_invertibility`'
                              ' set to True.')
