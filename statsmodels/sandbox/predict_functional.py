@@ -50,7 +50,8 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
         warnings.warn("%s in data frame but not in summaries or values."
                       % ", ".join(["'%s'" % x for x in unmatched]))
 
-    fexog = pd.DataFrame(index=range(num_points), columns=colnames)
+    # Initialize at zero so each column can be converted to any dtype.
+    fexog = pd.DataFrame(index=range(num_points), columns=colnames, dtype=np.float64) * 0
     for d, x in zip(dtypes, colnames):
         fexog[x] = fexog[x].astype(d)
 
@@ -363,8 +364,8 @@ def predict_functional_glm(result, focus_var, summaries=None, values=None, cvrg_
 
     if simultaneous:
 
-        sigma, c = _glm_basic_scr(result, exog, cvrg_prob)
-        cb = np.zeros((exog.shape[0], 2))
+        sigma, c = _glm_basic_scr(result, dexog, cvrg_prob)
+        cb = np.zeros((dexog.shape[0], 2))
         cb[:, 0] = pred - c*sigma
         cb[:, 1] = pred + c*sigma
 
