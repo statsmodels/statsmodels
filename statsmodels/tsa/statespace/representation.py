@@ -316,7 +316,7 @@ class Representation(object):
         _type = type(key)
         # If only a string is given then we must be getting an entire matrix
         if _type is str:
-            if not key in self.shapes:
+            if key not in self.shapes:
                 raise IndexError('"%s" is an invalid state space matrix name' % key)
             matrix = getattr(self, '_' + key)
 
@@ -326,7 +326,7 @@ class Representation(object):
         # Otherwise if we have a tuple, we want a slice of a matrix
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
-            if not name in self.shapes:
+            if name not in self.shapes:
                 raise IndexError('"%s" is an invalid state space matrix name' % name)
 
             matrix = getattr(self, '_' + name)
@@ -349,22 +349,21 @@ class Representation(object):
         _type = type(key)
         # If only a string is given then we must be setting an entire matrix
         if _type is str:
-            if not key in self.shapes:
+            if key not in self.shapes:
                 raise IndexError('"%s" is an invalid state space matrix name' % key)
             setattr(self, key, value)
         # If it's a tuple (with a string as the first element) then we must be
         # setting a slice of a matrix
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
-            if not name in self.shapes:
+            if name not in self.shapes:
                 raise IndexError('"%s" is an invalid state space matrix name' % key[0])
 
             # Change the dtype of the corresponding matrix
             dtype = np.array(value).dtype
             matrix = getattr(self, '_' + name)
-            if not matrix.dtype == dtype and dtype.char in ['f','d','F','D']:
+            if not matrix.dtype == dtype and dtype.char in ['f', 'd', 'F', 'D']:
                 matrix = getattr(self, '_' + name).real.astype(dtype)
-                
 
             # Since the model can support time-varying arrays, but often we
             # will instead have time-invariant arrays, we want to allow setting
@@ -635,6 +634,7 @@ class Representation(object):
             self._statespaces[prefix].initialize_stationary()
         else:
             raise RuntimeError('Statespace model not initialized.')
+
 
 class FrozenRepresentation(object):
     """

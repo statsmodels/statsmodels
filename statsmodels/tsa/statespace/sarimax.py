@@ -1134,7 +1134,7 @@ class SARIMAX(MLEModel):
         coefficient is zero on some element of the polynomial), then the
         constraint function is not onto the entire space of invertible
         polynomials, although it only excludes a very small portion very close
-        to the invertibility boundary. 
+        to the invertibility boundary.
         """
         constrained = np.zeros(unconstrained.shape, unconstrained.dtype)
 
@@ -1229,7 +1229,7 @@ class SARIMAX(MLEModel):
         coefficient is zero on some element of the polynomial), then the
         constraint function is not onto the entire space of invertible
         polynomials, although it only excludes a very small portion very close
-        to the invertibility boundary. 
+        to the invertibility boundary.
         """
         unconstrained = np.zeros(constrained.shape, constrained.dtype)
 

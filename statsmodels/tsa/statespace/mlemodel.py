@@ -17,6 +17,7 @@ from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 
+
 class MLEModel(Model):
     """
     State space maximum likelihood model
@@ -61,7 +62,7 @@ class MLEModel(Model):
 
         super(MLEModel, self).__init__(endog, k_states, exog, dates, freq,
                                        *args, **kwargs)
-        
+
         # Initialize the parameters
         self.params = None
 
@@ -144,10 +145,10 @@ class MLEModel(Model):
         # maximize the average loglikelihood, by default.
         fargs = (kwargs.get('average_loglike', True), False, False)
         mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                        fargs=fargs,
-                                        maxiter=maxiter,
-                                        full_output=full_output, disp=disp,
-                                        callback=callback, **kwargs)
+                                           fargs=fargs,
+                                           maxiter=maxiter,
+                                           full_output=full_output, disp=disp,
+                                           callback=callback, **kwargs)
 
         # Optionally tune the maximum likelihood estimates using complex step
         # gradient
@@ -156,10 +157,10 @@ class MLEModel(Model):
             del kwargs['epsilon']
             fargs = (kwargs.get('average_loglike', True), False, False)
             mlefit = super(MLEModel, self).fit(mlefit.params, method=method,
-                                            fargs=fargs,
-                                            maxiter=maxiter,
-                                            full_output=full_output, disp=disp,
-                                            callback=callback, **kwargs)
+                                               fargs=fargs,
+                                               maxiter=maxiter,
+                                               full_output=full_output, disp=disp,
+                                               callback=callback, **kwargs)
 
         # Constrain the final parameters and update the model to be sure we're
         # using them (in case, for example, the last time update was called
@@ -335,6 +336,7 @@ class MLEModel(Model):
             return self._start_params
         else:
             raise NotImplementedError
+
     @start_params.setter
     def start_params(self, values):
         self._start_params = np.asarray(values)
@@ -398,7 +400,7 @@ class MLEModel(Model):
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
             evalation.
-        
+
         Notes
         -----
         This is a noop in the base class, subclasses should override where
@@ -677,7 +679,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
                 dynamic = dynamic_start - start
             except KeyError:
                 raise ValueError("Dynamic must be in dates. Got %s | %s" %
-                        (str(dynamic), str(dtdynamic)))
+                                 (str(dynamic), str(dtdynamic)))
 
         # Perform the prediction
         results = super(MLEResults, self).predict(
@@ -761,7 +763,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             d = dates[start]
             sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
             d = dates[-1]
-            sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]                
+            sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
         else:
             sample = [str(start), ' - ' + str(self.model.nobs)]
 

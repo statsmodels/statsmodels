@@ -36,6 +36,7 @@ MEMORY_CONSERVE = (
     MEMORY_NO_LIKELIHOOD
 )
 
+
 class KalmanFilter(Representation):
     r"""
     State space representation of a time series process, with Kalman filter
@@ -306,6 +307,7 @@ class KalmanFilter(Representation):
         kwargs['results'] = 'loglikelihood'
         return np.sum(self.filter(*args, **kwargs)[loglikelihood_burn:])
 
+
 class FilterResults(FrozenRepresentation):
     """
     Results from applying the Kalman filter to a state space model.
@@ -565,7 +567,7 @@ class FilterResults(FrozenRepresentation):
 
             for t in range(self.forecasts_error_cov.shape[2]):
                 upper, _ = linalg.cho_factor(self.forecasts_error_cov[:, :, t],
-                                         check_finite=False)
+                                             check_finite=False)
                 self._standardized_forecasts_error[:, t] = (
                     linalg.solve_triangular(upper, self.forecasts_error[:, t],
                                             check_finite=False))

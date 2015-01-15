@@ -12,6 +12,7 @@ from .kalman_filter import KalmanFilter
 
 import statsmodels.tsa.base.tsa_model as tsbase
 
+
 class Model(KalmanFilter, Representation, tsbase.TimeSeriesModel):
     """
     State space model
@@ -60,7 +61,7 @@ class Model(KalmanFilter, Representation, tsbase.TimeSeriesModel):
         # Base class may allow 1-dim data, whereas we need 2-dim
         if endog.ndim == 1:
             endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
-        
+
         # Base classes data may be either C-ordered or F-ordered - we want it
         # to be C-ordered since it will also be in shape (nobs, k_endog), and
         # then we can just transpose it.
