@@ -385,11 +385,14 @@ class Representation(object):
 
     @property
     def prefix(self):
-        return find_best_blas_type((
-            self.endog, self._design, self._obs_intercept, self._obs_cov,
+        arrays = (
+            self._design, self._obs_intercept, self._obs_cov,
             self._transition, self._state_intercept, self._selection,
             self._state_cov
-        ))[0]
+        )
+        if self.endog is not None:
+            arrays = (self.endog,) + arrays
+        return find_best_blas_type(arrays)[0]
 
     @property
     def dtype(self):
