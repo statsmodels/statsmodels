@@ -18,9 +18,10 @@ import numpy as np
 import pandas as pd
 import os
 
+from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.model import Model
 from .results import results_kalman_filter
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_equal, assert_almost_equal, assert_raises
 from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -483,3 +484,130 @@ class TestClark1989ConserveAll(Clark1989):
             self.results.filtered_state[5][-1],
             self.true_states.iloc[end-1, 3], 4
         )
+
+# Miscellaneous coverage-related tests
+def test_slice_notation():
+    endog = np.arange(10)*1.0
+    mod = Model(endog, k_states=2)
+
+    # Test invalid __setitem__
+    def set_designs():
+        mod['designs'] = 1
+    def set_designs2():
+        mod['designs',0,0] = 1
+    def set_designs3():
+        mod[0] = 1
+    assert_raises(IndexError, set_designs)
+    assert_raises(IndexError, set_designs2)
+    assert_raises(IndexError, set_designs3)
+
+    # Test invalid __getitem__
+    assert_raises(IndexError, lambda: mod['designs'])
+    assert_raises(IndexError, lambda: mod['designs',0,0,0])
+    assert_raises(IndexError, lambda: mod[0])
+
+    # Test valid __setitem__, __getitem__
+    assert_equal(mod.design[0,0,0], 0)
+    mod['design',0,0,0] = 1
+    assert_equal(mod['design'].sum(), 1)
+    assert_equal(mod.design[0,0,0], 1)
+    assert_equal(mod['design',0,0,0], 1)
+
+    # Test valid __setitem__, __getitem__ with unspecified time index
+    mod['design'] = np.zeros(mod['design'].shape)
+    assert_equal(mod.design[0,0], 0)
+    mod['design',0,0] = 1
+    assert_equal(mod.design[0,0], 1)
+    assert_equal(mod['design',0,0], 1)
+
+def test_representation():
+    # Test an invalid number of states
+    def zero_kstates():
+        mod = Representation(1, 0)
+    assert_raises(ValueError, zero_kstates)
+
+    # Test an invalid endogenous array
+    def empty_endog():
+        endog = np.zeros((0,0))
+        mod = Representation(endog, k_states=2)
+    assert_raises(ValueError, empty_endog)
+
+    # Test a Fortran-ordered endogenous array (which will be assumed to be in
+    # wide format: k_endog x nobs)
+    nobs = 10
+    k_endog = 2
+    endog = np.asfortranarray(np.arange(nobs*k_endog).reshape(k_endog,nobs)*1.)
+    mod = Representation(endog, k_states=2)
+    assert_equal(mod.nobs, nobs)
+    assert_equal(mod.k_endog, k_endog)
+
+    # Test a C-ordered endogenous array (which will be assumed to be in
+    # tall format: nobs x k_endog)
+    nobs = 10
+    k_endog = 2
+    endog = np.arange(nobs*k_endog).reshape(nobs,k_endog)*1.
+    mod = Representation(endog, k_states=2)
+    assert_equal(mod.nobs, nobs)
+    assert_equal(mod.k_endog, k_endog)
+
+    # Test getting the statespace representation
+    assert_equal(mod._statespace, None)
+    mod._initialize_representation()
+    assert(mod._statespace is not None)
+
+def test_bind():
+    mod = Representation(1, k_states=2)
+
+    # Test invalid endogenous array (it must be ndarray)
+    assert_raises(ValueError, lambda: mod.bind([1,2,3,4]))
+
+    # Test valid (nobs x 1) endogenous array
+    mod.bind(np.arange(10)*1.)
+    assert_equal(mod.nobs, 10)
+
+    # Test valid (k_endog x 0) endogenous array
+    mod.bind(np.zeros(0,dtype=np.float64))
+
+    # Test invalid (3-dim) endogenous array
+    assert_raises(ValueError, lambda: mod.bind(np.arange(12).reshape(2,2,3)*1.))
+
+    # Test valid F-contiguous
+    mod.bind(np.asfortranarray(np.arange(10).reshape(1,10)))
+    assert_equal(mod.nobs, 10)
+
+    # Test valid C-contiguous
+    mod.bind(np.arange(10).reshape(10,1))
+    assert_equal(mod.nobs, 10)
+
+    # Test invalid F-contiguous
+    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(10,1))))
+
+    # Test invalid C-contiguous
+    assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
+
+    # Test invalid non-contiguous
+    assert_raises(ValueError, lambda: mod.bind(np.arange(100).reshape(10,10).diagonal()))
+
+def test_initialization():
+    mod = Representation(1, k_states=2)
+
+    # Test invalid state initialization
+    assert_raises(RuntimeError, lambda: mod._initialize_state())
+
+    # Test valid initialization
+    initial_state = np.zeros(2,) + 1.5
+    initial_state_cov = np.eye(2) * 3.
+    mod.initialize_known(initial_state, initial_state_cov)
+    assert_equal(mod._initial_state.sum(), 3)
+    assert_equal(mod._initial_state_cov.diagonal().sum(), 6)
+
+    # Test invalid initial_state
+    initial_state = np.zeros(10,)
+    assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
+    initial_state = np.zeros((10,10))
+    assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
+
+    # Test invalid initial_state_cov
+    initial_state = np.zeros(2,) + 1.5
+    initial_state_cov = np.eye(3)
+    assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
