@@ -263,10 +263,6 @@ class SARIMAX(MLEModel):
                              ' state vector, so that `mle_regression` must'
                              ' be set to False.')
 
-        if self.time_varying_regression:
-            # TODO should work, just needs unit tests
-            raise NotImplementedError
-
         # Lag polynomials
         # Assume that they are given from lowest degree to highest, that all
         # degrees except for the constant are included, and that they are
