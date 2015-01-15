@@ -528,14 +528,15 @@ class SARIMAX(MLEModel):
 
         # Cache the arrays for calculating the intercept from the trend
         # components
-        self._trend_data = np.ones((self.nobs, self.k_trend))
-        if self.k_trend > 1:
-            self._trend_data[:, 1] = np.arange(1, self.nobs+1)
-        if self.k_trend > 2:
-            for i in range(2, self.k_trend):
-                self._trend_data[:, i] = (
-                    self._trend_data[:, i-1] * self._trend_data[:, 1]
-                )
+        time_trend = np.arange(1, self.nobs+1)
+        self._trend_data = np.zeros((self.nobs, self.k_trend))
+        i = 0
+        for k in self.polynomial_trend.nonzero()[0]:
+            if k == 0:
+                self._trend_data[:, i] = np.ones(self.nobs,)
+            else:
+                self._trend_data[:, i] = time_trend**k
+            i += 1
 
         # Cache indices for exog variances in the state covariance matrix
         if self.state_regression and self.time_varying_regression:
