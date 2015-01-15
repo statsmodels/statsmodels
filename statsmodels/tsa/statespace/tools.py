@@ -143,7 +143,7 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
     return differenced
 
 
-def is_invertible(polynomial):
+def is_invertible(polynomial, threshold=1.):
     """
     Determine if a polynomial is invertible.
 
@@ -155,6 +155,8 @@ def is_invertible(polynomial):
         Coefficients of a polynomial, in order of increasing degree.
         For example, `polynomial=[1, -0.5]` corresponds to the polynomial
         :math:`1 - 0.5x` which has root :math:`2`.
+    threshold : number
+        Allowed threshold for `is_invertible` to return True. Default is 1.
 
     Notes
     -----
@@ -191,24 +193,13 @@ def is_invertible(polynomial):
     Finally, a companion matrix can be formed using the coefficients of the
     polynomial. Then the eigenvalues of that matrix give the roots of the
     polynomial. This last method is the one actually used.
-
-    See Also
-    --------
-    dismalpy.ssm.tools.companion_matrix
-
-    Examples
-    --------
-    >>> dp.ssm.is_invertible([0.5])
-    True
-    >>> dp.ssm.is_invertible([1])
-    False
     """
     # First method:
     # np.all(np.abs(np.roots(np.r_[1, params])) < 1)
     # Second method:
     # np.all(np.abs(np.roots(np.r_[1, params][::-1])) > 1)
     # Final method:
-    return np.all(np.abs(np.linalg.eigvals(companion_matrix(polynomial))) < 1)
+    return np.all(np.abs(np.linalg.eigvals(companion_matrix(polynomial))) < threshold)
 
 
 def constrain_stationary_univariate(unconstrained):
