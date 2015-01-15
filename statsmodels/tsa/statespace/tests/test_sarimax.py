@@ -1104,7 +1104,7 @@ def test_simple_time_varying():
         res = mod.fit(disp=-1)
 
     # Test that the estimated variances of the errors are essentially zero
-    assert_almost_equal(res.params, [0,0], 9)
+    assert_almost_equal(res.params, [0,0], 7)
 
     # Test that the time-varying coefficients are all 0.5 (except the first
     # one)
