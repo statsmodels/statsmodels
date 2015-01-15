@@ -927,13 +927,13 @@ class SARIMAX(MLEModel):
             else:
                 seasonal_diff = (('\Delta_%d^%d' if latex else 'D%dS%d') %
                                  (self.k_seasonal_diff, self.k_seasons))
-        if self.k_diff > 0 and self.k_seasonal_diff > 0:
+        if self.simple_differencing and self.k_diff > 0 and self.k_seasonal_diff > 0:
             return (('%s%s %s' if latex else '%s.%s.%s') %
                     (diff, seasonal_diff, self.data.ynames))
-        elif self.k_diff > 0:
+        elif self.simple_differencing and self.k_diff > 0:
             return (('%s %s' if latex else '%s.%s') %
                     (diff, self.data.ynames))
-        elif self.k_seasonal_diff > 0:
+        elif self.simple_differencing and self.k_seasonal_diff > 0:
             return (('%s %s' if latex else '%s.%s') %
                     (seasonal_diff, self.data.ynames))
         else:
