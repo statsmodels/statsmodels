@@ -1123,17 +1123,61 @@ class TestGEE(object):
                 a, b = np.tril_indices(8, -1)
                 pairs[k][1] = (start[k] + a, start[k] + b)
 
-        ec = sm.cov_struct.Equivalence(pairs)
-        model1 = sm.GEE(endog, exog, groups, cov_struct=ec)
+        ex = sm.cov_struct.Exchangeable()
+        model1 = sm.GEE(endog, exog, groups, cov_struct=ex)
         result1 = model1.fit()
 
-        ex = sm.cov_struct.Exchangeable()
-        model2 = sm.GEE(endog, exog, groups, cov_struct=ex)
-        result2 = model2.fit()
+        import copy
 
-        assert_allclose(result1.params, result2.params, atol=1e-6, rtol=1e-6)
-        assert_allclose(result1.bse, result2.bse, atol=1e-6, rtol=1e-6)
-        assert_allclose(result1.scale, result2.scale, atol=1e-6, rtol=1e-6)
+        for as_cor in False, True:
+
+            # This is changed inside the constructor so can't be re-used.
+            pairsc = copy.deepcopy(pairs)
+
+            ec = sm.cov_struct.Equivalence(pairsc, as_cor=as_cor)
+            model2 = sm.GEE(endog, exog, groups, cov_struct=ec)
+            result2 = model2.fit()
+
+            assert_allclose(result1.params, result2.params, atol=1e-3, rtol=1e-3)
+            assert_allclose(result1.bse, result2.bse, atol=1e-3, rtol=1e-3)
+            assert_allclose(result1.scale, result2.scale, atol=1e-3, rtol=1e-3)
+
+    def test_equivalence_from_pairs(self):
+
+        np.random.seed(3424)
+        endog = np.random.normal(size=50)
+        exog = np.random.normal(size=(50, 2))
+        exog[:, 0] = 1
+        groups = np.kron(np.arange(5), np.ones(10))
+        groups[30:] = 3 # Create unequal size groups
+
+        # Set up labels.
+        labels = np.kron(np.arange(5), np.ones(10)).astype(np.int32)
+        labels = labels[np.random.permutation(len(labels))]
+
+        eq = sm.cov_struct.Equivalence(labels=labels, as_cor=False)
+        model1 = sm.GEE(endog, exog, groups, cov_struct=eq)
+
+        # Call this directly instead of letting init do it to get the
+        # result before reindexing.
+        eq._pairs_from_labels()
+
+        # Make sure the size is correct to hold every element.
+        for g in model1.group_labels:
+            p = eq.pairs[g]
+            vl = [len(x[0]) for x in p.values()]
+            m = sum(groups == g)
+            assert_allclose(sum(vl), m*(m+1)/2)
+
+        # Check for duplicates.
+        ixs = set([])
+        for g in model1.group_labels:
+            for v in eq.pairs[g].values():
+                for a, b in zip(v[0], v[1]):
+                    ky = (a, b)
+                    assert(ky not in ixs)
+                    ixs.add(ky)
+
 
 class CheckConsistency(object):
 
