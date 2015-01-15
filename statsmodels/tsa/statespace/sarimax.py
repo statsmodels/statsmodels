@@ -749,6 +749,9 @@ class SARIMAX(MLEModel):
         k = 2*k_ma
         r = max(k+k_ma, k_ar)
 
+        k_params_ar = 0 if k_ar == 0 else len(polynomial_ar.nonzero()[0]) - 1
+        k_params_ma = 0 if k_ma == 0 else len(polynomial_ma.nonzero()[0]) - 1
+
         residuals = None
         if k_ar + k_ma + k_trend > 0:
             # If we have MA terms, get residuals from an AR(k) model to use
@@ -790,13 +793,13 @@ class SARIMAX(MLEModel):
             params_trend = params[offset:k_trend+offset]
             offset += k_trend
         if k_ar > 0:
-            params_ar = params[offset:k_ar+offset]
-            offset += k_ar
+            params_ar = params[offset:k_params_ar+offset]
+            offset += k_params_ar
         if k_ma > 0:
-            params_ma = params[offset:k_ma+offset]
-            offset += k_ma
+            params_ma = params[offset:k_params_ma+offset]
+            offset += k_params_ma
         if residuals is not None:
-            params_variance = (residuals[k_ma:]**2).mean()
+            params_variance = (residuals[k_params_ma:]**2).mean()
 
         return (params_trend, params_ar, params_ma,
                 params_variance)
