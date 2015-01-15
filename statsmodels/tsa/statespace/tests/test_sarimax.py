@@ -376,7 +376,7 @@ class SARIMAXCoverageTest(sarimax.SARIMAX):
 
         # Loglikelihood, parameters
         self.true_loglike = coverage_results.loc[i]['llf']
-        self.true_params = np.array(map(float, coverage_results.loc[i]['parameters'].split(',')))
+        self.true_params = np.array([float(x) for x in coverage_results.loc[i]['parameters'].split(',')])
         # Stata reports the standard deviation; make it the variance
         self.true_params[-1] = self.true_params[-1]**2
 
