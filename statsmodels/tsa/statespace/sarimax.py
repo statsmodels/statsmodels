@@ -514,17 +514,17 @@ class SARIMAX(MLEModel):
         end_row = start_row + self.k_ar + self.k_seasonal_ar
         col = self._k_diff + self.k_seasons*self._k_seasonal_diff
         if not self.hamilton_representation:
-            self.transition_ar_params_idx = np.s_[start_row:end_row, col]
+            self.transition_ar_params_idx = np.s_['transition', start_row:end_row, col]
         else:
-            self.transition_ar_params_idx = np.s_[col, start_row:end_row]
+            self.transition_ar_params_idx = np.s_['transition', col, start_row:end_row]
 
         start_row += 1
         end_row = start_row + self.k_ma + self.k_seasonal_ma
         col = 0
         if not self.hamilton_representation:
-            self.selection_ma_params_idx = np.s_[start_row:end_row, col]
+            self.selection_ma_params_idx = np.s_['selection', start_row:end_row, col]
         else:
-            self.design_ma_params_idx = np.s_[col, start_row:end_row]
+            self.design_ma_params_idx = np.s_['design', col, start_row:end_row]
 
         # Cache the arrays for calculating the intercept from the trend
         # components
@@ -540,7 +540,7 @@ class SARIMAX(MLEModel):
         # Cache indices for exog variances in the state covariance matrix
         if self.state_regression and self.time_varying_regression:
             idx = np.diag_indices(self.k_posdef)
-            self._exog_variance_idx = (idx[0][-self.k_exog:],
+            self._exog_variance_idx = ('state_cov', idx[0][-self.k_exog:],
                                        idx[1][-self.k_exog:])
 
     def initialize_known(self, initial_state, initial_state_cov):
@@ -1429,13 +1429,7 @@ class SARIMAX(MLEModel):
         # time-varying observation intercept (is equivalent to simply
         # subtracting it out of the endogenous variable first)
         if self.mle_regression:
-            if self.obs_intercept.dtype == params.dtype:
-                self.obs_intercept = np.dot(self.exog, params_exog)[None, :]
-            else:
-                obs_intercept = np.dot(
-                    self.exog, params_exog
-                )[None, :].astype(params.dtype)
-                self.obs_intercept = obs_intercept
+            self['obs_intercept'] = np.dot(self.exog, params_exog)[None, :]
 
         # State intercept (Harvey) or additional observation intercept
         # (Hamilton)
@@ -1446,12 +1440,7 @@ class SARIMAX(MLEModel):
         if self.k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
             if not self.hamilton_representation:
-                if self.state_intercept.dtype == params.dtype:
-                    self.state_intercept[self._k_diff + self._k_seasonal_diff * self.k_seasons, :] = data
-                else:
-                    state_intercept = self.state_intercept.real.astype(params.dtype)
-                    state_intercept[self._k_diff + self._k_seasonal_diff * self.k_seasons, :] = data
-                    self.state_intercept = state_intercept
+                self['state_intercept', self._k_diff + self._k_seasonal_diff * self.k_seasons, :] = data
             else:
                 # The way the trend enters in the Hamilton representation means
                 # that the parameter is not an ``intercept'' but instead the
@@ -1471,65 +1460,26 @@ class SARIMAX(MLEModel):
 
         # Observation covariance matrix
         if self.measurement_error:
-            if self.obs_cov.dtype == params.dtype:
-                self.obs_cov[0, 0] = params_measurement_variance
-            else:
-                obs_cov = self.obs_cov.real.astype(params.dtype)
-                obs_cov[0, 0] = params_measurement_variance
-                self.obs_cov = obs_cov
+            self['obs_cov', 0, 0] = params_measurement_variance
 
         # Transition matrix
         if self.k_ar > 0 or self.k_seasonal_ar > 0:
-            if self.transition.dtype == params.dtype:
-                self.transition[self.transition_ar_params_idx] = (
-                    reduced_polynomial_ar[1:, None]
-                )
-            else:
-                transition = self.transition.real.astype(params.dtype)
-                transition[self.transition_ar_params_idx] = (
-                    reduced_polynomial_ar[1:, None]
-                )
-                self.transition = transition
+            self[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
         elif not self.transition.dtype == params.dtype:
             self.transition = self.transition.real.astype(params.dtype)
 
         # Selection matrix (Harvey) or Design matrix (Hamilton)
         if self.k_ma > 0 or self.k_seasonal_ma > 0:
             if not self.hamilton_representation:
-                if self.selection.dtype == params.dtype:
-                    self.selection[self.selection_ma_params_idx] = (
-                        reduced_polynomial_ma[1:, None]
-                    )
-                else:
-                    selection = self.selection.real.astype(params.dtype)
-                    selection[self.selection_ma_params_idx] = (
-                        reduced_polynomial_ma[1:, None]
-                    )
-                    self.selection = selection
+                self[self.selection_ma_params_idx] = reduced_polynomial_ma[1:]
             else:
-                if self.design.dtype == params.dtype:
-                    self.design[self.design_ma_params_idx] = (
-                        reduced_polynomial_ma[1:, None]
-                    )
-                else:
-                    design = self.design.real.astype(params.dtype)
-                    design[self.design_ma_params_idx] = (
-                        reduced_polynomial_ma[1:, None]
-                    )
-                    self.design = design
+                self[self.design_ma_params_idx] = reduced_polynomial_ma[1:]
 
         # State covariance matrix
         if self.k_posdef > 0:
-            if self.state_cov.dtype == params.dtype:
-                self.state_cov[0, 0] = params_variance
-                if self.state_regression and self.time_varying_regression:
-                    self.state_cov[self._exog_variance_idx] = params_exog_variance[:, None]
-            else:
-                state_cov = self.state_cov.real.astype(params.dtype)
-                state_cov[0, 0] = params_variance
-                if self.state_regression and self.time_varying_regression:
-                    state_cov[self._exog_variance_idx] = params_exog_variance[:, None]
-                self.state_cov = state_cov
+            self['state_cov', 0, 0] = params_variance
+            if self.state_regression and self.time_varying_regression:
+                self[self._exog_variance_idx] = params_exog_variance
 
         # Initialize
         if not self._manual_initialization:
