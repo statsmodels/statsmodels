@@ -772,7 +772,7 @@ class SARIMAX(MLEModel):
                 if trend_data is None:
                     raise ValueError('Trend data must be provided if'
                                      ' `k_trend` > 0.')
-                X = np.c_[X, trend_data[:-r, :]]
+                X = np.c_[X, trend_data[:(-r if r > 0 else None), :]]
             if k_ar > 0:
                 X = np.c_[X, lagmat(endog, k_ar)[r:, polynomial_ar.nonzero()[0][1:]-1]]
             if k_ma > 0:
