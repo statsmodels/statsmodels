@@ -12,8 +12,7 @@ import pandas as pd
 from statsmodels.tsa.statespace import tools
 # from .results import results_sarimax
 from numpy.testing import (
-    assert_equal, assert_array_equal, assert_almost_equal, assert_raises,
-    assert_raises_regex
+    assert_equal, assert_array_equal, assert_almost_equal, assert_raises
 )
 
 class TestCompanionMatrix(object):
@@ -120,8 +119,8 @@ class TestValidateMatrixShape(object):
 
     def test_invalid_cases(self):
         for args in self.invalid:
-            assert_raises_regex(
-                ValueError, args[0], tools.validate_matrix_shape, *args
+            assert_raises(
+                ValueError, tools.validate_matrix_shape, *args
             )
 
 class TestValidateVectorShape(object):
@@ -145,6 +144,6 @@ class TestValidateVectorShape(object):
 
     def test_invalid_cases(self):
         for args in self.invalid:
-            assert_raises_regex(
-                ValueError, args[0], tools.validate_vector_shape, *args
+            assert_raises(
+                ValueError, tools.validate_vector_shape, *args
             )
