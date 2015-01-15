@@ -585,9 +585,6 @@ def test_bind():
     # Test invalid C-contiguous
     assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
 
-    # Test invalid non-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.arange(100).reshape(10,10).diagonal()))
-
 def test_initialization():
     mod = Representation(1, k_states=2)
 
