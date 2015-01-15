@@ -825,14 +825,6 @@ class SARIMAX(MLEModel):
             endog = self.endog.copy()[0, :]
             exog = self.exog.copy() if self.exog is not None else None
 
-        # Regression effects via OLS
-        params_exog = []
-        if self.k_exog > 0:
-            params_exog = np.linalg.pinv(exog).dot(endog)
-            endog -= np.dot(exog, params_exog)
-        if self.state_regression:
-            params_exog = []
-
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
         if np.any(np.isnan(endog)):
@@ -841,6 +833,14 @@ class SARIMAX(MLEModel):
                 exog = exog[~np.isnan(endog)]
             if trend_data is not None:
                 trend_data = trend_data[~np.isnan(endog)]
+
+        # Regression effects via OLS
+        params_exog = []
+        if self.k_exog > 0:
+            params_exog = np.linalg.pinv(exog).dot(endog)
+            endog -= np.dot(exog, params_exog)
+        if self.state_regression:
+            params_exog = []
 
         # Non-seasonal ARMA component and trend
         (params_trend, params_ar, params_ma,
