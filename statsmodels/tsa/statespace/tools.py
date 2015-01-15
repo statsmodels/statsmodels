@@ -85,7 +85,7 @@ def companion_matrix(polynomial):
     idx = np.diag_indices(n-1)
     idx = (idx[0], idx[1]+1)
     matrix[idx] = 1
-    if polynomial is not None:
+    if polynomial is not None and n > 0:
         matrix[:, 0] = -polynomial[1:] / polynomial[0]
     return matrix
 
