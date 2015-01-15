@@ -365,7 +365,7 @@ class SARIMAX(MLEModel):
         # (this is used internally in a number of locations)
         self._k_order = max(self.k_ar + self.k_seasonal_ar,
                             self.k_ma + self.k_seasonal_ma + 1)
-        if self.k_ar == self.k_ma == 0:
+        if self.k_ar == self.k_ma == self.k_seasonal_ar == self.k_seasonal_ma == 0:
             self._k_order = 0
 
         # Exogenous data
