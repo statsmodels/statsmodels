@@ -1101,7 +1101,7 @@ class SARIMAX(MLEModel):
         # Measurement error variance
         if self.measurement_error:
             meas_var_tpl = (
-                '$\\sigma_\\eta^2$' if latex else 'var.measurment_error'
+                '$\\sigma_\\eta^2$' if latex else 'var.measurement_error'
             )
             names['measurement_variance'] = [meas_var_tpl]
 
