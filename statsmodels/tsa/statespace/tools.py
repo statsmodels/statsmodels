@@ -78,12 +78,12 @@ def companion_matrix(polynomial):
         n = polynomial
         polynomial = None
     else:
-        n = len(polynomial)-1
+        n = len(polynomial) - 1
         polynomial = np.asanyarray(polynomial)
 
     matrix = np.zeros((n, n))
-    idx = np.diag_indices(n-1)
-    idx = (idx[0], idx[1]+1)
+    idx = np.diag_indices(n - 1)
+    idx = (idx[0], idx[1] + 1)
     matrix[idx] = 1
     if polynomial is not None and n > 0:
         matrix[:, 0] = -polynomial[1:] / polynomial[0]
@@ -128,7 +128,9 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
     if seasonal_diff is not None:
         while seasonal_diff > 0:
             if not pandas:
-                differenced = differenced[k_seasons:] - differenced[:-k_seasons]
+                differenced = (
+                    differenced[k_seasons:] - differenced[:-k_seasons]
+                )
             else:
                 differenced = differenced.diff(k_seasons)[k_seasons:]
             seasonal_diff -= 1
@@ -172,7 +174,8 @@ def is_invertible(polynomial, threshold=1.):
     .. math::
 
         C(L) & = c_0 + c_1 L + \dots + c_n L^n \\
-             & = constant (1 - \lambda_1 L) (1 - \lambda_2 L) \dots (1 - \lambda_n L)
+             & = constant (1 - \lambda_1 L)
+                 (1 - \lambda_2 L) \dots (1 - \lambda_n L)
 
     In order for :math:`C(L)` to be invertible, it must be that each factor
     :math:`(1 - \lambda_i L)` is invertible; the condition is then that
@@ -199,7 +202,8 @@ def is_invertible(polynomial, threshold=1.):
     # Second method:
     # np.all(np.abs(np.roots(np.r_[1, params][::-1])) > 1)
     # Final method:
-    return np.all(np.abs(np.linalg.eigvals(companion_matrix(polynomial))) < threshold)
+    eigvals = np.linalg.eigvals(companion_matrix(polynomial))
+    return np.all(np.abs(eigvals) < threshold)
 
 
 def constrain_stationary_univariate(unconstrained):
@@ -232,12 +236,12 @@ def constrain_stationary_univariate(unconstrained):
 
     n = unconstrained.shape[0]
     y = np.zeros((n, n), dtype=unconstrained.dtype)
-    r = unconstrained/((1+unconstrained**2)**0.5)
+    r = unconstrained/((1 + unconstrained**2)**0.5)
     for k in range(n):
         for i in range(k):
-            y[k, i] = y[k-1, i] + r[k] * y[k-1, k-i-1]
+            y[k, i] = y[k - 1, i] + r[k] * y[k - 1, k - i - 1]
         y[k, k] = r[k]
-    return -y[n-1, :]
+    return -y[n - 1, :]
 
 
 def unconstrain_stationary_univariate(constrained):

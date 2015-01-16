@@ -281,27 +281,27 @@ class SARIMAX(MLEModel):
         if isinstance(seasonal_order[0], int):
             self.polynomial_seasonal_ar = np.r_[
                 1.,  # constant
-                ([0] * (self.k_seasons-1) + [1]) * seasonal_order[0]
+                ([0] * (self.k_seasons - 1) + [1]) * seasonal_order[0]
             ]
         else:
             self.polynomial_seasonal_ar = np.r_[
-                1., [0]*self.k_seasons*len(seasonal_order[0])
+                1., [0] * self.k_seasons * len(seasonal_order[0])
             ]
             for i in range(len(seasonal_order[0])):
-                self.polynomial_seasonal_ar[(i+1)*self.k_seasons] = (
+                self.polynomial_seasonal_ar[(i + 1) * self.k_seasons] = (
                     seasonal_order[0][i]
                 )
         if isinstance(seasonal_order[2], int):
             self.polynomial_seasonal_ma = np.r_[
                 1.,  # constant
-                ([0] * (self.k_seasons-1) + [1]) * seasonal_order[2]
+                ([0] * (self.k_seasons - 1) + [1]) * seasonal_order[2]
             ]
         else:
             self.polynomial_seasonal_ma = np.r_[
-                1., [0]*self.k_seasons*len(seasonal_order[2])
+                1., [0] * self.k_seasons * len(seasonal_order[2])
             ]
             for i in range(len(seasonal_order[2])):
-                self.polynomial_seasonal_ma[(i+1)*self.k_seasons] = (
+                self.polynomial_seasonal_ma[(i + 1) * self.k_seasons] = (
                     seasonal_order[2][i]
                 )
 
@@ -331,10 +331,14 @@ class SARIMAX(MLEModel):
         self.k_ma_params = int(np.sum(self.polynomial_ma) - 1)
 
         self.k_seasonal_ar = int(self.polynomial_seasonal_ar.shape[0] - 1)
-        self.k_seasonal_ar_params = int(np.sum(self.polynomial_seasonal_ar) - 1)
+        self.k_seasonal_ar_params = (
+            int(np.sum(self.polynomial_seasonal_ar) - 1)
+        )
         self.k_seasonal_diff = int(seasonal_order[1])
         self.k_seasonal_ma = int(self.polynomial_seasonal_ma.shape[0] - 1)
-        self.k_seasonal_ma_params = int(np.sum(self.polynomial_seasonal_ma) - 1)
+        self.k_seasonal_ma_params = (
+            int(np.sum(self.polynomial_seasonal_ma) - 1)
+        )
 
         # Make internal copies of the differencing orders because if we use
         # simple differencing, then we will need to internally use zeros after
@@ -361,7 +365,7 @@ class SARIMAX(MLEModel):
         # (this is used internally in a number of locations)
         self._k_order = max(self.k_ar + self.k_seasonal_ar,
                             self.k_ma + self.k_seasonal_ma + 1)
-        if self.k_ar == self.k_ma == self.k_seasonal_ar == self.k_seasonal_ma == 0:
+        if self._k_order == 1 and self.k_ar + self.k_seasonal_ar == 0:
             self._k_order = 0
 
         # Exogenous data
@@ -447,6 +451,11 @@ class SARIMAX(MLEModel):
             self._k_diff = 0
             self._k_seasonal_diff = 0
 
+        # Internally used in several locations
+        self._k_states_diff = (
+            self._k_diff + self.k_seasons * self._k_seasonal_diff
+        )
+
         # Set some model variables now so they will be available for the
         # initialize() method, below
         self.nobs = len(endog)
@@ -506,25 +515,33 @@ class SARIMAX(MLEModel):
         # Save the indices corresponding to the reduced form lag polynomial
         # parameters in the transition and selection matrices so that they
         # don't have to be recalculated for each update()
-        start_row = self._k_diff + self.k_seasons*self._k_seasonal_diff
+        start_row = self._k_states_diff
         end_row = start_row + self.k_ar + self.k_seasonal_ar
-        col = self._k_diff + self.k_seasons*self._k_seasonal_diff
+        col = self._k_states_diff
         if not self.hamilton_representation:
-            self.transition_ar_params_idx = np.s_['transition', start_row:end_row, col]
+            self.transition_ar_params_idx = (
+                np.s_['transition', start_row:end_row, col]
+            )
         else:
-            self.transition_ar_params_idx = np.s_['transition', col, start_row:end_row]
+            self.transition_ar_params_idx = (
+                np.s_['transition', col, start_row:end_row]
+            )
 
         start_row += 1
         end_row = start_row + self.k_ma + self.k_seasonal_ma
         col = 0
         if not self.hamilton_representation:
-            self.selection_ma_params_idx = np.s_['selection', start_row:end_row, col]
+            self.selection_ma_params_idx = (
+                np.s_['selection', start_row:end_row, col]
+            )
         else:
-            self.design_ma_params_idx = np.s_['design', col, start_row:end_row]
+            self.design_ma_params_idx = (
+                np.s_['design', col, start_row:end_row]
+            )
 
         # Cache the arrays for calculating the intercept from the trend
         # components
-        time_trend = np.arange(1, self.nobs+1)
+        time_trend = np.arange(1, self.nobs + 1)
         self._trend_data = np.zeros((self.nobs, self.k_trend))
         i = 0
         for k in self.polynomial_trend.nonzero()[0]:
@@ -548,7 +565,9 @@ class SARIMAX(MLEModel):
     def initialize_approximate_diffuse(self, variance=None):
         self._manual_initialization = True
         super(SARIMAX, self).initialize_approximate_diffuse(variance)
-    initialize_approximate_diffuse.__doc__ = MLEModel.initialize_approximate_diffuse.__doc__
+    initialize_approximate_diffuse.__doc__ = (
+        MLEModel.initialize_approximate_diffuse.__doc__
+    )
 
     def initialize_stationary(self):
         self._manual_initialization = True
@@ -617,7 +636,9 @@ class SARIMAX(MLEModel):
                 selected_state_cov_stationary
             )
 
-            initial_state_cov[start:end, start:end] = initial_state_cov_stationary
+            initial_state_cov[start:end, start:end] = (
+                initial_state_cov_stationary
+            )
 
         super(SARIMAX, self).initialize_known(initial_state, initial_state_cov)
 
@@ -627,8 +648,8 @@ class SARIMAX(MLEModel):
         # Basic design matrix
         design = np.r_[
             [1] * self._k_diff,
-            ([0] * (self.k_seasons-1) + [1]) * self._k_seasonal_diff,
-            [1] * self.state_error, [0] * (self._k_order-1)
+            ([0] * (self.k_seasons - 1) + [1]) * self._k_seasonal_diff,
+            [1] * self.state_error, [0] * (self._k_order - 1)
         ]
 
         # If we have exogenous regressors included as part of the state vector
@@ -691,17 +712,17 @@ class SARIMAX(MLEModel):
             seasonal_companion[0, -1] = 1
             for d in range(self._k_seasonal_diff):
                 start = self._k_diff + d * self.k_seasons
-                end = self._k_diff + (d+1) * self.k_seasons
+                end = self._k_diff + (d + 1) * self.k_seasons
 
                 # T_c^*
                 transition[start:end, start:end] = seasonal_companion
 
                 # i
-                for i in range(d+1, self._k_seasonal_diff):
+                for i in range(d + 1, self._k_seasonal_diff):
                     transition[start, end + self.k_seasons - 1] = 1
 
                 # \iota
-                transition[start, self._k_diff + self.k_seasons*self._k_seasonal_diff] = 1
+                transition[start, self._k_states_diff] = 1
 
         # Differencing component
         if self._k_diff > 0:
@@ -711,10 +732,12 @@ class SARIMAX(MLEModel):
             # [0 1]
             if self.k_seasons > 0:
                 start = self._k_diff
-                end = self._k_diff + self.k_seasons*self._k_seasonal_diff
-                transition[:self._k_diff, start:end] = ([0] * (self.k_seasons-1) + [1]) * self._k_seasonal_diff
+                end = self._k_states_diff
+                transition[:self._k_diff, start:end] = (
+                    ([0] * (self.k_seasons - 1) + [1]) * self._k_seasonal_diff
+                )
             # [1 0]
-            column = self._k_diff + self.k_seasons*self._k_seasonal_diff
+            column = self._k_states_diff
             transition[:self._k_diff, column] = 1
 
         return transition
@@ -725,8 +748,8 @@ class SARIMAX(MLEModel):
         if not (self.state_regression and self.time_varying_regression):
             if self.k_posdef > 0:
                 selection = np.r_[
-                    [0] * (self._k_diff + self.k_seasons*self._k_seasonal_diff),
-                    [1] * (self._k_order > 0), [0] * (self._k_order-1),
+                    [0] * (self._k_states_diff),
+                    [1] * (self._k_order > 0), [0] * (self._k_order - 1),
                     [0] * ((1 - self.mle_regression) * self.k_exog)
                 ][:, None]
             else:
@@ -744,8 +767,8 @@ class SARIMAX(MLEModel):
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
                                  polynomial_ma, k_trend=0, trend_data=None):
-        k = 2*k_ma
-        r = max(k+k_ma, k_ar)
+        k = 2 * k_ma
+        r = max(k + k_ma, k_ar)
 
         k_params_ar = 0 if k_ar == 0 else len(polynomial_ar.nonzero()[0]) - 1
         k_params_ma = 0 if k_ma == 0 else len(polynomial_ma.nonzero()[0]) - 1
@@ -771,9 +794,11 @@ class SARIMAX(MLEModel):
                                      ' `k_trend` > 0.')
                 X = np.c_[X, trend_data[:(-r if r > 0 else None), :]]
             if k_ar > 0:
-                X = np.c_[X, lagmat(endog, k_ar)[r:, polynomial_ar.nonzero()[0][1:]-1]]
+                cols = polynomial_ar.nonzero()[0][1:]-1
+                X = np.c_[X, lagmat(endog, k_ar)[r:, cols]]
             if k_ma > 0:
-                X = np.c_[X, lagmat(residuals, k_ma)[r-k:, polynomial_ma.nonzero()[0][1:]-1]]
+                cols = polynomial_ma.nonzero()[0][1:]-1
+                X = np.c_[X, lagmat(residuals, k_ma)[r-k:, cols]]
 
             # Get the array of [ar_params, ma_params]
             params = np.linalg.pinv(X).dot(Y)
@@ -788,13 +813,13 @@ class SARIMAX(MLEModel):
         # Get the params
         offset = 0
         if k_trend > 0:
-            params_trend = params[offset:k_trend+offset]
+            params_trend = params[offset:k_trend + offset]
             offset += k_trend
         if k_ar > 0:
-            params_ar = params[offset:k_params_ar+offset]
+            params_ar = params[offset:k_params_ar + offset]
             offset += k_params_ar
         if k_ma > 0:
-            params_ma = params[offset:k_params_ma+offset]
+            params_ma = params[offset:k_params_ma + offset]
             offset += k_params_ma
         if residuals is not None:
             params_variance = (residuals[k_params_ma:]**2).mean()
@@ -851,14 +876,24 @@ class SARIMAX(MLEModel):
 
         # If we have estimated non-stationary start parameters but enforce
         # stationarity is on, raise an error
-        if self.k_ar > 0 and self.enforce_stationarity and not is_invertible(np.r_[1, -params_ar]):
+        invalid_ar = (
+            self.k_ar > 0 and
+            self.enforce_stationarity and
+            not is_invertible(np.r_[1, -params_ar])
+        )
+        if invalid_ar:
             raise ValueError('Non-stationary starting autoregressive'
                              ' parameters found with `enforce_stationarity`'
                              ' set to True.')
 
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
-        if self.k_ma > 0 and self.enforce_invertibility and not is_invertible(np.r_[1, params_ma]):
+        invalid_ma = (
+            self.k_ma > 0 and
+            self.enforce_invertibility and
+            not is_invertible(np.r_[1, params_ma])
+        )
+        if invalid_ma:
             raise ValueError('non-invertible starting MA parameters found'
                              ' with `enforce_invertibility` set to True.')
 
@@ -872,14 +907,24 @@ class SARIMAX(MLEModel):
 
         # If we have estimated non-stationary start parameters but enforce
         # stationarity is on, raise an error
-        if self.k_seasonal_ar > 0 and self.enforce_stationarity and not is_invertible(np.r_[1, -params_seasonal_ar]):
+        invalid_seasonal_ar = (
+            self.k_seasonal_ar > 0 and
+            self.enforce_stationarity and
+            not is_invertible(np.r_[1, -params_seasonal_ar])
+        )
+        if invalid_seasonal_ar:
             raise ValueError('Non-stationary starting autoregressive'
                              ' parameters found with `enforce_stationarity`'
                              ' set to True.')
 
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
-        if self.k_seasonal_ma > 0 and self.enforce_invertibility and not is_invertible(np.r_[1, params_seasonal_ma]):
+        invalid_seasonal_ma = (
+            self.k_seasonal_ma > 0 and
+            self.enforce_invertibility and
+            not is_invertible(np.r_[1, params_seasonal_ma])
+        )
+        if invalid_seasonal_ma:
             raise ValueError('non-invertible starting seasonal moving average'
                              ' parameters found with `enforce_invertibility`'
                              ' set to True.')
@@ -928,13 +973,14 @@ class SARIMAX(MLEModel):
             else:
                 seasonal_diff = (('\Delta_%d^%d' if latex else 'D%dS%d') %
                                  (self.k_seasonal_diff, self.k_seasons))
-        if self.simple_differencing and self.k_diff > 0 and self.k_seasonal_diff > 0:
+        endog_diff = self.simple_differencing
+        if endog_diff and self.k_diff > 0 and self.k_seasonal_diff > 0:
             return (('%s%s %s' if latex else '%s.%s.%s') %
                     (diff, seasonal_diff, self.data.ynames))
-        elif self.simple_differencing and self.k_diff > 0:
+        elif endog_diff and self.k_diff > 0:
             return (('%s %s' if latex else '%s.%s') %
                     (diff, self.data.ynames))
-        elif self.simple_differencing and self.k_seasonal_diff > 0:
+        elif endog_diff and self.k_seasonal_diff > 0:
             return (('%s %s' if latex else '%s.%s') %
                     (seasonal_diff, self.data.ynames))
         else:
@@ -1056,14 +1102,18 @@ class SARIMAX(MLEModel):
 
         # Seasonal Autoregressive
         if self.k_seasonal_ar > 0:
-            seasonal_ar_template = '$\\tilde \\phi_%d$' if latex else 'ar.S.L%d'
+            seasonal_ar_template = (
+                '$\\tilde \\phi_%d$' if latex else 'ar.S.L%d'
+            )
             names['seasonal_ar'] = []
             for i in self.polynomial_seasonal_ar.nonzero()[0][1:]:
                 names['seasonal_ar'].append(seasonal_ar_template % i)
 
         # Seasonal Moving Average
         if self.k_seasonal_ma > 0:
-            seasonal_ma_template = '$\\tilde \\theta_%d$' if latex else 'ma.S.L%d'
+            seasonal_ma_template = (
+                '$\\tilde \\theta_%d$' if latex else 'ma.S.L%d'
+            )
             names['seasonal_ma'] = []
             for i in self.polynomial_seasonal_ma.nonzero()[0][1:]:
                 names['seasonal_ma'].append(seasonal_ma_template % i)
@@ -1156,7 +1206,9 @@ class SARIMAX(MLEModel):
         if self.k_ar_params > 0:
             end += self.k_ar_params
             if self.enforce_stationarity:
-                constrained[start:end] = constrain_stationary_univariate(unconstrained[start:end])
+                constrained[start:end] = (
+                    constrain_stationary_univariate(unconstrained[start:end])
+                )
             else:
                 constrained[start:end] = unconstrained[start:end]
             start += self.k_ar_params
@@ -1165,7 +1217,9 @@ class SARIMAX(MLEModel):
         if self.k_ma_params > 0:
             end += self.k_ma_params
             if self.enforce_invertibility:
-                constrained[start:end] = constrain_stationary_univariate(unconstrained[start:end])
+                constrained[start:end] = (
+                    constrain_stationary_univariate(unconstrained[start:end])
+                )
             else:
                 constrained[start:end] = unconstrained[start:end]
             start += self.k_ma_params
@@ -1174,7 +1228,9 @@ class SARIMAX(MLEModel):
         if self.k_seasonal_ar > 0:
             end += self.k_seasonal_ar_params
             if self.enforce_stationarity:
-                constrained[start:end] = constrain_stationary_univariate(unconstrained[start:end])
+                constrained[start:end] = (
+                    constrain_stationary_univariate(unconstrained[start:end])
+                )
             else:
                 constrained[start:end] = unconstrained[start:end]
             start += self.k_seasonal_ar_params
@@ -1183,7 +1239,9 @@ class SARIMAX(MLEModel):
         if self.k_seasonal_ma_params > 0:
             end += self.k_seasonal_ma_params
             if self.enforce_invertibility:
-                constrained[start:end] = constrain_stationary_univariate(unconstrained[start:end])
+                constrained[start:end] = (
+                    constrain_stationary_univariate(unconstrained[start:end])
+                )
             else:
                 constrained[start:end] = unconstrained[start:end]
             start += self.k_seasonal_ma_params
@@ -1251,7 +1309,9 @@ class SARIMAX(MLEModel):
         if self.k_ar_params > 0:
             end += self.k_ar_params
             if self.enforce_stationarity:
-                unconstrained[start:end] = unconstrain_stationary_univariate(constrained[start:end])
+                unconstrained[start:end] = (
+                    unconstrain_stationary_univariate(constrained[start:end])
+                )
             else:
                 unconstrained[start:end] = constrained[start:end]
             start += self.k_ar_params
@@ -1260,7 +1320,9 @@ class SARIMAX(MLEModel):
         if self.k_ma_params > 0:
             end += self.k_ma_params
             if self.enforce_invertibility:
-                unconstrained[start:end] = unconstrain_stationary_univariate(constrained[start:end])
+                unconstrained[start:end] = (
+                    unconstrain_stationary_univariate(constrained[start:end])
+                )
             else:
                 unconstrained[start:end] = constrained[start:end]
             start += self.k_ma_params
@@ -1269,7 +1331,9 @@ class SARIMAX(MLEModel):
         if self.k_seasonal_ar > 0:
             end += self.k_seasonal_ar_params
             if self.enforce_stationarity:
-                unconstrained[start:end] = unconstrain_stationary_univariate(constrained[start:end])
+                unconstrained[start:end] = (
+                    unconstrain_stationary_univariate(constrained[start:end])
+                )
             else:
                 unconstrained[start:end] = constrained[start:end]
             start += self.k_seasonal_ar_params
@@ -1278,7 +1342,9 @@ class SARIMAX(MLEModel):
         if self.k_seasonal_ma_params > 0:
             end += self.k_seasonal_ma_params
             if self.enforce_invertibility:
-                unconstrained[start:end] = unconstrain_stationary_univariate(constrained[start:end])
+                unconstrained[start:end] = (
+                    unconstrain_stationary_univariate(constrained[start:end])
+                )
             else:
                 unconstrained[start:end] = constrained[start:end]
             start += self.k_seasonal_ma_params
@@ -1380,31 +1446,25 @@ class SARIMAX(MLEModel):
                 self.polynomial_ma = polynomial_ma
 
         if self.k_seasonal_ar > 0:
+            idx = self._polynomial_seasonal_ar_idx
             if self.polynomial_seasonal_ar.dtype == params.dtype:
-                self.polynomial_seasonal_ar[self._polynomial_seasonal_ar_idx] = (
-                    -params_seasonal_ar
-                )
+                self.polynomial_seasonal_ar[idx] = -params_seasonal_ar
             else:
                 polynomial_seasonal_ar = (
                     self.polynomial_seasonal_ar.real.astype(params.dtype)
                 )
-                polynomial_seasonal_ar[self._polynomial_seasonal_ar_idx] = (
-                    -params_seasonal_ar
-                )
+                polynomial_seasonal_ar[idx] = -params_seasonal_ar
                 self.polynomial_seasonal_ar = polynomial_seasonal_ar
 
         if self.k_seasonal_ma > 0:
+            idx = self._polynomial_seasonal_ma_idx
             if self.polynomial_seasonal_ma.dtype == params.dtype:
-                self.polynomial_seasonal_ma[self._polynomial_seasonal_ma_idx] = (
-                    params_seasonal_ma
-                )
+                self.polynomial_seasonal_ma[idx] = params_seasonal_ma
             else:
                 polynomial_seasonal_ma = (
                     self.polynomial_seasonal_ma.real.astype(params.dtype)
                 )
-                polynomial_seasonal_ma[self._polynomial_seasonal_ma_idx] = (
-                    params_seasonal_ma
-                )
+                polynomial_seasonal_ma[idx] = params_seasonal_ma
                 self.polynomial_seasonal_ma = polynomial_seasonal_ma
 
         # Get the reduced form lag polynomial terms by multiplying the regular
@@ -1441,7 +1501,7 @@ class SARIMAX(MLEModel):
         if self.k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
             if not self.hamilton_representation:
-                self['state_intercept', self._k_diff + self._k_seasonal_diff * self.k_seasons, :] = data
+                self['state_intercept', self._k_states_diff, :] = data
             else:
                 # The way the trend enters in the Hamilton representation means
                 # that the parameter is not an ``intercept'' but instead the
@@ -1685,14 +1745,14 @@ class SARIMAXResults(MLEResults):
         z = self.arroots
         if not z.size:
             return
-        return np.arctan2(z.imag, z.real) / (2*np.pi)
+        return np.arctan2(z.imag, z.real) / (2 * np.pi)
 
     @cache_readonly
     def mafreq(self):
         z = self.maroots
         if not z.size:
             return
-        return np.arctan2(z.imag, z.real) / (2*np.pi)
+        return np.arctan2(z.imag, z.real) / (2 * np.pi)
 
     @cache_readonly
     def arparams(self):
@@ -1752,19 +1812,22 @@ class SARIMAXResults(MLEResults):
         # Handle exogenous parameters
         if _out_of_sample and (self.k_exog > 0 or self.k_trend > 0):
             # Create a new faux SARIMAX model for the extended dataset
-            endog = np.zeros((self.model.orig_endog.shape[0]+_out_of_sample, self.k_endog))
+            nobs = self.model.orig_endog.shape[0] + _out_of_sample
+            endog = np.zeros((nobs, self.k_endog))
 
             if self.k_exog > 0:
                 if exog is None:
-                    raise ValueError('Out-of-sample forecasting in a model with'
-                                     ' a regression component requires additional'
-                                     ' exogenous values via the `exog` argument')
+                    raise ValueError('Out-of-sample forecasting in a model'
+                                     ' with a regression component requires'
+                                     ' additional exogenous values via the'
+                                     ' `exog` argument.')
                 exog = np.array(exog)
                 required_exog_shape = (_out_of_sample, self.k_exog)
                 if not exog.shape == required_exog_shape:
                     raise ValueError('Provided exogenous values are not of the'
-                                     ' appropriate shape. Required %s, got %s.' %
-                                     (str(required_exog_shape), str(exog.shape)))
+                                     ' appropriate shape. Required %s, got %s.'
+                                     % (str(required_exog_shape),
+                                        str(exog.shape)))
                 exog = np.c_[self.model.orig_exog.T, exog.T].T
 
             model = SARIMAX(
@@ -1850,14 +1913,20 @@ class SARIMAXResults(MLEResults):
             if self.k_ar == self.k_ar_params:
                 order_seasonal_ar = int(self.k_seasonal_ar / self.k_seasons)
             else:
-                order_seasonal_ar = tuple(self.polynomial_seasonal_ar.nonzero()[0][1:])
+                order_seasonal_ar = (
+                    tuple(self.polynomial_seasonal_ar.nonzero()[0][1:])
+                )
             if self.k_ma == self.k_ma_params:
                 order_seasonal_ma = int(self.k_seasonal_ma / self.k_seasons)
             else:
-                order_seasonal_ma = tuple(self.polynomial_seasonal_ma.nonzero()[0][1:])
+                order_seasonal_ma = (
+                    tuple(self.polynomial_seasonal_ma.nonzero()[0][1:])
+                )
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
-            k_seasonal_diff = 0 if self.simple_differencing else self.k_seasonal_diff
+            k_seasonal_diff = self.k_seasonal_diff
+            if self.simple_differencing:
+                k_seasonal_diff = 0
             seasonal_order = ('(%s, %d, %s, %d)' %
                               (str(order_seasonal_ar), k_seasonal_diff,
                                str(order_seasonal_ma), self.k_seasons))

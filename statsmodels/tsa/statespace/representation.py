@@ -147,7 +147,8 @@ class Representation(object):
     obs_intercept : array
         Observation intercept: :math:`d~(k\_endog \times nobs)`
     obs_cov : array
-        Observation covariance matrix: :math:`H~(k\_endog \times k\_endog \times nobs)`
+        Observation covariance matrix:
+        :math:`H~(k\_endog \times k\_endog \times nobs)`
     transition : array
         Transition matrix: :math:`T~(k\_states \times k\_states \times nobs)`
     state_intercept : array
@@ -155,9 +156,11 @@ class Representation(object):
     selection : array
         Selection matrix: :math:`R~(k\_states \times k\_posdef \times nobs)`
     state_cov : array
-        State covariance matrix: :math:`Q~(k\_posdef \times k\_posdef \times nobs)`
+        State covariance matrix:
+        :math:`Q~(k\_posdef \times k\_posdef \times nobs)`
     time_invariant : bool
-        Whether or not currently active representation matrices are time-invariant
+        Whether or not currently active representation matrices are
+        time-invariant
     initialization : str
         Kalman filter initialization method. Default is unset.
     initial_variance : float
@@ -317,7 +320,8 @@ class Representation(object):
         # If only a string is given then we must be getting an entire matrix
         if _type is str:
             if key not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key)
+                raise IndexError('"%s" is an invalid state space matrix name'
+                                 % key)
             matrix = getattr(self, '_' + key)
 
             # See note on time-varying arrays, below
@@ -327,7 +331,8 @@ class Representation(object):
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % name)
+                raise IndexError('"%s" is an invalid state space matrix name'
+                                 % name)
 
             matrix = getattr(self, '_' + name)
 
@@ -343,26 +348,30 @@ class Representation(object):
             return matrix[slice_]
         # Otherwise, we have only a single slice index, but it is not a string
         else:
-            raise IndexError('first index must the name of a valid state space matrix')
+            raise IndexError('First index must the name of a valid state space'
+                             'matrix.')
 
     def __setitem__(self, key, value):
         _type = type(key)
         # If only a string is given then we must be setting an entire matrix
         if _type is str:
             if key not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key)
+                raise IndexError('"%s" is an invalid state space matrix name'
+                                 % key)
             setattr(self, key, value)
         # If it's a tuple (with a string as the first element) then we must be
         # setting a slice of a matrix
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key[0])
+                raise IndexError('"%s" is an invalid state space matrix name'
+                                 % key[0])
 
             # Change the dtype of the corresponding matrix
             dtype = np.array(value).dtype
             matrix = getattr(self, '_' + name)
-            if not matrix.dtype == dtype and dtype.char in ['f', 'd', 'F', 'D']:
+            valid_types = ['f', 'd', 'F', 'D']
+            if not matrix.dtype == dtype and dtype.char in valid_types:
                 matrix = getattr(self, '_' + name).real.astype(dtype)
 
             # Since the model can support time-varying arrays, but often we
@@ -380,7 +389,8 @@ class Representation(object):
         # Otherwise we got a single non-string key, (e.g. mod[:]), which is
         # invalid
         else:
-            raise IndexError('first index must the name of a valid state space matrix')
+            raise IndexError('First index must the name of a valid state space'
+                             'matrix.')
 
     @property
     def prefix(self):
@@ -562,7 +572,9 @@ class Representation(object):
             self._representations[prefix] = {}
             for matrix in self.shapes.keys():
                 if matrix == 'obs':
-                    self._representations[prefix][matrix] = self.obs.astype(dtype)
+                    self._representations[prefix][matrix] = (
+                        self.obs.astype(dtype)
+                    )
                 else:
                     # Note: this always makes a copy
                     self._representations[prefix][matrix] = (
@@ -572,7 +584,9 @@ class Representation(object):
         else:
             for matrix in self.shapes.keys():
                 if matrix == 'obs':
-                    self._representations[prefix][matrix] = self.obs.astype(dtype)[:]
+                    self._representations[prefix][matrix] = (
+                        self.obs.astype(dtype)[:]
+                    )
                 else:
                     self._representations[prefix][matrix][:] = (
                         getattr(self, '_' + matrix).astype(dtype)[:]

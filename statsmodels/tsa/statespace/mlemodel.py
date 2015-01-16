@@ -159,8 +159,9 @@ class MLEModel(Model):
             mlefit = super(MLEModel, self).fit(mlefit.params, method=method,
                                                fargs=fargs,
                                                maxiter=maxiter,
-                                               full_output=full_output, disp=disp,
-                                               callback=callback, **kwargs)
+                                               full_output=full_output,
+                                               disp=disp, callback=callback,
+                                               **kwargs)
 
         # Constrain the final parameters and update the model to be sure we're
         # using them (in case, for example, the last time update was called
@@ -269,7 +270,8 @@ class MLEModel(Model):
 
             self.initialize_known(initial_state, initial_state_cov)
 
-        score = approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args, kwargs=kwargs)
+        score = approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args,
+                                 kwargs=kwargs)
 
         if initial_state is not None and initial_state_cov is not None:
             # Reset the initialization
@@ -319,7 +321,8 @@ class MLEModel(Model):
 
             self.initialize_known(initial_state, initial_state_cov)
 
-        hessian = approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args, kwargs=kwargs)
+        hessian = approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args,
+                                 kwargs=kwargs)
 
         if initial_state is not None and initial_state_cov is not None:
             # Reset the initialization
@@ -490,7 +493,8 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     bic : float
         Bayes Information Criterion
     bse : array
-        The standard errors of the parameters. Computed using the numerical Hessian.
+        The standard errors of the parameters. Computed using the numerical
+        Hessian.
     cov_params : array
         The variance / covariance matrix. Computed using the numerical Hessian.
     hqic : array
