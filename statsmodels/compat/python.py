@@ -1,7 +1,6 @@
 """
 Compatibility tools for differences between Python 2 and 3
 """
-
 import functools
 import itertools
 import sys
@@ -10,19 +9,7 @@ import urllib
 PY3 = (sys.version_info[0] >= 3)
 PY3_2 = sys.version_info[:2] == (3, 2)
 
-try:
-    import __builtin__ as builtins
-    # not writeable when instantiated with string, doesn't handle unicode well
-    from cStringIO import StringIO as cStringIO
-    # always writeable
-    from StringIO import StringIO
-
-    BytesIO = StringIO
-    import cPickle
-    pickle = cPickle
-    import urllib2
-    import urlparse
-except ImportError:
+if PY3:
     import builtins
     from io import StringIO, BytesIO
 
@@ -32,9 +19,6 @@ except ImportError:
     import urllib.request
     import urllib.parse
     from urllib.request import HTTPError, urlretrieve
-
-
-if PY3:
     import io
     bytes = bytes
     str = str
@@ -97,6 +81,18 @@ if PY3:
     input = input
 
 else:
+    import __builtin__ as builtins
+    # not writeable when instantiated with string, doesn't handle unicode well
+    from cStringIO import StringIO as cStringIO
+    # always writeable
+    from StringIO import StringIO
+
+    BytesIO = StringIO
+    import cPickle
+    pickle = cPickle
+    import urllib2
+    import urlparse
+
     bytes = str
     str = str
     asbytes = str
