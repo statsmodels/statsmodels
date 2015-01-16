@@ -1125,7 +1125,8 @@ class Equivalence(CovStruct):
         endog = self.model.endog_li
         varfunc = self.model.family.variance
         cached_means = self.model.cached_means
-        dep_params = defaultdict(lambda : [0., 0., 0., 0])
+        dep_params = defaultdict(lambda : [0., 0., 0.])
+        n_pairs = defaultdict(lambda : 0)
         dim = len(params)
 
         for k, gp in enumerate(self.model.group_labels):
@@ -1140,7 +1141,7 @@ class Equivalence(CovStruct):
                 if self.as_cor:
                     dep_params[lb][1] += np.sum(resid[jj[0]]**2)
                     dep_params[lb][2] += np.sum(resid[jj[1]]**2)
-                dep_params[lb][3] += len(jj[0])
+                n_pairs[lb] += len(jj[0])
 
         if self.as_cor:
             for lb in dep_params.keys():
@@ -1150,9 +1151,10 @@ class Equivalence(CovStruct):
                 dep_params[lb] = 1.
         else:
             for lb in dep_params.keys():
-                dep_params[lb] = dep_params[lb][0] / (dep_params[lb][3] - dim)
+                dep_params[lb] = dep_params[lb][0] / (n_pairs[lb] - dim)
 
         self.dep_params = dep_params
+        self.n_pairs = n_pairs
 
     def covariance_matrix(self, expval, index):
         dim = len(expval)
