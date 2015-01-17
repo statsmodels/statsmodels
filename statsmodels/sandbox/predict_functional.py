@@ -169,9 +169,10 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
                       % ", ".join(["'%s'" % x for x in unmatched]))
 
     # Initialize at zero so each column can be converted to any dtype.
-    fexog = pd.DataFrame(index=range(num_points), columns=colnames, dtype=np.float64) * 0
+    ix = range(num_points)
+    fexog = pd.DataFrame(index=ix, columns=colnames)
     for d, x in zip(dtypes, colnames):
-        fexog[x] = fexog[x].astype(d)
+        fexog[x] = pd.Series(index=ix, dtype=d)
 
     # The values of the 'focus variable' are a sequence of percentiles
     pctls = np.linspace(0, 100, num_points).tolist()
