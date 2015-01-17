@@ -320,7 +320,8 @@ def predict_functional(result, focus_var, summaries=None, values=None,
             dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2, values2, num_points)
 
     from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
-    if isinstance(result, GLMResultsWrapper):
+    from statsmodels.genmod.generalized_estimating_equations import GEEResultsWrapper
+    if isinstance(result, (GLMResultsWrapper, GEEResultsWrapper)):
         kwargs_pred = kwargs.copy()
         kwargs_pred.update({"linear": True})
     else:
