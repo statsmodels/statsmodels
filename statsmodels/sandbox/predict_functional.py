@@ -13,8 +13,121 @@ functional regression in which the role of x is modeled with b-splines
 or other basis functions.
 """
 
+_predict_functional_doc =\
+    """
+    Predictions and contrasts of a fitted model as a function of a given covariate.
 
-def _make_formula_exog(result, focus_var, summaries, values, num_points):
+    The value of the focus variable varies along a sequence of its
+    quantiles, calculated from the data used to fit the model.  The
+    other variables are held constant either at given values, or at
+    values obtained by applying given summary functions to the data
+    used to fit the model.  Optionally, a second specification of the
+    non-focus variables is provided and the contrast between the two
+    specifications is returned.
+
+    Parameters
+    ----------
+    result : statsmodels result object
+        A results object for the fitted model.
+    focus_var : string
+        The name of the 'focus variable'.
+    summaries : dict-like
+        A map from names of non-focus variables to summary functions.
+        Each summary function is applied to the data used to fit the
+        model, to obtain a value at which the variable is held fixed.
+    values : dict-like
+        Values at which a given non-focus variable is held fixed.
+    summaries2 : dict-like
+        A second set of summary functions used to define a contrast.
+    values2 : dict-like
+        A second set of fixed values used to define a contrast.
+    cvrg_prob : float
+        The coverage probability.
+    method : string
+        The method for constructing the confidence band, one of
+        'pointwise', 'scheffe', and 'simultaneous'.
+    num_points : integer
+        The number of equally-spaced quantile points where the
+        prediction is made.
+    exog : array-like
+        Explicitly provide points to cover with the confidence band.
+    exog2 : array-like
+        Explicitly provide points to contrast to `exog` in a functional
+        confidence band.
+    kwargs :
+        Arguments passed to the `predict` method.
+
+    Returns
+    -------
+    pred : array-like
+        The predicted mean values.
+    cb : array-like
+        An array with two columns, containing respectively the lower
+        and upper limits of a confidence band.
+    fvals : array-like
+        The values of the focus variable at which the prediction is
+        made.
+
+    Notes
+    -----
+    All variables in the model except for the focus variable should be
+    included as a key in either `summaries` or `values` (unless `exog`
+    is provided).
+
+    If `summaries2` and `values2` are not provided, the returned value
+    contains predicted conditional means for the outcome as the focus
+    variable varies, with the other variables fixed as specified.
+
+    If `summaries2` and/or `values2` is provided, two sets of
+    predicted conditional means are calculated, and the returned value
+    is the contrast between them.
+
+    If `exog` is provided, then the rows should contain a sequence of
+    values approximating a continuous path through the domain of the
+    covariates.  For example, if Z(s) is the covariate expressed as a
+    function of s, then the rows of exog may approximate Z(g(s)) for
+    some continuous function g.  If `exog` is provided then neither of
+    the summaries or values arguments should be provided.  If `exog2`
+    is also provided, then the returned value is a contrast between
+    the functionas defined by `exog` and `exog2`.
+
+    Examples
+    --------
+    Fit a model using a formula in which the predictors are age
+    (modeled with splines), ethnicity (which is categorical), gender,
+    and income.  Then we obtain the fitted mean values as a function
+    of age for females with mean income and the most common
+    ethnicity.
+
+    >>> model = sm.OLS.from_formula('y ~ bs(age, df=4) + C(ethnicity) + gender + income', data)
+    >>> result = model.fit()
+    >>> mode = lambda x : x.value_counts().argmax()
+    >>> summaries = {'income': np.mean, ethnicity=mode}
+    >>> values = {'gender': 'female'}
+    >>> pr, cb, x = predict_functional(result, 'age', summaries, values)
+
+    Fit a model using arrays.  Plot the means as a function of x3,
+    holding x1 fixed at its mean value in the data used to fit the
+    model, and holding x2 fixed at 1.
+
+    >>> model = sm.OLS(y ,x)
+    >>> result = model.fit()
+    >>> summaries = {'x1': np.mean}
+    >>> values = {'x2': 1}
+    >>> pr, cb, x = predict_functional(result, 'x3', summaries, values)
+
+    Fit a model usng a formula and construct a contrast comparing the
+    female and male predicted mean functions.
+
+    >>> model = sm.OLS.from_formula('y ~ bs(age, df=4) + gender', data)
+    >>> result = model.fit()
+    >>> values = {'gender': 'female'}
+    >>> values2 = {'gender': 'male'}
+    >>> pr, cb, x = predict_functional(result, 'age', values=values, values2=values2)
+    """
+
+
+def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     """
     Create dataframes for exploring a fitted model as a function of one variable.
 
@@ -31,6 +144,11 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
 
     model = result.model
     exog = model.data.frame
+
+    if summaries is None:
+        summaries = {}
+    if values is None:
+        values = {}
 
     if exog[focus_var].dtype is np.dtype('O'):
         raise ValueError('focus variable may not have object type')
@@ -72,7 +190,7 @@ def _make_formula_exog(result, focus_var, summaries, values, num_points):
     return dexog, fexog, fvals
 
 
-def _make_exog(result, focus_var, summaries, values, num_points):
+def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
     """
     Create dataframes for exploring a fitted model as a function of one variable.
 
@@ -88,6 +206,11 @@ def _make_exog(result, focus_var, summaries, values, num_points):
     model = result.model
     model_exog = model.exog
     exog_names = model.exog_names
+
+    if summaries is None:
+        summaries = {}
+    if values is None:
+        values = {}
 
     exog = np.zeros((num_points, model_exog.shape[1]))
 
@@ -119,129 +242,103 @@ def _make_exog(result, focus_var, summaries, values, num_points):
     return exog, fvals
 
 
+def _make_exog(result, focus_var, summaries, values, num_points):
+
+    # Branch depending on whether the model was fit with a formula.
+    if hasattr(result.model.data, "frame"):
+        dexog, fexog, fvals = _make_exog_from_formula(result, focus_var,
+                                       summaries, values, num_points)
+    else:
+        exog, fvals = _make_exog_from_arrays(result, focus_var, summaries,
+                                 values, num_points)
+        dexog, fexog = exog, exog
+
+    return dexog, fexog, fvals
+
+
+def _check_args(values, summaries, values2, summaries2):
+
+    if values is None:
+        values = {}
+    if values2 is None:
+        values2 = {}
+    if summaries is None:
+        summaries = {}
+    if summaries2 is None:
+        summaries2 = {}
+
+    for (s,v) in (summaries, values), (summaries2, values2):
+        ky = set(v.keys()) & set(s.keys())
+        ky = list(ky)
+        if len(ky) > 0:
+            raise ValueError("One or more variable names are contained in both `summaries` and `values`:" +
+                             ", ".join(ky))
+
+    return values, summaries, values2, summaries2
+
+
 def predict_functional(result, focus_var, summaries=None, values=None,
-                       cvrg_prob=0.95, simultaneous=False, num_points=10,
-                       exog=None, **kwargs):
-    """
-    Returns predictions of a fitted model as a function of a given covariate.
+                       summaries2=None, values2=None, cvrg_prob=0.95,
+                       method="pointwise", linear=True, num_points=10,
+                       exog=None, exog2=None, **kwargs):
+    # docstring attached below
 
-    The value of the focus variable varies along a sequence of its
-    quantiles, calculated from the data used to fit the model.  The
-    other variables are held constant either at given values, or at
-    values computed by applying given summary functions to the data
-    used to fit the model.
+    if method not in ("pointwise", "scheffe", "simultaneous"):
+        raise ValueError('confidence band method must be one of `pointwise`, `scheffe`, and `simultaneous`.')
 
-    Parameters
-    ----------
-    result : statsmodels result object
-        A results object for the fitted model.
-    focus_var : string
-        The name of the 'focus variable'.
-    summaries : dict-like
-        A map from names of non-focus variables to summary functions.
-        Each summary function is applied to the data used to fit the
-        model, to obtain a value at which the variable is held fixed.
-    values : dict-like
-        Values at which a given non-focus variable is held fixed.
-    cvrg_prob : float
-        The coverage probability.
-    simultaneous : bool
-        If true, the confidence band is simultaneous, otherwise it is
-        pointwise.
-    num_points : integer
-        The number of equally-spaced quantile points where the
-        prediction is made.
-    exog : array-like
-        Explicitly provide points to cover with the confidence band.
-    kwargs :
-        Arguments passed to the `predict` method.
+    contrast = (values2 is not None) or (summaries2 is not None)
 
-    Returns
-    -------
-    pred : array-like
-        The predicted mean values.
-    cb : array-like
-        An array with two columns, containing respectively the lower
-        and upper limits of a confidence band.
-    fvals : array-like
-        The values of the focus variable at which the prediction is
-        made.
-
-    Notes
-    -----
-    All variables in the model except for the focus variable should be
-    included as a key in either `summaries` or `values` (unless `exog`
-    is provided).
-
-    These are conditional means, based on specified values of the
-    non-focus variables.  They are not marginal (unconditional) means.
-
-    If `exog` is provided, then the rows should contain a sequence of
-    values approximating a continuous path through the domain of the
-    covariates.  For example, if Z(s) is the covariate expressed as a
-    function of s, then the rows of exog may approximate Z(g(s)) for
-    some continuous function g.
-
-    Examples
-    --------
-    Fit a model using a formula in which the predictors are age
-    (modeled with splines), ethnicity (which is categorical), gender,
-    and income.  Then we obtain the fitted mean values as a function
-    of age for females with mean income and the most common
-    ethnicity.
-
-    >>> model = sm.OLS.from_formula('y ~ bs(age, df=4) + C(ethnicity) + gender + income', data)
-    >>> result = model.fit()
-    >>> mode = lambda x : x.value_counts().argmax()
-    >>> summaries = {'income': np.mean, ethnicity=mode}
-    >>> values = {'gender': 'female'}
-    >>> pr, cb, x = predict_functional(result, 'age', summaries, values)
-
-    Fit a model using arrays.  Plot the means as a function of x3,
-    holding x1 fixed at its mean value in the data used to fit the
-    model, and holding x2 fixed at 1.
-
-    >>> model = sm.OLS(y ,x)
-    >>> result = model.fit()
-    >>> summaries = {'x1': np.mean}
-    >>> values = {'x2': 1}
-    >>> pr, cb, x = predict_functional(result, 'x3', summaries, values)
-    """
+    if contrast and not linear:
+        raise ValueError("`linear` must be True for computing contrasts")
 
     model = result.model
     if exog is not None:
 
-        if (summaries is not None) or (values is not None):
+        if any(x is not None for x in [summaries, summaries2, values, values2]):
             raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
 
         fexog = exog
-        dexog = patsy.dmatrix(model.data.orig_exog.design_info.builder, fexog, return_type='dataframe')
+        dexog = patsy.dmatrix(model.data.orig_exog.design_info.builder,
+                              fexog, return_type='dataframe')
+        fvals = exog[focus_var]
+
+        if exog2 is not None:
+            fexog2 = exog
+            dexog2 = patsy.dmatrix(model.data.orig_exog.design_info.builder,
+                                   fexog2, return_type='dataframe')
+            fvals2 = fvals
 
     else:
 
-        if summaries is None:
-            summaries = {}
-        if values is None:
-            values = {}
+        values, summaries, values2, summaries2 = _check_args(values,
+                             summaries, values2, summaries2)
 
-        ky = set(values.keys()) & set(summaries.keys())
-        if len(ky) > 0:
-            raise ValueError("%s included in both `values` and `summaries`" %
-                             ", ".join(ky))
+        dexog, fexog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
 
-        # Branch depending on whether the model was fit with a formula.
-        if hasattr(result.model.data, "frame"):
-            dexog, fexog, fvals = _make_formula_exog(result, focus_var,
-                                           summaries, values, num_points)
-        else:
-            exog, fvals = _make_exog(result, focus_var, summaries,
-                                     values, num_points)
-            dexog, fexog = exog, exog
+        if len(summaries2) + len(values2) > 0:
+            dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2, values2, num_points)
 
-    pred = result.predict(exog=fexog, **kwargs)
-    t_test = result.t_test(dexog)
+    from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
+    if isinstance(result, GLMResultsWrapper):
+        kwargs_pred = kwargs.copy()
+        kwargs_pred.update({"linear": True})
+    else:
+        kwargs_pred = kwargs
 
-    if simultaneous:
+    pred = result.predict(exog=fexog, **kwargs_pred)
+    if contrast:
+        pred2 = result.predict(exog=fexog2, **kwargs_pred)
+        pred = pred - pred2
+        dexog = dexog - dexog2
+
+    if method == 'pointwise':
+
+        t_test = result.t_test(dexog)
+        cb = t_test.conf_int(alpha=1-cvrg_prob)
+
+    elif method == 'scheffe':
+
+        t_test = result.t_test(dexog)
         sd = t_test.sd
         cb = np.zeros((num_points, 2))
 
@@ -254,11 +351,22 @@ def predict_functional(result, focus_var, summaries=None, values=None,
         cb[:, 0] = pred - fx
         cb[:, 1] = pred + fx
 
-    else:
-        cb = t_test.conf_int(alpha=1-cvrg_prob)
+    elif method == 'simultaneous':
+
+        sigma, c = _glm_basic_scr(result, dexog, cvrg_prob)
+        cb = np.zeros((dexog.shape[0], 2))
+        cb[:, 0] = pred - c*sigma
+        cb[:, 1] = pred + c*sigma
+
+    if not linear:
+        # May need to support other models with link-like functions.
+        link = result.family.link
+        pred = link.inverse(pred)
+        cb = link.inverse(cb)
 
     return pred, cb, fvals
 
+predict_functional.__doc__ = _predict_functional_doc
 
 def _glm_basic_scr(result, exog, cvrg_prob):
     """
@@ -325,59 +433,3 @@ def _glm_basic_scr(result, exog, cvrg_prob):
         raise ValueError("Root finding error in basic SCR")
 
     return sigma, c
-
-def predict_functional_glm(result, focus_var, summaries=None, values=None, cvrg_prob=0.95,
-                           simultaneous=False, num_points=10, exog=None, linear=False,
-                           **kwargs):
-
-    model = result.model
-    if exog is not None:
-
-        if (summaries is not None) or (values is not None):
-            raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
-
-        fexog = exog
-        dexog = patsy.dmatrix(model.data.orig_exog.design_info.builder, fexog, return_type='dataframe')
-
-    else:
-
-        if summaries is None:
-            summaries = {}
-        if values is None:
-            values = {}
-
-        ky = set(values.keys()) & set(summaries.keys())
-        if len(ky) > 0:
-            raise ValueError("%s included in both `values` and `summaries`" %
-                             ", ".join(ky))
-
-        # Branch depending on whether the model was fit with a formula.
-        if hasattr(result.model.data, "frame"):
-            dexog, fexog, fvals = _make_formula_exog(result, focus_var, summaries, values, num_points)
-        else:
-            exog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
-            dexog, fexog = exog, exog
-
-    kwargs_pred = kwargs.copy()
-    kwargs_pred.update({"linear": True})
-    pred = result.predict(exog=fexog, **kwargs_pred)
-
-    if simultaneous:
-
-        sigma, c = _glm_basic_scr(result, dexog, cvrg_prob)
-        cb = np.zeros((dexog.shape[0], 2))
-        cb[:, 0] = pred - c*sigma
-        cb[:, 1] = pred + c*sigma
-
-    else:
-        t_test = result.t_test(dexog)
-        cb = t_test.conf_int(alpha=1-cvrg_prob)
-
-    if not linear:
-        link = result.family.link
-        pred = link.inverse(pred)
-        cb = link.inverse(cb)
-
-    return pred, cb, fvals
-
-predict_functional_glm.__doc__ = predict_functional.__doc__.replace("predict_focus", "predict_focus_glm")
