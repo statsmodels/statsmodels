@@ -177,6 +177,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     # The values of the 'focus variable' are a sequence of percentiles
     pctls = np.linspace(0, 100, num_points).tolist()
     fvals = np.percentile(exog[focus_var], pctls)
+    fvals = np.asarray(fvals)
     fexog.loc[:, focus_var] = fvals
 
     # The values of the other variables may be given by summary functions...
