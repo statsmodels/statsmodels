@@ -5,7 +5,7 @@ import statsmodels.api as sm
 from numpy.testing import dec
 
 # If true, the output is written to a multi-page pdf file.
-pdf_output = True
+pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
