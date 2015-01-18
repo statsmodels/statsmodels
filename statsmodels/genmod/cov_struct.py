@@ -1033,8 +1033,14 @@ class Equivalence(CovStruct):
         mat.sort(1)
 
         # Remove repeated rows
-        dtype = np.dtype((np.void, mat.dtype.itemsize * mat.shape[1]))
-        bmat = np.ascontiguousarray(mat).view(dtype)
+        try:
+            dtype = np.dtype((np.void, mat.dtype.itemsize * mat.shape[1]))
+            bmat = np.ascontiguousarray(mat).view(dtype)
+        except TypeError:
+            # workaround for old numpy that can't call unique with complex
+            # dtypes
+            np.random.seed(4234)
+            bmat = np.dot(mat, np.random.uniform(size=mat.shape[1]))
         _, idx = np.unique(bmat, return_index=True)
         mat = mat[idx, :]
 
