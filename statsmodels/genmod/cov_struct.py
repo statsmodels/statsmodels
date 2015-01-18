@@ -1036,12 +1036,13 @@ class Equivalence(CovStruct):
         try:
             dtype = np.dtype((np.void, mat.dtype.itemsize * mat.shape[1]))
             bmat = np.ascontiguousarray(mat).view(dtype)
+            _, idx = np.unique(bmat, return_index=True)
         except TypeError:
             # workaround for old numpy that can't call unique with complex
             # dtypes
             np.random.seed(4234)
             bmat = np.dot(mat, np.random.uniform(size=mat.shape[1]))
-        _, idx = np.unique(bmat, return_index=True)
+            _, idx = np.unique(bmat, return_index=True)
         mat = mat[idx, :]
 
         return mat[:, 0], mat[:, 1]
