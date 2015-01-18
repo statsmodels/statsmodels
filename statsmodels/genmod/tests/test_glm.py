@@ -863,7 +863,7 @@ def test_gradient_irls():
     fnames = ["binomial", "poisson", "gamma", "negbinom", "gaussian",
               "inverse_gaussian"]
 
-    n = 2000
+    n = 100
     p = 3
     exog = np.random.normal(size=(n, p))
     exog[:, 0] = 1
