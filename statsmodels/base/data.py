@@ -365,43 +365,38 @@ class ModelData(object):
                 raise ValueError("endog and exog matrices are different sizes")
 
     def wrap_output(self, obj, how='columns', names=None):
-        if how == 'columns':
-            return self.attach_columns(obj)
-        elif how == 'rows':
-            return self.attach_rows(obj)
-        elif how == 'cov':
-            return self.attach_cov(obj)
-        elif how == 'dates':
-            return self.attach_dates(obj)
-        elif how == 'columns_eq':
-            return self.attach_columns_eq(obj)
-        elif how == 'cov_eq':
-            return self.attach_cov_eq(obj)
-        elif how == 'generic_columns':
-            return self.attach_generic_columns(obj, names)
-        elif how == 'generic_columns_2d':
-            return self.attach_generic_columns_2d(obj, names)
-        elif how == "cov_eq_by_col":
-            return self.attach_cov_eq_by_col(obj)
+        if isinstance(how, tuple):
+            # due to how methods are attached, tuple could get through
+            # could maybe due some currying higher up, but not worth it now
+            method_name = "attach_{0}".format(how[0])
+            if names is not None:
+                raise ValueError("Please report this error to the developers.")
+            names = how[1:]
         else:
+            names = ()
+            method_name = "attach_{0}".format(how)
+
+        if not hasattr(self, method_name):
             return obj
 
-    def attach_columns(self, result):
+        return getattr(self, method_name)(obj, *names)
+
+    def attach_columns(self, result, *arg, **kwargs):
         return result
 
-    def attach_columns_eq(self, result):
+    def attach_columns_eq(self, result, *arg, **kwargs):
         return result
 
-    def attach_cov(self, result):
+    def attach_cov(self, result, *arg, **kwargs):
         return result
 
-    def attach_cov_eq(self, result):
+    def attach_cov_eq(self, result, *arg, **kwargs):
         return result
 
-    def attach_rows(self, result):
+    def attach_rows(self, result, *arg, **kwargs):
         return result
 
-    def attach_dates(self, result):
+    def attach_dates(self, result, *arg, **kwargs):
         return result
 
     def attach_generic_columns(self, result, *args, **kwargs):
@@ -473,7 +468,7 @@ class PandasData(ModelData):
         colnames = getattr(self, colnames, None)
         return DataFrame(result, index=rownames, columns=colnames)
 
-    def attach_columns(self, result):
+    def attach_columns(self, result, *arg, **kwargs):
         # this can either be a 1d array or a scalar
         # don't squeeze because it might be a 2d row array
         # if it needs a squeeze, the bug is elsewhere
@@ -482,22 +477,22 @@ class PandasData(ModelData):
         else:  # for e.g., confidence intervals
             return DataFrame(result, index=self.param_names)
 
-    def attach_columns_eq(self, result):
+    def attach_columns_eq(self, result, *arg, **kwargs):
         return DataFrame(result, index=self.xnames, columns=self.ynames)
 
-    def attach_cov(self, result):
+    def attach_cov(self, result, *arg, **kwargs):
         return DataFrame(result, index=self.param_names,
                          columns=self.param_names)
 
-    def attach_cov_eq(self, result):
+    def attach_cov_eq(self, result, *arg, **kwargs):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
 
-    def attach_cov_eq_by_col(self, result):
+    def attach_cov_eq_by_col(self, result, *arg, **kwargs):
         names = [yname + ":" + xname for yname in self.ynames for xname
                  in self.xnames]
         return DataFrame(result, index=names, columns=names)
 
-    def attach_rows(self, result):
+    def attach_rows(self, result, *arg, **kwargs):
         # assumes if len(row_labels) > len(result) it's bc it was truncated
         # at the front, for AR lags, for example
         if result.squeeze().ndim == 1:
@@ -506,7 +501,7 @@ class PandasData(ModelData):
             return DataFrame(result, index=self.row_labels[-len(result):],
                              columns=self.ynames)
 
-    def attach_dates(self, result):
+    def attach_dates(self, result, *arg, **kwargs):
         return TimeSeries(result, index=self.predict_dates)
 
 
