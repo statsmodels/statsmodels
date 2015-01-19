@@ -399,5 +399,16 @@ def test_gap_split():
     conf_h = dict(proportion=[1, 2], gap=1.0, horizontal=True)
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
+
+def test_default_arg_index():
+    # 2116
+    import pandas as pd
+    df = pd.DataFrame({'size' : ['small', 'large', 'large', 'small', 'large',
+                                 'small'],
+                       'length' : ['long', 'short', 'short', 'long', 'long',
+                                   'short']})
+    assert_raises(ValueError, mosaic, data=df, title='foobar')
+
+
 if __name__ == '__main__':
     run_module_suite()
