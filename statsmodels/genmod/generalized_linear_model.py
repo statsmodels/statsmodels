@@ -198,6 +198,8 @@ class GLM(base.LikelihoodModel):
                  missing='none', **kwargs):
         if exposure is not None:
             exposure = np.log(exposure)
+            import warnings
+            warnings.warn('exposure behavior likely will change in 0.8')
         if offset is not None:  # this should probably be done upstream
             offset = np.asarray(offset)
         super(GLM, self).__init__(endog, exog, missing=missing,
