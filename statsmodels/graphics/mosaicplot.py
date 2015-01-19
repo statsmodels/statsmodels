@@ -16,6 +16,7 @@ from itertools import product
 
 from numpy import iterable, r_, cumsum, array
 from statsmodels.graphics import utils
+from pandas import DataFrame
 
 __all__ = ["mosaic"]
 
@@ -602,6 +603,10 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> mosaic(data, ['pet', 'gender'])
     >>> pylab.show()
     """
+    if isinstance(data, DataFrame) and index is None:
+        raise ValueError("You must pass an index if data is a DataFrame."
+                         " See examples.")
+
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
     # normalize the data to a dict with tuple of strings as keys
