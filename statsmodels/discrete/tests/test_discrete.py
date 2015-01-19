@@ -8,6 +8,7 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 # pylint: disable-msg=E1101
+import pandas as pd
 from statsmodels.compat.python import range
 import os
 import numpy as np
@@ -1406,6 +1407,33 @@ def test_formula_missing_exposure():
     exposure = pd.Series(np.random.randn(5))
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
+
+
+def test_mnlogit_eqnames():
+    # see 2147
+    dta = sm.datasets.anes96.load_pandas().data
+    dta.replace({"PID" : {0: "Strong Democrat", 1: "Weak Democrat",
+                          2: "Independent-Democrat",
+                          3: "Independent-Independent",
+                          4: "Independent-Republican", 5: "Weak Republican",
+                          6: "Strong Republican"}},
+                inplace=True)
+
+    res = sm.formula.mnlogit("PID ~ logpopul + selfLR + age + educ +"
+                             "income", data=dta).fit(disp=0)
+
+    # use numpy unique sort be
+    cols = dta.PID.unique()
+    cols.sort()
+    reference = cols[0]
+    cols = pd.Index(["PID[{0}]".format(i) for i in cols[1:]])
+
+    assert_(res.model.reference_category == "PID[{0}]".format(reference))
+    assert_(res.params.columns.equals(cols))
+    assert_(res.pvalues.columns.equals(cols))
+    assert_(res.tvalues.columns.equals(cols))
+    assert_(res.bse.columns.equals(cols))
+
 
 if __name__ == "__main__":
     import nose
