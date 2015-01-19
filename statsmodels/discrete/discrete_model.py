@@ -505,19 +505,27 @@ class MultinomialModel(BinaryModel):
         if data_tools._is_using_ndarray_type(endog, None):
             endog_dummies, ynames = _numpy_to_dummies(endog)
             yname = 'y'
+            keys = sorted(ynames.keys())
+            ynames = ["{0}={1}".format(yname, int(ynames[i])) for i in keys]
         elif data_tools._is_using_pandas(endog, None):
+            # patsy goes through here
             endog_dummies, ynames, yname = _pandas_to_dummies(endog)
         else:
             endog = np.asarray(endog)
             endog_dummies, ynames = _numpy_to_dummies(endog)
+            keys = sorted(ynames.keys())
+            ynames = ["{0}={1}".format(yname, int(ynames[i])) for i in keys]
             yname = 'y'
 
-        if not isinstance(ynames, dict):
-            ynames = dict(zip(range(endog_dummies.shape[1]), ynames))
+        reference = ynames[0]
+        ynames_map = dict(zip(range(1, endog_dummies.shape[1]),
+                              ynames[1:]))
 
-        self._ynames_map = ynames
+        self.reference_category = reference
+        self._ynames_map = ynames_map
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
-        data.ynames = yname  # overwrite this to single endog name
+        data.ynames = ynames[1:] # drop the refernce category
+        data.yname = yname
         data.orig_endog = endog
         self.wendog = data.endog
 
@@ -2418,13 +2426,6 @@ class DiscreteResults(base.LikelihoodModelResults):
     def bic(self):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
-    def _get_endog_name(self, yname, yname_list):
-        if yname is None:
-            yname = self.model.endog_names
-        if yname_list is None:
-            yname_list = self.model.endog_names
-        return yname, yname_list
-
     def get_margeff(self, at='overall', method='dydx', atexog=None,
             dummy=False, count=False):
         """Get marginal effects of the fitted model.
@@ -2544,7 +2545,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         #boiler plate
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        yname, yname_list = self._get_endog_name(yname, yname_list)
+        yname = self.model.data.yname
+        yname_list = self.model.data.ynames
         # for top of table
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
@@ -2906,34 +2908,6 @@ class L1BinaryResults(BinaryResults):
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for multinomial data", "extra_attr" : ""}
-    def _maybe_convert_ynames_int(self, ynames):
-        # see if they're integers
-        try:
-            for i in ynames:
-                if ynames[i] % 1 == 0:
-                    ynames[i] = str(int(ynames[i]))
-        except TypeError:
-            pass
-        return ynames
-
-    def _get_endog_name(self, yname, yname_list, all=False):
-        """
-        If all is False, the first variable name is dropped
-        """
-        model = self.model
-        if yname is None:
-            yname = model.endog_names
-        if yname_list is None:
-            ynames = model._ynames_map
-            ynames = self._maybe_convert_ynames_int(ynames)
-            # use range below to ensure sortedness
-            ynames = [ynames[key] for key in range(int(model.J))]
-            ynames = ['='.join([yname, name]) for name in ynames]
-            if not all:
-                yname_list = ynames[1:] # assumes first variable is dropped
-            else:
-                yname_list = ynames
-        return yname, yname_list
 
     def pred_table(self):
         """
@@ -3111,7 +3085,11 @@ class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1BinaryResultsWrapper, L1BinaryResults)
 
 class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
-    _attrs = {"resid_misclassified" : "rows"}
+    _attrs = {"resid_misclassified" : "rows",
+              "params": "columns_eq",
+              "bse": "columns_eq",
+              "pvalues": "columns_eq",
+              "tvalues": "columns_eq", }
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
             _attrs)
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
