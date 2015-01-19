@@ -525,6 +525,7 @@ class MultinomialModel(BinaryModel):
         self._ynames_map = ynames_map
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
         data.ynames = ynames[1:] # drop the refernce category
+        data.ynames_all = ynames
         data.yname = yname
         data.orig_endog = endog
         self.wendog = data.endog
@@ -3090,7 +3091,8 @@ class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
               "bse": "columns_eq",
               "pvalues": "columns_eq",
               "tvalues": "columns_eq", }
-    _methods = {"cov_params" : "cov_eq_by_col"}
+    _methods = {"cov_params": "cov_eq_by_col",
+                "pred_table": ("generic_columns_2d", "ynames_all")}
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
                                    _attrs)
     _wrap_methods = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_methods,
