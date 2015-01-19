@@ -1426,21 +1426,26 @@ def test_mnlogit_eqnames():
     cols = dta.PID.unique()
     cols.sort()
     reference = cols[0]
-    cols = pd.Index(["PID[{0}]".format(i) for i in cols[1:]])
+    colnames = pd.Index(["PID[{0}]".format(i) for i in cols])
+    eqnames = colnames[1:]
 
     assert_(res.model.reference_category == "PID[{0}]".format(reference))
-    assert_(res.params.columns.equals(cols))
-    assert_(res.pvalues.columns.equals(cols))
-    assert_(res.tvalues.columns.equals(cols))
-    assert_(res.bse.columns.equals(cols))
+    assert_(res.params.columns.equals(eqnames))
+    assert_(res.pvalues.columns.equals(eqnames))
+    assert_(res.tvalues.columns.equals(eqnames))
+    assert_(res.bse.columns.equals(eqnames))
 
     cov_params = res.cov_params()
 
     # covariance varies over column with equation first
-    names = pd.Index(["{0}:{1}".format(eq, xname) for eq in cols for xname in
-                     res.params.index])
+    names = pd.Index(["{0}:{1}".format(eq, xname) for eq in eqnames
+                      for xname in res.params.index])
     assert_(cov_params.index.equals(names))
     assert_(cov_params.columns.equals(names))
+
+    pred_table = res.pred_table()
+    assert_(pred_table.index.equals(colnames))
+    assert_(pred_table.columns.equals(colnames))
 
 
 if __name__ == "__main__":
