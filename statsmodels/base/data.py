@@ -381,6 +381,8 @@ class ModelData(object):
             return self.attach_generic_columns(obj, names)
         elif how == 'generic_columns_2d':
             return self.attach_generic_columns_2d(obj, names)
+        elif how == "cov_eq_by_col":
+            return self.attach_cov_eq_by_col(obj)
         else:
             return obj
 
@@ -489,6 +491,11 @@ class PandasData(ModelData):
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
+
+    def attach_cov_eq_by_col(self, result):
+        names = [yname + ":" + xname for yname in self.ynames for xname
+                 in self.xnames]
+        return DataFrame(result, index=names, columns=names)
 
     def attach_rows(self, result):
         # assumes if len(row_labels) > len(result) it's bc it was truncated

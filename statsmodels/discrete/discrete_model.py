@@ -3090,8 +3090,11 @@ class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
               "bse": "columns_eq",
               "pvalues": "columns_eq",
               "tvalues": "columns_eq", }
+    _methods = {"cov_params" : "cov_eq_by_col"}
     _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
-            _attrs)
+                                   _attrs)
+    _wrap_methods = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_methods,
+                                     _methods)
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
