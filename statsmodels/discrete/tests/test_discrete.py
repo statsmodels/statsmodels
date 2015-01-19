@@ -1167,7 +1167,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
         assert_equal(self.res1.model.K, self.res2.K)
 
     def test_endog_names(self):
-        assert_equal(self.res1._get_endog_name(None,None)[1],
+        assert_equal(self.res1.model.data.ynames,
                      ['y=1', 'y=2', 'y=3', 'y=4', 'y=5', 'y=6'])
 
     def test_pred_table(self):
@@ -1433,6 +1433,14 @@ def test_mnlogit_eqnames():
     assert_(res.pvalues.columns.equals(cols))
     assert_(res.tvalues.columns.equals(cols))
     assert_(res.bse.columns.equals(cols))
+
+    cov_params = res.cov_params()
+
+    # covariance varies over column with equation first
+    names = pd.Index(["{0}:{1}".format(eq, xname) for eq in cols for xname in
+                     res.params.index])
+    assert_(cov_params.index.equals(names))
+    assert_(cov_params.columns.equals(names))
 
 
 if __name__ == "__main__":
