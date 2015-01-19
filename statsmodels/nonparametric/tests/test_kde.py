@@ -1,9 +1,11 @@
 import os
 import numpy.testing as npt
 from nose import SkipTest
+from nose.tools import raises
 import numpy as np
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
+import statsmodels.sandbox.nonparametric.kernels as kernels
 from scipy import stats
 
 # get results from Stata
@@ -16,11 +18,45 @@ KDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 rfname = os.path.join(curdir,'results','results_kde_univ_weights.csv')
 KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 
+# get results from R
+curdir = os.path.dirname(os.path.abspath(__file__))
+rfname = os.path.join(curdir,'results','results_kcde.csv')
+#print rfname
+KCDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+
+
 # setup test data
 
 np.random.seed(12345)
 Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+
+class TestKDEExceptions(object):
+
+    @classmethod
+    def setupClass(cls):
+        cls.kde = KDE(Xi)
+        cls.weights_200 = np.linspace(1, 100, 200)
+        cls.weights_100 = np.linspace(1, 100, 100)
+
+    @raises(ValueError)
+    def test_check_is_fit_exception(self):
+        self.kde.evaluate(0)
+
+    @raises(NotImplementedError)
+    def test_non_weighted_fft_exception(self):
+        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_200, fft=True,
+                    bw="silverman")
+
+    @raises(ValueError)
+    def test_wrong_weight_length_exception(self):
+        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_100, fft=False,
+                    bw="silverman")
+
+    @raises(NotImplementedError)
+    def test_non_gaussian_fft_exception(self):
+        self.kde.fit(kernel="epa", gridsize=50, fft=True,
+                    bw="silverman")
 
 class CheckKDE(object):
 
@@ -62,6 +98,28 @@ class TestKDEGauss(CheckKDE):
         kde_vals[~mask_valid] = 0
         npt.assert_almost_equal(kde_vals, self.res_density,
                                 self.decimal_density)
+
+    # The following tests are regression tests
+    # Values have been checked to be very close to R 'ks' package (Dec 2013)
+    def test_support_gridded(self):
+        kde = self.res1
+        support = KCDEResults['gau_support']
+        npt.assert_allclose(support, kde.support)
+
+    def test_cdf_gridded(self):
+        kde = self.res1
+        cdf = KCDEResults['gau_cdf']
+        npt.assert_allclose(cdf, kde.cdf)
+
+    def test_sf_gridded(self):
+        kde = self.res1
+        sf = KCDEResults['gau_sf']
+        npt.assert_allclose(sf, kde.sf)
+
+    def test_icdf_gridded(self):
+        kde = self.res1
+        icdf = KCDEResults['gau_icdf']
+        npt.assert_allclose(icdf, kde.icdf)
 
 
 class TestKDEEpanechnikov(CheckKDE):
@@ -251,7 +309,7 @@ class T_estKDEWPar(CheckKDEWeights):
     res_kernel_name = "x_par_wd"
 
 
-class test_kde_refit():
+class TestKdeRefit():
     np.random.seed(12345)
     data1 = np.random.randn(100) * 100
     pdf = KDE(data1)
@@ -261,9 +319,18 @@ class test_kde_refit():
     pdf2 = KDE(data2)
     pdf2.fit()
 
+
     for attr in ['icdf', 'cdf', 'sf']:
         npt.assert_(not np.allclose(getattr(pdf, attr)[:10],
                                     getattr(pdf2, attr)[:10]))
+
+class TestNormConstant():
+    
+    def test_norm_constant_calculation(self):
+        custom_gauss = kernels.CustomKernel(lambda x: np.exp(-x**2/2.0))
+        gauss_true_const = 0.3989422804014327
+        npt.assert_almost_equal(gauss_true_const, custom_gauss.norm_const)
+
 
 if __name__ == "__main__":
     import nose

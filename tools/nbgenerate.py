@@ -58,6 +58,8 @@ class NotebookRunner:
     """
     def __init__(self, notebook_dir, extra_args=None, profile=None,
                  timeout=90):
+        print notebook_dir
+        print os.path.abspath(notebook_dir)
         self.notebook_dir = os.path.abspath(notebook_dir)
         self.profile = profile
         self.timeout = timeout
@@ -247,7 +249,7 @@ if __name__ == '__main__':
     parser = _get_parser()
     arg_ns, other_args = parser.parse_known_args()
 
-    os.chdir(arg_ns.path) # so we execute in notebook dir
+    os.chdir(arg_ns.path) # so we execute in notebook dir  
     notebook_runner = NotebookRunner(arg_ns.path, other_args, arg_ns.profile,
                                      arg_ns.timeout)
     try:
