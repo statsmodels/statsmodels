@@ -18,7 +18,7 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import lmap, lzip, range, lfilter
 import numpy as np
 from scipy.special import gammaln
 from scipy import stats, special, optimize  # opt just for nbin
@@ -101,11 +101,23 @@ _discrete_results_docs = """
         McFadden's pseudo-R-squared. `1 - (llf / llnull)`
 %(extra_attr)s"""
 
+
 _l1_results_attr = """    nnz_params : Integer
         The number of nonzero parameters in the model.  Train with
         trim_params == True or else numerical error will distort this.
     trimmed : Boolean array
         trimmed[i] == True if the ith parameter was trimmed from the model."""
+
+
+_mnlogit_extra_params = base._missing_param_doc + """
+    reference : str or int
+        The reference level for the endogenous variable. The default is to
+        chose the first category in lexicographical order. If endog
+        is a non-pandas array-like object and an integer is given, it is
+        assumed to be the index for the lexicographical ordered index
+        of the elements of endog. E.g., for [1, 2, 3] a reference of 2 is
+        3. For ['a', 'c', 'b'], a reference of 2 is 'c'.
+"""
 
 
 # helper for MNLogit (will be generally useful later)
@@ -138,6 +150,44 @@ def _pandas_to_dummies(endog):
 
     return endog_dummies, ynames, yname
 
+
+def _filter_ynames_for_name(ynames, reference):
+    import re
+    # could be patsy so use [] category brackets
+    regex = ".+\[{0}\]$".format(reference)
+    ref = lfilter(lambda x : re.search(regex, x), ynames)
+    if not len(ref):
+        raise ValueError("Reference level {0} not found".format(reference))
+    elif len(ref) > 1:
+        raise ValueError("Ambiguous reference found. {0}".format(ref))
+    else:
+        ref = ref[0]
+    return ref
+
+
+def _get_index_from_str(endog, ynames, reference):
+    # endog is pandas, reference is a str
+    if endog.ndim == 2 and endog.shape[1] > 1:
+        # went through patsy or got a 2d endog
+        try:
+            return endog.columns.get_loc(reference)
+        except KeyError:  # maybe patsy-fied categories
+            return _filter_ynames_for_name(ynames, reference)
+
+    else:  # got a series or 1d DataFrame
+        try:  # might be a name from endog_dummies
+            return ynames.index(reference)
+        except:
+            return _filter_ynames_for_name(ynames, reference)
+
+
+def _get_index_from_list(ynames, reference):
+    try:
+        return ynames.index(reference)
+    except:
+        raise ValueError("Reference level {0} "
+                         "not found in {1}.".format(reference,
+                                                    ynames))
 
 #### Private Model Classes ####
 
@@ -502,29 +552,60 @@ class BinaryModel(DiscreteModel):
 class MultinomialModel(BinaryModel):
 
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
+        reference = kwargs.pop('reference', 0)
+
         if data_tools._is_using_ndarray_type(endog, None):
             endog_dummies, ynames = _numpy_to_dummies(endog)
-            yname = 'y'
             keys = sorted(ynames.keys())
+            # sort the values
+            ynames = [ynames[i] for i in keys]
+            # if reference is an integer and
+            if not isinstance(reference, int):
+                reference_idx = _get_index_from_list(ynames, reference)
+            else:
+                reference_idx = reference
+                reference = ynames[reference]
             ynames = ["{0}={1}".format(yname, int(ynames[i])) for i in keys]
+            yname = 'y'
         elif data_tools._is_using_pandas(endog, None):
             # patsy goes through here
             endog_dummies, ynames, yname = _pandas_to_dummies(endog)
+            if not isinstance(reference, int):
+                reference = _get_index_from_str(endog, ynames, reference)
+                reference_idx = ynames.index(reference)
+            else:
+                reference_idx = reference
+                reference = ynames[reference]
         else:
             endog = np.asarray(endog)
             endog_dummies, ynames = _numpy_to_dummies(endog)
             keys = sorted(ynames.keys())
+            # sort the values
+            ynames = [ynames[i] for i in keys]
+            if not isinstance(reference, int):
+                reference_idx = _get_index_from_list(ynames, reference)
+            else:
+                reference_idx = reference
             ynames = ["{0}={1}".format(yname, int(ynames[i])) for i in keys]
             yname = 'y'
 
-        reference = ynames[0]
+        if reference_idx == 0:
+            self._use_cols_idx = slice(1, None)
+        elif reference_idx == endog_dummies.shape[1]:
+            self._use_cols_idx = slice(0, -1)
+        else:
+            # TODO: roll axis to avoid advanced indexing copy?
+            self._use_cols_idx = np.ones(endog_dummies.shape[1], dtype=bool)
+            self._use_cols_idx[reference_idx] = False
+
         ynames_map = dict(zip(range(1, endog_dummies.shape[1]),
-                              ynames[1:]))
+                              np.array(ynames)[self._use_cols_idx].tolist()))
 
         self.reference_category = reference
         self._ynames_map = ynames_map
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
-        data.ynames = ynames[1:] # drop the refernce category
+        # drop reference category
+        data.ynames = np.array(ynames)[self._use_cols_idx].tolist()
         data.ynames_all = ynames
         data.yname = yname
         data.orig_endog = endog
@@ -1610,6 +1691,7 @@ class Probit(BinaryModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+
 class MNLogit(MultinomialModel):
     __doc__ = """
     Multinomial logit model
@@ -1651,7 +1733,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """ % {'extra_params' : base._missing_param_doc}
+    """ % {'extra_params' : _mnlogit_extra_params}
 
     def pdf(self, eXB):
         """
@@ -1678,7 +1760,9 @@ class MNLogit(MultinomialModel):
         In the multinomial logit model.
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
-        eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
+        XB = np.zeros((X.shape[0], X.shape[1] + 1))
+        XB[:, self._use_cols_idx] = X
+        eXB = np.exp(XB)
         return eXB/eXB.sum(1)[:,None]
 
     def loglike(self, params):
@@ -1763,8 +1847,9 @@ class MNLogit(MultinomialModel):
         as a flattened array to work with the solvers.
         """
         params = params.reshape(self.K, -1, order='F')
-        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
-                                                  params))[:,1:]
+        firstterm = (self.wendog -
+                     self.cdf(np.dot(self.exog, params)))[:,
+                                                          self._use_cols_idx]
         #NOTE: might need to switch terms if params is reshaped
         return np.dot(firstterm.T, self.exog).flatten()
 
@@ -1779,7 +1864,7 @@ class MNLogit(MultinomialModel):
         params = params.reshape(self.K, -1, order='F')
         cdf_dot_exog_params = self.cdf(np.dot(self.exog, params))
         loglike_value = np.sum(self.wendog * np.log(cdf_dot_exog_params))
-        firstterm = self.wendog[:, 1:] - cdf_dot_exog_params[:, 1:]
+        firstterm = (self.wendog - cdf_dot_exog_params)[:, self._use_cols_idx]
         score_array = np.dot(firstterm.T, self.exog).flatten()
         return loglike_value, score_array
 
@@ -1809,8 +1894,9 @@ class MNLogit(MultinomialModel):
         the flatteded array of derivatives in columns.
         """
         params = params.reshape(self.K, -1, order='F')
-        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
-                                                  params))[:,1:]
+        firstterm = (self.wendog -
+                     self.cdf(np.dot(self.exog, params)))[:,
+                                                          self._use_cols_idx]
         #NOTE: might need to switch terms if params is reshaped
         return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
 
@@ -1848,20 +1934,20 @@ class MNLogit(MultinomialModel):
         """
         params = params.reshape(self.K, -1, order='F')
         X = self.exog
-        pr = self.cdf(np.dot(X,params))
+        pr = self.cdf(np.dot(X, params))
         partials = []
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
-        for i in range(J):
-            for j in range(J): # this loop assumes we drop the first col.
+        for i in np.where(self._use_cols_idx)[0]:
+            for j in np.where(self._use_cols_idx)[0]:
                 if i == j:
                     partials.append(\
-                        -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
+                        -np.dot(((pr[:,i]*(1-pr[:,j]))[:,None]*X).T,X))
                 else:
-                    partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
+                    partials.append(-np.dot(((pr[:,i]*-pr[:,j])[:,None]*X).T,X))
         H = np.array(partials)
         # the developer's notes on multinomial should clear this math up
-        H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
+        H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K, J*K)
         return H
 
 

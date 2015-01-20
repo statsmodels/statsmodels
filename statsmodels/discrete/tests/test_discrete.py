@@ -1448,6 +1448,78 @@ def test_mnlogit_eqnames():
     assert_(pred_table.columns.equals(colnames))
 
 
+def test_mnlogit_reference():
+    dta = sm.datasets.anes96.load_pandas().data
+    dta["constant"] = 1
+    dta.replace({"PID" : {0: "Strong Democrat", 1: "Weak Democrat",
+                          2: "Independent-Democrat",
+                          3: "Independent-Independent",
+                          4: "Independent-Republican", 5: "Weak Republican",
+                          6: "Strong Republican"}},
+                inplace=True)
+
+    mod = sm.formula.mnlogit("PID ~ logpopul + selfLR + age + educ +"
+                             "income", data=dta,
+                             reference="Independent-Republican")
+
+    params = np.array([.00280605, -.88710314, -.01421649, -.0187852,
+                       -.0366244, 5.3629299, -.01441, -.70532128, -.00616986,
+                       -.20698037, -.02692322, 3.9482596, .0915567,
+                       -1.2787718, .00868135, -.19982796, -.08449838,
+                       7.6138431, -.04932399, .79130835, -.0007513,
+                       .12209775, .02439571, -4.4919078, .08002073,
+                       -.98105743, -.01626365, -.11733651, -.07930182,
+                       7.2404414, -.0017279, .06818986, -.00922272,
+                       .01711089, -.00353996, .55336484])
+    params = params.reshape(6, -1, order="F")
+    # move intercept to beginning
+    params = np.vstack((params[[-1]], params[:-1]))
+    res = mod.fit(disp=0)
+
+    assert_(res.model.reference_category == "PID[Independent-Republican]")
+    assert_almost_equal(res.llf, -1461.922747312141, 6)
+    assert_almost_equal(res.params.values, params, 6)
+
+    mod = sm.formula.mnlogit("PID ~ logpopul + selfLR + age + educ +"
+                             "income", data=dta,
+                             reference=2)
+    res = mod.fit(disp=0)
+    assert_(res.model.reference_category == "PID[Independent-Republican]")
+    assert_almost_equal(res.llf, -1461.922747312141, 6)
+    assert_almost_equal(res.params.values, params, 6)
+
+    mod = sm.MNLogit(dta["PID"], dta[["constant", "logpopul", "selfLR",
+                                      "age", "educ",
+                                      "income"]], data=dta, reference=2)
+    res = mod.fit(disp=0)
+    assert_(res.model.reference_category == "Independent-Republican")
+    assert_almost_equal(res.llf, -1461.922747312141, 6)
+
+    mod = sm.MNLogit(dta["PID"], dta[["constant", "logpopul", "selfLR",
+                                      "age", "educ",
+                                      "income"]], data=dta,
+                     reference="Independent-Republican")
+    res = mod.fit(disp=0)
+    assert_(res.model.reference_category == "Independent-Republican")
+    assert_almost_equal(res.llf, -1461.922747312141, 6)
+
+    mod = sm.MNLogit(dta["PID"].values, dta[["constant", "logpopul", "selfLR",
+                                      "age", "educ",
+                                      "income"]].values, data=dta,
+                     reference="Independent-Republican")
+    res = mod.fit(disp=0)
+    assert_(res.model.reference_category == "Independent-Republican")
+    assert_almost_equal(res.llf, -1461.922747312141, 6)
+
+    mod = sm.MNLogit(dta["PID"].values, dta[["constant", "logpopul", "selfLR",
+                                      "age", "educ",
+                                      "income"]].values, data=dta,
+                     reference=2)
+    res = mod.fit(disp=0)
+    assert_(res.model.reference_category == "Independent-Republican")
+    assert_almost_equal(res.llf, -1461.922747312141, 6)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
