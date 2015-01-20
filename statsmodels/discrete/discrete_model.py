@@ -112,11 +112,10 @@ _l1_results_attr = """    nnz_params : Integer
 _mnlogit_extra_params = base._missing_param_doc + """
     reference : str or int
         The reference level for the endogenous variable. The default is to
-        chose the first category in lexicographical order. If endog
-        is a non-pandas array-like object and an integer is given, it is
-        assumed to be the index for the lexicographical ordered index
-        of the elements of endog. E.g., for [1, 2, 3] a reference of 2 is
-        3. For ['a', 'c', 'b'], a reference of 2 is 'c'.
+        chose the first category in lexicographical order. If an integer is
+        given, it is assumed to be the index for the lexicographical
+        ordered index of the elements of endog. E.g., for [1, 2, 3] a
+        reference of 2 is 3. For ['a', 'c', 'b'], a reference of 2 is 'c'.
 """
 
 
@@ -188,6 +187,14 @@ def _get_index_from_list(ynames, reference):
         raise ValueError("Reference level {0} "
                          "not found in {1}.".format(reference,
                                                     ynames))
+
+
+def _maybe_int(x):
+    try:
+        return int(x)
+    except:
+        return x
+
 
 #### Private Model Classes ####
 
@@ -558,21 +565,25 @@ class MultinomialModel(BinaryModel):
             endog_dummies, ynames = _numpy_to_dummies(endog)
             keys = sorted(ynames.keys())
             # sort the values
-            ynames = [ynames[i] for i in keys]
+            ynames = [_maybe_int(ynames[i]) for i in keys]
             # if reference is an integer and
             if not isinstance(reference, int):
                 reference_idx = _get_index_from_list(ynames, reference)
             else:
                 reference_idx = reference
                 reference = ynames[reference]
-            ynames = ["{0}={1}".format(yname, int(ynames[i])) for i in keys]
             yname = 'y'
+            ynames = ["{0}={1}".format(yname, ynames[i]) for i in keys]
         elif data_tools._is_using_pandas(endog, None):
             # patsy goes through here
             endog_dummies, ynames, yname = _pandas_to_dummies(endog)
             if not isinstance(reference, int):
-                reference = _get_index_from_str(endog, ynames, reference)
-                reference_idx = ynames.index(reference)
+                try:
+                    reference_idx = ynames.index(reference)
+                except:
+                    reference = _get_index_from_str(endog, ynames,
+                                                    reference)
+                    reference_idx = ynames.index(reference)
             else:
                 reference_idx = reference
                 reference = ynames[reference]
@@ -581,13 +592,13 @@ class MultinomialModel(BinaryModel):
             endog_dummies, ynames = _numpy_to_dummies(endog)
             keys = sorted(ynames.keys())
             # sort the values
-            ynames = [ynames[i] for i in keys]
+            ynames = [_maybe_int(ynames[i]) for i in keys]
             if not isinstance(reference, int):
                 reference_idx = _get_index_from_list(ynames, reference)
             else:
                 reference_idx = reference
-            ynames = ["{0}={1}".format(yname, int(ynames[i])) for i in keys]
             yname = 'y'
+            ynames = ["{0}={1}".format(yname, ynames[i]) for i in keys]
 
         if reference_idx == 0:
             self._use_cols_idx = slice(1, None)
@@ -1938,8 +1949,17 @@ class MNLogit(MultinomialModel):
         partials = []
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
-        for i in np.where(self._use_cols_idx)[0]:
-            for j in np.where(self._use_cols_idx)[0]:
+        idx = self._use_cols_idx
+        if isinstance(idx, slice):
+            if idx.start:
+                idx = range(idx.start, J + 1)
+            else:
+                idx = range(0, J)
+        else:
+            idx = np.where(self._use_cols_idx)[0]
+
+        for i in idx:
+            for j in idx:
                 if i == j:
                     partials.append(\
                         -np.dot(((pr[:,i]*(1-pr[:,j]))[:,None]*X).T,X))
