@@ -1012,7 +1012,7 @@ class Equivalence(CovStruct):
         if pairs is not None:
             self.pairs = pairs
         if labels is not None:
-            self.labels = labels
+            self.labels = np.asarray(labels)
 
         self.as_cor = as_cor
 
