@@ -1133,11 +1133,16 @@ class TestGEE(object):
             model2 = sm.GEE(endog, exog, groups, cov_struct=ec)
             result2 = model2.fit()
 
-            # Use large atol/rtol since there are some small differences in the results
-            # due to degree of freedom differences.
-            assert_allclose(result1.params, result2.params, atol=1e-3, rtol=1e-3)
-            assert_allclose(result1.bse, result2.bse, atol=1e-3, rtol=1e-3)
-            assert_allclose(result1.scale, result2.scale, atol=1e-3, rtol=1e-3)
+            # Use large atol/rtol for the correlation case since there
+            # are some small differences in the results due to degree
+            # of freedom differences.
+            if return_cov == True:
+                atol, rtol = 1e-6, 1e-6
+            else:
+                atol, rtol = 1e-3, 1e-3
+            assert_allclose(result1.params, result2.params, atol=atol, rtol=rtol)
+            assert_allclose(result1.bse, result2.bse, atol=atol, rtol=rtol)
+            assert_allclose(result1.scale, result2.scale, atol=atol, rtol=rtol)
 
     def test_equivalence_from_pairs(self):
 
