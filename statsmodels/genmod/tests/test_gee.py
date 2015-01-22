@@ -186,6 +186,50 @@ class TestGEE(object):
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
         assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
 
+    def test_weighted(self):
+
+        # Simple check where the answer can be computed by hand.
+        exog = np.ones(20)
+        weights = np.ones(20)
+        weights[0:10] = 2
+        endog = np.zeros(20)
+        endog[0:10] += 1
+        groups = np.kron(np.arange(10), np.r_[1, 1])
+        model = GEE(endog, exog, groups, weights=weights)
+        result = model.fit()
+        assert_allclose(result.params, np.r_[2/3.])
+
+        # Comparison against stata using groups with different sizes.
+        weights = np.ones(20)
+        weights[10:] = 2
+        endog = np.r_[1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 6, 5, 6, 7, 6,
+                      7, 8, 7, 8]
+        exog1 = np.r_[1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4,
+                      3, 3, 3, 3]
+        groups = np.r_[1, 1, 2, 2, 2, 2, 4, 4, 5, 5, 6, 6, 6, 6,
+                       8, 8, 9, 9, 10, 10]
+        exog = np.column_stack((np.ones(20), exog1))
+
+        # Comparison using independence model
+        model = GEE(endog, exog, groups, weights=weights,
+                    cov_struct=sm.cov_struct.Independence())
+        g = np.mean([2, 4, 2, 2, 4, 2, 2, 2])
+        fac = 20 / float(20 - g)
+        result = model.fit(ddof_scale=0, scaling_factor=fac)
+
+        assert_allclose(result.params, np.r_[1.247573, 1.436893], atol=1e-6)
+        assert_allclose(result.scale, 1.808576)
+
+        # Stata multiples robust SE by sqrt(N / (N - g)), where N is
+        # the total sample size and g is the average group size.
+        assert_allclose(result.bse, np.r_[0.895366, 0.3425498], atol=1e-5)
+
+        # Comparison using exchangeable model
+        # Smoke test for now
+        model = GEE(endog, exog, groups, weights=weights,
+                    cov_struct=sm.cov_struct.Exchangeable())
+        result = model.fit(ddof_scale=0)
+
 
     # This is in the release announcement for version 0.6.
     def test_poisson_epil(self):
@@ -1325,6 +1369,7 @@ def test_missing():
                   family=sm.families.Binomial())
 
     df = df.dropna()
+    #df.loc[:, 'constant'] = 1
     df['constant'] = 1
 
     mod2 = GEE(df.status, df[['constant', 'fake']], groups=df.grps,
