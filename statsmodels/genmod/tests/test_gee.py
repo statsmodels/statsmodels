@@ -1127,12 +1127,14 @@ class TestGEE(object):
         model1 = sm.GEE(endog, exog, groups, cov_struct=ex)
         result1 = model1.fit()
 
-        for as_cor in False, True:
+        for return_cov in False, True:
 
-            ec = sm.cov_struct.Equivalence(pairs, as_cor=as_cor)
+            ec = sm.cov_struct.Equivalence(pairs, return_cov=return_cov)
             model2 = sm.GEE(endog, exog, groups, cov_struct=ec)
             result2 = model2.fit()
 
+            # Use large atol/rtol since there are some small differences in the results
+            # due to degree of freedom differences.
             assert_allclose(result1.params, result2.params, atol=1e-3, rtol=1e-3)
             assert_allclose(result1.bse, result2.bse, atol=1e-3, rtol=1e-3)
             assert_allclose(result1.scale, result2.scale, atol=1e-3, rtol=1e-3)
@@ -1150,7 +1152,7 @@ class TestGEE(object):
         labels = np.kron(np.arange(5), np.ones(10)).astype(np.int32)
         labels = labels[np.random.permutation(len(labels))]
 
-        eq = sm.cov_struct.Equivalence(labels=labels, as_cor=False)
+        eq = sm.cov_struct.Equivalence(labels=labels, return_cov=True)
         model1 = sm.GEE(endog, exog, groups, cov_struct=eq)
 
         # Call this directly instead of letting init do it to get the
@@ -1172,6 +1174,9 @@ class TestGEE(object):
                     ky = (a, b)
                     assert(ky not in ixs)
                     ixs.add(ky)
+
+        # Smoke test
+        result1 = model1.fit()
 
 
 class CheckConsistency(object):

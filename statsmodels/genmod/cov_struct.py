@@ -961,9 +961,10 @@ class Equivalence(CovStruct):
       equivalence classes are defined: one for the diagonal elements
       (corresponding to variances) and one for the off-diagonal
       elements (corresponding to covariances).
-    as_cor : boolean
-      If True, returns an estimate of the correlation matrix, otherwise
-      returns an estimate of the covariance matrix.
+    return_cov : boolean
+      If True, `covariance_matrix` returns an estimate of the
+      covariance matrix, otherwise returns an estimate of the
+      correlation matrix.
 
     Notes
     -----
@@ -996,7 +997,7 @@ class Equivalence(CovStruct):
     >> pairs[1][2] = 3 + np.tril_indices(3, -1)
     """
 
-    def __init__(self, pairs=None, labels=None, as_cor=True):
+    def __init__(self, pairs=None, labels=None, return_cov=False):
 
         super(Equivalence, self).__init__()
 
@@ -1013,7 +1014,7 @@ class Equivalence(CovStruct):
         if labels is not None:
             self.labels = np.asarray(labels)
 
-        self.as_cor = as_cor
+        self.return_cov = return_cov
 
     def _make_pairs(self, i, j):
         """
@@ -1090,6 +1091,8 @@ class Equivalence(CovStruct):
                         i2 = i2[jj]
                         pairs[g_lb][clabel] = (i1, i2)
 
+        self.pairs = pairs
+
 
     def initialize(self, model):
 
@@ -1138,24 +1141,24 @@ class Equivalence(CovStruct):
             stdev = np.sqrt(varfunc(expval))
             resid = (endog[k] - expval) / stdev
             for lb in self.pairs[gp].keys():
-                if self.as_cor and lb in self._var_classes:
+                if (not self.return_cov) and lb in self._var_classes:
                     continue
                 jj = self.pairs[gp][lb]
                 dep_params[lb][0] += np.sum(resid[jj[0]] * resid[jj[1]])
-                if self.as_cor:
+                if not self.return_cov:
                     dep_params[lb][1] += np.sum(resid[jj[0]]**2)
                     dep_params[lb][2] += np.sum(resid[jj[1]]**2)
                 n_pairs[lb] += len(jj[0])
 
-        if self.as_cor:
+        if self.return_cov:
+            for lb in dep_params.keys():
+                dep_params[lb] = dep_params[lb][0] / (n_pairs[lb] - dim)
+        else:
             for lb in dep_params.keys():
                 den = np.sqrt(dep_params[lb][1] * dep_params[lb][2])
                 dep_params[lb] = dep_params[lb][0] / den
             for lb in self._var_classes:
                 dep_params[lb] = 1.
-        else:
-            for lb in dep_params.keys():
-                dep_params[lb] = dep_params[lb][0] / (n_pairs[lb] - dim)
 
         self.dep_params = dep_params
         self.n_pairs = n_pairs
@@ -1172,7 +1175,7 @@ class Equivalence(CovStruct):
         cmat = cmat + cmat.T
         np.fill_diagonal(cmat, cmat.diagonal() / 2)
 
-        return cmat, self.as_cor
+        return cmat, not self.return_cov
 
     update.__doc__ = CovStruct.update.__doc__
     covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
