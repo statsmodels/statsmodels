@@ -1176,8 +1176,9 @@ class TestGEE(object):
                     ixs.add(ky)
 
         # Smoke test
-        result1 = model1.fit()
-
+        eq = sm.cov_struct.Equivalence(labels=labels, return_cov=True)
+        model1 = sm.GEE(endog, exog, groups, cov_struct=eq)
+        result1 = model1.fit(maxiter=2)
 
 class CheckConsistency(object):
 
