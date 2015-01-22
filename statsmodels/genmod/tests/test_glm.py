@@ -804,6 +804,94 @@ def test_plots():
     fig = result.plot_ceres_residuals(1)
     plt.close(fig)
 
+def gen_endog(lin_pred, family_name):
+
+    if family_name == "binomial":
+        probs = 1 / (1 + np.exp(-lin_pred))
+        endog = 1*(np.random.uniform(size=len(lin_pred)) < probs)
+    elif family_name == "poisson":
+        lam = np.exp(lin_pred)
+        endog = np.random.poisson(lam)
+    elif family_name == "gamma":
+        lam = np.exp(lin_pred / 4)
+        endog = np.random.gamma(2, lam)
+    elif family_name == "gaussian":
+        endog = lin_pred + np.random.normal(size=len(lin_pred))
+    elif family_name == "negbinom":
+        from scipy.stats.distributions import nbinom
+        lam = np.exp(lin_pred)
+        endog = nbinom.rvs(lam, 0.5)
+    elif family_name == "inverse_gaussian":
+        from scipy.stats.distributions import invgauss
+        lin_pred = 2 + (lin_pred - 2) / 4.
+        lam = 1 / np.sqrt(lin_pred)
+        endog = invgauss.rvs(lam)
+    else:
+        raise ValueError
+
+    return endog
+
+
+def test_summary():
+    """
+    Smoke test for summary.
+    """
+
+    np.random.seed(4323)
+
+    n = 100
+    exog = np.random.normal(size=(n, 2))
+    exog[:, 0] = 1
+    endog = np.random.normal(size=n)
+
+    for method in "irls", "cg":
+        fa = sm.families.Gaussian()
+        model = sm.GLM(endog, exog, family=fa)
+        rslt = model.fit(method=method)
+        s = rslt.summary()
+
+def test_gradient_irls():
+    """
+    Compare the results when using gradient optimization and IRLS.
+    """
+
+    np.random.seed(87342)
+
+    families = [sm.families.Binomial(), sm.families.Poisson(),
+                sm.families.Gamma(), sm.families.NegativeBinomial(),
+                sm.families.Gaussian(), sm.families.InverseGaussian()]
+    fnames = ["binomial", "poisson", "gamma", "negbinom", "gaussian",
+              "inverse_gaussian"]
+
+    n = 100
+    p = 3
+    exog = np.random.normal(size=(n, p))
+    exog[:, 0] = 1
+    lin_pred = 1 + exog.sum(1)
+
+    for family, family_name in zip(families, fnames):
+
+        endog = gen_endog(lin_pred, family_name)
+
+        mod_irls = sm.GLM(endog, exog, family=family)
+        rslt_irls = mod_irls.fit(method="IRLS")
+
+        mod_gradient = sm.GLM(endog, exog, family=family)
+        mod_irls.score(rslt_irls.params)
+        rslt_gradient = mod_gradient.fit(start_params=rslt_irls.params, method="newton")
+
+        assert_allclose(rslt_gradient.params,
+                        rslt_irls.params, rtol=1e-6, atol=1e-6,
+                        err_msg=family_name + " params")
+
+        gradient_bse = rslt_gradient.bse
+        if family_name == "negbinom":
+            ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
+            gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+        assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6,
+                        atol=1e-6, err_msg=family_name + " SE")
+
+
 
 if __name__=="__main__":
     #run_module_suite()
