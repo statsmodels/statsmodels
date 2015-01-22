@@ -983,9 +983,6 @@ class Equivalence(CovStruct):
     level of the `pairs` dictionary to force the corresponding
     covariance to be zero.
 
-    The `pairs` dictionary is modified by the function so the user
-    should pass a copy if it is needed elsewhere.
-
     Examples
     --------
     The following sets up the `pairs` dictionary for a model with two
@@ -1010,7 +1007,9 @@ class Equivalence(CovStruct):
             raise ValueError("Equivalence cov_struct accepts only one of `pairs` and `labels`")
 
         if pairs is not None:
-            self.pairs = pairs
+            import copy
+            self.pairs = copy.deepcopy(pairs)
+
         if labels is not None:
             self.labels = np.asarray(labels)
 
@@ -1090,8 +1089,6 @@ class Equivalence(CovStruct):
                         i1 = i1[jj]
                         i2 = i2[jj]
                         pairs[g_lb][clabel] = (i1, i2)
-
-        self.pairs = pairs
 
 
     def initialize(self, model):

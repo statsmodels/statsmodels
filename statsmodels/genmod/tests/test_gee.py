@@ -1127,14 +1127,9 @@ class TestGEE(object):
         model1 = sm.GEE(endog, exog, groups, cov_struct=ex)
         result1 = model1.fit()
 
-        import copy
-
         for as_cor in False, True:
 
-            # This is changed inside the constructor so can't be re-used.
-            pairsc = copy.deepcopy(pairs)
-
-            ec = sm.cov_struct.Equivalence(pairsc, as_cor=as_cor)
+            ec = sm.cov_struct.Equivalence(pairs, as_cor=as_cor)
             model2 = sm.GEE(endog, exog, groups, cov_struct=ec)
             result2 = model2.fit()
 
