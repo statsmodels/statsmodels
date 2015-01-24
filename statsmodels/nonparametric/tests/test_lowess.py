@@ -9,7 +9,6 @@ The delta tests utilize Silverman's motorcycle collision data,
 available in R's MASS package.
 '''
 
-from functools import partial
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_raises,
@@ -19,8 +18,6 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 # Number of decimals to test equality with.
 # The default is 7.
-testdec = 7
-assert_equal_at_testdec = partial(assert_almost_equal, decimal=testdec)
 curdir = os.path.dirname(os.path.abspath(__file__))
 rpath = os.path.join(curdir, 'results')
 
@@ -39,28 +36,26 @@ class TestLowess(object):
             'x': np.arange(20), 'y': np.zeros(20), 'out': np.zeros(20)}
         expected_lowess = np.array([test_data['x'], test_data['out']]).T
         actual_lowess = lowess(test_data['y'], test_data['x'])
-        assert_equal_at_testdec(expected_lowess, actual_lowess)
+        assert_almost_equal(expected_lowess, actual_lowess, 7)
 
     def test_range(self):
         test_data = {
             'x': np.arange(20), 'y': np.arange(20), 'out': np.arange(20)}
         expected_lowess = np.array([test_data['x'], test_data['out']]).T
         actual_lowess = lowess(test_data['y'], test_data['x'])
-        assert_equal_at_testdec(expected_lowess, actual_lowess)
+        assert_almost_equal(expected_lowess, actual_lowess, 7)
 
     def test_all(self):
         def generate(name, fname,
                      x='x', y='y', out='out', kwargs={}, decimal=7):
             data = np.genfromtxt(
                 os.path.join(rpath, fname), delimiter=',', names=True)
-            assert_equal_at_testdec = partial(
-                assert_almost_equal, decimal=decimal)
-            assert_equal_at_testdec.description = name
+            assert_almost_equal.description = name
             if callable(kwargs):
                 kwargs = kwargs(data)
             result = lowess(data[y], data[x], **kwargs)
             expect = np.array([data[x], data[out]]).T
-            return assert_equal_at_testdec, result, expect
+            return assert_almost_equal, result, expect, decimal
 
         yield generate('test_simple', 'test_lowess_simple.csv')
         yield generate('test_iter_0', 'test_lowess_iter.csv', out='out_0',
