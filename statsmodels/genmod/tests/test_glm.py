@@ -924,7 +924,7 @@ def test_gradient_irls():
                rslt_irls = mod_irls.fit(method="IRLS")
 
                mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
-               rslt_gradient = mod_gradient.fit(start_params=rslt_irls.params, method="newton")
+               rslt_gradient = mod_gradient.fit(method="newton")
 
                assert_allclose(rslt_gradient.params,
                                rslt_irls.params, rtol=1e-6, atol=1e-6)
