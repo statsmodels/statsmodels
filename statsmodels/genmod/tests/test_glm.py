@@ -804,7 +804,7 @@ def test_plots():
     fig = result.plot_ceres_residuals(1)
     plt.close(fig)
 
-def gen_endog(lin_pred, family_class, link):
+def gen_endog(lin_pred, family_class, link, binom_version=0):
 
     np.random.seed(872)
 
@@ -813,7 +813,13 @@ def gen_endog(lin_pred, family_class, link):
     mu = link().inverse(lin_pred)
 
     if family_class == fam.Binomial:
-        endog = 1*(np.random.uniform(size=len(lin_pred)) < mu)
+        if binom_version == 0:
+            endog = 1*(np.random.uniform(size=len(lin_pred)) < mu)
+        else:
+            endog = np.empty((len(lin_pred), 2))
+            n = 10
+            endog[:, 0] = (np.random.uniform(size=(len(lin_pred), n)) < mu[:, None]).sum(1)
+            endog[:, 1] = n - endog[:, 0]
     elif family_class == fam.Poisson:
         endog = np.random.poisson(mu)
     elif family_class == fam.Gamma:
@@ -879,61 +885,62 @@ def test_gradient_irls():
     exog[:, 0] = 1
 
     for family_class, family_links in families:
-
        for link in family_links:
-           print((family_class, link))
-           if (family_class, link) == (fam.Poisson, lnk.identity):
-               lin_pred = 20 + exog.sum(1)
-           elif (family_class, link) == (fam.Binomial, lnk.log):
-               lin_pred = -1 + exog.sum(1) / 8
-           elif (family_class, link) == (fam.Poisson, lnk.sqrt):
-               lin_pred = 2 + exog.sum(1)
-           elif (family_class, link) == (fam.InverseGaussian, lnk.log):
-               lin_pred = -1 + exog.sum(1)
-           elif (family_class, link) == (fam.InverseGaussian, lnk.identity):
-               lin_pred = 20 + 5*exog.sum(1)
-               lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-           elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_squared):
-               lin_pred = 0.5 + exog.sum(1) / 5
-               continue
-           elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_power):
-               lin_pred = 1 + exog.sum(1) / 5
-           elif (family_class, link) == (fam.NegativeBinomial, lnk.identity):
-               lin_pred = 20 + 5*exog.sum(1)
-               lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-           elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_squared):
-               lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])**4
-               continue
-           elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_power):
-               lin_pred = 1 + exog.sum(1) / 5
-           else:
-               lin_pred = np.random.uniform(size=exog.shape[0])
+           for binom_version in 0,1:
 
-           endog = gen_endog(lin_pred, family_class, link)
+               if family_class != fam.Binomial and binom_version == 1:
+                   continue
 
-           mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
-           rslt_irls = mod_irls.fit(method="IRLS")
+               if (family_class, link) == (fam.Poisson, lnk.identity):
+                   lin_pred = 20 + exog.sum(1)
+               elif (family_class, link) == (fam.Binomial, lnk.log):
+                   lin_pred = -1 + exog.sum(1) / 8
+               elif (family_class, link) == (fam.Poisson, lnk.sqrt):
+                   lin_pred = 2 + exog.sum(1)
+               elif (family_class, link) == (fam.InverseGaussian, lnk.log):
+                   lin_pred = -1 + exog.sum(1)
+               elif (family_class, link) == (fam.InverseGaussian, lnk.identity):
+                   lin_pred = 20 + 5*exog.sum(1)
+                   lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+               elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_squared):
+                   lin_pred = 0.5 + exog.sum(1) / 5
+                   continue # skip due to non-convergence
+               elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_power):
+                   lin_pred = 1 + exog.sum(1) / 5
+               elif (family_class, link) == (fam.NegativeBinomial, lnk.identity):
+                   lin_pred = 20 + 5*exog.sum(1)
+                   lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+               elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_squared):
+                   lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
+                   continue # skip due to non-convergence
+               elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_power):
+                   lin_pred = 1 + exog.sum(1) / 5
+               else:
+                   lin_pred = np.random.uniform(size=exog.shape[0])
 
-           mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
-           rslt_gradient = mod_gradient.fit(start_params=rslt_irls.params, method="newton")
+               endog = gen_endog(lin_pred, family_class, link, binom_version)
 
-           assert_allclose(rslt_gradient.params,
-                           rslt_irls.params, rtol=1e-6, atol=1e-6,
-                           err_msg=str(family_class) + " params")
+               mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
+               rslt_irls = mod_irls.fit(method="IRLS")
 
-           assert_allclose(rslt_gradient.llf, rslt_irls.llf,
-                           rtol=1e-6, atol=1e-6, err_msg=str(family_class) + " params")
+               mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
+               rslt_gradient = mod_gradient.fit(start_params=rslt_irls.params, method="newton")
 
-           assert_allclose(rslt_gradient.scale, rslt_irls.scale,
-                           rtol=1e-6, atol=1e-6, err_msg=str(family_class) + " params")
+               assert_allclose(rslt_gradient.params,
+                               rslt_irls.params, rtol=1e-6, atol=1e-6)
 
-           # Get the standard errors using expected information.
-           gradient_bse = rslt_gradient.bse
-           ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
-           gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+               assert_allclose(rslt_gradient.llf, rslt_irls.llf,
+                               rtol=1e-6, atol=1e-6)
 
-           assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6,
-                           atol=1e-6, err_msg=str(family_class) + " SE")
+               assert_allclose(rslt_gradient.scale, rslt_irls.scale,
+                               rtol=1e-6, atol=1e-6)
+
+               # Get the standard errors using expected information.
+               gradient_bse = rslt_gradient.bse
+               ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
+               gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+
+               assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
 
 
 if __name__=="__main__":
