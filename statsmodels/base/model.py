@@ -1164,7 +1164,8 @@ class LikelihoodModelResults(Results):
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
 
-        if cov_p is None and self.normalized_cov_params is None:
+        if (cov_p is None and self.normalized_cov_params is None and
+            not hasattr(self, 'cov_params_default')):
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
         if num_params != self.params.shape[0]:
@@ -1366,7 +1367,7 @@ class LikelihoodModelResults(Results):
         r_matrix, q_matrix = LC.coefs, LC.constants
 
         if (self.normalized_cov_params is None and cov_p is None and
-                invcov is None):
+                invcov is None and not hasattr(self, 'cov_params_default')):
             raise ValueError('need covariance of parameters for computing '
                              'F statistics')
 
