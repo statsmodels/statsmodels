@@ -19,6 +19,7 @@ from statsmodels.base.covtype import get_robustcov_results
 from statsmodels.tools.tools import add_constant
 
 from numpy.testing import assert_allclose, assert_equal
+import statsmodels.tools._testing as smt
 
 
 # get data and results as module global for now, TODO: move to class
@@ -80,6 +81,14 @@ class CheckCountRobustMixin(object):
         res2 = self.res2
         assert_allclose(res1._results.llf, res2.ll, 1e-4)
         assert_allclose(res1._results.llnull, res2.ll_0, 1e-4)
+
+
+    def test_ttest(self):
+        smt.check_ttest_tvalues(self.res1)
+
+
+    def test_waldtest(self):
+        smt.check_ftest_pvalues(self.res1)
 
 
 class TestPoissonClu(CheckCountRobustMixin):
@@ -169,6 +178,11 @@ class TestPoissonCluFit(CheckCountRobustMixin):
                                          df_correction=True),  #TODO has no effect
                            use_t=False, #True,
                            )
+
+        # The model results, t_test, ... should also work without
+        # normalized_cov_params, see #2209
+        # Note: we cannot set on the wrapper res1, we need res1._results
+        cls.res1._results.normalized_cov_params = None
 
         cls.bse_rob = cls.res1.bse
 
@@ -305,6 +319,12 @@ class TestGLMPoissonCluFit(CheckCountRobustMixin):
                                                 df_correction=True),  #TODO has no effect
                                   use_t=False, #True,
                                                 )
+
+        # The model results, t_test, ... should also work without
+        # normalized_cov_params, see #2209
+        # Note: we cannot set on the wrapper res1, we need res1._results
+        cls.res1._results.normalized_cov_params = None
+
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = mod.exog.shape
