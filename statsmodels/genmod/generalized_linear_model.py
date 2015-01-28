@@ -732,16 +732,16 @@ class GLM(base.LikelihoodModel):
         using the scipy gradient optimizers.
         """
 
-        if max_start_irls > 0:
+        if (max_start_irls > 0) and (start_params is None):
             irls_rslt = self._fit_irls(start_params=start_params, maxiter=maxiter,
                                        tol=tol, scale=scale, cov_type=cov_type,
                                        cov_kwds=cov_kwds, use_t=use_t, **kwargs)
             start_params = irls_rslt.params
 
-        # TODO: pass more into fit here
         rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
+
         self.mu = self.predict(rslt.params)
         self.scale = self.estimate_scale(self.mu)
 

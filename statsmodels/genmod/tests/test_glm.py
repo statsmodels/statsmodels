@@ -861,12 +861,7 @@ def test_gradient_irls():
     Compare the results when using gradient optimization and IRLS.
     """
 
-    # TODO: Some of the non-canonical links are quite sensitive to the
-    # input data.  The tests here suggest that there are no
-    # fundamental errors in the code.  Better support is needed to
-    # detect non-convergence and optimization failures.
-
-    # TODO: Find working examples for inverse_square link
+    # TODO: Find working examples for inverse_squared link
 
     np.random.seed(87342)
 
@@ -923,24 +918,29 @@ def test_gradient_irls():
                mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
                rslt_irls = mod_irls.fit(method="IRLS")
 
-               mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
-               rslt_gradient = mod_gradient.fit(method="newton")
+               # Try with and without starting values.
+               for max_start_irls, start_params in (0, rslt_irls.params), (1, None):
 
-               assert_allclose(rslt_gradient.params,
-                               rslt_irls.params, rtol=1e-6, atol=1e-6)
+                   mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
+                   rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
+                                                    start_params=start_params,
+                                                    method="newton")
 
-               assert_allclose(rslt_gradient.llf, rslt_irls.llf,
-                               rtol=1e-6, atol=1e-6)
+                   assert_allclose(rslt_gradient.params,
+                                   rslt_irls.params, rtol=1e-6, atol=1e-6)
 
-               assert_allclose(rslt_gradient.scale, rslt_irls.scale,
-                               rtol=1e-6, atol=1e-6)
+                   assert_allclose(rslt_gradient.llf, rslt_irls.llf,
+                                   rtol=1e-6, atol=1e-6)
 
-               # Get the standard errors using expected information.
-               gradient_bse = rslt_gradient.bse
-               ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
-               gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+                   assert_allclose(rslt_gradient.scale, rslt_irls.scale,
+                                   rtol=1e-6, atol=1e-6)
 
-               assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
+                   # Get the standard errors using expected information.
+                   gradient_bse = rslt_gradient.bse
+                   ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
+                   gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
+
+                   assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
 
 
 if __name__=="__main__":
