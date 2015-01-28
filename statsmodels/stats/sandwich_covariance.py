@@ -102,6 +102,7 @@ Statistics 90, no. 3 (2008): 414–427.
 
 """
 from statsmodels.compat.python import range
+import pandas as pd
 import numpy as np
 
 from statsmodels.tools.grouputils import Group
@@ -433,6 +434,11 @@ def group_sums(x, group):
     '''
 
     #TODO: transpose return in group_sum, need test coverage first
+
+    # re-label groups or bincount takes too much memory
+    if np.max(group) > 2 * x.shape[0]:
+        group = pd.factorize(group)[0]
+
     return np.array([np.bincount(group, weights=x[:, col])
                             for col in range(x.shape[1])])
 
