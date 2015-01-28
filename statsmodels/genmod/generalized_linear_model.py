@@ -196,6 +196,12 @@ class GLM(base.LikelihoodModel):
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                  missing='none', **kwargs):
+
+        if (family is not None) and not isinstance(family.link, tuple(family.safe_links)):
+            import warnings
+            warnings.warn("The %s link function does not respect the domain of the %s family." %
+                          (family.link.__class__.__name__, family.__class__.__name__))
+
         if exposure is not None:
             exposure = np.log(exposure)
         if offset is not None:  # this should probably be done upstream
