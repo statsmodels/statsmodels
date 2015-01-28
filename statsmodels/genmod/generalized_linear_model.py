@@ -631,9 +631,9 @@ class GLM(base.LikelihoodModel):
         else:
             return self.family.fitted(linpred)
 
-    def fit(self, start_params=None, maxiter=100, method='IRLS',
-            tol=1e-8, scale=None, cov_type='nonrobust', cov_kwds=None,
-            use_t=None, full_output=True, disp=False, **kwargs):
+    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
+            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
+            full_output=True, disp=False, max_start_irls=3, **kwargs):
         """
         Fits a generalized linear model for a given family.
 
@@ -673,6 +673,10 @@ class GLM(base.LikelihoodModel):
         disp : bool, optional
             Set to True to print convergence messages.  Not used if method is
             IRLS.
+        max_start_irls : int
+            The number of IRLS iterations used to obtain starting
+            values for gradient optimization.  Only relevant if
+            `method` is set to something other than 'IRLS'.
 
         Notes
         -----
@@ -714,21 +718,30 @@ class GLM(base.LikelihoodModel):
                                       tol=tol, scale=scale,
                                       full_output=full_output,
                                       disp=disp, cov_type=cov_type,
-                                      cov_kwds=cov_kwds, use_t=use_t, **kwargs)
+                                      cov_kwds=cov_kwds, use_t=use_t,
+                                      max_start_irls=max_start_irls,
+                                      **kwargs)
 
     def _fit_gradient(self, start_params=None, method="newton",
                       maxiter=100, tol=1e-8, full_output=True,
                       disp=True, scale=None, cov_type='nonrobust',
-                      cov_kwds=None, use_t=None, **kwargs):
+                      cov_kwds=None, use_t=None, max_start_irls=3,
+                      **kwargs):
         """
         Fits a generalized linear model for a given family iteratively
         using the scipy gradient optimizers.
         """
 
-        # TODO: pass more into fit here
+        if (max_start_irls > 0) and (start_params is None):
+            irls_rslt = self._fit_irls(start_params=start_params, maxiter=maxiter,
+                                       tol=tol, scale=scale, cov_type=cov_type,
+                                       cov_kwds=cov_kwds, use_t=use_t, **kwargs)
+            start_params = irls_rslt.params
+
         rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
+
         self.mu = self.predict(rslt.params)
         self.scale = self.estimate_scale(self.mu)
 
