@@ -279,6 +279,7 @@ class Poisson(Family):
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
     valid = [0, np.inf]
+    safe_links = [L.log,]
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
@@ -430,6 +431,7 @@ class Gaussian(Family):
 
     links = [L.log, L.identity, L.inverse_power]
     variance = V.constant
+    safe_links = links
 
     def __init__(self, link=L.identity):
         self.variance = Gaussian.variance
@@ -577,6 +579,7 @@ class Gamma(Family):
 
     links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
+    safe_links = [L.log,]
 
     def __init__(self, link=L.inverse_power):
         self.variance = Gamma.variance
@@ -735,6 +738,9 @@ class Binomial(Family):
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
     variance = V.binary  # this is not used below in an effort to include n
+
+    # Other safe links, e.g. cloglog and probit are subclasses
+    safe_links = [L.logit, L.CDFLink]
 
     def __init__(self, link=L.logit):  # , n=1.):
         # TODO: it *should* work for a constant n>1 actually, if data_weights
@@ -995,6 +1001,7 @@ class InverseGaussian(Family):
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
     variance = V.mu_cubed
+    safe_links = [L.log,]
 
     def __init__(self, link=L.inverse_squared):
         self.variance = InverseGaussian.variance
@@ -1136,6 +1143,7 @@ class NegativeBinomial(Family):
     # TODO: add the ability to use the power links with an if test
     # similar to below
     variance = V.nbinom
+    safe_links = [L.log,]
 
     def __init__(self, link=L.log, alpha=1.):
         self.alpha = alpha

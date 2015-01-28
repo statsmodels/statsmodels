@@ -458,6 +458,11 @@ class GEE(base.Model):
                  exposure=None, dep_data=None, constraint=None,
                  update_dep=True, weights=None, **kwargs):
 
+        if (family is not None) and not isinstance(family.link, tuple(family.safe_links)):
+            import warnings
+            warnings.warn("The %s link function does not respect the domain of the %s family." %
+                          (family.link.__class__.__name__, family.__class__.__name__))
+
         self.missing = missing
         self.dep_data = dep_data
         self.constraint = constraint
@@ -2447,6 +2452,7 @@ class _Multinomial(families.Family):
 
     links = [_MultinomialLogit,]
     variance = varfuncs.binary
+    safe_links = [_MultinomialLogit,]
 
     def __init__(self, nlevels):
         """
