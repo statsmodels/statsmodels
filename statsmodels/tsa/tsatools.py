@@ -228,7 +228,7 @@ def detrend(x, order=1, axis=0):
         specifies the polynomial order of the trend, zero is constant, one is
         linear trend, two is quadratic trend
     axis : int
-        for detrending with order > 0, axis can be either 0 observations by rows,
+        axis can be either 0, observations by rows,
         or 1, observations by columns
 
     Returns
@@ -242,7 +242,7 @@ def detrend(x, order=1, axis=0):
     x = np.asarray(x)
     nobs = x.shape[0]
     if order == 0:
-        return x - np.expand_dims(x.mean(ax), x)
+        return x - np.expand_dims(x.mean(axis), axis)
     else:
         if x.ndim == 2 and lrange(2)[axis]==1:
             x = x.T
