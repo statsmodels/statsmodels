@@ -361,6 +361,25 @@ def compare_waldres(res, wa, constrasts):
         assert_allclose(wa.table.values[i, 1], wt.pvalue)
         df = c.shape[0] if c.ndim == 2 else 1
         assert_equal(wa.table.values[i, 2], df)
+        # attributes
+        assert_allclose(wa.statistic[i], wt.statistic)
+        assert_allclose(wa.pvalues[i], wt.pvalue)
+        assert_equal(wa.df_constraints[i], df)
+        if res.use_t:
+            assert_equal(wa.df_denom[i], res.df_resid)
+
+    col_names = wa.col_names
+    if res.use_t:
+        assert_equal(wa.distribution, 'F')
+        assert_equal(col_names[0], 'F')
+        assert_equal(col_names[1], 'P>F')
+    else:
+        assert_equal(wa.distribution, 'chi2')
+        assert_equal(col_names[0], 'chi2')
+        assert_equal(col_names[1], 'P>chi2')
+
+    # SMOKETEST
+    wa.summary_frame()
 
 
 class TestWaldAnovaOLS(CheckAnovaMixin):

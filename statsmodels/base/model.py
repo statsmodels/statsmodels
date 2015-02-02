@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
 from statsmodels.tools.tools import recipr, nan_dot
-from statsmodels.stats.contrast import ContrastResults, ANOVAWaldResult
+from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
@@ -1520,28 +1520,27 @@ class LikelihoodModelResults(Results):
             for cname in combine_terms:
                 combined_constraints.append((cname, np.vstack(combined[cname])))
 
+        use_t = result.use_t
+        distribution = ['chi2', 'F'][use_t]
 
         res_wald = []
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint)
-            res_wald.append([wt.statistic.item(), wt.pvalue, constraint.shape[0]])
+            row = [wt.statistic.item(), wt.pvalue, constraint.shape[0]]
+            if use_t:
+                row.append(wt.df_denom)
+            res_wald.append(row)
             index.append(name)
 
-        # TODO: clean up wald_test results so we can access this directly from it
-        use_t = result.use_t
+        # distribution nerutral names
+        col_names = ['statistic', 'pvalue', 'df_constraint']
         if use_t:
-            test = 'F'
-        else:
-            test = 'chi2'
-
-        pr_test = "PR(>%s)" % test
-
-        col_names = [test, pr_test, 'df']
+            col_names.append('df_denom')
         # TODO: maybe move DataFrame creation to results class
         from pandas import DataFrame
         table = DataFrame(res_wald, index=index, columns=col_names)
-        res = ANOVAWaldResult(table)
+        res = WaldTestResults(None, distribution, None, table=table)
         # TODO: remove temp again, added for testing
         res.temp = constraints + combined_constraints + extra_constraints
         return res
