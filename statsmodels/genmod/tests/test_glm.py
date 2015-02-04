@@ -628,6 +628,16 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
                    offset=offset2).fit()
         assert_almost_equal(mod1.params, mod2.params)
 
+        # test recreating model
+        mod1_ = mod1.model
+        kwds = mod1_._get_init_kwds()
+        assert_allclose(kwds['exposure'], exposure, rtol=1e-14)
+        assert_allclose(kwds['offset'], mod1_.offset, rtol=1e-14)
+        mod3 = mod1_.__class__(mod1_.endog, mod1_.exog, **kwds)
+        assert_allclose(mod3.exposure, mod1_.exposure, rtol=1e-14)
+        assert_allclose(mod3.offset, mod1_.offset, rtol=1e-14)
+
+
     def test_predict(self):
         np.random.seed(382304)
         endog = np.random.randint(0, 10, 100)
@@ -784,6 +794,7 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
     assert_raises(ValueError, GLM, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure, family=family)
+
 
 def test_plots():
 
