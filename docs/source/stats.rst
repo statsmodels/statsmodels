@@ -30,6 +30,10 @@ Residual Diagnostics and Specification Tests
    durbin_watson
    jarque_bera
    omni_normtest
+   medcouple
+   robust_skewness
+   robust_kurtosis
+   expected_robust_kurtosis
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
