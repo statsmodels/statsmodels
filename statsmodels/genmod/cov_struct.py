@@ -1007,9 +1007,6 @@ class Equivalence(CovStruct):
         if (pairs is not None) and (labels is not None):
             raise ValueError("Equivalence cov_struct accepts only one of `pairs` and `labels`")
 
-        if self.model.weights is not None:
-            warnings.warn("weights not implemented for equalence cov_struct, using unweighted covariance estimate")
-
         if pairs is not None:
             import copy
             self.pairs = copy.deepcopy(pairs)
@@ -1100,6 +1097,9 @@ class Equivalence(CovStruct):
     def initialize(self, model):
 
         super(Equivalence, self).initialize(model)
+
+        if self.model.weights is not None:
+            warnings.warn("weights not implemented for equalence cov_struct, using unweighted covariance estimate")
 
         if not hasattr(self, 'pairs'):
             self._pairs_from_labels()
