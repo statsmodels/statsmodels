@@ -1001,7 +1001,7 @@ class InverseGaussian(Family):
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
     variance = V.mu_cubed
-    safe_links = [L.Log,]
+    safe_links = [L.inverse_squared, L.Log,]
 
     def __init__(self, link=L.inverse_squared):
         self.variance = InverseGaussian.variance

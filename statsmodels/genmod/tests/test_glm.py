@@ -407,8 +407,10 @@ class TestGlmGamma(CheckModelResultsMixin):
         from .results.results_glm import Scotvote
         data = load()
         data.exog = add_constant(data.exog, prepend=False)
-        res1 = GLM(data.endog, data.exog, \
-                    family=sm.families.Gamma()).fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res1 = GLM(data.endog, data.exog,
+                       family=sm.families.Gamma()).fit()
         self.res1 = res1
 #        res2 = RModel(data.endog, data.exog, r.glm, family=r.Gamma)
         res2 = Scotvote()
@@ -446,8 +448,10 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
 
         from .results.results_glm import CancerIdentity
         res2 = CancerIdentity()
-        self.res1 = GLM(res2.endog, res2.exog,
-            family=sm.families.Gamma(link=sm.families.links.identity)).fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.res1 = GLM(res2.endog, res2.exog,
+                            family=sm.families.Gamma(link=sm.families.links.identity)).fit()
         self.res2 = res2
 
 #    def setup(self):
@@ -534,9 +538,11 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
 
         from .results.results_glm import Medpar1
         data = Medpar1()
-        self.res1 = GLM(data.endog, data.exog,
-            family=sm.families.InverseGaussian(link=\
-            sm.families.links.identity)).fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.res1 = GLM(data.endog, data.exog,
+                            family=sm.families.InverseGaussian(
+                                link=sm.families.links.identity)).fit()
         from .results.results_glm import InvGaussIdentity
         self.res2 = InvGaussIdentity()
 
