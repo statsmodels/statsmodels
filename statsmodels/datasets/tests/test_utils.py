@@ -1,7 +1,7 @@
 import os
 import sys
-from statsmodels.datasets import get_rdataset
-from numpy.testing import assert_
+from statsmodels.datasets import get_rdataset, webuse
+from numpy.testing import assert_, assert_array_equal
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,3 +17,22 @@ def test_get_rdataset():
     else:
         duncan = get_rdataset("Duncan", "car", cache=cur_dir)
         assert_(duncan.from_cache)
+
+
+def test_webuse():
+    # test copied and adjusted from iolib/tests/test_foreign
+    from statsmodels.iolib.tests.results.macrodata import macrodata_result as res2
+    base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
+    res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
+    assert_array_equal(res1 == res2, True)
+
+
+def test_webuse_pandas():
+    # test copied and adjusted from iolib/tests/test_foreign
+    from pandas.util.testing import assert_frame_equal
+    from statsmodels.datasets import macrodata
+    dta = macrodata.load_pandas().data
+    base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
+    res1 = webuse('macrodata', baseurl=base_gh)
+    res1 = res1.astype(float)
+    assert_frame_equal(res1, dta)
