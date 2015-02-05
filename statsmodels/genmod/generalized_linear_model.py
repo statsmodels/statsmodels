@@ -255,6 +255,16 @@ class GLM(base.LikelihoodModel):
             if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
 
+
+    def _get_init_kwds(self):
+        # this is a temporary fixup because exposure has been transformed
+        # see #1609, copied from discrete_model.CountModel
+        kwds = super(GLM, self)._get_init_kwds()
+        if 'exposure' in kwds and kwds['exposure'] is not None:
+            kwds['exposure'] = np.exp(kwds['exposure'])
+        return kwds
+
+
     def loglike_mu(self, mu, scale=1.):
         """
         Evaluate the log-likelihood for a generalized linear model.
