@@ -1,5 +1,5 @@
 from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError,
-                                       lrange, cPickle, urljoin)
+                                       lrange, cPickle, urljoin, BytesIO)
 import sys
 import shutil
 from os import environ
@@ -45,7 +45,7 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
 
     url = urljoin(baseurl, data+'.dta')
     dta = urlopen(url)
-    dta = StringIO(dta.read())  # make it truly file-like
+    dta = BytesIO(dta.read())  # make it truly file-like
     if as_df:  # could make this faster if we don't process dta twice?
         return DataFrame.from_records(genfromdta(dta))
     else:
