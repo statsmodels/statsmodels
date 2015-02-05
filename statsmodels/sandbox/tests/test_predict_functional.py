@@ -110,7 +110,7 @@ class TestPredFunc(object):
         values = {"x2": 1, "x3": 1} # y = 4
         values2 = {"x2": 0, "x3": 0} # y = x1
         pr, cb, fvals = predict_functional(result, "x1", values=values,
-                                           values2=values2, method='scheffe')
+                                           values2=values2, ci_method='scheffe')
 
         plt.clf()
         fig = plt.figure()
@@ -146,7 +146,7 @@ class TestPredFunc(object):
         values = {"x2": 1, "x3": 1} # y = 5.2
         values2 = {"x2": 0, "x3": 0} # y = 5 + 0.1*x1
         pr, cb, fvals = predict_functional(result, "x1", values=values,
-                                           values2=values2, method='simultaneous')
+                                           values2=values2, ci_method='simultaneous')
 
         plt.clf()
         fig = plt.figure()
@@ -202,7 +202,7 @@ class TestPredFunc(object):
                             values=values, summaries=summaries, linear=linear)
                 pred2, cb2, fvals2 = predict_functional(result, "x1",
                             values=values, summaries=summaries,
-                            method='simultaneous', linear=linear)
+                            ci_method='simultaneous', linear=linear)
 
                 plt.clf()
                 fig = plt.figure()

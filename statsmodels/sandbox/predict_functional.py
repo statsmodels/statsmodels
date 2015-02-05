@@ -41,9 +41,9 @@ _predict_functional_doc =\
         A second set of summary functions used to define a contrast.
     values2 : dict-like
         A second set of fixed values used to define a contrast.
-    cvrg_prob : float
-        The coverage probability.
-    method : string
+    alpha : float
+        `1 - alpha` is the coverage probability.
+    ci_method : string
         The method for constructing the confidence band, one of
         'pointwise', 'scheffe', and 'simultaneous'.
     num_points : integer
@@ -280,12 +280,12 @@ def _check_args(values, summaries, values2, summaries2):
 
 
 def predict_functional(result, focus_var, summaries=None, values=None,
-                       summaries2=None, values2=None, cvrg_prob=0.95,
-                       method="pointwise", linear=True, num_points=10,
+                       summaries2=None, values2=None, alpha=0.05,
+                       ci_method="pointwise", linear=True, num_points=10,
                        exog=None, exog2=None, **kwargs):
     # docstring attached below
 
-    if method not in ("pointwise", "scheffe", "simultaneous"):
+    if ci_method not in ("pointwise", "scheffe", "simultaneous"):
         raise ValueError('confidence band method must be one of `pointwise`, `scheffe`, and `simultaneous`.')
 
     contrast = (values2 is not None) or (summaries2 is not None)
@@ -334,12 +334,12 @@ def predict_functional(result, focus_var, summaries=None, values=None,
         pred = pred - pred2
         dexog = dexog - dexog2
 
-    if method == 'pointwise':
+    if ci_method == 'pointwise':
 
         t_test = result.t_test(dexog)
-        cb = t_test.conf_int(alpha=1-cvrg_prob)
+        cb = t_test.conf_int(alpha=alpha)
 
-    elif method == 'scheffe':
+    elif ci_method == 'scheffe':
 
         t_test = result.t_test(dexog)
         sd = t_test.sd
@@ -349,14 +349,14 @@ def predict_functional(result, focus_var, summaries=None, values=None,
         from scipy.stats.distributions import f as fdist
         df1 = result.model.exog.shape[1]
         df2 = result.model.exog.shape[0] - df1
-        qf = fdist.cdf(cvrg_prob, df1, df2)
+        qf = fdist.cdf(1 - alpha, df1, df2)
         fx = sd * np.sqrt(df1 * qf)
         cb[:, 0] = pred - fx
         cb[:, 1] = pred + fx
 
-    elif method == 'simultaneous':
+    elif ci_method == 'simultaneous':
 
-        sigma, c = _glm_basic_scr(result, dexog, cvrg_prob)
+        sigma, c = _glm_basic_scr(result, dexog, alpha)
         cb = np.zeros((dexog.shape[0], 2))
         cb[:, 0] = pred - c*sigma
         cb[:, 1] = pred + c*sigma
@@ -371,7 +371,7 @@ def predict_functional(result, focus_var, summaries=None, values=None,
 
 predict_functional.__doc__ = _predict_functional_doc
 
-def _glm_basic_scr(result, exog, cvrg_prob):
+def _glm_basic_scr(result, exog, alpha):
     """
     The basic SCR from (Sun et al. Annals of Statistics 2000).
 
@@ -383,8 +383,8 @@ def _glm_basic_scr(result, exog, cvrg_prob):
         The fitted GLM results instance
     exog : array-like
         The exog values spanning the interval
-    cvrg_prob : float
-        Coverage probability.
+    alpha : float
+        `1 - alpha` is the coverage probability.
 
     Returns
     -------
@@ -427,7 +427,7 @@ def _glm_basic_scr(result, exog, cvrg_prob):
     # The root of this function is the multiplier for the confidence
     # band, see Sun et al. equation 35.
     def func(c):
-        return kappa_0 * np.exp(-c**2/2) / np.pi + 2*(1 - norm.cdf(c)) - (1 - cvrg_prob)
+        return kappa_0 * np.exp(-c**2/2) / np.pi + 2*(1 - norm.cdf(c)) - alpha
 
     from scipy.optimize import brentq
 
