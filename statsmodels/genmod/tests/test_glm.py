@@ -15,6 +15,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from nose import SkipTest
+import warnings
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -406,8 +407,10 @@ class TestGlmGamma(CheckModelResultsMixin):
         from .results.results_glm import Scotvote
         data = load()
         data.exog = add_constant(data.exog, prepend=False)
-        res1 = GLM(data.endog, data.exog, \
-                    family=sm.families.Gamma()).fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res1 = GLM(data.endog, data.exog,
+                       family=sm.families.Gamma()).fit()
         self.res1 = res1
 #        res2 = RModel(data.endog, data.exog, r.glm, family=r.Gamma)
         res2 = Scotvote()
@@ -445,8 +448,10 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
 
         from .results.results_glm import CancerIdentity
         res2 = CancerIdentity()
-        self.res1 = GLM(res2.endog, res2.exog,
-            family=sm.families.Gamma(link=sm.families.links.identity)).fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.res1 = GLM(res2.endog, res2.exog,
+                            family=sm.families.Gamma(link=sm.families.links.identity)).fit()
         self.res2 = res2
 
 #    def setup(self):
@@ -533,9 +538,11 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
 
         from .results.results_glm import Medpar1
         data = Medpar1()
-        self.res1 = GLM(data.endog, data.exog,
-            family=sm.families.InverseGaussian(link=\
-            sm.families.links.identity)).fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.res1 = GLM(data.endog, data.exog,
+                            family=sm.families.InverseGaussian(
+                                link=sm.families.links.identity)).fit()
         from .results.results_glm import InvGaussIdentity
         self.res2 = InvGaussIdentity()
 
@@ -926,13 +933,17 @@ def test_gradient_irls():
 
                endog = gen_endog(lin_pred, family_class, link, binom_version)
 
-               mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
+               with warnings.catch_warnings():
+                   warnings.simplefilter("ignore")
+                   mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
                rslt_irls = mod_irls.fit(method="IRLS")
 
                # Try with and without starting values.
                for max_start_irls, start_params in (0, rslt_irls.params), (1, None):
 
-                   mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
+                   with warnings.catch_warnings():
+                       warnings.simplefilter("ignore")
+                       mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
                    rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
                                                     start_params=start_params,
                                                     method="newton")
