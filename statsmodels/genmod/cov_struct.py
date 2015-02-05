@@ -1,6 +1,7 @@
 from statsmodels.compat.python import iterkeys, itervalues, zip, range
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
+import pandas as pd
 from scipy import linalg as spl
 from collections import defaultdict
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
@@ -139,7 +140,6 @@ class CovStruct(object):
         """
 
         vmat, is_cor = self.covariance_matrix(expval, index)
-
         if is_cor:
             vmat *= np.outer(stdev, stdev)
 
@@ -954,9 +954,23 @@ class Equivalence(CovStruct):
       one triangle of each covariance matrix should be included.
       Positions where j1 and j2 have the same value are variance
       parameters.
+    labels : array-like
+      An array of labels such that every distinct pair of labels
+      defines an equivalence class.  Either `labels` or `pairs` must
+      be provided.  When the two labels in a pair are equal two
+      equivalence classes are defined: one for the diagonal elements
+      (corresponding to variances) and one for the off-diagonal
+      elements (corresponding to covariances).
+    return_cov : boolean
+      If True, `covariance_matrix` returns an estimate of the
+      covariance matrix, otherwise returns an estimate of the
+      correlation matrix.
 
     Notes
     -----
+    Using `labels` to define the class is much easier than using
+    `pairs`, but is less general.
+
     Any pair of values not contained in `pairs` will be assigned zero
     covariance.
 
@@ -964,6 +978,11 @@ class Equivalence(CovStruct):
     matrix.  They are not updated if missing data are present.  When
     using this covariance structure, missing data should be removed
     before constructing the model.
+
+    If using `labels`, after a model is defined using the covariance
+    structure it is possible to remove a label pair from the second
+    level of the `pairs` dictionary to force the corresponding
+    covariance to be zero.
 
     Examples
     --------
@@ -978,36 +997,135 @@ class Equivalence(CovStruct):
     >> pairs[1][2] = 3 + np.tril_indices(3, -1)
     """
 
-    def __init__(self, pairs):
+    def __init__(self, pairs=None, labels=None, return_cov=False):
 
         super(Equivalence, self).__init__()
 
+        if (pairs is None) and (labels is None):
+            raise ValueError("Equivalence cov_struct requires either `pairs` or `labels`")
+
+        if (pairs is not None) and (labels is not None):
+            raise ValueError("Equivalence cov_struct accepts only one of `pairs` and `labels`")
+
+        if pairs is not None:
+            import copy
+            self.pairs = copy.deepcopy(pairs)
+
+        if labels is not None:
+            self.labels = np.asarray(labels)
+
+        self.return_cov = return_cov
+
+    def _make_pairs(self, i, j):
+        """
+        Create arrays `i_`, `j_` containing all unique ordered pairs of elements in `i` and `j`.
+
+        The arrays `i` and `j` must be one-dimensional containing non-negative integers.
+        """
+
+        mat = np.zeros((len(i)*len(j), 2), dtype=np.int32)
+
+        # Create the pairs and order them
+        f = np.ones(len(j))
+        mat[:, 0] = np.kron(f, i).astype(np.int32)
+        f = np.ones(len(i))
+        mat[:, 1] = np.kron(j, f).astype(np.int32)
+        mat.sort(1)
+
+        # Remove repeated rows
+        try:
+            dtype = np.dtype((np.void, mat.dtype.itemsize * mat.shape[1]))
+            bmat = np.ascontiguousarray(mat).view(dtype)
+            _, idx = np.unique(bmat, return_index=True)
+        except TypeError:
+            # workaround for old numpy that can't call unique with complex
+            # dtypes
+            np.random.seed(4234)
+            bmat = np.dot(mat, np.random.uniform(size=mat.shape[1]))
+            _, idx = np.unique(bmat, return_index=True)
+        mat = mat[idx, :]
+
+        return mat[:, 0], mat[:, 1]
+
+    def _pairs_from_labels(self):
+
+        from collections import defaultdict
+        pairs = defaultdict(lambda : defaultdict(lambda : None))
+
+        model = self.model
+
+        df = pd.DataFrame({"labels": self.labels, "groups": model.groups})
+        gb = df.groupby(["groups", "labels"])
+
+        ulabels = np.unique(self.labels)
+
+        for g_ix, g_lb in enumerate(model.group_labels):
+
+            # Loop over label pairs
+            for lx1 in range(len(ulabels)):
+                for lx2 in range(lx1+1):
+
+                    lb1 = ulabels[lx1]
+                    lb2 = ulabels[lx2]
+
+                    try:
+                        i1 = gb.groups[(g_lb, lb1)]
+                        i2 = gb.groups[(g_lb, lb2)]
+                    except KeyError:
+                        continue
+
+                    i1, i2 = self._make_pairs(i1, i2)
+
+                    clabel = str(lb1) + "/" + str(lb2)
+
+                    # Variance parameters belong in their own equiv class.
+                    jj = np.flatnonzero(i1 == i2)
+                    if len(jj) > 0:
+                        clabelv = clabel + "/v"
+                        pairs[g_lb][clabelv] = (i1[jj], i2[jj])
+
+                    # Covariance parameters
+                    jj = np.flatnonzero(i1 != i2)
+                    if len(jj) > 0:
+                        i1 = i1[jj]
+                        i2 = i2[jj]
+                        pairs[g_lb][clabel] = (i1, i2)
+
         self.pairs = pairs
 
-        # Initialize so that any pair containing a variance parameter
-        # has value 1.
-        self.dep_params = defaultdict(lambda : 0.)
-        for gp in self.pairs:
-            for lb in self.pairs[gp]:
-                j1, j2 = self.pairs[gp][lb]
-                if np.any(j1 == j2):
-                    self.dep_params[lb] = 1
 
     def initialize(self, model):
-        """
-        Start indexing from 0 within each group.
-        """
 
         super(Equivalence, self).initialize(model)
 
+        if self.model.weights is not None:
+            warnings.warn("weights not implemented for equalence cov_struct, using unweighted covariance estimate")
+
+        if not hasattr(self, 'pairs'):
+            self._pairs_from_labels()
+
+        # Initialize so that any equivalence class containing a
+        # variance parameter has value 1.
+        self.dep_params = defaultdict(lambda : 0.)
+        self._var_classes = set([])
+        for gp in self.model.group_labels:
+            for lb in self.pairs[gp]:
+                j1, j2 = self.pairs[gp][lb]
+                if np.any(j1 == j2):
+                    if not np.all(j1 == j2):
+                        warnings.warn("equivalence class contains both variance and covariance parameters")
+                    self._var_classes.add(lb)
+                    self.dep_params[lb] = 1
+
+        # Need to start indexing at 0 within each group.
         # rx maps olds indices to new indices
         rx = -1 * np.ones(len(self.model.endog), dtype=np.int32)
-        for gp in self.model.group_labels:
-            ii = self.model.group_indices[gp]
+        for g_ix, g_lb in enumerate(self.model.group_labels):
+            ii = self.model.group_indices[g_lb]
             rx[ii] = np.arange(len(ii), dtype=np.int32)
 
         # Reindex
-        for gp in self.pairs.keys():
+        for gp in self.model.group_labels:
             for lb in self.pairs[gp].keys():
                 a, b = self.pairs[gp][lb]
                 self.pairs[gp][lb] = (rx[a], rx[b])
@@ -1017,35 +1135,50 @@ class Equivalence(CovStruct):
         endog = self.model.endog_li
         varfunc = self.model.family.variance
         cached_means = self.model.cached_means
-        dep_params = defaultdict(lambda : [0., 0])
+        dep_params = defaultdict(lambda : [0., 0., 0.])
+        n_pairs = defaultdict(lambda : 0)
         dim = len(params)
 
-        for gp in range(self.model.num_group):
-            expval, _ = cached_means[gp]
+        for k, gp in enumerate(self.model.group_labels):
+            expval, _ = cached_means[k]
             stdev = np.sqrt(varfunc(expval))
-            resid = (endog[gp] - expval) / stdev
+            resid = (endog[k] - expval) / stdev
             for lb in self.pairs[gp].keys():
+                if (not self.return_cov) and lb in self._var_classes:
+                    continue
                 jj = self.pairs[gp][lb]
                 dep_params[lb][0] += np.sum(resid[jj[0]] * resid[jj[1]])
-                dep_params[lb][1] += len(jj[0])
+                if not self.return_cov:
+                    dep_params[lb][1] += np.sum(resid[jj[0]]**2)
+                    dep_params[lb][2] += np.sum(resid[jj[1]]**2)
+                n_pairs[lb] += len(jj[0])
 
-        for lb in dep_params.keys():
-            dep_params[lb] = dep_params[lb][0] / (dep_params[lb][1] - dim)
+        if self.return_cov:
+            for lb in dep_params.keys():
+                dep_params[lb] = dep_params[lb][0] / (n_pairs[lb] - dim)
+        else:
+            for lb in dep_params.keys():
+                den = np.sqrt(dep_params[lb][1] * dep_params[lb][2])
+                dep_params[lb] = dep_params[lb][0] / den
+            for lb in self._var_classes:
+                dep_params[lb] = 1.
 
         self.dep_params = dep_params
+        self.n_pairs = n_pairs
 
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         cmat = np.zeros((dim, dim))
+        g_lb = self.model.group_labels[index]
 
-        for lb in self.pairs[index].keys():
-            j1, j2 = self.pairs[index][lb]
+        for lb in self.pairs[g_lb].keys():
+            j1, j2 = self.pairs[g_lb][lb]
             cmat[j1, j2] = self.dep_params[lb]
 
         cmat = cmat + cmat.T
         np.fill_diagonal(cmat, cmat.diagonal() / 2)
 
-        return cmat, False
+        return cmat, not self.return_cov
 
     update.__doc__ = CovStruct.update.__doc__
     covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
