@@ -213,6 +213,15 @@ def test_freq_to_period():
         assert_equal(tools.freq_to_period(i), j)
         assert_equal(tools.freq_to_period(to_offset(i)), j)
 
+def test_detrend():
+    data = np.arange(5)
+    assert_array_almost_equal(sm.tsa.detrend(data,order=1),np.zeros_like(data))
+    assert_array_almost_equal(sm.tsa.detrend(data,order=0),[-2,-1,0,1,2])
+    data = np.arange(10).reshape(5,2)
+    assert_array_almost_equal(sm.tsa.detrend(data,order=1,axis=0),np.zeros_like(data))
+    assert_array_almost_equal(sm.tsa.detrend(data,order=0,axis=0),[[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]])
+    assert_array_almost_equal(sm.tsa.detrend(data,order=0,axis=1),[[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
+
 if __name__ == '__main__':
     #running them directly
     # test_acf()
