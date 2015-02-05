@@ -15,6 +15,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from nose import SkipTest
+import warnings
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -915,13 +916,17 @@ def test_gradient_irls():
 
                endog = gen_endog(lin_pred, family_class, link, binom_version)
 
-               mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
+               with warnings.catch_warnings():
+                   warnings.simplefilter("ignore")
+                   mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
                rslt_irls = mod_irls.fit(method="IRLS")
 
                # Try with and without starting values.
                for max_start_irls, start_params in (0, rslt_irls.params), (1, None):
 
-                   mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
+                   with warnings.catch_warnings():
+                       warnings.simplefilter("ignore")
+                       mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
                    rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
                                                     start_params=start_params,
                                                     method="newton")
