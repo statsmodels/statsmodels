@@ -28,6 +28,31 @@ import statsmodels.api as sm
 from scipy.stats.distributions import norm
 from patsy import dmatrices
 
+try:
+    import matplotlib.pyplot as plt  #makes plt available for test functions
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
+pdf_output = False
+
+if pdf_output:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pdf = PdfPages("test_glm.pdf")
+else:
+    pdf = None
+
+def close_or_save(pdf, fig):
+    if pdf_output:
+        pdf.savefig(fig)
+    plt.close(fig)
+
+def teardown_module():
+    if have_matplotlib:
+        plt.close('all')
+        if pdf_output:
+            pdf.close()
+
 def load_data(fname, icept=True):
     """
     Load a data set from the results directory.  The data set should
@@ -1357,6 +1382,9 @@ class TestGEEMultinomialCovType(CheckConsistency):
         check_wrapper(rslt2)
 
 def test_plots():
+
+    if not have_matplotlib:
+        raise nose.SkipTest('No tests here')
 
     np.random.seed(378)
     exog = np.random.normal(size=100)
