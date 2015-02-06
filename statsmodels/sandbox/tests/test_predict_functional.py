@@ -92,6 +92,7 @@ class TestPredFunc(object):
         self.close_or_save(fig)
 
 
+    @dec.skipif(not have_matplotlib)
     def test_lm_contrast(self):
 
         np.random.seed(542)
@@ -127,6 +128,7 @@ class TestPredFunc(object):
         self.close_or_save(fig)
 
 
+    @dec.skipif(not have_matplotlib)
     def test_glm_formula_contrast(self):
 
         np.random.seed(542)
@@ -163,6 +165,7 @@ class TestPredFunc(object):
         self.close_or_save(fig)
 
 
+    @dec.skipif(not have_matplotlib)
     def test_scb(self):
 
         np.random.seed(473)
@@ -227,6 +230,7 @@ class TestPredFunc(object):
                 self.close_or_save(fig)
 
 
+    @dec.skipif(not have_matplotlib)
     def test_glm_formula(self):
 
         np.random.seed(542)
@@ -296,6 +300,7 @@ class TestPredFunc(object):
             self.close_or_save(fig)
 
 
+    @dec.skipif(not have_matplotlib)
     def test_noformula_prediction(self):
 
         np.random.seed(6434)
