@@ -31,7 +31,6 @@ class TestPredFunc(object):
         if pdf_output:
             cls.pdf.close()
 
-    @dec.skipif(not have_matplotlib)
     def close_or_save(self, fig):
         if pdf_output:
             self.pdf.savefig(fig)
