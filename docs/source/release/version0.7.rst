@@ -38,12 +38,19 @@ sandbox.  This change bring a number of new features, including:
    dta = dta.dropna()
 
    pca_model = PCA(dta.T, standardize=False, demean=True)
-
    pca_model.plot_scree()
 
-*Note* : A function version is also available which is compatible with the 
-call in the sandbox.  The function version is just a thin wrapper around the 
+*Note* : A function version is also available which is compatible with the
+call in the sandbox.  The function version is just a thin wrapper around the
 class-based PCA implementation.
+
+Regression graphics for GLM/GEE
+-------------------------------
+
+Added variable plots, partial residual plots, and CERES residual plots
+are available for GLM and GEE models by calling the methods
+`plot_added_variable`, `plot_partial_residuals`, and
+`plot_ceres_residuals` that are attached to the results classes.
 
 Other important new features
 ----------------------------
