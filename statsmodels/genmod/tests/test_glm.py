@@ -44,9 +44,10 @@ def close_or_save(pdf, fig):
     plt.close(fig)
 
 def teardown_module():
-    plt.close('all')
-    if pdf_output:
-        pdf.close()
+    if have_matplotlib:
+        plt.close('all')
+        if pdf_output:
+            pdf.close()
 
 class CheckModelResultsMixin(object):
     '''
