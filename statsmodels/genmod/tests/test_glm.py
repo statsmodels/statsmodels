@@ -7,7 +7,7 @@ from statsmodels.compat import range
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less)
+                           assert_allclose, assert_, assert_array_less, dec)
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -828,10 +828,8 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
+@dec.skipif(not have_matplotlib)
 def test_plots():
-
-    if not have_matplotlib:
-        raise nose.SkipTest('No tests here')
 
     np.random.seed(378)
     n = 200
