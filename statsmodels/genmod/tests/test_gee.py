@@ -1384,9 +1384,6 @@ class TestGEEMultinomialCovType(CheckConsistency):
 @dec.skipif(not have_matplotlib)
 def test_plots():
 
-    if not have_matplotlib:
-        raise nose.SkipTest('No tests here')
-
     np.random.seed(378)
     exog = np.random.normal(size=100)
     endog = np.random.normal(size=(100, 2))

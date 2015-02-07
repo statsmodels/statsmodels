@@ -924,7 +924,7 @@ def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
 plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
-def ceres_resids(results, focus_exog, frac=None, cond_means=None):
+def ceres_resids(results, focus_exog, frac=None, cond_means=None, cond_mean_tol=1e-5):
     """
     Calculate the CERES residuals (Conditional Expectation Partial
     Residuals) for a fitted model.
@@ -946,6 +946,9 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
         this is an empty nx0 array, the conditional means are
         treated as being zero.  If None, the conditional means are
         estimated.
+    cond_mean_tol : float
+        Tolerance used for excluding colinear columns when estimating
+        the conditional means.
 
     Returns
     -------
@@ -996,7 +999,7 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
             nm1 = np.sum(cf_fit**2)
             nm2 = np.sum(cf**2)
             nmd = (nm2 - nm1) / nm2
-            if nmd > 1e-5:
+            if nmd > cond_mean_tol:
                 new_exog = np.concatenate((new_exog, cf[:, None]), axis=1)
     else:
         new_exog = np.concatenate((new_exog, cond_means), axis=1)
