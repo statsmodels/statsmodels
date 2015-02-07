@@ -18,7 +18,9 @@ build_script:
   - C:\Python27\envs\py3\python.exe setup.py install
 
 test_script:
+  - cd c:\Python27\Scripts
+  - activate.bat
   - cd C:\Python27\envs\py3\Scripts
-#  - activate.bat
-  - SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
-  - C:\Python27\envs\py3\Scripts\nosetests -v -A "not slow" statsmodels
+  #- SET PATH=%PATH%;C:\Python27\envs\py3\Scripts
+  #- C:\Python27\envs\py3\Scripts\nosetests -v -A "not slow" statsmodels
+  - nosetests -v -A "not slow" statsmodels
