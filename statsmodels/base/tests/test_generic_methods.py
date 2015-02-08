@@ -15,7 +15,7 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
 
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_, assert_allclose, assert_equal
 
 from nose import SkipTest
 import platform
@@ -312,6 +312,167 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
         mod = sm.GEE(y_count, self.exog, groups, family=family, cov_struct=vi)
         self.results = mod.fit(start_params=start_params,
                                cov_type='bias_reduced')
+
+
+# Other test classes
+
+class CheckAnovaMixin(object):
+
+    @classmethod
+    def setup_class(cls):
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setupClass()
+
+        cls.data = test.data.drop([0,1,2])
+        cls.initialize()
+
+
+    def test_combined(self):
+        res = self.res
+        wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
+        eye = np.eye(len(res.params))
+        c_const = eye[0]
+        c_w = eye[[2,3]]
+        c_d = eye[1]
+        c_dw = eye[[4,5]]
+        c_weight = eye[2:6]
+        c_duration = eye[[1, 4, 5]]
+
+        compare_waldres(res, wa, [c_const, c_d, c_w, c_dw, c_duration, c_weight])
+
+
+    def test_categories(self):
+        # test only multicolumn terms
+        res = self.res
+        wa = res.wald_test_terms(skip_single=True)
+        eye = np.eye(len(res.params))
+        c_w = eye[[2,3]]
+        c_dw = eye[[4,5]]
+
+        compare_waldres(res, wa, [c_w, c_dw])
+
+
+def compare_waldres(res, wa, constrasts):
+    for i, c in enumerate(constrasts):
+        wt = res.wald_test(c)
+        assert_allclose(wa.table.values[i, 0], wt.statistic)
+        assert_allclose(wa.table.values[i, 1], wt.pvalue)
+        df = c.shape[0] if c.ndim == 2 else 1
+        assert_equal(wa.table.values[i, 2], df)
+        # attributes
+        assert_allclose(wa.statistic[i], wt.statistic)
+        assert_allclose(wa.pvalues[i], wt.pvalue)
+        assert_equal(wa.df_constraints[i], df)
+        if res.use_t:
+            assert_equal(wa.df_denom[i], res.df_resid)
+
+    col_names = wa.col_names
+    if res.use_t:
+        assert_equal(wa.distribution, 'F')
+        assert_equal(col_names[0], 'F')
+        assert_equal(col_names[1], 'P>F')
+    else:
+        assert_equal(wa.distribution, 'chi2')
+        assert_equal(col_names[0], 'chi2')
+        assert_equal(col_names[1], 'P>chi2')
+
+    # SMOKETEST
+    wa.summary_frame()
+
+
+class TestWaldAnovaOLS(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.formula.api import ols, glm, poisson
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit(use_t=False)
+
+
+    def test_noformula(self):
+        endog = self.res.model.endog
+        exog = self.res.model.data.orig_exog
+        del exog.design_info
+
+        res = sm.OLS(endog, exog).fit()
+        wa = res.wald_test_terms(skip_single=True,
+                                 combine_terms=['Duration', 'Weight'])
+        eye = np.eye(len(res.params))
+        c_weight = eye[2:6]
+        c_duration = eye[[1, 4, 5]]
+
+        compare_waldres(res, wa, [c_duration, c_weight])
+
+
+class TestWaldAnovaOLSF(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.formula.api import ols, glm, poisson
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit()  # default use_t=True
+
+
+class TestWaldAnovaGLM(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.formula.api import ols, glm, poisson
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = glm("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit(use_t=False)
+
+
+class TestWaldAnovaPoisson(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit(cov_type='HC0')
+
+
+class TestWaldAnovaNegBin(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.discrete.discrete_model import NegativeBinomial
+
+        formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
+        mod = NegativeBinomial.from_formula(formula, cls.data,
+                                            loglike_method='nb2')
+        cls.res = mod.fit()
+
+
+class TestWaldAnovaNegBin1(CheckAnovaMixin):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.discrete.discrete_model import NegativeBinomial
+
+        formula = "Days ~ C(Duration, Sum)*C(Weight, Sum)"
+        mod = NegativeBinomial.from_formula(formula, cls.data,
+                                            loglike_method='nb1')
+        cls.res = mod.fit(cov_type='HC0')
+
+
+class T_estWaldAnovaOLSNoFormula(object):
+
+    @classmethod
+    def initialize(cls):
+        from statsmodels.formula.api import ols, glm, poisson
+        from statsmodels.discrete.discrete_model import Poisson
+
+        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
+        cls.res = mod.fit()  # default use_t=True
 
 
 if __name__ == '__main__':
