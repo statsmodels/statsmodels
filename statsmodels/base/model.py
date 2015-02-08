@@ -1442,25 +1442,25 @@ class LikelihoodModelResults(Results):
         >>> res_ols = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
                           data).fit()
         >>> res_ols.wald_test_terms()
-        <class 'statsmodels.stats.contrast.ANOVAWaldResult'>
-                                                  F             PR(>F)  df
-        Intercept                        279.754525  2.37985521351e-22   1
-        C(Duration, Sum)                   5.367071    0.0245738436636   1
-        C(Weight, Sum)                    12.432445  3.99943118767e-05   2
-        C(Duration, Sum):C(Weight, Sum)    0.176002      0.83912310946   2
+        <class 'statsmodels.stats.contrast.WaldTestResults'>
+                                                  F                P>F  df constraint  df denom
+        Intercept                        279.754525  2.37985521351e-22              1        51
+        C(Duration, Sum)                   5.367071    0.0245738436636              1        51
+        C(Weight, Sum)                    12.432445  3.99943118767e-05              2        51
+        C(Duration, Sum):C(Weight, Sum)    0.176002      0.83912310946              2        51
 
         >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)",
                                            data).fit(cov_type='HC0')
         >>> wt = res_poi.wald_test_terms(skip_single=False,
                                          combine_terms=['Duration', 'Weight'])
         >>> print(wt)
-                                    chi2          PR(>chi2)  df
-        Intercept              15.695625  7.43960374424e-05   1
-        C(Weight)              16.132616  0.000313940174705   2
-        C(Duration)             1.009147     0.315107378931   1
-        C(Weight):C(Duration)   0.216694     0.897315972824   2
-        Duration               11.187849     0.010752286833   3
-        Weight                 30.263368  4.32586407145e-06   4
+                                    chi2             P>chi2  df constraint
+        Intercept              15.695625  7.43960374424e-05              1
+        C(Weight)              16.132616  0.000313940174705              2
+        C(Duration)             1.009147     0.315107378931              1
+        C(Weight):C(Duration)   0.216694     0.897315972824              2
+        Duration               11.187849     0.010752286833              3
+        Weight                 30.263368  4.32586407145e-06              4
 
         """
         # lazy import
