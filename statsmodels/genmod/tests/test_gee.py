@@ -14,7 +14,7 @@ import numpy as np
 import os
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_)
+                           assert_array_less, assert_raises, assert_, dec)
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
      OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
      NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
@@ -27,6 +27,31 @@ import statsmodels.formula.api as smf
 import statsmodels.api as sm
 from scipy.stats.distributions import norm
 from patsy import dmatrices
+
+try:
+    import matplotlib.pyplot as plt  #makes plt available for test functions
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
+pdf_output = False
+
+if pdf_output:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pdf = PdfPages("test_glm.pdf")
+else:
+    pdf = None
+
+def close_or_save(pdf, fig):
+    if pdf_output:
+        pdf.savefig(fig)
+    plt.close(fig)
+
+def teardown_module():
+    if have_matplotlib:
+        plt.close('all')
+        if pdf_output:
+            pdf.close()
 
 def load_data(fname, icept=True):
     """
@@ -1356,6 +1381,7 @@ class TestGEEMultinomialCovType(CheckConsistency):
 
         check_wrapper(rslt2)
 
+@dec.skipif(not have_matplotlib)
 def test_plots():
 
     np.random.seed(378)

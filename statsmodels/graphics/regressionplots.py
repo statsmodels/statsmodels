@@ -875,8 +875,11 @@ def plot_partial_residuals(results, focus_exog, ax=None):
     # Docstring attached below
 
     model = results.model
+
+    focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
+
     pr = partial_resids(results, focus_exog)
-    focus_exog_vals = results.model.exog[:, focus_exog]
+    focus_exog_vals = results.model.exog[:, focus_col]
 
     fig, ax = utils.create_mpl_ax(ax)
     ax.plot(focus_exog_vals, pr, 'o', alpha=0.6)
@@ -895,29 +898,25 @@ def plot_partial_residuals(results, focus_exog, ax=None):
 plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
-def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
+def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
                ax=None):
     # Docstring attached below
 
     model = results.model
 
+    focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
+
     presid = ceres_resids(results, focus_exog, frac=frac,
                           cond_means=cond_means)
 
-    if type(focus_exog) is str:
-        ix = model.exog_names.index(focus_exog)
-        xname = focus_exog
-    else:
-        ix = focus_exog
-        focus_exog_vals = model.exog[:, ix]
-        xname = model.exog_names[focus_exog]
+    focus_exog_vals = model.exog[:, focus_col]
 
     fig, ax = utils.create_mpl_ax(ax)
     ax.plot(focus_exog_vals, presid, 'o', alpha=0.6)
 
     ax.set_title('CERES residuals plot', fontsize='large')
 
-    ax.set_xlabel(xname, size=15)
+    ax.set_xlabel(focus_exog, size=15)
     ax.set_ylabel("Component plus residual", size=15)
 
     return fig
@@ -925,7 +924,7 @@ def plot_ceres_residuals(results, focus_exog, frac=None, cond_means=None,
 plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
     'extra_params_doc' : "results: object\n\tResults for a fitted regression model"}
 
-def ceres_resids(results, focus_exog, frac=None, cond_means=None):
+def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     """
     Calculate the CERES residuals (Conditional Expectation Partial
     Residuals) for a fitted model.
@@ -936,16 +935,16 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
         The fitted model for which the CERES residuals are calculated.
     focus_exog : int
         The column of results.model.exog used as the 'focus variable'.
-    frac : dict, optional
-        Map from column indices of results.model.exog to lowess
-        smoothing parameters (the frac keyword argument to lowess).
-        Not used if `cond_means` is provided.
+    frac : float, optional
+        Lowess smoothing parameter for estimating the conditional
+        means.  Not used if `cond_means` is provided.
     cond_means : array-like, optional
         If provided, the columns of this array are the conditional
         means E[exog | focus exog], where exog ranges over some
         or all of the columns of exog other than focus exog.  If
         this is an empty nx0 array, the conditional means are
-        treated as being zero.
+        treated as being zero.  If None, the conditional means are
+        estimated.
 
     Returns
     -------
@@ -955,7 +954,6 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
     -----
     If `cond_means` is not provided, it is obtained by smoothing each
     column of exog (except the focus column) against the focus column.
-    The values of `frac` control these lowess smooths.
 
     Currently only supports GLM, GEE, and OLS models.
     """
@@ -964,33 +962,41 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
 
     if not isinstance(model, (GLM, GEE, OLS)):
         raise ValueError("ceres residuals not available for %s" %
-                         type(model))
+                         model.__class__.__name__)
 
-    n = model.exog.shape[0]
-    m = model.exog.shape[1] - 1
-
-    if frac is None:
-        frac = {}
-
-    if type(focus_exog) is str:
-        focus_col = results.exog_names.index(focus_exog)
-    else:
-        focus_col = focus_exog
+    focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
 
     # Indices of non-focus columns
-    ii = range(len(results.params))
-    ii = list(ii)
-    ii.pop(focus_col)
+    ix_nf = range(len(results.params))
+    ix_nf = list(ix_nf)
+    ix_nf.pop(focus_col)
+    nnf = len(ix_nf)
 
+    # Estimate the conditional means if not provided.
     if cond_means is None:
-        cond_means = np.zeros((n, m))
-        x0 = model.exog[:, focus_col]
-        for j, i in enumerate(ii):
-            y0 = model.exog[:, i]
-            fr = frac[i] if i in frac else 0.66
-            cond_means[:, j] = lowess(y0, x0, frac=fr, return_sorted=False)
 
-    new_exog = np.concatenate((model.exog[:, ii], cond_means), axis=1)
+        # Below we calculate E[x | focus] where x is each column other
+        # than the focus column.  We don't want the intercept when we do
+        # this so we remove it here.
+        pexog = model.exog[:, ix_nf]
+        pexog -= pexog.mean(0)
+        u, s, vt = np.linalg.svd(pexog, 0)
+        ii = np.flatnonzero(s > 1e-6)
+        pexog = u[:, ii]
+
+        fcol = model.exog[:, focus_col]
+        cond_means = np.empty((len(fcol), pexog.shape[1]))
+        for j in range(pexog.shape[1]):
+
+            # Get the fitted values for column i given the other
+            # columns (skip the intercept).
+            y0 = pexog[:, j]
+
+            cf = lowess(y0, fcol, frac=frac, return_sorted=False)
+
+            cond_means[:, j] = cf
+
+    new_exog = np.concatenate((model.exog[:, ix_nf], cond_means), axis=1)
 
     # Refit the model using the adjusted exog values
     klass = model.__class__
@@ -1002,8 +1008,8 @@ def ceres_resids(results, focus_exog, frac=None, cond_means=None):
     presid = model.endog - new_result.fittedvalues
     if isinstance(model, (GLM, GEE)):
         presid *= model.family.link.deriv(new_result.fittedvalues)
-    if cond_means.shape[1] > 0:
-        presid += np.dot(cond_means, new_result.params[m:])
+    if new_exog.shape[1] > nnf:
+        presid += np.dot(new_exog[:, nnf:], new_result.params[nnf:])
 
     return presid
 
@@ -1047,7 +1053,7 @@ def partial_resids(results, focus_exog):
                          % type(model))
 
     if type(focus_exog) is str:
-        focus_col = results.exog_names.index(focus_exog)
+        focus_col = model.exog_names.index(focus_exog)
     else:
         focus_col = focus_exog
 
@@ -1098,15 +1104,13 @@ def added_variable_resids(results, focus_exog, resid_type=None,
 
     model = results.model
     if not isinstance(model, (GEE, GLM, OLS)):
-        raise ValueError("model type not supported for added variable residuals")
+        raise ValueError("model type %s not supported for added variable residuals" %
+                         model.__class__.__name__)
 
     exog = model.exog
     endog = model.endog
 
-    if type(focus_exog) is str:
-        focus_col = model.exog_names.index(focus_exog)
-    else:
-        focus_col = focus_exog
+    focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
 
     focus_exog_vals = exog[:, focus_col]
 

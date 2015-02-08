@@ -55,9 +55,8 @@ _plot_ceres_residuals_doc = """\
         indicating the variable whose role in the regression is to be
         assessed.
     frac : float
-        Map from column numbers to lowess tuning parameters for the
-        adjusted model used in the CERES analysis.  Not used if
-        `cond_means` is provided.
+        Lowess tuning parameter for the adjusted model used in the
+        CERES analysis.  Not used if `cond_means` is provided.
     cond_means : array-like, optional
         If provided, the columns of this array span the space of the
         conditional means E[exog | focus exog], where exog ranges over

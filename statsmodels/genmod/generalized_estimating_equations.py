@@ -1505,7 +1505,7 @@ class GEEResults(base.LikelihoodModelResults):
     plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
         'extra_params_doc' : ''}
 
-    def plot_ceres_residuals(self, focus_exog, frac=None, cond_means=None,
+    def plot_ceres_residuals(self, focus_exog, frac=0.66, cond_means=None,
                              ax=None):
         # Docstring attached below
 

@@ -7,7 +7,7 @@ from statsmodels.compat import range
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less)
+                           assert_allclose, assert_, assert_array_less, dec)
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -23,6 +23,31 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
+
+try:
+    import matplotlib.pyplot as plt  #makes plt available for test functions
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
+pdf_output = False
+
+if pdf_output:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pdf = PdfPages("test_glm.pdf")
+else:
+    pdf = None
+
+def close_or_save(pdf, fig):
+    if pdf_output:
+        pdf.savefig(fig)
+    plt.close(fig)
+
+def teardown_module():
+    if have_matplotlib:
+        plt.close('all')
+        if pdf_output:
+            pdf.close()
 
 class CheckModelResultsMixin(object):
     '''
@@ -803,24 +828,50 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
+@dec.skipif(not have_matplotlib)
 def test_plots():
 
     np.random.seed(378)
-    exog = np.random.normal(size=100)
-    endog = np.random.normal(size=(100, 2))
+    n = 200
+    exog = np.random.normal(size=(n, 2))
+    lin_pred = exog[:, 0] + exog[:, 1]**2
+    prob = 1 / (1 + np.exp(-lin_pred))
+    endog = 1 * (np.random.uniform(size=n) < prob)
 
-    model = sm.GLM(exog, endog)
+    model = sm.GLM(endog, exog, family=sm.families.Binomial())
     result = model.fit()
 
     import matplotlib.pyplot as plt
+    import pandas as pd
+    from statsmodels.graphics.regressionplots import add_lowess
 
-    # Smoke tests
-    fig = result.plot_added_variable(1)
-    plt.close(fig)
-    fig = result.plot_partial_residuals(1)
-    plt.close(fig)
-    fig = result.plot_ceres_residuals(1)
-    plt.close(fig)
+    # array interface
+    for j in 0,1:
+        fig = result.plot_added_variable(j)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+        fig = result.plot_partial_residuals(j)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+        fig = result.plot_ceres_residuals(j)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+
+    # formula interface
+    data = pd.DataFrame({"y": endog, "x1": exog[:, 0], "x2": exog[:, 1]})
+    model = sm.GLM.from_formula("y ~ x1 + x2", data, family=sm.families.Binomial())
+    result = model.fit()
+    for j in 0,1:
+        xname = ["x1", "x2"][j]
+        fig = result.plot_added_variable(xname)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+        fig = result.plot_partial_residuals(xname)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
+        fig = result.plot_ceres_residuals(xname)
+        add_lowess(fig.axes[0], frac=0.5)
+        close_or_save(pdf, fig)
 
 def gen_endog(lin_pred, family_class, link, binom_version=0):
 
