@@ -1347,25 +1347,19 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        params : arrayh-like
+        params : array-like
             The model proportional hazards model parameters.
 
         Returns
         -------
-        A list of objects of type scipy.stats.distributions.rv_discrete
+        See statsmodels.duration.hazard_regression.rv_discrete_float
 
         Notes
         -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
-        failure times wihtin a stratum.
+        failure times within a stratum.
         """
-
-        # TODO: this returns a Python list of rv_discrete objects, so
-        # nothing can be vectorized.  It appears that rv_discrete does
-        # not allow vectorization.
-
-        from scipy.stats.distributions import rv_discrete
 
         surv = self.surv
         bhaz = self.baseline_cumulative_hazard(params)
