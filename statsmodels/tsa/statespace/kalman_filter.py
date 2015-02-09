@@ -185,15 +185,14 @@ class KalmanFilter(Representation):
 
         return prefix, dtype, create_filter, create_statespace
 
-    def set_filter_method(self, filter_method=None, reset=True, **kwargs):
+    def set_filter_method(self, filter_method=None, **kwargs):
         if filter_method is not None:
             self.filter_method = filter_method
         for name in KalmanFilter.filter_methods:
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-    def set_inversion_method(self, inversion_method=None, reset=True,
-                             **kwargs):
+    def set_inversion_method(self, inversion_method=None, **kwargs):
         if inversion_method is not None:
             self.inversion_method = inversion_method
         for name in KalmanFilter.inversion_methods:
