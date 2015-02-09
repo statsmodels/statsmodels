@@ -560,8 +560,7 @@ class Representation(object):
         """
         self.initialization = 'stationary'
 
-    def _initialize_representation(self, recreate_statespace=False,
-                                   *args, **kwargs):
+    def _initialize_representation(self, *args, **kwargs):
         prefix = kwargs['prefix'] if 'prefix' in kwargs else self.prefix
         dtype = prefix_dtype_map[prefix]
 
