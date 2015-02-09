@@ -73,7 +73,7 @@ def test_from_formula():
 def test_cov_params():
     mod, res = get_dummy_mod()
 
-    assert_almost_equal(res.cov_params, res.cov_params_delta)
+    assert_almost_equal(res.cov_params(), res.cov_params_delta)
 
 def test_results():
     mod, res = get_dummy_mod()

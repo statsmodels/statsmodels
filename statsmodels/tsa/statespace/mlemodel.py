@@ -567,12 +567,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # return -2*self.llf + self.params.shape[0]*np.log(self.nobs)
         return bic(self.llf, self.nobs, self.params.shape[0])
 
-    @cache_readonly
-    def bse(self):
-        return np.sqrt(np.diagonal(self.cov_params))
+    def cov_params(self):
+        return self.cov_params_default
 
     @cache_readonly
-    def cov_params(self):
+    def cov_params_default(self):
         hessian = self.model.hessian(
             self._params, set_params=False, transformed=True,
             initial_state=self.initial_state,
