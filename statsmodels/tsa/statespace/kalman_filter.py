@@ -786,6 +786,9 @@ class FilterResults(FrozenRepresentation):
             return result.forecasts[:, start:end]
 
     def _predict(self, nstatic, ndynamic, nforecast, model, *args, **kwargs):
+        # TODO: this doesn't use self, and can either be a static method or
+        #       moved outside the class altogether.
+
         # Get the underlying filter
         kfilter = model._kalman_filter
 
