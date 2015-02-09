@@ -41,13 +41,14 @@ class SARIMAX(MLEModel):
         an AR(1) model: (1,0,0).
     seasonal_order : iterable, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
-        AR parameters, differences, MA parameters, and number of seasons.
+        AR parameters, differences, MA parameters, and periodicity.
         `d` must be an integer indicating the integration order of the process,
         while `p` and `q` may either be an integers indicating the AR and MA
         orders (so that all lags up to those orders are included) or else
         iterables giving specific AR and / or MA lags to include. `s` is an
-        integer giving the number of seasons, often it is 4 for quarterly data
-        or 12 for monthly data. Default is no seasonal effect.
+        integer giving the periodicity (number of periods in season), often it
+        is 4 for quarterly data or 12 for monthly data. Default is no seasonal
+        effect.
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e. a
@@ -57,24 +58,25 @@ class SARIMAX(MLEModel):
         `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
         include a trend component.
     measurement_error : boolean, optional
-        Whether or not to assume the observations were measured with error.
-        Default is False.
+        Whether or not to assume the endogenous observations `endog` were
+        measured with error. Default is False.
     time_varying_regression : boolean, optional
-        Used when an exogenous dataset is provided to select whether or not
-        coefficients on the exogenous regressors are allowed to vary over time.
-        Default is False.
+        Used when an explanatory variables, `exog`, are provided provided
+        to select whether or not coefficients on the exogenous regressors are
+        allowed to vary over time. Default is False.
     mle_regression : boolean, optional
-        Whether or not to use estimate the regression coefficients as part of
-        maximum likelihood estimation or through the Kalman filter (i.e.
-        recursive least squares). If `time_varying_regression` is True, this
-        must be set to False. Default is True.
+        Whether or not to use estimate the regression coefficients for the
+        exogenous variables as part of maximum likelihood estimation or through
+        the Kalman filter (i.e. recursive least squares). If
+        `time_varying_regression` is True, this must be set to False. Default
+        is True.
     simple_differencing : boolean, optional
-        Whether or not to use conditional maximum likelihood estimation.
-        If True, differencing is performed prior to estimation, which discards
-        the first :math:`SD + d` initial rows but reuslts in a smaller
-        state-space formulation. If False, the full SARIMAX model is put in
-        state-space form so that all datapoints can be used in estimation.
-        Default is False.
+        Whether or not to use partially conditional maximum likelihood
+        estimation. If True, differencing is performed prior to estimation,
+        which discards the first :math:`s D + d` initial rows but reuslts in a
+        smaller state-space formulation. If False, the full SARIMAX model is
+        put in state-space form so that all datapoints can be used in
+        estimation. Default is False.
     enforce_stationarity : boolean, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
@@ -88,20 +90,23 @@ class SARIMAX(MLEModel):
     Attributes
     ----------
     measurement_error : boolean
-        Whether or not to assume the observations were measured with error.
+        Whether or not to assume the endogenous observations `endog` were
+        measured with error.
     state_error : boolean
         Whether or not the transition equation has an error component.
     mle_regression : boolean
-        Whether or not to use estimate the regression coefficients as part of
-        maximum likelihood estimation.
+        Whether or not the regression coefficients for the exogenous variables
+        were estimated via maximum likelihood estimation.
     state_regression : boolean
-        Whether or not to use estimate the regression coefficients via the
-        Kalman filter, by extending the state space.
+        Whether or not the regression coefficients for the exogenous variables
+        are included as elements of the state space and estimated via the
+        Kalman filter.
     time_varying_regression : boolean
         Whether or not coefficients on the exogenous regressors are allowed to
-        vary over time. Not yet implemented.
+        vary over time.
     simple_differencing : boolean
-        Whether or not to use conditional maximum likelihood estimation.
+        Whether or not to use partially conditional maximum likelihood
+        estimation.
     enforce_stationarity : boolean
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model.
@@ -143,12 +148,12 @@ class SARIMAX(MLEModel):
         Highest moving average order in the model, zero-indexed.
     k_ma_params : int
         Number of moving average parameters to be estimated.
+    k_seasons : int
+        Number of periods in a season.
     k_seasonal_ar : int
         Highest seasonal autoregressive order in the model, zero-indexed.
     k_seasonal_ar_params : int
         Number of seasonal autoregressive parameters to be estimated.
-    k_seasons : int
-        Number of seasons.
     k_seasonal_diff : int
         Order of seasonal intergration.
     k_seasonal_ma : int
@@ -1572,12 +1577,12 @@ class SARIMAXResults(MLEResults):
         Highest moving average order in the model, zero-indexed.
     k_ma_params : int
         Number of moving average parameters to be estimated.
+    k_seasons : int
+        Number of periods in a season.
     k_seasonal_ar : int
         Highest seasonal autoregressive order in the model, zero-indexed.
     k_seasonal_ar_params : int
         Number of seasonal autoregressive parameters to be estimated.
-    k_seasons : int
-        Number of seasons.
     k_seasonal_diff : int
         Order of seasonal intergration.
     k_seasonal_ma : int
@@ -1631,7 +1636,8 @@ class SARIMAXResults(MLEResults):
         Moving average parameters actually estimated in the model. Does not
         include parameters whose values are constrained to be zero.
     measurement_error : boolean
-        Whether or not to assume the observations were measured with error.
+        Whether or not to assume the endogenous observations `endog` were
+        measured with error.
     state_error : boolean
         Whether or not the transition equation has an error component.
     mle_regression : boolean
@@ -1642,9 +1648,10 @@ class SARIMAXResults(MLEResults):
         Kalman filter, by extending the state space.
     time_varying_regression : boolean
         Whether or not coefficients on the exogenous regressors are allowed to
-        vary over time. Not yet implemented.
+        vary over time.
     simple_differencing : boolean
-        Whether or not to use conditional maximum likelihood estimation.
+        Whether or not to use partially conditional maximum likelihood
+        estimation.
     enforce_stationarity : boolean
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model.
