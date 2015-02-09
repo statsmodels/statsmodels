@@ -99,6 +99,11 @@ def group_sums(x, group, use_bincount=True):
         raise ValueError('not implemented yet')
 
     if use_bincount:
+
+        # re-label groups or bincount takes too much memory
+        if np.max(group) > 2 * x.shape[0]:
+            group = pd.factorize(group)[0]
+
         return np.array([np.bincount(group, weights=x[:, col])
                          for col in range(x.shape[1])])
     else:
