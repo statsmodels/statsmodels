@@ -148,7 +148,8 @@ class MLEModel(Model):
                                            fargs=fargs,
                                            maxiter=maxiter,
                                            full_output=full_output, disp=disp,
-                                           callback=callback, **kwargs)
+                                           callback=callback,
+                                           skip_hessian=True, **kwargs)
 
         # Optionally tune the maximum likelihood estimates using complex step
         # gradient
@@ -161,6 +162,7 @@ class MLEModel(Model):
                                                maxiter=maxiter,
                                                full_output=full_output,
                                                disp=disp, callback=callback,
+                                               skip_hessian=True,
                                                **kwargs)
 
         # Constrain the final parameters and update the model to be sure we're
