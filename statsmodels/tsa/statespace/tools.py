@@ -90,9 +90,9 @@ def companion_matrix(polynomial):
     return matrix
 
 
-def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
+def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
     """
-    Difference a series simply and / or seasonally along the zero-th axis.
+    Difference a series simply and/or seasonally along the zero-th axis.
 
     Given a series (denoted :math:`y_t`), performs the differencing operation
 
@@ -125,23 +125,23 @@ def diff(series, diff=1, seasonal_diff=None, k_seasons=1):
     differenced = np.asanyarray(series) if not pandas else series
 
     # Seasonal differencing
-    if seasonal_diff is not None:
-        while seasonal_diff > 0:
+    if k_seasonal_diff is not None:
+        while k_seasonal_diff > 0:
             if not pandas:
                 differenced = (
                     differenced[k_seasons:] - differenced[:-k_seasons]
                 )
             else:
                 differenced = differenced.diff(k_seasons)[k_seasons:]
-            seasonal_diff -= 1
+            k_seasonal_diff -= 1
 
     # Simple differencing
     if not pandas:
-        differenced = np.diff(differenced, diff, axis=0)
+        differenced = np.diff(differenced, k_diff, axis=0)
     else:
-        while diff > 0:
+        while k_diff > 0:
             differenced = differenced.diff()[1:]
-            diff -= 1
+            k_diff -= 1
     return differenced
 
 
