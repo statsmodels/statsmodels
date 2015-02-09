@@ -606,7 +606,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
     def fittedvalues(self):
         """The predicted values of the model."""
-        return self.forecasts.copy()
+        return self.forecasts
 
     @cache_readonly
     def hqic(self):
@@ -623,7 +623,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
     def resid(self):
         """The model residuals."""
-        return self.forecasts_error.copy()
+        return self.forecasts_error
 
     @cache_readonly
     def zvalues(self):
