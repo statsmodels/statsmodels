@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover
         dtype, index = max(
             [(ar.dtype, i) for i, ar in enumerate(arrays)])
         prefix = _type_conv.get(dtype.char, 'd')
-        return (prefix, dtype, None)
+        return prefix, dtype, None
 
 
 prefix_dtype_map = {
@@ -284,7 +284,7 @@ def unconstrain_stationary_univariate(constrained):
 
 def validate_matrix_shape(name, shape, nrows, ncols, nobs):
     """
-    Validate the shape of a possibly time-varing matrix, or raise an exception
+    Validate the shape of a possibly time-varying matrix, or raise an exception
 
     Parameters
     ----------
@@ -337,7 +337,7 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
 def validate_vector_shape(name, shape, nrows, nobs):
     """
-    Validate the shape of a possibly time-varing vector, or raise an exception
+    Validate the shape of a possibly time-varying vector, or raise an exception
 
     Parameters
     ----------
