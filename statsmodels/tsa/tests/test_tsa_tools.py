@@ -7,7 +7,7 @@ from statsmodels.compat.python import zip
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal, assert_raises
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as tsa
@@ -374,19 +374,52 @@ def test_freq_to_period():
         assert_equal(tools.freq_to_period(to_offset(i)), j)
 
 
-def test_detrend():
-    data = np.arange(5)
-    assert_array_almost_equal(sm.tsa.detrend(data, order=1),
-                              np.zeros_like(data))
-    assert_array_almost_equal(sm.tsa.detrend(data, order=0), [-2, -1, 0, 1, 2])
-    data = np.arange(10).reshape(5, 2)
-    assert_array_almost_equal(sm.tsa.detrend(data, order=1, axis=0),
-                              np.zeros_like(data))
-    assert_array_almost_equal(sm.tsa.detrend(data, order=0, axis=0),
-                              [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]])
-    assert_array_almost_equal(sm.tsa.detrend(data, order=0, axis=1),
-                              [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5],
-                               [-0.5, 0.5], [-0.5, 0.5]])
+class TestDetrend(unittest.TestCase):
+    @classmethod
+    def setup_class(cls):
+        cls.data_1d = np.arange(5.0)
+        cls.data_2d = np.arange(10.0).reshape(5, 2)
+
+    def test_detrend_1d(self):
+        data = self.data_1d
+        assert_array_almost_equal(sm.tsa.detrend(data, order=1), np.zeros_like(data))
+        assert_array_almost_equal(sm.tsa.detrend(data, order=0), [-2, -1, 0, 1, 2])
+
+    def test_detrend_2d(self):
+        data = self.data_2d
+        assert_array_almost_equal(sm.tsa.detrend(data, order=1, axis=0), np.zeros_like(data))
+        assert_array_almost_equal(sm.tsa.detrend(data, order=0, axis=0), [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]])
+        assert_array_almost_equal(sm.tsa.detrend(data, order=0, axis=1),
+                                  [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
+
+    def test_detrend_series(self):
+        data = pd.Series(self.data_1d, name='one')
+        detrended = sm.tsa.detrend(data, order=1)
+        assert_array_almost_equal(detrended.values, np.zeros_like(data))
+        assert_series_equal(detrended, pd.Series(detrended.values, name='one'))
+        detrended = sm.tsa.detrend(data, order=0)
+        assert_array_almost_equal(detrended.values, pd.Series([-2, -1, 0, 1, 2]))
+        assert_series_equal(detrended, pd.Series(detrended.values, name='one'))
+
+    def test_detrend_dataframe(self):
+        columns = ['one', 'two']
+        index = [c for c in 'abcde']
+        data = pd.DataFrame(self.data_2d, columns=columns, index=index)
+
+        detrended = sm.tsa.detrend(data, order=1, axis=0)
+        assert_array_almost_equal(detrended.values, np.zeros_like(data))
+        assert_frame_equal(detrended, pd.DataFrame(detrended.values, columns=columns, index=index))
+
+        detrended = sm.tsa.detrend(data, order=0, axis=0)
+        assert_array_almost_equal(detrended.values, [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]])
+        assert_frame_equal(detrended, pd.DataFrame(detrended.values, columns=columns, index=index))
+
+        detrended = sm.tsa.detrend(data, order=0, axis=1)
+        assert_array_almost_equal(detrended.values, [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
+        assert_frame_equal(detrended, pd.DataFrame(detrended.values, columns=columns, index=index))
+
+    def test_detrend_dim_too_large(self):
+        assert_raises(NotImplementedError, sm.tsa.detrend, np.ones((3, 3, 3)))
 
 class TestAddTrend(unittest.TestCase):
     @classmethod

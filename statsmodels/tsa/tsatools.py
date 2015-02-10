@@ -228,8 +228,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         return np.column_stack((x[lags:,first_cols],ndlags,
                     x[lags:,last_cols]))
 
+
 def detrend(x, order=1, axis=0):
-    '''detrend an array with a trend of given order along axis 0 or 1
+    """
+    Detrend an array with a trend of given order along axis 0 or 1
 
     Parameters
     ----------
@@ -248,25 +250,20 @@ def detrend(x, order=1, axis=0):
     detrended data series : ndarray
         The detrended series is the residual of the linear regression of the
         data on the trend of given order.
-
-
-    '''
-    x = np.asarray(x)
+    """
+    if x.ndim == 2 and int(axis) == 1:
+        x = x.T
+    elif x.ndim > 2:
+        raise NotImplementedError('x.ndim > 2 is not implemented until it is needed')
+    # could use a polynomial, but this should work also with 2d x, but maybe not yet
     nobs = x.shape[0]
-    if order == 0:
-        return x - np.expand_dims(x.mean(axis), axis)
-    else:
-        if x.ndim == 2 and lrange(2)[axis]==1:
-            x = x.T
-        elif x.ndim > 2:
-            raise NotImplementedError('x.ndim>2 is not implemented until it is needed')
-        #could use a polynomial, but this should work also with 2d x, but maybe not yet
-        trends = np.vander(np.arange(nobs).astype(float), N=order+1)
-        beta = np.linalg.lstsq(trends, x)[0]
-        resid = x - np.dot(trends, beta)
-        if x.ndim == 2 and lrange(2)[axis]==1:
-            resid = resid.T
-        return resid
+    trends = np.vander(np.arange(float(nobs)), N=order + 1)
+    beta = np.linalg.pinv(trends).dot(x)
+    resid = x - np.dot(trends, beta)
+    if x.ndim == 2 and int(axis) == 1:
+        resid = resid.T
+
+    return resid
 
 
 def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
