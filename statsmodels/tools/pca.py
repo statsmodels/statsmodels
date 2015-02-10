@@ -6,7 +6,6 @@ Modified by Kevin Sheppard
 from __future__ import print_function, division
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from statsmodels.compat.python import range
@@ -693,6 +692,8 @@ class PCA(object):
         fig : figure
             Handle to the figure
         """
+        # Local import since mpl is optional
+        import matplotlib.pyplot as plt
         plt.figure()
         ncomp = self._ncomp if ncomp is None else ncomp
         vals = np.asarray(self.eigenvals)
@@ -744,6 +745,8 @@ class PCA(object):
         fig : figure
             Handle to the figure
         """
+        # Local import since mpl is optional
+        import matplotlib.pyplot as plt
         plt.figure()
         ncomp = 10 if ncomp is None else ncomp
         ncomp = min(ncomp, self._ncomp)

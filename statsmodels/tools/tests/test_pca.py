@@ -5,7 +5,14 @@ import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_raises
+from numpy.testing.decorators import skipif
 import pandas as pd
+
+try:
+    import matplotlib.pyplot as plt
+    missing_matplotlib = False
+except ImportError:
+    missing_matplotlib = True
 
 from statsmodels.tools.pca import PCA
 from statsmodels.tools.tests.results.datamlw import data, princomp1, princomp2
@@ -43,6 +50,7 @@ class TestPCA(TestCase):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
+    @skipif(missing_matplotlib)
     def test_smoke_plot_and_repr(self):
         pc = PCA(self.x)
         fig = pc.plot_scree()

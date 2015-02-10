@@ -1392,8 +1392,6 @@ def test_plots():
     model = sm.GEE(exog, endog, groups)
     result = model.fit()
 
-    import matplotlib.pyplot as plt
-
     # Smoke tests
     fig = result.plot_added_variable(1)
     plt.close(fig)
