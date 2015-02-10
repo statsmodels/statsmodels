@@ -253,10 +253,14 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
     Returns
     -------
-    data : array
+    data : array, recarray or DataFrame
         The original values with a constant (column of ones) as the first or
-        last column.
+        last column. Returned value depends on input type.
 
+    Notes
+    -----
+    When the input is recarray or a pandas Series or DataFrame, the added
+    column's name is 'const'.
     """
     is_recarray = _is_recarray(data)
     if _is_using_pandas(data, None) or is_recarray:
@@ -290,9 +294,9 @@ def add_constant(data, prepend=True, has_constant='skip'):
         else:
             data['const'] = const
     else:
-        data = np.column_stack((data, np.ones((data.shape[0], 1))))
-        if prepend:
-            return np.roll(data, 1, 1)
+        order = 1 if prepend else -1
+        data = [np.ones((data.shape[0], 1)), data]
+        data = np.column_stack(data[::order])
 
     if is_recarray:
         data = data.to_records(index=False, convert_datetime64=False)

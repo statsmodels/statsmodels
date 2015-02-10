@@ -33,6 +33,13 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
         constant. 'skip' will return the data without change. 'skip' is the
         default.
 
+    Returns
+    -------
+    y : array, recarray or DataFrame
+        The original data with the additional trend columns.  If x is a
+        recarray or pandas Series or DataFrame, then the trend column names
+        are 'const', 'trend' and 'trend_squared'.
+
     Notes
     -----
     Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
@@ -40,7 +47,7 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
 
     See also
     --------
-    statsmodels.add_constant
+    statsmodels.tools.add_constant
     """
     # TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
@@ -77,13 +84,16 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     trendarr = np.fliplr(trendarr)
     if trend == "t":
         trendarr = trendarr[:, 1]
+    # Constant if all have same value and non-zero
+    x_has_constant = np.any(np.logical_and(np.any(np.ptp(np.asanyarray(X), axis=0) == 0, axis=0),
+                                           np.all(X != 0.0, axis=0)))
 
-    if "c" in trend and np.any(np.ptp(np.asanyarray(X), axis=0) == 0):
+    if "c" in trend and x_has_constant:
         if has_constant == 'raise':
             raise ValueError("X already contains a constant")
         elif has_constant == 'add':
             pass
-        elif has_constant == 'skip' and trend == "ct":
+        else:
             trendarr = trendarr[:, 1]
 
     order = 1 if prepend else -1
