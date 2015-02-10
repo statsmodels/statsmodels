@@ -12,6 +12,7 @@ import os
 
 import warnings
 from statsmodels.tsa.statespace import sarimax, tools
+from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_almost_equal, assert_raises, assert_allclose
@@ -22,6 +23,49 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
 
+
+class SARIMAXStatsmodelsTests(object):
+    """
+    Test ARIMA model using SARIMAX class against statsmodels ARIMA class
+    """
+    def __init__(self):
+        self.true = results_sarimax.wpi1_stationary
+        endog = self.true['data']
+
+        self.model_a = arima.ARIMA(endog, order=(1,1,1))
+        self.result_a = self.model_a.fit(disp=-1)
+
+        self.model_b = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c',
+                                       simple_differencing=True,
+                                       hamilton_representation=True)
+        self.result_b = self.model_b.fit(disp=-1)
+
+    def test_loglike(self):
+        assert_allclose(self.result_b.llf, self.result_a.llf)
+
+    def test_aic(self):
+        assert_allclose(self.result_b.aic, self.result_a.aic)
+
+    def test_bic(self):
+        assert_allclose(self.result_b.bic, self.result_a.bic)
+
+    def test_hqic(self):
+        assert_allclose(self.result_b.hqic, self.result_a.hqic)
+
+    def test_mle(self):
+        # ARIMA estimates the mean of the process, whereas SARIMAX estimates
+        # the intercept. Convert the mean to intercept to compare
+        params_a = self.result_a.params
+        params_a[0] = (1 - params_a[1]) * params_a[0]
+        assert_allclose(self.result_b.params[:-1], params_a, atol=1e-3)
+
+    def test_bse(self):
+        assert_allclose(
+            self.result_b.bse[1:-1],
+            self.result_a.bse[1:],
+            atol=1e-2
+        )
+        
 
 class SARIMAXStataTests(object):
     def test_loglike(self):
