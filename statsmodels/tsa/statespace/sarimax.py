@@ -232,6 +232,24 @@ class SARIMAX(MLEModel):
     Stata and R require using it along with simple differencing (as Stata
     does).
 
+    Detailed information about state space models can be found in [1]_. Some
+    specific references are:
+
+    - Chapter 3.4 describes ARMA and ARIMA models in state space form (using
+      the Harvey representation), and gives references for basic seasonal
+      models and models with a multiplicative form (for example the airline
+      model). It also shows a state space model for a full ARIMA process (this
+      is what is done here if `simple_differencing=False`).
+    - Chapter 3.6 describes estimating regression effects via the Kalman filter
+      (this is performed if `mle_regression` is False), regression with
+      time-varying coefficients, and regression with ARMA errors (recall from
+      above that if regression effects are present, the model estimated by this
+      class is regression with SARIMA errors).
+    - Chapter 8.4 describes the application of an ARMA model to an example
+      dataset. A replication of this section is available in an example
+      IPython notebook in the documentation.
+
+
     References
     ----------
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
