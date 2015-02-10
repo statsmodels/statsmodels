@@ -20,7 +20,7 @@ from statsmodels.tools.eval_measures import aic, bic, hqic
 
 class MLEModel(Model):
     """
-    State space maximum likelihood model
+    State space model for maximum likelihood estimation
 
     Parameters
     ----------
@@ -37,6 +37,10 @@ class MLEModel(Model):
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
+    **kwargs
+        Keyword arguments may be used to provide default values for state space
+        matrices or for Kalman filtering options. See `Representation`, and
+        `KalmanFilter` for more details.
 
     Attributes
     ----------
@@ -56,12 +60,12 @@ class MLEModel(Model):
     statsmodels.tsa.statespace.KalmanFilter
     """
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
-                 *args, **kwargs):
+                 **kwargs):
         # Set the default results class to be MLEResults
         kwargs.setdefault('results_class', MLEResults)
 
         super(MLEModel, self).__init__(endog, k_states, exog, dates, freq,
-                                       *args, **kwargs)
+                                       **kwargs)
 
         # Initialize the parameters
         self.params = None
@@ -69,7 +73,7 @@ class MLEModel(Model):
     def fit(self, start_params=None, transformed=True,
             method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
-            bfgs_tune=False, *args, **kwargs):
+            bfgs_tune=False, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -172,7 +176,7 @@ class MLEModel(Model):
 
         # Just return the fitted parameters if requested
         if return_params:
-            self.filter(return_loglike=True)
+            self.filter(results='loglikelihood')
             return self.params
         # Otherwise construct the results class if desired
         else:
@@ -183,7 +187,7 @@ class MLEModel(Model):
             return res
 
     def loglike(self, params=None, average_loglike=False, transformed=True,
-                set_params=True, *args, **kwargs):
+                set_params=True, **kwargs):
         """
         Loglikelihood evaluation
 
@@ -201,6 +205,9 @@ class MLEModel(Model):
         set_params : boolean
             Whether or not to copy `params` to the model object's params
             attribute. Default is True.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
 
         Notes
         -----
@@ -220,12 +227,7 @@ class MLEModel(Model):
         if params is not None:
             self.update(params, transformed=transformed, set_params=set_params)
 
-        # By default, we do not need to consider recreating the entire
-        # _statespace and Cython Kalman filter objects because only parameters
-        # will be changing and not dimensions of matrices.
-        kwargs.setdefault('recreate', False)
-
-        loglike = super(MLEModel, self).loglike(*args, **kwargs)
+        loglike = super(MLEModel, self).loglike(**kwargs)
 
         # Koopman, Shephard, and Doornik recommend maximizing the average
         # likelihood to avoid scale issues.
@@ -242,6 +244,8 @@ class MLEModel(Model):
         ----------
         params : array_like
             Array of parameters at which to evaluate the score.
+        *args, **kwargs
+            Additional arguments to the `loglike` method.
 
         Returns
         ----------
@@ -251,6 +255,10 @@ class MLEModel(Model):
         Notes
         -----
         This is a numerical approximation.
+
+        Both *args and **kwargs are necessary because the optimizer from `fit`
+        must call this function and only supports passing arguments via *args
+        (for example `scipy.optimize.fmin_l_bfgs`).
         """
         nargs = len(args)
         if nargs < 1:
@@ -260,8 +268,8 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        initial_state = kwargs.get('initial_state', None)
-        initial_state_cov = kwargs.get('initial_state_cov', None)
+        initial_state = kwargs.pop('initial_state', None)
+        initial_state_cov = kwargs.pop('initial_state_cov', None)
         if initial_state is not None and initial_state_cov is not None:
             # If initialization is stationary, we don't want to recalculate the
             # initial_state_cov for each new set of parameters here
@@ -293,6 +301,8 @@ class MLEModel(Model):
         ----------
         params : array_like
             Array of parameters at which to evaluate the hessian.
+        *args, **kwargs
+            Additional arguments to the `loglike` method.
 
         Returns
         -------
@@ -302,6 +312,10 @@ class MLEModel(Model):
         Notes
         -----
         This is a numerical approximation.
+
+        Both *args and **kwargs are necessary because the optimizer from `fit`
+        must call this function and only supports passing arguments via *args
+        (for example `scipy.optimize.fmin_l_bfgs`).
         """
         nargs = len(args)
         if nargs < 1:
@@ -311,8 +325,8 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        initial_state = kwargs.get('initial_state', None)
-        initial_state_cov = kwargs.get('initial_state_cov', None)
+        initial_state = kwargs.pop('initial_state', None)
+        initial_state_cov = kwargs.pop('initial_state_cov', None)
         if initial_state is not None and initial_state_cov is not None:
             # If initialization is stationary, we don't want to recalculate the
             # initial_state_cov for each new set of parameters here
@@ -472,7 +486,7 @@ class MLEModel(Model):
         return params
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None):
         """
         Not implemented for State space models
         """
@@ -534,7 +548,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     t_test
     wald_test
     """
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model):
         self.data = model.data
 
         # Save the model output
@@ -551,7 +565,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # Initialize the Statsmodels model base
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
-                                               scale=1., *args, **kwargs)
+                                               scale=1.)
 
         # Initialize the statespace representation
         super(MLEResults, self).__init__(model)
@@ -630,7 +644,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         return self.params / self.bse
 
     def predict(self, start=None, end=None, dynamic=False, full_results=False,
-                *args, **kwargs):
+                **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -659,6 +673,9 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             If True, returns a FilterResults instance; if False returns a
             tuple with forecasts, the forecast errors, and the forecast error
             covariance matrices. Default is False.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
 
         Returns
         -------
@@ -688,7 +705,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         # Perform the prediction
         results = super(MLEResults, self).predict(
-            start, end+out_of_sample+1, dynamic, full_results, *args, **kwargs
+            start, end+out_of_sample+1, dynamic, full_results, **kwargs
         )
 
         # Note: to be consistent with Statsmodels, return only the forecasts
@@ -718,7 +735,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         return forecasts
 
-    def forecast(self, steps=1, *args, **kwargs):
+    def forecast(self, steps=1, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -727,16 +744,18 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         steps : int, optional
             The number of out of sample forecasts from the end of the
             sample. Default is 1.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
 
         Returns
         -------
         forecast : array
             Array of out of sample forecasts.
         """
-        return self.predict(start=self.nobs, end=self.nobs+steps-1,
-                            *args, **kwargs)
+        return self.predict(start=self.nobs, end=self.nobs+steps-1, **kwargs)
 
-    def summary(self, alpha=.05, start=None, *args, **kwargs):
+    def summary(self, alpha=.05, start=None, model_name=None):
         """
         Summarize the Model
 
@@ -746,6 +765,8 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             Significance level for the confidence intervals. Default is 0.05.
         start : int, optional
             Integer of the start observation. Default is 0.
+        model_name : string
+            The name of the model used. Default is to use model class name.
 
         Returns
         -------
@@ -772,9 +793,12 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         else:
             sample = [str(start), ' - ' + str(self.model.nobs)]
 
+        if model_name is None:
+            model_name = model.__class__.__name__
+
         top_left = [
             ('Dep. Variable:', None),
-            ('Model:', [kwargs.get('model', model.__class__.__name__)]),
+            ('Model:', [model_name]),
             ('Date:', None),
             ('Time:', None),
             ('Sample:', [sample[0]]),

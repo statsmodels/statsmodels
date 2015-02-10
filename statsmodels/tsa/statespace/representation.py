@@ -93,14 +93,26 @@ class Representation(object):
 
     Parameters
     ----------
-    endog : array_like
-        The observed time-series process :math:`y`
+    k_endog : array_like or integer
+        The observed time-series process :math:`y` if array like or the
+        number of variables in the process if an integer.
     k_states : int
         The dimension of the unobserved state process.
     k_posdef : int, optional
         The dimension of a guaranteed positive definite covariance matrix
         describing the shocks in the measurement equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
+    initial_variance : float, optional
+        Initial variance used when approximate diffuse initialization is
+        specified. Default is 1e6.
+    nobs : integer, optional
+        If an endogenous vector is not given (i.e. `k_endog` is an integer),
+        the number of observations can optionally be specified. If not
+        specified, they will be set to zero until data is bound to the model.
+    dtype : dtype, optional
+        If an endogenous vector is not given (i.e. `k_endog` is an integer),
+        the default datatype of the state space matrices can optionally be
+        specified. Default is `np.float64`.
     design : array_like, optional
         The design matrix, :math:`Z`. Default is set to zeros.
     obs_intercept : array_like, optional
@@ -119,6 +131,12 @@ class Representation(object):
     state_cov : array_like, optional
         The covariance matrix for the state equation :math:`Q`. Default is set
         to zeros.
+    **kwargs
+        Additional keyword arguments. Not used directly. It is present to
+        improve compatibility with subclasses, so that they can use `**kwargs`
+        to specify any default state space matrices (e.g. `design`) without
+        having to clean out any other keyword arguments they might have been
+        passed.
 
     Attributes
     ----------
@@ -166,22 +184,6 @@ class Representation(object):
     initial_variance : float
         Initial variance for approximate diffuse initialization. Default is
         1e6.
-    loglikelihood_burn : int
-        The number of initial periods during which the loglikelihood is not
-        recorded. Default is 0.
-    filter_method : int
-        Bitmask representing the Kalman filtering method.
-    inversion_method : int
-        Bitmask representing the method used to invert the forecast error
-        covariance matrix.
-    stability_method : int
-        Bitmask representing the methods used to promote numerical stability in
-        the Kalman filter recursions.
-    conserve_memory : int
-        Bitmask representing the selected memory conservation method.
-    tolerance : float
-        The tolerance at which the Kalman filter determines convergence to
-        steady-state. Default is 1e-19.
 
     Notes
     -----
@@ -239,7 +241,11 @@ class Representation(object):
     selection = MatrixWrapper('selection', 'selection')
     state_cov = MatrixWrapper('state covariance matrix', 'state_cov')
 
-    def __init__(self, k_endog, k_states, k_posdef=None, *args, **kwargs):
+    def __init__(self, k_endog, k_states, k_posdef=None,
+                 initial_variance=1e6, nobs=0, dtype=np.float64,
+                 design=None, obs_intercept=None, obs_cov=None,
+                 transition=None, state_intercept=None, selection=None,
+                 state_cov=None, **kwargs):
         self.shapes = {}
 
         # Check if k_endog is actually the endog array
@@ -257,8 +263,7 @@ class Representation(object):
         if k_endog < 1:
             raise ValueError('Number of endogenous variables in statespace'
                              ' model must be a positive number.')
-        self.nobs = kwargs.get('nobs', 0)
-        dtype = kwargs.get('dtype', np.float64)
+        self.nobs = nobs
 
         # Get dimensions from transition equation
         if k_states < 1:
@@ -289,6 +294,7 @@ class Representation(object):
         # These matrices are only used in the Python object as containers,
         # which will be copied to the appropriate _statespace object if a
         # filter is called.
+        scope = locals()
         for name, shape in self.shapes.items():
             if name == 'obs':
                 continue
@@ -297,8 +303,8 @@ class Representation(object):
 
             # If we were given an initial value for the matrix, set it
             # (notice it is being set via the descriptor)
-            if name in kwargs:
-                setattr(self, name, kwargs[name])
+            if scope[name] is not None:
+                setattr(self, name, scope[name])
 
         # State-space initialization data
         self.initialization = None
@@ -313,7 +319,7 @@ class Representation(object):
         self._statespaces = {}
 
         # Options
-        self.initial_variance = kwargs.get('initial_variance', 1e6)
+        self.initial_variance = initial_variance
 
     def __getitem__(self, key):
         _type = type(key)
@@ -560,8 +566,9 @@ class Representation(object):
         """
         self.initialization = 'stationary'
 
-    def _initialize_representation(self, *args, **kwargs):
-        prefix = kwargs['prefix'] if 'prefix' in kwargs else self.prefix
+    def _initialize_representation(self, prefix=None):
+        if prefix is None:
+            prefix = self.prefix
         dtype = prefix_dtype_map[prefix]
 
         # If the dtype-specific representation matrices do not exist, create
@@ -629,8 +636,9 @@ class Representation(object):
 
         return prefix, dtype, create
 
-    def _initialize_state(self, *args, **kwargs):
-        prefix = kwargs['prefix'] if 'prefix' in kwargs else self.prefix
+    def _initialize_state(self, prefix=None):
+        if prefix is None:
+            prefix = self.prefix
         dtype = prefix_dtype_map[prefix]
 
         # (Re-)initialize the statespace model
