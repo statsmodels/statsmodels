@@ -37,7 +37,7 @@ except ImportError:
 
 from statsmodels.tsa.statespace import _statespace as ss
 from .results import results_kalman_filter
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose
 from nose.exc import SkipTest
 
 prefix_statespace_map = {
@@ -189,12 +189,34 @@ class TestClark1987Single(Clark1987):
     Basic single precision test for the loglikelihood and filtered states.
     """
     def __init__(self):
-        raise SkipTest('Not implemented')
         super(TestClark1987Single, self).__init__(
             dtype=np.float32, conserve_memory=0
         )
         self.init_filter()
         self.run_filter()
+
+    def test_loglike(self):
+        assert_allclose(
+            self.result['loglike'](self.true['start']), self.true['loglike'],
+            rtol=1e-3
+        )
+
+    def test_filtered_state(self):
+        assert_allclose(
+            self.result['state'][0][self.true['start']:],
+            self.true_states.iloc[:, 0],
+            atol=1e-2
+        )
+        assert_allclose(
+            self.result['state'][1][self.true['start']:],
+            self.true_states.iloc[:, 1],
+            atol=1e-2
+        )
+        assert_allclose(
+            self.result['state'][3][self.true['start']:],
+            self.true_states.iloc[:, 2],
+            atol=1e-2
+        )
 
 
 class TestClark1987Double(Clark1987):
@@ -215,12 +237,34 @@ class TestClark1987SingleComplex(Clark1987):
     states.
     """
     def __init__(self):
-        raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, self).__init__(
             dtype=np.complex64, conserve_memory=0
         )
         self.init_filter()
         self.run_filter()
+
+    def test_loglike(self):
+        assert_allclose(
+            self.result['loglike'](self.true['start']), self.true['loglike'],
+            rtol=1e-3
+        )
+
+    def test_filtered_state(self):
+        assert_allclose(
+            self.result['state'][0][self.true['start']:],
+            self.true_states.iloc[:, 0],
+            atol=1e-2
+        )
+        assert_allclose(
+            self.result['state'][1][self.true['start']:],
+            self.true_states.iloc[:, 1],
+            atol=1e-2
+        )
+        assert_allclose(
+            self.result['state'][3][self.true['start']:],
+            self.true_states.iloc[:, 2],
+            atol=1e-2
+        )
 
 
 class TestClark1987DoubleComplex(Clark1987):

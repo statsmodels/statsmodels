@@ -21,7 +21,7 @@ import os
 from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.model import Model
 from .results import results_kalman_filter
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises
+from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -110,7 +110,6 @@ class TestClark1987Single(Clark1987):
     Basic single precision test for the loglikelihood and filtered states.
     """
     def __init__(self):
-        raise SkipTest('Not implemented')
         super(TestClark1987Single, self).__init__(
             dtype=np.float32, conserve_memory=0
         )
@@ -134,7 +133,6 @@ class TestClark1987SingleComplex(Clark1987):
     states.
     """
     def __init__(self):
-        raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, self).__init__(
             dtype=np.complex64, conserve_memory=0
         )
