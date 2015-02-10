@@ -2,12 +2,13 @@ from statsmodels.compat.python import range, lrange, lzip
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
+from statsmodels.tools.data import
 from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.tools import add_constant
-from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 
@@ -41,54 +42,62 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     --------
     statsmodels.add_constant
     """
-    #TODO: could be generalized for trend of aribitrary order
+    # TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
-    if trend == "c":    # handles structured arrays
+    columns = ['const', 'trend', 'trend_squared']
+    if trend == "c":  # handles structured arrays
         return add_constant(X, prepend=prepend, has_constant=has_constant)
     elif trend == "ct" or trend == "t":
+        columns = columns[:2]
+        if trend == "t":
+            columns = columns[1:2]
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
     else:
         raise ValueError("trend %s not understood" % trend)
 
-    X = np.asanyarray(X)
+    is_recarray = _is_recarray(X)
+    is_pandas = _is_using_pandas(X, None) or is_recarray
+    if is_pandas or is_recarray:
+        import pandas as pd
+
+        if is_recarray:
+            X = pd.DataFrame.from_records(X)
+        elif isinstance(X, pd.Series):
+            X = pd.DataFrame(X)
+        else:
+            X = X.copy()
+    else:
+        X = np.asanyarray(X)
+
     nobs = len(X)
-    trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    trendarr = np.vander(np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1)
     # put in order ctt
     trendarr = np.fliplr(trendarr)
     if trend == "t":
-        trendarr = trendarr[:,1]
-    if not X.dtype.names:
-        # check for constant
-        if "c" in trend and np.any(np.ptp(X, axis=0) == 0):
-            if has_constant == 'raise':
-                raise ValueError("X already contains a constant")
-            elif has_constant == 'add':
-                pass
-            elif has_constant == 'skip' and trend == "ct":
-                trendarr = trendarr[:, 1]
+        trendarr = trendarr[:, 1]
 
-        if not prepend:
-            X = np.column_stack((X, trendarr))
-        else:
-            X = np.column_stack((trendarr, X))
+    if "c" in trend and np.any(np.ptp(np.asanyarray(X), axis=0) == 0):
+        if has_constant == 'raise':
+            raise ValueError("X already contains a constant")
+        elif has_constant == 'add':
+            pass
+        elif has_constant == 'skip' and trend == "ct":
+            trendarr = trendarr[:, 1]
+
+    order = 1 if prepend else -1
+    if is_recarray or is_pandas:
+        trendarr = pd.DataFrame(trendarr, index=X.index, columns=columns)
+        X = [trendarr, X]
+        X = pd.concat(X[::order], 1)
     else:
-        return_rec = data.__clas__ is np.recarray
-        if trendorder == 1:
-            if trend == "ct":
-                dt = [('const',float),('trend',float)]
-            else:
-                dt = [('trend', float)]
-        elif trendorder == 2:
-            dt = [('const',float),('trend',float),('trend_squared', float)]
-        trendarr = trendarr.view(dt)
-        if prepend:
-            X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in X.dtype.names], usemask=False, asrecarray=return_rec)
-        else:
-            X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=False, asrecarray=return_rec)
+        X = [trendarr, X]
+        X = np.column_stack(X[::order])
+
+    if is_recarray:
+        X = X.to_records(index=False, convert_datetime64=False)
+
     return X
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
