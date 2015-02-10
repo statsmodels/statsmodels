@@ -23,7 +23,7 @@ coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
 
 
-class SARIMAXStataTests(sarimax.SARIMAX):
+class SARIMAXStataTests(object):
     def test_loglike(self):
         assert_almost_equal(
             self.result.llf,
@@ -72,8 +72,8 @@ class ARIMA(SARIMAXStataTests):
         kwargs.setdefault('simple_differencing', True)
         kwargs.setdefault('hamilton_representation', True)
 
-        super(ARIMA, self).__init__(endog, order=(1, 1, 1), trend='c',
-                                    *args, **kwargs)
+        self.model = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c',
+                                     *args, **kwargs)
 
         # Stata estimates the mean of the process, whereas SARIMAX estimates
         # the intercept of the process. Get the intercept.
@@ -81,8 +81,8 @@ class ARIMA(SARIMAXStataTests):
         params = np.r_[intercept, true['params_ar'], true['params_ma'],
                        true['params_variance']]
 
-        self.update(params)
-        self.result = self.filter()
+        self.model.update(params)
+        self.result = self.model.filter()
 
 
 class TestARIMAStationary(ARIMA):
@@ -90,14 +90,14 @@ class TestARIMAStationary(ARIMA):
         super(TestARIMAStationary, self).__init__(
             results_sarimax.wpi1_stationary
         )
-        self.result = self.filter()
+        self.result = self.model.filter()
 
 
 class TestARIMADiffuse(ARIMA):
     def __init__(self):
         super(TestARIMADiffuse, self).__init__(results_sarimax.wpi1_diffuse)
-        self.initialize_approximate_diffuse(self.true['initial_variance'])
-        self.result = self.filter()
+        self.model.initialize_approximate_diffuse(self.true['initial_variance'])
+        self.result = self.model.filter()
 
 
 class AdditiveSeasonal(SARIMAXStataTests):
@@ -113,7 +113,7 @@ class AdditiveSeasonal(SARIMAXStataTests):
         kwargs.setdefault('simple_differencing', True)
         kwargs.setdefault('hamilton_representation', True)
 
-        super(AdditiveSeasonal, self).__init__(
+        self.model = sarimax.SARIMAX(
             endog, order=(1, 1, (1, 0, 0, 1)), trend='c', *args, **kwargs
         )
 
@@ -123,7 +123,7 @@ class AdditiveSeasonal(SARIMAXStataTests):
         params = np.r_[intercept, true['params_ar'], true['params_ma'],
                        true['params_variance']]
 
-        self.update(params)
+        self.model.update(params)
 
 
 class TestAdditionSeasonal(AdditiveSeasonal):
@@ -131,7 +131,7 @@ class TestAdditionSeasonal(AdditiveSeasonal):
         super(TestAdditionSeasonal, self).__init__(
             results_sarimax.wpi1_seasonal
         )
-        self.result = self.filter()
+        self.result = self.model.filter()
 
 
 class Airline(SARIMAXStataTests):
@@ -147,7 +147,7 @@ class Airline(SARIMAXStataTests):
         kwargs.setdefault('simple_differencing', True)
         kwargs.setdefault('hamilton_representation', True)
 
-        super(Airline, self).__init__(
+        self.model = sarimax.SARIMAX(
             endog, order=(0, 1, 1), seasonal_order=(0, 1, 1, 12),
             trend='n', *args, **kwargs
         )
@@ -155,7 +155,7 @@ class Airline(SARIMAXStataTests):
         params = np.r_[true['params_ma'], true['params_seasonal_ma'],
                        true['params_variance']]
 
-        self.update(params)
+        self.model.update(params)
 
 
 class TestAirlineHamilton(Airline):
@@ -163,7 +163,7 @@ class TestAirlineHamilton(Airline):
         super(TestAirlineHamilton, self).__init__(
             results_sarimax.air2_stationary
         )
-        self.result = self.filter()
+        self.result = self.model.filter()
 
 
 class TestAirlineHarvey(Airline):
@@ -171,7 +171,7 @@ class TestAirlineHarvey(Airline):
         super(TestAirlineHarvey, self).__init__(
             results_sarimax.air2_stationary, hamilton_representation=False
         )
-        self.result = self.filter()
+        self.result = self.model.filter()
 
 
 class TestAirlineStateDifferencing(Airline):
@@ -180,7 +180,7 @@ class TestAirlineStateDifferencing(Airline):
             results_sarimax.air2_stationary, simple_differencing=False,
             hamilton_representation=False
         )
-        self.result = self.filter()
+        self.result = self.model.filter()
 
     def test_bic(self):
         # Due to diffuse component of the state (which technically changes the
@@ -206,14 +206,14 @@ class Friedman(SARIMAXStataTests):
         kwargs.setdefault('simple_differencing', True)
         kwargs.setdefault('hamilton_representation', True)
 
-        super(Friedman, self).__init__(
+        self.model = sarimax.SARIMAX(
             endog, exog=exog, order=(1, 0, 1), *args, **kwargs
         )
 
         params = np.r_[true['params_exog'], true['params_ar'],
                        true['params_ma'], true['params_variance']]
 
-        self.update(params)
+        self.model.update(params)
 
 
 class TestFriedmanMLERegression(Friedman):
@@ -221,7 +221,7 @@ class TestFriedmanMLERegression(Friedman):
         super(TestFriedmanMLERegression, self).__init__(
             results_sarimax.friedman2_mle
         )
-        self.result = self.filter()
+        self.result = self.model.filter()
 
 
 class TestFriedmanStateRegression(Friedman):
@@ -240,7 +240,7 @@ class TestFriedmanStateRegression(Friedman):
             true, mle_regression=False
         )
 
-        self.result = self.filter()
+        self.result = self.model.filter()
 
     def test_regression_parameters(self):
         assert_almost_equal(
@@ -277,7 +277,7 @@ class TestFriedmanPredict(Friedman):
             results_sarimax.friedman2_predict
         )
 
-        self.result = self.filter()
+        self.result = self.model.filter()
 
     # loglike, aic, bic are not the point of this test (they could pass, but we
     # would have to modify the data so that they were calculated to
@@ -337,7 +337,7 @@ class TestFriedmanForecast(Friedman):
 
         super(TestFriedmanForecast, self).__init__(true)
 
-        self.result = self.filter()
+        self.result = self.model.filter()
 
     # loglike, aic, bic are not the point of this test (they could pass, but we
     # would have to modify the data so that they were calculated to
@@ -368,7 +368,7 @@ class TestFriedmanForecast(Friedman):
             self.true['dynamic_forecast'], 3
         )
 
-class SARIMAXCoverageTest(sarimax.SARIMAX):
+class SARIMAXCoverageTest(object):
     def __init__(self, i, decimal=4, endog=None, *args, **kwargs):
         # Dataset
         if endog is None:
@@ -387,11 +387,11 @@ class SARIMAXCoverageTest(sarimax.SARIMAX):
         kwargs.setdefault('simple_differencing', True)
         kwargs.setdefault('hamilton_representation', True)
 
-        super(SARIMAXCoverageTest, self).__init__(endog, *args, **kwargs)
+        self.model = sarimax.SARIMAX(endog, *args, **kwargs)
 
     def test_loglike(self):
-        self.update(self.true_params)
-        self.result = self.filter()
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
 
         assert_almost_equal( 
             self.result.llf,
@@ -403,11 +403,11 @@ class SARIMAXCoverageTest(sarimax.SARIMAX):
         # just a quick test that start_params isn't throwing an exception
         # (other than related to invertibility)
 
-        self.enforce_stationarity = False
-        self.enforce_invertibility = False
-        self.start_params
-        self.enforce_stationarity = True
-        self.enforce_invertibility = True
+        self.model.enforce_stationarity = False
+        self.model.enforce_invertibility = False
+        self.model.start_params
+        self.model.enforce_stationarity = True
+        self.model.enforce_invertibility = True
 
     def test_transform_untransform(self):
         true_constrained = self.true_params
@@ -415,29 +415,29 @@ class SARIMAXCoverageTest(sarimax.SARIMAX):
         # Sometimes the parameters given by Stata are not stationary and / or
         # invertible, so we need to skip those transformations for those
         # parameter sets
-        self.update(self.true_params)
-        contracted_polynomial_seasonal_ar = self.polynomial_seasonal_ar[self.polynomial_seasonal_ar.nonzero()]
-        self.enforce_stationarity = (
-            (self.k_ar == 0 or tools.is_invertible(np.r_[1, -self.polynomial_ar[1:]])) and
+        self.model.update(self.true_params)
+        contracted_polynomial_seasonal_ar = self.model.polynomial_seasonal_ar[self.model.polynomial_seasonal_ar.nonzero()]
+        self.model.enforce_stationarity = (
+            (self.model.k_ar == 0 or tools.is_invertible(np.r_[1, -self.model.polynomial_ar[1:]])) and
             (len(contracted_polynomial_seasonal_ar) <= 1 or tools.is_invertible(np.r_[1, -contracted_polynomial_seasonal_ar[1:]]))
         )
-        contracted_polynomial_seasonal_ma = self.polynomial_seasonal_ma[self.polynomial_seasonal_ma.nonzero()]
-        self.enforce_invertibility = (
-            (self.k_ma == 0 or tools.is_invertible(np.r_[1, -self.polynomial_ma[1:]])) and 
+        contracted_polynomial_seasonal_ma = self.model.polynomial_seasonal_ma[self.model.polynomial_seasonal_ma.nonzero()]
+        self.model.enforce_invertibility = (
+            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, -self.model.polynomial_ma[1:]])) and 
             (len(contracted_polynomial_seasonal_ma) <= 1 or tools.is_invertible(np.r_[1, -contracted_polynomial_seasonal_ma[1:]]))
         )
 
-        unconstrained = self.untransform_params(true_constrained)
-        constrained = self.transform_params(unconstrained)
+        unconstrained = self.model.untransform_params(true_constrained)
+        constrained = self.model.transform_params(unconstrained)
 
         assert_almost_equal(constrained, true_constrained, 4)
 
-        self.enforce_stationarity = True
-        self.enforce_invertibility = True
+        self.model.enforce_stationarity = True
+        self.model.enforce_invertibility = True
 
     def test_results(self):
-        self.update(self.true_params)
-        self.result = self.filter()
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
 
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
@@ -515,7 +515,7 @@ class Test_ar_diffuse(SARIMAXCoverageTest):
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (3,0,0)
         super(Test_ar_diffuse, self).__init__(6, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_ar_no_enforce(SARIMAXCoverageTest):
     # // AR: (p,0,0) x (0,0,0,0)
@@ -529,13 +529,13 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         super(Test_ar_no_enforce, self).__init__(6, *args, **kwargs)
         # Reset loglikelihood burn, which gets automatically set to the number
         # of states if enforce_stationarity = False
-        self.loglikelihood_burn = 0
+        self.model.loglikelihood_burn = 0
 
     def test_loglike(self):
         # Regression in the state vector gives a different loglikelihood, so
         # just check that it's approximately the same
-        self.update(self.true_params)
-        self.result = self.filter()
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
 
         assert_allclose( 
             self.result.llf,
@@ -569,8 +569,8 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
     def test_loglike(self):
         # Regression in the state vector gives a different loglikelihood, so
         # just check that it's approximately the same
-        self.update(self.true_params)
-        self.result = self.filter()
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
 
         assert_allclose( 
             self.result.llf,
@@ -582,8 +582,8 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
         # Test that the regression coefficient (estimated as the last filtered
         # state estimate for the regression state) is the same as the Stata
         # MLE state
-        self.update(self.true_params)
-        self.result = self.filter()
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
 
         assert_allclose( 
             self.result.filtered_state[3][-1],
@@ -658,7 +658,7 @@ class Test_ma_diffuse(SARIMAXCoverageTest):
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (0,0,3)
         super(Test_ma_diffuse, self).__init__(14, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_ma_exogenous(SARIMAXCoverageTest):
     # // MAX
@@ -744,7 +744,7 @@ class Test_arma_diffuse(SARIMAXCoverageTest):
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (3,0,2)
         super(Test_arma_diffuse, self).__init__(23, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_arma_exogenous(SARIMAXCoverageTest):
     # // ARMAX
@@ -836,7 +836,7 @@ class Test_seasonal_ar_diffuse(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (3,0,0,4)
         super(Test_seasonal_ar_diffuse, self).__init__(31, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_seasonal_ar_exogenous(SARIMAXCoverageTest):
     # // SARX
@@ -925,7 +925,7 @@ class Test_seasonal_ma_diffuse(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (0,0,3,4)
         super(Test_seasonal_ma_diffuse, self).__init__(39, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_seasonal_ma_exogenous(SARIMAXCoverageTest):
     # // SMAX
@@ -1020,7 +1020,7 @@ class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (3,0,2,4)
         kwargs['decimal'] = 3
         super(Test_seasonal_arma_diffuse, self).__init__(48, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_seasonal_arma_exogenous(SARIMAXCoverageTest):
     # // SARMAX
@@ -1068,7 +1068,7 @@ class Test_sarimax_exogenous_diffuse(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         kwargs['decimal'] = 2
         super(Test_sarimax_exogenous_diffuse, self).__init__(51, *args, **kwargs)
-        self.initialize_approximate_diffuse(1e9)
+        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
     # // ARMA and exogenous and trend polynomial and missing
