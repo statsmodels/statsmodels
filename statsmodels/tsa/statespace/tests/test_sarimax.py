@@ -53,11 +53,6 @@ class SARIMAXStataTests(object):
             hqic, 3
         )
 
-    # def test_bse(self):
-    #     assert_allclose(
-    #         self.result.bse, self.true['se_ar'] + self.true['se_variance'],
-    #         atol=1e-3
-    #     )
 
 class ARIMA(SARIMAXStataTests):
     """
@@ -84,6 +79,13 @@ class ARIMA(SARIMAXStataTests):
         self.model.update(params)
         self.result = self.model.filter()
 
+    def test_mle(self):
+        result = self.model.fit(disp=-1)
+        assert_allclose(
+            result.params, self.result.params,
+            atol=1e-3
+        )
+
 
 class TestARIMAStationary(ARIMA):
     def __init__(self):
@@ -92,12 +94,32 @@ class TestARIMAStationary(ARIMA):
         )
         self.result = self.model.filter()
 
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[1], self.true['se_ar_oim'],
+            atol=1e-3,
+        )
+        assert_allclose(
+            self.result.bse[2], self.true['se_ma_oim'],
+            atol=1e-3, rtol=1e-2
+        )
+
 
 class TestARIMADiffuse(ARIMA):
     def __init__(self):
         super(TestARIMADiffuse, self).__init__(results_sarimax.wpi1_diffuse)
         self.model.initialize_approximate_diffuse(self.true['initial_variance'])
         self.result = self.model.filter()
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[1], self.true['se_ar_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            self.result.bse[2], self.true['se_ma_oim'],
+            atol=1e-2, rtol=1e-1
+        )
 
 
 class AdditiveSeasonal(SARIMAXStataTests):
@@ -125,13 +147,30 @@ class AdditiveSeasonal(SARIMAXStataTests):
 
         self.model.update(params)
 
+    def test_mle(self):
+        result = self.model.fit(disp=-1)
+        assert_allclose(
+            result.params, self.result.params,
+            atol=1e-3
+        )
 
-class TestAdditionSeasonal(AdditiveSeasonal):
+
+class TestAdditiveSeasonal(AdditiveSeasonal):
     def __init__(self):
-        super(TestAdditionSeasonal, self).__init__(
+        super(TestAdditiveSeasonal, self).__init__(
             results_sarimax.wpi1_seasonal
         )
         self.result = self.model.filter()
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[1], self.true['se_ar_oim'],
+            atol=1e-3, rtol=1e-2
+        )
+        assert_allclose(
+            self.result.bse[2:4], self.true['se_ma_oim'],
+            atol=1e-3,
+        )
 
 
 class Airline(SARIMAXStataTests):
@@ -157,6 +196,13 @@ class Airline(SARIMAXStataTests):
 
         self.model.update(params)
 
+    def test_mle(self):
+        result = self.model.fit(disp=-1)
+        assert_allclose(
+            result.params, self.result.params,
+            atol=1e-4
+        )
+
 
 class TestAirlineHamilton(Airline):
     def __init__(self):
@@ -165,6 +211,16 @@ class TestAirlineHamilton(Airline):
         )
         self.result = self.model.filter()
 
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[0], self.true['se_ma_oim'],
+            atol=1e-4,
+        )
+        assert_allclose(
+            self.result.bse[1], self.true['se_seasonal_ma_oim'],
+            atol=1e-3,
+        )
+
 
 class TestAirlineHarvey(Airline):
     def __init__(self):
@@ -172,6 +228,16 @@ class TestAirlineHarvey(Airline):
             results_sarimax.air2_stationary, hamilton_representation=False
         )
         self.result = self.model.filter()
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[0], self.true['se_ma_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            self.result.bse[1], self.true['se_seasonal_ma_oim'],
+            atol=1e-3,
+        )
 
 
 class TestAirlineStateDifferencing(Airline):
@@ -189,6 +255,23 @@ class TestAirlineStateDifferencing(Airline):
         assert_almost_equal(
             self.result.bic,
             self.true['bic'], 0
+        )
+
+    def test_mle(self):
+        result = self.model.fit(disp=-1)
+        assert_allclose(
+            result.params, self.result.params,
+            atol=1e-3
+        )
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[0], self.true['se_ma_oim'],
+            atol=1e-3,
+        )
+        assert_allclose(
+            self.result.bse[1], self.true['se_seasonal_ma_oim'],
+            atol=1e-4,
         )
 
 
@@ -223,6 +306,31 @@ class TestFriedmanMLERegression(Friedman):
         )
         self.result = self.model.filter()
 
+    def test_mle(self):
+        result = self.model.fit(disp=-1)
+        assert_allclose(
+            result.params, self.result.params,
+            atol=1e-3, rtol=1e-3
+        )
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[0], self.true['se_exog_oim'][0],
+            rtol=3e-1
+        )
+        assert_allclose(
+            self.result.bse[1], self.true['se_exog_oim'][1],
+            atol=1e-2,
+        )
+        assert_allclose(
+            self.result.bse[2], self.true['se_ar_oim'],
+            atol=1e-1,
+        )
+        assert_allclose(
+            self.result.bse[3], self.true['se_ma_oim'],
+            atol=1e-2,
+        )
+
 
 class TestFriedmanStateRegression(Friedman):
     def __init__(self):
@@ -231,7 +339,7 @@ class TestFriedmanStateRegression(Friedman):
         true = dict(results_sarimax.friedman2_mle)
 
         true['mle_params_exog'] = true['params_exog'][:]
-        true['mle_se_exog'] = true['se_exog'][:]
+        true['mle_se_exog'] = true['se_exog_oim'][:]
 
         true['params_exog'] = []
         true['se_exog'] = []
@@ -258,6 +366,16 @@ class TestFriedmanStateRegression(Friedman):
 
     def test_bic(self):
         pass
+
+    def test_bse(self):
+        assert_allclose(
+            self.result.bse[0], self.true['se_ar_oim'],
+            atol=1e-1,
+        )
+        assert_allclose(
+            self.result.bse[1], self.true['se_ma_oim'],
+            atol=1e-4,
+        )
 
 
 class TestFriedmanPredict(Friedman):
