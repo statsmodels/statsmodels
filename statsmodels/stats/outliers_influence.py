@@ -545,9 +545,9 @@ class OLSInfluence(object):
         endog = self.endog
         exog = self.exog
 
-        params = np.zeros_like(exog)
-        mse_resid = np.zeros_like(endog)
-        det_cov_params = np.zeros_like(endog)
+        params = np.zeros(exog.shape, dtype=np.float)
+        mse_resid = np.zeros(endog.shape, dtype=np.float)
+        det_cov_params = np.zeros(endog.shape, dtype=np.float)
 
         cv_iter = LeaveOneOut(self.nobs)
         for inidx, outidx in cv_iter:

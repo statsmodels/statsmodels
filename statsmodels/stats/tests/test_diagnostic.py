@@ -14,7 +14,7 @@ import os
 import numpy as np
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_approx_equal)
+                           assert_approx_equal, assert_allclose)
 from nose import SkipTest
 
 from statsmodels.regression.linear_model import OLS, GLSAR
@@ -760,6 +760,27 @@ def test_influence_wrapped():
     #TODO: finish wrapping this stuff
     assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
     assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
+
+
+def test_influence_dtype():
+    # see #2148  bug when endog is integer
+    y = np.ones(20)
+    np.random.seed(123)
+    x = np.random.randn(20, 3)
+    res1 = OLS(y, x).fit()
+
+    res2 = OLS(y*1., x).fit()
+    cr1 = res1.get_influence().cov_ratio
+    cr2 = res2.get_influence().cov_ratio
+    assert_allclose(cr1, cr2, rtol=1e-14)
+    # regression test for values
+    cr3 = np.array(
+      [ 1.22239215,  1.31551021,  1.52671069,  1.05003921,  0.89099323,
+        1.57405066,  1.03230092,  0.95844196,  1.15531836,  1.21963623,
+        0.87699564,  1.16707748,  1.10481391,  0.98839447,  1.08999334,
+        1.35680102,  1.46227715,  1.45966708,  1.13659521,  1.22799038])
+    assert_almost_equal(cr1, cr3, decimal=8)
+
 
 def test_outlier_test():
     # results from R with NA -> 1. Just testing interface here because
