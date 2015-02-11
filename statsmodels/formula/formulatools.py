@@ -71,7 +71,12 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     missing_mask = getattr(na_action, 'missing_mask', None)
     if not np.any(missing_mask):
         missing_mask = None
-    return result, missing_mask
+    if len(result) > 1:  # have RHS design
+        design_info = result[1].design_info  # detach it from DataFrame
+    else:
+        design_info = None
+    # NOTE: is there ever a case where we'd need LHS design_info?
+    return result, missing_mask, design_info
 
 
 def _remove_intercept_patsy(terms):

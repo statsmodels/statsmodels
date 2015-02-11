@@ -60,7 +60,7 @@ def anova_single(model, **kwargs):
     nobs = exog.shape[0]
 
     response_name = model.model.endog_names
-    design_info = model.model.data.orig_exog.design_info
+    design_info = model.model.data.design_info
     exog_names = model.model.exog_names
     # +1 for resids
     n_rows = (len(design_info.terms) - _has_intercept(design_info) + 1)
