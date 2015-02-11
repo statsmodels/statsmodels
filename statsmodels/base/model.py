@@ -145,11 +145,11 @@ class Model(object):
         missing = kwargs.get('missing', 'drop')
         if missing == 'none':  # with patys it's drop or raise. let's raise.
             missing = 'raise'
-        ((endog, exog),
-         missing_idx,
-         design_info) = handle_formula_data(data, None, formula,
-                                            depth=eval_env,
-                                            missing=missing)
+
+        tmp = handle_formula_data(data, None, formula, depth=eval_env,
+                                  missing=missing)
+        ((endog, exog), missing_idx, design_info) = tmp
+
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
                        'formula': formula,  # attach formula for unpckling

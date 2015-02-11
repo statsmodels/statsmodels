@@ -94,7 +94,7 @@ class ModelData(object):
             from patsy import dmatrices
             depth = 1  # hmm, have to have same eval env in calling ns
             data = d['orig_endog'].join(d['orig_exog'])
-            _, design = dmatrices(d['formula'], data, depth,
+            _, design = dmatrices(d['formula'], data, eval_env=depth,
                                   return_type='dataframe')
             self.design_info = design.design_info
             del d["restore_design_info"]
