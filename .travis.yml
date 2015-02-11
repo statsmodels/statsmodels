@@ -9,6 +9,7 @@ env:
   global:
     - OPTIONAL=
     - COVERAGE=false
+    - USEMPL=true
 
 matrix:
   fast_finish: true
@@ -45,7 +46,7 @@ matrix:
     - PYTHON=2.7
     - NUMPY=
     - SCIPY=
-    - MATPLOTLIB=
+    - USEMPL=false
     - PANDAS=
 
 notifications:
@@ -77,7 +78,7 @@ before_install:
   - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
-  - PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi
+  - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
 
 # Install packages
 install:
