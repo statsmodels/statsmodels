@@ -46,6 +46,20 @@ class MLEModel(Model):
     ----------
     start_params : array
         Starting parameters for maximum likelihood estimation.
+    updater : callable or None
+        Can be set with a callable accepting arguments (`model`, `params`) that
+        can be used to update the state space representation so that maximum
+        likelihood estimation can be performed in an ad-hoc setup.
+    transformer : callable or None
+        Can be set with a callable accepting arguments (`model`, `params`) that
+        can be used to transform parameters from unconstrained optimization
+        parameters to constrained parameters for likelihood estimation in an
+        ad-hoc setup.
+    untransformer : callable or None
+        Can be set with a callable accepting arguments (`model`, `params`) that
+        can be used to perform a reverse transformation of parameters from
+        constrained parameters for likelihood estimation back to unconstrained
+        optimization parameters in an ad-hoc setup.
     params_names : list of str
         List of human readable parameter names (for parameters actually
         included in the model).
@@ -54,11 +68,50 @@ class MLEModel(Model):
     model_latex_names : list of str
         The latex names of all possible model parameters.
 
+    Notes
+    -----
+    This class extends the state space model with Kalman filtering to add in
+    functionality for maximum likelihood estimation. In particular, it adds
+    the concept of updating the state space representation based on a defined
+    set of parameters, through the `update` method or `updater` attribute (see
+    below for more details on which to use when), and it adds a `fit` method
+    which uses a numerical optimizer to select the parameters that maximize
+    the likelihood of the model.
+
+    It is used in one of two ways:
+
+    1. A base class
+    2. Ad-hoc MLE
+
+    **As a base class**
+
+    The most typical usage of the MLEModel class is as a base class so that a
+    specific state space model can be built as a subclass without having to
+    deal with optimization-related functionality.
+
+    In this case, the `start_params` `update` method must be overridden in the
+    child class (and the `transform` and `untransform` methods, if needed).
+
+    **Ad-hoc MLE**
+
+    This class can also be instantiated directly for ad-hoc MLE, particularly
+    if the model is very simple.
+
+    In this case, the `start_params` attribute can be set directly and in place
+    of the `update`, `transform`, and `untransform` methods, the attributes
+    `updater`, `transformer`, and `untransformer` can be set with callback
+    functions to perform that functionality.
+
     See Also
     --------
-    statsmodels.tsa.statespace.Model
-    statsmodels.tsa.statespace.KalmanFilter
+    MLEResults
+    statsmodels.tsa.statespace.kalman_filter.KalmanFilter
+    statsmodels.tsa.statespace.representation.Representation
     """
+    updater = None
+    transformer = None
+    untransformer = None
+
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
         # Set the default results class to be MLEResults
@@ -127,9 +180,8 @@ class MLEModel(Model):
 
         See also
         --------
-        statsmodels.base.model.LikelihoodModel.fit : for more information
-            on using the solvers.
-        MLEResults : results class returned by fit
+        statsmodels.base.model.LikelihoodModel.fit
+        MLEResults
         """
 
         if start_params is None:
@@ -425,7 +477,11 @@ class MLEModel(Model):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return unconstrained
+        if self.transformer is not None:
+            constrained = self.transformer(self, unconstrained)
+        else:
+            constrained = unconstrained
+        return constrained
 
     def untransform_params(self, constrained):
         """
@@ -448,7 +504,11 @@ class MLEModel(Model):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return constrained
+        if self.untransformer is not None:
+            unconstrained = self.untransformer(self, constrained)
+        else:
+            unconstrained = constrained
+        return unconstrained
 
     def update(self, params, transformed=True, set_params=True):
         """
@@ -483,6 +543,10 @@ class MLEModel(Model):
             params = self.transform_params(params)
         if set_params:
             self.params = params
+
+        if self.updater is not None:
+            self.updater(self, params)
+
         return params
 
     @classmethod
@@ -547,6 +611,12 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     summary
     t_test
     wald_test
+
+    See Also
+    --------
+    MLEModel
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
     def __init__(self, model):
         self.data = model.data
