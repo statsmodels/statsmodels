@@ -56,6 +56,10 @@ class ModelData(object):
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
+        if 'design_info' in kwargs:
+            self.design_info = kwargs.pop('design_info')
+        if 'formula' in kwargs:
+            self.formula = kwargs.pop('formula')
         if missing != 'none':
             arrays, nan_idx = self.handle_missing(endog, exog, missing,
                                                   **kwargs)
@@ -75,6 +79,26 @@ class ModelData(object):
         self._handle_constant(hasconst)
         self._check_integrity()
         self._cache = resettable_cache()
+
+    def __getstate__(self):
+        from copy import copy
+        d = copy(self.__dict__)
+        if "design_info" in d:
+            del d["design_info"]
+            d["restore_design_info"] = True
+        return d
+
+    def __setstate__(self, d):
+        if "restore_design_info" in d:
+            # NOTE: there may be a more performant way to do this
+            from patsy import dmatrices
+            depth = 1  # hmm, have to have same eval env in calling ns
+            data = d['orig_endog'].join(d['orig_exog'])
+            _, design = dmatrices(d['formula'], data, eval_env=depth,
+                                  return_type='dataframe')
+            self.design_info = design.design_info
+            del d["restore_design_info"]
+        self.__dict__.update(d)
 
     def _handle_constant(self, hasconst):
         if hasconst is not None:

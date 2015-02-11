@@ -183,7 +183,7 @@ class TestPHReg(object):
         result1 = model1.fit()
 
         from patsy import dmatrix
-        dfp = dmatrix(model1.data.orig_exog.design_info.builder, df)
+        dfp = dmatrix(model1.data.design_info.builder, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
