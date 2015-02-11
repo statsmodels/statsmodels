@@ -190,6 +190,7 @@ class TestPCA(TestCase):
         assert_raises(ValueError, PCA, self.x, tol=2.0)
         assert_raises(ValueError, PCA, np.nan * np.ones((200,100)), tol=2.0)
 
+    @skipif(missing_matplotlib)
     def test_pandas(self):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)

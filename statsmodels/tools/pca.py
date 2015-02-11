@@ -672,36 +672,39 @@ class PCA(object):
         self.ic = pd.DataFrame(self.ic, columns=['IC_p1', 'IC_p2', 'IC_p3'])
         self.ic.index.name = 'ncomp'
 
-    def plot_scree(self, ncomp=None, log_scale=True, cumulative=False):
+    def plot_scree(self, ncomp=None, log_scale=True, cumulative=False, ax=None):
         """
         Plot of the ordered eigenvalues
 
         Parameters
         ----------
         ncomp : int, optional
-            Number of components ot include in the plot.  It None, will
+            Number of components ot include in the plot.  If None, will
             included the same as the number of components computed
         log_scale : boot, optional
             Flag indicating whether ot use a log scale for the y-axis
         cumulative : bool, optional
             Flag indicating whether to plot the eigenvalues or cumulative
             eigenvalues
+        ax : Matplotlib axes instance, optional
+            An axes on which to draw the graph.  If omitted, new a figure
+            is created
 
         Returns
         -------
         fig : figure
             Handle to the figure
         """
-        # Local import since mpl is optional
-        import matplotlib.pyplot as plt
-        plt.figure()
+        import statsmodels.graphics.utils as gutils
+
+        fig, ax = gutils.create_mpl_ax(ax)
+
         ncomp = self._ncomp if ncomp is None else ncomp
         vals = np.asarray(self.eigenvals)
         vals = vals[:self._ncomp]
         if cumulative:
             vals = np.cumsum(vals)
 
-        ax = plt.subplot(1, 1, 1)
         if log_scale:
             ax.set_yscale('log')
         ax.plot(np.arange(ncomp), vals[: ncomp], 'bo')
@@ -724,42 +727,43 @@ class PCA(object):
         ax.set_title('Scree Plot')
         ax.set_ylabel('Eigenvalue')
         ax.set_xlabel('Component Number')
-        fig = ax.get_figure()
         fig.tight_layout()
 
-        plt.draw()
         return fig
 
-    def plot_rsquare(self, ncomp=None):
+    def plot_rsquare(self, ncomp=None, ax=None):
         """
         Box plots of the individual series R-square against the number of PCs
 
         Parameters
         ----------
         ncomp : int, optional
-            Number of components ot include in the plot.  It None, will
+            Number of components ot include in the plot.  If None, will
             plot the minimum of 10 or the number of computed components
+        ax : Matplotlib axes instance, optional
+            An axes on which to draw the graph.  If omitted, new a figure
+            is created
 
         Returns
         -------
         fig : figure
             Handle to the figure
         """
-        # Local import since mpl is optional
-        import matplotlib.pyplot as plt
-        plt.figure()
+        import statsmodels.graphics.utils as gutils
+
+        fig, ax = gutils.create_mpl_ax(ax)
+
         ncomp = 10 if ncomp is None else ncomp
         ncomp = min(ncomp, self._ncomp)
         # R2s in rows, series in columns
         r2s = 1.0 - self._ess_indiv / self._tss_indiv
         r2s = r2s[1:]
         r2s = r2s[:ncomp]
-        bp = plt.boxplot(r2s.T)
-        ax = bp['boxes'][0].get_axes()
+        ax.boxplot(r2s.T)
         ax.set_title('Individual Input $R^2$')
         ax.set_ylabel('$R^2$')
         ax.set_xlabel('Number of Included Principal Components')
-        fig = ax.get_figure()
+
         return fig
 
 
