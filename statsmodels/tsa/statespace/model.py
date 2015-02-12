@@ -15,7 +15,11 @@ import statsmodels.tsa.base.tsa_model as tsbase
 
 class Model(KalmanFilter, Representation, tsbase.TimeSeriesModel):
     """
-    State space model
+    State space representation of a time series process, with Kalman filter and
+    Statsmodels integration.
+
+    This intermediate class joins the state space representation and filtering
+    classes with the Statsmodels `TimeSeriesModel`.
 
     Parameters
     ----------
@@ -32,25 +36,22 @@ class Model(KalmanFilter, Representation, tsbase.TimeSeriesModel):
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
-
-    Attributes
-    ----------
-    start_params : array
-        Starting parameters for maximum likelihood estimation.
-    params_names : list of str
-        List of human readable parameter names (for parameters actually
-        included in the model).
-    model_names : list of str
-        The plain text names of all possible model parameters.
-    model_latex_names : list of str
-        The latex names of all possible model parameters.
+    **kwargs
+        Keyword arguments may be used to provide default values for state space
+        matrices, for Kalman filtering options, for Kalman smoothing
+        options, or for Simulation smoothing options.
+        See `Representation`, `KalmanFilter`, and `KalmanSmoother` for more
+        details.
 
     See Also
     --------
-    statsmodels.tsa.statespace.KalmanFilter
+    statsmodels.tsa.statespace.tsa.base.tsa_model.TimeSeriesModel
+    statsmodels.tsa.statespace.mlemodel.MLEModel
+    statsmodels.tsa.statespace.kalman_filter.KalmanFilter
+    statsmodels.tsa.statespace.representation.Representation
     """
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
-                 *args, **kwargs):
+                 **kwargs):
         # Initialize the model base
         tsbase.TimeSeriesModel.__init__(self, endog=endog, exog=exog,
                                         dates=dates, freq=freq, missing='none')
@@ -77,6 +78,6 @@ class Model(KalmanFilter, Representation, tsbase.TimeSeriesModel):
         endog = endog.T
 
         # Initialize the statespace representation
-        super(Model, self).__init__(endog.shape[0], k_states, *args, **kwargs)
+        super(Model, self).__init__(endog.shape[0], k_states, **kwargs)
         # Bind the data to the model
         self.bind(endog)

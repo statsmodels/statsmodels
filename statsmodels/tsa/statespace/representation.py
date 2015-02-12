@@ -147,43 +147,18 @@ class Representation(object):
     k_states : int
         The dimension of the unobserved state process.
     k_posdef : int
-        The dimension of a guaranteed positive definite covariance matrix
-        describing the shocks in the measurement equation.
-    dtype : dtype
-        Datatype of currently active representation matrices
-    prefix : str
-        BLAS prefix of currently active representation matrices
+        The dimension of a guaranteed positive
+        definite covariance matrix describing
+        the shocks in the measurement equation.
     shapes : dictionary of name:tuple
-        A dictionary recording the initial shapes of each of the representation
-        matrices as tuples.
-    endog : array
-        The observation vector. Alias for `obs`.
-    obs : array
-        Observation vector: :math:`y~(k\_endog \times nobs)`
-    design : array
-        Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`
-    obs_intercept : array
-        Observation intercept: :math:`d~(k\_endog \times nobs)`
-    obs_cov : array
-        Observation covariance matrix:
-        :math:`H~(k\_endog \times k\_endog \times nobs)`
-    transition : array
-        Transition matrix: :math:`T~(k\_states \times k\_states \times nobs)`
-    state_intercept : array
-        State intercept: :math:`c~(k\_states \times nobs)`
-    selection : array
-        Selection matrix: :math:`R~(k\_states \times k\_posdef \times nobs)`
-    state_cov : array
-        State covariance matrix:
-        :math:`Q~(k\_posdef \times k\_posdef \times nobs)`
-    time_invariant : bool
-        Whether or not currently active representation matrices are
-        time-invariant
+        A dictionary recording the initial shapes
+        of each of the representation matrices as
+        tuples.
     initialization : str
         Kalman filter initialization method. Default is unset.
     initial_variance : float
-        Initial variance for approximate diffuse initialization. Default is
-        1e6.
+        Initial variance for approximate diffuse
+        initialization. Default is 1e6.
 
     Notes
     -----
@@ -233,13 +208,38 @@ class Representation(object):
     """
 
     endog = None
+    r"""
+    (array) The observation vector, alias for `obs`.
+    """
     design = MatrixWrapper('design', 'design')
+    r"""
+    (array) Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`
+    """
     obs_intercept = MatrixWrapper('observation intercept', 'obs_intercept')
+    r"""
+    (array) Observation intercept: :math:`d~(k\_endog \times nobs)`
+    """
     obs_cov = MatrixWrapper('observation covariance matrix', 'obs_cov')
+    r"""
+    (array) Observation covariance matrix:
+    :math:`H~(k\_endog \times k\_endog \times nobs)`
+    """
     transition = MatrixWrapper('transition', 'transition')
+    r"""
+    (array) Transition matrix: :math:`T~(k\_states \times k\_states \times nobs)`
+    """
     state_intercept = MatrixWrapper('state intercept', 'state_intercept')
+    r"""
+    (array) State intercept: :math:`c~(k\_states \times nobs)`
+    """
     selection = MatrixWrapper('selection', 'selection')
+    r"""
+    (array) Selection matrix: :math:`R~(k\_states \times k\_posdef \times nobs)`
+    """
     state_cov = MatrixWrapper('state covariance matrix', 'state_cov')
+    r"""
+    (array) State covariance matrix: :math:`Q~(k\_posdef \times k\_posdef \times nobs)`
+    """
 
     def __init__(self, k_endog, k_states, k_posdef=None,
                  initial_variance=1e6, nobs=0, dtype=np.float64,
@@ -355,7 +355,7 @@ class Representation(object):
         # Otherwise, we have only a single slice index, but it is not a string
         else:
             raise IndexError('First index must the name of a valid state space'
-                             'matrix.')
+                             ' matrix.')
 
     def __setitem__(self, key, value):
         _type = type(key)
@@ -396,10 +396,13 @@ class Representation(object):
         # invalid
         else:
             raise IndexError('First index must the name of a valid state space'
-                             'matrix.')
+                             ' matrix.')
 
     @property
     def prefix(self):
+        """
+        (str) BLAS prefix of currently active representation matrices
+        """
         arrays = (
             self._design, self._obs_intercept, self._obs_cov,
             self._transition, self._state_intercept, self._selection,
@@ -411,10 +414,17 @@ class Representation(object):
 
     @property
     def dtype(self):
+        """
+        (dtype) Datatype of currently active representation matrices
+        """
         return prefix_dtype_map[self.prefix]
 
     @property
     def time_invariant(self):
+        """
+        (bool) Whether or not currently active representation matrices are
+        time-invariant
+        """
         return (
             self._design.shape[2] == self._obs_intercept.shape[1] ==
             self._obs_cov.shape[2] == self._transition.shape[2] ==
@@ -431,6 +441,9 @@ class Representation(object):
 
     @property
     def obs(self):
+        r"""
+        (array) Observation vector: :math:`y~(k\_endog \times nobs)`
+        """
         return self.endog
 
     def bind(self, endog):
@@ -677,15 +690,16 @@ class FrozenRepresentation(object):
     k_states : int
         The dimension of the unobserved state process.
     k_posdef : int
-        The dimension of a guaranteed positive definite covariance matrix
-        describing the shocks in the measurement equation.
+        The dimension of a guaranteed positive definite
+        covariance matrix describing the shocks in the
+        measurement equation.
     dtype : dtype
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
     shapes : dictionary of name:tuple
-        A dictionary recording the shapes of each of the representation
-        matrices as tuples.
+        A dictionary recording the shapes of each of
+        the representation matrices as tuples.
     endog : array
         The observation vector.
     design : array
@@ -703,12 +717,14 @@ class FrozenRepresentation(object):
     state_cov : array
         The covariance matrix for the state equation :math:`Q`.
     missing : array of bool
-        An array of the same size as `endog`, filled with boolean values that
-        are True if the corresponding entry in `endog` is NaN and False
+        An array of the same size as `endog`, filled
+        with boolean values that are True if the
+        corresponding entry in `endog` is NaN and False
         otherwise.
     nmissing : array of int
-        An array of size `nobs`, where the ith entry is the number (between 0
-        and k_endog) of NaNs in the ith row of the `endog` array.
+        An array of size `nobs`, where the ith entry
+        is the number (between 0 and `k_endog`) of NaNs in
+        the ith row of the `endog` array.
     time_invariant : bool
         Whether or not the representation matrices are time-invariant
     initialization : str

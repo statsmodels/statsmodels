@@ -94,54 +94,66 @@ class SARIMAX(MLEModel):
     Attributes
     ----------
     measurement_error : boolean
-        Whether or not to assume the endogenous observations `endog` were
-        measured with error.
+        Whether or not to assume the endogenous
+        observations `endog` were measured with error.
     state_error : boolean
         Whether or not the transition equation has an error component.
     mle_regression : boolean
-        Whether or not the regression coefficients for the exogenous variables
-        were estimated via maximum likelihood estimation.
+        Whether or not the regression coefficients for
+        the exogenous variables were estimated via maximum
+        likelihood estimation.
     state_regression : boolean
-        Whether or not the regression coefficients for the exogenous variables
-        are included as elements of the state space and estimated via the
-        Kalman filter.
+        Whether or not the regression coefficients for
+        the exogenous variables are included as elements
+        of the state space and estimated via the Kalman
+        filter.
     time_varying_regression : boolean
-        Whether or not coefficients on the exogenous regressors are allowed to
-        vary over time.
+        Whether or not coefficients on the exogenous
+        regressors are allowed to vary over time.
     simple_differencing : boolean
         Whether or not to use partially conditional maximum likelihood
         estimation.
     enforce_stationarity : boolean
-        Whether or not to transform the AR parameters to enforce stationarity
-        in the autoregressive component of the model.
+        Whether or not to transform the AR parameters
+        to enforce stationarity in the autoregressive
+        component of the model.
     enforce_invertibility : boolean
-        Whether or not to transform the MA parameters to enforce invertibility
-        in the moving average component of the model.
+        Whether or not to transform the MA parameters
+        to enforce invertibility in the moving average
+        component of the model.
     hamilton_representation : boolean
         Whether or not to use the Hamilton representation of an ARMA process.
     trend : str{'n','c','t','ct'} or iterable
-        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        See the class parameter documentation for more information.
+        Parameter controlling the deterministic
+        trend polynomial :math:`A(t)`. See the class
+        parameter documentation for more information.
     polynomial_ar : array
-        Array containing autoregressive lag polynomial coefficients,
-        ordered from lowest degree to highest. Initialized with ones, unless
-        a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_ma : array
-        Array containing moving average lag polynomial coefficients,
-        ordered from lowest degree to highest. Initialized with ones, unless
-        a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_seasonal_ar : array
-        Array containing seasonal autoregressive lag polynomial coefficients,
-        ordered from lowest degree to highest. Initialized with ones, unless
-        a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_seasonal_ma : array
-        Array containing seasonal moving average lag polynomial coefficients,
-        ordered from lowest degree to highest. Initialized with ones, unless
-        a coefficient is constrained to be zero (in which case it is zero).
-    polynomial_trend : array
-        Array containing trend polynomial coefficients, ordered from lowest
-        degree to highest. Initialized with ones, unless a coefficient is
+        Array containing autoregressive lag polynomial
+        coefficients, ordered from lowest degree to highest.
+        Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
+    polynomial_ma : array
+        Array containing moving average lag polynomial
+        coefficients, ordered from lowest degree to highest.
+        Initialized with ones, unless a coefficient is
+        constrained to be zero (in which case it is zero).
+    polynomial_seasonal_ar : array
+        Array containing seasonal moving average lag
+        polynomial coefficients, ordered from lowest degree
+        to highest. Initialized with ones, unless a
+        coefficient is constrained to be zero (in which
+        case it is zero).
+    polynomial_seasonal_ma : array
+        Array containing seasonal moving average lag
+        polynomial coefficients, ordered from lowest degree
+        to highest. Initialized with ones, unless a
+        coefficient is constrained to be zero (in which
+        case it is zero).
+    polynomial_trend : array
+        Array containing trend polynomial coefficients,
+        ordered from lowest degree to highest. Initialized
+        with ones, unless a coefficient is constrained to be
+        zero (in which case it is zero).
     k_ar : int
         Highest autoregressive order in the model, zero-indexed.
     k_ar_params : int
@@ -183,8 +195,8 @@ class SARIMAX(MLEModel):
 
     .. math::
 
-        y_t = u_t + \eta_t \\
-        \phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D u_t = A(t) +
+        y_t & = u_t + \eta_t \\
+        \phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D u_t & = A(t) +
             \theta_q (L) \tilde \theta_Q (L^s) \zeta_t
 
     where :math:`\eta_t` is only applicable in the case of measurement error
@@ -196,8 +208,8 @@ class SARIMAX(MLEModel):
 
     .. math::
 
-        y_t = \beta_t x_t + u_t \\
-        \phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D u_t = A(t) +
+        y_t & = \beta_t x_t + u_t \\
+        \phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D u_t & = A(t) +
             \theta_q (L) \tilde \theta_Q (L^s) \zeta_t
 
     this model is the one used when exogenous regressors are provided.
@@ -252,7 +264,6 @@ class SARIMAX(MLEModel):
     - Chapter 8.4 describes the application of an ARMA model to an example
       dataset. A replication of this section is available in an example
       IPython notebook in the documentation.
-
 
     References
     ----------
@@ -820,10 +831,10 @@ class SARIMAX(MLEModel):
                                      ' `k_trend` > 0.')
                 X = np.c_[X, trend_data[:(-r if r > 0 else None), :]]
             if k_ar > 0:
-                cols = polynomial_ar.nonzero()[0][1:]-1
+                cols = polynomial_ar.nonzero()[0][1:] - 1
                 X = np.c_[X, lagmat(endog, k_ar)[r:, cols]]
             if k_ma > 0:
-                cols = polynomial_ma.nonzero()[0][1:]-1
+                cols = polynomial_ma.nonzero()[0][1:] - 1
                 X = np.c_[X, lagmat(residuals, k_ma)[r-k:, cols]]
 
             # Get the array of [ar_params, ma_params]
@@ -984,6 +995,7 @@ class SARIMAX(MLEModel):
 
     @property
     def endog_names(self, latex=False):
+        """Names of endogenous variables"""
         diff = ''
         if self.k_diff > 0:
             if self.k_diff == 1:
@@ -1391,7 +1403,7 @@ class SARIMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, **kwargs):
+    def update(self, params, transformed=True, set_params=True):
         """
         Update the parameters of the model
 
@@ -1402,13 +1414,19 @@ class SARIMAX(MLEModel):
         ----------
         params : array_like
             Array of new parameters.
+        transformed : boolean, optional
+            Whether or not `params` is already transformed. If set to False,
+            `transform_params` is called. Default is True.
+        set_params : boolean
+            Whether or not to copy `params` to the model object's params
+            attribute. Usually set to True.
 
         Returns
         -------
         params : array_like
             Array of parameters.
         """
-        params = super(SARIMAX, self).update(params, **kwargs)
+        params = super(SARIMAX, self).update(params, transformed, set_params)
 
         params_trend = None
         params_exog = None
@@ -1553,6 +1571,9 @@ class SARIMAX(MLEModel):
         if self.k_ar > 0 or self.k_seasonal_ar > 0:
             self[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
         elif not self.transition.dtype == params.dtype:
+            # This is required if the transition matrix is not really in use
+            # (e.g. for an MA(q) process) so that it's dtype never changes as
+            # the parameters' dtype changes. This changes the dtype manually.
             self.transition = self.transition.real.astype(params.dtype)
 
         # Selection matrix (Harvey) or Design matrix (Hamilton)
@@ -1581,7 +1602,7 @@ class SARIMAXResults(MLEResults):
 
     Parameters
     ----------
-    model : MLEModel instance
+    model : SARIMAX instance
         The fitted model instance
 
     Attributes
@@ -1640,22 +1661,6 @@ class SARIMAXResults(MLEResults):
         Array containing trend polynomial coefficients, ordered from lowest
         degree to highest. Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
-    arroots : array
-        Roots of the reduced form autoregressive lag polynomial
-    maroots : array
-        Roots of the reduced form moving average lag polynomial
-    arfreq : array
-        Frequency of the roots of the reduced form autoregressive
-        lag polynomial
-    mafreq : array
-        Frequency of the roots of the reduced form moving average
-        lag polynomial
-    arparams : array
-        Autoregressive parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
-    maparams : array
-        Moving average parameters actually estimated in the model. Does not
-        include parameters whose values are constrained to be zero.
     measurement_error : boolean
         Whether or not to assume the endogenous observations `endog` were
         measured with error.
@@ -1682,25 +1687,10 @@ class SARIMAXResults(MLEResults):
     hamilton_representation : boolean
         Whether or not to use the Hamilton representation of an ARMA process.
 
-    Methods
-    -------
-    conf_int
-    f_test
-    fittedvalues
-    forecast
-    load
-    predict
-    remove_data
-    resid
-    save
-    summary
-    t_test
-    wald_test
-
     See Also
     --------
-    statsmodels.tsa.statespace.FilterResults
-    statsmodels.tsa.statespace.MLEResults
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
     """
     def __init__(self, model):
         super(SARIMAXResults, self).__init__(model)
@@ -1762,14 +1752,24 @@ class SARIMAXResults(MLEResults):
 
     @cache_readonly
     def arroots(self):
+        """
+        (array) Roots of the reduced form autoregressive lag polynomial
+        """
         return np.roots(self.polynomial_reduced_ar)**-1
 
     @cache_readonly
     def maroots(self):
+        """
+        (array) Roots of the reduced form moving average lag polynomial
+        """
         return np.roots(self.polynomial_reduced_ma)**-1
 
     @cache_readonly
     def arfreq(self):
+        """
+        (array) Frequency of the roots of the reduced form autoregressive
+        lag polynomial
+        """
         z = self.arroots
         if not z.size:
             return
@@ -1777,6 +1777,10 @@ class SARIMAXResults(MLEResults):
 
     @cache_readonly
     def mafreq(self):
+        """
+        (array) Frequency of the roots of the reduced form moving average
+        lag polynomial
+        """
         z = self.maroots
         if not z.size:
             return
@@ -1784,10 +1788,18 @@ class SARIMAXResults(MLEResults):
 
     @cache_readonly
     def arparams(self):
+        """
+        (array) Autoregressive parameters actually estimated in the model.
+        Does not include parameters whose values are constrained to be zero.
+        """
         return self._params_ar
 
     @cache_readonly
     def maparams(self):
+        """
+        (array) Moving average parameters actually estimated in the model.
+        Does not include parameters whose values are constrained to be zero.
+        """
         return self._params_ma
 
     def predict(self, start=None, end=None, exog=None, dynamic=False,
@@ -1923,7 +1935,7 @@ class SARIMAXResults(MLEResults):
             steps, exog=exog, **kwargs
         )
 
-    def summary(self, alpha=.05, start=None, **kwargs):
+    def summary(self, alpha=.05, start=None):
         # Create the model name
 
         # See if we have an ARIMA component
