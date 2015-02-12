@@ -16,3 +16,5 @@ from .seasonal import seasonal_decompose
 from ..graphics import tsaplots as graphics
 from .x13 import x13_arima_select_order
 from .x13 import x13_arima_analysis
+from .statespace import api as statespace
+from .statespace.sarimax import SARIMAX

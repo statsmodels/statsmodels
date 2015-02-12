@@ -408,15 +408,15 @@ class LikelihoodModel(Model):
 
         nobs = self.endog.shape[0]
         f = lambda params, *args: -self.loglike(params, *args) / nobs
-        score = lambda params: -self.score(params) / nobs
+        score = lambda params, *args: -self.score(params, *args) / nobs
         try:
-            hess = lambda params: -self.hessian(params) / nobs
+            hess = lambda params, *args: -self.hessian(params, *args) / nobs
         except:
             hess = None
 
         if method == 'newton':
-            score = lambda params: self.score(params) / nobs
-            hess = lambda params: self.hessian(params) / nobs
+            score = lambda params, *args: self.score(params, *args) / nobs
+            hess = lambda params, *args: self.hessian(params, *args) / nobs
             #TODO: why are score and hess positive?
 
         warn_convergence = kwargs.pop('warn_convergence', True)

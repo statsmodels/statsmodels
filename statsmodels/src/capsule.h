@@ -5,7 +5,7 @@
 
 #if PY_VERSION_HEX >= 0x03000000
 
-void* SMCapsule_AsVoidPtr(PyObject *obj)
+void* Capsule_AsVoidPtr(PyObject *obj)
 {
     void *ret = PyCapsule_GetPointer(obj, NULL);
     if (ret == NULL) {
@@ -16,7 +16,7 @@ void* SMCapsule_AsVoidPtr(PyObject *obj)
 
 #else
 
-void* SMCapsule_AsVoidPtr(PyObject *ptr)
+void* Capsule_AsVoidPtr(PyObject *ptr)
 {
     return PyCObject_AsVoidPtr(ptr);
 }

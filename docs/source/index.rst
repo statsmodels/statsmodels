@@ -95,6 +95,7 @@ Table of Contents
    discretemod
    anova
    tsa
+   statespace
    duration
    stats
    nonparametric
