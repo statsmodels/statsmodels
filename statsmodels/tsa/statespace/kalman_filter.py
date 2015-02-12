@@ -782,7 +782,7 @@ class FilterResults(FrozenRepresentation):
         The forecast errors at each time period.
     forecasts_error_cov : array
         The forecast error covariance matrices at each time period.
-    loglikelihood : array
+    llf_obs : array
         The loglikelihood values at each time period.
     """
     _filter_attributes = [
@@ -791,7 +791,7 @@ class FilterResults(FrozenRepresentation):
         'period_converged', 'filtered_state', 'filtered_state_cov',
         'predicted_state', 'predicted_state_cov',
         'forecasts', 'forecasts_error', 'forecasts_error_cov',
-        'loglikelihood'
+        'llf_obs'
     ]
 
     _filter_options = (
@@ -884,7 +884,7 @@ class FilterResults(FrozenRepresentation):
         self.forecasts_error_cov = np.array(
             kalman_filter.forecast_error_cov, copy=True
         )
-        self.loglikelihood = np.array(kalman_filter.loglikelihood, copy=True)
+        self.llf_obs = np.array(kalman_filter.loglikelihood, copy=True)
 
         # If there was missing data, save the original values from the Kalman
         # filter output, since below will set the values corresponding to

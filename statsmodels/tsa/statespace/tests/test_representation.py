@@ -86,7 +86,7 @@ class Clark1987(object):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.results.loglikelihood[self.true['start']:].sum(),
+            self.results.llf_obs[self.true['start']:].sum(),
             self.true['loglike'], 5
         )
 
@@ -243,7 +243,7 @@ class TestClark1987ConserveAll(Clark1987):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.results.loglikelihood[0], self.true['loglike'], 5
+            self.results.llf_obs[0], self.true['loglike'], 5
         )
 
     def test_filtered_state(self):
@@ -327,8 +327,8 @@ class Clark1989(object):
 
     def test_loglike(self):
         assert_almost_equal(
-            # self.results.loglikelihood[self.true['start']:].sum(),
-            self.results.loglikelihood[0:].sum(),
+            # self.results.llf_obs[self.true['start']:].sum(),
+            self.results.llf_obs[0:].sum(),
             self.true['loglike'], 2
         )
 
@@ -463,7 +463,7 @@ class TestClark1989ConserveAll(Clark1989):
 
     def test_loglike(self):
         assert_almost_equal(
-            self.results.loglikelihood[0], self.true['loglike'], 2
+            self.results.llf_obs[0], self.true['loglike'], 2
         )
 
     def test_filtered_state(self):
