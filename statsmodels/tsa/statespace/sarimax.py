@@ -1609,40 +1609,8 @@ class SARIMAXResults(MLEResults):
 
     Attributes
     ----------
-    param_terms : list of str
-        List of parameters actually included in the model, in sorted order.
-    k_ar : int
-        Highest autoregressive order in the model, zero-indexed.
-    k_ar_params : int
-        Number of autoregressive parameters to be estimated.
-    k_diff : int
-        Order of intergration.
-    k_ma : int
-        Highest moving average order in the model, zero-indexed.
-    k_ma_params : int
-        Number of moving average parameters to be estimated.
-    k_seasons : int
-        Number of periods in a season.
-    k_seasonal_ar : int
-        Highest seasonal autoregressive order in the model, zero-indexed.
-    k_seasonal_ar_params : int
-        Number of seasonal autoregressive parameters to be estimated.
-    k_seasonal_diff : int
-        Order of seasonal intergration.
-    k_seasonal_ma : int
-        Highest seasonal moving average order in the model, zero-indexed.
-    k_seasonal_ma_params : int
-        Number of seasonal moving average parameters to be estimated.
-    k_trend : int
-        Order of the trend polynomial plus one (i.e. the constant polynomial
-        would have `k_trend=1`).
-    k_exog : int
-        Number of exogenous regressors.
-    trend : str{'n','c','t','ct'} or iterable
-        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        See the class parameter documentation for more information.
-    model_orders : list of int
-        The orders of each of the polynomials in the model.
+    specification : dictionary
+        Dictionary including all attributes from the SARIMAX model instance.
     polynomial_ar : array
         Array containing autoregressive lag polynomial coefficients,
         ordered from lowest degree to highest. Initialized with ones, unless
@@ -1663,31 +1631,10 @@ class SARIMAXResults(MLEResults):
         Array containing trend polynomial coefficients, ordered from lowest
         degree to highest. Initialized with ones, unless a coefficient is
         constrained to be zero (in which case it is zero).
-    measurement_error : boolean
-        Whether or not to assume the endogenous observations `endog` were
-        measured with error.
-    state_error : boolean
-        Whether or not the transition equation has an error component.
-    mle_regression : boolean
-        Whether or not to use estimate the regression coefficients as part of
-        maximum likelihood estimation.
-    state_regression : boolean
-        Whether or not to use estimate the regression coefficients via the
-        Kalman filter, by extending the state space.
-    time_varying_regression : boolean
-        Whether or not coefficients on the exogenous regressors are allowed to
-        vary over time.
-    simple_differencing : boolean
-        Whether or not to use partially conditional maximum likelihood
-        estimation.
-    enforce_stationarity : boolean
-        Whether or not to transform the AR parameters to enforce stationarity
-        in the autoregressive component of the model.
-    enforce_invertibility : boolean
-        Whether or not to transform the MA parameters to enforce invertibility
-        in the moving average component of the model.
-    hamilton_representation : boolean
-        Whether or not to use the Hamilton representation of an ARMA process.
+    model_orders : list of int
+        The orders of each of the polynomials in the model.
+    param_terms : list of str
+        List of parameters actually included in the model, in sorted order.
 
     See Also
     --------
@@ -1697,38 +1644,40 @@ class SARIMAXResults(MLEResults):
     def __init__(self, model):
         super(SARIMAXResults, self).__init__(model)
 
-        # Set additional model parameters
-        self.k_seasons = self.model.k_seasons
-        self.measurement_error = self.model.measurement_error
-        self.time_varying_regression = self.model.time_varying_regression
-        self.mle_regression = self.model.mle_regression
-        self.simple_differencing = self.model.simple_differencing
-        self.enforce_stationarity = self.model.enforce_stationarity
-        self.enforce_invertibility = self.model.enforce_invertibility
-        self.hamilton_representation = self.model.hamilton_representation
+        self.specification = {
+            # Set additional model parameters
+            'k_seasons': self.model.k_seasons,
+            'measurement_error': self.model.measurement_error,
+            'time_varying_regression': self.model.time_varying_regression,
+            'mle_regression': self.model.mle_regression,
+            'simple_differencing': self.model.simple_differencing,
+            'enforce_stationarity': self.model.enforce_stationarity,
+            'enforce_invertibility': self.model.enforce_invertibility,
+            'hamilton_representation': self.model.hamilton_representation,
 
-        self.order = self.model.order
-        self.seasonal_order = self.model.seasonal_order
+            'order': self.model.order,
+            'seasonal_order': self.model.seasonal_order,
 
-        # Model order
-        self.k_diff = self.model.k_diff
-        self.k_seasonal_diff = self.model.k_seasonal_diff
-        self.k_ar = self.model.k_ar
-        self.k_ma = self.model.k_ma
-        self.k_seasonal_ar = self.model.k_seasonal_ar
-        self.k_seasonal_ma = self.model.k_seasonal_ma
+            # Model order
+            'k_diff': self.model.k_diff,
+            'k_seasonal_diff': self.model.k_seasonal_diff,
+            'k_ar': self.model.k_ar,
+            'k_ma': self.model.k_ma,
+            'k_seasonal_ar': self.model.k_seasonal_ar,
+            'k_seasonal_ma': self.model.k_seasonal_ma,
 
-        # Param Numbers
-        self.k_ar_params = self.model.k_ar_params
-        self.k_ma_params = self.model.k_ma_params
+            # Param Numbers
+            'k_ar_params': self.model.k_ar_params,
+            'k_ma_params': self.model.k_ma_params,
 
-        # Trend / Regression
-        self.trend = self.model.trend
-        self.k_trend = self.model.k_trend
-        self.k_exog = self.model.k_exog
+            # Trend / Regression
+            'trend': self.model.trend,
+            'k_trend': self.model.k_trend,
+            'k_exog': self.model.k_exog,
 
-        self.mle_regression = self.model.mle_regression
-        self.state_regression = self.model.state_regression
+            'mle_regression': self.model.mle_regression,
+            'state_regression': self.model.state_regression,
+        }
 
         # Polynomials
         self.polynomial_trend = self.model.polynomial_trend
@@ -1855,19 +1804,19 @@ class SARIMAXResults(MLEResults):
         _end, _out_of_sample = self.model._get_predict_end(end)
 
         # Handle exogenous parameters
-        if _out_of_sample and (self.k_exog > 0 or self.k_trend > 0):
+        if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
             # Create a new faux SARIMAX model for the extended dataset
             nobs = self.model.orig_endog.shape[0] + _out_of_sample
-            endog = np.zeros((nobs, self.k_endog))
+            endog = np.zeros((nobs, self.model.k_endog))
 
-            if self.k_exog > 0:
+            if self.model.k_exog > 0:
                 if exog is None:
                     raise ValueError('Out-of-sample forecasting in a model'
                                      ' with a regression component requires'
                                      ' additional exogenous values via the'
                                      ' `exog` argument.')
                 exog = np.array(exog)
-                required_exog_shape = (_out_of_sample, self.k_exog)
+                required_exog_shape = (_out_of_sample, self.model.k_exog)
                 if not exog.shape == required_exog_shape:
                     raise ValueError('Provided exogenous values are not of the'
                                      ' appropriate shape. Required %s, got %s.'
@@ -1878,16 +1827,16 @@ class SARIMAXResults(MLEResults):
             model = SARIMAX(
                 endog,
                 exog=exog,
-                order=self.order,
-                seasonal_order=self.seasonal_order,
-                trend=self.trend,
-                measurement_error=self.measurement_error,
-                time_varying_regression=self.time_varying_regression,
-                mle_regression=self.mle_regression,
-                simple_differencing=self.simple_differencing,
-                enforce_stationarity=self.enforce_stationarity,
-                enforce_invertibility=self.enforce_invertibility,
-                hamilton_representation=self.hamilton_representation
+                order=self.model.order,
+                seasonal_order=self.model.seasonal_order,
+                trend=self.model.trend,
+                measurement_error=self.model.measurement_error,
+                time_varying_regression=self.model.time_varying_regression,
+                mle_regression=self.model.mle_regression,
+                simple_differencing=self.model.simple_differencing,
+                enforce_stationarity=self.model.enforce_stationarity,
+                enforce_invertibility=self.model.enforce_invertibility,
+                hamilton_representation=self.model.hamilton_representation
             )
             model.update(self.params)
 
@@ -1902,7 +1851,7 @@ class SARIMAXResults(MLEResults):
                         kwargs[name] = mat[:, -_out_of_sample:]
                     else:
                         kwargs[name] = mat[:, :, -_out_of_sample:]
-        elif self.k_exog == 0 and exog is not None:
+        elif self.model.k_exog == 0 and exog is not None:
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.')
 
@@ -1942,42 +1891,51 @@ class SARIMAXResults(MLEResults):
 
         # See if we have an ARIMA component
         order = ''
-        if self.k_ar + self.k_diff + self.k_ma > 0:
-            if self.k_ar == self.k_ar_params:
-                order_ar = self.k_ar
+        if self.model.k_ar + self.model.k_diff + self.model.k_ma > 0:
+            if self.model.k_ar == self.model.k_ar_params:
+                order_ar = self.model.k_ar
             else:
                 order_ar = tuple(self.polynomial_ar.nonzero()[0][1:])
-            if self.k_ma == self.k_ma_params:
-                order_ma = self.k_ma
+            if self.model.k_ma == self.model.k_ma_params:
+                order_ma = self.model.k_ma
             else:
                 order_ma = tuple(self.polynomial_ma.nonzero()[0][1:])
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
-            k_diff = 0 if self.simple_differencing else self.k_diff
+            k_diff = 0 if self.model.simple_differencing else self.model.k_diff
             order = '(%s, %d, %s)' % (order_ar, k_diff, order_ma)
         # See if we have an SARIMA component
         seasonal_order = ''
-        if self.k_seasonal_ar + self.k_seasonal_diff + self.k_seasonal_ma > 0:
-            if self.k_ar == self.k_ar_params:
-                order_seasonal_ar = int(self.k_seasonal_ar / self.k_seasons)
+        has_seasonal = (
+            self.model.k_seasonal_ar +
+            self.model.k_seasonal_diff +
+            self.model.k_seasonal_ma
+        ) > 0
+        if has_seasonal:
+            if self.model.k_ar == self.model.k_ar_params:
+                order_seasonal_ar = (
+                    int(self.model.k_seasonal_ar / self.model.k_seasons)
+                )
             else:
                 order_seasonal_ar = (
                     tuple(self.polynomial_seasonal_ar.nonzero()[0][1:])
                 )
-            if self.k_ma == self.k_ma_params:
-                order_seasonal_ma = int(self.k_seasonal_ma / self.k_seasons)
+            if self.model.k_ma == self.model.k_ma_params:
+                order_seasonal_ma = (
+                    int(self.model.k_seasonal_ma / self.model.k_seasons)
+                )
             else:
                 order_seasonal_ma = (
                     tuple(self.polynomial_seasonal_ma.nonzero()[0][1:])
                 )
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
-            k_seasonal_diff = self.k_seasonal_diff
-            if self.simple_differencing:
+            k_seasonal_diff = self.model.k_seasonal_diff
+            if self.model.simple_differencing:
                 k_seasonal_diff = 0
             seasonal_order = ('(%s, %d, %s, %d)' %
                               (str(order_seasonal_ar), k_seasonal_diff,
-                               str(order_seasonal_ma), self.k_seasons))
+                               str(order_seasonal_ma), self.model.k_seasons))
             if not order == '':
                 order += 'x'
         model_name = ('%s%s%s' %
