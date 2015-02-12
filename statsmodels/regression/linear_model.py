@@ -151,10 +151,21 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
             to solve the least squares problem. "qr" uses the QR
             factorization.
+        cov_type : str, optional
+            See `regression.linear_model.RegressionResults` for a description
+            of the available covariance estimators
+        cov_kwds : list or None, optional
+            See `linear_model.RegressionResults.get_robustcov_results` for a
+            description required keywords for alternative covariance estimators
+        use_t : bool, optional
+            Flag indicating to use the Student's t distribution when computing
+            p-values.  Default behavior depends on cov_type. See
+            `linear_model.RegressionResults.get_robustcov_results` for
+            implementation details.
 
         Returns
         -------
@@ -162,7 +173,8 @@ class RegressionModel(base.LikelihoodModel):
 
         See Also
         ---------
-        regression.RegressionResults
+        regression.linear_model.RegressionResults
+        regression.linear_model.RegressionResults.get_robustcov_results
 
         Notes
         -----
