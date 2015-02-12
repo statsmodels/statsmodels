@@ -18,7 +18,7 @@ if PY3:
     pickle = cPickle
     import urllib.request
     import urllib.parse
-    from urllib.request import HTTPError, urlretrieve
+    from urllib.request import HTTPError, urlretrieve, URLError
     import io
     bytes = bytes
     str = str
@@ -131,6 +131,7 @@ else:
     urljoin = urlparse.urljoin
     urlencode = urllib.urlencode
     HTTPError = urllib2.HTTPError
+    URLError = urllib2.URLError
     string_types = basestring
 
     input = raw_input
