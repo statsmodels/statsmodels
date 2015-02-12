@@ -158,11 +158,11 @@ class TestARIMADiffuse(ARIMA):
     def test_bse(self):
         assert_allclose(
             self.result.bse[1], self.true['se_ar_oim'],
-            atol=1e-2,
+            atol=1e-1,
         )
         assert_allclose(
             self.result.bse[2], self.true['se_ma_oim'],
-            atol=1e-2, rtol=1e-1
+            atol=1e-1, rtol=1e-1
         )
 
 
@@ -354,7 +354,7 @@ class TestFriedmanMLERegression(Friedman):
         result = self.model.fit(disp=-1)
         assert_allclose(
             result.params, self.result.params,
-            atol=1e-3, rtol=1e-3
+            atol=1e-2, rtol=1e-3
         )
 
     def test_bse(self):
