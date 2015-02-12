@@ -409,7 +409,7 @@ class MLEModel(Model):
         self._start_params = np.asarray(values)
 
     @property
-    def params_names(self):
+    def param_names(self):
         """
         (list of str) List of human readable parameter names (for parameters
         actually included in the model).
@@ -596,12 +596,12 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         self._endog_names = model.endog_names
         self._exog_names = model.endog_names
         self._params = model.params
-        self._params_names = model.params_names
+        self._param_names = model.param_names
         self._model_names = model.model_names
         self._model_latex_names = model.model_latex_names
 
         # Associate the names with the true parameters
-        params = pd.Series(self._params, index=self._params_names)
+        params = pd.Series(self._params, index=self._param_names)
 
         # Initialize the Statsmodels model base
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
@@ -892,7 +892,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
-        summary.add_table_params(self, alpha=alpha, xname=self._params_names,
+        summary.add_table_params(self, alpha=alpha, xname=self._param_names,
                                  use_t=False)
 
         return summary

@@ -1050,7 +1050,7 @@ class SARIMAX(MLEModel):
         return params
 
     @property
-    def params_names(self):
+    def param_names(self):
         """
         List of human readable parameter names (for parameters actually
         included in the model).
