@@ -563,10 +563,10 @@ class SARIMAXCoverageTest(object):
         self.model.update(self.true_params)
         self.result = self.model.filter()
 
-        assert_almost_equal(
+        assert_allclose(
             self.result.llf,
             self.true_loglike,
-            self.decimal
+            atol=0.7 * 10**(-self.decimal)
         )
 
     def test_start_params(self):
