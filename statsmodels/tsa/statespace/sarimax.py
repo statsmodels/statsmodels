@@ -1644,6 +1644,8 @@ class SARIMAXResults(MLEResults):
     def __init__(self, model):
         super(SARIMAXResults, self).__init__(model)
 
+        self.df_resid = np.inf  # attribute required for wald tests
+
         self.specification = {
             # Set additional model parameters
             'k_seasons': self.model.k_seasons,
