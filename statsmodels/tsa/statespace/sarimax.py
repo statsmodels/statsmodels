@@ -523,6 +523,15 @@ class SARIMAX(MLEModel):
         if k_diffuse_states == 0:
             self.initialize_stationary()
 
+        # update _init_keys attached by super
+        self._init_keys += ['order',  'seasonal_order', 'trend',
+                 'measurement_error', 'time_varying_regression',
+                 'mle_regression' 'simple_differencing',
+                 'enforce_stationarity', 'enforce_invertibility',
+                 'hamilton_representation'] + list(kwargs.keys())
+        # TODO: I think the kwargs or not attached, need to recover from ???
+
+
     def initialize(self):
         """
         Initialize the SARIMAX model.

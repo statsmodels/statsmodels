@@ -612,6 +612,18 @@ class SARIMAXCoverageTest(object):
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
+    def test_init_keys_replicate(self):
+        mod1 = self.model
+        mod1.update(self.true_params)  # test with side effect ?
+
+        kwargs = self.model._get_init_kwds()
+        model2 = sarimax.SARIMAX(mod1.endog.squeeze(), mod1.exog, **kwargs)
+        model2.update(self.true_params)
+        res1 = self.model.filter()
+        res2 = model2.filter()
+        assert_allclose(res2.llf, res1.llf, rtol=1e-13)
+
+
 class Test_ar(SARIMAXCoverageTest):
     # // AR: (p,0,0) x (0,0,0,0)
     # arima wpi, arima(3,0,0) noconstant vce(oim)
