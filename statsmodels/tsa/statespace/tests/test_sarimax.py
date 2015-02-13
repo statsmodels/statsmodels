@@ -24,7 +24,7 @@ coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
 
 
-class SARIMAXStatsmodelsTests(object):
+class TestSARIMAXStatsmodels(object):
     """
     Test ARIMA model using SARIMAX class against statsmodels ARIMA class
     """
@@ -57,7 +57,7 @@ class SARIMAXStatsmodelsTests(object):
         # the intercept. Convert the mean to intercept to compare
         params_a = self.result_a.params
         params_a[0] = (1 - params_a[1]) * params_a[0]
-        assert_allclose(self.result_b.params[:-1], params_a, atol=1e-3)
+        assert_allclose(self.result_b.params[:-1], params_a, atol=5e-5)
 
     def test_bse(self):
         assert_allclose(
@@ -65,7 +65,15 @@ class SARIMAXStatsmodelsTests(object):
             self.result_a.bse[1:],
             atol=1e-2
         )
-        
+
+
+    def test_t_test(self):
+        import statsmodels.tools._testing as smt
+        #self.result_b.pvalues
+        #self.result_b._cache['pvalues'] += 1  # use to trigger failure
+        smt.check_ttest_tvalues(self.result_b)
+        smt.check_ftest_pvalues(self.result_b)
+
 
 class SARIMAXStataTests(object):
     def test_loglike(self):
@@ -555,10 +563,10 @@ class SARIMAXCoverageTest(object):
         self.model.update(self.true_params)
         self.result = self.model.filter()
 
-        assert_almost_equal( 
+        assert_allclose(
             self.result.llf,
             self.true_loglike,
-            self.decimal
+            atol=0.7 * 10**(-self.decimal)
         )
 
     def test_start_params(self):
@@ -585,7 +593,7 @@ class SARIMAXCoverageTest(object):
         )
         contracted_polynomial_seasonal_ma = self.model.polynomial_seasonal_ma[self.model.polynomial_seasonal_ma.nonzero()]
         self.model.enforce_invertibility = (
-            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, -self.model.polynomial_ma[1:]])) and 
+            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, -self.model.polynomial_ma[1:]])) and
             (len(contracted_polynomial_seasonal_ma) <= 1 or tools.is_invertible(np.r_[1, -contracted_polynomial_seasonal_ma[1:]]))
         )
 
@@ -699,7 +707,7 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         self.model.update(self.true_params)
         self.result = self.model.filter()
 
-        assert_allclose( 
+        assert_allclose(
             self.result.llf,
             self.true_loglike,
             atol=2
@@ -734,7 +742,7 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
         self.model.update(self.true_params)
         self.result = self.model.filter()
 
-        assert_allclose( 
+        assert_allclose(
             self.result.llf,
             self.true_loglike,
             atol=2
@@ -747,7 +755,7 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
         self.model.update(self.true_params)
         self.result = self.model.filter()
 
-        assert_allclose( 
+        assert_allclose(
             self.result.filtered_state[3][-1],
             self.true_regression_coefficient,
             self.decimal
