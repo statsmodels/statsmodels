@@ -506,7 +506,7 @@ class SARIMAX(MLEModel):
 
         # Set the default results class to be SARIMAXResults
         kwargs.setdefault('results_class', SARIMAXResults)
-
+        self._init_kwargs = kwargs  # store to recreate model
         # Initialize the statespace
         super(SARIMAX, self).__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
@@ -530,6 +530,18 @@ class SARIMAX(MLEModel):
                  'enforce_stationarity', 'enforce_invertibility',
                  'hamilton_representation'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
+
+
+    def _get_init_kwds(self):
+        # this is a temporary fixup because exposure has been transformed
+        # see #1609
+        kwds = super(SARIMAX, self)._get_init_kwds()
+        kwds['endog'] = self.orig_endog
+        kwds['exog'] = self.orig_exog
+        if self.initialization == 'approximate_diffuse':
+            import warnings
+            warnings.warn('not all init keys or initialization is available yet')
+        return kwds
 
 
     def initialize(self):
