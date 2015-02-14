@@ -1,5 +1,6 @@
-from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError,
-                                       lrange, cPickle, urljoin, BytesIO)
+from statsmodels.compat.python import (range, StringIO, urlopen,
+                                       HTTPError, URLError, lrange,
+                                       cPickle, urljoin, BytesIO)
 import sys
 import shutil
 from os import environ
@@ -326,3 +327,11 @@ def clear_data_home(data_home=None):
     """Delete all the content of the data home cache."""
     data_home = get_data_home(data_home)
     shutil.rmtree(data_home)
+
+def check_internet():
+    """Check if internet is available"""
+    try:
+        urlopen("https://github.com")
+    except URLError as err:
+        return False
+    return True
