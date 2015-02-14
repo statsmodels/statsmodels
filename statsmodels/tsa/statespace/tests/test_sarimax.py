@@ -618,8 +618,9 @@ class SARIMAXCoverageTest(object):
 
         kwargs = self.model._get_init_kwds()
         endog = mod1.endog.squeeze() # test failures
-        endog = mod1.data.orig_endog
-        model2 = sarimax.SARIMAX(endog, mod1.exog, **kwargs)
+        endog = mod1.orig_endog
+        exog = mod1.orig_exog
+        model2 = sarimax.SARIMAX(endog, exog, **kwargs)
         model2.update(self.true_params)
         res1 = self.model.filter()
         res2 = model2.filter()
