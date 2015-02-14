@@ -612,6 +612,32 @@ class SARIMAXCoverageTest(object):
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
+    def test_init_keys_replicate(self):
+        mod1 = self.model
+        mod1.update(self.true_params)  # test with side effect ?
+
+        if mod1.initialization == 'approximate_diffuse':
+            raise SkipTest('known failure: init_keys incomplete')
+        kwargs = self.model._get_init_kwds()
+        # TODO: current limitations #2259 comments
+        #endog = mod1.endog.squeeze() # test failures, endog may be transformed
+        # this works
+        #endog = mod1.orig_endog
+        #exog = mod1.orig_exog
+
+        # in SARIMAX endog, exog will always be in kwargs but not in other models
+        if 'endog' in kwargs:
+            endog = kwargs.pop('endog')
+        if 'exog' in kwargs:
+            exog = kwargs.pop('exog')
+
+        model2 = sarimax.SARIMAX(endog, exog, **kwargs)
+        model2.update(self.true_params)
+        res1 = self.model.filter()
+        res2 = model2.filter()
+        assert_allclose(res2.llf, res1.llf, rtol=1e-13)
+
+
 class Test_ar(SARIMAXCoverageTest):
     # // AR: (p,0,0) x (0,0,0,0)
     # arima wpi, arima(3,0,0) noconstant vce(oim)
@@ -913,6 +939,8 @@ class Test_arma_diffuse(SARIMAXCoverageTest):
     # save_results 24
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (3,0,2)
+        # TODO: diffuse initialization not supported through keywords #2259
+        kwargs['initial_variance'] = 1e9
         super(Test_arma_diffuse, self).__init__(23, *args, **kwargs)
         self.model.initialize_approximate_diffuse(1e9)
 
