@@ -999,7 +999,7 @@ def generate_gjrgarch(nobs, ar, ma, mu=1., scale=0.1, varinnovation=None):
     #h = np.abs(h)
     #h = np.exp(h)
     #err = np.sqrt(h)*np.random.randn(nobs)
-    print('h.shape', h.shape)
+    #print('h.shape', h.shape)
     err = np.sqrt(h[:len(eta)])*eta #np.random.standard_t(8, size=len(h))
     return err, h, etax
 
@@ -1025,7 +1025,7 @@ def loglike_GARCH11(params, y):
     llvalues = -0.5*np.log(2*np.pi) - np.log(sqrtht) - 0.5*(x**2);
     return llvalues.sum(), llvalues, ht
 
-from statsmodels.tsa.filters import miso_lfilter
+from statsmodels.tsa.filters.filtertools import miso_lfilter
 #copied to statsmodels.tsa.filters.filtertools
 def miso_lfilter_old(ar, ma, x, useic=False): #[0.1,0.1]):
     '''
