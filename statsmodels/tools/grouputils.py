@@ -374,9 +374,9 @@ class Grouping(object):
             # pandas < 0.15
             tmp = pd.Categorical(self.index)
             try:
-                labl = tmp.labels
-            except AttributeError:
                 labl = tmp.codes
+            except AttributeError:
+                labl = tmp.labels  # Old pandsd
 
             return labl[None]
 
