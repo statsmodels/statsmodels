@@ -58,7 +58,7 @@ def labelmeanfilter_nd(y, x):
 def labelmeanfilter_str(ys, x):
     # works also for string labels in ys, but requires 1D
     # from mailing list scipy-user 2009-02-11
-    unil, unilinv = np.unique1d(ys, return_index=False, return_inverse=True)
+    unil, unilinv = np.unique(ys, return_index=False, return_inverse=True)
     labelmeans = np.array(ndimage.mean(x, labels=unilinv, index=np.arange(np.max(unil)+1)))
     arr3 = labelmeans[unilinv]
     return arr3
@@ -67,7 +67,7 @@ def groupstatsbin(factors, values):
     '''uses np.bincount, assumes factors/labels are integers
     '''
     n = len(factors)
-    ix,rind = np.unique1d(factors, return_inverse=1)
+    ix,rind = np.unique(factors, return_inverse=1)
     gcount = np.bincount(rind)
     gmean = np.bincount(rind, weights=values)/ (1.0*gcount)
     meanarr = gmean[rind]
@@ -93,7 +93,7 @@ def convertlabels(ys, indices=None):
             # there might be a problem here
             ylabel = ys
 
-    unil, unilinv = np.unique1d(ylabel, return_index=False, return_inverse=True)
+    unil, unilinv = np.unique(ylabel, return_index=False, return_inverse=True)
     return unilinv, np.arange(len(unil)), unil
 
 def groupsstats_1d(y, x, labelsunique):
