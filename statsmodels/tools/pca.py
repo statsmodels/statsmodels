@@ -401,6 +401,9 @@ class PCA(object):
         Standardize or demean data.
         """
         adj_data = self._adjusted_data
+        if np.all(np.isnan(adj_data)):
+            return np.empty(adj_data.shape[1]).fill(np.nan)
+
         self._mu = nanmean(adj_data, axis=0)
         self._sigma = np.sqrt(nanmean((adj_data - self._mu) ** 2.0, axis=0))
         if self._standardize:

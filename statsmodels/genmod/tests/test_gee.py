@@ -1442,8 +1442,7 @@ def test_missing():
                   cov_struct=sm.cov_struct.Independence(),
                   family=sm.families.Binomial())
 
-    df = df.dropna()
-    #df.loc[:, 'constant'] = 1
+    df = df.dropna().copy()
     df['constant'] = 1
 
     mod2 = GEE(df.status, df[['constant', 'fake']], groups=df.grps,
