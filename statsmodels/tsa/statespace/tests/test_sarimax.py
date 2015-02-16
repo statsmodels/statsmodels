@@ -404,6 +404,13 @@ class TestFriedmanStateRegression(Friedman):
 
         self.result = self.model.filter()
 
+    def test_mle(self):
+        result = self.model.fit(disp=-1)
+        assert_allclose(
+            result.params, self.result.params,
+            atol=1e-1, rtol=1e-1
+        )
+
     def test_regression_parameters(self):
         # The regression effects are integrated into the state vector as
         # the last two states (thus the index [-2:]). The filtered
