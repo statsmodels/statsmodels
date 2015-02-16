@@ -18,9 +18,9 @@ def test_get_rdataset():
         duncan = get_rdataset("Duncan", "car", cache=cur_dir)
         assert_(duncan.from_cache)
 
-internet_available = check_internet()
-@dec.skipif(not internet_available)
-def test_webuse():
+#internet_available = check_internet()
+#@dec.skipif(not internet_available)
+def t_est_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result as res2
     #base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
@@ -28,8 +28,8 @@ def test_webuse():
     res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
     assert_array_equal(res1 == res2, True)
 
-@dec.skipif(not internet_available)
-def test_webuse_pandas():
+#@dec.skipif(not internet_available)
+def t_est_webuse_pandas():
     # test copied and adjusted from iolib/tests/test_foreign
     from pandas.util.testing import assert_frame_equal
     from statsmodels.datasets import macrodata
