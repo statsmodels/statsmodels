@@ -970,8 +970,8 @@ class VARResults(VARProcess):
         """
         Estimated covariance matrix of model coefficients ex intercept
         """
-        # drop intercept
-        return self.cov_params[self.neqs:, self.neqs:]
+        # drop intercept and trend
+        return self.cov_params[self.k_trend*self.neqs:, self.k_trend*self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
