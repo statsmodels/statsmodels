@@ -225,7 +225,7 @@ def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
         GIT_REVISION = "Unknown"
 
     if not ISRELEASED:
-        FULLVERSION += '.dev-' + GIT_REVISION[:7]
+        FULLVERSION += '.dev0+' + GIT_REVISION[:7]
 
 
     if dowrite:
