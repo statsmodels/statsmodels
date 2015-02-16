@@ -18,7 +18,8 @@ import statsmodels.tools.data as data_util
 from statsmodels.tsa.vector_ar.var_model import VAR
 
 
-from numpy.testing import assert_almost_equal, assert_equal, assert_
+from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+                           assert_allclose)
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -575,6 +576,36 @@ def test_var_constant():
 
     model = VAR(data)
     assert_raises(ValueError, model.fit, 1)
+
+def test_irf_trend():
+    # test for irf with different trend see #1636
+    # this is a rough comparison by adding trend or subtracting mean to data
+    # to get similar AR coefficients and IRF
+    data = get_macrodata().view((float,3))
+
+    model = sm.tsa.VAR(data)
+    results = model.fit(4) #, trend = 'c')
+    irf = results.irf(10)
+
+
+    data_nc = data - data.mean(0)
+    model_nc = sm.tsa.VAR(data_nc)
+    results_nc = model_nc.fit(4, trend = 'nc')
+    irf_nc = results_nc.irf(10)
+
+    assert_allclose(irf_nc.stderr()[1:4], irf.stderr()[1:4], rtol=0.01)
+
+    trend = 1e-3 * np.arange(len(data)) / (len(data) - 1)
+    # for pandas version, currently not used, if data is a pd.DataFrame
+    #data_t = pd.DataFrame(data.values + trend[:,None], index=data.index, columns=data.columns)
+    data_t = data + trend[:,None]
+
+    model_t = sm.tsa.VAR(data_t)
+    results_t = model_t.fit(4, trend = 'ct')
+    irf_t = results_t.irf(10)
+
+    assert_allclose(irf_t.stderr()[1:4], irf.stderr()[1:4], rtol=0.03)
+
 
 if __name__ == '__main__':
     import nose
