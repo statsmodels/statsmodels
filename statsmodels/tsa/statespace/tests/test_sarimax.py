@@ -333,10 +333,11 @@ class Friedman(SARIMAXStataTests):
 
     Stata arima documentation, Example 4
     """
-    def __init__(self, true, *args, **kwargs):
+    def __init__(self, true, exog=None, *args, **kwargs):
         self.true = true
         endog = np.r_[true['data']['consump']]
-        exog = add_constant(true['data']['m2'])
+        if exog is None:
+            exog = add_constant(true['data']['m2'])
 
         kwargs.setdefault('simple_differencing', True)
         kwargs.setdefault('hamilton_representation', True)
@@ -389,6 +390,7 @@ class TestFriedmanStateRegression(Friedman):
         # Remove the regression coefficients from the parameters, since they
         # will be estimated as part of the state vector
         true = dict(results_sarimax.friedman2_mle)
+        exog = add_constant(true['data']['m2']) / 10.
 
         true['mle_params_exog'] = true['params_exog'][:]
         true['mle_se_exog'] = true['se_exog_oim'][:]
@@ -397,14 +399,14 @@ class TestFriedmanStateRegression(Friedman):
         true['se_exog'] = []
 
         super(TestFriedmanStateRegression, self).__init__(
-            true, mle_regression=False
+            true, exog=exog, mle_regression=False
         )
 
         self.result = self.model.filter()
 
     def test_regression_parameters(self):
         assert_almost_equal(
-            self.result.filtered_state[-2:, -1],
+            self.result.filtered_state[-2:, -1] / 10.,
             self.true['mle_params_exog'], 1
         )
 
@@ -426,7 +428,7 @@ class TestFriedmanStateRegression(Friedman):
         )
         assert_allclose(
             self.result.bse[1], self.true['se_ma_oim'],
-            atol=1e-4,
+            atol=1e-2,
         )
 
 
