@@ -405,6 +405,14 @@ class TestFriedmanStateRegression(Friedman):
         self.result = self.model.filter()
 
     def test_regression_parameters(self):
+        # The regression effects are integrated into the state vector as
+        # the last two states (thus the index [-2:]). The filtered
+        # estimates of the state vector produced by the Kalman filter and
+        # stored in `filtered_state` for these state elements give the
+        # recursive least squares estimates of the regression coefficients
+        # at each time period. To get the estimates conditional on the
+        # entire dataset, use the filtered states from the last time
+        # period (thus the index [-1]).
         assert_almost_equal(
             self.result.filtered_state[-2:, -1] / 10.,
             self.true['mle_params_exog'], 1
