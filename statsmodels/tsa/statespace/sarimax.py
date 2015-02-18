@@ -409,11 +409,16 @@ class SARIMAX(MLEModel):
         # Exogenous data
         self.k_exog = 0
         if exog is not None:
-            exog = np.asarray(exog)
+            exog_is_using_pandas = _is_using_pandas(exog, None)
+            if not exog_is_using_pandas:
+                exog = np.asarray(exog)
 
             # Make sure we have 2-dimensional array
             if exog.ndim == 1:
-                exog = exog[:, None]
+                if not exog_is_using_pandas:
+                    exog = exog[:, None]
+                else:
+                    exog = exog.to_frame()
 
             self.k_exog = exog.shape[1]
         # Redefine mle_regression to be true only if it was previously set to
@@ -471,8 +476,6 @@ class SARIMAX(MLEModel):
         self.orig_exog = exog
         if not _is_using_pandas(endog, None):
             endog = np.asanyarray(endog)
-        if exog is not None and not _is_using_pandas(exog, None):
-            exog = np.asanyarray(exog)
 
         # Perform simple differencing if requested
         if (simple_differencing and
