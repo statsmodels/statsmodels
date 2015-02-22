@@ -487,16 +487,166 @@ class Nested(CovStruct):
         return msg
 
 
+class Stationary(CovStruct):
+    """
+    A stationary covariance structure.
+
+    The correlation between two observations is an arbitrary function
+    of the distance between them.  Distances up to a given maximum
+    value are included in the covariance model.
+
+    Parameters
+    ----------
+    max_lag : float
+        The largest distance that is included in the covariance model.
+    grid : bool
+        If True, the index positions in the data (after dropping missing
+        values) are used to define distances, and the `time` variable is
+        ignored.
+    """
+
+    def __init__(self, max_lag=1, grid=False):
+
+        super(Stationary, self).__init__()
+        self.max_lag = max_lag
+        self.grid = grid
+        self.dep_params = np.zeros(max_lag)
+
+
+    def initialize(self, model):
+
+        super(Stationary, self).initialize(model)
+
+        # Time used as an index needs to be integer type.
+        if self.grid == False:
+            time = self.model.time[:, 0].astype(np.int32)
+            self.time = self.model.cluster_list(time)
+
+
+    def update(self, params):
+
+        if self.grid:
+            self.update_grid(params)
+        else:
+            self.update_nogrid(params)
+
+
+    def update_grid(self, params):
+
+        endog = self.model.endog_li
+        cached_means = self.model.cached_means
+        varfunc = self.model.family.variance
+
+        dep_params = np.zeros(self.max_lag + 1)
+        for i in range(self.model.num_group):
+
+            expval, _ = cached_means[i]
+            stdev = np.sqrt(varfunc(expval))
+            resid = (endog[i] - expval) / stdev
+
+            dep_params[0] += np.sum(resid * resid) / len(resid)
+            for j in range(1, self.max_lag + 1):
+                dep_params[j] += np.sum(resid[0:-j] * resid[j:]) / len(resid[j:])
+
+        self.dep_params = dep_params[1:] / dep_params[0]
+
+
+    def update_nogrid(self, params):
+
+        endog = self.model.endog_li
+        cached_means = self.model.cached_means
+        varfunc = self.model.family.variance
+
+        dep_params = np.zeros(self.max_lag + 1)
+        dn = np.zeros(self.max_lag + 1)
+        for i in range(self.model.num_group):
+
+            expval, _ = cached_means[i]
+            stdev = np.sqrt(varfunc(expval))
+            resid = (endog[i] - expval) / stdev
+
+            j1, j2 = np.tril_indices(len(expval))
+            dx = np.abs(self.time[i][j1] - self.time[i][j2])
+            ii = np.flatnonzero(dx <= self.max_lag)
+            j1 = j1[ii]
+            j2 = j2[ii]
+            dx = dx[ii]
+
+            vs = np.bincount(dx, weights=resid[j1] * resid[j2], minlength=self.max_lag+1)
+            vd = np.bincount(dx, minlength=self.max_lag+1)
+
+            ii = np.flatnonzero(vd > 0)
+            dn[ii] += 1
+            if len(ii) > 0:
+                dep_params[ii] += vs[ii] / vd[ii]
+
+        dep_params /= dn
+        self.dep_params = dep_params[1:] / dep_params[0]
+
+
+    def covariance_matrix(self, endog_expval, index):
+
+        if self.grid:
+            return self.covariance_matrix_grid(endog_expal, index)
+
+        j1, j2 = np.tril_indices(len(endog_expval))
+        dx = np.abs(self.time[index][j1] - self.time[index][j2])
+        ii = np.flatnonzero((0 < dx) & (dx <= self.max_lag))
+        j1 = j1[ii]
+        j2 = j2[ii]
+        dx = dx[ii]
+
+        cmat = np.eye(len(endog_expval))
+        cmat[j1, j2] = self.dep_params[dx - 1]
+        cmat[j2, j1] = self.dep_params[dx - 1]
+        return cmat, True
+
+
+    def covariance_matrix_grid(self, endog_expval, index):
+
+        from scipy.linalg import toeplitz
+        r = np.zeros(len(endog_expval))
+        r[0] = 1
+        r[1:self.max_lag + 1] = self.dep_params
+        return toeplitz(r), True
+
+
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
+
+        if self.grid == False:
+            return super(Stationary, self).covariance_matrix_solve(expval, index, stdev, rhs)
+
+        from statsmodels.tools.linalg import toeplitz_solve
+        r = np.zeros(len(expval))
+        r[0:self.max_lag] = self.dep_params
+        return [toeplitz_solve(r, x) for x in rhs]
+
+
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
+    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
+
+
+    def summary(self):
+
+        return ("Stationary dependence parameters\n",
+                self.dep_params)
+
+
 
 class Autoregressive(CovStruct):
     """
-    An autoregressive working dependence structure.
+    A first-order autoregressive working dependence structure.
 
     The dependence is defined in terms of the `time` component of the
-    parent GEE class.  Time represents a potentially multidimensional
+    parent GEE class, which defaults to the index position of each
+    value within its cluster, based on the order of values in the
+    input data set.  Time represents a potentially multidimensional
     index from which distances between pairs of observations can be
-    determined.  The correlation between two observations in the same
-    cluster is dep_params^distance, where `dep_params` is the
+    determined.
+
+    The correlation between two observations in the same cluster is
+    dep_params^distance, where `dep_params` contains the (scalar)
     autocorrelation parameter to be estimated, and `distance` is the
     distance between the two observations, calculated from their
     corresponding time values.  `time` is stored as an n_obs x k
@@ -510,8 +660,8 @@ class Autoregressive(CovStruct):
     Parameters
     ----------
     dist_func: function from R^k x R^k to R^+, optional
-       A function that computes the distance between the two
-       observations based on their `time` values.
+        A function that computes the distance between the two
+        observations based on their `time` values.
 
     References
     ----------
@@ -534,6 +684,7 @@ class Autoregressive(CovStruct):
 
         # The autocorrelation parameter
         self.dep_params = 0.
+
 
     def update(self, params):
 
@@ -616,6 +767,7 @@ class Autoregressive(CovStruct):
         from scipy.optimize import brent
         self.dep_params = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
 
+
     def covariance_matrix(self, endog_expval, index):
         ngrp = len(endog_expval)
         if self.dep_params == 0:
@@ -623,6 +775,7 @@ class Autoregressive(CovStruct):
         idx = np.arange(ngrp)
         cmat = self.dep_params**np.abs(idx[:, None] - idx[None, :])
         return cmat, True
+
 
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
         # The inverse of an AR(1) covariance matrix is tri-diagonal.

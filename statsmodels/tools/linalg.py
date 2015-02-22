@@ -220,30 +220,6 @@ def logdet_symm(m, check_symm=False):
     return 2*np.sum(np.log(c.diagonal()))
 
 
-def durbin(rhs):
-    """
-    Solve a Yule-Walker linear system.
-
-    For each j=1,2,..., solve the Yule-Walker system for right-hand
-    side rhs[0:j].  The results are returned as a list.
-    """
-
-    soln = [rhs[0:1]]
-
-    for j in range(1, len(rhs)):
-
-        # what to put here?
-        r = rhs[0:j][::-1]
-        rn = rhs[j]
-
-        y = soln[-1]
-        a = (rn - np.dot(r, y)) / (1 - np.dot(r, y[::-1]))
-        z = y - a*y[::-1]
-        soln.append(np.concatenate((z, np.r_[a])))
-
-    return soln
-
-
 def toeplitz_solve(r, b):
     """
     Solve a linear system for a Toeplitz correlation matrix.
@@ -262,15 +238,29 @@ def toeplitz_solve(r, b):
     The solution to the linear system.
     """
 
-    db = durbin(r)
-    x = b[0]
+    db = r[0:1]
+
+    dim = b.ndim
+    if b.ndim == 1:
+        b = b[:, None]
+    x = b[0:1,:]
 
     for j in range(1, len(b)):
-        y = db[j-1]
-        r1 = r[0:j][::-1]
-        a = (b[j] - np.dot(r1, x)) / (1 - np.dot(r1, y[::-1]))
-        z = x - a*y[::-1]
-        x = np.concatenate((z, np.r_[a]))
+        rf = r[0:j][::-1]
+        a = (b[j,:] - np.dot(rf, x)) / (1 - np.dot(rf, db[::-1]))
+        z = x - np.outer(db[::-1], a)
+        x = np.concatenate((z, a[None, :]), axis=0)
+
+        if j == len(b) - 1:
+            break
+
+        rn = r[j]
+        a = (rn - np.dot(rf, db)) / (1 - np.dot(rf, db[::-1]))
+        z = db - a*db[::-1]
+        db = np.concatenate((z, np.r_[a]))
+
+    if dim == 1:
+        x = x[:, 0]
 
     return x
 
