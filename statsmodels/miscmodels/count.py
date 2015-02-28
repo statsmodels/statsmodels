@@ -53,19 +53,23 @@ class NonlinearDeltaCov(object):
 
     equations follow Greene
 
+    This class does not use any caching. The intended usage is as a helper
+    function. Extra methods have been added for convenience but might move
+    to calling functions.
+
     '''
     def __init__(self, fun, params, cov_params, grad=None):
         self.fun = fun
         self.params = params
         self.cov_params = cov_params
-        self.grad = grad
+        self._grad = grad
 
     def grad(self, params=None, **kwds):
 
         if params is None:
             params = self.params
-        if self.grad is not None:
-            return self.grad(params)
+        if self._grad is not None:
+            return self._grad(params)
         else:
             kwds.setdefault('epsilon', 1e-4)
             from statsmodels.tools.numdiff import approx_fprime
@@ -99,7 +103,9 @@ class NonlinearDeltaCov(object):
         return np.sqrt(var)
 
 
-    def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None):
+    def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None,
+                 predicted=None, se=None):
+        # TODO: predicted and se as arguments to avoid duplicate calculations, keep?
         if not use_t:
             dist = stats.norm
             dist_args = ()
@@ -109,15 +115,36 @@ class NonlinearDeltaCov(object):
             dist = stats.t
             dist_args = (df,)
 
-        effect = self.predicted()
-        se = self.se_vectorized()
+        if predicted is None:
+            predicted = self.predicted()
+        if se is None:
+            se = self.se_vectorized()
         if var_extra is not None:
             se = np.sqrt(se**2 + var_extra)
 
         q = dist.ppf(1 - alpha / 2., *dist_args)
-        lower = effect - q * se
-        upper = effect + q * se
+        lower = predicted - q * se
+        upper = predicted + q * se
         return np.column_stack((lower, upper))
+
+
+    def summary(self, xname=None, alpha=0.05, title=None, use_t=False, df=None):
+        """Summarize the Results of the hypothesis test
+        """
+        # this is an experimental reuse of ContrastResults
+        from statsmodels.stats.contrast import ContrastResults
+        predicted = self.predicted()
+        se = self.se_vectorized()
+        statistic = predicted / se
+        if use_t:
+            df_resid = df
+            cr = ContrastResults(effect=predicted, t=statistic, sd=se,
+                                   df_denom=df_resid)
+        else:
+            cr = ContrastResults(effect=predicted, statistic=statistic, sd=se,
+                                   df_denom=None, distribution='norm')
+
+        return cr.summary(xname=xname, alpha=alpha, title=title)
 
 
 class PoissonGMLE(GenericLikelihoodModel):
