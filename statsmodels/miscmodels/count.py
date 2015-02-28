@@ -54,17 +54,22 @@ class NonlinearDeltaCov(object):
     equations follow Greene
 
     '''
-    def __init__(self, fun, params, cov_params):
+    def __init__(self, fun, params, cov_params, grad=None):
         self.fun = fun
         self.params = params
         self.cov_params = cov_params
+        self.grad = grad
 
     def grad(self, params=None, **kwds):
+
         if params is None:
             params = self.params
-        kwds.setdefault('epsilon', 1e-4)
-        from statsmodels.tools.numdiff import approx_fprime
-        return approx_fprime(params, self.fun, **kwds)
+        if self.grad is not None:
+            return self.grad(params)
+        else:
+            kwds.setdefault('epsilon', 1e-4)
+            from statsmodels.tools.numdiff import approx_fprime
+            return approx_fprime(params, self.fun, **kwds)
 
     def cov(self):
         g = self.grad()
@@ -84,6 +89,34 @@ class NonlinearDeltaCov(object):
         return lmstat, stats.chi2.sf(lmstat, df)
 
 
+    def se_vectorized(self):
+        """standard error for each equation (row) treated separately
+
+        """
+        g = self.grad()
+        var = (np.dot(g, self.cov_params) * g).sum(-1)
+        return np.sqrt(var)
+
+
+    def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None):
+        if not use_t:
+            dist = stats.norm
+            dist_args = ()
+        else:
+            if df is None:
+                raise ValueError('t distribution requires df')
+            dist = stats.t
+            dist_args = (df,)
+
+        effect = self.expected()
+        se = self.se_vectorized()
+        if var_extra is not None:
+            se = np.sqrt(se**2 + var_extra)
+
+        q = dist.ppf(1 - alpha / 2., *dist_args)
+        lower = effect - q * se
+        upper = effect + q * se
+        return np.column_stack((lower, upper))
 
 
 class PoissonGMLE(GenericLikelihoodModel):
