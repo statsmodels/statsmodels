@@ -76,17 +76,18 @@ class NonlinearDeltaCov(object):
         covar = np.dot(np.dot(g, self.cov_params), g.T)
         return covar
 
-    def expected(self):
+    def predicted(self):
         # rename: misnomer, this is the MLE of the fun
         return self.fun(self.params)
 
-    def wald(self, value):
-        m = self.expected()
+    def wald_test(self, value):
+        # TODO: add use_t option or not?
+        m = self.predicted()
         v = self.cov()
-        df = np.size(m)
+        df_constraints = np.size(m)
         diff = m - value
         lmstat = np.dot(np.dot(diff.T, np.linalg.inv(v)), diff)
-        return lmstat, stats.chi2.sf(lmstat, df)
+        return lmstat, stats.chi2.sf(lmstat, df_constraints)
 
 
     def se_vectorized(self):
@@ -108,7 +109,7 @@ class NonlinearDeltaCov(object):
             dist = stats.t
             dist_args = (df,)
 
-        effect = self.expected()
+        effect = self.predicted()
         se = self.se_vectorized()
         if var_extra is not None:
             se = np.sqrt(se**2 + var_extra)
