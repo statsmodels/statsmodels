@@ -135,6 +135,10 @@ class NonlinearDeltaCov(object):
         from statsmodels.stats.contrast import ContrastResults
         predicted = self.predicted()
         se = self.se_vectorized()
+        # TODO check shape for scalar case, ContrastResults requires iterable
+        predicted = np.atleast_1d(predicted)
+        se = np.atleast_1d(se)
+
         statistic = predicted / se
         if use_t:
             df_resid = df
