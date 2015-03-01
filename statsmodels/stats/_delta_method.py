@@ -26,11 +26,14 @@ class NonlinearDeltaCov(object):
     to calling functions.
 
     '''
-    def __init__(self, fun, params, cov_params, grad=None):
+    def __init__(self, fun, params, cov_params, grad=None, func_args=None):
         self.fun = fun
         self.params = params
         self.cov_params = cov_params
         self._grad = grad
+        self.func_args = func_args if func_args is not None else ()
+        if func_args is not None:
+            raise NotImplementedError('func_args not yet implemented')
 
     def grad(self, params=None, **kwds):
 
@@ -39,9 +42,15 @@ class NonlinearDeltaCov(object):
         if self._grad is not None:
             return self._grad(params)
         else:
-            kwds.setdefault('epsilon', 1e-4)
-            from statsmodels.tools.numdiff import approx_fprime
-            return approx_fprime(params, self.fun, **kwds)
+            # copied from discrete_margins
+            try:
+                from statsmodels.tools.numdiff import approx_fprime_cs
+                jac = approx_fprime_cs(params, self.fun)
+            except TypeError:  # norm.cdf doesn't take complex values
+                from statsmodels.tools.numdiff import approx_fprime
+                jac = approx_fprime(params, self.fun)
+
+            return jac
 
     def cov(self):
         g = self.grad()
@@ -50,7 +59,12 @@ class NonlinearDeltaCov(object):
 
     def predicted(self):
         # rename: misnomer, this is the MLE of the fun
-        return self.fun(self.params)
+        predicted = self.fun(self.params)
+
+        # TODO: why do I need to squeeze in poisson example
+        if predicted.ndim > 1:
+            predicted = predicted.squeeze()
+        return predicted
 
     def wald_test(self, value):
         # TODO: add use_t option or not?
@@ -93,7 +107,10 @@ class NonlinearDeltaCov(object):
         q = dist.ppf(1 - alpha / 2., *dist_args)
         lower = predicted - q * se
         upper = predicted + q * se
-        return np.column_stack((lower, upper))
+        ci = np.column_stack((lower, upper))
+        if ci.shape[1] !=2:
+            raise RuntimeError('something wrong: ci not 2 columns')
+        return ci
 
 
     def summary(self, xname=None, alpha=0.05, title=None, use_t=False, df=None):
@@ -105,6 +122,8 @@ class NonlinearDeltaCov(object):
         se = self.se_vectorized()
         # TODO check shape for scalar case, ContrastResults requires iterable
         predicted = np.atleast_1d(predicted)
+        if predicted.ndim > 1:
+            predicted = predicted.squeeze()
         se = np.atleast_1d(se)
 
         statistic = predicted / se

@@ -1659,6 +1659,34 @@ class LikelihoodModelResults(Results):
         return res
 
 
+    def _wald_test_nl(self, func, deriv=None): #, func_args=None):
+        """Experimental method for nonlinear prediction and tests
+
+        Parameters
+        ----------
+        func : function of params
+            nonlinear function of the estimation parameters. The return of
+            the function can be vector valued, i.e. a 1-D array
+        deriv : function or None
+            first derivative or Jacobian of func. If deriv is None, then a
+            numerical derivative will be used. If func returns a 1-D array,
+            then the `deriv` should have rows corresponding to the elements
+            of the return of func.
+
+        Returns
+        -------
+        nl : instance of `NonlinearDeltaCov` with attributes and methods to
+            calculate the results for the prediction or tests
+
+        """
+        from statsmodels.stats._delta_method import NonlinearDeltaCov
+        func_args = None  #TODO: not yet implemented, maybe skip - use partial
+        nl = NonlinearDeltaCov(func, self.params, self.cov_params(),
+                               grad=deriv, func_args=func_args)
+
+        return nl
+
+
     def conf_int(self, alpha=.05, cols=None, method='default'):
         """
         Returns the confidence interval of the fitted parameters.
