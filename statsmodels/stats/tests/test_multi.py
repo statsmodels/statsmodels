@@ -363,7 +363,7 @@ def test_local_fdr():
 
     # Exact local FDR for U(3, 4) component.
     f1 = np.exp(-z1**2 / 2) / np.sqrt(2*np.pi)
-    r = len(z1) / (len(z0) + len(z1))
+    r = len(z1) / float(len(z0) + len(z1))
     f1 /= (1 - r) * f1 + r
 
     fdr = local_fdr(zs)
