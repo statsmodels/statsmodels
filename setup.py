@@ -158,7 +158,17 @@ exts = dict(
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
-                    'depends': ['statsmodels/src/capsule.h']})
+                    'depends': ['statsmodels/src/capsule.h']},
+    _cy_kernels = {"name" : "statsmodels/kernel_methods/_cy_kernels.c",
+                   "depends" : [],
+                   "sources" : []},
+    _cy_fast_linbin = {"name" : "statsmodels/kernel_methods/_cy_fast_linbin.c",
+                       "depends" : [],
+                       "sources" : []},
+    _cy_grid_interpolation = {"name" : "statsmodels/kernel_methods/_cy_grid_interpolation.c",
+                              "depends" : ["statsmodels/nonparametric/grid_inter.h",
+                                           "statsmodels/nonparametric/grid_inter.pxd"],
+                              "sources" : ["statsmodels/nonparametric/grid_interp.c"]})
 
 statespace_exts = [
     'statsmodels/tsa/statespace/_initialization.pyx.in',
@@ -261,7 +271,6 @@ def process_tempita(source_name):
             os.utime(pyx_filename, (file_stats.st_atime, file_stats.st_mtime))
         source_name = pyx_filename
     return source_name
-
 
 EXT_REQUIRES_NUMPY_MATH_LIBS = []
 extensions = []
