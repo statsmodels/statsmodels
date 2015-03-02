@@ -9,10 +9,11 @@ from scipy import linalg
 from statsmodels.compat.python import range
 from ._kde_utils import numpy_trans_method, atleast_2df
 from .grid import Grid
-from . import kde1d_methods, kernels
+from . import kernels
 from copy import copy as shallow_copy
 from ._fast_linbin import fast_linbin_nd as fast_bin_nd
-from .kde_methods import KDEMethod, _array_arg
+from ._kde_methods import KDEMethod, _array_arg
+from ._kde1d_methods import Reflection1D, Cyclic1D
 
 def generate_grid(kde, N=None, cut=None):
     r"""
@@ -169,7 +170,7 @@ class KDEnDMethod(KDEMethod):
         """
         ndim = kde.ndim
         if ndim == 1 and type(self) == KDEnDMethod:
-            method = kde1d_methods.Reflection()
+            method = Reflection1D()
             return method.fit(kde, compute_bandwidth)
         fitted = self.copy()
         fitted._fitted = True
@@ -405,12 +406,12 @@ class KDEnDMethod(KDEMethod):
             return 2 ** p2
         return N
 
-class Cyclic(KDEnDMethod):
+class CyclicnD(KDEnDMethod):
     def fit(self, kde, compute_bandwidth=True):
         if kde.ndim == 1:
-            cyc = kde1d_methods.Cyclic()
+            cyc = Cyclic1D()
             return cyc.fit(kde, compute_bandwidth)
-        return super(Cyclic, self).fit(kde, compute_bandwidth)
+        return super(CyclicnD, self).fit(kde, compute_bandwidth)
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
@@ -418,7 +419,7 @@ class Cyclic(KDEnDMethod):
             if self.bounded(i) and not self.closed(i):
                 raise ValueError("Error, cyclic method requires all dimensions to be closed or not bounded")
         if not self.bounded():
-            return super(Cyclic, self).pdf(points, out)
+            return super(CyclicnD, self).pdf(points, out)
         exog = self.exog
 
         m, d = points.shape
