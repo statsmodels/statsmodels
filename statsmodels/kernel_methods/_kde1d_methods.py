@@ -41,7 +41,7 @@ from .grid import Grid
 from ._fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
 from .kernels import Kernel1D
-from .kde_methods import KDEMethod
+from ._kde_methods import KDEMethod
 from . import kernels
 
 
@@ -160,7 +160,7 @@ class KDE1DMethod(KDEMethod):
 
     def __init__(self):
         KDEMethod.__init__(self)
-        self._kernel = kernels.normal_kernel()
+        self._kernel = kernels.normal1d()
 
     @property
     def axis_type(self):
@@ -1040,7 +1040,7 @@ def fftdensity(exog, kernel_rfft, bw, lower, upper, N, weights, total_weights):
     DataHist /= total_weights
     return mesh, fftdensity_from_binned(mesh, DataHist, kernel_rfft, bw)
 
-class Cyclic(KDE1DMethod):
+class Cyclic1D(KDE1DMethod):
     r"""
     This method assumes cyclic boundary conditions and works only for closed
     boundaries.
@@ -1190,7 +1190,7 @@ class Cyclic(KDE1DMethod):
             return 2 ** 16
         return N  # 2 ** int(np.ceil(np.log2(N)))
 
-Unbounded = Cyclic
+Unbounded = Cyclic1D
 
 def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weights=None, dim=-1):
     """
@@ -1271,7 +1271,7 @@ def dctdensity(exog, kernel_dct, bw, lower, upper, N, weights, total_weights):
     DataHist /= total_weights
     return mesh, dctdensity_from_binned(mesh, DataHist, kernel_dct, bw)
 
-class Reflection(KDE1DMethod):
+class Reflection1D(KDE1DMethod):
     r"""
     This method consist in simulating the reflection of the data left and
     right of the boundaries. If one of the boundary is infinite, then the
@@ -1457,7 +1457,7 @@ class Renormalization(Unbounded):
     @numpy_trans1d_method()
     def pdf(self, points, out):
         if not self.bounded:
-            return Cyclic.pdf(self, points, out)
+            return Cyclic1D.pdf(self, points, out)
 
         exog = self.exog
         points = points[..., np.newaxis]
@@ -1762,7 +1762,7 @@ class _transKDE(object):
     def fit(self):
         return self.method.fit(self)
 
-class TransformKDE(KDE1DMethod):
+class TransformKDE1D(KDE1DMethod):
     r"""
     Compute the Kernel Density Estimate of a dataset, transforming it first to
     a domain where distances are "more meaningful".
@@ -1817,10 +1817,10 @@ class TransformKDE(KDE1DMethod):
         a pre-allocated array to store its result.
         Also the ``out`` parameter may be one of the input argument.
         """
-        super(TransformKDE, self).__init__()
+        super(TransformKDE1D, self).__init__()
         self.trans = create_transform(trans, inv, Dinv)
         if method is None:
-            method = Reflection()
+            method = Reflection1D()
         self._method = method
         self._clean_attrs()
 
@@ -1831,7 +1831,7 @@ class TransformKDE(KDE1DMethod):
         """
         Remove attributes not needed for this class
         """
-        for attr in TransformKDE._to_clean:
+        for attr in TransformKDE1D._to_clean:
             if hasattr(self, attr):
                 delattr(self, attr)
 
@@ -1929,7 +1929,7 @@ class TransformKDE(KDE1DMethod):
 
         This method copy, and transform, the various attributes of the KDE.
         """
-        fitted = super(TransformKDE, self).fit(kde, False)
+        fitted = super(TransformKDE1D, self).fit(kde, False)
         fitted._clean_attrs()
 
         trans_method = self.method.fit(fitted._trans_kde(kde))
@@ -2022,5 +2022,5 @@ def _add_fwd_attr(cls, to_fwd, attr):
 
     setattr(cls, attr, property(getter, setter, doc=doc))
 
-for attr in TransformKDE._fwd_attrs:
-    _add_fwd_attr(TransformKDE, 'method', attr)
+for attr in TransformKDE1D._fwd_attrs:
+    _add_fwd_attr(TransformKDE1D, 'method', attr)

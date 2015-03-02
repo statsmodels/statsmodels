@@ -6,11 +6,10 @@ This modules contains a set of methods to compute KDEs on non-continuous data.
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
-from . import kernelsnc  # NoQA
 from ._kde_utils import numpy_trans1d_method, finite
 from ._fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
-from .kde_methods import KDEMethod
+from ._kde_methods import KDEMethod
 from . import kernels
 
 def _compute_bandwidth(kde):
