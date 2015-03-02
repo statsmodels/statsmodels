@@ -8,10 +8,10 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from statsmodels.compat.python import range
 from copy import copy as shallow_copy
-from . import kernels, kernelsnc
-from . import kde1d_methods, kdenc_methods
+from . import kernels
+from . import _kde1d_methods, _kdenc_methods
 from ._kde_utils import numpy_trans_method, AxesType, namedtuple
-from .kde_methods import KDEMethod
+from ._kde_methods import KDEMethod
 from .bandwidths import KDE1DAdaptor
 from ._fast_linbin import fast_linbin_nd as fast_bin_nd
 
@@ -60,11 +60,11 @@ class MultivariateKDE(KDEMethod):
         self._methods = {}
         self._kernels = {}
         self._kernels_type = dict(C=kernels.normal_kernel1d(),
-                                  O=kernelsnc.WangRyzin(),
-                                  U=kernelsnc.AitchisonAitken())
-        self._methods_type = dict(C=kde1d_methods.Reflection(),
-                                  O=kdenc_methods.OrderedKDE(),
-                                  U=kdenc_methods.UnorderedKDE())
+                                  O=kernels.WangRyzin(),
+                                  U=kernels.AitchisonAitken())
+        self._methods_type = dict(C=_kde1d_methods.Reflection(),
+                                  O=_kdenc_methods.OrderedKDE(),
+                                  U=_kdenc_methods.UnorderedKDE())
         for k in kwords:
             if hasattr(self, k):
                 setattr(self, k, kwords[k])
