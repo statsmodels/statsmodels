@@ -346,7 +346,18 @@ ext_data = dict(
                  "sources" : []},
         _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
                  "depends" : [],
-                 "sources" : []}
+                 "sources" : []},
+        _cy_kernels = {"name" : "statsmodels/kernel_methods/_cy_kernels.c",
+                 "depends" : [],
+                 "sources" : []},
+        _cy_fast_linbin = {"name" : "statsmodels/kernel_methods/_cy_fast_linbin.c",
+                 "depends" : [],
+                 "sources" : []},
+        _cy_grid_interpolation = {"name" : "statsmodels/kernel_methods/_cy_grid_interpolation.c",
+                 "depends" : ["statsmodels/nonparametric/grid_inter.h",
+                              "statsmodels/nonparametric/grid_inter.pxd"],
+                 "sources" : ["statsmodels/nonparametric/grid_interp.c"]},
+
         )
 
 extensions = []
