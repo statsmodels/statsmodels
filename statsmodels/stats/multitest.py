@@ -493,8 +493,7 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     zbins = (bins[:-1] + bins[1:]) / 2
 
     # The design matrix at bin centers
-    dmat = [(zbins**k)[:,None] for k in range(0, deg + 1)]
-    dmat = np.concatenate(dmat, axis=1)
+    dmat = np.vander(zbins, deg + 1)
 
     # Use this to get starting values for Poisson regression
     md = OLS(np.log(1 + zhist), dmat).fit()
@@ -503,8 +502,7 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     md = GLM(zhist, dmat, family=families.Poisson()).fit(start_params=md.params)
 
     # The design matrix for all Z-scores
-    dmat_full = [(zscores**k)[:,None] for k in range(0, deg + 1)]
-    dmat_full = np.concatenate(dmat_full, axis=1)
+    dmat_full = np.vander(zscores, deg + 1)
 
     # The height of the estimated marginal density of Z-scores,
     # evaluated at every observed Z-score.
