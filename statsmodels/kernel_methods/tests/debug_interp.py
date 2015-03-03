@@ -26,7 +26,7 @@ def run():
     ax1 = (ax1 + (ax1[1] - ax1[0]) / 2)[:-1]
     ax2 = np.r_[-90:90:257j]
     ax2 = (ax2 + (ax2[1] - ax2[0]) / 2)[:-1]
-    grid2 = sm.nonparametric.grid.Grid([ax1, ax2])
+    grid2 = sm.kernel_methods.kde_utils.Grid([ax1, ax2])
     min_val0 = grid2.grid[0][0]
     max_val0 = grid2.grid[0][-1]
     min_val1 = grid2.grid[1][0]

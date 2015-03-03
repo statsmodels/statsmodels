@@ -7,7 +7,7 @@ Module containing the methods for continuous, univariate, KDE estimations.
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy import fftpack, optimize, linalg
-from ._kde_utils import large_float, finite, atleast_2df, AxesType
+from .kde_utils import large_float, finite, atleast_2df, AxesType
 from statsmodels.compat.python import range
 from scipy.stats import scoreatpercentile as sap
 
@@ -22,7 +22,7 @@ def _spread(X):
     IQR = (sap(X, 75, axis=0) - sap(X, 25, axis=0)) / 1.349
     return np.minimum(np.std(X, axis=0, ddof=1), IQR)
 
-def variance_bandwidth(factor, exog):
+def full_variance(factor, exog):
     r"""
     Returns the bandwidth matrix:
 
@@ -39,13 +39,13 @@ def variance_bandwidth(factor, exog):
         spread = np.atleast_2d(linalg.sqrtm(np.cov(exog, rowvar=0, bias=False)))
     return spread * factor
 
-def diagonal_bandwidth(factor, exog):
+def diagonal_variance(factor, exog):
     r"""
     Return the diagonal covariance matrix according to Silverman's rule
     """
     return _spread(exog) * factor
 
-def silverman_bandwidth(model):
+def silverman(model):
     r"""
     The Silverman bandwidth is defined as a variance bandwidth with factor:
 
@@ -55,10 +55,10 @@ def silverman_bandwidth(model):
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
-    return diagonal_bandwidth(0.9 * (n ** (-1. / (d + 4.))), exog)
+    return diagonal_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
 
 
-def scotts_bandwidth(model):
+def scotts(model):
     r"""
     The Scotts bandwidth is defined as a variance bandwidth with factor:
 
@@ -68,23 +68,23 @@ def scotts_bandwidth(model):
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
-    return diagonal_bandwidth((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
+    return diagonal_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
 
-def scotts_bandwidth_full(model):
+def scotts_full(model):
     """
     Scotts bandwidths, based on covariance only, and returning a full matrix
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
-    return variance_bandwidth((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
+    return full_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
 
-def silverman_bandwidth_full(model):
+def silverman_full(model):
     """
     Silverman bandwidths, based on covariance only, and returning a full matrix
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
-    return variance_bandwidth(0.9 * (n ** (-1. / (d + 4.))), exog)
+    return full_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
 
 def _botev_fixed_point(t, M, I, a2):
     l = 7
@@ -102,7 +102,7 @@ def _botev_fixed_point(t, M, I, a2):
     return t - (2 * M * np.sqrt(np.pi) * f) ** (-2 / 5)
 
 
-class botev_bandwidth(object):
+class botev(object):
     """
     Implementation of the KDE bandwidth selection method outline in:
 
@@ -212,9 +212,9 @@ for attr in KDE1DAdaptor._constant_attributes:
     _add_fwd_attr(KDE1DAdaptor, attr)
 
 
-class MultivariateBandwidth(object):
+class Multivariate(object):
     def __init__(self):
-        self.continuous = scotts_bandwidth
+        self.continuous = scotts
         self.ordered = 0.1
         self.unordered = 0.1
 
@@ -248,4 +248,4 @@ class MultivariateBandwidth(object):
             res[u] = self.unordered
         return res
 
-from .bw_crossvalidation import leastsquare_cv_bandwidth  # NoQA
+from .bw_crossvalidation import lsq_crossvalidation, ContinuousIMSE  # NoQA

@@ -56,9 +56,9 @@ Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
+from .kde_utils import atleast_2df, AxesType
 from . import kernels, bandwidths  # noqa
 from ._kde_multivariate import MultivariateKDE
-from ._kde_utils import atleast_2df, AxesType
 from copy import copy as shallow_copy
 
 # default_method = kde1d_methods.Reflection

@@ -1,6 +1,6 @@
 import numpy as np
 from . import _cy_grid_interpolation
-from .grid import Grid
+from ._grid import Grid
 
 class GridInterpolator(object):
     def __init__(self, grid, values):
@@ -66,8 +66,8 @@ class GridInterpolator(object):
         if out is None:
             out = np.zeros(pts.shape[:-1], dtype=float)
         _cy_grid_interpolation.interpnd(pts, self._bounds[:, 0], self._bounds[:, 1],
-                                     self._grid, self._values, self._bin_types,
-                                     out)
+                                        self._grid, self._values, self._bin_types,
+                                        out)
         return out.squeeze()
 
     def __call__(self, pts, out=None):

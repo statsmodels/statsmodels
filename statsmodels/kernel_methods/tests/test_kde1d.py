@@ -4,7 +4,7 @@ from .. import kde1d_methods, bandwidths
 import numpy as np
 from numpy.random import randn
 from scipy import integrate
-from . import _kde_utils as kde_utils
+from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
 
 class FakeModel(object):
@@ -33,11 +33,11 @@ class TestBandwidth(object):
         assert sum((rati - self.ratios) ** 2) < 1e-6
 
     def test_variance_methods(self):
-        yield self.methods, bandwidths.silverman_bandwidth
-        yield self.methods, bandwidths.scotts_bandwidth
+        yield self.methods, bandwidths.silverman
+        yield self.methods, bandwidths.scotts
 
     def test_botev(self):
-        bws = np.array([bandwidths.botev_bandwidth()(FakeModel(v)) for v in self.vs])
+        bws = np.array([bandwidths.botev()(FakeModel(v)) for v in self.vs])
         assert bws.shape == (3,)
         rati = bws / self.ss
         assert sum((rati - rati[0]) ** 2) < 1e-6
@@ -71,7 +71,7 @@ class TestKDE1D(kde_utils.KDETester):
 
     def test_copy(self):
         k = self.createKDE(self.vs[0], self.methods[0])
-        k.bandwidth = bandwidths.silverman_bandwidth
+        k.bandwidth = bandwidths.silverman
         xs = np.r_[self.xs.min():self.xs.max():512j]
         est = k.fit()
         ys = est(xs)
@@ -88,7 +88,7 @@ class TestKDE1D(kde_utils.KDETester):
         k.bandwidth = 0.1
         est = k.fit()
         np.testing.assert_almost_equal(est.bandwidth, 0.1)
-        k.bandwidth = bandwidths.botev_bandwidth()
+        k.bandwidth = bandwidths.botev()
         est = k.fit()
         assert est.bandwidth > 0
 

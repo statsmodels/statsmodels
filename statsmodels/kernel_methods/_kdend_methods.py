@@ -7,8 +7,7 @@ This module contains a set of methods to compute multivariates KDEs.
 import numpy as np
 from scipy import linalg
 from statsmodels.compat.python import range
-from ._kde_utils import numpy_trans_method, atleast_2df
-from .grid import Grid
+from .kde_utils import numpy_trans_method, atleast_2df, Grid
 from . import kernels
 from copy import copy as shallow_copy
 from ._fast_linbin import fast_linbin_nd as fast_bin_nd
@@ -145,7 +144,7 @@ class KDEnDMethod(KDEMethod):
         self._inv_bw = None
         self._det_inv_bw = None
         self.base_p2 = 10
-        self._kernel = kernels.normal_kernel()
+        self._kernel = kernels.normal()
 
     def fit(self, kde, compute_bandwidth=True):
         """
@@ -406,12 +405,12 @@ class KDEnDMethod(KDEMethod):
             return 2 ** p2
         return N
 
-class CyclicnD(KDEnDMethod):
+class Cyclic(KDEnDMethod):
     def fit(self, kde, compute_bandwidth=True):
         if kde.ndim == 1:
             cyc = Cyclic1D()
             return cyc.fit(kde, compute_bandwidth)
-        return super(CyclicnD, self).fit(kde, compute_bandwidth)
+        return super(Cyclic, self).fit(kde, compute_bandwidth)
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
@@ -419,7 +418,7 @@ class CyclicnD(KDEnDMethod):
             if self.bounded(i) and not self.closed(i):
                 raise ValueError("Error, cyclic method requires all dimensions to be closed or not bounded")
         if not self.bounded():
-            return super(CyclicnD, self).pdf(points, out)
+            return super(Cyclic, self).pdf(points, out)
         exog = self.exog
 
         m, d = points.shape

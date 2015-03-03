@@ -36,8 +36,7 @@ References:
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy import fftpack, integrate, optimize
-from ._kde_utils import make_ufunc, namedtuple, numpy_trans1d_method, numpy_trans1d, finite, AxesType
-from .grid import Grid
+from .kde_utils import make_ufunc, namedtuple, numpy_trans1d_method, numpy_trans1d, finite, AxesType, Grid
 from ._fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
 from .kernels import Kernel1D
@@ -165,7 +164,7 @@ class KDE1DMethod(KDEMethod):
     @property
     def axis_type(self):
         """
-        Instance of AxesType describing the axis (e.g. always 'c')
+        Instance of AxesType describing the axis (e.g. always 'C')
         """
         return AxesType('C')
 
@@ -1190,7 +1189,7 @@ class Cyclic1D(KDE1DMethod):
             return 2 ** 16
         return N  # 2 ** int(np.ceil(np.log2(N)))
 
-Unbounded = Cyclic1D
+Unbounded1D = Cyclic1D
 
 def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weights=None, dim=-1):
     """
@@ -1432,7 +1431,7 @@ class Reflection1D(KDE1DMethod):
             return 2 ** 16
         return N  # 2 ** int(np.ceil(np.log2(N)))
 
-class Renormalization(Unbounded):
+class Renormalization(Unbounded1D):
     r"""
     This method consists in using the normal kernel method, but renormalize
     to only take into account the part of the kernel within the domain of the
@@ -1545,7 +1544,7 @@ class _LinearCombinationKernel(Kernel1D):
 
     __call__ = pdf
 
-class LinearCombination(Unbounded):
+class LinearCombination(Unbounded1D):
     r"""
     This method uses the linear combination correction published in [1]_.
 

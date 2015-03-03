@@ -6,7 +6,7 @@ This module contains the multi-variate KDE meta-method.
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
-from ._kde_utils import atleast_2df, AxesType
+from .kde_utils import atleast_2df, AxesType
 from . import bandwidths
 
 def _array_arg(value, value_name, ndim, dtype=float):
@@ -35,7 +35,7 @@ class KDEMethod(object):
         self._lower = None
         self._axis_type = AxesType()
         self._kernel = None
-        self._bandwidth = bandwidths.MultivariateBandwidth()
+        self._bandwidth = bandwidths.Multivariate()
         self._weights = None
         self._adjust = None
         self._total_weights = None
@@ -81,7 +81,7 @@ class KDEMethod(object):
         for 1D kernels. It is recommended to inherit one of these classes to provide numerical approximation for all
         methods.
 
-        By default, the kernel class is :py:class:`pyqt_fit.kernels.normal_kernel`
+        By default, the kernel class is :py:class:`pyqt_fit.kernels.normal`
         """
         return self._kernel
 
@@ -106,7 +106,7 @@ class KDEMethod(object):
 
     @axis_type.deleter
     def axis_type(self):
-        self._axis_type[:] = 'c'
+        self._axis_type[:] = 'C'
 
     @property
     def bandwidth(self):

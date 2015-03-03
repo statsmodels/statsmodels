@@ -1,10 +1,10 @@
 from __future__ import division, absolute_import, print_function
 
-from .. import kde1d_methods, bandwidths
+from .. import kde_methods, bandwidths
 import numpy as np
 from numpy.random import randn
 from scipy import integrate
-from . import _kde_utils
+from . import kde_utils
 from nose.plugins.attrib import attr
 
 @attr('nonparametric')
