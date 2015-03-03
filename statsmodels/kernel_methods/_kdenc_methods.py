@@ -6,7 +6,7 @@ This modules contains a set of methods to compute KDEs on non-continuous data.
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
-from ._kde_utils import numpy_trans1d_method, finite
+from .kde_utils import numpy_trans1d_method, finite
 from ._fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
 from ._kde_methods import KDEMethod
@@ -259,9 +259,7 @@ class UnorderedKDE(KDEMethod):
         compatibility with the continuous version.
         """
         weights = self.weights
-        if weights.ndim == 0:
-            weights = None
-        mesh, bins = fast_bin(self._exog, [0, self.num_levels - 1], self.num_levels, weights=weights, bin_type='d')
+        mesh, bins = fast_bin(self._exog, [0, self.num_levels - 1], self.num_levels, weights=weights, bin_type='D')
         return mesh, self.from_binned(mesh, bins, True)
 
     def from_binned(self, mesh, bins, normed=False, dim=-1):

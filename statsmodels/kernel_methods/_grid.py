@@ -42,6 +42,8 @@ class Grid(object):
                 if len(bin_types) != self._ndim:
                     raise ValueError("Error, there must be as many bin types as bins")
                 self._bin_types = bin_types
+            if any(bt not in 'BCRD' for bt in self._bin_types):
+                raise ValueError("Error, bin type must be one of 'B', 'C', 'R' or 'D'")
             if edges is None:
                 self._edges = grid_axes._edges
             else:
@@ -235,7 +237,7 @@ class Grid(object):
         if self._edges is None:
             edges = [np.empty((s + 1,), dtype=self.dtype) for s in self._shape]
             for d, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds, self.grid, self.bin_types)):
-                if bn == 'd':
+                if bn == 'D':
                     es[:] = np.arange(len(ax) + 1) - 0.5
                 else:
                     es[1:-1] = (ax[1:] + ax[:-1]) / 2
