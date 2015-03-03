@@ -24,3 +24,5 @@ _import_methods(_kde1d_methods)
 _import_methods(_kdenc_methods)
 _import_methods(_kdend_methods)
 _import_methods(_kde_multivariate)
+
+from ._kde1d_methods import LogTransform, ExpTransform, create_transform  # noqa

@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
-from ..grid import Grid
-from .._grid_interpolation import GridInterpolator
+from ..kde_utils import Grid, GridInterpolator
 import numpy as np
 from ...compat.python import zip
 from scipy.interpolate import interp2d
