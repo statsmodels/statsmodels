@@ -1,19 +1,19 @@
 import numpy as np
 from . import _cy_fast_linbin
-from .grid import Grid
+from .kde_utils import Grid
 
 def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
     X = np.atleast_1d(X).astype(float)
     if X.ndim != 1:
         raise ValueError("Error, X must be a 1D array")
-    if not bin_type in ('C', 'R', 'B', 'D'):
+    if bin_type not in ('C', 'R', 'B', 'D'):
         raise ValueError("Error, bin_type must be one of 'C', 'R', 'B' or 'D'")
     try:
         float(weights)
     except TypeError:
         weights = np.asarray(weights, dtype=float)
         if weights.ndim != 1 or weights.shape[0] != X.shape[0]:
-            raise ValueError("Weights must be None or an array of the same shape as X")
+            raise ValueError("Weights must be a single value or an array of the same shape as X")
     else:
         weights = np.empty((0,), dtype=float)
     if bin_type == 'D':

@@ -11,6 +11,8 @@ import inspect
 from ..compat.python import range
 import functools
 from .namedtuple import namedtuple  # NOQA need to be defined here
+from ._grid import Grid  # noqa
+from ._grid_interpolation import GridInterpolator  # noqa
 
 # Find the largest float available for this numpy
 if hasattr(np, 'float128'):
@@ -375,7 +377,7 @@ class AxesType(object):
     def __delitem__(self, idx):
         del self._types[idx]
 
-    def resize(self, nl, default='c'):
+    def resize(self, nl, default='C'):
         cur_l = len(self)
         if nl < cur_l:
             self._types = self._types[nl:]

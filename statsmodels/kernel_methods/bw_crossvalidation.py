@@ -187,7 +187,7 @@ class ContinuousIMSE(object):
         from . import bandwidths
         test_model = model.copy()
         if initial_method is None:
-            test_model.bandwidth = bandwidths.MultivariateBandwidth()
+            test_model.bandwidth = bandwidths.Multivariate()
         else:
             test_model.bandwidth = initial_method
         test_est = test_model.fit()
@@ -233,7 +233,7 @@ class ContinuousIMSE(object):
         return F - 2 * L / self.LOO.nb_tests
 
 
-class leastsquare_cv_bandwidth(object):
+class lsq_crossvalidation(object):
     r"""
     Implement the Cross-Validation Least Square bandwidth estimation method.
 

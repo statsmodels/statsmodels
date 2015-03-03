@@ -7,7 +7,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy.special import erf
 from scipy import fftpack, integrate
-from ._kde_utils import make_ufunc, numpy_trans_method, numpy_trans1d_method
+from .kde_utils import make_ufunc, numpy_trans_method, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
 from statsmodels.compat.python import range
@@ -439,7 +439,7 @@ class normal1d(Kernel1D):
     def for_ndim(self, ndim):
         if ndim == 1:
             return self
-        return normal_kernel(ndim)
+        return normal(ndim)
 
     def pdf(self, z, out=None):
         r"""
@@ -466,7 +466,7 @@ class normal1d(Kernel1D):
 
     def _pdf(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal_kernel1d.pdf`
+        Full-python implementation of :py:func:`normal1d.pdf`
         """
         z = np.asarray(z)
         if out is None:
@@ -530,7 +530,7 @@ class normal1d(Kernel1D):
 
     def _cdf(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal_kernel1d.cdf`
+        Full-python implementation of :py:func:`normal1d.cdf`
         """
         z = np.asarray(z)
         if out is None:
@@ -554,7 +554,7 @@ class normal1d(Kernel1D):
 
     def _pm1(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal_kernel1d.pm1`
+        Full-python implementation of :py:func:`normal1d.pm1`
         """
         z = np.asarray(z)
         if out is None:
@@ -579,7 +579,7 @@ class normal1d(Kernel1D):
 
     def _pm2(self, z, out=None):
         """
-        Full-python implementation of :py:func:`normal_kernel1d.pm2`
+        Full-python implementation of :py:func:`normal1d.pm2`
         """
         z = np.asarray(z, dtype=float)
         if out is None:
@@ -649,8 +649,7 @@ class KernelnD(object):
         """
         return self.pdf(z, out=out)
 
-    @numpy_trans_method('ndim', 1)
-    def cdf(self, z, out):
+    def cdf(self, z, out=None):
         try:
             comp_cdf = self.__comp_cdf
         except AttributeError:
@@ -707,36 +706,33 @@ class normal(KernelnD):
         Create the same kernel but for a different number of dimensions
         """
         if ndim == 1:
-            return normal_kernel1d()
-        return normal_kernel(ndim)
+            return normal1d()
+        return normal(ndim)
 
     def __init__(self, dim=2):
-        super(normal_kernel, self).__init__(dim)
+        super(normal, self).__init__(dim)
         self.factor = 1 / np.sqrt(2 * np.pi) ** dim
 
-    @numpy_trans_method('ndim', 1)
-    def pdf(self, xs, out):
+    def pdf(self, xs, out=None):
         """
         Return the probability density of the function.
 
-        :param ndarray xs: Array of shape (D,N) where D is the dimension of the kernel
-            and N the number of points.
-        :returns: an array of shape (N,) with the density on each point of ``xs``
+        :param ndarray xs: Array of shape (...,D) where D is the dimension of the kernel
+        :returns: an array of shape (...) with the density on each point of ``xs``
         """
-        np.sum(xs*xs, axis=-1, out=out)
+        out = np.sum(xs*xs, axis=-1, out=out)
         out *= -0.5
         np.exp(out, out=out)
         out *= self.factor
         return out
 
-    @numpy_trans_method('ndim', 1)
-    def cdf(self, xs, out):
+    def cdf(self, xs, out=None):
         """
         Return the CDF of the normal kernel
         """
         tmp = erf(xs / np.sqrt(2))
         tmp += 1
-        np.prod(tmp, axis=-1, out=out)
+        out = np.prod(tmp, axis=-1, out=out)
         out /= 2**self.ndim
         return out
 

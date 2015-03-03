@@ -284,7 +284,7 @@ def fast_linbin_2d(np.ndarray[DOUBLE, ndim=2] X not None,
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
             raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'b', 'c', 'r' or 'd'".format(s_bin_types[d]))
+                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
 
         if bin_types[d] == CYCLIC:
             delta[d] = (b[d] - a[d]) / M[d]
@@ -440,7 +440,7 @@ def fast_linbin_3d(np.ndarray[DOUBLE, ndim=2] X not None,
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
             raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'b', 'c', 'r' or 'd'".format(s_bin_types[d]))
+                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
 
         if bin_types[d] == CYCLIC:
             delta[d] = (b[d] - a[d]) / M[d]
@@ -608,7 +608,7 @@ def fast_linbin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
             raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'b', 'c', 'r' or 'd'".format(s_bin_types[d]))
+                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
 
         if bin_types[d] == CYCLIC:
             delta[d] = (b[d] - a[d]) / M[d]
@@ -755,7 +755,7 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
             raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'b', 'c', 'r' or 'd'".format(s_bin_types[d]))
+                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
 
         if bin_types[d] == DISCRETE:
             delta[d] = (b[d] - a[d])/(M[d] - 1)
