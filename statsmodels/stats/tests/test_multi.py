@@ -19,7 +19,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_,
 
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage,
-                                         empirical_null,
+                                         EmpiricalNull,
                                          local_fdr)
 from statsmodels.stats.multicomp import tukeyhsd
 from scipy.stats.distributions import norm
@@ -380,8 +380,13 @@ def test_empirical_null():
     z0 = norm.ppf(grid)
     z1 = np.linspace(3, 4, 20)
     zs = np.concatenate((z0, z1))
-    mean0, scale0, prob0, f0 = empirical_null(zs, estimate_prob=True)
+    emp_null = EmpiricalNull(zs, estimate_prob=True)
 
-    assert_allclose(mean0, 0, atol=1e-5, rtol=1e-5)
-    assert_allclose(scale0, 1, atol=1e-5, rtol=1e-2)
-    assert_allclose(prob0, 0.98, atol=1e-5, rtol=1e-2)
+    assert_allclose(emp_null.mean0, 0, atol=1e-5, rtol=1e-5)
+    assert_allclose(emp_null.scale0, 1, atol=1e-5, rtol=1e-2)
+    assert_allclose(emp_null.prob0, 0.98, atol=1e-5, rtol=1e-2)
+
+    # smoke tests
+    emp_null.pdf(0.)
+    emp_null.pdf(np.r_[-1, 0, 1])
+

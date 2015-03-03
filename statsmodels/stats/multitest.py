@@ -522,8 +522,7 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     return fdr
 
 
-def empirical_null(zscores, null_lb=-1, null_ub=1, estimate_mean=True,
-                   estimate_scale=True, estimate_prob=False):
+class EmpiricalNull(object):
     """
     Estimate empirical distribution of null Z-scores.
 
@@ -568,68 +567,90 @@ def empirical_null(zscores, null_lb=-1, null_ub=1, estimate_mean=True,
     Model.  Statistical Science 23:1, 1-22.
     """
 
-    # Extract the null z-scores
-    ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
-    if len(ii) == 0:
-        raise RunTimeError("No Z-scores fall between null_lb and null_ub")
-    zscores0 = zscores[ii]
+    def __init__(self, zscores, null_lb=-1, null_ub=1, estimate_mean=True,
+                 estimate_scale=True, estimate_prob=False):
 
-    # Number of Z-scores, and null Z-scores
-    n_zs, n_zs0 = len(zscores), len(zscores0)
+        # Extract the null z-scores
+        ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
+        if len(ii) == 0:
+            raise RunTimeError("No Z-scores fall between null_lb and null_ub")
+        zscores0 = zscores[ii]
 
-    # Unpack and transform the parameters to the natural scale, hold
-    # parameters fixed as specified.
-    def xform(params):
+        # Number of Z-scores, and null Z-scores
+        n_zs, n_zs0 = len(zscores), len(zscores0)
 
-        mean0, logscale0, logitp0 = tuple(params)
-        scale0 = np.exp(logscale0)
-        prob0 = 1 / (1 + np.exp(-logitp0))
+        # Unpack and transform the parameters to the natural scale, hold
+        # parameters fixed as specified.
+        def xform(params):
 
-        mean0 = mean0 if estimate_mean else 0.
-        scale0 = scale0 if estimate_scale else 1.
-        prob0 = prob0 if estimate_prob else 1.
+            mean0, logscale0, logitp0 = tuple(params)
+            scale0 = np.exp(logscale0)
+            prob0 = 1 / (1 + np.exp(-logitp0))
 
-        return mean0, scale0, prob0
+            mean0 = mean0 if estimate_mean else 0.
+            scale0 = scale0 if estimate_scale else 1.
+            prob0 = prob0 if estimate_prob else 1.
 
-
-    from scipy.stats.distributions import norm
-
-    def fun(params):
-        """
-        Negative likelihood of z-scores, parameterized as mean, scale
-        of Gaussian family, and proportion of true nulls.  Follows
-        section 4 of Efron 2008.
-        """
-
-        d0, s0, p0 = xform(params)
-
-        # Mass within the central region
-        central_mass = (norm.cdf((null_ub - d0) / s0) -
-                        norm.cdf((null_lb - d0) / s0))
-
-        # Probability that a Z-score is null and is in the central region
-        cp = p0 * central_mass
-
-        # Binomial term
-        rval = n_zs0 * np.log(cp) + (n_zs - n_zs0) * np.log(1 - cp)
-
-        # Truncated Gaussian term for null Z-scores
-        zv = (zscores0 - d0) / s0
-        rval += np.sum(-zv**2 / 2) - n_zs0 * np.log(s0)
-        rval -= n_zs0 * np.log(central_mass)
-
-        return -rval
+            return mean0, scale0, prob0
 
 
-    # Estimate the parameters
-    from scipy.optimize import minimize
-    # starting values are mean = 0, scale = 1, p0 ~ 1
-    mz = minimize(fun, np.r_[0., 0, 3], method="Nelder-Mead")
-    mean0, scale0, prob0 = xform(mz['x'])
+        from scipy.stats.distributions import norm
+
+        def fun(params):
+            """
+            Negative likelihood of z-scores, parameterized as mean, scale
+            of Gaussian family, and proportion of true nulls.  Follows
+            section 4 of Efron 2008.
+            """
+
+            d0, s0, p0 = xform(params)
+
+            # Mass within the central region
+            central_mass = (norm.cdf((null_ub - d0) / s0) -
+                            norm.cdf((null_lb - d0) / s0))
+
+            # Probability that a Z-score is null and is in the central region
+            cp = p0 * central_mass
+
+            # Binomial term
+            rval = n_zs0 * np.log(cp) + (n_zs - n_zs0) * np.log(1 - cp)
+
+            # Truncated Gaussian term for null Z-scores
+            zv = (zscores0 - d0) / s0
+            rval += np.sum(-zv**2 / 2) - n_zs0 * np.log(s0)
+            rval -= n_zs0 * np.log(central_mass)
+
+            return -rval
+
+
+        # Estimate the parameters
+        from scipy.optimize import minimize
+        # starting values are mean = 0, scale = 1, p0 ~ 1
+        mz = minimize(fun, np.r_[0., 0, 3], method="Nelder-Mead")
+        mean0, scale0, prob0 = xform(mz['x'])
+
+        self.mean0 = mean0
+        self.scale0 = scale0
+        self.prob0 = prob0
+
 
     # The fitted null density function
-    def null_density(zscores):
-        zval = (zscores - mean0) / scale0
-        return np.exp(-0.5*zval**2 - np.log(scale0) - 0.5*np.log(2*np.pi))
+    def pdf(self, zscores):
+        """
+        Evaluate the fitted emirical null Z-score density.
 
-    return mean0, scale0, prob0, null_density
+        Parameters
+        ----------
+        zscores : scalar or array-like
+            The point or points at which the density is to be
+            evaluated.
+
+        Returns
+        -------
+        The empirical null Z-score density evaluated at the given
+        points.
+        """
+
+        zval = (zscores - self.mean0) / self.scale0
+        return np.exp(-0.5*zval**2 - np.log(self.scale0) - 0.5*np.log(2*np.pi))
+
