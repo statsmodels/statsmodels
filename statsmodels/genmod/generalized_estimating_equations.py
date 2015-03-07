@@ -958,6 +958,7 @@ class GEE(base.Model):
 
         return (cov_robust, cov_naive, cov_robust_bc, cmat)
 
+
     def predict(self, params, exog=None, offset=None,
                 exposure=None, linear=False):
         """
@@ -1043,28 +1044,12 @@ class GEE(base.Model):
 
         return lin_pred
 
+
     def _starting_params(self):
-        """
-        Returns a starting value for the mean parameters and a list of
-        variable names.
-        """
-
-        dm = self.exog.shape[1]
-
-        # For categorical models, use independence cov_struct to get
-        # starting values.
-        if isinstance(self.cov_struct, GlobalOddsRatio):
-
-            ind = Independence()
-            md = GEE(self.endog, self.exog, self.groups,
-                     time=self.time, family=self.family,
-                     offset=self.offset, exposure=self.exposure)
-            mdf = md.fit()
-            return mdf.params
 
         # TODO: use GLM to get Poisson starting values
-        else:
-            return np.zeros(dm, dtype=np.float64)
+        return np.zeros(self.exog.shape[1])
+
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
@@ -1864,7 +1849,7 @@ class OrdinalGEE(GEE):
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
-                       dep_data=None, constraint=None):
+                       dep_data=None, constraint=None, **kwargs):
 
         if family is None:
             family = families.Binomial()
@@ -1951,6 +1936,15 @@ class OrdinalGEE(GEE):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
+
+
+    def _starting_params(self):
+        model = GEE(self.endog, self.exog, self.groups,
+                    time=self.time, family=families.Binomial(),
+                    offset=self.offset, exposure=self.exposure)
+        result = model.fit()
+        return result.params
+
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
@@ -2084,9 +2078,10 @@ class NominalGEE(GEE):
                          'family_doc': _gee_nominal_family_doc,
                          'example': _gee_nominal_example})
 
+
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
-                       dep_data=None, constraint=None):
+                       dep_data=None, constraint=None, **kwargs):
 
         endog, exog, groups, time, offset = self.setup_nominal(endog,
                                        exog, groups, time, offset)
@@ -2097,6 +2092,15 @@ class NominalGEE(GEE):
         super(NominalGEE, self).__init__(endog, exog, groups,
                  time, family, cov_struct, missing, offset, dep_data,
                  constraint)
+
+
+    def _starting_params(self):
+        model = GEE(self.endog, self.exog, self.groups,
+                    time=self.time, family=families.Binomial(),
+                    offset=self.offset, exposure=self.exposure)
+        result = model.fit()
+        return result.params
+
 
     def setup_nominal(self, endog, exog, groups, time, offset):
         """

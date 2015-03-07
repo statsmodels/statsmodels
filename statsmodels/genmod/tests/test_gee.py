@@ -732,6 +732,50 @@ class TestGEE(object):
         assert_equal(type(rslt), OrdinalGEEResultsWrapper)
         assert_equal(type(rslt._results), OrdinalGEEResults)
 
+
+    def test_ordinal_formula(self):
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.arange(n)
+        x1 = np.random.normal(size=n)
+        x2 = np.random.normal(size=n)
+
+        df = pd.DataFrame({"y": y, "groups": groups, "x1": x1, "x2": x2})
+
+        model = OrdinalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
+        result = model.fit()
+
+
+    def test_ordinal_independence(self):
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.kron(np.arange(n/2), np.r_[1, 1])
+        x = np.random.normal(size=(n,1))
+
+        # smoke test
+        odi = sm.cov_struct.OrdinalIndependence()
+        model1 = OrdinalGEE(y, x, groups, cov_struct=odi)
+        result1 = model1.fit()
+
+
+    def test_nominal_independence(self):
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.kron(np.arange(n/2), np.r_[1, 1])
+        x = np.random.normal(size=(n,1))
+
+        # smoke test
+        nmi = sm.cov_struct.NominalIndependence()
+        model1 = NominalGEE(y, x, groups, cov_struct=nmi)
+        result1 = model1.fit()
+
+
     def test_nominal(self):
 
         endog, exog, groups = load_data("gee_nominal_1.csv",
