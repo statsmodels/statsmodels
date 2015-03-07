@@ -35,9 +35,8 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
-from statsmodels.genmod.cov_struct import (Independence,
-                                           GlobalOddsRatio,
-                                           CovStruct)
+from statsmodels.genmod import cov_struct as cov_structs
+
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 
@@ -494,9 +493,9 @@ class GEE(base.Model):
 
         # Handle the cov_struct argument
         if cov_struct is None:
-            cov_struct = Independence()
+            cov_struct = cov_structs.Independence()
         else:
-            if not issubclass(cov_struct.__class__, CovStruct):
+            if not issubclass(cov_struct.__class__, cov_structs.CovStruct):
                 raise ValueError("GEE: `cov_struct` must be a genmod "
                                  "cov_struct instance")
 
@@ -1857,6 +1856,9 @@ class OrdinalGEE(GEE):
             if not isinstance(family, families.Binomial):
                 raise ValueError("ordinal GEE must use a Binomial family")
 
+        if cov_struct is None:
+            cov_struct = cov_structs.OrdinalIndependence()
+
         endog, exog, groups, time, offset = self.setup_ordinal(endog,
                                        exog, groups, time, offset)
 
@@ -2088,6 +2090,9 @@ class NominalGEE(GEE):
 
         if family is None:
             family = _Multinomial(self.ncut+1)
+
+        if cov_struct is None:
+            cov_struct = cov_structs.NominalIndependence()
 
         super(NominalGEE, self).__init__(endog, exog, groups,
                  time, family, cov_struct, missing, offset, dep_data,

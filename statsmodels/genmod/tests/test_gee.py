@@ -27,6 +27,7 @@ import statsmodels.formula.api as smf
 import statsmodels.api as sm
 from scipy.stats.distributions import norm
 from patsy import dmatrices
+import warnings
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -167,6 +168,7 @@ class TestGEE(object):
 
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
+
 
     def test_margins_poisson(self):
         """
@@ -744,8 +746,15 @@ class TestGEE(object):
 
         df = pd.DataFrame({"y": y, "groups": groups, "x1": x1, "x2": x2})
 
+        # smoke test
         model = OrdinalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
         result = model.fit()
+
+        # smoke test
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model = NominalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
+            result = model.fit()
 
 
     def test_ordinal_independence(self):
@@ -771,9 +780,11 @@ class TestGEE(object):
         x = np.random.normal(size=(n,1))
 
         # smoke test
-        nmi = sm.cov_struct.NominalIndependence()
-        model1 = NominalGEE(y, x, groups, cov_struct=nmi)
-        result1 = model1.fit()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            nmi = sm.cov_struct.NominalIndependence()
+            model1 = NominalGEE(y, x, groups, cov_struct=nmi)
+            result1 = model1.fit()
 
 
     def test_nominal(self):
@@ -1252,7 +1263,10 @@ class TestGEE(object):
         # Smoke test
         eq = sm.cov_struct.Equivalence(labels=labels, return_cov=True)
         model1 = sm.GEE(endog, exog, groups, cov_struct=eq)
-        result1 = model1.fit(maxiter=2)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            result1 = model1.fit(maxiter=2)
+
 
 class CheckConsistency(object):
 
