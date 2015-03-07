@@ -702,9 +702,10 @@ class CategoricalCovStruct(CovStruct):
     nlevel : int
         The number of distinct levels for the outcome variable.
     ibd : list
-        A list whose i^th element ibd[i] is a sequence of integer
-        pairs (a,b), where endog_li[i][a:b] is the subvector of binary
-        indicators derived from the same ordinal value.
+        A list whose i^th element ibd[i] is an array whose rows
+        contain integer pairs (a,b), where endog_li[i][a:b] is the
+        subvector of binary indicators derived from the same ordinal
+        value.
     """
 
     def initialize(self, model):
@@ -714,12 +715,15 @@ class CategoricalCovStruct(CovStruct):
         self.nlevel = len(model.endog_values)
         self._ncut = self.nlevel - 1
 
+        from numpy.lib.stride_tricks import as_strided
+        b = np.dtype(np.int64).itemsize
+
         ibd = []
         for v in model.endog_li:
-            jj = np.arange(0, len(v) + 1, self._ncut)
-            ibd1 = np.hstack((jj[0:-1][:, None], jj[1:][:, None]))
-            ibd1 = [(jj[k], jj[k + 1]) for k in range(len(jj) - 1)]
-            ibd.append(ibd1)
+            jj = np.arange(0, len(v) + 1, self._ncut, dtype=np.int64)
+            jj = as_strided(jj, shape=(len(jj) - 1, 2), strides=(b, b))
+            ibd.append(jj)
+
         self.ibd = ibd
 
 
