@@ -924,7 +924,7 @@ class TestGEE(object):
         import string
         for j,g in enumerate(set(groups)):
             mp[g] = string.ascii_letters[j:j+4]
-        groups2 = [mp[x] for x in groups]
+        groups2 = [mp[g] for g in groups]
 
         model3 = GEE(y, x, groups=groups2)
         result3 = model3.fit()
