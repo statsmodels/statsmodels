@@ -891,6 +891,47 @@ class TestGEE(object):
                                  decimal=6)
              # print(mdf.params)
 
+    def test_groups(self):
+        # Test various group structures (nonconsecutive, different
+        # group sizes, not ordered, string labels)
+
+        n = 40
+        x = np.random.normal(size=(n, 2))
+        y = np.random.normal(size=n)
+
+        # groups with unequal group sizes
+        groups = np.kron(np.arange(n/4), np.ones(4))
+        groups[8:12] = 3
+        groups[34:36] = 9
+
+        model1 = GEE(y, x, groups=groups)
+        result1 = model1.fit()
+
+        # Unordered groups
+        ix = np.random.permutation(n)
+        y1 = y[ix]
+        x1 = x[ix, :]
+        groups1 = groups[ix]
+
+        model2 = GEE(y1, x1, groups=groups1)
+        result2 = model2.fit()
+
+        assert_allclose(result1.params, result2.params)
+        assert_allclose(result1.tvalues, result2.tvalues)
+
+        # group labels are strings
+        mp = {}
+        import string
+        for j,g in enumerate(set(groups)):
+            mp[g] = string.ascii_letters[j:j+4]
+        groups2 = [mp[x] for x in groups]
+
+        model3 = GEE(y, x, groups=groups2)
+        result3 = model3.fit()
+
+        assert_allclose(result1.params, result3.params)
+        assert_allclose(result1.tvalues, result3.tvalues)
+
 
     def test_compare_OLS(self):
         #Gaussian GEE with independence correlation should agree

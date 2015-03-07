@@ -534,17 +534,16 @@ class GEE(base.Model):
                 self._offset_exposure = self.constraint.offset_increment().copy()
             self.exog = self.constraint.reduced_exog()
 
-        # Convert the data to the internal representation, which is a
-        # list of arrays, corresponding to the groups.
-        group_labels = sorted(set(self.groups))
-        group_indices = dict((s, []) for s in group_labels)
-        for i in range(len(self.endog)):
-            group_indices[self.groups[i]].append(i)
-        for k in iterkeys(group_indices):
-            group_indices[k] = np.asarray(group_indices[k])
-        self.group_indices = group_indices
+        # Create list of row indices for each group
+        group_labels, ix = np.unique(self.groups, return_inverse=True)
+        se = pd.Series(index=np.arange(len(ix)))
+        gb = se.groupby(ix).groups
+        dk = [(lb, np.asarray(gb[k])) for k,lb in enumerate(group_labels)]
+        self.group_indices = dict(dk)
         self.group_labels = group_labels
 
+        # Convert the data to the internal representation, which is a
+        # list of arrays, corresponding to the groups.
         self.endog_li = self.cluster_list(self.endog)
         self.exog_li = self.cluster_list(self.exog)
 
