@@ -797,7 +797,8 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
         # Initialize the dependence parameters
         self.crude_or = self.observed_crude_oddsratio()
-        self.dep_params = self.crude_or
+        if self.model.update_dep:
+            self.dep_params = self.crude_or
 
 
     def pooled_odds_ratio(self, tables):
