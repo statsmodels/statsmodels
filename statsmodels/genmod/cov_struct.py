@@ -775,22 +775,16 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
             # Number of subjects in this group
             m = int(len(v) / self._ncut)
+            i1, i2 = np.tril_indices(m, -1)
 
             cpp1 = {}
-            # Loop over distinct subject pairs
-            for i1 in range(m):
-                for i2 in range(i1):
-                    # Loop over cut point pairs
-                    for k1 in range(self._ncut):
-                        for k2 in range(k1+1):
-                            if (k2, k1) not in cpp1:
-                                cpp1[(k2, k1)] = []
-                            j1 = i1*self._ncut + k1
-                            j2 = i2*self._ncut + k2
-                            cpp1[(k2, k1)].append([j2, j1])
+            for k1 in range(self._ncut):
+                for k2 in range(k1+1):
+                    jj = np.zeros((len(i1), 2), dtype=np.int64)
+                    jj[:, 0] = i1*self._ncut + k1
+                    jj[:, 1] = i2*self._ncut + k2
+                    cpp1[(k2, k1)] = jj
 
-            for k in cpp1.keys():
-                cpp1[k] = np.asarray(cpp1[k])
             cpp.append(cpp1)
 
         self.cpp = cpp
