@@ -1664,7 +1664,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        func : function of params
+        func : callable, f(params)
             nonlinear function of the estimation parameters. The return of
             the function can be vector valued, i.e. a 1-D array
         deriv : function or None
