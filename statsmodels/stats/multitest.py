@@ -457,7 +457,7 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
         A vector of Z-scores
     p0 : float
         The assumed proportion of true null hypotheses
-    null_density : function (real to positive real)
+    null_density : function mapping reals to positive reals
         The density of null Z-scores; if None, use standard normal
     deg : integer
         The maximum exponent in the polynomial expansion of the
@@ -475,6 +475,17 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     ----------
     B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
     Model.  Statistical Science 23:1, 1-22.
+
+    Examples
+    --------
+    Basic use:
+
+    >>> fdr = local_fdr(zscores)
+
+    Example using an empirical null distribution estimated from the data:
+
+    >>> null = EmpiricalNull(zscores)
+    >>> fdr = local_fdr(zscores, null_density=null.pdf)
     """
 
     from statsmodels.genmod.generalized_linear_model import GLM
