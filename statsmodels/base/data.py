@@ -169,11 +169,21 @@ class ModelData(object):
                 # Compute rank of augmented matrix
                 augmented_exog = np.column_stack(
                             (np.ones(self.exog.shape[0]), self.exog))
-                rank_augm = np_matrix_rank(augmented_exog)
-                rank_orig = np_matrix_rank(self.exog)
-                self.k_constant = int(rank_orig == rank_augm)
+                ranks = np.zeros(2, dtype=np.int)
+                for i, mat in enumerate((augmented_exog, self.exog)):
+                    valid_locs = np.isfinite(mat).all(1)
+                    if not valid_locs.all():
+                        if not valid_locs.any():
+                            error = 'Cannot check rank of all-NaN arrays'
+                            raise RuntimeError(error)
+                        import warnings
+                        warning = 'Cannot check matrix rank when matrix ' \
+                                  'contains NaNs.  Dropping NaNs to check rank.'
+                        warnings.warn(warning, RuntimeWarning)
+                        mat = mat[valid_locs]
+                    ranks[i] = int(np_matrix_rank(mat))
+                self.k_constant = int(ranks[0] == ranks[1])
                 self.const_idx = None
-
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):

@@ -11,7 +11,7 @@ from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.base.datetools import dates_from_range
-from .results import results_arma, results_arima
+from statsmodels.tsa.tests.results import results_arma, results_arima
 import os
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.datasets.macrodata import load as load_macrodata
