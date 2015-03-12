@@ -6,7 +6,8 @@ import inspect
 import textwrap
 import re
 import pydoc
-from StringIO import StringIO
+#from StringIO import StringIO
+from statsmodels.compat import StringIO
 from warnings import warn
 
 class Reader(object):
@@ -426,7 +427,7 @@ class FunctionDoc(NumpyDocString):
                 argspec = inspect.formatargspec(*argspec)
                 argspec = argspec.replace('*','\*')
                 signature = '%s%s' % (func_name, argspec)
-            except TypeError, e:
+            except TypeError:
                 signature = '%s()' % func_name
             self['Signature'] = signature
 
@@ -449,7 +450,7 @@ class FunctionDoc(NumpyDocString):
 
         if self._role:
             if not roles.has_key(self._role):
-                print "Warning: invalid role %s" % self._role
+                print("Warning: invalid role %s" % self._role)
             out += '.. %s:: %s\n    \n\n' % (roles.get(self._role,''),
                                              func_name)
 
