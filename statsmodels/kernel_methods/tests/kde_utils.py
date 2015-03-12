@@ -1,5 +1,5 @@
 import numpy as np
-from .. import kde1d_methods as k1m
+from .. import kde_methods as km
 from ..kde_utils import namedtuple
 from ...compat.python import range
 from scipy import stats
@@ -44,13 +44,13 @@ test_method = namedtuple('test_method',
                          ['instance', 'accuracy', 'grid_accuracy',
                           'normed_accuracy', 'bound_low', 'bound_high'])
 
-methods = [ test_method(k1m.Unbounded, 1e-5, 1e-4, 1e-5, False, False)
-          , test_method(k1m.Reflection, 1e-5, 1e-4, 1e-5, True, True)
-          , test_method(k1m.Cyclic, 1e-5, 1e-3, 1e-4, True, True)
-          , test_method(k1m.Renormalization, 1e-5, 1e-4, 1e-2, True, True)
-          , test_method(k1m.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
+methods = [ test_method(km.Unbounded1D, 1e-5, 1e-4, 1e-5, False, False)
+          , test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True)
+          , test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True)
+          , test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True)
+          , test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
           ]
-methods_log = [test_method(k1m.TransformKDE(k1m.LogTransform), 1e-5, 1e-4, 1e-5, True, False)]
+methods_log = [test_method(km.TransformKDE1D(km.LogTransform), 1e-5, 1e-4, 1e-5, True, False)]
 
 test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'positive'])
 
