@@ -44,7 +44,7 @@ from ._kde_methods import KDEMethod
 from . import kernels
 
 
-def generate_grid(kde, N=None, cut=None, span=None):
+def generate_grid1d(kde, N=None, cut=None, span=None):
     r"""
     Helper method returning a regular grid on the domain of the KDE.
 
@@ -672,10 +672,10 @@ class KDE1DMethod(KDEMethod):
         Notes
         -----
         By default, this method evaluates :math:`pdf(x)` on a grid generated
-        using :py:func:`generate_grid`
+        using :py:func:`generate_grid1d`
         """
         N = self.grid_size(N)
-        g = generate_grid(self, N, cut, span)
+        g = generate_grid1d(self, N, cut, span)
         out = np.empty(g.shape, dtype=float)
         return g, self.pdf(g.full(), out)
 
@@ -746,11 +746,11 @@ class KDE1DMethod(KDEMethod):
             estimations.
 
         Notes
-        By defaults, thie method evaluate :math:`cdf(x)` on a grid generated using :py:func:`generate_grid`
+        By defaults, thie method evaluate :math:`cdf(x)` on a grid generated using :py:func:`generate_grid1d`
         """
         N = self.grid_size(N)
         if N <= 2 ** 11:
-            g = generate_grid(self, N, cut)
+            g = generate_grid1d(self, N, cut)
             out = np.empty(g.shape, dtype=float)
             return g, self.cdf(g.full(), out)
         return self.numeric_cdf_grid(N, cut)
@@ -945,6 +945,7 @@ class KDE1DMethod(KDEMethod):
         comp_cdf(np.arange(len(sp)), out=parts)
 
         ints = parts.cumsum()
+        ints[ints > 1] = 1
 
         out.put(ix, ints)
         return out
@@ -1077,7 +1078,7 @@ class Cyclic1D(KDE1DMethod):
                              "closed or un-bounded domains.")
 
         exog = self.exog
-        points = np.atleast_1d(points)[..., np.newaxis]
+        points = points[..., np.newaxis]
 
         # Make sure points are between the bounds
         if any(points < self.lower) or any(points > self.upper):
@@ -1571,7 +1572,7 @@ class LinearCombination(Unbounded1D):
             return KDE1DMethod.pdf(self, points, out)
 
         exog = self.exog
-        points = np.atleast_1d(points)[..., np.newaxis]
+        points = points[..., np.newaxis]
 
         bw = self.bandwidth * self.adjust
 
@@ -1652,7 +1653,6 @@ class LinearCombination(Unbounded1D):
         density *= a2
         density -= a1 * z_density
         density /= a2 * a0 - a1 * a1
-        grid[0] = 0.
 
         return Grid(grid), density
 

@@ -20,6 +20,9 @@ from . import _kdenc_methods
 from . import _kdend_methods
 from . import _kde_multivariate
 
+from ._kde1d_methods import generate_grid1d  # noqa
+from ._kdend_methods import generate_grid  # noqa
+
 _import_methods(_kde1d_methods)
 _import_methods(_kdenc_methods)
 _import_methods(_kdend_methods)

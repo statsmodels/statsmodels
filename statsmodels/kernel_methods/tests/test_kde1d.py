@@ -1,6 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
-from .. import kde1d_methods, bandwidths
+from .. import kde_methods, bandwidths
 import numpy as np
 from numpy.random import randn
 from scipy import integrate
@@ -15,7 +15,7 @@ class FakeModel(object):
     def __init__(self, exog):
         self.exog = exog
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestBandwidth(object):
     @classmethod
     def setUpClass(cls):
@@ -45,7 +45,7 @@ class TestBandwidth(object):
         assert sum((rati - self.ratios) ** 2) < 1e-6
 
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestKDE1D(kde_utils.KDETester):
     @classmethod
     def setUpClass(cls):
@@ -110,14 +110,14 @@ class TestKDE1D(kde_utils.KDETester):
         acc = max(method.grid_accuracy, method.normed_accuracy) * ker.precision_factor
         assert abs(tot - 1) < acc, "Error, {} should be close to 1".format(tot)
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class LogTestKDE1D(TestKDE1D):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         cls.methods = kde_utils.methods_log
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestSF(kde_utils.KDETester):
     @classmethod
     def setUpClass(cls):
@@ -127,7 +127,7 @@ class TestSF(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        xs = kde1d_methods.generate_grid(est, N=2 ** 8)
+        xs = kde_methods.generate_grid1d(est, N=2 ** 8)
         sf = est.sf(xs.linear())
         cdf = est.cdf(xs.linear())
         np.testing.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
@@ -144,7 +144,7 @@ class TestSF(kde_utils.KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestLogSF(TestSF):
     @classmethod
     def setUpClass(cls):
@@ -152,7 +152,7 @@ class TestLogSF(TestSF):
         cls.methods = kde_utils.methods_log
         del cls.sizes[1:]
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestISF(kde_utils.KDETester):
     @classmethod
     def setUpClass(cls):
@@ -171,9 +171,10 @@ class TestISF(kde_utils.KDETester):
     def grid_method_works(self, k, method, name):
         est = k.fit()
         comp_sf, xs = est.isf_grid()
-        ref_sf = est.sf(xs)
+        ref_sf = est.sf(xs[::16])
+        comp_sf = comp_sf.grid[0][::16]
         acc = max(method.grid_accuracy, method.normed_accuracy)
-        np.testing.assert_allclose(comp_sf.grid[0], ref_sf, acc, acc)
+        np.testing.assert_allclose(comp_sf, ref_sf, acc, acc)
 
     def kernel_works(self, ker, name):
         pass
@@ -181,7 +182,7 @@ class TestISF(kde_utils.KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestLogISF(TestISF):
     @classmethod
     def setUpClass(cls):
@@ -216,7 +217,7 @@ class TestICDF(kde_utils.KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestLogICDF(TestICDF):
     @classmethod
     def setUpClass(cls):
@@ -225,7 +226,7 @@ class TestLogICDF(TestICDF):
         del cls.sizes[1:]
 
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestHazard(kde_utils.KDETester):
     @classmethod
     def setUpClass(cls):
@@ -235,7 +236,7 @@ class TestHazard(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        xs = kde1d_methods.generate_grid(est, N=2 ** 8)
+        xs = kde_methods.generate_grid1d(est, N=2 ** 8)
         h_comp = est.hazard(xs.linear())
         sf = est.sf(xs.linear())
         h_ref = est.pdf(xs.linear())
@@ -262,7 +263,7 @@ class TestHazard(kde_utils.KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestLogHazard(TestHazard):
     @classmethod
     def setUpClass(cls):
@@ -270,7 +271,7 @@ class TestLogHazard(TestHazard):
         del cls.sizes[1:]
         cls.methods = kde_utils.methods_log
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestCumHazard(kde_utils.KDETester):
     @classmethod
     def setUpClass(cls):
@@ -280,7 +281,7 @@ class TestCumHazard(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        xs = kde1d_methods.generate_grid(est, N=2 ** 8)
+        xs = kde_methods.generate_grid1d(est, N=2 ** 8)
         h_comp = est.cumhazard(xs.linear())
         sf = est.sf(xs.linear())
         sf[sf < 0] = 0  # Some methods can produce negative sf
@@ -304,7 +305,7 @@ class TestCumHazard(kde_utils.KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestLogCumHazard(TestCumHazard):
     @classmethod
     def setUpClass(cls):
