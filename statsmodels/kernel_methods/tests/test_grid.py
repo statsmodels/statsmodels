@@ -6,7 +6,7 @@ from ...compat.python import zip
 from scipy.interpolate import interp2d
 from nose.plugins.attrib import attr
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestBasics(object):
     @classmethod
     def setUpClass(cls):
@@ -57,7 +57,7 @@ class TestBasics(object):
         g = Grid.fromFull(self.full_grid_f, order='F', bin_types=self.bin_types)
         self.checkIsSame(g)
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestInterpolation(object):
     @classmethod
     def setUpClass(cls):

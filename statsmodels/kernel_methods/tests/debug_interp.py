@@ -1,4 +1,4 @@
-from statsmodels.nonparametric._grid_interpolation import GridInterpolator
+from statsmodels.kernel_methods._grid_interpolation import GridInterpolator
 import statsmodels.api as sm
 from scipy.interpolate import interp2d
 import numpy as np

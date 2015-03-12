@@ -7,7 +7,7 @@ from scipy import integrate
 from . import kde_utils
 from nose.plugins.attrib import attr
 
-@attr('nonparametric')
+@attr('kernel_methods')
 class TestBasic(object):
     @classmethod
     def setUpClass(cls):
