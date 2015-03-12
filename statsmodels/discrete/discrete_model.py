@@ -2269,7 +2269,12 @@ class NegativeBinomial(CountModel):
 
         if start_params is None:
             # Use poisson fit as first guess.
-            start_params = Poisson(self.endog, self.exog).fit(disp=0).params
+            #TODO, Warning: this assumes exposure is logged
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if len(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit(disp=0).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
         mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
