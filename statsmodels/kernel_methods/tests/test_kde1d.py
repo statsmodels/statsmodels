@@ -127,7 +127,7 @@ class TestSF(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        xs = kde_methods.generate_grid1d(est, N=2 ** 8)
+        xs = kde_methods.generate_grid1d(est, N=32)
         sf = est.sf(xs.linear())
         cdf = est.cdf(xs.linear())
         np.testing.assert_allclose(sf, 1 - cdf, method.accuracy, method.accuracy)
@@ -162,7 +162,7 @@ class TestISF(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        sf = np.linspace(0, 1, 64)
+        sf = np.linspace(0, 1, 32)
         sf_xs = est.isf(sf)
         cdf_xs = est.icdf(1 - sf)
         acc = max(method.accuracy, method.normed_accuracy)
@@ -171,8 +171,9 @@ class TestISF(kde_utils.KDETester):
     def grid_method_works(self, k, method, name):
         est = k.fit()
         comp_sf, xs = est.isf_grid()
-        ref_sf = est.sf(xs[::16])
-        comp_sf = comp_sf.grid[0][::16]
+        step = len(xs) // 16
+        ref_sf = est.sf(xs[::step])
+        comp_sf = comp_sf.grid[0][::step]
         acc = max(method.grid_accuracy, method.normed_accuracy)
         np.testing.assert_allclose(comp_sf, ref_sf, acc, acc)
 
@@ -198,7 +199,7 @@ class TestICDF(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        quant = np.linspace(0, 1, 64)
+        quant = np.linspace(0, 1, 32)
         xs = est.icdf(quant)
         cdf_quant = est.cdf(xs)
         acc = max(method.accuracy, method.normed_accuracy)
@@ -207,9 +208,11 @@ class TestICDF(kde_utils.KDETester):
     def grid_method_works(self, k, method, name):
         est = k.fit()
         comp_cdf, xs = est.icdf_grid()
-        ref_cdf = est.cdf(xs)
+        step = len(xs) // 16
+        ref_cdf = est.cdf(xs[::step])
+        comp_cdf = comp_cdf.grid[0][::step]
         acc = max(method.grid_accuracy, method.normed_accuracy)
-        np.testing.assert_allclose(comp_cdf.grid[0], ref_cdf, acc, acc)
+        np.testing.assert_allclose(comp_cdf, ref_cdf, acc, acc)
 
     def kernel_works(self, ker, name):
         pass
@@ -236,7 +239,7 @@ class TestHazard(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        xs = kde_methods.generate_grid1d(est, N=2 ** 8)
+        xs = kde_methods.generate_grid1d(est, N=32)
         h_comp = est.hazard(xs.linear())
         sf = est.sf(xs.linear())
         h_ref = est.pdf(xs.linear())
@@ -281,7 +284,7 @@ class TestCumHazard(kde_utils.KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        xs = kde_methods.generate_grid1d(est, N=2 ** 8)
+        xs = kde_methods.generate_grid1d(est, N=32)
         h_comp = est.cumhazard(xs.linear())
         sf = est.sf(xs.linear())
         sf[sf < 0] = 0  # Some methods can produce negative sf

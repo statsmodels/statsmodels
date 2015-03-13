@@ -7,17 +7,72 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy.special import erf
 from scipy import fftpack, integrate
-from .kde_utils import make_ufunc, numpy_trans_method, numpy_trans1d_method
+from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
 from statsmodels.compat.python import range
 from numpy.lib.stride_tricks import broadcast_arrays
+from ..compat.python import long
 
 S2PI = np.sqrt(2 * np.pi)
 
 S2 = np.sqrt(2)
 
-from numpy.fft import rfftfreq
+def rfftfreq(n, d=1.0):
+    """
+    Return the Discrete Fourier Transform sample frequencies
+    (for usage with rfft, irfft).
+
+    The returned float array `f` contains the frequency bin centers in cycles
+    per unit of the sample spacing (with zero at the start).  For instance, if
+    the sample spacing is in seconds, then the frequency unit is cycles/second.
+
+    Given a window length `n` and a sample spacing `d`::
+
+      f = [0, 1, ...,     n/2-1,     n/2] / (d*n)   if n is even
+      f = [0, 1, ..., (n-1)/2-1, (n-1)/2] / (d*n)   if n is odd
+
+    Unlike `fftfreq` (but like `scipy.fftpack.rfftfreq`)
+    the Nyquist frequency component is considered to be positive.
+
+    Parameters
+    ----------
+    n : int
+        Window length.
+    d : scalar, optional
+        Sample spacing (inverse of the sampling rate). Defaults to 1.
+
+    Returns
+    -------
+    f : ndarray
+        Array of length ``n//2 + 1`` containing the sample frequencies.
+
+    Notes
+    -----
+    This function has been copied from the source code of numpy because it has
+    been added only on version 1.8 while statsmodels requires support of numpy
+    1.7.
+
+    Examples
+    --------
+    >>> signal = np.array([-2, 8, 6, 4, 1, 0, 3, 5, -3, 4], dtype=float)
+    >>> fourier = np.fft.rfft(signal)
+    >>> n = signal.size
+    >>> sample_rate = 100
+    >>> freq = np.fft.fftfreq(n, d=1./sample_rate)
+    >>> freq
+    array([  0.,  10.,  20.,  30.,  40., -50., -40., -30., -20., -10.])
+    >>> freq = np.fft.rfftfreq(n, d=1./sample_rate)
+    >>> freq
+    array([  0.,  10.,  20.,  30.,  40.,  50.])
+
+    """
+    if not isinstance(n, (int, long)):
+        raise ValueError("n should be an integer")
+    val = 1.0/(n*d)
+    N = n//2 + 1
+    results = np.arange(0, N, dtype=int)
+    return results * val
 
 def rfftsize(N):
     """
