@@ -2,7 +2,7 @@ from __future__ import division, print_function, absolute_import
 from ..compat.python import string_types
 from keyword import iskeyword as _iskeyword
 from operator import itemgetter as _itemgetter
-from collections import OrderedDict
+from ..compat.ordereddict import OrderedDict
 import sys
 
 def namedtuple(typename, field_names, verbose=False, rename=False):

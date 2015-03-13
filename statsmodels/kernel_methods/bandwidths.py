@@ -9,7 +9,6 @@ import numpy as np
 from scipy import fftpack, optimize, linalg
 from .kde_utils import large_float, finite, atleast_2df, AxesType
 from statsmodels.compat.python import range
-from scipy.stats import scoreatpercentile as sap
 
 def _spread(X):
     """
@@ -19,7 +18,8 @@ def _spread(X):
     ----------
     Silverman (1986) p.47
     """
-    IQR = (sap(X, 75, axis=0) - sap(X, 25, axis=0)) / 1.349
+    Q1, Q3 = np.percentile(X, [25, 75], axis=0)
+    IQR = (Q3 - Q1) / 1.349
     return np.minimum(np.std(X, axis=0, ddof=1), IQR)
 
 def full_variance(factor, exog):
