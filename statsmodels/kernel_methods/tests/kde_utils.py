@@ -109,17 +109,15 @@ class KDETester(object):
 
     def test_adjust_methods(self):
         for m in self.methods:
-            for i in range(len(self.sizes)):
-                k = self.createKDE(self.vs[i], m)
-                k.adjust = self.adjust[i]
-                yield self.method_works, k, m, 'adjust_{0}_{1}'.format(k.method, i)
+            k = self.createKDE(self.vs[0], m)
+            k.adjust = self.adjust[0]
+            yield self.method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
 
     def test_adjust_grid_methods(self):
         for m in self.methods:
-            for i in range(len(self.sizes)):
-                k = self.createKDE(self.vs[i], m)
-                k.adjust = self.adjust[i]
-                yield self.grid_method_works, k, m, 'adjust_{0}_{1}'.format(k.method, i)
+            k = self.createKDE(self.vs[0], m)
+            k.adjust = self.adjust[0]
+            yield self.grid_method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
 
     def kernel_works_(self, k):
         self.kernel_works(k, 'default')
