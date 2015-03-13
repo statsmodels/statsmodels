@@ -35,7 +35,7 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
         # names separated by whitespace and/or commas
         field_names = field_names.replace(',', ' ').split()
     field_names = tuple(map(str, field_names))
-    forbidden_fields = {'__init__', '__slots__', '__new__', '__repr__', '__getnewargs__'}
+    forbidden_fields = set(['__init__', '__slots__', '__new__', '__repr__', '__getnewargs__'])
     if rename:
         names = list(field_names)
         seen = set()
