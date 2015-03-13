@@ -43,7 +43,7 @@ def check_script(filename):
     file_to_run = "python -c\"import warnings; "
     file_to_run += "warnings.simplefilter('ignore'); "
     file_to_run += "from matplotlib import use; use('Agg'); "
-    file_to_run += "execfile(r'%s')\"" % os.path.join(example_dir, filename)
+    file_to_run += "exec(open(r'%s', 'r').read())\"" % os.path.join(example_dir, filename)
     proc = subprocess.Popen(file_to_run, shell=True, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     #NOTE: use communicate to wait for process termination
@@ -66,7 +66,7 @@ def parse_docstring(block):
         start = re.search(ds, block).end()
         end = re.search(ds, block[start:]).start()
     except: #TODO: make more informative
-        raise IOError("File %s does not have a docstring?")
+        raise IOError("File does not have a docstring?")
     docstring = block[start:start+end]
     block = block[start+end+3:]
     return docstring.strip(), block
@@ -133,7 +133,8 @@ def restify(example_file, filehash, fname):
     try:
         rst_file = parse_file(example_file)
     except IOError as err:
-        raise IOError(err.message % fname)
+        #raise IOError(err.message % fname)
+        print('IOError skipping %s' % fname)
     write_file(rst_file, write_filename)
     if filehash is not None:
         hash_funcs.update_hash_dict(filehash, fname)
