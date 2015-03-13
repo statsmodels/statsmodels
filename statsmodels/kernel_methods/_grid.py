@@ -2,6 +2,7 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 from numpy.lib.stride_tricks import broadcast_arrays
 from ..compat.python import range, zip
+from ..compat.numpy import np_meshgrid
 
 class Grid(object):
     """
@@ -309,7 +310,7 @@ class Grid(object):
         """
         if self.ndim == 1:
             return self.bin_sizes()[0]
-        bins = np.meshgrid(*self.bin_sizes(), indexing='ij', copy=False, sparse=True)
+        bins = np_meshgrid(*self.bin_sizes(), indexing='ij', copy=False, sparse=True)
         return np.prod(bins)
 
     def full(self, order='F'):
@@ -320,7 +321,7 @@ class Grid(object):
         """
         if self._ndim == 1:
             return self._grid[0]
-        m = broadcast_arrays(*np.meshgrid(*self._grid, indexing='ij', sparse='True', copy='False'))
+        m = broadcast_arrays(*np_meshgrid(*self._grid, indexing='ij', sparse='True', copy='False'))
         if order is 'C':
             return np.asarray(m)
         return np.concatenate([mm[..., None] for mm in m], axis=-1)
@@ -348,7 +349,7 @@ class Grid(object):
         """
         if self._ndim == 1:
             return self._grid[0]
-        return np.meshgrid(*self._grid, indexing='ij', copy=False, sparse=True)
+        return np_meshgrid(*self._grid, indexing='ij', copy=False, sparse=True)
 
     def __iter__(self):
         return iter(self._grid)
