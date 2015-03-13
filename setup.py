@@ -354,9 +354,8 @@ ext_data = dict(
                  "depends" : [],
                  "sources" : []},
         _cy_grid_interpolation = {"name" : "statsmodels/kernel_methods/_cy_grid_interpolation.c",
-                 "depends" : ["statsmodels/kernel_methods/grid_inter.h",
-                              "statsmodels/kernel_methods/grid_inter.pxd"],
-                 "sources" : ["statsmodels/kernel_methods/grid_interp.c"]},
+                 "depends" : [],
+                 "sources" : []},
 
         )
 

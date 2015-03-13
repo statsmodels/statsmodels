@@ -2,13 +2,10 @@ cimport cython
 cimport numpy as np
 import numpy as np
 from libc.math cimport floor, fmod, round, NAN
-from grid_interp cimport binary_search
-cimport grid_interp
+from libc.stdint cimport uintptr_t, intptr_t
 
 ctypedef np.float64_t DOUBLE
 ctypedef np.int_t INT
-ctypedef grid_interp.uintptr_t uintptr_t
-ctypedef grid_interp.intptr_t intptr_t
 
 DEF MAX_DIM = 64
 
@@ -16,6 +13,19 @@ DEF BOUNDED = 0
 DEF REFLECTED = 1
 DEF CYCLIC = 2
 DEF DISCRETE = 3
+
+cdef np.npy_intp binary_search(double value,
+                               double *mesh,
+                               np.npy_intp inf,
+                               np.npy_intp sup):
+    cdef np.npy_intp cur
+    while sup > inf:
+        cur = inf + ((sup-inf)>>1);
+        if value >= mesh[cur]:
+            inf = cur + 1
+        else:
+            sup = cur
+    return inf - 1
 
 cdef object bin_type_map = dict(B=BOUNDED,
                                 R=REFLECTED,
