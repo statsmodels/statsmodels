@@ -4,11 +4,18 @@
 #Author: Raymond Hettinger
 #License: MIT License
 #http://code.activestate.com/recipes/576693/ revision 9, downloaded 2012-03-28
-from .python import iterkeys, iteritems
-try:
-    from thread import get_ident as _get_ident
-except ImportError:
-    from dummy_thread import get_ident as _get_ident
+from .python import iterkeys, iteritems, PY3
+
+if PY3:
+    try:
+        from _thread import get_ident as _get_ident
+    except ImportError:
+        from _dummy_thread import get_ident as _get_ident
+else:
+    try:
+        from thread import get_ident as _get_ident
+    except ImportError:
+        from dummy_thread import get_ident as _get_ident
 
 try:
     from _abcoll import KeysView, ValuesView, ItemsView

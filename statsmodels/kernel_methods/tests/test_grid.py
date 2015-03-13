@@ -3,6 +3,7 @@ from __future__ import division, absolute_import, print_function
 from ..kde_utils import Grid, GridInterpolator
 import numpy as np
 from ...compat.python import zip
+from ...compat.numpy import np_meshgrid
 from scipy.interpolate import interp2d
 from nose.plugins.attrib import attr
 
@@ -13,8 +14,8 @@ class TestBasics(object):
         cls.sparse_grid = np.ogrid[0:11, 1:100:100j, -5.5:5.5:12j, 0:124]
         cls.sparse_grid[-1] = (cls.sparse_grid[-1] + 0.5) * 2 * np.pi / 124
         cls.axes_def = [g.squeeze() for g in cls.sparse_grid]
-        cls.full_grid_c = np.array(np.meshgrid(*cls.sparse_grid, indexing='ij'))
-        cls.full_grid_f = np.concatenate([g[..., None] for g in np.meshgrid(*cls.sparse_grid, indexing='ij')], axis=-1)
+        cls.full_grid_c = np.array(np_meshgrid(*cls.sparse_grid, indexing='ij'))
+        cls.full_grid_f = np.concatenate([g[..., None] for g in np_meshgrid(*cls.sparse_grid, indexing='ij')], axis=-1)
         cls.bin_types = 'DBRC'
         cls.ndim = 4
         cls.shape = cls.full_grid_c.shape[1:]

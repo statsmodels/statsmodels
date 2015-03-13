@@ -13,6 +13,7 @@ from copy import copy as shallowcopy
 from statsmodels.compat.python import range
 from numpy.lib.stride_tricks import broadcast_arrays
 from ..compat.python import long
+from ..compat.numpy import np_meshgrid
 
 S2PI = np.sqrt(2 * np.pi)
 
@@ -111,7 +112,7 @@ def fftnfreq(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [np.fft.fftfreq(Xs[d], dx[d]) for d in range(ndim)]
-    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def rfftnfreq(Ns, dx=None):
     """
@@ -141,7 +142,7 @@ def rfftnfreq(Ns, dx=None):
     for d in range(ndim-1):
         fs.append(np.fft.fftfreq(Ns[d], dx[d]))
     fs.append(np.fft.rfftfreq(Ns[-1], dx[-1]))
-    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def fftsamples(N, dx=1.0):
     """
@@ -190,7 +191,7 @@ def fftnsamples(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [fftsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def dctfreq(N, dx=1.0):
     dz = 1/(2*N*dx)
@@ -203,7 +204,7 @@ def dctnfreq(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [dctfreq(Ns[d], dx[d]) for d in range(ndim)]
-    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def dctsamples(N, dx=1.0):
     return np.arange(0.5, N)*dx
@@ -215,7 +216,7 @@ def dctnsamples(Ns, dx=None):
     elif len(dx) != ndim:
         raise ValueError("Error, dx must be of same length as Ns")
     fs = [dctsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np.meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 class Kernel1D(object):
     r"""
