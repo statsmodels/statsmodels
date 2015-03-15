@@ -743,7 +743,7 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         double upper[MAX_DIM]
         double w
         int base_idx[MAX_DIM]
-        int N, is_in
+        int N, is_out
         int bin_types[MAX_DIM]
         int has_weight = weights.shape[0] > 0
         void *data = np.PyArray_DATA(grid)
@@ -756,7 +756,6 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         except KeyError as err:
             raise ValueError("Error, letter '{0}' is invalid. "
                     "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
-
         if bin_types[d] == DISCRETE:
             delta[d] = (b[d] - a[d])/(M[d] - 1)
         else:
@@ -766,7 +765,7 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         upper[d] = M[d]
 
     for i in range(nobs):
-        is_in = 1
+        is_out = 0
         for d in range(D):
             val[d] = (X[i,d] + shift[d]) / delta[d]
             if bin_types[d] == CYCLIC:
@@ -782,26 +781,25 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
                         val[d] =  2*upper[d] - val[d]
             elif bin_types[d] == BOUNDED:
                 if val[d] < lower[d] or val[d] > upper[d]:
-                    is_in = 0
+                    is_out = 1
                     break
             else: # DISCRETE
                 val[d] = round(val[d])
                 if val[d] < lower[d] or val[d] > upper[d]:
-                    is_in = 0
+                    is_out = 1
                     break
-        if is_in:
-            if has_weight:
-                w = weights[i]
-            else:
-                w = 1.
-            pos = 0
-            for d in range(D):
-                base_idx[d] = <int> floor(val[d])
-                if base_idx[d] == M[d]:
-                    base_idx[d] -= 1
-                pos += strides[d]*base_idx[d]
-            (<double*>(data+pos))[0] += w
+        if is_out: continue
+        if has_weight:
+            w = weights[i]
+        else:
+            w = 1.
+        pos = 0
+        for d in range(D):
+            base_idx[d] = <int> floor(val[d])
+            if base_idx[d] == M[d]:
+                base_idx[d] -= 1
+            pos += strides[d]*base_idx[d]
+        (<double*>(data+pos))[0] += w
 
-    mesh = [ np.linspace(a[i]+delta[i]/2, b[i]-delta[i]/2, M[i]) for i in range(D) ]
+    mesh = [np.linspace(a[i]+delta[i]/2, b[i]-delta[i]/2, M[i]) for i in range(D)]
     return mesh, np.c_[a,b]
-

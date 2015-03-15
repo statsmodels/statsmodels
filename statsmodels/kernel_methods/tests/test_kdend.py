@@ -16,3 +16,8 @@ class TestBasic(object):
         cls.vs = (cls.ratios[:, np.newaxis, np.newaxis] *
                   np.concatenate(3 * [d[np.newaxis]], axis=0))
 
+    def test_unity_2d(self):
+        """
+        Enure the sum of the kernel over its domain is unity
+        """
+        pass
