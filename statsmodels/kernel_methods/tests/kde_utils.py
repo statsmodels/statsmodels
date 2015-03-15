@@ -56,7 +56,7 @@ test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'posi
 
 kernels1d = [ test_kernel(kernels.normal1d, 1, 1, True)
             , test_kernel(kernels.tricube, 1, 1, True)
-            , test_kernel(kernels.Epanechnikov, 1, 1, True)
+            , test_kernel(kernels.Epanechnikov, 10, 1, True)
             , test_kernel(kernels.normal_order4, 10, 0, False)  # Bad for precision because of high frequencies
             , test_kernel(kernels.Epanechnikov_order4, 1000, 0, False)  # Bad for precision because of high frequencies
             ]

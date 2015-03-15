@@ -24,9 +24,12 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
         out = np.zeros((M,), dtype=float)
     elif out.shape != (M,) or out.dtype != np.dtype(np.float):
         raise ValueError("Error, out array must be a 1D float array with length M")
-    a, b = bounds
-    a = float(a)
-    b = float(b)
+    try:
+        a, b = bounds
+        a = float(a)
+        b = float(b)
+    except:
+        raise ValueError("Bounds must be a pair of floating point values")
     mesh, bounds = fct(X, a, b, out, weights, bin_type)
 
     return Grid(mesh, bounds, bin_type), out
@@ -139,7 +142,7 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_types, out):
     except TypeError:
         weights = np.asarray(weights).astype(float)
         if weights.shape != (n,):
-            raise ValueError("weights must be None or a 1D array of same length as X")
+            raise ValueError("weights must be a floating point or a 1D array of same length as X")
     else:
         weights = np.empty((0,), dtype=float)
 
