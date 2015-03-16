@@ -386,7 +386,8 @@ class KDEnDMethod(KDEMethod):
             Number of elements on the grid, per dimension
         """
         gr = generate_grid(self, N, cut)
-        return gr, self.pdf(gr.full())
+        data = self.pdf(gr.linear()).reshape(gr.shape)
+        return gr, data
 
     @numpy_trans_method('ndim', 1)
     def cdf(self, points, out):
@@ -474,7 +475,7 @@ class Cyclic(KDEnDMethod):
             energy = np.empty((points.shape[0],), dtype=out.dtype)
             # print("iterate on exog")
             for idx in range(n):
-                diff = inv_bw_fct(points - exog[idx])
+                diff = inv_bw_fct(points - exog[idx]) / adjust[na]
                 kernel.pdf(diff, out=energy)
                 for d in range(self.ndim):
                     if np.isfinite(span[d]):
