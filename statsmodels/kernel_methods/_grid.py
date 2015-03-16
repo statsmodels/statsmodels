@@ -20,7 +20,7 @@ class Grid(object):
         to the min and max of the axes.
     bin_types: str
         A string with as many letter as there are dimensions. For each dimension, gives the kind of axes. Can be one
-        of 'B', 'R', 'C' or 'N' (See :py:attr:`bin_types`). If a single letter is provided, this is the class for
+        of 'B', 'R', 'C' or 'D' (See :py:attr:`bin_types`). If a single letter is provided, this is the class for
         all axes. If not specified, the default is 'B'.
     edges: list of ndarray
         If provided, should be a list with one array per dimension. Each array should have one more element than the
@@ -72,7 +72,7 @@ class Grid(object):
         expected_bounds = np.empty((ndim, 2), dtype=dtype)
         for d in range(ndim):
             ax = grid_axes[d]
-            if bin_types[d] == 'N':
+            if bin_types[d] == 'D':
                 expected_bounds[d] = [ax[0], ax[-1]]
             else:
                 expected_bounds[d] = [(3 * ax[0] - ax[1]) / 2, (3 * ax[-1] - ax[-2]) / 2]
@@ -87,12 +87,6 @@ class Grid(object):
                 raise ValueError("The lower bounds must be strictly smaller than the upper bounds")
             if bounds.shape != expected_bounds.shape:
                 raise ValueError("Bounds must be a (D,2) array with D the dimension of the grid")
-            diff_bounds = (np.sqrt(np.sum((expected_bounds - bounds) ** 2)) /
-                           sum(expected_bounds[:, 1] - expected_bounds[:, 0]))
-            # If bounds are un-expected
-            if edges is None and diff_bounds > 1e-5:
-                self._bounds = bounds
-                self.edges  # pre-compute edges as they are probably not regular
         self._bounds = bounds
 
     def __repr__(self):
