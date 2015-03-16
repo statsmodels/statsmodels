@@ -29,32 +29,13 @@ class Grid(object):
     def __init__(self, grid_axes, bounds=None, bin_types=None, edges=None, dtype=None):
         self._interval = None
         if isinstance(grid_axes, Grid):
-            self._grid = grid_axes.grid
-            self._ndim = grid_axes.ndim
             if bounds is None:
-                self._bounds = grid_axes._bounds
-            else:
-                self._bounds = bounds
+                bounds = grid_axes.bounds
             if bin_types is None:
-                self._bin_types = grid_axes._bin_types
-            else:
-                if len(bin_types) == 1:
-                    bin_types = bin_types * self._ndim
-                if len(bin_types) != self._ndim:
-                    raise ValueError("Error, there must be as many bin types as bins")
-                self._bin_types = bin_types
-            if any(bt not in 'BCRD' for bt in self._bin_types):
-                raise ValueError("Error, bin type must be one of 'B', 'C', 'R' or 'D'")
-            if edges is None:
-                self._edges = grid_axes._edges
-            else:
-                self._edges = edges
-            if dtype is not None and dtype != grid_axes._dtype:
-                self._dtype = dtype
-                self._bounds = self._bounds.astype(dtype)
-                self._grid = [d.astype(dtype) for d in self._grid]
-                if self._edges is not None:
-                    self._edges = [e.astype(dtype) for e in self._edges]
+                bin_types = grid_axes.bin_types
+            if edges is None and grid_axes._edges is not None:
+                edges = grid_axes._edges
+            self.__init__(grid_axes.grid, bounds, bin_types, edges, dtype)
             return
         first_elemt = np.asarray(grid_axes[0])
         if first_elemt.ndim == 0:
@@ -69,7 +50,7 @@ class Grid(object):
             if grid_axes[d].ndim != 1:
                 raise ValueError("Error, the axis of a grid must be 1D arrays or "
                                  "have exacltly one dimension with more than 1 element")
-            grid_axes[d] = grid_axes[d].astype(dtype)
+            grid_axes[d] = grid_axes[d].astype(dtype, False)
         self._grid = grid_axes
         self._ndim = ndim
         if bin_types is None:
@@ -80,8 +61,12 @@ class Grid(object):
             bin_types = bin_types * ndim
         elif len(bin_types) != ndim:
             raise ValueError("Error, there must be as many bin_types as dimensions")
+        if any(b not in 'CRBD' for b in bin_types):
+            raise ValueError("Error, bin type must be one of 'B', 'R', 'C' or 'D'")
         self._bin_types = bin_types
         self._shape = tuple(len(ax) for ax in grid_axes)
+        if edges is not None:
+            edges = [e.astype(dtype) for e in edges]
         self._edges = edges
 
         expected_bounds = np.empty((ndim, 2), dtype=dtype)
@@ -98,6 +83,10 @@ class Grid(object):
             bounds = np.asarray(bounds)
             if bounds.ndim == 1:
                 bounds = bounds[None, :]
+            if (bounds[:, 0] >= bounds[:, 1]).any():
+                raise ValueError("The lower bounds must be strictly smaller than the upper bounds")
+            if bounds.shape != expected_bounds.shape:
+                raise ValueError("Bounds must be a (D,2) array with D the dimension of the grid")
             diff_bounds = (np.sqrt(np.sum((expected_bounds - bounds) ** 2)) /
                            sum(expected_bounds[:, 1] - expected_bounds[:, 0]))
             # If bounds are un-expected
@@ -115,13 +104,8 @@ class Grid(object):
         """
         Deep-copy the content of the grid
         """
-        grid = [g.copy() for g in self._grid]
         bounds = self._bounds.copy()
-        if self.edges is None:
-            edges = None
-        else:
-            edges = [e.copy() for e in self._edges]
-        return Grid(grid, bounds, self.bin_types, edges, self.dtype)
+        return Grid(self, bounds=bounds)
 
     @staticmethod
     def fromSparse(grid, *args, **kwords):
