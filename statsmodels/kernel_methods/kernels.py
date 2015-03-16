@@ -459,21 +459,6 @@ class Kernel1D(object):
             self._convolve_kernel = KernelfromPDF(self._convolution)
         return self._convolve_kernel
 
-    @numpy_trans1d_method()
-    def convolution2(self, z, out):
-        try:
-            comp_conv = self.__comp_conv2
-        except AttributeError:
-            pdf = self.pdf
-
-            @make_ufunc()
-            def comp_conv(x):
-                def product(y):
-                    return pdf(y) * pdf(x-y)
-                return integrate.quad(product, -np.inf, np.inf)[0]
-            self.__comp_conv2 = comp_conv
-        return comp_conv(z, out=out)
-
 class KernelfromPDF(Kernel1D):
     """
     This class creates a kernel from a single function computing the PDF.
@@ -481,7 +466,7 @@ class KernelfromPDF(Kernel1D):
     def __init__(self, pdf):
         self._pdf = pdf
 
-    def pdf(self, w, out=None):
+    def pdf(self, z, out=None):
         return self._pdf(z, out)
 
     __call__ = pdf
@@ -722,14 +707,18 @@ class KernelnD(object):
                 xs = np.minimum(xs, upper)
                 return integrate.nquad(pdf, [(lower, x) for x in xs])[0]
             self.__comp_cdf = comp_cdf
-        return comp_cdf(*z, out=out)
+        z = np.atleast_2d(z)
+        if out is None:
+            out = np.empty(z.shape[:-1], dtype=float)
+        return comp_cdf(*z.T, out=out)
 
     def rfft(self, N, dx, out=None):
         """
         FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
-        samples = np.dstack(broadcast_arrays(*fftnsamples(N, dx)))
+        samples = (s[..., None] for s in fftnsamples(N, dx))
+        samples = np.concatenate(np.broadcast_arrays(*samples), axis=-1)
         pdf = self.pdf(samples)
         pdf *= np.prod(dx)
         if out is None:
@@ -739,15 +728,18 @@ class KernelnD(object):
 
     def dct(self, N, dx, out=None):
         """
-        FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
+        DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
-        samples = np.dstack(broadcast_arrays(*dctnsamples(N, dx)))
+        samples = (s[..., None] for s in dctnsamples(N, dx))
+        samples = np.concatenate(np.broadcast_arrays(*samples), axis=-1)
         pdf = self.pdf(samples)
         pdf *= np.prod(dx)
         if out is None:
-            out = np.empty(rfftnsize(N), dtype=complex)
-        out[:] = fftpack.dctn(pdf)
+            out = np.empty(N, dtype=float)
+        out[:] = fftpack.dct(pdf, axis=0)
+        for a in range(1, out.ndim):
+            out[:] = fftpack.dct(out, axis=a)
         return out
 
 class normal(KernelnD):
@@ -776,7 +768,10 @@ class normal(KernelnD):
         :param ndarray xs: Array of shape (...,D) where D is the dimension of the kernel
         :returns: an array of shape (...) with the density on each point of ``xs``
         """
-        out = np.sum(xs*xs, axis=-1, out=out)
+        xs = np.atleast_2d(xs)
+        if out is None:
+            out = np.empty(xs.shape[:-1], dtype=xs.dtype)
+        np.sum(xs*xs, axis=-1, out=out)
         out *= -0.5
         np.exp(out, out=out)
         out *= self.factor
