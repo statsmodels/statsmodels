@@ -3,8 +3,7 @@ from __future__ import division, absolute_import, print_function
 from .. import _fast_linbin as linbin
 
 from nose.plugins.attrib import attr
-from nose.tools import (raises, eq_, assert_less_equal, assert_greater_equal,
-                        assert_almost_equal)
+from nose.tools import (raises, eq_, assert_almost_equal)
 from scipy import stats
 from itertools import product
 import numpy as np
@@ -37,8 +36,8 @@ class TestContinuousBinning1D(object):
             size = weights.sum()
         mesh, bins = fct(data, bounds, M, weights, bin_type)
         eq_(mesh.shape, (M,))
-        assert_greater_equal(mesh.grid[0][0], bounds[0])
-        assert_less_equal(mesh.grid[0][-1], bounds[1])
+        assert mesh.grid[0][0] >= bounds[0]
+        assert mesh.grid[0][-1] <= bounds[1]
         assert_almost_equal(bins.sum(), size, delta=1e-8)
 
     def test_validity(self):
@@ -137,8 +136,8 @@ class TestContinuousBinningnD(object):
         mesh, bins = fct(data, bounds, M, weights, bin_type)
         eq_(mesh.shape, M)
         for d in range(len(bounds)):
-            assert_greater_equal(mesh.grid[d][0], bounds[d][0])
-            assert_less_equal(mesh.grid[d][-1], bounds[d][1])
+            assert mesh.grid[d][0] >= bounds[d][0]
+            assert mesh.grid[d][-1] <= bounds[d][1]
         assert_almost_equal(bins.sum(), size, delta=1e-8)
 
     def test_validity(self):
