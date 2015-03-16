@@ -174,6 +174,8 @@ class Grid(object):
                 raise ValueError('Argument is not a full numeric grid')
             if grid.ndim == 2:  # Cannot happen for full grid
                 raise ValueError('Argument is not a full numeric grid')
+            if grid.ndim == 1:
+                return Grid.fromFull(grid, 'C', *args, **kwords)
             ndim = grid.ndim - 1
             if grid.shape[-1] == ndim:
                 return Grid.fromFull(grid, 'F', *args, **kwords)

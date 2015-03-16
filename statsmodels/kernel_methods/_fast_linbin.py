@@ -119,6 +119,9 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_types, out):
     X = np.atleast_2d(X).astype(np.float)
     bounds = np.atleast_2d(bounds).astype(float)
 
+    if X.ndim != 2:
+        raise ValueError("Error, the data must have at most 2 dimension.")
+
     D = X.shape[1]
     max_d = _cy_fast_linbin.MAX_DIMENSION
     if D > max_d:
@@ -163,6 +166,7 @@ def fast_linbin_2d(X, bounds, M, weights=1., bin_types='B', out=None):
     return _fast_bin_nd(_cy_fast_linbin.fast_linbin_2d, X, bounds, M, weights, bin_types, out)
 
 def fast_linbin_3d(X, bounds, M, weights=1., bin_types='B', out=None):
+    X = np.atleast_2d(X).astype(np.float)
     return _fast_bin_nd(_cy_fast_linbin.fast_linbin_3d, X, bounds, M, weights, bin_types, out)
 
 def fast_linbin_nd(X, bounds, M, weights=1., bin_types='B', out=None):
@@ -218,6 +222,7 @@ def fast_linbin_nd(X, bounds, M, weights=1., bin_types='B', out=None):
     :math:`\delta = \frac{M}{b-a}` and there is a virtual bin in :math:`b` which is fused with :math:`a`.
 
     """
+    X = np.atleast_2d(X).astype(np.float)
     if X.shape[1] == 2:
         return _fast_bin_nd(_cy_fast_linbin.fast_linbin_2d, X, bounds, M, weights, bin_types, out)
     if X.shape[1] == 3:
