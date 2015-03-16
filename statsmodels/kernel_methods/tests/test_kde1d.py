@@ -6,7 +6,7 @@ from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
-from nose.tools import assert_almost_equal, eq_, assert_greater
+from nose.tools import assert_almost_equal, eq_
 from .. import kde
 
 class FakeModel(object):
@@ -162,7 +162,7 @@ class TestKDE1D(KDETester):
         assert_almost_equal(est.bandwidth, 0.1)
         k.bandwidth = bandwidths.botev()
         est = k.fit()
-        assert_greater(est.bandwidth, 0)
+        assert est.bandwidth > 0
 
     def kernel_works(self, ker, name):
         method = self.methods[0]

@@ -1,10 +1,8 @@
 from __future__ import division, absolute_import, print_function
 
-import numpy as np
 from . import kde_utils
-from scipy import integrate
 from nose.plugins.attrib import attr
-from nose.tools import eq_, assert_almost_equal, assert_greater_equal, set_trace
+from nose.tools import eq_, assert_almost_equal
 from .. import kde
 
 class KDETester(object):
@@ -91,7 +89,7 @@ class TestKDE2D(KDETester):
         """
         est = k.fit()
         val = est([0, 0])
-        assert_greater_equal(val, 0)
+        assert val >= 0
         del k.weights
         del k.adjust
         est = k.fit()
