@@ -6,6 +6,8 @@ from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
+from nose.tools import assert_almost_equal, eq_, assert_greater
+from .. import kde
 
 class FakeModel(object):
     lower = -np.inf
@@ -26,11 +28,11 @@ class TestBandwidth(object):
 
     def methods(self, m):
         bws = np.asfarray([m(FakeModel(v)) for v in self.vs])
-        assert bws.shape == (3, 1)
+        eq_(bws.shape, (3, 1))
         rati = bws[:, 0] / self.ss
-        assert sum((rati - rati[0]) ** 2) < 1e-6
+        assert_almost_equal(sum((rati - rati[0]) ** 2), 0, delta=1e-6)
         rati = bws[:, 0] / bws[0]
-        assert sum((rati - self.ratios) ** 2) < 1e-6
+        assert_almost_equal(sum((rati - self.ratios) ** 2), 0, delta=1e-6)
 
     def test_variance_methods(self):
         yield self.methods, bandwidths.silverman
@@ -38,15 +40,85 @@ class TestBandwidth(object):
 
     def test_botev(self):
         bws = np.array([bandwidths.botev()(FakeModel(v)) for v in self.vs])
-        assert bws.shape == (3,)
+        eq_(bws.shape, (3,))
         rati = bws / self.ss
-        assert sum((rati - rati[0]) ** 2) < 1e-6
+        assert_almost_equal(sum((rati - rati[0]) ** 2), 0, delta=1e-6)
         rati = bws / bws[0]
-        assert sum((rati - self.ratios) ** 2) < 1e-6
+        assert_almost_equal(sum((rati - self.ratios) ** 2), delta=1e-6)
 
+class KDETester(object):
+    def createKDE(self, data, method, **args):
+        all_args = dict(self.args)
+        all_args.update(args)
+        k = kde.KDE(data, **all_args)
+        if method.instance is None:
+            del k.method
+        else:
+            k.method = method.instance
+        if method.bound_low:
+            k.lower = self.lower
+        else:
+            del k.lower
+        if method.bound_high:
+            k.upper = self.upper
+        else:
+            del k.upper
+        return k
+
+    def test_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                yield self.method_works, k, m, '{0}_{1}'.format(k.method, i)
+
+    def test_grid_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                yield self.grid_method_works, k, m, '{0}_{1}'.format(k.method, i)
+
+    def test_weights_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                k.weights = self.weights[i]
+                yield self.method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+
+    def test_weights_grid_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                k.weights = self.weights[i]
+                yield self.grid_method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+
+    def test_adjust_methods(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[0], m)
+            k.adjust = self.adjust[0]
+            yield self.method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+
+    def test_adjust_grid_methods(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[0], m)
+            k.adjust = self.adjust[0]
+            yield self.grid_method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+
+    def kernel_works_(self, k):
+        self.kernel_works(k, 'default')
+
+    def test_kernels(self):
+        for k in kde_utils.kernels1d:
+            yield self.kernel_works_, k
+
+    def grid_kernel_works_(self, k):
+        self.grid_kernel_works(k, 'default')
+
+    def test_grid_kernels(self):
+        for k in kde_utils.kernels1d:
+            yield self.grid_kernel_works_, k
 
 @attr('kernel_methods')
-class TestKDE1D(kde_utils.KDETester):
+class TestKDE1D(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
@@ -55,19 +127,19 @@ class TestKDE1D(kde_utils.KDETester):
         est = k.fit()
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
         acc = method.normed_accuracy
-        assert abs(tot - 1) < acc, "Error, {} should be close to 1".format(tot)
+        assert_almost_equal(tot, 1, delta=acc)
         del k.weights
         del k.adjust
         est = k.fit()
-        assert est.total_weights == k.npts
-        assert est.adjust == 1.
+        eq_(est.total_weights, k.npts)
+        eq_(est.adjust, 1.)
 
     def grid_method_works(self, k, method, name):
         est = k.fit()
         xs, ys = est.grid()
         tot = xs.integrate(ys)
         acc = max(method.normed_accuracy, method.grid_accuracy)
-        assert abs(tot - 1) < acc, "Error, {} should be close to 1".format(tot)
+        assert_almost_equal(tot, 1, delta=acc)
 
     def test_copy(self):
         k = self.createKDE(self.vs[0], self.methods[0])
@@ -87,10 +159,10 @@ class TestKDE1D(kde_utils.KDETester):
         k = self.createKDE(self.vs[0], self.methods[0])
         k.bandwidth = 0.1
         est = k.fit()
-        np.testing.assert_almost_equal(est.bandwidth, 0.1)
+        assert_almost_equal(est.bandwidth, 0.1)
         k.bandwidth = bandwidths.botev()
         est = k.fit()
-        assert est.bandwidth > 0
+        assert_greater(est.bandwidth, 0)
 
     def kernel_works(self, ker, name):
         method = self.methods[0]
@@ -99,7 +171,7 @@ class TestKDE1D(kde_utils.KDETester):
         est = k.fit()
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
         acc = method.normed_accuracy * ker.precision_factor
-        assert abs(tot - 1) < acc, "Error, {} should be close to 1".format(tot)
+        assert_almost_equal(tot, 1, delta=acc)
 
     def grid_kernel_works(self, ker, name):
         method = self.methods[0]
@@ -108,7 +180,7 @@ class TestKDE1D(kde_utils.KDETester):
         xs, ys = est.grid()
         tot = xs.integrate(ys)
         acc = max(method.grid_accuracy, method.normed_accuracy) * ker.precision_factor
-        assert abs(tot - 1) < acc, "Error, {} should be close to 1".format(tot)
+        assert_almost_equal(tot, 1, delta=acc)
 
 @attr('kernel_methods')
 class LogTestKDE1D(TestKDE1D):

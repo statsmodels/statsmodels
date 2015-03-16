@@ -1,23 +1,114 @@
 from __future__ import division, absolute_import, print_function
 
-from .. import kde_methods, bandwidths
 import numpy as np
-from numpy.random import randn
-from scipy import integrate
 from . import kde_utils
+from scipy import integrate
 from nose.plugins.attrib import attr
+from nose.tools import eq_, assert_almost_equal, assert_greater_equal, set_trace
+from .. import kde
+
+class KDETester(object):
+    def createKDE(self, data, method, **args):
+        all_args = dict(self.args)
+        all_args.update(args)
+        k = kde.KDE(data, **all_args)
+        if method.instance is None:
+            del k.method
+        else:
+            k.method = method.instance
+        if method.bound_low:
+            k.lower = self.lower
+        else:
+            del k.lower
+        if method.bound_high:
+            k.upper = self.upper
+        else:
+            del k.upper
+        return k
+
+    def test_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                yield self.method_works, k, m, '{0}_{1}'.format(k.method, i)
+
+    def test_grid_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                yield self.grid_method_works, k, m, '{0}_{1}'.format(k.method, i)
+
+    def test_weights_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                k.weights = self.weights[i]
+                yield self.method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+
+    def test_weights_grid_methods(self):
+        for m in self.methods:
+            for i in range(len(self.sizes)):
+                k = self.createKDE(self.vs[i], m)
+                k.weights = self.weights[i]
+                yield self.grid_method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
+
+    #def test_adjust_methods(self):
+        #for m in self.methods:
+            #k = self.createKDE(self.vs[0], m)
+            #k.adjust = self.adjust[0]
+            #yield self.method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+
+    #def test_adjust_grid_methods(self):
+        #for m in self.methods:
+            #k = self.createKDE(self.vs[0], m)
+            #k.adjust = self.adjust[0]
+            #yield self.grid_method_works, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+
+    #def kernel_works_(self, k):
+        #self.kernel_works(k, 'default')
+
+    #def test_kernels(self):
+        #for k in kde_utils.kernels1d:
+            #yield self.kernel_works_, k
+
+    #def grid_kernel_works_(self, k):
+        #self.grid_kernel_works(k, 'default')
+
+    #def test_grid_kernels(self):
+        #for k in kde_utils.kernels1d:
+            #yield self.grid_kernel_works_, k
+
 
 @attr('kernel_methods')
-class TestBasic(object):
+class TestKDE2D(KDETester):
     @classmethod
     def setUpClass(cls):
-        cls.ratios = np.array([1., 2., 5.])
-        d = randn(500, 2)
-        cls.vs = (cls.ratios[:, np.newaxis, np.newaxis] *
-                  np.concatenate(3 * [d[np.newaxis]], axis=0))
+        kde_utils.setupClass_normnd(cls, 2)
 
-    def test_unity_2d(self):
+    def method_works(self, k, method, name):
         """
         Enure the sum of the kernel over its domain is unity
         """
-        pass
+        est = k.fit()
+        val = est([0, 0])
+        assert_greater_equal(val, 0)
+        del k.weights
+        del k.adjust
+        est = k.fit()
+        eq_(est.total_weights, k.npts)
+        eq_(est.adjust, 1.)
+
+    def grid_method_works(self, k, method, name):
+        """
+        Enure the sum of the kernel over its domain is unity
+        """
+        est = k.fit()
+        mesh, vals = est.grid(N=32)
+        tot = mesh.integrate(vals)
+        acc = max(method.normed_accuracy, method.grid_accuracy)
+        assert_almost_equal(tot, 1, delta=acc)
+        del k.weights
+        del k.adjust
+        est = k.fit()
+        eq_(est.total_weights, k.npts)
+        eq_(est.adjust, 1.)
