@@ -38,6 +38,8 @@ class UnorderedKDE(KDEMethod):
         self._bw = None
         self._kernel = kernels.AitchisonAitken()
 
+    name = 'unordered'
+
     @property
     def axis_type(self):
         return 'U'
@@ -244,8 +246,11 @@ class UnorderedKDE(KDEMethod):
         Parameters
         ----------
         """
+        if self.adjust.ndim:
+            raise NotImplemented("This method cannot handle adjustments")
         points = points[:, None]
         kpdf = self.kernel.pdf(points, self.exog, self.bandwidth, self.num_levels)
+        kpdf *= self.weights
         kpdf.sum(axis=-1, out=out)
         out /= self.total_weights
         return out
@@ -258,6 +263,8 @@ class UnorderedKDE(KDEMethod):
         Create a grid with all the values, in this implementation N and cut are ignored and are present only for
         compatibility with the continuous version.
         """
+        if self.adjust.ndim:
+            raise NotImplemented("This method cannot handle adjustments")
         weights = self.weights
         mesh, bins = fast_bin(self._exog, [0, self.num_levels - 1], self.num_levels, weights=weights, bin_type='D')
         return mesh, self.from_binned(mesh, bins, True)
@@ -279,6 +286,8 @@ class OrderedKDE(UnorderedKDE):
     def __init__(self):
         UnorderedKDE.__init__(self)
         self._kernel = kernels.WangRyzin()
+
+    name = "ordered"
 
     @property
     def axis_type(self):

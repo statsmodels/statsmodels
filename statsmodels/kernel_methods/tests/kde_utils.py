@@ -14,6 +14,10 @@ def generate_nd(dist, N):
     np.random.seed(1)
     return dist.rvs(N)
 
+def generate_nc(dist, N):
+    np.random.seed(1)
+    return dist.rvs(N)
+
 def setupClass_norm(cls):
     """
     Setup the class for a 1D normal distribution
@@ -44,7 +48,7 @@ def setupClass_lognorm(cls):
 
 def setupClass_normnd(cls, ndim):
     """
-    Seting the class for a nD normal distribution
+    Setting up the class for a nD normal distribution
     """
     cls.dist = stats.multivariate_normal(cov=np.eye(ndim))
     cls.sizes = [32, 64, 128]
@@ -56,6 +60,19 @@ def setupClass_normnd(cls, ndim):
     cls.upper = [5] * ndim
     cls.methods = methods_nd
     cls.args = {}
+
+def setupClass_nc(cls):
+    """
+    Setting up the class for a nC poisson distribution
+    """
+    cls.dist = stats.poisson(12)
+    cls.sizes = [128, 256]
+    cls.vs = [generate_nc(cls.dist, s) for s in cls.sizes]
+    cls.weights = [cls.dist.pmf(v) for v in cls.vs]
+    cls.upper = max(v.max() for v in cls.vs)
+    cls.xs = np.arange(cls.upper + 1)
+    cls.args = {}
+    cls.methods = methods_nc
 
 test_method = namedtuple('test_method',
                          ['instance', 'accuracy', 'grid_accuracy',
@@ -73,6 +90,8 @@ methods_nd = [test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True)
              ,test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, False, False)
              ,test_method(km.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)
              ]
+
+methods_nc = [test_method(None, 1e-5, 1e-4, 1e-5, True, True)]
 
 test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'positive'])
 
