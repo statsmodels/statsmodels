@@ -44,7 +44,7 @@ class TestBandwidth(object):
         rati = bws / self.ss
         assert_almost_equal(sum((rati - rati[0]) ** 2), 0, delta=1e-6)
         rati = bws / bws[0]
-        assert_almost_equal(sum((rati - self.ratios) ** 2), delta=1e-6)
+        assert_almost_equal(sum((rati - self.ratios) ** 2), 0, delta=1e-6)
 
 class KDETester(object):
     def createKDE(self, data, method, **args):
@@ -190,7 +190,7 @@ class LogTestKDE1D(TestKDE1D):
         cls.methods = kde_utils.methods_log
 
 @attr('kernel_methods')
-class TestSF(kde_utils.KDETester):
+class TestSF(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
@@ -225,7 +225,7 @@ class TestLogSF(TestSF):
         del cls.sizes[1:]
 
 @attr('kernel_methods')
-class TestISF(kde_utils.KDETester):
+class TestISF(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
@@ -262,7 +262,7 @@ class TestLogISF(TestISF):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
 
-class TestICDF(kde_utils.KDETester):
+class TestICDF(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
@@ -302,7 +302,7 @@ class TestLogICDF(TestICDF):
 
 
 @attr('kernel_methods')
-class TestHazard(kde_utils.KDETester):
+class TestHazard(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
@@ -347,7 +347,7 @@ class TestLogHazard(TestHazard):
         cls.methods = kde_utils.methods_log
 
 @attr('kernel_methods')
-class TestCumHazard(kde_utils.KDETester):
+class TestCumHazard(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
