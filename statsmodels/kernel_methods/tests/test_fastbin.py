@@ -17,7 +17,7 @@ class TestContinuousBinning1D(object):
         cls.weights = stats.uniform(1, 5).rvs(2000)
         cls.bin_types = 'CRB'
         cls.bounds = [-3, 3]
-        cls.sizes = (256, 512, 999)
+        cls.sizes = (64, 128, 159)
 
     def validity(self, fct, M, bin_type, weighted):
         data = self.data
@@ -48,51 +48,50 @@ class TestContinuousBinning1D(object):
 
     @raises(ValueError)
     def bad_data(self, fct):
-        bounds = self.bounds * 4
-        fct([[[1]]], bounds, 256, 1., 'BBBB')
+        bounds = self.bounds
+        fct([[[1]]], bounds, 256, 1., 'B')
 
     @raises(ValueError)
     def bad_bin_type1(self, fct):
-        bounds = self.bounds * 4
+        bounds = self.bounds
         fct(self.data, bounds, 256, 1., 'X')
 
     @raises(ValueError)
     def bad_bin_type2(self, fct):
-        bounds = self.bounds * 4
-        fct(self.data, bounds, 256, 1., 'XXXX')
+        bounds = self.bounds
+        fct(self.data, bounds, 256, 1., 'BB')
 
     @raises(ValueError)
     def bad_bin_type3(self, fct):
-        bounds = self.bounds * 4
-        fct(self.data, bounds, 256, 1., 'XXX')
+        bounds = self.bounds
+        fct(self.data, bounds, 256, 1., '')
 
     @raises(ValueError)
     def bad_weights(self, fct):
-        bounds = self.bounds * 4
-        fct(self.data, bounds, 256, [1, 2, 3], 'XXX')
+        bounds = self.bounds
+        fct(self.data, bounds, 256, [1, 2, 3], 'B')
 
     @raises(ValueError)
     def bad_bounds1(self, fct):
-        bounds = self.bounds * 3
-        fct(self.data, bounds, 256, 1., 'BBBB')
+        fct(self.data, [[1, 2], [3, 4]], 256, 1., 'B')
 
     @raises(ValueError)
     def bad_bounds2(self, fct):
-        fct(self.data, [1, 2, 3], 256, 1., 'BBBB')
+        fct(self.data, [1, 2, 3], 256, 1., 'B')
 
     @raises(ValueError)
     def bad_bounds3(self, fct):
-        fct(self.data, 'bad', 256, 1., 'BBBB')
+        fct(self.data, 'bad', 256, 1., 'B')
 
     @raises(ValueError)
     def bad_out1(self, fct):
         out = np.empty((1,), dtype=float)
-        fct(self.data, 'bad', 256, 1., 'BBBB', out)
+        fct(self.data, self.bounds, 256, 1., 'B', out)
 
     @raises(ValueError)
     def bad_out2(self, fct):
         out = np.empty(self.weights.shape, dtype=int)
-        fct(self.data, 'bad', 256, 1., 'BBBB', out)
+        fct(self.data, self.bounds, 256, 1., 'B', out)
 
     def test_bad_args(self):
         for fct in [linbin.fast_bin, linbin.fast_linbin]:
@@ -116,7 +115,7 @@ class TestContinuousBinningnD(object):
         cls.weights = stats.uniform(1, 5).rvs(2000)
         cls.bin_types = 'CRB'
         cls.bounds = [[-3, 3]]
-        cls.sizes = (16, 32, 51)
+        cls.sizes = (16, 32, 21)
 
     def validity(self, fct, d, M, bin_type, weighted):
         data = self.data[:, :d]
@@ -149,19 +148,64 @@ class TestContinuousBinningnD(object):
             yield self.validity, fct, d, s, t, False
 
     @raises(ValueError)
-    def bad_args(self, fct, data, bounds, M, weights, bin_type, out=None):
-        fct(data, bounds, M, weights, bin_type, out)
+    def bad_data(self, fct):
+        bounds = self.bounds * 4
+        fct([[[1]]], bounds, 256, 1., 'BBBB')
+
+    @raises(ValueError)
+    def bad_bin_type1(self, fct):
+        bounds = self.bounds * 4
+        fct(self.data, bounds, 256, 1., 'X')
+
+    @raises(ValueError)
+    def bad_bin_type2(self, fct):
+        bounds = self.bounds * 4
+        fct(self.data, bounds, 256, 1., 'BBBX')
+
+    @raises(ValueError)
+    def bad_bin_type3(self, fct):
+        bounds = self.bounds * 4
+        fct(self.data, bounds, 256, 1., 'BBB')
+
+    @raises(ValueError)
+    def bad_weights(self, fct):
+        bounds = self.bounds * 4
+        fct(self.data, bounds, 256, [1, 2, 3], 'BBBB')
+
+    @raises(ValueError)
+    def bad_bounds1(self, fct):
+        bounds = self.bounds * 3
+        fct(self.data, bounds, 256, 1., 'BBBB')
+
+    @raises(ValueError)
+    def bad_bounds2(self, fct):
+        fct(self.data, [1, 2, 3], 256, 1., 'BBBB')
+
+    @raises(ValueError)
+    def bad_bounds3(self, fct):
+        fct(self.data, 'bad', 256, 1., 'BBBB')
+
+    @raises(ValueError)
+    def bad_out1(self, fct):
+        bounds = self.bounds * 4
+        out = np.empty((1,), dtype=float)
+        fct(self.data, bounds, 256, 1., 'BBBB', out)
+
+    @raises(ValueError)
+    def bad_out2(self, fct):
+        bounds = self.bounds * 4
+        out = np.empty(self.weights.shape, dtype=int)
+        fct(self.data, bounds, 256, 1., 'BBBB', out)
 
     def test_bad_args(self):
-        bnds = [self.bounds]*4
-        for fct in [linbin.fast_bin, linbin.fast_linbin]:
-            yield self.bad_args, fct, self.data, bnds, 256, 1., 'X'  # bad bin_type
-            yield self.bad_args, fct, self.data, bnds, 256, 1., 'XXXX'  # bad bin_type
-            yield self.bad_args, fct, self.data, bnds, 256, [1, 2, 3], 'B'  # bad weights
-            yield self.bad_args, fct, self.data, (1, 2, 3), 256, 1, 'B'  # bad bounds
-            yield self.bad_args, fct, self.data, 'bad', 256, 1, 'B'  # bad bounds
-            yield self.bad_args, fct, self.data, bnds, 256, 1, 'B'  # bad out
-            out = np.empty((1,), dtype=float)
-            yield self.bad_args, fct, self.data, bnds, 256, 1, 'B', out  # bad out
-            out = np.empty((256,)*4, dtype=int)
-            yield self.bad_args, fct, self.data, bnds, 256, 1, 'B', out  # bad out dtype
+        for fct in [linbin.fast_bin_nd, linbin.fast_linbin_nd]:
+            yield self.bad_data, fct
+            yield self.bad_bin_type1, fct
+            yield self.bad_bin_type2, fct
+            yield self.bad_bin_type3, fct
+            yield self.bad_weights, fct
+            yield self.bad_bounds1, fct
+            yield self.bad_bounds2, fct
+            yield self.bad_bounds3, fct
+            yield self.bad_out1, fct
+            yield self.bad_out2, fct
