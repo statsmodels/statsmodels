@@ -155,7 +155,7 @@ class KDE1DMethod(KDEMethod):
           arrays.
     """
 
-    name = 'unbounded'
+    name = 'unbounded1d'
 
     def __init__(self):
         KDEMethod.__init__(self)
@@ -1063,7 +1063,7 @@ class Cyclic1D(KDE1DMethod):
     using FFT.
     """
 
-    name = 'cyclic'
+    name = 'cyclic1d'
 
     @property
     def bin_type(self):
@@ -1297,7 +1297,7 @@ class Reflection1D(KDE1DMethod):
     using CDT.
     """
 
-    name = 'reflection'
+    name = 'reflection1d'
 
     @property
     def bin_type(self):
@@ -1452,7 +1452,7 @@ class Renormalization(Unbounded1D):
 
     """
 
-    name = 'renormalization'
+    name = 'renormalization1d'
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
@@ -1564,7 +1564,7 @@ class LinearCombination(Unbounded1D):
 
     """
 
-    name = 'linear combination'
+    name = 'linear combination1d'
 
     @numpy_trans1d_method()
     def pdf(self, points, out):

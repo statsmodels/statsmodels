@@ -407,6 +407,9 @@ class KDEnDMethod(KDEMethod):
         return N
 
 class Cyclic(KDEnDMethod):
+
+    name = "cyclic"
+
     def fit(self, kde, compute_bandwidth=True):
         if kde.ndim == 1:
             cyc = Cyclic1D()
