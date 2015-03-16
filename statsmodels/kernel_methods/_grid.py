@@ -50,7 +50,7 @@ class Grid(object):
             if grid_axes[d].ndim != 1:
                 raise ValueError("Error, the axis of a grid must be 1D arrays or "
                                  "have exacltly one dimension with more than 1 element")
-            grid_axes[d] = grid_axes[d].astype(dtype, False)
+            grid_axes[d] = grid_axes[d].astype(dtype)
         self._grid = grid_axes
         self._ndim = ndim
         if bin_types is None:
