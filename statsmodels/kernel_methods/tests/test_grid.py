@@ -2,12 +2,12 @@ from __future__ import division, absolute_import, print_function
 
 from ..kde_utils import Grid, GridInterpolator
 import numpy as np
-from ...compat.python import zip
 from ...compat.numpy import np_meshgrid, NumpyVersion
 from scipy.interpolate import interp2d
 import scipy
 from nose.plugins.attrib import attr
-from nose.tools import raises
+from nose.tools import raises, eq_
+from numpy.testing import assert_equal
 
 # interp2d doesn't work on older versions of scipy
 can_use_inter2p = NumpyVersion(scipy.__version__) > NumpyVersion('0.11.0')
@@ -35,17 +35,32 @@ class TestBasics(object):
         cls.reference = Grid(cls.axes_def, bounds=cls.bounds, bin_types=cls.bin_types,
                              edges=cls.edges)
 
+    @raises(ValueError)
+    def test_bad_array_type(self):
+        p = [1, 2]
+        row = [p, p]
+        col = [row, row]
+        Grid.fromArrays([col, col])
+
+    @raises(ValueError)
+    def test_bad_bounds1(self):
+        Grid(self.reference, bounds=[[0, 1], [0, 1], [1, 0], [1, 0]])
+
+    @raises(ValueError)
+    def test_bad_bounds2(self):
+        Grid(self.reference, bounds=[[0, 1], [0, 1], [0, 0], [0, 1]])
+
     def checkIsSame(self, g):
         assert self.reference.almost_equal(g)
 
     def test_to_sparse(self):
-        assert all(np.all(g1 == g2) for (g1, g2) in zip(self.reference.sparse(), self.sparse_grid))
+        assert_equal(self.reference.sparse(), self.sparse_grid)
 
     def test_to_full_c(self):
-        assert np.all(self.reference.full('C') == self.full_grid_c)
+        assert_equal(self.reference.full('C'), self.full_grid_c)
 
     def test_to_full_f(self):
-        assert np.all(self.reference.full('F') == self.full_grid_f)
+        assert_equal(self.reference.full('F'), self.full_grid_f)
 
     def test_from_axes(self):
         g = Grid(self.axes_def, bin_types=self.bin_types)
@@ -62,6 +77,87 @@ class TestBasics(object):
     def test_from_full_F(self):
         g = Grid.fromFull(self.full_grid_f, order='F', bin_types=self.bin_types)
         self.checkIsSame(g)
+
+    def test_copy(self):
+        g2 = self.reference.copy()
+        eq_(self.reference.shape, g2.shape)
+        eq_(self.reference.bin_types, g2.bin_types)
+        assert self.reference.grid[0] is not g2.grid[0]
+
+    def test_build_from_grid(self):
+        g2 = Grid(self.reference)
+        eq_(self.reference.shape, g2.shape)
+        eq_(self.reference.bin_types, g2.bin_types)
+        assert self.reference.grid[0] is not g2.grid[0]
+
+    def test_build_from_grid_dtype(self):
+        e1 = self.reference.edges
+        eq_(e1[0].dtype, np.dtype(float))
+        dt = np.dtype(np.float32)
+        g2 = Grid(self.reference, dtype=dt)
+        eq_(g2.dtype, dt)
+        eq_(g2.edges[0].dtype, dt)
+
+    def test_build_from_grid_edges(self):
+        edges = self.reference.edges
+        edges = [edges[0] + 1, edges[1], edges[2]]
+        g2 = Grid(self.reference, edges=edges)
+        assert_equal(g2.edges, edges)
+
+    def test_build_from_grid_bin_types(self):
+        g2 = Grid(self.reference, bin_types='CCRR')
+        eq_(g2.bin_types, 'CCRR')
+
+    def test_build_from_grid_bin_types_1(self):
+        g2 = Grid(self.reference, bin_types='C')
+        eq_(g2.bin_types, 'CCCC')
+
+    @raises(ValueError)
+    def test_build_from_grid_bin_types_err1(self):
+        Grid(self.reference, bin_types='CR')
+
+    @raises(ValueError)
+    def test_build_from_grid_bin_types_err2(self):
+        Grid(self.reference, bin_types='CCRX')
+
+    def test_build_from_grid_bounds(self):
+        bnds = [[-1, 1], [-2, 2], [-3, 3], [-4, 4]]
+        g2 = Grid(self.reference, bounds=bnds)
+        assert_equal(g2.bounds, bnds)
+
+    def test_transform_all(self):
+        g2 = self.reference.copy()
+        g2.transform(lambda x: x+1)
+        for i in range(g2.ndim):
+            assert_equal(g2.edges[i], self.reference.edges[i]+1)
+            assert_equal(g2.grid[i], self.reference.grid[i]+1)
+        assert_equal(g2.bounds, self.reference.bounds+1)
+
+    def test_transform_one(self):
+        g2 = self.reference.copy()
+        g2.transform({1: lambda x: x+1})
+        for i in range(g2.ndim):
+            if i == 1:
+                assert_equal(g2.edges[i], self.reference.edges[i]+1)
+                assert_equal(g2.grid[i], self.reference.grid[i]+1)
+                assert_equal(g2.bounds[i], self.reference.bounds[i]+1)
+            else:
+                assert_equal(g2.edges[i], self.reference.edges[i])
+                assert_equal(g2.grid[i], self.reference.grid[i])
+                assert_equal(g2.bounds[i], self.reference.bounds[i])
+
+    def test_unequal_bounds(self):
+        g1 = Grid(self.axes_def, bounds=self.bounds + 1, bin_types=self.bin_types,
+                  edges=self.edges)
+        assert g1 != self.reference
+
+    def test_unequal_bintypes(self):
+        g1 = Grid(self.axes_def, bounds=self.bounds + 1, bin_types='CCCC',
+                  edges=self.edges)
+        assert g1 != self.reference
+
+    def test_equal_badtype(self):
+        assert self.reference != [1]
 
 @attr('kernel_methods')
 class TestInterpolation(object):
@@ -104,8 +200,6 @@ class TestInterpolation(object):
 
     @raises(ValueError)
     def test_bad_pts_2d_2(self):
-        import pdb
-        pdb.set_trace()
         self.grid3.bin_types = 'BB'
         interp = GridInterpolator(self.grid3.sparse(), self.val3)
         test_values = np.array([[1., 1., 1., 1., 1.]])
