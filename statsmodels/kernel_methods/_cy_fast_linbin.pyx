@@ -1,3 +1,4 @@
+# cython: profile=True, linetrace=True, binding=True
 """
 cython -a fast_linbin.pyx
 gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -I/usr/local/lib/python2.7/dist-packages/numpy/core/include/ -o fast_linbin.so fast_linbin.c
@@ -193,11 +194,12 @@ def fast_bin(np.ndarray[DOUBLE] X not None,
 
     if bin_type == DISCRETE:
         delta = (b - a)/(M - 1)
+        upper = M - 1
     else:
         delta = (b - a)/M
+        upper = M
     shift = -a
     lower = 0
-    upper = M
 
     for i in range(nobs):
         val = (X[i] + shift) / delta
@@ -240,7 +242,10 @@ def fast_bin(np.ndarray[DOUBLE] X not None,
             base_idx -= 1
         grid[base_idx] += w
 
-    return np.linspace(a+delta/2, b-delta/2, M), [a, b]
+    if bin_type == DISCRETE:
+        return np.linspace(a, b, M), [a, b]
+    else:
+        return np.linspace(a+delta/2, b-delta/2, M), [a, b]
 
 # specialized version of fast_linbin_nd for 2 and 3d
 
@@ -758,11 +763,12 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
                     "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
         if bin_types[d] == DISCRETE:
             delta[d] = (b[d] - a[d])/(M[d] - 1)
+            upper[d] = M[d] - 1
         else:
             delta[d] = (b[d] - a[d])/M[d]
+            upper[d] = M[d]
         shift[d] = -a[d]
         lower[d] = 0
-        upper[d] = M[d]
 
     for i in range(nobs):
         is_out = 0
@@ -801,5 +807,15 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
             pos += strides[d]*base_idx[d]
         (<double*>(data+pos))[0] += w
 
-    mesh = [np.linspace(a[i]+delta[i]/2, b[i]-delta[i]/2, M[i]) for i in range(D)]
-    return mesh, np.c_[a,b]
+    mesh = [None]*D
+    bounds = np.zeros((D,2), dtype=np.float)
+    for d in range(D):
+        if bin_types[d] == DISCRETE:
+            mesh[d] = np.linspace(a[d], b[d], M[d])
+            bounds[d,0] = a[d]
+            bounds[d,1] = b[d]
+        else: # BOUNDED or REFLECTED
+            mesh[d] = np.linspace(a[d]+delta[d]/2, b[d]-delta[d]/2, M[d])
+            bounds[d,0] = a[d]
+            bounds[d,1] = b[d]
+    return mesh, bounds

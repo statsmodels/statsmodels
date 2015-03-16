@@ -6,6 +6,10 @@ from scipy import stats, integrate
 import numpy as np
 from . import kde_utils
 from nose.plugins.attrib import attr
+from nose.tools import assert_almost_equal, eq_, assert_less_equal, raises
+from .._fast_linbin import fast_linbin
+from ..kde_utils import Grid
+from numpy.testing import assert_allclose
 
 class RefKernel1D(kernels.Kernel1D):
     """
@@ -20,10 +24,26 @@ class RefKernel1D(kernels.Kernel1D):
     def pdf(self, z, out=None):
         return self.real_kernel.pdf(z, out)
 
+
+class RefKernelnD(kernels.KernelnD):
+    """
+    Reference kernel: force use of explicit integration
+    """
+    def __init__(self, kernel):
+        self._ndim = kernel.ndim
+        self.lower = kernel.lower
+        self.upper = kernel.upper
+        self.cut = kernel.cut
+        self.real_kernel = kernel
+
+    def pdf(self, z, out=None):
+        return self.real_kernel.pdf(z, out)
+
 tol = 1e-8
+nd_tol = 1e-5
 
 @attr("kernel_methods")
-class TestKernels(object):
+class TestKernels1D(object):
     @classmethod
     def setUpClass(cls, lower=-np.inf, test_width=3):
         cls.lower = float(lower)
@@ -41,7 +61,7 @@ class TestKernels(object):
     def unity(self, kernel):
         ker = kernel.cls()
         total = integrate.quad(ker.pdf, -np.inf, np.inf)[0]
-        assert abs(total-1) < tol*kernel.precision_factor
+        assert_almost_equal(total, 1, delta=tol*kernel.precision_factor)
 
     def mean(self, kernel):
         ker = kernel.cls()
@@ -49,7 +69,7 @@ class TestKernels(object):
         def f(x):
             return x*ker.pdf(x)
         total = integrate.quad(f, -np.inf, np.inf)[0]
-        assert abs(total) < tol*kernel.precision_factor
+        assert_almost_equal(total, 0, delta=tol*kernel.precision_factor)
 
     def variance(self, kernel):
         ker = kernel.cls()
@@ -57,7 +77,7 @@ class TestKernels(object):
         def f(x):
             return x*x*ker.pdf(x)
         total = integrate.quad(f, -np.inf, np.inf)[0]
-        assert abs(total-kernel.var) < tol*kernel.precision_factor
+        assert_almost_equal(total, kernel.var, delta=tol*kernel.precision_factor)
 
     def cdf(self, kernel):
         ker = kernel.cls()
@@ -67,7 +87,7 @@ class TestKernels(object):
         acc = kernel.precision_factor * tol
         np.testing.assert_allclose(val, ref, acc, acc)
         tot = ker.cdf(np.inf)
-        assert abs(tot-1) < acc, "ker.cdf(inf) = {0}, while it should be close to 1".format(tot)
+        assert_almost_equal(tot, 1, delta=acc)
         short1 = ker.cdf(self.small)
         short2 = [float(ker.cdf(x)) for x in self.small]
         np.testing.assert_allclose(short1, short2, acc, acc)
@@ -80,7 +100,7 @@ class TestKernels(object):
         acc = kernel.precision_factor * tol
         np.testing.assert_allclose(val, ref, acc, acc)
         tot = ker.pm1(np.inf)
-        assert abs(tot) < acc, "ker.cdf(inf) = {0}, while it should be close to 0".format(tot)
+        assert_almost_equal(tot, 0, delta=acc)
         short1 = ker.pm1(self.small)
         short2 = [float(ker.pm1(x)) for x in self.small]
         np.testing.assert_allclose(short1, short2, acc, acc)
@@ -93,7 +113,7 @@ class TestKernels(object):
         acc = kernel.precision_factor * tol
         np.testing.assert_allclose(val, ref, acc, acc)
         tot = ker.pm2(np.inf)
-        assert abs(tot - kernel.var) < acc, "ker.cdf(inf) = {0}, expected: {1}".format(tot, kernel.var)
+        assert_almost_equal(tot, kernel.var, delta=acc)
         short1 = ker.pm2(self.small)
         short2 = [float(ker.pm2(x)) for x in self.small]
         np.testing.assert_allclose(short1, short2, acc, acc)
@@ -106,11 +126,27 @@ class TestKernels(object):
         acc = kernel.precision_factor * tol
         np.testing.assert_allclose(val, ref, acc, acc)
 
+    def rfft_xfx(self, kernel):
+        ker = kernel.cls()
+        ref_ker = RefKernel1D(ker)
+        ref = ref_ker.rfft_xfx(self.N, self.dx)
+        val = ker.rfft_xfx(self.N, self.dx)
+        acc = kernel.precision_factor * tol
+        np.testing.assert_allclose(val, ref, acc, acc)
+
     def dct(self, kernel):
         ker = kernel.cls()
         ref_ker = RefKernel1D(ker)
         ref = ref_ker.dct(self.N, self.dx)
         val = ker.dct(self.N, self.dx)
+        acc = kernel.precision_factor * tol
+        np.testing.assert_allclose(val, ref, acc, acc)
+
+    def convolution(self, kernel):
+        ker = kernel.cls()
+        ref_ker = RefKernel1D(ker)
+        ref = ref_ker.convolution(self.xs)
+        val = ker.convolution(self.xs)
         acc = kernel.precision_factor * tol
         np.testing.assert_allclose(val, ref, acc, acc)
 
@@ -126,6 +162,14 @@ class TestKernels(object):
         for kernel in kde_utils.kernels1d:
             yield self.variance, kernel
 
+    def test_cdf(self):
+        for kernel in kde_utils.kernels1d:
+            yield self.cdf, kernel
+
+    def test_convolution(self):
+        for kernel in kde_utils.kernels1d:
+            yield self.convolution, kernel
+
     def test_pm1(self):
         for kernel in kde_utils.kernels1d:
             yield self.pm1, kernel
@@ -138,10 +182,17 @@ class TestKernels(object):
         for kernel in kde_utils.kernels1d:
             yield self.dct, kernel
 
-    def test_fft(self):
+    def test_rfft(self):
         for kernel in kde_utils.kernels1d:
             yield self.rfft, kernel
 
+    def test_rfft_xfx(self):
+        for kernel in kde_utils.kernels1d:
+            yield self.rfft_xfx, kernel
+
+    @raises(ValueError)
+    def test_rfftfreq_bad(self):
+        kernels.rfftfreq(1.2)
 
 @attr("kernel_methods")
 class TestNormal1d(object):
@@ -179,3 +230,137 @@ class TestNormal1d(object):
 
     def test_pm2(self):
         self.python_attr('pm2')
+
+@attr("kernel_methods")
+class TestKernelsnd(object):
+    @classmethod
+    def setUpClass(cls):
+        dist = stats.norm(0, 1)
+        cls.ds = np.c_[dist.rvs(200),
+                       dist.rvs(200),
+                       dist.rvs(200)]
+        bw = 0.2
+        R = 10
+
+        N = 2**8
+        dx = R/(bw*N)
+        cls.dx2 = (dx, dx)
+        cls.N2 = (N, N)
+
+        N = 2**6
+        dx = R/(bw*N)
+        cls.dx3 = (dx, dx, dx)
+        cls.N3 = (N, N, N)
+
+        cut = 5
+        cls.grid2d = Grid.fromSparse(np.ogrid[-cut:cut:512j, -cut:cut:512j])
+        cls.grid3d = Grid.fromSparse(np.ogrid[-cut:cut:128j,
+                                              -cut:cut:128j,
+                                              -cut:cut:128j])
+
+    def unity2d(self, kernel):
+        ker = kernel.cls().for_ndim(2)
+        vals = ker(self.grid2d.full())
+        total = self.grid2d.integrate(vals)
+        assert_almost_equal(total, 1, delta=nd_tol*kernel.precision_factor)
+
+    def unity3d(self, kernel):
+        ker = kernel.cls().for_ndim(3)
+        vals = ker(self.grid3d.full())
+        total = self.grid3d.integrate(vals)
+        assert_almost_equal(total, 1, delta=nd_tol*kernel.precision_factor)
+
+    def cdf2d(self, kernel):
+        ker = kernel.cls().for_ndim(2)
+        ref_ker = RefKernelnD(ker)
+        acc = tol*kernel.precision_factor
+        assert_almost_equal(ker.cdf([-np.inf, -np.inf]), 0, delta=acc)
+        assert_almost_equal(ker.cdf([np.inf, np.inf]), 1, delta=acc)
+        assert_almost_equal(ker.cdf([0, 0]), ref_ker.cdf([0, 0]), delta=acc)
+
+    def cdf3d(self, kernel):
+        ker = kernel.cls().for_ndim(3)
+        acc = tol*kernel.precision_factor
+        assert_almost_equal(ker.cdf([-np.inf, -np.inf, -np.inf]), 0, delta=acc)
+        assert_almost_equal(ker.cdf([np.inf, np.inf, np.inf]), 1, delta=acc)
+
+    def rfft2d(self, kernel):
+        ker = kernel.cls().for_ndim(2)
+        ref_ker = RefKernelnD(ker)
+        ref = ref_ker.rfft(self.N2, self.dx2)
+        val = ker.rfft(self.N2, self.dx2)
+        acc = kernel.precision_factor * nd_tol
+        np.testing.assert_allclose(val, ref, acc, acc)
+
+    def rfft3d(self, kernel):
+        ker = kernel.cls().for_ndim(3)
+        ref_ker = RefKernelnD(ker)
+        ref = ref_ker.rfft(self.N3, self.dx3)
+        val = ker.rfft(self.N3, self.dx3)
+        acc = 100*kernel.precision_factor * nd_tol
+        np.testing.assert_allclose(val, ref, acc, acc)
+
+    def dct2d(self, kernel):
+        ker = kernel.cls().for_ndim(2)
+        ref_ker = RefKernelnD(ker)
+        ref = ref_ker.dct(self.N2, self.dx2[:2])
+        val = ker.dct(self.N2, self.dx2[:2])
+        acc = kernel.precision_factor * nd_tol
+        np.testing.assert_allclose(val, ref, acc, acc)
+
+    def dct3d(self, kernel):
+        ker = kernel.cls().for_ndim(3)
+        ref_ker = RefKernelnD(ker)
+        ref = ref_ker.dct(self.N3, self.dx3)
+        val = ker.dct(self.N3, self.dx3)
+        acc = 100*kernel.precision_factor * nd_tol
+        np.testing.assert_allclose(val, ref, acc, acc)
+
+    def test_unity(self):
+        for k in kde_utils.kernelsnd:
+            yield self.unity2d, k
+            yield self.unity3d, k
+
+    def test_cdf(self):
+        for k in kde_utils.kernelsnd:
+            yield self.cdf2d, k
+            yield self.cdf3d, k
+
+    def test_rfft(self):
+        for k in kde_utils.kernelsnd:
+            yield self.rfft2d, k
+            yield self.rfft3d, k
+
+    def test_cdt(self):
+        for k in kde_utils.kernelsnd:
+            yield self.dct2d, k
+            yield self.dct3d, k
+
+@attr("kernel_methods")
+class TestKernelnc(object):
+    @classmethod
+    def setUpClass(cls):
+        dist = stats.poisson(10)
+        cls.ds = dist.rvs(10)
+        cls.xs = np.arange(0, cls.ds.max()+1)[:, None]
+        cls.num_levels = cls.ds.max()+1
+        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels], cls.num_levels, bin_type='D')
+
+    def pdf(self, kernel):
+        k = kernel.cls()
+        eq_(k.ndim, 1)
+        dst = k.pdf(self.xs, self.ds, 0.2, self.num_levels)
+        assert_less_equal(dst.sum(), self.ds.shape[0] + tol*kernel.precision_factor)
+
+    def from_binned(self, kernel):
+        k = kernel.cls()
+        dst = k.from_binned(self.mesh, self.bins, 0.2)
+        assert_less_equal(dst.sum(), self.ds.shape[0] + tol*kernel.precision_factor)
+
+    def test_pdf(self):
+        for k in kde_utils.kernelsnc:
+            yield self.pdf, k
+
+    def test_from_binned(self):
+        for k in kde_utils.kernelsnc:
+            yield self.from_binned, k
