@@ -22,7 +22,7 @@ def setupClass_norm(cls):
     cls.sizes = [128, 256, 512]
     cls.vs = [generate(cls.dist, s, -5, 5) for s in cls.sizes]
     cls.args = {}
-    cls.weights = [cls.dist.rvs(v) for v in cls.sizes]
+    cls.weights = [cls.dist.pdf(v) for v in cls.vs]
     cls.adjust = [1 - ws for ws in cls.weights]
     cls.xs = np.r_[-5:5:512j]
     cls.lower = -5
