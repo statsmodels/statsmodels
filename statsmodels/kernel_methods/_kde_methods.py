@@ -41,6 +41,9 @@ class KDEMethod(object):
         self._total_weights = None
         self._fitted = False
 
+    def __str__(self):
+        return self.name
+
     @property
     def fitted(self):
         return self._fitted
