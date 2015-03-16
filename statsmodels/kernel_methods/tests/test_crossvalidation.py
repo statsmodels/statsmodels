@@ -1,9 +1,7 @@
 from __future__ import division, absolute_import, print_function
 
-import numpy as np
 from . import kde_utils
 from nose.plugins.attrib import attr
-from nose.tools import eq_, assert_almost_equal, assert_greater, set_trace
 from .. import kde
 from .. import bandwidths
 
@@ -34,19 +32,19 @@ class TestCV(object):
     def loo(self, k, name):
         k.bandwidth = bandwidths.lsq_crossvalidation()
         est = k.fit()
-        assert_greater(est.bandwidth, 0)
+        assert est.bandwidth > 0
 
     def folds(self, k, name):
         imse_args = dict(use_grid=True, folding=5)
         k.bandwidth = bandwidths.lsq_crossvalidation(imse_args=imse_args)
         est = k.fit()
-        assert_greater(est.bandwidth, 0)
+        assert est.bandwidth > 0
 
     def sampling(self, k, name):
         imse_args = dict(sampling=100)
         k.bandwidth = bandwidths.lsq_crossvalidation(imse_args=imse_args)
         est = k.fit()
-        assert_greater(est.bandwidth, 0)
+        assert est.bandwidth > 0
 
     def test_loo(self):
         for m in self.methods:

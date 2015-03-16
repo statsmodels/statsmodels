@@ -6,8 +6,7 @@ from ...compat.numpy import np_meshgrid, NumpyVersion
 from scipy.interpolate import interp2d
 import scipy
 from nose.plugins.attrib import attr
-from nose.tools import (raises, eq_, set_trace, assert_almost_equal,
-                        assert_less_equal, assert_greater_equal)
+from nose.tools import raises, eq_, assert_almost_equal
 from numpy.testing import assert_equal, assert_allclose
 
 # interp2d doesn't work on older versions of scipy
@@ -117,8 +116,8 @@ class TestBasics(object):
         g = Grid(self.axes_def, bounds=self.bounds, bin_types=self.bin_types)
         es = g.edges
         for i in range(len(es)):
-            assert_less_equal(es[i][0], self.bounds[i, 0])
-            assert_greater_equal(es[i][-1], self.bounds[i, 1])
+            assert es[i][0] <= self.bounds[i, 0]
+            assert es[i][-1] >= self.bounds[i, 1]
 
     def test_copy(self):
         g2 = self.reference.copy()
