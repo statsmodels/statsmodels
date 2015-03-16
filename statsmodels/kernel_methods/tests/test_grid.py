@@ -6,8 +6,9 @@ from ...compat.numpy import np_meshgrid, NumpyVersion
 from scipy.interpolate import interp2d
 import scipy
 from nose.plugins.attrib import attr
-from nose.tools import raises, eq_
-from numpy.testing import assert_equal
+from nose.tools import (raises, eq_, set_trace, assert_almost_equal,
+                        assert_less_equal, assert_greater_equal)
+from numpy.testing import assert_equal, assert_allclose
 
 # interp2d doesn't work on older versions of scipy
 can_use_inter2p = NumpyVersion(scipy.__version__) > NumpyVersion('0.11.0')
@@ -32,8 +33,31 @@ class TestBasics(object):
                      np.r_[0.5:100.5:101j],
                      np.r_[-6:6:13j],
                      np.r_[0:2 * np.pi:125j]]
+        cls.start_interval = np.array([e[1] - e[0] for e in cls.edges])
         cls.reference = Grid(cls.axes_def, bounds=cls.bounds, bin_types=cls.bin_types,
                              edges=cls.edges)
+
+    def test_interval(self):
+        si = self.reference.start_interval
+        assert_equal(si, self.start_interval)
+
+    def test_bin_sizes(self):
+        bs = self.reference.bin_sizes()
+        es = self.edges
+        for i, e in enumerate(es):
+            assert_allclose(bs[i], e[1:] - e[:-1])
+
+    def test_bin_volumes(self):
+        vols = self.reference.bin_volumes()
+        eq_(vols.shape, self.reference.shape)
+
+    def test_linear(self):
+        ln = self.reference.linear()
+        eq_(ln.shape, (np.prod(self.reference.shape), 4))
+
+    def test_getitem(self):
+        it = self.reference[0, 0]
+        eq_(it, self.axes_def[0][0])
 
     @raises(ValueError)
     def test_bad_array_type(self):
@@ -50,6 +74,10 @@ class TestBasics(object):
     def test_bad_bounds2(self):
         Grid(self.reference, bounds=[[0, 1], [0, 1], [0, 0], [0, 1]])
 
+    @raises(ValueError)
+    def test_bad_bounds3(self):
+        Grid(self.axes_def[0], bounds=[[0, 1], [0, 1], [0, 1], [0, 1]])
+
     def checkIsSame(self, g):
         assert self.reference.almost_equal(g)
 
@@ -62,21 +90,35 @@ class TestBasics(object):
     def test_to_full_f(self):
         assert_equal(self.reference.full('F'), self.full_grid_f)
 
+    def test_make_1d(self):
+        Grid(self.axes_def[0], bounds=self.bounds[0])
+
     def test_from_axes(self):
-        g = Grid(self.axes_def, bin_types=self.bin_types)
+        g = Grid(self.axes_def, bin_types=self.bin_types,
+                 edges=self.edges, bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_from_sparse(self):
-        g = Grid.fromSparse(self.sparse_grid, bin_types=self.bin_types)
+        g = Grid.fromSparse(self.sparse_grid, bin_types=self.bin_types,
+                            edges=self.edges, bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_from_full_C(self):
-        g = Grid.fromFull(self.full_grid_c, order='C', bin_types=self.bin_types)
+        g = Grid.fromFull(self.full_grid_c, order='C', bin_types=self.bin_types,
+                          edges=self.edges, bounds=self.bounds)
         self.checkIsSame(g)
 
     def test_from_full_F(self):
-        g = Grid.fromFull(self.full_grid_f, order='F', bin_types=self.bin_types)
+        g = Grid.fromFull(self.full_grid_f, order='F', bin_types=self.bin_types,
+                          edges=self.edges, bounds=self.bounds)
         self.checkIsSame(g)
+
+    def test_make_edges(self):
+        g = Grid(self.axes_def, bounds=self.bounds, bin_types=self.bin_types)
+        es = g.edges
+        for i in range(len(es)):
+            assert_less_equal(es[i][0], self.bounds[i, 0])
+            assert_greater_equal(es[i][-1], self.bounds[i, 1])
 
     def test_copy(self):
         g2 = self.reference.copy()
@@ -158,6 +200,31 @@ class TestBasics(object):
 
     def test_equal_badtype(self):
         assert self.reference != [1]
+
+    @raises(ValueError)
+    def test_bad_grid(self):
+        Grid([[[1, 2], [2, 3]]])
+
+    def test_integrate1(self):
+        g = Grid(self.axes_def[:2])
+        val = g.integrate()
+        assert_almost_equal(val, g.bin_volumes().sum())
+
+    def test_integrate2(self):
+        g = Grid(self.axes_def[:2])
+        val = g.integrate(0.5*np.ones(g.shape))
+        assert_almost_equal(val, 0.5*g.bin_volumes().sum())
+
+    def test_cum_integrate1(self):
+        g = Grid(self.axes_def[:2])
+        val = g.cum_integrate()
+        assert_almost_equal(val[-1, -1], g.integrate())
+
+    def test_cum_integrate2(self):
+        g = Grid(self.axes_def[:2])
+        values = 0.5 * np.ones(g.shape)
+        val = g.cum_integrate(values)
+        assert_almost_equal(val[-1, -1], g.integrate(values))
 
 @attr('kernel_methods')
 class TestInterpolation(object):

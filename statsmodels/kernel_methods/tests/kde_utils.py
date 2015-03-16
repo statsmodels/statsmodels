@@ -61,6 +61,12 @@ kernels1d = [ test_kernel(kernels.normal1d, 1, 1, True)
             , test_kernel(kernels.Epanechnikov_order4, 1000, 0, False)  # Bad for precision because of high frequencies
             ]
 
+kernelsnc = [ test_kernel(kernels.AitchisonAitken, 1, 1, True)
+            , test_kernel(kernels.WangRyzin, 1, 1, True)
+            ]
+
+kernelsnd = [ test_kernel(kernels.normal, 1, 1, True) ]
+
 class KDETester(object):
 
     def createKDE(self, data, method, **args):

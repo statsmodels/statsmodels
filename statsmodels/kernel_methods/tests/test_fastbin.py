@@ -3,7 +3,8 @@ from __future__ import division, absolute_import, print_function
 from .. import _fast_linbin as linbin
 
 from nose.plugins.attrib import attr
-from nose.tools import raises
+from nose.tools import (raises, eq_, assert_less_equal, assert_greater_equal,
+                        assert_almost_equal)
 from scipy import stats
 from itertools import product
 import numpy as np
@@ -35,10 +36,10 @@ class TestContinuousBinning1D(object):
             weights = self.weights
             size = weights.sum()
         mesh, bins = fct(data, bounds, M, weights, bin_type)
-        assert mesh.shape == (M,), "Bad mesh shape"
-        assert mesh.grid[0][0] >= bounds[0], "Incorrect lower bound"
-        assert mesh.grid[0][-1] <= bounds[1], "Incorrect upper bound"
-        assert abs(bins.sum() - size) < 1e-8, "Incorrect sum of binned values"
+        eq_(mesh.shape, (M,))
+        assert_greater_equal(mesh.grid[0][0], bounds[0])
+        assert_less_equal(mesh.grid[0][-1], bounds[1])
+        assert_almost_equal(bins.sum(), size, delta=1e-8)
 
     def test_validity(self):
         for fct, s, t in product([linbin.fast_bin, linbin.fast_linbin],
@@ -134,11 +135,11 @@ class TestContinuousBinningnD(object):
             size = weights.sum()
         bin_type = bin_type*d
         mesh, bins = fct(data, bounds, M, weights, bin_type)
-        assert mesh.shape == M, "Bad mesh shape"
+        eq_(mesh.shape, M)
         for d in range(len(bounds)):
-            assert mesh.grid[d][0] >= bounds[d][0], "Incorrect lower bound"
-            assert mesh.grid[d][-1] <= bounds[d][1], "Incorrect upper bound"
-        assert abs(bins.sum() - size) < 1e-8, "Incorrect sum of binned values"
+            assert_greater_equal(mesh.grid[d][0], bounds[d][0])
+            assert_less_equal(mesh.grid[d][-1], bounds[d][1])
+        assert_almost_equal(bins.sum(), size, delta=1e-8)
 
     def test_validity(self):
         for fct, s, t, d in product([linbin.fast_bin_nd, linbin.fast_linbin_nd],
@@ -209,3 +210,38 @@ class TestContinuousBinningnD(object):
             yield self.bad_bounds3, fct
             yield self.bad_out1, fct
             yield self.bad_out2, fct
+
+@attr('kernel_methods')
+class TestDiscreteBinning(object):
+    @classmethod
+    def setUpClass(cls):
+        dst = stats.poisson(12)
+        cls.data = dst.rvs(2000).reshape(1000, 2)
+        cls.weights = stats.uniform(1, 5).rvs(1000)
+        cls.bin_types = 'DD'
+        cls.real_upper = cls.data.max(axis=0)
+        cls.test_upper = [12, 12]
+        cls.sizes = (16, 32, 21)
+
+    def validity_1d(self, fct, M, bounds, weighted):
+        data = self.data[:, 0]
+        sel = data <= bounds[1]
+        if weighted:
+            weights = self.weights
+            size = weights[sel].sum()
+        else:
+            weights = 1.
+            size = sel.sum()
+        mesh, bins = fct(data, bounds, M, weights, 'D')
+        eq_(mesh.grid[0][0], 0)
+        eq_(mesh.grid[0][-1], bounds[1])
+        eq_(len(mesh.grid[0]), bounds[1]+1)
+        assert_almost_equal(bins.sum(), size, delta=1e-8)
+
+    def test_validity_1d(self):
+        for fct, s in product([linbin.fast_bin, linbin.fast_linbin],
+                              self.sizes):
+            yield self.validity_1d, fct, s, [0, self.real_upper[0]], True
+            yield self.validity_1d, fct, s, [0, self.real_upper[0]], False
+            yield self.validity_1d, fct, s, [0, self.test_upper[0]], True
+            yield self.validity_1d, fct, s, [0, self.test_upper[0]], False

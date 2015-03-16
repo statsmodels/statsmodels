@@ -50,23 +50,22 @@ class AitchisonAitken(object):
         Returns
         -------
         ndarray
-            Result of the pdf on x from Xi. If x and Xi are arrays on different dimension, the outer product will be 
-            performed
+            Result of the pdf on x from Xi. If x and Xi are arrays on different dimension,
+            the outer product will be performed
         """
-        x = np.asarray(x)
+        x = np.asfarray(x)
         bw = float(bw)
-        Xi = np.asarray(Xi)
+        Xi = np.asfarray(Xi)
         dx = Xi - x
         if dx.ndim == 0:
             dx.shape = (1,)
         if out is None:
             out = np.empty_like(dx)
         out[...] = bw / (num_levels-1)
-        out[dx==0] = 1 - bw
+        out[dx == 0] = 1 - bw
         return out
 
     def from_binned(self, mesh, bins, bw, dim=-1):
-        gr = mesh.grid[dim]
         num_levels = bins.shape[dim]
         all_vals = np.sum(bins, axis=dim, keepdims=True)
         result = bins*(1-bw)
@@ -96,17 +95,21 @@ class WangRyzin(object):
         assert ndim == 1, "Error, this kernel only works in 1D"
         return self
 
+    @property
+    def ndim(self):
+        return 1
+
     def pdf(self, x, Xi, bw, num_levels, out=None):
         """
         Compute the PDF on the points x
 
         Parameters
         ----------
-        x: ndarray
+        x: float or 1-D ndarray (K,)
             Points to evaluated the PDF at
-        Xi: ndarray
+        Xi: ndarray of ints, shape (1,nobs) or (K, nobs)
             Training dataset
-        bw: float
+        bw: float or 1-D array of shape (K,)
             Bandwidth
         num_levels: int
             Number of levels possible. The levels will be from 0  to num_levels-1
@@ -114,12 +117,12 @@ class WangRyzin(object):
         Returns
         -------
         ndarray
-            Result of the pdf on x from Xi. If x and Xi are arrays on different dimension, the outer product will be 
-            performed
+            Result of the pdf on x from Xi. If x and Xi are arrays on different dimension,
+            the outer product will be performed
         """
-        x = np.asarray(x)
+        x = np.asfarray(x)
         bw = float(bw)
-        Xi = np.asarray(Xi)
+        Xi = np.asfarray(Xi)
         dx = Xi - x
         if dx.ndim == 0:
             dx.shape = (1,)
@@ -130,10 +133,8 @@ class WangRyzin(object):
         return out
 
     def from_binned(self, mesh, bins, bw, dim=-1):
-        gr = mesh.grid[dim]
         num_levels = bins.shape[dim]
         all_vals = np.sum(bins, axis=dim, keepdims=True)
         result = bins*(1-bw)
         result += (all_vals - bins) * bw / (num_levels-1)
         return result
-
