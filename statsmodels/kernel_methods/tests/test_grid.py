@@ -7,6 +7,7 @@ from ...compat.numpy import np_meshgrid, NumpyVersion
 from scipy.interpolate import interp2d
 import scipy
 from nose.plugins.attrib import attr
+from nose.tools import raises
 
 # interp2d doesn't work on older versions of scipy
 can_use_inter2p = NumpyVersion(scipy.__version__) > NumpyVersion('0.11.0')
@@ -77,8 +78,60 @@ class TestInterpolation(object):
         cls.val2 = np.cos(sg[0]) + np.sin(sg[1] * np.pi / 180)
         ax3 = np.r_[0:20]
         cls.grid3 = Grid([ax1, ax3], bin_types='BD')
-        sg = cls.grid2.sparse()
+        sg = cls.grid3.sparse()
         cls.val3 = np.cos(sg[0]) + sg[1]
+
+    @raises(ValueError)
+    def test_bad_value_shape(self):
+        GridInterpolator(self.grid1, self.val1[:-5])
+
+    @raises(ValueError)
+    def test_bad_pts_1d(self):
+        self.grid1.bin_types = 'B'
+        interp = GridInterpolator(self.grid1.sparse(), self.val1)
+        test_values = np.array([[1.]])
+        interp_test = interp(test_values)
+        interp_comp = np.interp(test_values, self.grid1.full(),
+                                self.val1, self.val1[0], self.val1[-1])
+        np.testing.assert_allclose(interp_test, interp_comp)
+
+    @raises(ValueError)
+    def test_bad_pts_2d_1(self):
+        self.grid3.bin_types = 'BB'
+        interp = GridInterpolator(self.grid3.sparse(), self.val3)
+        test_values = np.array([[[1., 1., 1.]]])
+        interp(test_values)
+
+    @raises(ValueError)
+    def test_bad_pts_2d_2(self):
+        import pdb
+        pdb.set_trace()
+        self.grid3.bin_types = 'BB'
+        interp = GridInterpolator(self.grid3.sparse(), self.val3)
+        test_values = np.array([[1., 1., 1., 1., 1.]])
+        interp(test_values)
+
+    def test_0d_pts(self):
+        self.grid1.bin_types = 'B'
+        interp = GridInterpolator(self.grid1.sparse(), self.val1)
+        test_values = np.array(1.)
+        interp(test_values)
+
+    def test_1d_pts(self):
+        grid = self.grid3
+        grid.bin_types = 'BB'
+        interp = GridInterpolator(grid.sparse(), self.val3)
+        test_values = np.array([1., 1.])
+        interp(test_values)
+
+    def test_1d_bounded_from_array(self):
+        self.grid1.bin_types = 'B'
+        interp = GridInterpolator(self.grid1.sparse(), self.val1)
+        test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
+        interp_test = interp(test_values)
+        interp_comp = np.interp(test_values, self.grid1.full(),
+                                self.val1, self.val1[0], self.val1[-1])
+        np.testing.assert_allclose(interp_test, interp_comp)
 
     def test_1d_bounded(self):
         self.grid1.bin_types = 'B'
