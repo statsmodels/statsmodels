@@ -184,6 +184,7 @@ class TestKDE1D(KDETester):
     def grid_kernel_works(self, ker, name):
         method = self.methods[0]
         k = self.createKDE(self.vs[1], method)
+        k.kernel = ker.cls()
         est = k.fit()
         xs, ys = est.grid()
         tot = xs.integrate(ys)
