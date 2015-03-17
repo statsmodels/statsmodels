@@ -362,6 +362,7 @@ class KDE1DMethod(KDEMethod):
     @weights.deleter
     def weights(self):
         self._weights = 1.
+        self._total_weights = self.npts
 
     @property
     def total_weights(self):
