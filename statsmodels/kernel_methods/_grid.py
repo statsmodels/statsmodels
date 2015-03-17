@@ -320,8 +320,7 @@ class Grid(object):
             return self._grid[0]
         m = self.full()
         npts = np.prod(self.shape)
-        m.shape = (npts, self.ndim)
-        return m
+        return m.reshape(npts, self.ndim)
 
     def sparse(self):
         """

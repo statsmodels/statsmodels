@@ -6,8 +6,8 @@ from ...compat.numpy import np_meshgrid, NumpyVersion
 from scipy.interpolate import interp2d
 import scipy
 from nose.plugins.attrib import attr
-from nose.tools import raises, eq_, assert_almost_equal
-from numpy.testing import assert_equal, assert_allclose
+from nose.tools import raises
+from ...tools.testing import assert_equal, assert_allclose
 
 # interp2d doesn't work on older versions of scipy
 can_use_inter2p = NumpyVersion(scipy.__version__) > NumpyVersion('0.11.0')
@@ -48,15 +48,15 @@ class TestBasics(object):
 
     def test_bin_volumes(self):
         vols = self.reference.bin_volumes()
-        eq_(vols.shape, self.reference.shape)
+        assert_equal(vols.shape, self.reference.shape)
 
     def test_linear(self):
         ln = self.reference.linear()
-        eq_(ln.shape, (np.prod(self.reference.shape), 4))
+        assert_equal(ln.shape, (np.prod(self.reference.shape), 4))
 
     def test_getitem(self):
         it = self.reference[0, 0]
-        eq_(it, self.axes_def[0][0])
+        assert_equal(it, self.axes_def[0][0])
 
     @raises(ValueError)
     def test_bad_array_type(self):
@@ -121,23 +121,23 @@ class TestBasics(object):
 
     def test_copy(self):
         g2 = self.reference.copy()
-        eq_(self.reference.shape, g2.shape)
-        eq_(self.reference.bin_types, g2.bin_types)
+        assert_equal(self.reference.shape, g2.shape)
+        assert_equal(self.reference.bin_types, g2.bin_types)
         assert self.reference.grid[0] is not g2.grid[0]
 
     def test_build_from_grid(self):
         g2 = Grid(self.reference)
-        eq_(self.reference.shape, g2.shape)
-        eq_(self.reference.bin_types, g2.bin_types)
+        assert_equal(self.reference.shape, g2.shape)
+        assert_equal(self.reference.bin_types, g2.bin_types)
         assert self.reference.grid[0] is not g2.grid[0]
 
     def test_build_from_grid_dtype(self):
         e1 = self.reference.edges
-        eq_(e1[0].dtype, np.dtype(float))
+        assert_equal(e1[0].dtype, np.dtype(float))
         dt = np.dtype(np.float32)
         g2 = Grid(self.reference, dtype=dt)
-        eq_(g2.dtype, dt)
-        eq_(g2.edges[0].dtype, dt)
+        assert_equal(g2.dtype, dt)
+        assert_equal(g2.edges[0].dtype, dt)
 
     def test_build_from_grid_edges(self):
         edges = self.reference.edges
@@ -147,11 +147,11 @@ class TestBasics(object):
 
     def test_build_from_grid_bin_types(self):
         g2 = Grid(self.reference, bin_types='CCRR')
-        eq_(g2.bin_types, 'CCRR')
+        assert_equal(g2.bin_types, 'CCRR')
 
     def test_build_from_grid_bin_types_1(self):
         g2 = Grid(self.reference, bin_types='C')
-        eq_(g2.bin_types, 'CCCC')
+        assert_equal(g2.bin_types, 'CCCC')
 
     @raises(ValueError)
     def test_build_from_grid_bin_types_err1(self):
@@ -207,23 +207,23 @@ class TestBasics(object):
     def test_integrate1(self):
         g = Grid(self.axes_def[:2])
         val = g.integrate()
-        assert_almost_equal(val, g.bin_volumes().sum())
+        assert_allclose(val, g.bin_volumes().sum())
 
     def test_integrate2(self):
         g = Grid(self.axes_def[:2])
         val = g.integrate(0.5*np.ones(g.shape))
-        assert_almost_equal(val, 0.5*g.bin_volumes().sum())
+        assert_allclose(val, 0.5*g.bin_volumes().sum())
 
     def test_cum_integrate1(self):
         g = Grid(self.axes_def[:2])
         val = g.cum_integrate()
-        assert_almost_equal(val[-1, -1], g.integrate())
+        assert_allclose(val[-1, -1], g.integrate())
 
     def test_cum_integrate2(self):
         g = Grid(self.axes_def[:2])
         values = 0.5 * np.ones(g.shape)
         val = g.cum_integrate(values)
-        assert_almost_equal(val[-1, -1], g.integrate(values))
+        assert_allclose(val[-1, -1], g.integrate(values))
 
 @attr('kernel_methods')
 class TestInterpolation(object):

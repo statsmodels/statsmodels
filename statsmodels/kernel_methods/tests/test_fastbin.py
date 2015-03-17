@@ -3,7 +3,8 @@ from __future__ import division, absolute_import, print_function
 from .. import _fast_linbin as linbin
 
 from nose.plugins.attrib import attr
-from nose.tools import (raises, eq_, assert_almost_equal)
+from nose.tools import raises
+from ...tools.testing import (assert_equal, assert_allclose)
 from scipy import stats
 from itertools import product
 import numpy as np
@@ -35,10 +36,10 @@ class TestContinuousBinning1D(object):
             weights = self.weights
             size = weights.sum()
         mesh, bins = fct(data, bounds, M, weights, bin_type)
-        eq_(mesh.shape, (M,))
+        assert_equal(mesh.shape, (M,))
         assert mesh.grid[0][0] >= bounds[0]
         assert mesh.grid[0][-1] <= bounds[1]
-        assert_almost_equal(bins.sum(), size, delta=1e-8)
+        assert_allclose(bins.sum(), size, rtol=1e-8)
 
     def test_validity(self):
         for fct, s, t in product([linbin.fast_bin, linbin.fast_linbin],
@@ -134,11 +135,11 @@ class TestContinuousBinningnD(object):
             size = weights.sum()
         bin_type = bin_type*d
         mesh, bins = fct(data, bounds, M, weights, bin_type)
-        eq_(mesh.shape, M)
+        assert_equal(mesh.shape, M)
         for d in range(len(bounds)):
             assert mesh.grid[d][0] >= bounds[d][0]
             assert mesh.grid[d][-1] <= bounds[d][1]
-        assert_almost_equal(bins.sum(), size, delta=1e-8)
+        assert_allclose(bins.sum(), size, rtol=1e-8)
 
     def test_validity(self):
         for fct, s, t, d in product([linbin.fast_bin_nd, linbin.fast_linbin_nd],
@@ -232,10 +233,10 @@ class TestDiscreteBinning(object):
             weights = 1.
             size = sel.sum()
         mesh, bins = fct(data, bounds, M, weights, 'D')
-        eq_(mesh.grid[0][0], 0)
-        eq_(mesh.grid[0][-1], bounds[1])
-        eq_(len(mesh.grid[0]), bounds[1]+1)
-        assert_almost_equal(bins.sum(), size, delta=1e-8)
+        assert_equal(mesh.grid[0][0], 0)
+        assert_equal(mesh.grid[0][-1], bounds[1])
+        assert_equal(len(mesh.grid[0]), bounds[1]+1)
+        assert_allclose(bins.sum(), size, rtol=1e-8)
 
     def test_validity_1d(self):
         for fct, s in product([linbin.fast_bin, linbin.fast_linbin],
