@@ -2,7 +2,7 @@ from __future__ import division, absolute_import, print_function
 
 from . import kde_utils
 from nose.plugins.attrib import attr
-from nose.tools import eq_, assert_almost_equal
+from ...tools.testing import assert_equal, assert_allclose
 from .. import kde
 
 class KDETester(object):
@@ -93,8 +93,8 @@ class TestKDE2D(KDETester):
         del k.weights
         del k.adjust
         est = k.fit()
-        eq_(est.total_weights, k.npts)
-        eq_(est.adjust, 1.)
+        assert_equal(est.total_weights, k.npts)
+        assert_equal(est.adjust, 1.)
 
     def grid_method_works(self, k, method, name):
         """
@@ -104,9 +104,9 @@ class TestKDE2D(KDETester):
         mesh, vals = est.grid(N=32)
         tot = mesh.integrate(vals)
         acc = max(method.normed_accuracy, method.grid_accuracy)
-        assert_almost_equal(tot, 1, delta=acc)
+        assert_allclose(tot, 1, rtol=acc, atol=acc)
         del k.weights
         del k.adjust
         est = k.fit()
-        eq_(est.total_weights, k.npts)
-        eq_(est.adjust, 1.)
+        assert_equal(est.total_weights, k.npts)
+        assert_equal(est.adjust, 1.)

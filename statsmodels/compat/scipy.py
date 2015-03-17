@@ -53,7 +53,6 @@ def _next_regular(target):
         match = p5
     return match
 
-
 def _valarray(shape, value=np.nan, typecode=None):
     """Return an array of all value.
     """

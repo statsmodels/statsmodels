@@ -11,9 +11,9 @@ from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
 from statsmodels.compat.python import range
-from numpy.lib.stride_tricks import broadcast_arrays
 from ..compat.python import long
 from ..compat.numpy import np_meshgrid
+from ..compat.scipy import sp_integrate_nquad as nquad
 
 S2PI = np.sqrt(2 * np.pi)
 
@@ -141,7 +141,7 @@ def rfftnfreq(Ns, dx=None):
     fs = []
     for d in range(ndim-1):
         fs.append(np.fft.fftfreq(Ns[d], dx[d]))
-    fs.append(np.fft.rfftfreq(Ns[-1], dx[-1]))
+    fs.append(rfftfreq(Ns[-1], dx[-1]))
     return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def fftsamples(N, dx=1.0):
@@ -705,7 +705,7 @@ class KernelnD(object):
                 if any(x <= lower for x in xs):
                     return 0
                 xs = np.minimum(xs, upper)
-                return integrate.nquad(pdf, [(lower, x) for x in xs])[0]
+                return nquad(pdf, [(lower, x) for x in xs])[0]
             self.__comp_cdf = comp_cdf
         z = np.atleast_2d(z)
         if out is None:
