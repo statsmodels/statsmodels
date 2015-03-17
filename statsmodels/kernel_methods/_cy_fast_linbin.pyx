@@ -264,6 +264,7 @@ def fast_linbin_2d(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t i, d, c, N
         int nobs = X.shape[0]
         object mesh
+        object bounds
         double shift[2]
         double rem[2]
         double val[2]
@@ -420,6 +421,7 @@ def fast_linbin_3d(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t i, d, c, N
         int nobs = X.shape[0]
         object mesh
+        object bounds
         double shift[3]
         double rem[3]
         double val[3]
@@ -589,6 +591,7 @@ def fast_linbin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t i, d, c, N
         int nobs = X.shape[0]
         object mesh
+        object bounds
         double shift[MAX_DIM]
         double rem[MAX_DIM]
         double val[MAX_DIM]
@@ -741,6 +744,7 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t D = X.shape[1]
         int nobs = X.shape[0]
         object mesh
+        object bounds
         double delta[MAX_DIM]
         double shift[MAX_DIM]
         double val[MAX_DIM]
