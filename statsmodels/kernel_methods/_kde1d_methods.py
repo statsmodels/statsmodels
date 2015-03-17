@@ -352,6 +352,10 @@ class KDE1DMethod(KDEMethod):
             val = val.reshape(self._exog.shape)
             self._weights = val
 
+    @weights.deleter
+    def weights(self):
+        self._weights = 1.
+
     @property
     def total_weights(self):
         """

@@ -7,6 +7,7 @@ from scipy import integrate
 from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
 from ...tools.testing import assert_allclose, assert_equal
+from nose.tools import raises
 from .. import kde
 
 class FakeModel(object):
@@ -128,11 +129,18 @@ class TestKDE1D(KDETester):
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
         acc = method.normed_accuracy
         assert_allclose(tot, 1, rtol=acc, atol=acc)
-        del k.weights
-        del k.adjust
-        est = k.fit()
+        adjust = est.adjust.copy()
+        weights = est.weights.copy()
+        del est.weights
+        del est.adjust
         assert_equal(est.total_weights, k.npts)
         assert_equal(est.adjust, 1.)
+        est.adjust = adjust  # Try to set the adjust
+        est.weights = weights
+        est.upper = k.upper
+        est.lower = k.lower
+        assert_equal(est.lower, float(k.lower))
+        assert_equal(est.upper, float(k.upper))
 
     def grid_method_works(self, k, method, name):
         est = k.fit()
@@ -181,20 +189,36 @@ class TestKDE1D(KDETester):
         tot = xs.integrate(ys)
         acc = max(method.grid_accuracy, method.normed_accuracy) * ker.precision_factor
         assert_allclose(tot, 1, rtol=acc, atol=acc)
+        assert_equal(type(est.kernel), type(k.kernel.for_ndim(1)))
+
+    @raises(ValueError)
+    def bad_set_axis(self, k, m, name):
+        k.method.axis_type = 'O'
+
+    def set_axis(self, k, m, name):
+        k.method.axis_type = 'C'
+
+    def test_set_axis(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[0], m)
+            yield self.set_axis, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
+
+    def test_bad_set_axis(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[0], m)
+            yield self.bad_set_axis, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
 
 @attr('kernel_methods')
 class LogTestKDE1D(TestKDE1D):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
-        cls.methods = kde_utils.methods_log
 
 @attr('kernel_methods')
 class TestSF(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
-        cls.methods = kde_utils.methods
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -221,7 +245,6 @@ class TestLogSF(TestSF):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
-        cls.methods = kde_utils.methods_log
         del cls.sizes[1:]
 
 @attr('kernel_methods')
@@ -229,7 +252,6 @@ class TestISF(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
-        cls.methods = kde_utils.methods
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -262,11 +284,11 @@ class TestLogISF(TestISF):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
 
+@attr('kernel_methods')
 class TestICDF(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
-        cls.methods = kde_utils.methods
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -297,16 +319,13 @@ class TestLogICDF(TestICDF):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
-        cls.methods = kde_utils.methods_log
         del cls.sizes[1:]
-
 
 @attr('kernel_methods')
 class TestHazard(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
-        cls.methods = kde_utils.methods
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -344,14 +363,12 @@ class TestLogHazard(TestHazard):
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
-        cls.methods = kde_utils.methods_log
 
 @attr('kernel_methods')
 class TestCumHazard(KDETester):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_norm(cls)
-        cls.methods = kde_utils.methods
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -386,7 +403,6 @@ class TestLogCumHazard(TestCumHazard):
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
-        cls.methods = kde_utils.methods_log
 
 if __name__ == "__main__":
     import nose
