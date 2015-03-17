@@ -346,11 +346,18 @@ class KDE1DMethod(KDEMethod):
         return self._weights
 
     @weights.setter
-    def weights(self, val):
-        val = np.asarray(val)
-        if val.shape:
-            val = val.reshape(self._exog.shape)
-            self._weights = val
+    def weights(self, ws):
+        try:
+            ws = float(ws)
+            self._weights = np.asarray(1.)
+            if self._fitted:
+                self._total_weights = self.npts
+        except TypeError:
+            ws = np.atleast_1d(ws).astype(float)
+            ws = ws.reshape((self.npts,))
+            self._weights = ws
+            if self._fitted:
+                self._total_weights = sum(ws)
 
     @weights.deleter
     def weights(self):
