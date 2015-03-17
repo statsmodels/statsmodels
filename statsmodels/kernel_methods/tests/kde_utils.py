@@ -1,6 +1,6 @@
 import numpy as np
 from .. import kde_methods as km
-from ..kde_utils import namedtuple
+from ..kde_utils import namedtuple, Grid
 from scipy import stats, linalg
 from .. import kernels
 from ...compat.numpy import NumpyVersion
@@ -61,12 +61,15 @@ def generate_nc(dist, N):
     np.random.seed(1)
     return dist.rvs(N)
 
+def generate_multivariate(N, *dists):
+    return np.vstack([d.rvs(N) for d in dists]).T
+
 def setupClass_norm(cls):
     """
     Setup the class for a 1D normal distribution
     """
     cls.dist = stats.norm(0, 1)
-    cls.sizes = [128, 256, 512]
+    cls.sizes = [128, 256, 201]
     cls.vs = [generate(cls.dist, s, -5, 5) for s in cls.sizes]
     cls.args = {}
     cls.weights = [cls.dist.pdf(v) for v in cls.vs]
@@ -74,11 +77,11 @@ def setupClass_norm(cls):
     cls.xs = np.r_[-5:5:512j]
     cls.lower = -5
     cls.upper = 5
-    cls.methods = methods
+    cls.methods = methods_1d
 
 def setupClass_lognorm(cls):
     cls.dist = stats.lognorm(1)
-    cls.sizes = [128, 256, 512]
+    cls.sizes = [128, 256, 201]
     cls.args = {}
     cls.vs = [generate(cls.dist, s, 0.001, 20) for s in cls.sizes]
     cls.vs = [v[v < 20] for v in cls.vs]
@@ -109,7 +112,7 @@ def setupClass_nc(cls):
     Setting up the class for a nC poisson distribution
     """
     cls.dist = stats.poisson(12)
-    cls.sizes = [128, 256]
+    cls.sizes = [128, 256, 201]
     cls.vs = [generate_nc(cls.dist, s) for s in cls.sizes]
     cls.weights = [cls.dist.pmf(v) for v in cls.vs]
     cls.upper = max(v.max() for v in cls.vs)
@@ -117,16 +120,35 @@ def setupClass_nc(cls):
     cls.args = {}
     cls.methods = methods_nc
 
+def setupClass_multivariate(cls):
+    """
+    Setting up the class with a poisson distribution and two normals
+    """
+    cls.d1 = stats.norm(0, 1)
+    cls.d2 = stats.poisson(12)
+    cls.sizes = [64, 128, 101]
+    cls.vs = [generate_multivariate(s, cls.d1, cls.d2) for s in cls.sizes]
+    cls.weights = [cls.d1.pdf(v[:, 0]) for v in cls.vs]
+    cls.upper = [5, max(v[:, 1].max() for v in cls.vs)]
+    cls.lower = [-5, 0]
+    cls.x1 = np.r_[-5:5:512j]
+    cls.x2 = np.arange(cls.upper[1] + 1)
+    cls.grid = Grid([cls.x1, cls.x2])
+    cls.args = {}
+    cls.methods1 = methods_1d + methods_nc + methods_nc
+    cls.methods2 = methods_nc + methods_1d + methods_nc[::-1]
+    cls.nb_methods = len(cls.methods1)
+
 test_method = namedtuple('test_method',
                          ['instance', 'accuracy', 'grid_accuracy',
                           'normed_accuracy', 'bound_low', 'bound_high'])
 
-methods = [test_method(km.Unbounded1D, 1e-5, 1e-4, 1e-5, False, False)
-          ,test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True)
-          ,test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True)
-          ,test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True)
-          ,test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
-          ]
+methods_1d = [test_method(km.Unbounded1D, 1e-5, 1e-4, 1e-5, False, False)
+             ,test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True)
+             ,test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True)
+             ,test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True)
+             ,test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
+             ]
 methods_log = [test_method(km.TransformKDE1D(km.LogTransform), 1e-5, 1e-4, 1e-5, True, False)]
 
 methods_nd = [test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True)
@@ -134,7 +156,8 @@ methods_nd = [test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True)
              ,test_method(km.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)
              ]
 
-methods_nc = [test_method(None, 1e-5, 1e-4, 1e-5, True, True)]
+methods_nc = [test_method(km.OrderedKDE, 1e-5, 1e-4, 1e-5, True, True)
+             ,test_method(km.UnorderedKDE, 1e-5, 1e-4, 1e-5, True, True)]
 
 test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'positive'])
 
