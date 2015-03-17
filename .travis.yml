@@ -96,7 +96,7 @@ script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
-  - echo 'import statsmodels as sm; a=sm.test(label="full"); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
+  - echo 'import statsmodels as sm; a=sm.test(label="full",verbose=3); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
   - if [ ${COVERAGE} = true ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
 
 after_success:
