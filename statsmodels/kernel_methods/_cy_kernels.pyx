@@ -4,8 +4,9 @@
 
 import numpy as np
 cimport numpy as np
+from libc.math cimport exp, sqrt, M_PI, pow, sin, cos
 IF UNAME_SYSNAME == 'Windows':
-    from float import _finite
+    from ms_float cimport _finite
     from math cimport fabs
     isfinite = _finite
 
@@ -26,11 +27,10 @@ IF UNAME_SYSNAME == 'Windows':
             x = -x
         # A & S 7.1.26
         t = 1.0/(1.0 + p*x)
-        y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*math.exp(-x*x)
+        y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x)
         return sign*y
 ELSE:
     from math cimport isfinite, erf, fabs
-from libc.math cimport exp, sqrt, M_PI, pow, sin, cos
 
 np.import_array()
 

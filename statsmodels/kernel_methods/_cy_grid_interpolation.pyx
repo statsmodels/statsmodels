@@ -1,11 +1,21 @@
 cimport cython
 cimport numpy as np
 import numpy as np
-from libc.math cimport floor, fmod, round, NAN
-from libc.stdint cimport uintptr_t, intptr_t
+from libc.math cimport floor, fmod
+from numpy.math cimport NAN
+
+IF UNAME_SYSNAME == 'Windows':
+    from libc.math cimport ceil, floor
+    cdef inline double round(double a):
+        if a < 0.0:
+            return ceil(a - 0.5)
+        return floor(a + 0.5)
+ELSE:
+    from libc.math cimport round
 
 ctypedef np.float64_t DOUBLE
 ctypedef np.int_t INT
+ctypedef np.uint8_t uint8_t
 
 DEF MAX_DIM = 64
 
@@ -155,24 +165,24 @@ def interpnd(np.ndarray[DOUBLE, ndim=2] X not None,
     cdef:
         Py_ssize_t i
         int nobs = X.shape[0]
-        uintptr_t D = X.shape[1]
+        np.npy_uintp D = X.shape[1]
         double* meshes[MAX_DIM]
-        intptr_t M[MAX_DIM]
-        intptr_t init_inf[MAX_DIM]
-        intptr_t init_sup[MAX_DIM]
-        intptr_t inf[MAX_DIM]
-        intptr_t sup[MAX_DIM]
+        np.npy_intp M[MAX_DIM]
+        np.npy_intp init_inf[MAX_DIM]
+        np.npy_intp init_sup[MAX_DIM]
+        np.npy_intp inf[MAX_DIM]
+        np.npy_intp sup[MAX_DIM]
         double lower[MAX_DIM]
         double upper[MAX_DIM]
         double span[MAX_DIM]
-        uintptr_t corner, d, pos
-        uintptr_t nb_corners = 1 << D
+        np.npy_uintp corner, d, pos
+        np.npy_uintp nb_corners = 1 << D
         int bin_types[MAX_DIM]
         double rem[MAX_DIM]
         double val[MAX_DIM]
         int fail
         double tmp, wc, acc, delta
-        void *data = np.PyArray_DATA(values)
+        uint8_t *data = <uint8_t*>(np.PyArray_DATA(values))
         np.npy_intp *strides = np.PyArray_STRIDES(values)
 
     for d in range(D):

@@ -1,16 +1,19 @@
-# cython: profile=True, linetrace=True, binding=True
-"""
-cython -a fast_linbin.pyx
-gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -I/usr/local/lib/python2.7/dist-packages/numpy/core/include/ -o fast_linbin.so fast_linbin.c
-"""
-
 cimport cython
 cimport numpy as np
 import numpy as np
-from libc.math cimport floor, fmod, round
+from libc.math cimport floor, fmod
+IF UNAME_SYSNAME == 'Windows':
+    from libc.math cimport ceil, floor
+    cdef inline double round(double a):
+        if a < 0.0:
+            return ceil(a - 0.5)
+        return floor(a + 0.5)
+ELSE:
+    from libc.math cimport round
 
 ctypedef np.float64_t DOUBLE
 ctypedef np.int_t INT
+ctypedef np.uint8_t uint8_t
 
 DEF BOUNDED = 0
 DEF REFLECTED = 1
@@ -21,6 +24,8 @@ cdef object bin_type_map = dict(B=BOUNDED,
                                 R=REFLECTED,
                                 C=CYCLIC,
                                 D=DISCRETE)
+
+DEF bin_type_error="Error, letter '{0}' is invalid: must be one of 'B', 'C', 'R' or 'D'"
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -52,7 +57,7 @@ def fast_linbin(np.ndarray[DOUBLE] X not None,
     try:
         bin_type = bin_type_map[s_bin_type]
     except KeyError as err:
-        raise ValueError('Error, invalid bin type: {0}'.format(err.args[0]))
+        raise ValueError(bin_type_error.format(s_bin_type))
 
     if bin_type == CYCLIC:
         lower = 0
@@ -190,7 +195,7 @@ def fast_bin(np.ndarray[DOUBLE] X not None,
     try:
         bin_type = bin_type_map[s_bin_type]
     except KeyError as err:
-        raise ValueError('Error, invalid bin type: {0}'.format(err.args[0]))
+        raise ValueError(bin_type_error.format(s_bin_type))
 
     if bin_type == DISCRETE:
         delta = (b - a)/(M - 1)
@@ -279,7 +284,7 @@ def fast_linbin_2d(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t nb_corner = 4
         double wc
         Py_ssize_t pos
-        #void *data = np.PyArray_DATA(grid)
+        #uint8_t *data = <uint8_t*>(np.PyArray_DATA(grid))
         #np.npy_intp *strides = np.PyArray_STRIDES(grid)
         np.npy_intp *M = np.PyArray_DIMS(grid)
         int bin_types[2]
@@ -289,8 +294,7 @@ def fast_linbin_2d(np.ndarray[DOUBLE, ndim=2] X not None,
         try:
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
-            raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
+            raise ValueError(bin_type_error.format(s_bin_types[d]))
 
         if bin_types[d] == CYCLIC:
             delta[d] = (b[d] - a[d]) / M[d]
@@ -436,7 +440,7 @@ def fast_linbin_3d(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t nb_corner = 1 << 3
         double wc
         Py_ssize_t pos
-        #void *data = np.PyArray_DATA(grid)
+        #uint8_t *data = <uint8_t*>(np.PyArray_DATA(grid))
         #np.npy_intp *strides = np.PyArray_STRIDES(grid)
         np.npy_intp *M = np.PyArray_DIMS(grid)
         int bin_types[3]
@@ -446,8 +450,7 @@ def fast_linbin_3d(np.ndarray[DOUBLE, ndim=2] X not None,
         try:
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
-            raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
+            raise ValueError(bin_type_error.format(s_bin_types[d]))
 
         if bin_types[d] == CYCLIC:
             delta[d] = (b[d] - a[d]) / M[d]
@@ -605,7 +608,7 @@ def fast_linbin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         Py_ssize_t nb_corner = 1 << D
         double wc
         Py_ssize_t pos
-        void *data = np.PyArray_DATA(grid)
+        uint8_t *data = <uint8_t*>(np.PyArray_DATA(grid))
         np.npy_intp *strides = np.PyArray_STRIDES(grid)
         np.npy_intp *M = np.PyArray_DIMS(grid)
         int bin_types[MAX_DIM]
@@ -615,8 +618,7 @@ def fast_linbin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         try:
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
-            raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
+            raise ValueError(bin_type_error.format(s_bin_types[d]))
 
         if bin_types[d] == CYCLIC:
             delta[d] = (b[d] - a[d]) / M[d]
@@ -755,7 +757,7 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         int N, is_out
         int bin_types[MAX_DIM]
         int has_weight = weights.shape[0] > 0
-        void *data = np.PyArray_DATA(grid)
+        uint8_t *data = <uint8_t*>(np.PyArray_DATA(grid))
         np.npy_intp *strides = np.PyArray_STRIDES(grid)
         np.npy_intp *M = np.PyArray_DIMS(grid)
 
@@ -763,8 +765,7 @@ def fast_bin_nd(np.ndarray[DOUBLE, ndim=2] X not None,
         try:
             bin_types[d] = bin_type_map[s_bin_types[d]]
         except KeyError as err:
-            raise ValueError("Error, letter '{0}' is invalid. "
-                    "bin_types letters must be one of 'B', 'C', 'R' or 'D'".format(s_bin_types[d]))
+            raise ValueError(bin_type_error.format(s_bin_types[d]))
         if bin_types[d] == DISCRETE:
             delta[d] = (b[d] - a[d])/(M[d] - 1)
             upper[d] = M[d] - 1
