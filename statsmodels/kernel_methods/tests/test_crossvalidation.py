@@ -60,4 +60,3 @@ class TestCV(object):
         for m in self.methods:
             k = self.createKDE(self.vs[0], m)
             yield self.sampling, k, 'sampling_{0}_{1}'.format(k.method, 0)
-

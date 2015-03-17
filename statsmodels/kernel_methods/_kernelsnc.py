@@ -8,6 +8,7 @@ Unlike with continuous kernels, these ones require explicitely the evaluation po
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
+from ..compat.numpy import np_sum
 
 class AitchisonAitken(object):
     """
@@ -67,7 +68,7 @@ class AitchisonAitken(object):
 
     def from_binned(self, mesh, bins, bw, dim=-1):
         num_levels = bins.shape[dim]
-        all_vals = np.sum(bins, axis=dim, keepdims=True)
+        all_vals = np_sum(bins, axis=dim, keepdims=True)
         result = bins*(1-bw)
         result += (all_vals - bins) * bw / (num_levels-1)
         return result
@@ -134,7 +135,7 @@ class WangRyzin(object):
 
     def from_binned(self, mesh, bins, bw, dim=-1):
         num_levels = bins.shape[dim]
-        all_vals = np.sum(bins, axis=dim, keepdims=True)
+        all_vals = np_sum(bins, axis=dim, keepdims=True)
         result = bins*(1-bw)
         result += (all_vals - bins) * bw / (num_levels-1)
         return result

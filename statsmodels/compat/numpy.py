@@ -431,3 +431,17 @@ else:
 
         return avg
 
+if NumpyVersion(np.__version__) < NumpyVersion('1.7.0'):
+    def np_sum(a, axis=None, dtype=None, out=None, keepdims=False):
+        val = np.sum(a, axis, dtype, out)
+        if keepdims:
+            if axis is None:
+                shape = (1,) * a.ndim
+            else:
+                shape = np.array(a.shape)
+                shape[axis] = 1
+            return val.reshape(shape)
+        else:
+            val
+else:
+    np_sum = np.sum
