@@ -6,7 +6,7 @@ from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
-from nose.tools import assert_almost_equal, eq_
+from ...tools.testing import assert_allclose, assert_equal
 from .. import kde
 
 class FakeModel(object):
@@ -28,11 +28,11 @@ class TestBandwidth(object):
 
     def methods(self, m):
         bws = np.asfarray([m(FakeModel(v)) for v in self.vs])
-        eq_(bws.shape, (3, 1))
+        assert_equal(bws.shape, (3, 1))
         rati = bws[:, 0] / self.ss
-        assert_almost_equal(sum((rati - rati[0]) ** 2), 0, delta=1e-6)
+        assert_allclose(sum((rati - rati[0]) ** 2), 0, rtol=1e-6, atol=1e-6)
         rati = bws[:, 0] / bws[0]
-        assert_almost_equal(sum((rati - self.ratios) ** 2), 0, delta=1e-6)
+        assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6, atol=1e-6)
 
     def test_variance_methods(self):
         yield self.methods, bandwidths.silverman
@@ -40,11 +40,11 @@ class TestBandwidth(object):
 
     def test_botev(self):
         bws = np.array([bandwidths.botev()(FakeModel(v)) for v in self.vs])
-        eq_(bws.shape, (3,))
+        assert_equal(bws.shape, (3,))
         rati = bws / self.ss
-        assert_almost_equal(sum((rati - rati[0]) ** 2), 0, delta=1e-6)
+        assert_allclose(sum((rati - rati[0]) ** 2), 0, rtol=1e-6, atol=1e-6)
         rati = bws / bws[0]
-        assert_almost_equal(sum((rati - self.ratios) ** 2), 0, delta=1e-6)
+        assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6, atol=1e-6)
 
 class KDETester(object):
     def createKDE(self, data, method, **args):
@@ -127,19 +127,19 @@ class TestKDE1D(KDETester):
         est = k.fit()
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
         acc = method.normed_accuracy
-        assert_almost_equal(tot, 1, delta=acc)
+        assert_allclose(tot, 1, rtol=acc, atol=acc)
         del k.weights
         del k.adjust
         est = k.fit()
-        eq_(est.total_weights, k.npts)
-        eq_(est.adjust, 1.)
+        assert_equal(est.total_weights, k.npts)
+        assert_equal(est.adjust, 1.)
 
     def grid_method_works(self, k, method, name):
         est = k.fit()
         xs, ys = est.grid()
         tot = xs.integrate(ys)
         acc = max(method.normed_accuracy, method.grid_accuracy)
-        assert_almost_equal(tot, 1, delta=acc)
+        assert_allclose(tot, 1, rtol=acc, atol=acc)
 
     def test_copy(self):
         k = self.createKDE(self.vs[0], self.methods[0])
@@ -159,7 +159,7 @@ class TestKDE1D(KDETester):
         k = self.createKDE(self.vs[0], self.methods[0])
         k.bandwidth = 0.1
         est = k.fit()
-        assert_almost_equal(est.bandwidth, 0.1)
+        assert_allclose(est.bandwidth, 0.1)
         k.bandwidth = bandwidths.botev()
         est = k.fit()
         assert est.bandwidth > 0
@@ -171,7 +171,7 @@ class TestKDE1D(KDETester):
         est = k.fit()
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
         acc = method.normed_accuracy * ker.precision_factor
-        assert_almost_equal(tot, 1, delta=acc)
+        assert_allclose(tot, 1, rtol=acc, atol=acc)
 
     def grid_kernel_works(self, ker, name):
         method = self.methods[0]
@@ -180,7 +180,7 @@ class TestKDE1D(KDETester):
         xs, ys = est.grid()
         tot = xs.integrate(ys)
         acc = max(method.grid_accuracy, method.normed_accuracy) * ker.precision_factor
-        assert_almost_equal(tot, 1, delta=acc)
+        assert_allclose(tot, 1, rtol=acc, atol=acc)
 
 @attr('kernel_methods')
 class LogTestKDE1D(TestKDE1D):
