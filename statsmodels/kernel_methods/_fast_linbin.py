@@ -131,6 +131,8 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_types, out):
         bin_types = bin_types * D
     elif len(bin_types) != D:
         raise ValueError("Error, bin_types must be a string of length 1 or D (e.g. the number of dimensions)")
+    #if any(bt not in 'BRCD' for bt in bin_types):
+        #raise ValueError("Error, all bin types must be one of 'B', 'R', 'C' or 'D'")
 
     n = X.shape[0]
     if M.ndim == 0:
