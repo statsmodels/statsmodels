@@ -2,8 +2,9 @@ from __future__ import division, absolute_import, print_function
 
 from . import kde_utils
 from nose.plugins.attrib import attr
-from ...tools.testing import assert_equal, assert_allclose
-from .. import kde, kde_methods
+from ...tools.testing import assert_allclose
+from .. import kde
+import numpy as np
 
 class KDETester(object):
     def createKDE(self, data, method, **args):
@@ -13,8 +14,6 @@ class KDETester(object):
         k.method = method.instance
         k.axis_type = k.method.axis_type
         k.bandwidth = 0.2
-        k.lower = 0
-        k.upper = self.upper
         return k
 
     def test_methods(self):
@@ -51,7 +50,8 @@ class TestNonContinuous(KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
-        ys = est(self.xs)
+        xs = np.arange(est.lower, est.upper+1)
+        ys = est(xs)
         tot = ys.sum()
         assert_allclose(tot, 1, rtol=1e-3)
 

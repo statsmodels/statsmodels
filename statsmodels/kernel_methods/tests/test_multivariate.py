@@ -10,7 +10,8 @@ class KDETester(object):
     def createKDE(self, data, methods, **args):
         all_args = dict(self.args)
         all_args.update(args)
-        k = kde.KDE(data, **all_args)
+        d = data.copy()
+        k = kde.KDE(d, **all_args)
         mv = kde_methods.MultivariateKDE()
         k.method = mv
 
@@ -22,14 +23,16 @@ class KDETester(object):
             method_instance = m.instance()
             mv.methods[i] = method_instance
             axis_type += str(method_instance.axis_type)
+            if method_instance.axis_type != 'C':
+                d[:, i] = np.round(d[:, i])
             if m.bound_low:
                 lower[i] = self.lower[i]
             if m.bound_high:
                 upper[i] = self.upper[i]
+        k.exog = d
         k.axis_type = axis_type
         k.lower = lower
         k.upper = upper
-
         return k
 
     def test_methods(self):
@@ -78,19 +81,47 @@ class TestMultivariate(KDETester):
 
     def method_works(self, k, methods, name):
         est = k.fit()
-        values = est(self.grid.linear()).reshape(self.grid.shape)
-        tot = self.grid.integrate(values)
-        acc = max(m.normed_accuracy for m in methods)
+        bt = est.bin_types
+        bounds = [None, None]
+        if est.methods[0].bin_types == 'D':
+            bounds[0] = [est.lower[0], est.upper[0]]
+        else:
+            if methods[0].bound_low:
+                low = self.lower[0]
+            else:
+                low = est.exog[:, 0].min() - 5*est.bandwidth[0]
+            if methods[0].bound_high:
+                high = self.upper[0]
+            else:
+                high = est.exog[:, 0].max() + 5*est.bandwidth[0]
+            bounds[0] = [low, high]
+        if est.methods[1].bin_types == 'D':
+            bounds[1] = [est.lower[1], est.upper[1]]
+        else:
+            if methods[1].bound_low:
+                low = self.lower[1]
+            else:
+                low = est.exog[:, 1].min() - 5*est.bandwidth[1]
+            if methods[1].bound_high:
+                high = self.upper[1]
+            else:
+                high = est.exog[:, 1].max() + 5*est.bandwidth[1]
+            bounds[1] = [low, high]
+        grid = kde_utils.Grid.fromBounds(bounds, bin_types=bt, shape=128, dtype=float)
+        values = est(grid.linear()).reshape(grid.shape)
+        tot = grid.integrate(values)
+        # Note: the precision is quite bad as we use small number of values!
+        acc = 100*max(m.normed_accuracy for m in methods)
         assert_allclose(tot, 1., rtol=acc)
         del k.weights
         del k.adjust
         est = k.fit()
-        assert_equal(est.total_weights, k.npts)
+        assert_equal(est.total_weights, est.npts)
         assert_equal(est.adjust, 1.)
 
     def grid_method_works(self, k, methods, name):
         est = k.fit()
         mesh, values = est.grid(512)
         tot = mesh.integrate(values)
-        acc = max(m.normed_accuracy for m in methods)
+        acc = max(m.grid_accuracy for m in methods)
         assert_allclose(tot, 1., rtol=acc)
