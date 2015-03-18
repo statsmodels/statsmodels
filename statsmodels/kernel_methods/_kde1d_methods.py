@@ -37,10 +37,10 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy import fftpack, integrate, optimize
 from .kde_utils import make_ufunc, namedtuple, numpy_trans1d_method, numpy_trans1d, finite, AxesType, Grid
-from ._fast_linbin import fast_linbin as fast_bin
+from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
 from .kernels import Kernel1D
-from ._kde_methods import KDEMethod
+from ._kde_methods import KDEMethod, filter_exog
 from . import kernels
 
 
@@ -93,7 +93,6 @@ def _compute_bandwidth(kde, default):
     else:
         bw = float(bw)
     return bw
-    raise ValueError("Bandwidth needs to be specified")
 
 def convolve(exog, point, fct, out=None, scaling=1., weights=1., factor=1., dim=-1):
     """
@@ -174,7 +173,7 @@ class KDE1DMethod(KDEMethod):
             raise ValueError('Error, this method can only be used for 1D continuous axis')
 
     @property
-    def bin_type(self):
+    def bin_types(self):
         return 'B'
 
     def fit(self, kde, compute_bandwidth=True):
@@ -202,45 +201,41 @@ class KDE1DMethod(KDEMethod):
             raise ValueError("Error, this is a 1D method, expecting a 1D problem")
         if np.any(kde.axis_type != self.axis_type):
             raise ValueError("Error, incompatible method for the type of axis")
-        fitted = self.copy()
-        fitted._fitted = True
+
+        kde = filter_exog(kde, self.bin_types)
+
         if compute_bandwidth:
-            bw = _compute_bandwidth(kde, self._bandwidth)
-            fitted._bandwidth = bw
-        fitted._exog = kde.exog.reshape((kde.npts,))
+            k = kde.copy()
+            bw = _compute_bandwidth(k, self._bandwidth)
+        else:
+            bw = kde.bandwidth
+
+        fitted = self.copy()
+        fitted._bandwidth = bw
+        fitted._fitted = True
         fitted._upper = float(kde.upper)
         fitted._lower = float(kde.lower)
+        fitted._exog = kde.exog.reshape((kde.npts,))
         if kde.kernel is not None:
             fitted._kernel = kde.kernel.for_ndim(1)
         elif hasattr(self, '_kernel') and self._kernel is not None:
             fitted._kernel = self._kernel.for_ndim(1)
+        else:
+            raise ValueError("No kernel specified and this method doesn't have a default kernel.")
         fitted._weights = kde.weights
-        assert fitted._weights.ndim == 0 or fitted._weights.shape == (kde.npts,)
         fitted._adjust = kde.adjust
-        assert fitted._adjust.ndim == 0 or fitted._adjust.shape == (kde.npts,)
         fitted._total_weights = kde.total_weights
         return fitted
 
+    @KDEMethod.exog.setter
+    def exog(self, value):
+        value = np.atleast_1d(value).astype(float)
+        if value.shape != (self.npts,):
+            raise ValueError("Bad shape: to change the number of points use update_inputs")
+        self._exog = value
+
     def copy(self):
         return shallow_copy(self)
-
-    @property
-    def adjust(self):
-        return self._adjust
-
-    @adjust.setter
-    def adjust(self, val):
-        try:
-            self._adjust = np.asarray(float(val))
-        except TypeError:
-            val = np.atleast_1d(val).astype(float)
-            assert val.shape == (self.npts,), \
-                "Adjust must be a single values or a 1D array with value per input point"
-            self._adjust = val
-
-    @adjust.deleter
-    def adjust(self):
-        self._adjust = np.asarray(1.)
 
     @property
     def ndim(self):
@@ -249,17 +244,7 @@ class KDE1DMethod(KDEMethod):
         """
         return 1
 
-    @property
-    def bandwidth(self):
-        """
-        Selected bandwidth.
-
-        Unlike the bandwidth for the KDE, this must be an actual value and not
-        a method.
-        """
-        return self._bandwidth
-
-    @bandwidth.setter
+    @KDEMethod.bandwidth.setter
     def bandwidth(self, val):
         val = float(val)
         assert val > 0, "The bandwidth must be strictly positive"
@@ -289,7 +274,7 @@ class KDE1DMethod(KDEMethod):
     @property
     def to_bin(self):
         """
-        Property holding to data to be binned. This is useful when the PDF is
+        Property holding the data to be binned. This is useful when the PDF is
         not evaluated on the real dataset, but on a transformed one.
 
         Returns
@@ -303,73 +288,15 @@ class KDE1DMethod(KDEMethod):
     restore_axis = None
     transform_bins = None
 
-    @property
-    def lower(self):
-        """
-        Lower bound of the problem domain
-        """
-        return self._lower
-
-    @lower.setter
+    @KDEMethod.lower.setter
     def lower(self, val):
         val = float(val)
         self._lower = val
 
-    @property
-    def upper(self):
-        """
-        Upper bound of the problem domain
-        """
-        return self._upper
-
-    @upper.setter
+    @KDEMethod.upper.setter
     def upper(self, val):
         val = float(val)
         self._upper = val
-
-    @property
-    def kernel(self):
-        """
-        Kernel used for the estimation
-        """
-        return self._kernel
-
-    @kernel.setter
-    def kernel(self, ker):
-        self._kernel = ker
-
-    @property
-    def weights(self):
-        """
-        Weights for the points in ``KDE1DMethod.exog``
-        """
-        return self._weights
-
-    @weights.setter
-    def weights(self, ws):
-        try:
-            ws = float(ws)
-            self._weights = np.asarray(1.)
-            if self._fitted:
-                self._total_weights = self.npts
-        except TypeError:
-            ws = np.atleast_1d(ws).astype(float)
-            ws = ws.reshape((self.npts,))
-            self._weights = ws
-            if self._fitted:
-                self._total_weights = sum(ws)
-
-    @weights.deleter
-    def weights(self):
-        self._weights = 1.
-        self._total_weights = self.npts
-
-    @property
-    def total_weights(self):
-        """
-        Sum of the point weights
-        """
-        return self._total_weights
 
     @property
     def closed(self):
@@ -712,11 +639,11 @@ class KDE1DMethod(KDEMethod):
         ndarray
             Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
         """
+        if self.adjust.ndim:
+            raise ValueError("Error, cannot use binned data with non-constant adjustment.")
         result = np.empty_like(bins)
         if dim < 0:
             dim = mesh.ndim + dim
-        left = np.index_exp[:] * dim
-        right = np.index_exp[:] * (mesh.ndim - dim - 1)
         pdf = self.kernel.pdf
         if mesh.ndim == 1:
             pts = mesh.grid[dim]
@@ -724,6 +651,8 @@ class KDE1DMethod(KDEMethod):
                      scaling=self.bandwidth * self.adjust,
                      weights=bins)
         else:
+            left = np.index_exp[:] * dim
+            right = np.index_exp[:] * (mesh.ndim - dim - 1)
             eval_pts = mesh.grid[dim]
             pts = eval_pts.view()
             pts.shape = (1,) * dim + (len(pts),) + (1,) * (mesh.ndim - dim - 1)
@@ -1077,8 +1006,11 @@ class Cyclic1D(KDE1DMethod):
 
     name = 'cyclic1d'
 
+    def __init__(self):
+        super(Cyclic1D, self).__init__()
+
     @property
-    def bin_type(self):
+    def bin_types(self):
         return 'C'
 
     @numpy_trans1d_method()
@@ -1192,8 +1124,10 @@ class Cyclic1D(KDE1DMethod):
         return fftdensity(exog, self.kernel.rfft, bw, lower, upper, N, self.weights, self.total_weights)
 
     def from_binned(self, mesh, binned, normed=False, dim=-1):
-        return fftdensity_from_binned(mesh, binned, self.kernel.rfft, self.bandwidth, normed,
-                                      self.total_weights, dim)
+        if self.adjust.ndim:
+            raise ValueError("Error, cannot use binned data with non-constant adjustment.")
+        return fftdensity_from_binned(mesh, binned, self.kernel.rfft, self.adjust*self.bandwidth,
+                                      normed, self.total_weights, dim)
 
     def grid_size(self, N=None):
         if N is None:
@@ -1226,6 +1160,8 @@ def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weigh
     ndarray
         An array of same size as the bins, convoluted by the kernel
     """
+    if dim < 0:
+        dim += mesh.ndim
     DCTData = fftpack.dct(bins, axis=dim)
 
     smth = kernel_dct(bins.shape[dim], mesh.start_interval[dim] / bw)
@@ -1235,14 +1171,12 @@ def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weigh
     # Smooth the DCTransformed data using t_star
     SmDCTData = DCTData * smth
     # Inverse DCT to get density
-    R = mesh.grid[dim][-1] - mesh.grid[dim][0]
+    R = mesh.bounds[dim][1] - mesh.bounds[dim][0]
     density = fftpack.idct(SmDCTData, axis=dim) / (2 * R)
-
     if normed:
         if total_weights is None:
             total_weights = bins.sum()
         density /= total_weights
-
     return density
 
 def dctdensity(exog, kernel_dct, bw, lower, upper, N, weights, total_weights):
@@ -1311,8 +1245,11 @@ class Reflection1D(KDE1DMethod):
 
     name = 'reflection1d'
 
+    def __init__(self):
+        super(Reflection1D, self).__init__()
+
     @property
-    def bin_type(self):
+    def bin_types(self):
         return 'R'
 
     @numpy_trans1d_method()
@@ -1434,8 +1371,10 @@ class Reflection1D(KDE1DMethod):
         return dctdensity(exog, self.kernel.dct, bw, lower, upper, N, weights, self.total_weights)
 
     def from_binned(self, mesh, binned, normed=False, dim=-1):
-        return dctdensity_from_binned(mesh, binned, self.kernel.dct, self.bandwidth, normed,
-                                      self.total_weights, dim=dim)
+        if self.adjust.ndim:
+            raise ValueError("Error, cannot use binned data with non-constant adjustment.")
+        return dctdensity_from_binned(mesh, binned, self.kernel.dct, self.bandwidth*self.adjust,
+                                      normed, self.total_weights, dim=dim)
 
     def grid_size(self, N=None):
         if N is None:
@@ -1466,6 +1405,9 @@ class Renormalization(Unbounded1D):
 
     name = 'renormalization1d'
 
+    def __init__(self):
+        super(Renormalization, self).__init__()
+
     @numpy_trans1d_method()
     def pdf(self, points, out):
         if not self.bounded:
@@ -1490,6 +1432,10 @@ class Renormalization(Unbounded1D):
         out /= self.total_weights
 
         return out
+
+    @property
+    def bin_types(self):
+        return 'B'
 
     @numpy_trans1d_method()
     def cdf(self, points, out):
@@ -1578,6 +1524,9 @@ class LinearCombination(Unbounded1D):
 
     name = 'linear combination1d'
 
+    def __init__(self):
+        super(LinearCombination, self).__init__()
+
     @numpy_trans1d_method()
     def pdf(self, points, out):
         if not self.bounded:
@@ -1608,6 +1557,10 @@ class LinearCombination(Unbounded1D):
         out /= self.total_weights
 
         return out
+
+    @property
+    def bin_types(self):
+        return 'B'
 
     def cdf(self, points, out=None):
         if not self.bounded:
@@ -1897,32 +1850,20 @@ class TransformKDE1D(KDE1DMethod):
     def to_bin(self):
         return self.method.exog
 
-    @property
-    def exog(self):
-        return self._exog
-
-    @exog.setter
+    @KDEMethod.exog.setter
     def exog(self, val):
         val = np.atleast_1d(val).reshape(self._exog.shape)
         self.method.exog = self.trans(val)
         self._exog = val
 
-    @property
-    def lower(self):
-        return self._lower
-
-    @lower.setter
+    @KDEMethod.lower.setter
     def lower(self, val):
         val = float(val)
         trans_val = self.trans(val)
         self.method.lower = trans_val
         self._lower = val
 
-    @property
-    def upper(self):
-        return self._upper
-
-    @upper.setter
+    @KDEMethod.upper.setter
     def upper(self, val):
         val = float(val)
         trans_val = self.trans(val)
@@ -1940,6 +1881,8 @@ class TransformKDE1D(KDE1DMethod):
 
         This method copy, and transform, the various attributes of the KDE.
         """
+        kde = filter_exog(kde, self._method.bin_types)
+        self._kernel = self._method._kernel
         fitted = super(TransformKDE1D, self).fit(kde, False)
         fitted._clean_attrs()
 

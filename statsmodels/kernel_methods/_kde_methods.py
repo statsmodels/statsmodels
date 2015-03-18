@@ -23,6 +23,49 @@ def _array_arg(value, value_name, ndim, dtype=float):
         raise ValueError("Error, '{0}' must be a scalar or a 1D array with {1} elements".format(value_name, ndim))
     return value
 
+def filter_exog(kde, bin_types):
+    """
+    Filter the data to remove anything that is outside the bounds
+
+    Parameters
+    ----------
+    kde: object with the fields exog, lower, upper, weights and adjust and a copy method
+        This object must behave as a KDE object for those fields.
+    bin_types: str
+        String of length D with the bin types for each dimension
+
+    Returns
+    -------
+    Either the kde object itself, or a copy with modified exog, weights and adjust properties
+    """
+    if any(b not in 'CRBD' for b in bin_types):
+        raise ValueError("bin_types must be one of 'C', 'R', 'B' or 'D'. Current value: {}".format(bin_types))
+    exog = atleast_2df(kde.exog)
+    sel = np.ones(exog.shape[0], dtype=bool)
+    ndim = exog.shape[1]
+    lower = np.atleast_1d(kde.lower)
+    upper = np.atleast_1d(kde.upper)
+    if lower.shape != (exog.shape[1],) or upper.shape != (exog.shape[1],):
+        raise ValueError('Lower and upper bound must be at most a 1D array with one value per dimension.')
+    if len(bin_types) == 1:
+        bin_types = bin_types * ndim
+    for i in range(ndim):
+        if bin_types[i] == 'B' or bin_types[i] == 'D':
+            sel &= (exog[:, i] >= lower[i]) & (exog[:, i] <= upper[i])
+    if np.all(sel):
+        return kde
+    k = kde.copy()
+    k.exog = exog[sel]
+    if kde.weights.shape:
+        if kde.weights.shape != (exog.shape[0],):
+            raise ValueError("The weights must be either a single value or an array of shape (npts,)")
+        k.weights = kde.weights[sel]
+    if kde.adjust.shape:
+        if kde.weights.shape != (exog.shape[0],):
+            raise ValueError("The adjustments must be either a single value or an array of shape (npts,)")
+        k.adjust = kde.adjust[sel]
+    return k
+
 class KDEMethod(object):
     """
     This is the base class for KDE methods.
@@ -40,6 +83,7 @@ class KDEMethod(object):
         self._adjust = None
         self._total_weights = None
         self._fitted = False
+        self._mask = slice(None)
 
     def __str__(self):
         return self.name
@@ -59,6 +103,8 @@ class KDEMethod(object):
     @exog.setter
     def exog(self, value):
         value = atleast_2df(value).astype(float)
+        if value.shape != self._exog.shape:
+            raise ValueError("Bad input change, you cannot change it after fitting")
         self._exog = value.reshape(self._exog.shape)
 
     @property
@@ -67,6 +113,8 @@ class KDEMethod(object):
         int
             Number of dimensions of the problem
         """
+        if self._exog is None:
+            return 1
         return self._exog.shape[1]
 
     @property
@@ -114,11 +162,10 @@ class KDEMethod(object):
     @property
     def bandwidth(self):
         """
-        Bandwidth of the kernel.
-        Can be set either as a fixed value or using a bandwidth calculator,
-        that is a function of signature ``w(model)`` that returns the bandwidth.
+        Selected bandwidth.
 
-        See the actual method used for details on the acceptable values.
+        Unlike the bandwidth for the KDE, this must be an actual value and not
+        a method.
         """
         return self._bandwidth
 

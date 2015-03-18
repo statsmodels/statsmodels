@@ -10,8 +10,8 @@ from statsmodels.compat.python import range
 from .kde_utils import numpy_trans_method, atleast_2df, Grid
 from . import kernels
 from copy import copy as shallow_copy
-from ._fast_linbin import fast_linbin_nd as fast_bin_nd
-from ._kde_methods import KDEMethod, _array_arg
+from .fast_linbin import fast_linbin_nd as fast_bin_nd
+from ._kde_methods import KDEMethod, _array_arg, filter_exog
 from ._kde1d_methods import Reflection1D, Cyclic1D
 
 def generate_grid(kde, N=None, cut=None):
@@ -171,6 +171,8 @@ class KDEnDMethod(KDEMethod):
         if ndim == 1 and type(self) == KDEnDMethod:
             method = Reflection1D()
             return method.fit(kde, compute_bandwidth)
+
+        kde = filter_exog(kde, self.bin_types)
         fitted = self.copy()
         fitted._fitted = True
         fitted._exog = kde.exog
@@ -201,6 +203,10 @@ class KDEnDMethod(KDEMethod):
         if len(self._axis_type) != self.ndim:
             self._axis_type.set('C' * self.ndim)
         return self._axis_type
+
+    @property
+    def bin_types(self):
+        return 'B'*self.ndim
 
     @property
     def bandwidth(self):
@@ -415,6 +421,10 @@ class Cyclic(KDEnDMethod):
             cyc = Cyclic1D()
             return cyc.fit(kde, compute_bandwidth)
         return super(Cyclic, self).fit(kde, compute_bandwidth)
+
+    @property
+    def bin_types(self):
+        return 'C'*self.ndim
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):

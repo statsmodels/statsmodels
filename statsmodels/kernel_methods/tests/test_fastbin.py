@@ -1,6 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
-from .. import _fast_linbin as linbin
+from .. import fast_linbin as linbin
 
 from nose.plugins.attrib import attr
 from nose.tools import raises
