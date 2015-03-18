@@ -36,7 +36,7 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
 
 def get_trendorder(trend='c'):
     # Handle constant, etc.
-    if trend == 'c':
+    if trend == 'c' or trend == 't':
         trendorder = 1
     elif trend == 'nc':
         trendorder = 0

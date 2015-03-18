@@ -548,6 +548,7 @@ class TestVARResultsLutkepohl(object):
 def test_get_trendorder():
     results = {
         'c' : 1,
+        't': 1,
         'nc' : 0,
         'ct' : 2,
         'ctt' : 3
