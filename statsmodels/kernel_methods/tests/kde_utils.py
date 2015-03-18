@@ -115,8 +115,6 @@ def setupClass_nc(cls):
     cls.sizes = [128, 256, 201]
     cls.vs = [generate_nc(cls.dist, s) for s in cls.sizes]
     cls.weights = [cls.dist.pmf(v) for v in cls.vs]
-    cls.upper = max(v.max() for v in cls.vs)
-    cls.xs = np.arange(cls.upper + 1)
     cls.args = {}
     cls.methods = methods_nc
 
@@ -124,16 +122,13 @@ def setupClass_multivariate(cls):
     """
     Setting up the class with a poisson distribution and two normals
     """
-    cls.d1 = stats.norm(0, 1)
+    cls.d1 = stats.norm(0, 3)
     cls.d2 = stats.poisson(12)
     cls.sizes = [64, 128, 101]
     cls.vs = [generate_multivariate(s, cls.d1, cls.d2) for s in cls.sizes]
     cls.weights = [cls.d1.pdf(v[:, 0]) for v in cls.vs]
     cls.upper = [5, max(v[:, 1].max() for v in cls.vs)]
     cls.lower = [-5, 0]
-    cls.x1 = np.r_[-5:5:512j]
-    cls.x2 = np.arange(cls.upper[1] + 1)
-    cls.grid = Grid([cls.x1, cls.x2])
     cls.args = {}
     cls.methods1 = methods_1d + methods_nc + methods_nc
     cls.methods2 = methods_nc + methods_1d + methods_nc[::-1]
@@ -143,33 +138,29 @@ test_method = namedtuple('test_method',
                          ['instance', 'accuracy', 'grid_accuracy',
                           'normed_accuracy', 'bound_low', 'bound_high'])
 
-methods_1d = [test_method(km.Unbounded1D, 1e-5, 1e-4, 1e-5, False, False)
-             ,test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True)
-             ,test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True)
-             ,test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True)
-             ,test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)
-             ]
+methods_1d = [test_method(km.Unbounded1D, 1e-5, 1e-4, 1e-5, False, False),
+              test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True),
+              test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True),
+              test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True),
+              test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)]
 methods_log = [test_method(km.TransformKDE1D(km.LogTransform), 1e-5, 1e-4, 1e-5, True, False)]
 
-methods_nd = [test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True)
-             ,test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, False, False)
-             ,test_method(km.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)
-             ]
+methods_nd = [test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True),
+              test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, False, False),
+              test_method(km.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)]
 
-methods_nc = [test_method(km.OrderedKDE, 1e-5, 1e-4, 1e-5, True, True)
-             ,test_method(km.UnorderedKDE, 1e-5, 1e-4, 1e-5, True, True)]
+methods_nc = [test_method(km.OrderedKDE, 1e-5, 1e-4, 1e-5, False, False),
+              test_method(km.UnorderedKDE, 1e-5, 1e-4, 1e-5, False, False)]
 
 test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'positive'])
 
-kernels1d = [test_kernel(kernels.normal1d, 1, 1, True)
-            ,test_kernel(kernels.tricube, 1, 1, True)
-            ,test_kernel(kernels.Epanechnikov, 10, 1, True)
-            ,test_kernel(kernels.normal_order4, 10, 0, False)  # Bad for precision because of high frequencies
-            ,test_kernel(kernels.Epanechnikov_order4, 1000, 0, False)  # Bad for precision because of high frequencies
-            ]
+kernels1d = [test_kernel(kernels.normal1d, 1, 1, True),
+             test_kernel(kernels.tricube, 1, 1, True),
+             test_kernel(kernels.Epanechnikov, 10, 1, True),
+             test_kernel(kernels.normal_order4, 10, 0, False),  # Bad for precision because of high frequencies
+             test_kernel(kernels.Epanechnikov_order4, 1000, 0, False)]  # Bad for precision because of high frequencies
 
-kernelsnc = [test_kernel(kernels.AitchisonAitken, 1, 1, True)
-            ,test_kernel(kernels.WangRyzin, 1, 1, True)
-            ]
+kernelsnc = [test_kernel(kernels.AitchisonAitken, 1, 1, True),
+             test_kernel(kernels.WangRyzin, 1, 1, True)]
 
 kernelsnd = [test_kernel(kernels.normal, 1, 1, True)]

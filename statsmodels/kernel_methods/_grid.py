@@ -163,6 +163,52 @@ class Grid(object):
             return Grid.fromSparse(grid, *args, **kwords)
         raise ValueError("Couldn't find what kind of grid this is.")
 
+    @staticmethod
+    def fromBounds(bounds, bin_types='B', shape=256, **kwargs):
+        """
+        Create a grid from bounds, types and bin sizes.
+
+        Parameters
+        ----------
+        bounds: array-like of shape (D,2)
+            For each axis, the lower and upper bound
+        bin_types: str
+            String defining the bin types. If a single character is used, all axis will have this type.
+            As usual, the types may be one of 'C', 'R', 'B' or 'D'
+        shape: int or list of int
+            If a single int, all axis will have this size, otherwise, specify a size per axis.
+            Note that discrete axis are always the range from low to high, so their bin size is ignored.
+        kwargs: dict
+            Any extra argument is forwarded to the Grid constructor
+
+        Returns
+        -------
+        A Grid object with the given characteristics
+        """
+        bounds = np.atleast_2d(bounds)
+        if bounds.shape[1] != 2:
+            raise ValueError("Bounds must be a (D,2) array for a D-dimensional grid")
+        ndim = bounds.shape[0]
+        if len(bin_types) == 1:
+            bin_types = bin_types * ndim
+        if any(b not in 'CRBD' for b in bin_types):
+            raise ValueError("A bin type must be one of 'C', 'R' , 'B' and 'D'")
+        shape = np.asarray(shape, dtype=int)
+        if not shape.shape:
+            shape = shape * np.ones((ndim,), dtype=int)
+        elif shape.shape != (ndim,):
+            raise ValueError("Shape must be either a single integer, or an integer per dimension")
+        grid = [None]*ndim
+        for d in range(ndim):
+            if bin_types[d] == 'D':
+                grid[d] = np.arange(bounds[d, 0], bounds[d, 1]+1)
+            else:
+                dx = (bounds[d, 1] - bounds[d, 0]) / shape[d]
+                grid[d] = np.linspace(bounds[d, 0] + dx/2,
+                                      bounds[d, 1] - dx/2,
+                                      shape[d])
+        return Grid(grid, bounds, bin_types, **kwargs)
+
     @property
     def ndim(self):
         """
@@ -327,7 +373,7 @@ class Grid(object):
         Return the sparse representation of the grid.
         """
         if self._ndim == 1:
-            return self._grid[0]
+            return [self._grid[0]]
         return np_meshgrid(*self._grid, indexing='ij', copy=False, sparse=True)
 
     def __iter__(self):

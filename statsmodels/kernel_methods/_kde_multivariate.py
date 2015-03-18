@@ -11,9 +11,9 @@ from copy import copy as shallow_copy
 from . import kernels
 from . import _kde1d_methods, _kdenc_methods
 from .kde_utils import numpy_trans_method, AxesType, namedtuple
-from ._kde_methods import KDEMethod
+from ._kde_methods import KDEMethod, filter_exog
 from .bandwidths import KDE1DAdaptor
-from ._fast_linbin import fast_linbin_nd as fast_bin_nd
+from .fast_linbin import fast_linbin_nd as fast_bin_nd
 
 AxesMethods = namedtuple("AxesMethods", ["methods", "kernels"])
 
@@ -203,15 +203,22 @@ class MultivariateKDE(KDEMethod):
         methods, kernels = self.get_methods(axis_type)
         ndim = kde.ndim
         if ndim == 1:
+            if kde.bandwidth is None:
+                kde = kde.copy()
+                if methods[0].axis_type == 'O':
+                    kde.bandwidth = self.bandwidth.ordered
+                elif methods[0].axis_type == 'U':
+                    kde.bandwidth = self.bandwidth.unordered
+                else:
+                    kde.bandwidth = self.bandwidth.continuous
             return methods[0].fit(kde)
+        bin_types = ''.join(m.bin_types for m in methods)
+        self._bin_types = bin_types
+        kde = filter_exog(kde, bin_types)
+
         bw = _compute_bandwidth(kde, self.bandwidth)
-        fitted = self.copy()
-        fitted._bandwidth = bw
-        fitted._axis_type = kde.axis_type
-        fitted._kernels = kernels
-        fitted._exog = kde.exog
+
         new_kde = kde.copy()
-        new_kde.kernels = kernels
         new_kde.bandwidth = bw
         adapt = KDE1DAdaptor(new_kde)
         bin_data = None
@@ -221,6 +228,12 @@ class MultivariateKDE(KDEMethod):
             methods[d] = f
             if f.to_bin is not None:
                 bin_data = True
+
+        fitted = self.copy()
+        fitted._bandwidth = bw
+        fitted._axis_type = axis_type
+        fitted._kernels = kernels
+        fitted._exog = kde.exog
         fitted._methods = methods
         fitted._lower = np.array([m.lower for m in fitted.methods])
         fitted._upper = np.array([m.upper for m in fitted.methods])
@@ -229,6 +242,10 @@ class MultivariateKDE(KDEMethod):
         fitted._adjust = kde.adjust
         fitted._total_weights = kde.total_weights
         return fitted
+
+    @property
+    def bin_types(self):
+        return self._bin_types
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
@@ -290,7 +307,7 @@ class MultivariateKDE(KDEMethod):
 
     def grid(self, N=None, cut=None):
         to_bin = self.to_bin
-        bin_types = ''.join(m.bin_type for m in self.methods)
+        bin_types = ''.join(m.bin_types for m in self.methods)
         bounds = np.c_[self.lower, self.upper]
 
         if cut is None:
@@ -311,7 +328,7 @@ class MultivariateKDE(KDEMethod):
 
         N = self.grid_size(N)
         mesh, binned = fast_bin_nd(to_bin, bounds, N, self.weights, bin_types)
-        binned /= self.total_weights
+        binned /= self._total_weights
 
         for d, m in enumerate(self.methods):
             binned = m.from_binned(mesh, binned, dim=d)

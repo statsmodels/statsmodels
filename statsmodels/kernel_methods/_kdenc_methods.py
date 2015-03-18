@@ -7,9 +7,9 @@ This modules contains a set of methods to compute KDEs on non-continuous data.
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from .kde_utils import numpy_trans1d_method, finite
-from ._fast_linbin import fast_linbin as fast_bin
+from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
-from ._kde_methods import KDEMethod
+from ._kde_methods import KDEMethod, filter_exog
 from . import kernels
 
 def _compute_bandwidth(kde):
@@ -37,6 +37,7 @@ class UnorderedKDE(KDEMethod):
         self._total_weights = None
         self._bw = None
         self._kernel = kernels.AitchisonAitken()
+        self._epsilon = 1e-6
 
     name = 'unordered'
 
@@ -50,34 +51,59 @@ class UnorderedKDE(KDEMethod):
             raise ValueError('Error, this method can only be used for discrete unordered axis')
 
     @property
-    def bin_type(self):
+    def bin_types(self):
         return 'D'
 
     @property
     def to_bin(self):
         return None
 
+    @property
+    def epsilon(self):
+        """
+        Precision required for the computation of the bounds and number of levels.
+
+        This is used to compute the upper and lower bound while fitting the
+        KDE, if they are not already provided.
+        """
+        return self._epsilon
+
+    @epsilon.setter
+    def epsilon(self, value):
+        if self._fitted:
+            raise RuntimeError("You cannot change epsilon after fitting")
+        value = float(value)
+        if value <= 0:
+            raise ValueError('epsilon must be strictly positive')
+        self._epsilon = value
+
     def fit(self, kde, compute_bandwidth=True):
         if kde.ndim != 1:
             raise ValueError("Error, this method only accepts one variable problem")
         if kde.axis_type != self.axis_type:
             raise ValueError("Error, this method only accepts an unordered discrete axis")
+        kde = filter_exog(kde, self.bin_types)
         fitted = self.copy()
         fitted._fitted = True
         fitted._exog = kde.exog.reshape((kde.npts,))
         if compute_bandwidth:
             fitted._bw = _compute_bandwidth(kde)
-        if not finite(kde.upper):
-            fitted._num_levels = int(fitted._exog.max()) + 1
-        else:
-            fitted._num_levels = int(kde.upper) + 1
-        if fitted.num_levels <= 2:
-            raise ValueError("Error, there must be at least two levels for this method")
         if kde.kernel is not None:
             fitted._kernel = kde.kernel.for_ndim(1)
         fitted._weights = kde.weights
         fitted._adjust = kde.adjust
         fitted._total_weights = kde.total_weights
+        cut = fitted.cut()
+        if not finite(kde.upper):
+            upper = int(np.round(fitted._exog.max())) + cut
+        else:
+            upper = int(np.round(kde.upper))
+        if not finite(kde.lower):
+            lower = int(np.round(fitted._exog.min())) - cut
+        else:
+            lower = int(np.round(kde.lower))
+        fitted._lower = lower
+        fitted.upper = upper
         return fitted
 
     def copy(self):
@@ -220,23 +246,25 @@ class UnorderedKDE(KDEMethod):
 
     @property
     def lower(self):
-        return 0
+        return self._lower
 
     @lower.setter
     def lower(self, value):
-        pass  # Ignore
+        value = int(value)
+        self._lower = value
 
     @property
     def upper(self):
         if self.num_levels:
-            return self.num_levels - 1
+            return self.num_levels - 1 + self._lower
         return np.inf
 
     @upper.setter
     def upper(self, value):
         if finite(value):
-            self._num_levels = int(value) + 1
-        self._num_levels = None
+            self.num_levels = int(value) + 1 - self._lower
+        else:
+            self._num_levels = None
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
@@ -266,8 +294,11 @@ class UnorderedKDE(KDEMethod):
         if self.adjust.ndim:
             raise NotImplemented("This method cannot handle adjustments")
         weights = self.weights
-        mesh, bins = fast_bin(self._exog, [0, self.num_levels - 1], self.num_levels, weights=weights, bin_type='D')
+        mesh, bins = fast_bin(self._exog, [self.lower, self.upper], self.num_levels, weights=weights, bin_type='D')
         return mesh, self.from_binned(mesh, bins, True)
+
+    def cut(self):
+        return self._kernel.cut(self.bandwidth*self.adjust.max(), self.epsilon)
 
     def from_binned(self, mesh, bins, normed=False, dim=-1):
         result = self.kernel.from_binned(mesh, bins, self.bandwidth, dim)
@@ -299,7 +330,7 @@ class OrderedKDE(UnorderedKDE):
             raise ValueError('Error, this method can only be used for discrete ordered axis')
 
     @property
-    def bin_type(self):
+    def bin_types(self):
         return 'D'
 
     def grid_cdf(self, N=None, cut=None):

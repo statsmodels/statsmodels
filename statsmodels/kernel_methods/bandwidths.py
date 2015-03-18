@@ -187,6 +187,9 @@ class KDE1DAdaptor(object):
     def exog(self):
         return self._kde.exog[..., self._axis]
 
+    def copy(self):
+        return KDE1DAdaptor(self._kde.copy(), self._axis)
+
     _list_attributes = ['lower', 'upper', 'axis_type', 'kernel', 'bandwidth']
 
     _constant_attributes = ['weights', 'adjust', 'total_weights', 'npts']

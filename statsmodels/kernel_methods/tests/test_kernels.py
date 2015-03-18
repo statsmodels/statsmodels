@@ -8,7 +8,7 @@ from . import kde_utils
 from nose.plugins.attrib import attr
 from nose.tools import raises
 from ...tools.testing import assert_allclose, assert_equal
-from .._fast_linbin import fast_linbin
+from ..fast_linbin import fast_linbin
 from ..kde_utils import Grid
 
 class RefKernel1D(kernels.Kernel1D):
