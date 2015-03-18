@@ -33,6 +33,21 @@ class AitchisonAitken(object):
     def ndim(self):
         return 1
 
+    def cut(self, bw, epsilon):
+        """
+        Parameters
+        ----------
+        bw: float in [0,1]
+            Bandwidth used
+        epsilon: float
+            Precision required
+
+        Returns
+        -------
+        The number of categories to add on either direction to ensure no weight is lost.
+        """
+        return 0
+
     def pdf(self, x, Xi, bw, num_levels, out=None):
         """
         Compute the PDF on the points x
@@ -100,6 +115,21 @@ class WangRyzin(object):
     def ndim(self):
         return 1
 
+    def cut(self, bw, epsilon):
+        """
+        Parameters
+        ----------
+        bw: float in [0,1]
+            Bandwidth used
+        epsilon: float
+            Precision required
+
+        Returns
+        -------
+        The number of categories to add on either direction to ensure no weight is lost.
+        """
+        return int(np.ceil(np.log(epsilon) / np.log(bw) - 1))
+
     def pdf(self, x, Xi, bw, num_levels, out=None):
         """
         Compute the PDF on the points x
@@ -134,8 +164,11 @@ class WangRyzin(object):
         return out
 
     def from_binned(self, mesh, bins, bw, dim=-1):
-        num_levels = bins.shape[dim]
-        all_vals = np_sum(bins, axis=dim, keepdims=True)
-        result = bins*(1-bw)
-        result += (all_vals - bins) * bw / (num_levels-1)
+        factor = (1-bw)/2
+        result = factor*bins
+        grid = mesh.sparse()[dim]
+        selector = [slice(None)] * mesh.ndim
+        for i, level in enumerate(mesh.grid[dim]):
+            selector[dim] = i
+            result[selector] += factor * np_sum(bw ** abs(grid - level) * bins, axis=dim)
         return result

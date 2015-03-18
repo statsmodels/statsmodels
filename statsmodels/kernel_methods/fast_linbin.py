@@ -17,7 +17,7 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
     else:
         weights = np.empty((0,), dtype=float)
     if bin_type == 'D':
-        M = int(bounds[1]) + 1
+        M = int(bounds[1] - bounds[0]) + 1
     else:
         M = int(M)
     if out is None:
@@ -131,8 +131,6 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_types, out):
         bin_types = bin_types * D
     elif len(bin_types) != D:
         raise ValueError("Error, bin_types must be a string of length 1 or D (e.g. the number of dimensions)")
-    #if any(bt not in 'BRCD' for bt in bin_types):
-        #raise ValueError("Error, all bin types must be one of 'B', 'R', 'C' or 'D'")
 
     n = X.shape[0]
     if M.ndim == 0:
@@ -153,7 +151,7 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_types, out):
 
     for d in range(D):
         if bin_types[d] == 'D':
-            M[d] = int(bounds[d, 1]) + 1
+            M[d] = int(bounds[d, 1] - bounds[d, 0]) + 1
     tM = tuple(M)
 
     if out is None:

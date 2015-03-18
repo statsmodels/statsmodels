@@ -166,11 +166,20 @@ def _process_trans1d_args(z, dims, out, in_dtype, out_dtype):
         z = z.astype(in_dtype)
     if dims is not None:
         z = atleast_2df(z)
-        npts = z.shape[0]
-        dims = np.atleast_1d(dims)
-        ndims = len(dims)
         if z.ndim > 2:
-            raise ValueError('Error, the input array must be at most 2D')
+            raise ValueError('The input array must be at most 2D')
+        npts = z.shape[0]
+        zdims = z.shape[1]
+        try:
+            dims = np.unique([d if d >= 0 else zdims+d for d in dims])
+        except TypeError:
+            if dims < 0:
+                dims = [zdims+d]
+            else:
+                dims = [dims]
+        ndims = len(dims)
+        if any(d >= zdims for d in dims):
+            raise ValueError('The input array has only {0} dimensions'.format(zdims))
     else:
         npts = np.prod(z.shape)
         if npts == 0:

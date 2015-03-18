@@ -143,7 +143,7 @@ class KDE(object):
 
     @lower.deleter
     def lower(self):
-        self._lower = -np.inf
+        self._lower = -np.inf*np.ones(self.ndim, dtype=float)
 
     @property
     def upper(self):
@@ -158,7 +158,7 @@ class KDE(object):
 
     @upper.deleter
     def upper(self):
-        self._upper = np.inf
+        self._upper = np.inf*np.ones(self.ndim, dtype=float)
 
     @property
     def exog(self):
@@ -170,6 +170,15 @@ class KDE(object):
     @exog.setter
     def exog(self, value):
         value = atleast_2df(value).astype(float)
+        ndim = value.shape[1]
+        if ndim != self.ndim:
+            self._axis_type = AxesType('C' * ndim)
+            if ndim == 1:
+                self._lower = -np.inf
+                self._upper = np.inf
+            else:
+                self._lower = [-np.inf] * ndim
+                self._upper = [np.inf] * ndim
         self._exog = value
 
     @property
@@ -177,6 +186,8 @@ class KDE(object):
         """
         Number of dimensions of the problem.
         """
+        if self._exog is None:
+            return 0
         return self._exog.shape[1]
 
     @property
@@ -284,9 +295,6 @@ class KDE(object):
 
     @property
     def total_weights(self):
-        """
-        Sum of the weights of the exogenous data points.
-        """
-        if self._weights.ndim == 0:
-            return self.npts
-        return np.sum(self.weights)
+        if self._weights.shape:
+            return self._weights.sum()
+        return self.npts
