@@ -399,8 +399,9 @@ class VAR(tsbase.TimeSeriesModel):
             bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
-        trend, str {"c", "ct", "ctt", "nc"}
+        trend, str {"c", "t", "ct", "ctt", "nc"}
             "c" - add constant
+            "t" - trend only
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
             "nc" - co constant, no trend
@@ -415,7 +416,8 @@ class VAR(tsbase.TimeSeriesModel):
         est : VARResults
         """
         lags = maxlags
-
+        if trend not in ['c', 't', 'ct', 'ctt', 'ncc']:
+            raise ValueError("{} trend option not recognized".format(trend ))
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:
