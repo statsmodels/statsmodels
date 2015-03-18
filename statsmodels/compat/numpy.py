@@ -441,7 +441,6 @@ if NumpyVersion(np.__version__) < NumpyVersion('1.7.0'):
                 shape = np.array(a.shape)
                 shape[axis] = 1
             return val.reshape(shape)
-        else:
-            val
+        return val
 else:
     np_sum = np.sum
