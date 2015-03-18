@@ -416,7 +416,7 @@ class VAR(tsbase.TimeSeriesModel):
         est : VARResults
         """
         lags = maxlags
-        if trend not in ['c', 't', 'ct', 'ctt', 'ncc']:
+        if trend not in ['c', 't', 'ct', 'ctt', 'nc']:
             raise ValueError("{} trend option not recognized".format(trend ))
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
