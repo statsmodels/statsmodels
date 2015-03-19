@@ -14,7 +14,6 @@ import subprocess
 import re
 from distutils.version import StrictVersion, LooseVersion
 
-
 # temporarily redirect config directory to prevent matplotlib importing
 # testing that for writeable directory which results in sandbox error in
 # certain easy_install versions
@@ -348,13 +347,19 @@ ext_data = dict(
                  "depends" : [],
                  "sources" : []},
         _cy_kernels = {"name" : "statsmodels/kernel_methods/_cy_kernels.c",
-                 "depends" : [],
-                 "sources" : []},
+                 "include_dirs": npymath_info['include_dirs'],
+                 "libraries": npymath_info['libraries'],
+                 "library_dirs": npymath_info['library_dirs'],
+                 "depends" : ["statsmodels/kernel_methods/s_erf.h"],
+                 "sources" : ["statsmodels/kernel_methods/s_erf.c"]},
         _cy_fast_linbin = {"name" : "statsmodels/kernel_methods/_cy_fast_linbin.c",
                  "depends" : [],
                  "sources" : []},
         _cy_grid_interpolation = {"name" : "statsmodels/kernel_methods/_cy_grid_interpolation.c",
                  "depends" : [],
+                 "include_dirs": npymath_info['include_dirs'],
+                 "libraries": npymath_info['libraries'],
+                 "library_dirs": npymath_info['library_dirs'],
                  "sources" : []},
 
         )
