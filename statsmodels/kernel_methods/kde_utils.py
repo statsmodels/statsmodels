@@ -160,30 +160,13 @@ def numpy_trans(input_dim, output_dim, out_dtype=None, in_dtype=float):
         return f
     return decorator
 
-def _process_trans1d_args(z, dims, out, in_dtype, out_dtype):
+def _process_trans1d_args(z, out, in_dtype, out_dtype):
     z = np.asarray(z)
     if in_dtype is not None:
         z = z.astype(in_dtype)
-    if dims is not None:
-        z = atleast_2df(z)
-        if z.ndim > 2:
-            raise ValueError('The input array must be at most 2D')
-        npts = z.shape[0]
-        zdims = z.shape[1]
-        try:
-            dims = np.unique([d if d >= 0 else zdims+d for d in dims])
-        except TypeError:
-            if dims < 0:
-                dims = [zdims+d]
-            else:
-                dims = [dims]
-        ndims = len(dims)
-        if any(d >= zdims for d in dims):
-            raise ValueError('The input array has only {0} dimensions'.format(zdims))
-    else:
-        npts = np.prod(z.shape)
-        if npts == 0:
-            npts = 1
+    npts = np.prod(z.shape)
+    if npts == 0:
+        npts = 1
     if out is None:
         if out_dtype is None:
             dtype = z.dtype
@@ -191,20 +174,8 @@ def _process_trans1d_args(z, dims, out, in_dtype, out_dtype):
             dtype = out_dtype
         if issubclass(dtype.type, np.integer):
             dtype = np.float64
-        if dims is None:
-            out = np.empty(z.shape, dtype=dtype)
-        elif ndims == 1:
-            out = np.empty((npts,), dtype=dtype)
-        else:
-            out = np.empty((npts, len(dims)), dtype=dtype)
-    if dims is not None:
-        if ndims > 1:
-            if out.shape[1] > ndims:
-                return z, out, [out[..., d] for d in dims], True
-            return z, out, [out[..., i] for i in range(len(dims))], True
-        else:
-            return z[..., dims[0]], out, out[..., dims[0]], False
-    return z, out, out, False
+        out = np.empty(z.shape, dtype=dtype)
+    return z, out, out
 
 def numpy_trans1d(out_dtype=None, in_dtype=None):
     """
@@ -234,13 +205,9 @@ def numpy_trans1d(out_dtype=None, in_dtype=None):
 
     def decorator(fct):
         @functools.wraps(fct)
-        def f(z, out=None, dims=None):
-            z, out, write_out, iterate = _process_trans1d_args(z, dims, out, in_dtype, out_dtype)
-            if iterate:
-                for d, o in zip(dims, write_out):
-                    fct(z[..., d], o)
-            else:
-                fct(z, write_out)
+        def f(z, out=None):
+            z, out, write_out = _process_trans1d_args(z, out, in_dtype, out_dtype)
+            fct(z, write_out)
             return out
         return f
     return decorator
@@ -322,14 +289,10 @@ def numpy_trans1d_method(out_dtype=None, in_dtype=None):
 
     def decorator(fct):
         @functools.wraps(fct)
-        def f(self, z, out=None, dims=None):
-            z, out, write_out, iterate = _process_trans1d_args(z, dims, out, in_dtype, out_dtype)
-            if iterate:
-                for d, o in zip(dims, write_out):
-                    fct(self, z[..., d], o)
-            else:
-                fct(self, z, out=write_out)
-            return out
+        def f(self, z, out=None):
+            z, real_out, write_out = _process_trans1d_args(z, out, in_dtype, out_dtype)
+            fct(self, z, out=write_out)
+            return real_out
         return f
     return decorator
 

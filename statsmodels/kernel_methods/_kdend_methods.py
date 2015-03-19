@@ -101,7 +101,7 @@ def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weight
     -----
     No checks are made to ensure the consistency of the input!
     """
-    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_types='C')
+    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='C')
     DataHist /= total_weights * mesh.start_volume
     FFTData = np.fft.rfftn(DataHist)
 
@@ -172,7 +172,7 @@ class KDEnDMethod(KDEMethod):
             method = Reflection1D()
             return method.fit(kde, compute_bandwidth)
 
-        kde = filter_exog(kde, self.bin_types)
+        kde = filter_exog(kde, self.bin_type)
         fitted = self.copy()
         fitted._fitted = True
         fitted._exog = kde.exog
@@ -205,7 +205,7 @@ class KDEnDMethod(KDEMethod):
         return self._axis_type
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'B'*self.ndim
 
     @property
@@ -423,7 +423,7 @@ class Cyclic(KDEnDMethod):
         return super(Cyclic, self).fit(kde, compute_bandwidth)
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'C'*self.ndim
 
     @numpy_trans_method('ndim', 1)
