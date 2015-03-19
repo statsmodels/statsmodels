@@ -577,6 +577,21 @@ def test_var_constant():
     model = VAR(data)
     assert_raises(ValueError, model.fit, 1)
 
+def test_var_trend():
+    # see 2271
+    data = get_macrodata().view((float,3))
+
+    model = sm.tsa.VAR(data)
+    results = model.fit(4) #, trend = 'c')
+    irf = results.irf(10)
+
+
+    data_nc = data - data.mean(0)
+    model_nc = sm.tsa.VAR(data_nc)
+    results_nc = model_nc.fit(4, trend = 'nc')
+    assert_raises(ValueError, model.fit, 4, trend='t')
+
+
 def test_irf_trend():
     # test for irf with different trend see #1636
     # this is a rough comparison by adding trend or subtracting mean to data
