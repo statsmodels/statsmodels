@@ -155,8 +155,8 @@ def robust_skewness(y, axis=0):
         SK_{4}=\\frac{\\mu-\\hat{q}_{0.5}}{\\hat{\\sigma}}
 
     .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
-    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
-    March 2004.
+       skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+       March 2004.
     """
 
     if axis is None:
@@ -208,8 +208,8 @@ def _kr3(y, alpha=5.0, beta=50.0):
     Notes
     -----
     .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
-    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
-    March 2004.
+       skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+       March 2004.
     """
     perc = (alpha, 100.0 - alpha, beta, 100.0 - beta)
     lower_alpha, upper_alpha, lower_beta, upper_beta = np.percentile(y, perc)
@@ -325,8 +325,8 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     where :math:`\\hat{q}_{p}` is the estimated quantile at :math:`p`.
 
     .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
-    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
-    March 2004.
+       skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+       March 2004.
     """
     if (axis is None or
             (y.squeeze().ndim == 1 and y.ndim != 1)):
@@ -373,8 +373,8 @@ def _medcouple_1d(y):
     not work for very large arrays (N>10000).
 
     .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
-    distributions" Computational Statistics & Data Analysis, vol. 52,
-    pp. 5186-5201, August 2008.
+       distributions" Computational Statistics & Data Analysis, vol. 52, pp.
+       5186-5201, August 2008.
     """
 
     # Parameter changes the algorithm to the slower for large n
@@ -425,8 +425,8 @@ def medcouple(y, axis=0):
     not work for very large arrays (N>10000).
 
     .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
-    distributions" Computational Statistics & Data Analysis, vol. 52,
-    pp. 5186-5201, August 2008.
+       distributions" Computational Statistics & Data Analysis, vol. 52, pp.
+       5186-5201, August 2008.
     """
     if axis is None:
         return _medcouple_1d(y.ravel())
