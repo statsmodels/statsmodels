@@ -415,7 +415,15 @@ class MLEModel(Model):
         (list of str) List of human readable parameter names (for parameters
         actually included in the model).
         """
-        return self.model_names
+        if hasattr(self, '_param_names'):
+            return self._param_names
+        else:
+            return self.model_names
+
+    @param_names.setter
+    def param_names(self, values):
+        self._param_names = values
+        self.data.param_names = self._param_names
 
     @property
     def model_names(self):
@@ -432,10 +440,13 @@ class MLEModel(Model):
         return self._get_model_names(latex=True)
 
     def _get_model_names(self, latex=False):
-        if latex:
-            names = ['param_%d' % i for i in range(len(self.start_params))]
-        else:
-            names = ['param.%d' % i for i in range(len(self.start_params))]
+        try:
+            if latex:
+                names = ['param_%d' % i for i in range(len(self.start_params))]
+            else:
+                names = ['param.%d' % i for i in range(len(self.start_params))]
+        except NotImplementedError:
+            names = []
         return names
 
     def transform_jacobian(self, unconstrained):
