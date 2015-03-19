@@ -4,35 +4,14 @@
 
 import numpy as np
 cimport numpy as np
-from libc.math cimport exp, sqrt, M_PI, pow, sin, cos
-IF UNAME_SYSNAME == 'Windows':
-    from ms_float cimport _finite
-    from math cimport fabs
-    isfinite = _finite
-
-    cdef double erf(double x):
-        # constants
-        cdef double a1 =  0.254829592
-        cdef double a2 = -0.284496736
-        cdef double a3 =  1.421413741
-        cdef double a4 = -1.453152027
-        cdef double a5 =  1.061405429
-        cdef double p  =  0.3275911
-        # To compute the result
-        cdef double t, y
-        # Save the sign of x
-        cdef double sign = 1
-        if x < 0:
-            sign = -1
-            x = -x
-        # A & S 7.1.26
-        t = 1.0/(1.0 + p*x)
-        y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x)
-        return sign*y
-ELSE:
-    from math cimport isfinite, erf, fabs
+from libc.math cimport exp, sqrt, M_PI, pow, sin, cos, fabs
+from numpy.math cimport isfinite, copysign
+from math cimport erf
 
 np.import_array()
+
+def sm_erf(double a):
+    return erf(a)
 
 ctypedef np.npy_float64 float64_t
 ctypedef np.npy_complex128 complex128_t
