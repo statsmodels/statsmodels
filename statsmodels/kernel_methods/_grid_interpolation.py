@@ -20,7 +20,7 @@ class GridInterpolator(object):
         self._values = np.asarray(values, float)
         if self._values.shape != grid.shape:
             raise ValueError("The values must have the same shape as the grid")
-        self._bin_types = grid.bin_types
+        self._bin_type = grid.bin_type
         self._ndim = grid.ndim
         self._bounds = grid.bounds
         if self._ndim == 1:
@@ -48,7 +48,7 @@ class GridInterpolator(object):
         if out is None:
             out = np.zeros(pts.shape, dtype=float)
         _cy_grid_interpolation.interp1d(pts, self._bounds[0, 0], self._bounds[0, 1],
-                                        self._grid, self._values, self._bin_types,
+                                        self._grid, self._values, self._bin_type,
                                         out)
         return out.squeeze()
 
@@ -66,7 +66,7 @@ class GridInterpolator(object):
         if out is None:
             out = np.zeros(pts.shape[:-1], dtype=float)
         _cy_grid_interpolation.interpnd(pts, self._bounds[:, 0], self._bounds[:, 1],
-                                        self._grid, self._values, self._bin_types,
+                                        self._grid, self._values, self._bin_type,
                                         out)
         return out.squeeze()
 

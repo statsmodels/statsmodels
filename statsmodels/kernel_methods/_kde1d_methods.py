@@ -64,18 +64,16 @@ def generate_grid1d(kde, N=None, cut=None, span=None):
     """
     N = kde.grid_size(N)
     if span is None:
-        if cut is None:
-            cut = kde.kernel.cut
-        if kde.lower == -np.inf:
-            lower = np.min(kde.exog) - cut * kde.bandwidth
-        else:
-            lower = kde.lower
-        if kde.upper == np.inf:
-            upper = np.max(kde.exog) + cut * kde.bandwidth
-        else:
-            upper = kde.upper
+        lower = kde.lower
+        upper = kde.upper
     else:
         lower, upper = span
+    if cut is None:
+        cut = kde.kernel.cut
+    if not finite(lower):
+        lower = np.min(kde.exog) - cut * kde.bandwidth
+    if not finite(upper):
+        upper = np.max(kde.exog) + cut * kde.bandwidth
     mesh, step = np.linspace(lower, upper, N, endpoint=False, retstep=True)
     mesh += step / 2
     return Grid(mesh, bounds=[lower, upper])
@@ -173,7 +171,7 @@ class KDE1DMethod(KDEMethod):
             raise ValueError('Error, this method can only be used for 1D continuous axis')
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'B'
 
     def fit(self, kde, compute_bandwidth=True):
@@ -202,7 +200,7 @@ class KDE1DMethod(KDEMethod):
         if np.any(kde.axis_type != self.axis_type):
             raise ValueError("Error, incompatible method for the type of axis")
 
-        kde = filter_exog(kde, self.bin_types)
+        kde = filter_exog(kde, self.bin_type)
 
         if compute_bandwidth:
             k = kde.copy()
@@ -1010,7 +1008,7 @@ class Cyclic1D(KDE1DMethod):
         super(Cyclic1D, self).__init__()
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'C'
 
     @numpy_trans1d_method()
@@ -1112,14 +1110,15 @@ class Cyclic1D(KDE1DMethod):
         if span is None:
             lower = self.lower
             upper = self.upper
-
-            if upper == np.inf:
-                if cut is None:
-                    cut = self.kernel.cut
-                lower = np.min(exog) - cut * self.bandwidth
-                upper = np.max(exog) + cut * self.bandwidth
         else:
             lower, upper = span
+
+        if cut is None:
+            cut = self.kernel.cut
+        if not finite(upper):
+            upper = np.max(exog) + cut * self.bandwidth
+        if not finite(lower):
+            lower = np.min(exog) - cut * self.bandwidth
 
         return fftdensity(exog, self.kernel.rfft, bw, lower, upper, N, self.weights, self.total_weights)
 
@@ -1249,7 +1248,7 @@ class Reflection1D(KDE1DMethod):
         super(Reflection1D, self).__init__()
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'R'
 
     @numpy_trans1d_method()
@@ -1352,19 +1351,18 @@ class Reflection1D(KDE1DMethod):
         N = self.grid_size(N)
 
         if span is None:
-            if cut is None:
-                cut = self.kernel.cut
-
-            if self.lower == -np.inf:
-                lower = np.min(exog) - cut * self.bandwidth
-            else:
-                lower = self.lower
-            if self.upper == np.inf:
-                upper = np.max(exog) + cut * self.bandwidth
-            else:
-                upper = self.upper
+            lower = self.lower
+            upper = self.upper
         else:
             lower, upper = span
+
+        if cut is None:
+            cut = self.kernel.cut
+
+        if not finite(lower):
+            lower = np.min(exog) - cut * self.bandwidth
+        if not finite(upper):
+            upper = np.max(exog) + cut * self.bandwidth
 
         weights = self.weights
 
@@ -1434,7 +1432,7 @@ class Renormalization(Unbounded1D):
         return out
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'B'
 
     @numpy_trans1d_method()
@@ -1459,12 +1457,14 @@ class Renormalization(Unbounded1D):
         if span is None:
             lower = self.lower
             upper = self.upper
-            if not finite(lower):
-                lower = exog.min() - cut * self.bandwidth
-            if not finite(upper):
-                upper = exog.max() + cut * self.bandwidth
         else:
             lower, upper = span
+
+        if not finite(lower):
+            lower = exog.min() - cut * self.bandwidth
+        if not finite(upper):
+            upper = exog.max() + cut * self.bandwidth
+
         R = upper - lower
         kernel = self.kernel
 
@@ -1559,7 +1559,7 @@ class LinearCombination(Unbounded1D):
         return out
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'B'
 
     def cdf(self, points, out=None):
@@ -1586,10 +1586,13 @@ class LinearCombination(Unbounded1D):
         lower = self.lower
         upper = self.upper
         if span is None:
-            est_lower = lower if finite(lower) else exog.min() - cut * self.bandwidth
-            est_upper = upper if finite(upper) else exog.max() + cut * self.bandwidth
+            est_lower, est_upper = lower, upper
         else:
             est_lower, est_upper = span
+        if not finite(lower):
+            est_lower = exog.min() - cut * self.bandwidth
+        if not finite(upper):
+            est_upper = exog.max() + cut * self.bandwidth
         est_R = est_upper - est_lower
 
         # Compute the FFT with enough margin to avoid side effects
@@ -1629,7 +1632,6 @@ def _inverse(x, out=None):
 LogTransform = Transform(np.log, np.exp, np.exp)
 ExpTransform = Transform(np.exp, np.log, _inverse)
 
-
 def transform_distribution(xs, ys, Dinv, out):
     r"""
     Transform a distribution into another one by a change a variable.
@@ -1661,12 +1663,11 @@ def transform_distribution(xs, ys, Dinv, out):
         f_Y(y) = \left| \frac{1}{g'(g^{-1}(y))} \right| \cdot f_X(g^{-1}(y))
 
     """
-    di = Dinv(xs)
+    di = np.asarray(Dinv(xs))
     np.abs(di, out=di)
     _inverse(di, out=di)
     np.multiply(di, ys, out=out)
     return out
-
 
 def create_transform(obj, inv=None, Dinv=None):
     """
@@ -1707,10 +1708,11 @@ def create_transform(obj, inv=None, Dinv=None):
             Dinv = obj.Dinv
         else:
             @numpy_trans1d()
-            def Dinv(x):
+            def Dinv(x, out):
                 dx = x * 1e-9
                 dx[x == 0] = np.min(dx[x != 0])
-                return (inv(x + dx) - inv(x - dx)) / (2 * dx)
+                np.divide(inv(x + dx) - inv(x - dx), 2 * dx, out=out)
+                return out
     return Transform(fct, inv, Dinv)
 
 
@@ -1787,6 +1789,8 @@ class TransformKDE1D(KDE1DMethod):
             method = Reflection1D()
         self._method = method
         self._clean_attrs()
+
+    name = 'transformkde1d'
 
     _to_clean = ['_bandwidth', '_adjust',
                  '_weights', '_kernel', '_total_weights']
@@ -1881,7 +1885,7 @@ class TransformKDE1D(KDE1DMethod):
 
         This method copy, and transform, the various attributes of the KDE.
         """
-        kde = filter_exog(kde, self._method.bin_types)
+        kde = filter_exog(kde, self._method.bin_type)
         self._kernel = self._method._kernel
         fitted = super(TransformKDE1D, self).fit(kde, False)
         fitted._clean_attrs()
@@ -1974,7 +1978,7 @@ def _add_fwd_attr(cls, to_fwd, attr):
     def deleter(self):
         delattr(getattr(self, to_fwd), attr)
 
-    setattr(cls, attr, property(getter, setter, doc=doc))
+    setattr(cls, attr, property(getter, setter, deleter, doc=doc))
 
 for attr in TransformKDE1D._fwd_attrs:
     _add_fwd_attr(TransformKDE1D, 'method', attr)

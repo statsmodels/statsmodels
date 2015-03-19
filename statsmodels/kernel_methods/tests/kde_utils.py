@@ -138,7 +138,7 @@ test_method = namedtuple('test_method',
                          ['instance', 'accuracy', 'grid_accuracy',
                           'normed_accuracy', 'bound_low', 'bound_high'])
 
-methods_1d = [test_method(km.Unbounded1D, 1e-5, 1e-4, 1e-5, False, False),
+methods_1d = [test_method(km.KDE1DMethod, 1e-5, 1e-4, 1e-5, False, False),
               test_method(km.Reflection1D, 1e-5, 1e-4, 1e-5, True, True),
               test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True),
               test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True),

@@ -212,9 +212,9 @@ class MultivariateKDE(KDEMethod):
                 else:
                     kde.bandwidth = self.bandwidth.continuous
             return methods[0].fit(kde)
-        bin_types = ''.join(m.bin_types for m in methods)
-        self._bin_types = bin_types
-        kde = filter_exog(kde, bin_types)
+        bin_type = ''.join(m.bin_type for m in methods)
+        self._bin_type = bin_type
+        kde = filter_exog(kde, bin_type)
 
         bw = _compute_bandwidth(kde, self.bandwidth)
 
@@ -244,14 +244,14 @@ class MultivariateKDE(KDEMethod):
         return fitted
 
     @property
-    def bin_types(self):
-        return self._bin_types
+    def bin_type(self):
+        return self._bin_type
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
         full_out = np.empty_like(points)
         for i in range(self.ndim):
-            self._methods[i].pdf(points, out=full_out, dims=i)
+            self._methods[i].pdf(points[:, i], out=full_out[:, i])
         np.prod(full_out, axis=1, out=out)
         return out
 
@@ -307,7 +307,7 @@ class MultivariateKDE(KDEMethod):
 
     def grid(self, N=None, cut=None):
         to_bin = self.to_bin
-        bin_types = ''.join(m.bin_types for m in self.methods)
+        bin_type = ''.join(m.bin_type for m in self.methods)
         bounds = np.c_[self.lower, self.upper]
 
         if cut is None:
@@ -327,7 +327,7 @@ class MultivariateKDE(KDEMethod):
                 bounds[d, 1] = to_bin[:, d].max() + cut[d] * m.bandwidth
 
         N = self.grid_size(N)
-        mesh, binned = fast_bin_nd(to_bin, bounds, N, self.weights, bin_types)
+        mesh, binned = fast_bin_nd(to_bin, bounds, N, self.weights, bin_type)
         binned /= self._total_weights
 
         for d, m in enumerate(self.methods):

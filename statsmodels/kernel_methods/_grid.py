@@ -18,24 +18,24 @@ class Grid(object):
     bounds: ndarray
         This is a Dx2 array. For each dimension, the lower and upper bound of the axes (doesn't have to correspond
         to the min and max of the axes.
-    bin_types: str
+    bin_type: str
         A string with as many letter as there are dimensions. For each dimension, gives the kind of axes. Can be one
-        of 'B', 'R', 'C' or 'D' (See :py:attr:`bin_types`). If a single letter is provided, this is the class for
+        of 'B', 'R', 'C' or 'D' (See :py:attr:`bin_type`). If a single letter is provided, this is the class for
         all axes. If not specified, the default is 'B'.
     edges: list of ndarray
         If provided, should be a list with one array per dimension. Each array should have one more element than the
         bin for that dimension. These represent the edges of the bins.
     """
-    def __init__(self, grid_axes, bounds=None, bin_types=None, edges=None, dtype=None):
+    def __init__(self, grid_axes, bounds=None, bin_type=None, edges=None, dtype=None):
         self._interval = None
         if isinstance(grid_axes, Grid):
             if bounds is None:
                 bounds = grid_axes.bounds
-            if bin_types is None:
-                bin_types = grid_axes.bin_types
+            if bin_type is None:
+                bin_type = grid_axes.bin_type
             if edges is None and grid_axes._edges is not None:
                 edges = grid_axes._edges
-            self.__init__(grid_axes.grid, bounds, bin_types, edges, dtype)
+            self.__init__(grid_axes.grid, bounds, bin_type, edges, dtype)
             return
         first_elemt = np.asarray(grid_axes[0])
         if first_elemt.ndim == 0:
@@ -53,17 +53,17 @@ class Grid(object):
             grid_axes[d] = grid_axes[d].astype(dtype)
         self._grid = grid_axes
         self._ndim = ndim
-        if bin_types is None:
-            bin_types = 'B' * ndim
+        if bin_type is None:
+            bin_type = 'B' * ndim
         else:
-            bin_types = str(bin_types)
-        if len(bin_types) == 1:
-            bin_types = bin_types * ndim
-        elif len(bin_types) != ndim:
-            raise ValueError("Error, there must be as many bin_types as dimensions")
-        if any(b not in 'CRBD' for b in bin_types):
+            bin_type = str(bin_type)
+        if len(bin_type) == 1:
+            bin_type = bin_type * ndim
+        elif len(bin_type) != ndim:
+            raise ValueError("Error, there must be as many bin_type as dimensions")
+        if any(b not in 'CRBD' for b in bin_type):
             raise ValueError("Error, bin type must be one of 'B', 'R', 'C' or 'D'")
-        self._bin_types = bin_types
+        self._bin_type = bin_type
         self._shape = tuple(len(ax) for ax in grid_axes)
         if edges is not None:
             edges = [e.astype(dtype) for e in edges]
@@ -72,7 +72,7 @@ class Grid(object):
         expected_bounds = np.empty((ndim, 2), dtype=dtype)
         for d in range(ndim):
             ax = grid_axes[d]
-            if bin_types[d] == 'D':
+            if bin_type[d] == 'D':
                 expected_bounds[d] = [ax[0], ax[-1]]
             else:
                 expected_bounds[d] = [(3 * ax[0] - ax[1]) / 2, (3 * ax[-1] - ax[-2]) / 2]
@@ -90,7 +90,7 @@ class Grid(object):
         self._bounds = bounds
 
     def __repr__(self):
-        dims = 'x'.join(str(s) + bt for s, bt in zip(self.shape, self.bin_types))
+        dims = 'x'.join(str(s) + bt for s, bt in zip(self.shape, self.bin_type))
         lims = '[{}]'.format(" ; ".join('{0:g} - {1:g}'.format(b[0], b[1]) for b in self.bounds))
         return "<Grid {0}, {1}, dtype={2}>".format(dims, lims, self.dtype)
 
@@ -164,7 +164,7 @@ class Grid(object):
         raise ValueError("Couldn't find what kind of grid this is.")
 
     @staticmethod
-    def fromBounds(bounds, bin_types='B', shape=256, **kwargs):
+    def fromBounds(bounds, bin_type='B', shape=256, **kwargs):
         """
         Create a grid from bounds, types and bin sizes.
 
@@ -172,7 +172,7 @@ class Grid(object):
         ----------
         bounds: array-like of shape (D,2)
             For each axis, the lower and upper bound
-        bin_types: str
+        bin_type: str
             String defining the bin types. If a single character is used, all axis will have this type.
             As usual, the types may be one of 'C', 'R', 'B' or 'D'
         shape: int or list of int
@@ -189,9 +189,9 @@ class Grid(object):
         if bounds.shape[1] != 2:
             raise ValueError("Bounds must be a (D,2) array for a D-dimensional grid")
         ndim = bounds.shape[0]
-        if len(bin_types) == 1:
-            bin_types = bin_types * ndim
-        if any(b not in 'CRBD' for b in bin_types):
+        if len(bin_type) == 1:
+            bin_type = bin_type * ndim
+        if any(b not in 'CRBD' for b in bin_type):
             raise ValueError("A bin type must be one of 'C', 'R' , 'B' and 'D'")
         shape = np.asarray(shape, dtype=int)
         if not shape.shape:
@@ -200,14 +200,14 @@ class Grid(object):
             raise ValueError("Shape must be either a single integer, or an integer per dimension")
         grid = [None]*ndim
         for d in range(ndim):
-            if bin_types[d] == 'D':
+            if bin_type[d] == 'D':
                 grid[d] = np.arange(bounds[d, 0], bounds[d, 1]+1)
             else:
                 dx = (bounds[d, 1] - bounds[d, 0]) / shape[d]
                 grid[d] = np.linspace(bounds[d, 0] + dx/2,
                                       bounds[d, 1] - dx/2,
                                       shape[d])
-        return Grid(grid, bounds, bin_types, **kwargs)
+        return Grid(grid, bounds, bin_type, **kwargs)
 
     @property
     def ndim(self):
@@ -217,7 +217,7 @@ class Grid(object):
         return self._ndim
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         """
         Types of the axes.
 
@@ -233,20 +233,20 @@ class Grid(object):
 
         Notes
         -----
-        If bin_types is specified with a single letter, all dimensions will be given the new type.
+        If bin_type is specified with a single letter, all dimensions will be given the new type.
         """
-        return self._bin_types
+        return self._bin_type
 
-    @bin_types.setter
-    def bin_types(self, bin_types):
-        bin_types = str(bin_types)
-        if any(c not in 'BRCN' for c in bin_types):
-            raise ValueError("Error, the letters in 'bin_types' must be one of 'BRCN'")
-        if len(bin_types) == 1:
-            bin_types = bin_types * self.ndim
-        if len(bin_types) != self.ndim:
-            raise ValueError("Error, 'bin_types' must have either one letter or one letter per dimension")
-        self._bin_types = bin_types
+    @bin_type.setter
+    def bin_type(self, bin_type):
+        bin_type = str(bin_type)
+        if any(c not in 'BRCN' for c in bin_type):
+            raise ValueError("Error, the letters in 'bin_type' must be one of 'BRCN'")
+        if len(bin_type) == 1:
+            bin_type = bin_type * self.ndim
+        if len(bin_type) != self.ndim:
+            raise ValueError("Error, 'bin_type' must have either one letter or one letter per dimension")
+        self._bin_type = bin_type
 
     @property
     def shape(self):
@@ -263,7 +263,7 @@ class Grid(object):
         """
         if self._edges is None:
             edges = [np.empty((s + 1,), dtype=self.dtype) for s in self._shape]
-            for d, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds, self.grid, self.bin_types)):
+            for d, (es, bnd, ax, bn) in enumerate(zip(edges, self.bounds, self.grid, self.bin_type)):
                 if bn == 'D':
                     es[:] = np.arange(len(ax) + 1) - 0.5
                 else:
@@ -457,7 +457,7 @@ class Grid(object):
             return NotImplemented
         if self.shape != other.shape:
             return False
-        if self.bin_types != other.bin_types:
+        if self.bin_type != other.bin_type:
             return False
         if (self.bounds != other.bounds).any():
             return False
@@ -489,7 +489,7 @@ class Grid(object):
             atol = rtol
         if self.shape != other.shape:
             return False
-        if self.bin_types != other.bin_types:
+        if self.bin_type != other.bin_type:
             return False
         if not np.allclose(self.bounds, other.bounds, rtol, atol):
             return False

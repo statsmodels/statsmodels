@@ -23,7 +23,7 @@ def _array_arg(value, value_name, ndim, dtype=float):
         raise ValueError("Error, '{0}' must be a scalar or a 1D array with {1} elements".format(value_name, ndim))
     return value
 
-def filter_exog(kde, bin_types):
+def filter_exog(kde, bin_type):
     """
     Filter the data to remove anything that is outside the bounds
 
@@ -31,15 +31,15 @@ def filter_exog(kde, bin_types):
     ----------
     kde: object with the fields exog, lower, upper, weights and adjust and a copy method
         This object must behave as a KDE object for those fields.
-    bin_types: str
+    bin_type: str
         String of length D with the bin types for each dimension
 
     Returns
     -------
     Either the kde object itself, or a copy with modified exog, weights and adjust properties
     """
-    if any(b not in 'CRBD' for b in bin_types):
-        raise ValueError("bin_types must be one of 'C', 'R', 'B' or 'D'. Current value: {}".format(bin_types))
+    if any(b not in 'CRBD' for b in bin_type):
+        raise ValueError("bin_type must be one of 'C', 'R', 'B' or 'D'. Current value: {}".format(bin_type))
     exog = atleast_2df(kde.exog)
     sel = np.ones(exog.shape[0], dtype=bool)
     ndim = exog.shape[1]
@@ -47,10 +47,10 @@ def filter_exog(kde, bin_types):
     upper = np.atleast_1d(kde.upper)
     if lower.shape != (exog.shape[1],) or upper.shape != (exog.shape[1],):
         raise ValueError('Lower and upper bound must be at most a 1D array with one value per dimension.')
-    if len(bin_types) == 1:
-        bin_types = bin_types * ndim
+    if len(bin_type) == 1:
+        bin_type = bin_type * ndim
     for i in range(ndim):
-        if bin_types[i] == 'B' or bin_types[i] == 'D':
+        if bin_type[i] == 'B' or bin_type[i] == 'D':
             sel &= (exog[:, i] >= lower[i]) & (exog[:, i] <= upper[i])
     if np.all(sel):
         return kde

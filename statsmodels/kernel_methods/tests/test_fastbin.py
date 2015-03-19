@@ -16,7 +16,7 @@ class TestContinuousBinning1D(object):
         dst = stats.norm(0, 1)
         cls.data = dst.rvs(2000)
         cls.weights = stats.uniform(1, 5).rvs(2000)
-        cls.bin_types = 'CRB'
+        cls.bin_type = 'CRB'
         cls.bounds = [-3, 3]
         cls.sizes = (64, 128, 159)
 
@@ -43,7 +43,7 @@ class TestContinuousBinning1D(object):
 
     def test_validity(self):
         for fct, s, t in product([linbin.fast_bin, linbin.fast_linbin],
-                                 self.sizes, self.bin_types):
+                                 self.sizes, self.bin_type):
             yield self.validity, fct, s, t, True
             yield self.validity, fct, s, t, False
 
@@ -114,7 +114,7 @@ class TestContinuousBinningnD(object):
         dst = stats.norm(0, 1)
         cls.data = dst.rvs(4*2000).reshape(2000, 4)
         cls.weights = stats.uniform(1, 5).rvs(2000)
-        cls.bin_types = 'CRB'
+        cls.bin_type = 'CRB'
         cls.bounds = [[-3, 3]]
         cls.sizes = (16, 32, 21)
 
@@ -143,7 +143,7 @@ class TestContinuousBinningnD(object):
 
     def test_validity(self):
         for fct, s, t, d in product([linbin.fast_bin_nd, linbin.fast_linbin_nd],
-                                    self.sizes, self.bin_types, [2, 3, 4]):
+                                    self.sizes, self.bin_type, [2, 3, 4]):
             s = (s,)*d
             yield self.validity, fct, d, s, t, True
             yield self.validity, fct, d, s, t, False
@@ -222,7 +222,7 @@ class TestDiscreteBinning(object):
         dst = stats.poisson(12)
         cls.data = dst.rvs(2000).reshape(1000, 2)
         cls.weights = stats.uniform(1, 5).rvs(1000)
-        cls.bin_types = 'DD'
+        cls.bin_type = 'DD'
         cls.real_upper = cls.data.max(axis=0)
         cls.test_upper = [12, 12]
         cls.sizes = (16, 32, 21)
