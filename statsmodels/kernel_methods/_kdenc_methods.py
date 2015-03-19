@@ -51,7 +51,7 @@ class UnorderedKDE(KDEMethod):
             raise ValueError('Error, this method can only be used for discrete unordered axis')
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'D'
 
     @property
@@ -82,7 +82,7 @@ class UnorderedKDE(KDEMethod):
             raise ValueError("Error, this method only accepts one variable problem")
         if kde.axis_type != self.axis_type:
             raise ValueError("Error, this method only accepts an unordered discrete axis")
-        kde = filter_exog(kde, self.bin_types)
+        kde = filter_exog(kde, self.bin_type)
         fitted = self.copy()
         fitted._fitted = True
         fitted._exog = kde.exog.reshape((kde.npts,))
@@ -283,8 +283,8 @@ class UnorderedKDE(KDEMethod):
         out /= self.total_weights
         return out
 
-    def __call__(self, points, out=None, dims=None):
-        return self.pdf(points, out, dims)
+    def __call__(self, points, out=None):
+        return self.pdf(points, out)
 
     def grid(self, N=None, cut=None):
         """
@@ -330,7 +330,7 @@ class OrderedKDE(UnorderedKDE):
             raise ValueError('Error, this method can only be used for discrete ordered axis')
 
     @property
-    def bin_types(self):
+    def bin_type(self):
         return 'D'
 
     def grid_cdf(self, N=None, cut=None):
