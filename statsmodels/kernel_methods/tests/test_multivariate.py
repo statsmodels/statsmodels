@@ -81,9 +81,9 @@ class TestMultivariate(KDETester):
 
     def method_works(self, k, methods, name):
         est = k.fit()
-        bt = est.bin_types
+        bt = est.bin_type
         bounds = [None, None]
-        if est.methods[0].bin_types == 'D':
+        if est.methods[0].bin_type == 'D':
             bounds[0] = [est.lower[0], est.upper[0]]
         else:
             if methods[0].bound_low:
@@ -95,7 +95,7 @@ class TestMultivariate(KDETester):
             else:
                 high = est.exog[:, 0].max() + 5*est.bandwidth[0]
             bounds[0] = [low, high]
-        if est.methods[1].bin_types == 'D':
+        if est.methods[1].bin_type == 'D':
             bounds[1] = [est.lower[1], est.upper[1]]
         else:
             if methods[1].bound_low:
@@ -107,7 +107,7 @@ class TestMultivariate(KDETester):
             else:
                 high = est.exog[:, 1].max() + 5*est.bandwidth[1]
             bounds[1] = [low, high]
-        grid = kde_utils.Grid.fromBounds(bounds, bin_types=bt, shape=128, dtype=float)
+        grid = kde_utils.Grid.fromBounds(bounds, bin_type=bt, shape=128, dtype=float)
         values = est(grid.linear()).reshape(grid.shape)
         tot = grid.integrate(values)
         # Note: the precision is quite bad as we use small number of values!

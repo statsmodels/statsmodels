@@ -1,6 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
-from .. import kde_methods, bandwidths
+from .. import kde, kde_methods, bandwidths
 import numpy as np
 from numpy.random import randn
 from scipy import integrate
@@ -8,7 +8,7 @@ from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
 from ...tools.testing import assert_allclose, assert_equal
 from nose.tools import raises
-from .. import kde
+from ..kde_utils import GridInterpolator, numpy_trans1d_method
 
 class FakeModel(object):
     lower = -np.inf
@@ -126,6 +126,7 @@ class TestKDE1D(KDETester):
 
     def method_works(self, k, method, name):
         est = k.fit()
+        assert_equal(est.ndim, 1)
         tot = integrate.quad(est.pdf, est.lower, est.upper, limit=100)[0]
         acc = method.normed_accuracy
         assert_allclose(tot, 1, rtol=acc, atol=acc)
@@ -209,11 +210,132 @@ class TestKDE1D(KDETester):
             k = self.createKDE(self.vs[0], m)
             yield self.bad_set_axis, k, m, 'adjust_{0}_{1}'.format(k.method, 0)
 
+    def force_span(self, k, m, name):
+        est = k.fit()
+        span = [est.lower, est.upper]
+        if not m.bound_low:
+            span[0] = -10
+        if not m.bound_high:
+            span[1] = 10
+        xs, ys = est.grid(span=span)
+        x = np.r_[-2:2:64j]
+        x = x[(x > est.lower) & (x < est.upper)]
+        y1 = est.pdf(x)
+        interp = GridInterpolator(xs, ys)
+        y2 = interp(x)
+        assert_allclose(y1, y2, rtol=1e-4, atol=1e-4)
+
+    def test_force_span(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[0], m)
+            yield self.force_span, k, m, str(k.method)
+
+    @raises(ValueError)
+    def test_non1d_data(self):
+        d = np.array([[1, 2], [3, 4], [5, 6.]])
+        k = kde.KDE(d, method=kde_methods.Reflection1D)
+        k.fit()  # should raise a ValueError
+
+    @raises(ValueError)
+    def test_bad_axis_type(self):
+        k = kde.KDE(self.vs[0], method=kde_methods.Reflection1D, axis_type='O')
+        k.fit()  # should raise a ValueError
+
+    def test_change_exog(self):
+        k = self.createKDE(self.vs[0], self.methods[0])
+        est = k.fit()
+        xs1, ys1 = est.grid()
+        est.exog = self.vs[0]*3
+        xs2, ys2 = est.grid()
+        est.exog = self.vs[0]
+        xs3, ys3 = est.grid()
+
+        assert sum((ys1 - ys2)**2) > 0
+        assert_allclose(ys1, ys3, rtol=1e-8, atol=1e-8)
+        assert_allclose(xs1.full(), xs3.full(), rtol=1e-8, atol=1e-8)
+
+    @raises(ValueError)
+    def test_bad_change_exog(self):
+        k = self.createKDE(self.vs[0], self.methods[0])
+        est = k.fit()
+        est.exog = self.vs[1]
+
+    def update_inputs(self, k, m, name):
+        est = k.fit()
+        est.update_inputs(self.vs[1][:-5],
+                          weights=self.weights[1][:-5],
+                          adjust=self.adjust[1][:-5])
+        xs, ys = est.grid()
+        tot = xs.integrate(ys)
+        assert_allclose(tot, 1, rtol=m.grid_accuracy, atol=m.grid_accuracy)
+
+    def test_update_inputs(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[1], m)
+            k.weights = self.weights[1]
+            k.adjust = self.adjust[1]
+            yield self.update_inputs, k, m, str(k.method)
+
+    @raises(ValueError)
+    def bad_update_inputs1(self, k, m, name):
+        est = k.fit()
+        est.update_inputs(self.vs[1][:-5],
+                          weights=self.weights[1],
+                          adjust=self.adjust[1][:-5])
+
+    @raises(ValueError)
+    def bad_update_inputs2(self, k, m, name):
+        est = k.fit()
+        est.update_inputs(self.vs[1][:-5],
+                          weights=self.weights[1][:-5],
+                          adjust=self.adjust[1])
+
+    @raises(ValueError)
+    def bad_update_inputs3(self, k, m, name):
+        est = k.fit()
+        est.update_inputs([[1, 2], [2, 3], [3, 4]],
+                          weights=self.weights[1][:-5],
+                          adjust=self.adjust[1])
+
+    def test_bad_update_inputs(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[1], m)
+            k.weights = self.weights[1]
+            k.adjust = self.adjust[1]
+            yield self.bad_update_inputs1, k, m, str(k.method) + "_bad1"
+            yield self.bad_update_inputs2, k, m, str(k.method) + "_bad2"
+            yield self.bad_update_inputs3, k, m, str(k.method) + "_bad3"
+
 @attr('kernel_methods')
-class LogTestKDE1D(TestKDE1D):
+class TestLogKDE1D(TestKDE1D):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
+
+    def test_transform(self):
+        tr = kde_methods.create_transform(np.log, np.exp)
+        log_tr = kde_methods.LogTransform
+
+        xs = np.r_[1:3:16j]
+        tol = 1e-6
+        assert_allclose(tr.Dinv(xs), log_tr.Dinv(xs), rtol=tol, atol=tol)
+
+        class MyTransform(object):
+            def __call__(self, x):
+                return np.log(x)
+
+            def inv(self, x):
+                return np.exp(x)
+
+            def Dinv(self, x):
+                return np.exp(x)
+
+        tr1 = kde_methods.create_transform(MyTransform())
+        assert_allclose(tr1.Dinv(xs), log_tr.Dinv(xs), rtol=tol, atol=tol)
+
+    @raises(AttributeError)
+    def test_bad_transform1(self):
+        kde_methods.create_transform(np.log)
 
 @attr('kernel_methods')
 class TestSF(KDETester):
