@@ -480,10 +480,6 @@ class Grid(object):
             Relative tolerance
         atol: float
             Absolute tolerance. If None, this will be the same as rtol
-
-        See Also
-        --------
-        `np.allclose`
         """
         if atol is None:
             atol = rtol

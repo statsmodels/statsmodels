@@ -95,7 +95,6 @@ class KDE(object):
 
     The model knows about a set number of parameters that all methods must account for. However, check on the method's
     documentation to make sure if there aren't other parameters.
-
     """
     def __init__(self, exog, **kwords):
         self._exog = None
@@ -289,12 +288,27 @@ class KDE(object):
 
     def fit(self):
         """
-        Compute the various parameters needed by the kde method
+        Compute the bandwidths and find the proper KDE method for the current dataset.
+
+        Returns
+        -------
+        :py:class:`kde_methods.KDEMethod`
+            An object derived from ready for estimation
+
+        Notes
+        -----
+        The returned object doesn't maintain any reference to the
+        :py:class:`KDE` object, which can therefore be modified freely.
+        However, the data are not (always) copied either, so modifying the data in place
+        may modify the returned object.
         """
         return self.method.fit(self)
 
     @property
     def total_weights(self):
+        """
+        Total weights for the current dataset.
+        """
         if self._weights.shape:
             return self._weights.sum()
         return self.npts
