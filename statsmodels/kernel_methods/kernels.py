@@ -237,37 +237,27 @@ class Kernel1D(object):
     - a finite variance. It is even recommanded that the variance is close to 1 to give a uniform meaning to the
       bandwidth.
 
-    .. py:attribute:: cut
-
-        :type: float
-
+    Attributes
+    ----------
+    cut: float
         Cutting point after which there is a negligeable part of the probability. More formally, if :math:`c` is the
         cutting point:
 
         .. math::
 
             \int_{-c}^c p(x) dx \approx 1
-
-    .. py:attribute:: lower
-
-        :type: float
-
+    lower: float
         Lower bound of the support of the PDF. Formally, if :math:`l` is the lower bound:
 
         .. math::
 
             \int_{-\infty}^l p(x)dx = 0
-
-    .. py:attribute:: upper
-
-        :type: float
-
+    upper: float
         Upper bound of the support of the PDF. Formally, if :math:`u` is the upper bound:
 
         .. math::
 
             \int_u^\infty p(x)dx = 0
-
     """
     cut = 3.
     lower = -np.inf
@@ -275,7 +265,7 @@ class Kernel1D(object):
 
     def for_ndim(self, ndim):
         """
-        Create the same kernel but for a different number of dimensions
+        Returns an equivalent kernel but for `ndim` dimensions.
         """
         assert ndim == 1, "Error, this kernel only works in 1D"
         return self
@@ -478,6 +468,9 @@ class normal1d(Kernel1D):
     cut = 5.
 
     def for_ndim(self, ndim):
+        """
+        Return an equivalent kernel, but for `ndim` dimensions
+        """
         if ndim == 1:
             return self
         return normal(ndim)
@@ -751,7 +744,7 @@ class normal(KernelnD):
 
     def for_ndim(self, ndim):
         """
-        Create the same kernel but for a different number of dimensions
+        Return an equivalent kernel, but for `ndim` dimensions
         """
         if ndim == 1:
             return normal1d()

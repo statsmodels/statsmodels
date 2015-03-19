@@ -52,6 +52,11 @@ def silverman(model):
     .. math::
 
         \tau = \left( n \frac{d+2}{4} \right)^\frac{-1}{d+4}
+
+    .. seealso::
+
+        :py:func:`diagonal_variance`
+        :py:func:`silverman_full`
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
@@ -65,6 +70,11 @@ def scotts(model):
     .. math::
 
         \tau = n^\frac{-1}{d+4}
+
+    .. seealso::
+
+        :py:func:`diagonal_variance`
+        :py:func:`scotts_full`
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
@@ -73,6 +83,15 @@ def scotts(model):
 def scotts_full(model):
     """
     Scotts bandwidths, based on covariance only, and returning a full matrix
+
+    .. math::
+
+        \tau = n^\frac{-1}{d+4}
+
+    .. seealso::
+
+        :py:func:`full_variance`
+        :py:func:`scotts`
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
@@ -81,6 +100,15 @@ def scotts_full(model):
 def silverman_full(model):
     """
     Silverman bandwidths, based on covariance only, and returning a full matrix
+
+    .. math::
+
+        \tau = \left( n \frac{d+2}{4} \right)^\frac{-1}{d+4}
+
+    .. seealso::
+
+        :py:func:`full_variance`
+        :py:func:`silverman`
     """
     exog = atleast_2df(model.exog)
     n, d = exog.shape
@@ -216,39 +244,96 @@ for attr in KDE1DAdaptor._constant_attributes:
 
 
 class Multivariate(object):
+    """
+    Object computing the bandwidth for each axis of a multi-variate dataset.
+    """
     def __init__(self):
-        self.continuous = scotts
-        self.ordered = 0.1
-        self.unordered = 0.1
+        self._defaults = dict(C=scotts,
+                              O=0.1,
+                              U=0.1)
+        self._bandwidths = {}
+
+    @property
+    def continuous(self):
+        """
+        Default bandwidth for a continuous axis (Default: :py:func:`scotts`)
+        """
+        return self._defaults['C']
+
+    @continuous.setter
+    def continuous(self, val):
+        if not callable(val):
+            self._defaults['C'] = float(val)
+        else:
+            self._defaults['C'] = val
+
+    @property
+    def ordered(self):
+        """
+        Default bandwidth for an ordered axis (Default: 0.1)
+        """
+        return self._defaults['O']
+
+    @ordered.setter
+    def ordered(self, val):
+        if not callable(val):
+            self._defaults['O'] = float(val)
+        else:
+            self._defaults['O'] = val
+
+    @property
+    def unordered(self):
+        """
+        Default bandwidth for an unordered axis (Default: 0.1)
+        """
+        return self._defaults['U']
+
+    @unordered.setter
+    def unordered(self, val):
+        if not callable(val):
+            self._defaults['U'] = float(val)
+        else:
+            self._defaults['U'] = val
+
+    @property
+    def bandwidths(self):
+        """
+        Dictionnary holding explicit methods or values for specific axes, by index.
+        """
+        return self._bandwidths
 
     def __call__(self, model):
+        """
+        Compute the bandwidths for all the axes of the model
+
+        Parameters
+        ----------
+        model: object
+            An object similar to a KDE, containing the axis types, exog data
+            and other properties required by each method
+
+        Returns
+        -------
+        ndarray of shape (D,)
+            An array with one bandwidth per dimension
+        """
         res = np.zeros(model.ndim, dtype=float)
         if len(model.axis_type) == 1:
             axis_type = AxesType(model.axis_type[0] * model.ndim)
         else:
             axis_type = AxesType(model.axis_type)
-        c = np.nonzero(axis_type == 'C')[0]
-        o = np.nonzero(axis_type == 'O')[0]
-        u = np.nonzero(axis_type == 'U')[0]
+        bandwidths = self._bandwidths
+        defaults = self._defaults
         adapt = KDE1DAdaptor(model)
-        if callable(self.continuous):
-            for d in c:
+        for d, axis in enumerate(axis_type):
+            bw = bandwidths.get(d, None)
+            if bw is None:
+                bw = defaults[axis]
+            if callable(bw):
                 adapt.axis = d
-                res[d] = self.continuous(adapt)
-        else:
-            res[c] = self.continuous
-        if callable(self.ordered):
-            for d in c:
-                adapt.axis = d
-                res[d] = self.ordered(adapt)
-        else:
-            res[o] = self.ordered
-        if callable(self.unordered):
-            for d in c:
-                adapt.axis = d
-                res[d] = self.unordered(adapt)
-        else:
-            res[u] = self.unordered
+                res[d] = bw(adapt)
+            else:
+                res[d] = float(bw)
         return res
 
 from .bw_crossvalidation import lsq_crossvalidation, ContinuousIMSE  # NoQA
