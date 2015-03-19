@@ -1,15 +1,14 @@
 cimport cython
 cimport numpy as np
 import numpy as np
-from libc.math cimport floor, fmod
-IF UNAME_SYSNAME == 'Windows':
-    from libc.math cimport ceil, floor
-    cdef inline double round(double a):
-        if a < 0.0:
-            return ceil(a - 0.5)
-        return floor(a + 0.5)
-ELSE:
-    from libc.math cimport round
+from libc.math cimport floor, fmod, ceil
+
+np.import_array()
+
+cdef inline double round(double a):
+    if a < 0.0:
+        return ceil(a - 0.5)
+    return floor(a + 0.5)
 
 ctypedef np.float64_t DOUBLE
 ctypedef np.int_t INT
