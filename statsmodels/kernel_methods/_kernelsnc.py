@@ -11,10 +11,10 @@ import numpy as np
 from ..compat.numpy import np_sum
 
 class AitchisonAitken(object):
-    """
+    r"""
     The Aitchison-Aitken kernel, used for unordered discrete random variables.
 
-    See p.18 of [2]_ for details.  The value of the kernel L if :math:`X_{i}=x`
+    See p.18 of Racine's reference for details.  The value of the kernel L if :math:`X_{i}=x`
     is :math:`1-\lambda`, otherwise it is :math:`\frac{\lambda}{c-1}`.
     Here :math:`c` is the number of levels plus one of the RV.
 
@@ -89,12 +89,12 @@ class AitchisonAitken(object):
         return result
 
 class WangRyzin(object):
-    """
+    r"""
     The Wang-Ryzin kernel, used for ordered discrete random variables.
 
     Notes
     -----
-    See p. 19 in [1]_ for details.  The value of the kernel L if
+    See p. 19 in Racine's reference for details.  The value of the kernel L if
     :math:`X_{i}=x` is :math:`1-\lambda`, otherwise it is
     :math:`\frac{1-\lambda}{2}\lambda^{|X_{i}-x|}`, where :math:`\lambda` is
     the bandwidth.

@@ -5,7 +5,7 @@ from operator import itemgetter as _itemgetter
 from ..compat.ordereddict import OrderedDict
 import sys
 
-def namedtuple(typename, field_names, verbose=False, rename=False):
+def namedtuple(typename, field_names, verbose=False, rename=False, doc="", field_docs=None):
     """Returns a new subclass of tuple with named fields.
 
     >>> Point = namedtuple('Point', 'x y')
@@ -70,8 +70,10 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
     numfields = len(field_names)
     argtxt = repr(field_names).replace("'", "")[1:-1]   # tuple repr without parens or quotes
     reprtxt = ', '.join('%s=%%r' % name for name in field_names)
+    if doc is None:
+        doc = '%(typename)s(%(argtxt)s)' % dict(typename=typename, argtxt=argtxt)
     template = '''class %(typename)s(tuple):
-        '%(typename)s(%(argtxt)s)' \n
+        %(doc)s\n
         __slots__ = () \n
         _fields = %(field_names)r \n
         def __new__(_cls, %(argtxt)s):
@@ -99,10 +101,13 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
         def __getnewargs__(self):
             'Return self as a plain tuple.  Used by copy and pickle.'
             return tuple(self) \n\n''' % dict(numfields=numfields, field_names=field_names,
-                                              typename=typename, argtxt=argtxt, reprtxt=reprtxt)
+                                              typename=typename, argtxt=argtxt, reprtxt=reprtxt,
+                                              doc=repr(doc))
+    if field_docs is None:
+        field_docs = ['Alias for field number %d' % i for i in range(len(field_names))]
     for i, name in enumerate(field_names):
         template += "        %s = _property(_itemgetter(%d), " \
-                    "doc='Alias for field number %d')\n" % (name, i, i)
+                    "doc=%s)\n" % (name, i, repr(field_docs[i]))
     if verbose:
         print(template)
 

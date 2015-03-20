@@ -44,14 +44,6 @@ If the domain of the density estimation is bounded to the interval
 
 where :math:`\hat{K}` is a modified kernel that depends on the exact method
 used. Currently, only 1D KDE supports bounded domains.
-
-References
-----------
-Wasserman, L. All of Nonparametric Statistics Springer, 2005
-
-http://en.wikipedia.org/wiki/Kernel_%28statistics%29
-
-Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
 
 from __future__ import division, absolute_import, print_function
@@ -292,8 +284,9 @@ class KDE(object):
 
         Returns
         -------
-        :py:class:`kde_methods.KDEMethod`
-            An object derived from ready for estimation
+        estimator : kde_methods.KDEMethod
+            An object fully instantiated with pre-computed parameters for
+            efficient estimation of the KDE
 
         Notes
         -----
