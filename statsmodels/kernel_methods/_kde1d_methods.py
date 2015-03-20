@@ -1129,8 +1129,6 @@ class Cyclic1D(KDE1DMethod):
             return 2 ** 16
         return N  # 2 ** int(np.ceil(np.log2(N)))
 
-Unbounded1D = Cyclic1D
-
 def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weights=None, dim=-1):
     """
     Parameters
@@ -1375,7 +1373,7 @@ class Reflection1D(KDE1DMethod):
             return 2 ** 16
         return N  # 2 ** int(np.ceil(np.log2(N)))
 
-class Renormalization(Unbounded1D):
+class Renormalization(Cyclic1D):
     r"""
     This method consists in using the normal kernel method, but renormalize
     to only take into account the part of the kernel within the domain of the
@@ -1497,7 +1495,7 @@ class _LinearCombinationKernel(Kernel1D):
 
     __call__ = pdf
 
-class LinearCombination(Unbounded1D):
+class LinearCombination(Cyclic1D):
     r"""
     This method uses the linear combination correction published in [1]_.
 
@@ -1986,3 +1984,6 @@ def _add_fwd_attr(cls, to_fwd, attr):
 
 for attr in TransformKDE1D._fwd_attrs:
     _add_fwd_attr(TransformKDE1D, 'method', attr)
+
+#: Alias toward the default, unbounded, method
+Unbounded1D = Reflection1D

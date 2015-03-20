@@ -90,26 +90,30 @@ class LeaveKOutFolding(object):
         Number of points in the dataset
     folding: int
         Number of folds to use.
+    repeats: int
+        Number of repeats for the folding.
     """
-    def __init__(self, data, is_sel, npts, folding):
+    def __init__(self, data, is_sel, npts, folding, repeats):
         self.data = data
         self.is_sel = is_sel
         self.npts = npts
         self.folding = folding
+        self.repeats = repeats
         fold_size = npts // folding
         rem = npts % folding
-        idx = np.random.permutation(npts)
-        folds = [None] * folding
-        cur_idx = 0
-        for i in range(rem):
-            end_idx = cur_idx + fold_size + 1
-            folds[i] = idx[cur_idx:end_idx]
-            cur_idx = end_idx
+        folds = [None] * (folding*repeats)
+        for n in range(repeats):
+            idx = np.random.permutation(npts)
+            cur_idx = 0
+            for i in range(rem):
+                end_idx = cur_idx + fold_size + 1
+                folds[n*folding + i] = idx[cur_idx:end_idx]
+                cur_idx = end_idx
 
-        for i in range(rem, folding):
-            end_idx = cur_idx + fold_size
-            folds[i] = idx[cur_idx:end_idx]
-            cur_idx = end_idx
+            for i in range(rem, folding):
+                end_idx = cur_idx + fold_size
+                folds[n*folding + i] = idx[cur_idx:end_idx]
+                cur_idx = end_idx
 
         self.folds = folds
 
@@ -149,17 +153,17 @@ def leave_some_out(exog, *data, **kwords):
     *data: tuple
         Other arrays or values to select for. If the value doesn't have the same length as exog, then it will be sent
         as-is all the times. Otherwise, it will be selected like exog.
-
-    Optional Parameters
-    -------------------
     sampling: int
         Instead of an exhaustive leave-one-out, a random sub-sample is iterated over
     folding: int
         The exogeneous dataset is split into k groups of same length. For each iteration, (k-1) groups are used for
         fitting and the last one is used for testing.
+    repeats: int
+        Together with `folding`, `repeat` indicates we will use more than one folding.
     '''
     sampling = kwords.get('sampling', None)
     folding = kwords.get('folding', None)
+    repeats = int(kwords.get('repeats', 1))
     if sampling is not None and folding is not None:
         raise ValueError("You can only specify one of 'folding' or 'sampling'")
     data = (exog,) + data
@@ -171,7 +175,7 @@ def leave_some_out(exog, *data, **kwords):
     if sampling is not None:
         return LeaveOneOutSampling(data, is_sel, npts, sampling)
     if folding is not None:
-        return LeaveKOutFolding(data, is_sel, npts, folding)
+        return LeaveKOutFolding(data, is_sel, npts, folding, repeats)
     return LeaveOneOut(data, is_sel, npts)
 
 

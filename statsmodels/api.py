@@ -24,6 +24,7 @@ from .graphics import api as graphics
 from .stats import api as stats
 from .emplike import api as emplike
 from .duration import api as duration
+from .kernel_methods import api as kernel_methods
 
 from .formula import api as formula
 

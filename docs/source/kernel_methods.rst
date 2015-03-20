@@ -23,6 +23,15 @@ will return a univariate method if the data has a single dimension. Same for the
 multi-dimensional methods returning the equivalent 1D method for efficiency
 purposes.
 
+Examples
+--------
+
+Here is a list of example notebooks:
+
+.. toctree::
+
+    examples/notebooks/generated/kernel_methods_kde1d
+
 References
 ----------
 
