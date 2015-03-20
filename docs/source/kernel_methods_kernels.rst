@@ -1,7 +1,7 @@
 .. currentmodule:: statsmodels.kernel_methods
 
-Module :py:mod:`kernels`
-========================
+Module :py:mod:`.kernels`
+=========================
 
 .. automodule:: statsmodels.kernel_methods.kernels
 
