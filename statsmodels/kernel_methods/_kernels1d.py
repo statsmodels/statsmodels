@@ -86,20 +86,23 @@ class tricube(Kernel1D):
 
         .. math::
 
-            \begin{array}{cc}
-             \left\{ & \begin{array}{cc}
-                    \frac{(x+2)^7 \left(14 x^{12}-196 x^{11}+1568 x^{10}-8439 x^9+33474 x^8-98448 x^7+213558 x^6-334740
-                    x^5+561120 x^4-453722 x^3+558880 x^2-206822 x+151470\right)}{12932920} & -2<x\leq -1 \\
-                    -\frac{(x-2)^7 \left(14 x^{12}+196 x^{11}+1568 x^{10}+8439 x^9+33474 x^8+98448 x^7+213558 x^6+334740
-                    x^5+561120 x^4+453722 x^3+558880 x^2+206822 x+151470\right)}{12932920} & 1\leq x<2 \\
-                    -\frac{3 x^{19}}{923780}-\frac{3 x^{16}}{40040}-\frac{111 x^{13}}{20020}-\frac{31
+             \left\{
+             \begin{array}{cc}
+             \frac{(x+2)^7 \left(14 x^{12}-196 x^{11}+1568 x^{10}-8439 x^9+33474 x^8-98448 x^7+213558 x^6-334740
+                    x^5+561120 x^4-453722 x^3+558880 x^2-206822 x+151470\right)}{12932920}
+                    & -2<x\leq -1 \\
+             -\frac{(x-2)^7 \left(14 x^{12}+196 x^{11}+1568 x^{10}+8439 x^9+33474 x^8+98448 x^7+213558 x^6+334740
+                    x^5+561120 x^4+453722 x^3+558880 x^2+206822 x+151470\right)}{12932920}
+                    & 1\leq x<2 \\
+             -\frac{3 x^{19}}{923780}-\frac{3 x^{16}}{40040}-\frac{111 x^{13}}{20020}-\frac{31
                     x^{10}}{140}-\frac{81 x^9}{70}-\frac{729 x^8}{220}-\frac{747 x^7}{140}-\frac{729 x^6}{182}+\frac{9
-                    x^4}{5}-\frac{19683 x^2}{13090}+\frac{6561}{6916} & -1<x\leq 0 \\
-                    \frac{3 x^{19}}{923780}-\frac{3 x^{16}}{40040}+\frac{111 x^{13}}{20020}-\frac{31
+                    x^4}{5}-\frac{19683 x^2}{13090}+\frac{6561}{6916}
+                    & -1<x\leq 0 \\
+             \frac{3 x^{19}}{923780}-\frac{3 x^{16}}{40040}+\frac{111 x^{13}}{20020}-\frac{31
                     x^{10}}{140}+\frac{81 x^9}{70}-\frac{729 x^8}{220}+\frac{747 x^7}{140}-\frac{729 x^6}{182}+\frac{9
-                    x^4}{5}-\frac{19683 x^2}{13090}+\frac{6561}{6916} & 0<x<1
-                  \end{array} \right.
-            \end{array}
+                    x^4}{5}-\frac{19683 x^2}{13090}+\frac{6561}{6916}
+                    & 0<x<1
+             \end{array} \right.
         """
         return _cy_kernels.tricube_convolution(z, out)
 
@@ -147,7 +150,7 @@ class Epanechnikov(Kernel1D):
 
         .. math::
 
-            \bar{f}(x) = \frac{1}{\sqrt{5}} \bar{f_r\left(\frac{x}{\sqrt{5}}\right)
+            \bar{f}(x) = \frac{1}{\sqrt{5}} \bar{f_r}\left(\frac{x}{\sqrt{5}}\right)
 
         """
         return _cy_kernels.epanechnikov_convolution(xs, out)
