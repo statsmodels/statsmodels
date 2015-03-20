@@ -145,9 +145,9 @@ class KDEMethod(object):
         """
         AxesType
             Type of each axis. Each axis type is defined by a letter:
-                - c for continuous
-                - u for unordered (discrete)
-                - o for ordered (discrete)
+                - C for continuous
+                - U for unordered (discrete)
+                - O for ordered (discrete)
         """
         return self._axis_type
 
@@ -209,11 +209,11 @@ class KDEMethod(object):
     @property
     def adjust(self):
         """
-        Scaling of the bandwidth, per data point. It can be either a single
+        Adjustment of the bandwidth, per data point. It can be either a single
         value or an array with one value per data point. The real bandwidth
         then becomes: bandwidth * adjust
 
-        When deleted, the adjusting is reset to 1.
+        When deleted, the adjustment is reset to 1.
         """
         return self._adjust
 
@@ -245,12 +245,12 @@ class KDEMethod(object):
 
     @lower.deleter
     def lower(self):
-        self._lower = None
+        self._lower = -np.inf * np.ones((self.ndim,), dtype=float)
 
     @property
     def upper(self):
         r"""
-        Upper bound of the density domain. If deleted, becomes set to :math:`\infty`
+        Upper bound of the density domain. If deleted, becomes :math:`\infty` on all dimensions
 
         Note that for discrete dimensions, if the upper dimension is 0, it will be set to the maximum observed element.
         """
@@ -262,4 +262,4 @@ class KDEMethod(object):
 
     @upper.deleter
     def upper(self):
-        self._upper = None
+        self._upper = np.inf * np.ones((self.ndim,), dtype=float)

@@ -6,7 +6,7 @@ This module contains the multi-variate KDE meta-method.
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
-from statsmodels.compat.python import range
+from ..compat.python import range
 from copy import copy as shallow_copy
 from . import kernels
 from . import _kde1d_methods, _kdenc_methods

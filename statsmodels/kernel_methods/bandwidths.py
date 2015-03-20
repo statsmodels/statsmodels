@@ -1,14 +1,13 @@
 """
-Module containing the methods for continuous, univariate, KDE estimations.
+Module containing the methods to compute the bandwidth of the KDE.
 
 :Author: Barbier de Reuille, Pierre
-
 """
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy import fftpack, optimize, linalg
 from .kde_utils import large_float, finite, atleast_2df, AxesType
-from statsmodels.compat.python import range
+from ..compat.python import range
 
 def _spread(X):
     """
@@ -28,9 +27,10 @@ def full_variance(factor, exog):
 
     .. math::
 
-        \mathcal{C} = \tau cov(X)^{1/2}
+        \mathcal{C} = \tau \left(\Sigma_X\right)^{1/2}
 
-    where :math:`\tau` is a correcting factor that depends on the method.
+    where :math:`\tau` is a correcting factor and :math:`\Sigma_X` is the
+    covariance matrix of X.
     """
     d = exog.shape[1]
     if d == 1:
@@ -41,7 +41,16 @@ def full_variance(factor, exog):
 
 def diagonal_variance(factor, exog):
     r"""
-    Return the diagonal covariance matrix according to Silverman's rule
+    Return the diagonal covariance matrix according to Silverman's rule. The
+    variance of each dimension is computed as:
+
+    .. math::
+
+        \mathcal{C} = \tau \min(\sigma_X, IQR(X) / 1.349)
+
+    where :math:`\tau` is the correcting factor, :math:`\sigma_X` is the
+    unbiased standard deviation of X and :math:`IQR(X)` is the intequartile
+    range of X.
     """
     return _spread(exog) * factor
 
@@ -51,7 +60,9 @@ def silverman(model):
 
     .. math::
 
-        \tau = \left( n \frac{d+2}{4} \right)^\frac{-1}{d+4}
+        \tau = .9 n^{-\frac{1}{d+4}}
+
+    where n is the number of points and d the dimension of the model.
 
     .. seealso::
 
@@ -62,6 +73,24 @@ def silverman(model):
     n, d = exog.shape
     return diagonal_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
 
+def silverman_full(model):
+    r"""
+    Silverman bandwidths, based on covariance only, and returning a full matrix
+
+    .. math::
+
+        \tau = .9 n^{-\frac{1}{d+4}}
+
+    where n is the number of points and d the dimension of the model.
+
+    .. seealso::
+
+        :py:func:`full_variance`
+        :py:func:`silverman`
+    """
+    exog = atleast_2df(model.exog)
+    n, d = exog.shape
+    return full_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
 
 def scotts(model):
     r"""
@@ -69,7 +98,9 @@ def scotts(model):
 
     .. math::
 
-        \tau = n^\frac{-1}{d+4}
+        \tau = \left( n \frac{d+2}{4} \right)^\frac{-1}{d+4}
+
+    where n is the number of points and d the dimension of the model.
 
     .. seealso::
 
@@ -81,12 +112,14 @@ def scotts(model):
     return diagonal_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
 
 def scotts_full(model):
-    """
+    r"""
     Scotts bandwidths, based on covariance only, and returning a full matrix
 
     .. math::
 
-        \tau = n^\frac{-1}{d+4}
+        \tau = \left( n \frac{d+2}{4} \right)^\frac{-1}{d+4}
+
+    where n is the number of points and d the dimension of the model.
 
     .. seealso::
 
@@ -96,23 +129,6 @@ def scotts_full(model):
     exog = atleast_2df(model.exog)
     n, d = exog.shape
     return full_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
-
-def silverman_full(model):
-    """
-    Silverman bandwidths, based on covariance only, and returning a full matrix
-
-    .. math::
-
-        \tau = \left( n \frac{d+2}{4} \right)^\frac{-1}{d+4}
-
-    .. seealso::
-
-        :py:func:`full_variance`
-        :py:func:`silverman`
-    """
-    exog = atleast_2df(model.exog)
-    n, d = exog.shape
-    return full_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
 
 def _botev_fixed_point(t, M, I, a2):
     l = 7
@@ -336,4 +352,4 @@ class Multivariate(object):
                 res[d] = float(bw)
         return res
 
-from .bw_crossvalidation import lsq_crossvalidation, ContinuousIMSE  # NoQA
+from .bw_crossvalidation import lsq_crossvalidation, ContinuousIMSE, leave_some_out  # NoQA

@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from __future__ import print_function
 """
 Script to generate notebooks with output from notebooks that don't have
 output.
@@ -17,7 +18,10 @@ SOURCE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
                                           "examples",
                                           "notebooks"))
 
-from Queue import Empty
+try:
+    from Queue import Empty
+except ImportError:
+    from queue import Empty
 
 try: # IPython has been refactored
     from IPython.kernel import KernelManager
@@ -141,7 +145,7 @@ class NotebookRunner:
                 out.evalue = content["evalue"]
                 out.traceback = content["traceback"]
             else:
-                print "unhandled iopub msg:", msg_type
+                print("unhandled iopub msg:", msg_type)
 
             outs.append(out)
 
@@ -171,22 +175,22 @@ class NotebookRunner:
                         cell_errors += 1
                     exec_count += 1
                 except Exception as e:
-                    print "failed to run cell:", repr(e)
-                    print cell.input
+                    print("failed to run cell:", repr(e))
+                    print(cell.input)
                     errors += 1
                     continue
                 cell.outputs = outs
 
-        print "ran notebook %s" % nb.metadata.name
-        print "    ran %3i cells" % cells
+        print("ran notebook %s" % nb.metadata.name)
+        print("    ran %3i cells" % cells)
         if errors:
-            print "    %3i cells raised exceptions" % errors
+            print("    %3i cells raised exceptions" % errors)
         else:
-            print "    there were no errors in run_cell"
+            print("    there were no errors in run_cell")
         if cell_errors:
-            print "    %3i cells have exceptions in their output" % cell_errors
+            print("    %3i cells have exceptions in their output" % cell_errors)
         else:
-            print "    all code executed in the notebook as expected"
+            print("    all code executed in the notebook as expected")
 
     def __del__(self):
         self.kc.stop_channels()
@@ -258,9 +262,9 @@ if __name__ == '__main__':
             towrite, filehash = hash_funcs.check_hash(open(fname, "r").read(),
                                                       fname_only)
             if not towrite:
-                print "Hash has not changed for file %s" % fname_only
+                print("Hash has not changed for file %s" % fname_only)
                 continue
-            print "Writing ", fname_only
+            print("Writing ", fname_only)
 
             # This edits the notebook cells inplace
             notebook_runner(nb)
@@ -297,8 +301,8 @@ if __name__ == '__main__':
                     # IPython 3.x got rid of header cells
                     pass
                 else:
-                    print "Title not in first cell for ", fname_only
-                    print "Not generating rST"
+                    print("Title not in first cell for ", fname_only)
+                    print("Not generating rST")
                     continue
 
                 html_out = nb2html(nb)
@@ -311,7 +315,7 @@ if __name__ == '__main__':
                     f.write(notebook_template.substitute(name=fname_only,
                                                          body=html_out))
             hash_funcs.update_hash_dict(filehash, fname_only)
-    except Exception, err:
+    except Exception as err:
         raise err
 
     finally:

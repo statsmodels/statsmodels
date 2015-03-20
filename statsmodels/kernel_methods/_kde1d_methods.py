@@ -322,15 +322,12 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the distribution on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
         Returns
         -------
-        Returns the ``out`` variable, updated with the PDF.
-
-        :Default: Direct implementation of the formula for unbounded pdf
-            computation.
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
         """
         return convolve(self.exog, points[..., None], self.kernel.pdf, out,
                         self.bandwidth * self.adjust, self.weights, self.total_weights)
@@ -359,14 +356,11 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the CDF on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
         Returns
         -------
-        The ``out`` variable, updated with the CDF.
-
-        :Default: Direct implementation of the formula for unbounded CDF
+        out: ndarray
+            The default implementation uses the formula for unbounded CDF
             computation.
         """
         exog = self.exog
@@ -404,8 +398,6 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the iCDF on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
         Returns
         -------
@@ -467,10 +459,8 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the survival function on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
-        Results
+        Returns
         -------
         ndarray
             Returns the ``out`` variable, updated with the survival function.
@@ -499,8 +489,6 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the iSF on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
         Returns
         -------
@@ -524,8 +512,6 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the hazard function on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
         Returns
         -------
@@ -561,8 +547,6 @@ class KDE1DMethod(KDEMethod):
             Points to evaluate the cumuladavid gutive hazard function on
         out: ndarray
             Result object. If must have the same shapes as ``points``
-        dims: ndarray
-            If specified, points must be a NxD array and dims must be a (list of) dimensions < D.
 
         Returns
         -------
@@ -599,12 +583,17 @@ class KDE1DMethod(KDEMethod):
         cut: float
             for unbounded domains, how far from the last data
             point should the grid go, as a fraction of the bandwidth.
+        span: (float, float)
+            If specified, fix the lower and upper bounds of the grid on which
+            the PDF is computer. *If the KDE is bounded, you should always use
+            the bounds as border*.
 
         Returns
         -------
-        (ndarray, ndarray)
-            The array of positions the PDF has been estimated on, and the
-            estimations.
+        mesh : :py:class:`Grid`
+            Grid on which the PDF has bin evaluated
+        values : ndarray
+            Values of the PDF for each position of the grid.
 
         Notes
         -----
@@ -632,7 +621,7 @@ class KDE1DMethod(KDEMethod):
         dim: int
             Dimension along which the estimation must be done
 
-        Results
+        Returns
         -------
         ndarray
             Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
@@ -664,7 +653,7 @@ class KDE1DMethod(KDEMethod):
             result /= self.total_weights
         return result
 
-    def cdf_grid(self, N=None, cut=None):
+    def cdf_grid(self, N=None, cut=None, span=None):
         """
         Evaluate the CDF of the distribution on a regular grid with at least
         ``N`` elements.
@@ -680,12 +669,15 @@ class KDE1DMethod(KDEMethod):
 
         Returns
         -------
-        (ndarray, ndarray)
-            The array of positions the CDF has been estimated on, and the
-            estimations.
+        mesh : :py:class:`Grid`
+            Grid on which the CDF has bin evaluated
+        values : ndarray
+            Values of the CDF for each position of the grid.
 
         Notes
-        By defaults, thie method evaluate :math:`cdf(x)` on a grid generated using :py:func:`generate_grid1d`
+        -----
+        By defaults, thie method evaluate :math:`cdf(x)` on a grid generated using
+        :py:func:`generate_grid1d`
         """
         N = self.grid_size(N)
         if N <= 2 ** 11:
@@ -710,9 +702,10 @@ class KDE1DMethod(KDEMethod):
 
         Returns
         -------
-        (ndarray, ndarray)
-            The array of positions the CDF has been estimated on, and the
-            estimations.
+        mesh : :py:class:`Grid`
+            Grid on which the inverse CDF has bin evaluated
+        values : ndarray
+            Values of the inverse CDF for each position of the grid.
 
         Notes
         -----
@@ -742,9 +735,10 @@ class KDE1DMethod(KDEMethod):
 
         Returns
         -------
-        (ndarray, ndarray)
-            The array of positions the survival function has been
-            estimated on, and the estimations.
+        mesh : :py:class:`Grid`
+            Grid on which the survival function has bin evaluated
+        values : ndarray
+            Values of the inverse survival function for each position of the grid.
 
         Notes
         -----
@@ -1385,7 +1379,7 @@ class Renormalization(Unbounded1D):
     r"""
     This method consists in using the normal kernel method, but renormalize
     to only take into account the part of the kernel within the domain of the
-    density [1]_.
+    density.
 
     The kernel is then replaced with:
 
@@ -1520,6 +1514,8 @@ class LinearCombination(Unbounded1D):
 
         z = \frac{x-X}{h} \qquad l = \frac{L-x}{h} \qquad u = \frac{U-x}{h}
 
+    .. [1] Jones, M. C. 1993. Simple boundary correction for kernel density
+        estimation. Statistics and Computing 3: 135--146.
     """
 
     name = 'linear combination1d'
@@ -1624,12 +1620,20 @@ class LinearCombination(Unbounded1D):
 
         return Grid(grid), density
 
-Transform = namedtuple('Tranform', ['__call__', 'inv', 'Dinv'])
+_Transform_doc = "Named tuple storing the three function needed to transform an axis"
+_Transform_field_docs = ["Map coordinates from the original axis to the transformed axis.",
+                         "Map coordinates from the transformed axis back to the original one.",
+                         "Derivative of the inverse transform function."]
+Transform = namedtuple('Transform', ['__call__', 'inv', 'Dinv'],
+                       doc=_Transform_doc,
+                       field_docs=_Transform_field_docs)
 
 def _inverse(x, out=None):
     return np.divide(1, x, out)
 
+#: Transform object for a log-transform mapping [0, +oo] to [-oo, +oo]
 LogTransform = Transform(np.log, np.exp, np.exp)
+#: Transform object for an exp-transform mapping [-oo, +oo] to [o, +oo]
 ExpTransform = Transform(np.exp, np.log, _inverse)
 
 def transform_distribution(xs, ys, Dinv, out):
@@ -1685,7 +1689,7 @@ def create_transform(obj, inv=None, Dinv=None):
 
     Returns
     -------
-    Transform
+    transform : :py:class:`Transform`
         A transform object with function, inverse and derivative of the inverse
 
     Notes
