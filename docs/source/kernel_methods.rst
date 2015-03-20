@@ -1,70 +1,27 @@
-.. currentmodule:: statsmodels.kernel_methods
+.. currentmodule:: statsmodels
 
 .. _kernel_methods:
 
 Kernel Methods :mod:`kernel_methods`
 ====================================
 
-:mod:`statsmodels.kernel_methods` collect kernel-based methods, currently only
-directed toward estimation of density of probability. It currently handles
-univariate, multivariate and multidimensional data, which can be continuous or
-discrete.
+.. currentmodule:: statsmodels.kernel_methods
 
-The :py:class:`kde.KDE` object is the entrance point to all these methods. From there, the
-user defines the data, its properties, and the methods to use for the
-estimation. :py:class:`kde_utils.Grid`.
+This modules currently implements a variety of methods for kernel density
+estimation for Multi-variate data on bounded domains.
 
-Univariate continuous KDE
--------------------------
+The main entry point of the module is the :py:class:`kde.KDE` object, which is
+used to define the parameters of the density estimation. After construction, the
+user needs to call the method :py:meth:`kde.KDE.fit` to obtain a fitted model
+from which the density and other quantities can be computed. The exact list of
+quantities being computed depends on the object fitted and the method used.
 
-This is the simplest, and default, case. As an example, let's look at the
-distribution of annual flow of the Nile:
-
-.. code-block:: python
-
-    >>> from statsmodels import datasets
-    >>> import statsmodels.kernel_methods.api as km
-    >>> from matplotlib import pyplot as plt
-    >>> plt.ion()
-    >>> import pandas as pd
-    >>> ds = datasets.nile.load()
-    >>> df = pd.DataFrame(ds.data)
-    >>> df.volume.describe()
-    count     100.000000
-    mean      919.350000
-    std       169.227501
-    min       456.000000
-    25%       798.500000
-    50%       893.500000
-    75%      1032.500000
-    max      1370.000000
-    Name: volume, dtype: float64
-
-We can simply use the default options for this::
-
-    >>> m = km.KDE(df.volume)
-    >>> est = m.fit()
-    >>> xs, ys = est.grid()
-    >>> f = plt.figure()
-    >>> plt.plot(xs, ys)
-    >>> plt.xlabel('Flow')
-    >>> plt.ylabel('Frequency')
-    >>> plt.show()
-
-Bounded domains
-^^^^^^^^^^^^^^^
-
-Transformed axis
-^^^^^^^^^^^^^^^^
-
-Univariate discrete KDE
------------------------
-
-Multi-dimensional KDE
----------------------
-
-Multivariate KDE
-----------------
+The module :py:mod:`.kde_methods` contains all the methods that are defined.
+While fitting, each method is free is use a different, more adapted method given
+the parameters. For example, the :py:class:`.kde_methods.MultivariateKDE` method
+will return a univariate method if the data has a single dimension. Same for the
+multi-dimensional methods returning the equivalent 1D method for efficiency
+purposes.
 
 References
 ----------
