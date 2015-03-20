@@ -5,9 +5,10 @@
 Kernel Methods :mod:`kernel_methods`
 ====================================
 
-This section collect kernel-based methods, currently only directed toward
-estimation of density of probability. It currently handles univariate,
-multivariate and multidimensional data, which can be continuous or discrete.
+:mod:`statsmodels.kernel_methods` collect kernel-based methods, currently only
+directed toward estimation of density of probability. It currently handles
+univariate, multivariate and multidimensional data, which can be continuous or
+discrete.
 
 The :py:class:`kde.KDE` object is the entrance point to all these methods. From there, the
 user defines the data, its properties, and the methods to use for the
@@ -89,84 +90,10 @@ References
 Module Reference
 ----------------
 
-The public classes and modules are
+.. toctree::
 
-.. autosummary::
-  :toctree: generated/
-
-  kde.KDE
-  kde_methods.KDEMethod
-  kde_methods.MultivariateKDE
-
-The continuous axis methods are
-
-.. autosummary::
-  :toctree: generated/
-
-  kde_methods.KDE1DMethod
-  kde_methods.Cyclic1D
-  kde_methods.Reflection1D
-  kde_methods.Renormalization
-  kde_methods.LinearCombination
-  kde_methods.TransformKDE1D
-
-The following kernels can be used with these methods:
-
-.. autosummary::
-  :toctree: generated/
-
-  kernels.Kernel1D
-  kernels.normal
-  kernels.normal1d
-  kernels.tricube
-  kernels.Epanechnikov
-  kernels.Epanechnikov_order4
-  kernels.normal_order4
-
-The discrete axis methods are
-
-.. autosummary::
-  :toctree: generated/
-
-  kde_methods.UnorderedKDE
-  kde_methods.OrderedKDE
-
-The following kernels can be used with these methods:
-
-.. autosummary::
-  :toctree: generated/
-
-  kernels.WangRyzin
-  kernels.AitchisonAitken
-
-The multidimensional axes methods are
-
-.. autosummary::
-  :toctree: generated/
-
-  kde_methods.KDEnDMethod
-  kde_methods.Cyclic
-  kernels.normal
-
-A number of methods to estimate the bandwidths is also provided
-
-.. autosummary::
-  :toctree: generated/
-
-  bandwidths.Multivariate
-  bandwidths.scotts
-  bandwidths.scotts_full
-  bandwidths.silverman
-  bandwidths.silverman_full
-  bandwidths.botev
-  bandwidths.diagonal_variance
-  bandwidths.full_variance
-
-There is a number of utilities to use the results, such as integration and interpolation
-
-.. autosummary::
-  :toctree: generated/
-
-  kde_utils.Grid
-  kde_utils.GridInterpolator
-
+    kernel_methods_kde
+    kernel_methods_kde_methods
+    kernel_methods_bandwidths
+    kernel_methods_kernels
+    kernel_methods_utils

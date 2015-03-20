@@ -334,11 +334,51 @@ class OrderedKDE(UnorderedKDE):
         return 'D'
 
     def grid_cdf(self, N=None, cut=None):
+        """
+        Compute the CDF of the distribution on a grid
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+        span: (float, float)
+            If specified, fix the lower and upper bounds of the grid on which
+            the PDF is computer. *If the KDE is bounded, you should always use
+            the bounds as border*.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the CDF has bin evaluated
+        values : ndarray
+            Values of the CDF for each position of the grid.
+
+        """
         mesh, bins = self.grid()
         return mesh, np.cumsum(bins, out=bins)
 
     @numpy_trans1d_method()
     def cdf(self, points, out):
+        """
+        Compute the CDF of the distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the CDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            The default implementation uses the formula for unbounded CDF
+            computation.
+        """
         _, bins = self.grid_cdf()
         out[...] = bins[points]
         return out

@@ -10,8 +10,7 @@ from scipy import fftpack, integrate
 from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
-from statsmodels.compat.python import range
-from ..compat.python import long
+from ..compat.python import range, long
 from ..compat.numpy import np_meshgrid
 from ..compat.scipy import sp_integrate_nquad as nquad
 
@@ -86,33 +85,6 @@ def rfftnsize(Ns):
     Returns the number of elements in the result of :py:func:`numpy.fft.rfft`.
     """
     return tuple(Ns[:-1]) + ((Ns[-1]//2)+1,)
-
-def fftnfreq(Ns, dx=None):
-    """
-    Return the Discrete Fourier Transform sample frequencies
-    (for usage with :py:func:`numpy.fft.fftn`, :py:func:`numpy.fft.rfftn`).
-
-    See :py:func:`numpy.fft.rfftfreq` and :py:func:`numpy.fft.rfftn` for details.
-
-    Parameters
-    ----------
-    Ns: list of int
-        Number of samples for each dimension
-    dx: None of list of float
-        If not None, this must be of same length as Ns and is the space between samples along that axis
-
-    Returns
-    -------
-    list of ndarray
-        Sparse grid for the frequencies
-    """
-    ndim = len(Ns)
-    if dx is None:
-        dx = [1.0]*ndim
-    elif len(dx) != ndim:
-        raise ValueError("Error, dx must be of same length as Ns")
-    fs = [np.fft.fftfreq(Xs[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def rfftnfreq(Ns, dx=None):
     """
@@ -234,34 +206,23 @@ class Kernel1D(object):
 
     - a sum of 1 (i.e. a valid density of probability);
     - an average of 0 (i.e. centered);
-    - a finite variance. It is even recommanded that the variance is close to 1 to give a uniform meaning to the
-      bandwidth.
-
-    Attributes
-    ----------
-    cut: float
-        Cutting point after which there is a negligeable part of the probability. More formally, if :math:`c` is the
-        cutting point:
-
-        .. math::
-
-            \int_{-c}^c p(x) dx \approx 1
-    lower: float
-        Lower bound of the support of the PDF. Formally, if :math:`l` is the lower bound:
-
-        .. math::
-
-            \int_{-\infty}^l p(x)dx = 0
-    upper: float
-        Upper bound of the support of the PDF. Formally, if :math:`u` is the upper bound:
-
-        .. math::
-
-            \int_u^\infty p(x)dx = 0
+    - a finite variance. It is even recommanded that the variance is close to 1
+      to give a uniform meaning to the bandwidth.
     """
+
+    #: Interval containing most of the kernel: :math:`\int_{-c}^c p(x) dx \approx 1`
     cut = 3.
+    #: Lower bound of the kernel domain: :math:`\int_{-\infty}^l p(x) dx = 0`
     lower = -np.inf
+    #: Upper bound of the kernel domain: :math:`\int_u^{-\infty} p(x) dx = 0`
     upper = np.inf
+
+    @property
+    def ndim(self):
+        """
+        Dimension of the kernel (always 1 for this one)
+        """
+        return 1
 
     def for_ndim(self, ndim):
         """
@@ -274,8 +235,12 @@ class Kernel1D(object):
         r"""
         Returns the density of the kernel on the points `z`. This is the funtion :math:`K(z)` itself.
 
-        :param ndarray z: Array of points to evaluate the function on. The method should accept any shape of array.
-        :param ndarray out: If provided, it will be of the same shape as `z` and the result should be stored in it.
+        Parameters
+        ----------
+        z : ndarray
+            Array of points to evaluate the function on. The method should accept any shape of array.
+        out: ndarray
+            If provided, it will be of the same shape as `z` and the result should be stored in it.
             Ideally, it should be used for as many intermediate computation as possible.
         """
         raise NotImplementedError()
@@ -407,21 +372,6 @@ class Kernel1D(object):
 
     @numpy_trans1d_method()
     def _convolution(self, z, out):
-        r"""
-        Convolution kernel.
-
-        The definition of a convolution kernel is:
-
-        .. math::
-
-            \bar{K(x)} = (K \otimes K)(x) = \int_{\mathcal{R}} K(y) K(x-y) dy
-
-        Notes
-        -----
-
-        The computation of the convolution is, by default, very expensive. Most kernels should define this methods in
-        addition to the PDF.
-        """
         try:
             comp_conv = self.__comp_conv
         except AttributeError:
@@ -445,11 +395,26 @@ class Kernel1D(object):
 
     @property
     def convolution(self):
+        r"""
+        Convolution kernel.
+
+        The definition of a convolution kernel is:
+
+        .. math::
+
+            \bar{K(x)} = (K \otimes K)(x) = \int_{\mathcal{R}} K(y) K(x-y) dy
+
+        Notes
+        -----
+
+        The computation of the convolution is, by default, very expensive. Most kernels should define this methods in
+        addition to the PDF.
+        """
         if not hasattr(self, '_convolve_kernel'):
-            self._convolve_kernel = KernelfromPDF(self._convolution)
+            self._convolve_kernel = from1DPDF(self._convolution)
         return self._convolve_kernel
 
-class KernelfromPDF(Kernel1D):
+class from1DPDF(Kernel1D):
     """
     This class creates a kernel from a single function computing the PDF.
     """
@@ -457,6 +422,9 @@ class KernelfromPDF(Kernel1D):
         self._pdf = pdf
 
     def pdf(self, z, out=None):
+        """
+        Call the pdf function set at construction time
+        """
         return self._pdf(z, out)
 
     __call__ = pdf
@@ -636,8 +604,11 @@ class KernelnD(object):
 
     It provides various services, such as numerical approximations for the CDF, FFT and DCT for the kernel.
     """
+    #: Interval containing most of the kernel
     cut = 3.
+    #: Lower bound of the kernel domain for each axis
     lower = -np.inf
+    #: Upper bound of the kernel domain for each axis
     upper = np.inf
 
     def __init__(self, ndim=2):
@@ -645,6 +616,9 @@ class KernelnD(object):
 
     @property
     def ndim(self):
+        """
+        Number of dimension of the kernel
+        """
         return self._ndim
 
     def for_ndim(self, ndim):
@@ -684,6 +658,12 @@ class KernelnD(object):
         return self.pdf(z, out=out)
 
     def cdf(self, z, out=None):
+        """
+        CDF of the kernel.
+
+        By default, use :py:func:`numpy.nquad` to integrate the PDF from the
+        lower bounds to the upper bound.
+        """
         try:
             comp_cdf = self.__comp_cdf
         except AttributeError:

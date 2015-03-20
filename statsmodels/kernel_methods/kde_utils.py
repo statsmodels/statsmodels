@@ -5,10 +5,9 @@ Module contained a variety of small useful functions.
 """
 
 from __future__ import division, print_function, absolute_import
-from ..compat.python import string_types
+from ..compat.python import string_types, range
 import numpy as np
 import inspect
-from ..compat.python import range
 import functools
 from .namedtuple import namedtuple  # NOQA need to be defined here
 from ._grid import Grid  # noqa
