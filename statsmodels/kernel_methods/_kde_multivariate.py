@@ -122,6 +122,9 @@ class MultivariateKDE(KDEMethod):
 
     @property
     def adjust(self):
+        """
+        Bandwidth adjustment values
+        """
         return self._adjust
 
     @adjust.setter
@@ -143,18 +146,30 @@ class MultivariateKDE(KDEMethod):
 
     @property
     def npts(self):
+        """
+        Number of points in the dataset
+        """
         return self._exog.shape[0]
 
     @property
     def ndim(self):
+        """
+        Number of dimensions of the data
+        """
         return self._exog.shape[1]
 
     @property
     def lower(self):
+        """
+        Lower bounds of the domain
+        """
         return self._lower
 
     @property
     def upper(self):
+        """
+        Upper bound of the domain
+        """
         return self._upper
 
     def get_methods(self, axis_types):
@@ -245,10 +260,28 @@ class MultivariateKDE(KDEMethod):
 
     @property
     def bin_type(self):
+        """
+        Type of bin for each dimension (see :py:class:`.kde_utils.Grid`)
+        """
         return self._bin_type
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
+        """
+        Compute the PDF of the distribution
+
+        Parameters
+        ----------
+        points: ndarray of shape (M,D)
+            Points on which the PDF should be evaluated
+        out: ndarray of shape (M,)
+            Array in which the result is stored
+
+        Returns
+        -------
+        out: ndarray of shape (M,)
+            For each input point, the value of the PDF on that point
+        """
         full_out = np.empty_like(points)
         for i in range(self.ndim):
             self._methods[i].pdf(points[:, i], out=full_out[:, i])
@@ -256,10 +289,16 @@ class MultivariateKDE(KDEMethod):
         return out
 
     def __call__(self, points, out=None):
+        """
+        Alias for :py:meth:`pdf`
+        """
         return self.pdf(points, out)
 
     @property
     def to_bin(self):
+        """
+        Property holding the data to be binned. It is different from :py:attr:`exog` if any method provide this.
+        """
         if self._bin_data is not None:
             if self._bin_data is True:
                 self._bin_data = self._exog.copy()
@@ -271,7 +310,7 @@ class MultivariateKDE(KDEMethod):
 
     def update_inputs(self, exog, weights=1., adjust=1.):
         """
-        Update the inputs
+        Update the inputs from a constistent set of data, weights and adjustments
         """
         exog = np.atleast_2d(exog)
         if exog.ndim > 2 or exog.shape[1] != self.ndim:
@@ -298,6 +337,9 @@ class MultivariateKDE(KDEMethod):
         self._bin_data = bin_data
 
     def grid_size(self, N=None):
+        """
+        Compute an acceptable size for a grid
+        """
         if N is None:
             p2 = self.base_p2 // self.ndim
             if self.base_p2 % self.ndim > 0:
@@ -306,6 +348,25 @@ class MultivariateKDE(KDEMethod):
         return N
 
     def grid(self, N=None, cut=None):
+        """
+        Compute the PDF on a grid
+
+        Parameters
+        ----------
+        N: int of tuple of int
+            Number of bins on each dimension. If a single number is used, this is valid for each dimension.
+        cut: float or tuple of float
+            If defined, override the cutting value for each dimension. If a
+            tuple is defined, each non-None value override a specific
+            dimension.
+
+        Returns
+        -------
+        mesh: `statsmodels.kernel_methods.kde_utils.Grid`
+            Grid on which the PDF has been evaluated
+        values: ndarray
+            Values of the PDF on the mesh.
+        """
         to_bin = self.to_bin
         bin_type = ''.join(m.bin_type for m in self.methods)
         bounds = np.c_[self.lower, self.upper]

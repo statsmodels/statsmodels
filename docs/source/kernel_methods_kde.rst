@@ -1,7 +1,7 @@
 .. currentmodule:: statsmodels.kernel_methods
 
-Module :py:mod:`kde`
-====================
+Module :py:mod:`.kde`
+=====================
 
 .. automodule:: statsmodels.kernel_methods.kde
 

@@ -8,8 +8,8 @@ List of modules:
 * :py:mod:`statsmodels.kernel_methods.kde_utils`
 * :py:mod:`statsmodels.kernel_methods.fast_linbin`
 
-Module :py:mod:`kde_utils`
---------------------------
+Module :py:mod:`.kde_utils`
+---------------------------
 
 .. automodule:: statsmodels.kernel_methods.kde_utils
 
@@ -29,8 +29,8 @@ List of classes:
 
 .. currentmodule:: statsmodels.kernel_methods
 
-Module :py:mod:`fast_linbin`
-----------------------------
+Module :py:mod:`.fast_linbin`
+-----------------------------
 
 .. automodule:: statsmodels.kernel_methods.fast_linbin
 

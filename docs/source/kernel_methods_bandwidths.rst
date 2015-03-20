@@ -1,7 +1,7 @@
 .. currentmodule:: statsmodels.kernel_methods
 
-Module :py:mod:`bandwidths`
-===========================
+Module :py:mod:`.bandwidths`
+============================
 
 .. automodule:: statsmodels.kernel_methods.bandwidths
 

@@ -1,7 +1,7 @@
 .. currentmodule:: statsmodels.kernel_methods
 
-Module :py:mod:`kde_methods`
-============================
+Module :py:mod:`.kde_methods`
+=============================
 
 .. automodule:: statsmodels.kernel_methods.kde_methods
 
@@ -142,6 +142,8 @@ Module reference
 ----------------
 
 .. autoclass:: MultivariateKDE
+    :members:
+    :special-members: __call__
 
     Base class: :py:class:`KDEMethod`
 
