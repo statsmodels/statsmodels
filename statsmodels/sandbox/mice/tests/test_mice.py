@@ -88,9 +88,6 @@ class Test_MICEData(object):
                                         np.arange(11, 30, 2),
                                         np.arange(30, 200))))
 
-        # Initial imputation should preserve the mean
-        assert_allclose(df.mean(), imp_data.data.mean())
-
         for k in range(3):
             imp_data.update_all()
             assert_equal(imp_data.data.shape[0], nrow)
@@ -100,12 +97,13 @@ class Test_MICEData(object):
         fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
         assert_equal(imp_data.conditional_formula['x1'], fml)
 
-        assert_equal(imp_data.cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
+        assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
         # Should make a copy
         assert(not (df is imp_data.data))
 
-        endog_obs, exog_obs, exog_miss = imp_data.get_split_data('x3')
+        (endog_obs, exog_obs, following_obs, exog_miss,
+         predict_obs_kwds, predict_miss_kwds) = imp_data.get_split_data('x3')
         assert_equal(len(endog_obs), 190)
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
@@ -133,6 +131,30 @@ class Test_MICEData(object):
         assert(all_x[0] is all_x[1])
 
 
+    def test_following(self):
+        """
+        Test imputations in which one variable follows another.
+        """
+
+        df = gendat()
+        df["x2"] = np.nan
+        df.x2[0:50] = 0
+        df.x2[50:100] = 1
+        df.x2[100:150] = 2
+        df["x3"] = np.nan
+        df.x3[0:50] = 3
+        df.x3[50:100] = 4
+        df.x3[100:125] = 5
+        df.x3[125:150] = 6
+        imp_data = mice.MICEData(df, followed_by={"x2": ["x3"]})
+
+        x = next(imp_data)
+
+        for a,b in (0, 3), (1, 4):
+            ii = np.flatnonzero(df.x3 == b)
+            assert_allclose(df.x2.iloc[ii], a)
+
+
     def test_pertmeth(self):
         """
         Test with specified perturbation method.
@@ -154,7 +176,31 @@ class Test_MICEData(object):
                 assert_equal(imp_data.data.shape[1], ncol)
                 assert_allclose(orig[mx], imp_data.data[mx])
 
-        assert_equal(imp_data.cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
+        assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
+
+
+    def test_phreg(self):
+
+        np.random.seed(8742)
+        n = 300
+        x1 = np.random.normal(size=n)
+        x2 = np.random.normal(size=n)
+        event_time = np.random.exponential(size=n) * np.exp(x1)
+        obs_time = np.random.exponential(size=n)
+        time = np.where(event_time < obs_time, event_time, obs_time)
+        status = np.where(time == event_time, 1, 0)
+        df = pd.DataFrame({"time": time, "status": status, "x1": x1, "x2": x2})
+        df.time.iloc[10:40] = np.nan
+        df.status.iloc[10:40] = np.nan
+        df.x1.iloc[30:50] = np.nan
+        df.x2.iloc[40:60] = np.nan
+
+        from statsmodels.duration.hazard_regression import PHReg
+
+        idata = mice.MICEData(df, followed_by={"time": ["status"]})
+        idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg, init_kwds={"status": mice.PatsyFormula("status")})
+
+        x = next(idata)
 
 
     def test_set_imputer(self):
@@ -195,7 +241,7 @@ class Test_MICEData(object):
         fml = 'x4 ~ x1 + x2 + x3 + x5 + y'
         assert_equal(imp_data.conditional_formula['x4'], fml)
 
-        assert_equal(imp_data.cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
+        assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
     @dec.skipif(not have_matplotlib)
