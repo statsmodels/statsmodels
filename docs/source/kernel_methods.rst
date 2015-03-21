@@ -58,6 +58,7 @@ Module Reference
 ----------------
 
 .. toctree::
+    :maxdepth: 2
 
     kernel_methods_kde
     kernel_methods_kde_methods

@@ -143,14 +143,14 @@ methods_1d = [test_method(km.KDE1DMethod, 1e-5, 1e-4, 1e-5, False, False),
               test_method(km.Cyclic1D, 1e-5, 1e-3, 1e-4, True, True),
               test_method(km.Renormalization, 1e-5, 1e-4, 1e-2, True, True),
               test_method(km.LinearCombination, 1e-1, 1e-1, 1e-1, True, False)]
-methods_log = [test_method(km.TransformKDE1D(km.LogTransform), 1e-5, 1e-4, 1e-5, True, False)]
+methods_log = [test_method(km.Transform1D(km.LogTransform), 1e-5, 1e-4, 1e-5, True, False)]
 
 methods_nd = [test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, True, True),
               test_method(km.Cyclic, 1e-5, 1e-4, 1e-5, False, False),
               test_method(km.KDEnDMethod, 1e-5, 1e-4, 1e-5, False, False)]
 
-methods_nc = [test_method(km.OrderedKDE, 1e-5, 1e-4, 1e-5, False, False),
-              test_method(km.UnorderedKDE, 1e-5, 1e-4, 1e-5, False, False)]
+methods_nc = [test_method(km.Ordered, 1e-5, 1e-4, 1e-5, False, False),
+              test_method(km.Unordered, 1e-5, 1e-4, 1e-5, False, False)]
 
 test_kernel = namedtuple('test_kernel', ['cls', 'precision_factor', 'var', 'positive'])
 

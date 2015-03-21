@@ -12,17 +12,17 @@ from ..compat.numpy import np_sum
 
 class AitchisonAitken(object):
     r"""
-    The Aitchison-Aitken kernel, used for unordered discrete random variables.
+    The Aitchison-Aitken kernel, used for unordered discrete random variables [KM2]_.
 
-    See p.18 of Racine's reference for details.  The value of the kernel L if :math:`X_{i}=x`
+    See p.18 of [KM3]_ for details.  The value of the kernel L if :math:`X_{i}=x`
     is :math:`1-\lambda`, otherwise it is :math:`\frac{\lambda}{c-1}`.
     Here :math:`c` is the number of levels plus one of the RV.
 
     References
     ----------
-    .. [1] J. Aitchison and C.G.G. Aitken, "Multivariate binary discrimination
+    .. [KM2] J. Aitchison and C.G.G. Aitken, "Multivariate binary discrimination
            by the kernel method", Biometrika, vol. 63, pp. 413-420, 1976.
-    .. [2] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
+    .. [KM3] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
     """
     def for_ndim(self, ndim):
@@ -90,21 +90,21 @@ class AitchisonAitken(object):
 
 class WangRyzin(object):
     r"""
-    The Wang-Ryzin kernel, used for ordered discrete random variables.
+    The Wang-Ryzin kernel, used for ordered discrete random variables [KM5]_.
 
     Notes
     -----
-    See p. 19 in Racine's reference for details.  The value of the kernel L if
+    See p. 19 in [KM4]_ for details.  The value of the kernel L if
     :math:`X_{i}=x` is :math:`1-\lambda`, otherwise it is
     :math:`\frac{1-\lambda}{2}\lambda^{|X_{i}-x|}`, where :math:`\lambda` is
     the bandwidth.
 
     References
     ----------
-    .. [1] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
+    .. [KM4] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
            http://dx.doi.org/10.1561/0800000009
-    .. [2] M.-C. Wang and J. van Ryzin, "A class of smooth estimators for
+    .. [KM5] M.-C. Wang and J. van Ryzin, "A class of smooth estimators for
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
     def for_ndim(self, ndim):

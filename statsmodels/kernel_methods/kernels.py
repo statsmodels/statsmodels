@@ -89,9 +89,9 @@ def rfftnsize(Ns):
 def rfftnfreq(Ns, dx=None):
     """
     Return the Discrete Fourier Transform sample frequencies
-    (for usage with :py:func:`numpy.fft.rfftn`, :py:func:`numpy.fft.irfftn`).
+    (for usage with :py:func:`scipy.fftpack.rfftn`, :py:func:`scipy.fftpack.irfftn`).
 
-    See :py:func:`numpy.fft.rfftfreq` and :py:func:`numpy.fft.rfftn` for details.
+    See :py:func:`scipy.fftpack.rfftfreq` and :py:func:`scipy.fftpack.rfftn` for details.
 
     Parameters
     ----------
@@ -119,7 +119,7 @@ def rfftnfreq(Ns, dx=None):
 def fftsamples(N, dx=1.0):
     """
     Returns the array of sample positions needed to comput the FFT with N samples.
-    (for usage with :py:func:`numpy.fft.fft`, :py:func:`numpy.fft.rfft`).
+    (for usage with :py:func:`scipy.fftpack.fft`, :py:func:`scipy.fftpack.rfft`).
 
     Parameters
     ----------
@@ -131,7 +131,7 @@ def fftsamples(N, dx=1.0):
     Returns
     -------
     ndarray
-        Array of frequencies, as returned by :py:func:`numpy.fft.fftfreq`
+        Array of positions
     """
     if N % 2 == 1:
         n = (N-1)//2
@@ -166,10 +166,42 @@ def fftnsamples(Ns, dx=None):
     return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def dctfreq(N, dx=1.0):
+    """
+    Return the Discrete Cosine Transform sample frequencies
+    (for usage with dct, idct).
+
+    Parameters
+    ----------
+    n : int
+        Window length.
+    d : scalar, optional
+        Sample spacing (inverse of the sampling rate). Defaults to 1.
+
+    Returns
+    -------
+    f : ndarray
+        Array of length ``N`` containing the sample frequencies.
+    """
     dz = 1/(2*N*dx)
     return np.arange(N)*dz
 
 def dctnfreq(Ns, dx=None):
+    """
+    Return the Discrete Cosine Transform sample frequencies
+    (for usage with :py:func:`scipy.fftpack.dctn`, :py:func:`scipy.fftpack.idctn`).
+
+    Parameters
+    ----------
+    Ns: list of int
+        Number of samples for each dimension
+    dx: None of list of float
+        If not None, this must be of same length as Ns and is the space between samples along that axis
+
+    Returns
+    -------
+    list of ndarray
+        Sparse grid for the frequencies
+    """
     ndim = len(Ns)
     if dx is None:
         dx = [1.0]*ndim
@@ -179,9 +211,41 @@ def dctnfreq(Ns, dx=None):
     return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
 
 def dctsamples(N, dx=1.0):
+    """
+    Returns the array of sample positions needed to comput the DCT with N samples.
+    (for usage with :py:func:`scipy.fftpack.dct`)
+
+    Parameters
+    ----------
+    N: int
+        Number of samples for the DCT
+    dx: float or None
+        Distance between sample points. If None, dx = 1.0.
+
+    Returns
+    -------
+    ndarray
+        Array of positions
+    """
     return np.arange(0.5, N)*dx
 
 def dctnsamples(Ns, dx=None):
+    """
+    Returns the array of sample positions needed to comput the DCT with N samples.
+    (for usage with :py:func:`scipy.fftpack.dctn`)
+
+    Parameters
+    ----------
+    N: list of int
+        Number of samples for the DCT for each dimension
+    dx: float or None
+        Distance between sample points for each dimension. If None, dx = 1.0 for each dimension.
+
+    Returns
+    -------
+    Grid
+        Grid for the samples
+    """
     ndim = len(Ns)
     if dx is None:
         dx = [1.0]*ndim
