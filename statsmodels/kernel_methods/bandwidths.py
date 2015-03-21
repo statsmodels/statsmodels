@@ -352,4 +352,4 @@ class Multivariate(object):
                 res[d] = float(bw)
         return res
 
-from .bw_crossvalidation import lsq_crossvalidation, ContinuousIMSE, leave_some_out  # NoQA
+from .bw_crossvalidation import crossvalidation, CVFunc, CV_IMSE, CV_LogLikelihood, leave_some_out  # NoQA

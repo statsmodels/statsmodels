@@ -30,19 +30,25 @@ class TestCV(object):
         kde_utils.setupClass_norm(cls)
 
     def loo(self, k, name):
-        k.bandwidth = bandwidths.lsq_crossvalidation()
+        k.bandwidth = bandwidths.crossvalidation()
         est = k.fit()
         assert est.bandwidth > 0
 
     def folds(self, k, name):
         imse_args = dict(use_grid=True, folding=5)
-        k.bandwidth = bandwidths.lsq_crossvalidation(imse_args=imse_args)
+        k.bandwidth = bandwidths.crossvalidation(**imse_args)
+        est = k.fit()
+        assert est.bandwidth > 0
+
+    def imse(self, k, name):
+        imse_args = dict(use_grid=True, folding=5)
+        k.bandwidth = bandwidths.crossvalidation(bandwidths.CV_IMSE, **imse_args)
         est = k.fit()
         assert est.bandwidth > 0
 
     def sampling(self, k, name):
         imse_args = dict(sampling=100)
-        k.bandwidth = bandwidths.lsq_crossvalidation(imse_args=imse_args)
+        k.bandwidth = bandwidths.crossvalidation(**imse_args)
         est = k.fit()
         assert est.bandwidth > 0
 
@@ -50,6 +56,11 @@ class TestCV(object):
         for m in self.methods:
             k = self.createKDE(self.vs[0], m)
             yield self.loo, k, 'loo_{0}_{1}'.format(k.method, 0)
+
+    def test_IMSE(self):
+        for m in self.methods:
+            k = self.createKDE(self.vs[0], m)
+            yield self.imse, k, 'imse_{0}_{1}'.format(k.method, 0)
 
     def test_folds(self):
         for m in self.methods:
