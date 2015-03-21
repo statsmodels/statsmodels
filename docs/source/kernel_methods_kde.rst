@@ -7,6 +7,7 @@ Module :py:mod:`.kde`
 
 This module contains the class from which all KDE models are created:
 
-.. autoclass:: KDE
-    :members: fit, copy, exog, weights, adjust, kernel, bandwidth,
-              lower, upper, axis_type, ndim, npts, total_weights
+.. autosummary::
+    :toctree: generated/
+
+    KDE

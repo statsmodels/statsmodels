@@ -44,7 +44,7 @@ def _compute_bandwidth(kde, default):
         raise ValueError("Error, there must be one bandwidth per variable")
     return bw
 
-class MultivariateKDE(KDEMethod):
+class Multivariate(KDEMethod):
     """
     This class works as an adaptor for various 1D methods to work together.
 
@@ -63,8 +63,8 @@ class MultivariateKDE(KDEMethod):
                                   O=kernels.WangRyzin(),
                                   U=kernels.AitchisonAitken())
         self._methods_type = dict(C=_kde1d_methods.Unbounded1D(),
-                                  O=_kdenc_methods.OrderedKDE(),
-                                  U=_kdenc_methods.UnorderedKDE())
+                                  O=_kdenc_methods.Ordered(),
+                                  U=_kdenc_methods.Unordered())
         for k in kwords:
             if hasattr(self, k):
                 setattr(self, k, kwords[k])
@@ -245,7 +245,8 @@ class MultivariateKDE(KDEMethod):
                 bin_data = True
 
         fitted = self.copy()
-        #fitted._bandwidth = bw
+        if hasattr(fitted, 'bandwidth'):
+            del fitted._bandwidth
         fitted._axis_type = axis_type
         fitted._kernels = kernels
         fitted._exog = kde.exog

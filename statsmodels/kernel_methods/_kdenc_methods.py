@@ -25,7 +25,7 @@ def _compute_bandwidth(kde):
     raise ValueError("Bandwidth needs to be specified")
 
 
-class UnorderedKDE(KDEMethod):
+class Unordered(KDEMethod):
     """
     Discrete, unordered, univariate method.
     """
@@ -310,12 +310,12 @@ class UnorderedKDE(KDEMethod):
     restore_axis = None
     transform_bins = None
 
-class OrderedKDE(UnorderedKDE):
+class Ordered(Unordered):
     """
     Discrete, ordered, univariate method.
     """
     def __init__(self):
-        UnorderedKDE.__init__(self)
+        Unordered.__init__(self)
         self._kernel = kernels.WangRyzin()
 
     name = "ordered"

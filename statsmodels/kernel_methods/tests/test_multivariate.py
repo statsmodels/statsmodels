@@ -12,7 +12,7 @@ class KDETester(object):
         all_args.update(args)
         d = data.copy()
         k = kde.KDE(d, **all_args)
-        mv = kde_methods.MultivariateKDE()
+        mv = kde_methods.Multivariate()
         k.method = mv
 
         n = len(methods)
