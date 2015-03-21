@@ -152,6 +152,7 @@ class KDE1DMethod(KDEMethod):
           arrays.
     """
 
+    #: Name of the method, for presentation purposes
     name = 'unbounded1d'
 
     def __init__(self):
@@ -172,6 +173,9 @@ class KDE1DMethod(KDEMethod):
 
     @property
     def bin_type(self):
+        """
+        Type of the bins adapted for the method (default: 'B')
+        """
         return 'B'
 
     def fit(self, kde, compute_bandwidth=True):
@@ -233,6 +237,9 @@ class KDE1DMethod(KDEMethod):
         self._exog = value
 
     def copy(self):
+        """
+        Create a shallow copy of the estimated object
+        """
         return shallow_copy(self)
 
     @property
@@ -274,16 +281,14 @@ class KDE1DMethod(KDEMethod):
         """
         Property holding the data to be binned. This is useful when the PDF is
         not evaluated on the real dataset, but on a transformed one.
-
-        Returns
-        -------
-        ndarray
-            Return the data to bin, or None if it is the same as the exog data
         """
         return None
 
+    #: Function used to transform an axis, or None for no transformation
     transform_axis = None
+    #: Inverse function of transform_axis
     restore_axis = None
+    #: Function used to adapt the bin values when restoring an axis
     transform_bins = None
 
     @KDEMethod.lower.setter
@@ -299,15 +304,15 @@ class KDE1DMethod(KDEMethod):
     @property
     def closed(self):
         """
-        Returns true if the density domain is closed (i.e. lower and upper
-        are both finite)
+        Returns true if the density domain is closed (lower and upper
+        are both finite).
         """
         return self.lower > -np.inf and self.upper < np.inf
 
     @property
     def bounded(self):
         """
-        Returns true if the density domain is actually bounded
+        Returns true if the density domain is actually bounded.
         """
         return self.lower > -np.inf or self.upper < np.inf
 
@@ -892,6 +897,9 @@ class KDE1DMethod(KDEMethod):
         return pts, pts.cum_integrate(pdf)
 
     def grid_size(self, N=None):
+        """
+        Returns a valid grid size.
+        """
         if N is None:
             return 2 ** 10
         return N
@@ -996,6 +1004,7 @@ class Cyclic1D(KDE1DMethod):
     using FFT.
     """
 
+    #: Name of the method, for presentation purposes
     name = 'cyclic1d'
 
     def __init__(self):
@@ -1003,10 +1012,29 @@ class Cyclic1D(KDE1DMethod):
 
     @property
     def bin_type(self):
+        """
+        Type of the bins adapted for the method
+        """
         return 'C'
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
+        """
+        Compute the PDF of the estimated distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
+        """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
         if not self.closed:
@@ -1044,6 +1072,28 @@ class Cyclic1D(KDE1DMethod):
 
     @numpy_trans1d_method()
     def cdf(self, points, out):
+        r"""
+        Compute the CDF of the estimated distribution, defined as:
+
+        .. math::
+
+            cdf(x) = P(X \leq x) = \int_l^x p(t) dt
+
+        where :math:`l` is the lower bound of the distribution domain and
+        :math:`p` the density of probability
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the CDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            The CDF for the points parameters
+        """
         if not self.bounded:
             return KDE1DMethod.cdf(self, points, out)
         if not self.closed:
@@ -1117,12 +1167,35 @@ class Cyclic1D(KDE1DMethod):
         return fftdensity(exog, self.kernel.rfft, bw, lower, upper, N, self.weights, self.total_weights)
 
     def from_binned(self, mesh, binned, normed=False, dim=-1):
+        """
+        Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
+        data.
+
+        Parameters
+        ----------
+        mesh: grid.Grid
+            Grid of the binning
+        bins: ndarray
+            Array of the same shape as the mesh with the values per bin
+        normed: bool
+            If true, the result will be normed w.r.t. the total weight of the exog
+        dim: int
+            Dimension along which the estimation must be done
+
+        Returns
+        -------
+        ndarray
+            Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
+        """
         if self.adjust.ndim:
             raise ValueError("Error, cannot use binned data with non-constant adjustment.")
         return fftdensity_from_binned(mesh, binned, self.kernel.rfft, self.adjust*self.bandwidth,
                                       normed, self.total_weights, dim)
 
     def grid_size(self, N=None):
+        """
+        Returns a valid grid size.
+        """
         if N is None:
             if self.adjust.shape:
                 return 2 ** 10
@@ -1234,6 +1307,7 @@ class Reflection1D(KDE1DMethod):
     using CDT.
     """
 
+    #: Name of the method, for presentation purposes
     name = 'reflection1d'
 
     def __init__(self):
@@ -1241,10 +1315,29 @@ class Reflection1D(KDE1DMethod):
 
     @property
     def bin_type(self):
+        """
+        Type of the bins adapted for the method
+        """
         return 'R'
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
+        """
+        Compute the PDF of the estimated distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
+        """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
 
@@ -1284,6 +1377,28 @@ class Reflection1D(KDE1DMethod):
 
     @numpy_trans1d_method()
     def cdf(self, points, out):
+        r"""
+        Compute the CDF of the estimated distribution, defined as:
+
+        .. math::
+
+            cdf(x) = P(X \leq x) = \int_l^x p(t) dt
+
+        where :math:`l` is the lower bound of the distribution domain and
+        :math:`p` the density of probability
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the CDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            The CDF for the points parameters
+        """
         if not self.bounded:
             return KDE1DMethod.cdf(self, points, out)
 
@@ -1361,12 +1476,35 @@ class Reflection1D(KDE1DMethod):
         return dctdensity(exog, self.kernel.dct, bw, lower, upper, N, weights, self.total_weights)
 
     def from_binned(self, mesh, binned, normed=False, dim=-1):
+        """
+        Evaluate the PDF from data already binned. The binning might have been high-dimensional but must be of the same
+        data.
+
+        Parameters
+        ----------
+        mesh: grid.Grid
+            Grid of the binning
+        bins: ndarray
+            Array of the same shape as the mesh with the values per bin
+        normed: bool
+            If true, the result will be normed w.r.t. the total weight of the exog
+        dim: int
+            Dimension along which the estimation must be done
+
+        Returns
+        -------
+        ndarray
+            Array of same size as bins, but with the estimated of the PDF for each line along the dimension `dim`
+        """
         if self.adjust.ndim:
             raise ValueError("Error, cannot use binned data with non-constant adjustment.")
         return dctdensity_from_binned(mesh, binned, self.kernel.dct, self.bandwidth*self.adjust,
                                       normed, self.total_weights, dim=dim)
 
     def grid_size(self, N=None):
+        """
+        Returns a valid grid size.
+        """
         if N is None:
             if self.adjust.shape:
                 return 2 ** 10
@@ -1393,6 +1531,7 @@ class Renormalization(Cyclic1D):
 
     """
 
+    #: Name of the method, for presentation purposes
     name = 'renormalization1d'
 
     def __init__(self):
@@ -1400,6 +1539,22 @@ class Renormalization(Cyclic1D):
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
+        """
+        Compute the PDF of the estimated distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
+        """
         if not self.bounded:
             return Cyclic1D.pdf(self, points, out)
 
@@ -1425,15 +1580,64 @@ class Renormalization(Cyclic1D):
 
     @property
     def bin_type(self):
+        """
+        Type of the bins adapted for the method
+        """
         return 'B'
 
     @numpy_trans1d_method()
     def cdf(self, points, out):
+        r"""
+        Compute the CDF of the estimated distribution, defined as:
+
+        .. math::
+
+            cdf(x) = P(X \leq x) = \int_l^x p(t) dt
+
+        where :math:`l` is the lower bound of the distribution domain and
+        :math:`p` the density of probability
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the CDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            The CDF for the points parameters
+        """
         if not self.bounded:
             return super(Renormalization, self).cdf(points, out)
         return self.numeric_cdf(points, out)
 
     def grid(self, N=None, cut=None, span=None):
+        """
+        Evaluate the PDF of the distribution on a regular grid with at least
+        ``N`` elements.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+        span: (float, float)
+            If specified, fix the lower and upper bounds of the grid on which
+            the PDF is computer. *If the KDE is bounded, you should always use
+            the bounds as border*.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the PDF has bin evaluated
+        values : ndarray
+            Values of the PDF for each position of the grid.
+        """
         if self.adjust.shape:
             return KDE1DMethod.grid(self, N, cut)
         if not self.bounded:
@@ -1489,6 +1693,22 @@ class _LinearCombinationKernel(Kernel1D):
         self._kernel = ker
 
     def pdf(self, x, out=None):
+        """
+        Compute the PDF of the estimated distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
+        """
         out = self._kernel(x, out)
         out *= x
         return out
@@ -1497,7 +1717,7 @@ class _LinearCombinationKernel(Kernel1D):
 
 class LinearCombination(Cyclic1D):
     r"""
-    This method uses the linear combination correction published in [1]_.
+    This method uses the linear combination correction published in [KM1]_.
 
     The estimation is done with a modified kernel given by:
 
@@ -1512,10 +1732,11 @@ class LinearCombination(Cyclic1D):
 
         z = \frac{x-X}{h} \qquad l = \frac{L-x}{h} \qquad u = \frac{U-x}{h}
 
-    .. [1] Jones, M. C. 1993. Simple boundary correction for kernel density
+    .. [KM1] Jones, M. C. 1993. Simple boundary correction for kernel density
         estimation. Statistics and Computing 3: 135--146.
     """
 
+    #: Name of the method, for presentation purposes
     name = 'linear combination1d'
 
     def __init__(self):
@@ -1523,6 +1744,22 @@ class LinearCombination(Cyclic1D):
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
+        """
+        Compute the PDF of the estimated distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
+        """
         if not self.bounded:
             return KDE1DMethod.pdf(self, points, out)
 
@@ -1554,14 +1791,63 @@ class LinearCombination(Cyclic1D):
 
     @property
     def bin_type(self):
+        """
+        Type of the bins adapted for the method
+        """
         return 'B'
 
     def cdf(self, points, out=None):
+        r"""
+        Compute the CDF of the estimated distribution, defined as:
+
+        .. math::
+
+            cdf(x) = P(X \leq x) = \int_l^x p(t) dt
+
+        where :math:`l` is the lower bound of the distribution domain and
+        :math:`p` the density of probability
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the CDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            The CDF for the points parameters
+        """
         if not self.bounded:
             return super(LinearCombination, self).cdf(points, out)
         return self.numeric_cdf(points, out)
 
     def grid(self, N=None, cut=None, span=None):
+        """
+        Evaluate the PDF of the distribution on a regular grid with at least
+        ``N`` elements.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+        span: (float, float)
+            If specified, fix the lower and upper bounds of the grid on which
+            the PDF is computer. *If the KDE is bounded, you should always use
+            the bounds as border*.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the PDF has bin evaluated
+        values : ndarray
+            Values of the PDF for each position of the grid.
+        """
         if self.adjust.shape:
             return KDE1DMethod.grid(self, N, cut)
         if not self.bounded:
@@ -1730,7 +2016,7 @@ class _transKDE(object):
     def fit(self):
         return self.method.fit(self)
 
-class TransformKDE1D(KDE1DMethod):
+class Transform1D(KDE1DMethod):
     r"""
     Compute the Kernel Density Estimate of a dataset, transforming it first to
     a domain where distances are "more meaningful".
@@ -1785,13 +2071,14 @@ class TransformKDE1D(KDE1DMethod):
         a pre-allocated array to store its result.
         Also the ``out`` parameter may be one of the input argument.
         """
-        super(TransformKDE1D, self).__init__()
+        super(Transform1D, self).__init__()
         self.trans = create_transform(trans, inv, Dinv)
         if method is None:
             method = Reflection1D()
         self._method = method
         self._clean_attrs()
 
+    #: Name of the method, for presentation purposes
     name = 'transformkde1d'
 
     _to_clean = ['_bandwidth', '_adjust',
@@ -1801,7 +2088,7 @@ class TransformKDE1D(KDE1DMethod):
         """
         Remove attributes not needed for this class
         """
-        for attr in TransformKDE1D._to_clean:
+        for attr in Transform1D._to_clean:
             if hasattr(self, attr):
                 delattr(self, attr)
 
@@ -1854,6 +2141,9 @@ class TransformKDE1D(KDE1DMethod):
 
     @property
     def to_bin(self):
+        """
+        Return the exog data, transformed into the domain in which they should be binned.
+        """
         return self.method.exog
 
     @KDEMethod.exog.setter
@@ -1889,7 +2179,7 @@ class TransformKDE1D(KDE1DMethod):
         """
         kde = filter_exog(kde, self._method.bin_type)
         self._kernel = self._method._kernel
-        fitted = super(TransformKDE1D, self).fit(kde, False)
+        fitted = super(Transform1D, self).fit(kde, False)
         fitted._clean_attrs()
 
         trans_method = self.method.fit(fitted._trans_kde(kde))
@@ -1900,6 +2190,22 @@ class TransformKDE1D(KDE1DMethod):
 
     @numpy_trans1d_method()
     def pdf(self, points, out):
+        """
+        Compute the PDF of the estimated distribution.
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the distribution on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            Returns the PDF for each point. The default is to use the formula
+            for unbounded pdf computation using the :py:func:`convolve` function.
+        """
         trans = self.trans
         pts = trans(points)
         pdf = np.empty(points.shape, points.dtype)
@@ -1907,6 +2213,30 @@ class TransformKDE1D(KDE1DMethod):
         return transform_distribution(pts, pdf, trans.Dinv, out=out)
 
     def grid(self, N=None, cut=None, span=None):
+        """
+        Evaluate the PDF of the distribution on a regular grid with at least
+        ``N`` elements.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+        span: (float, float)
+            If specified, fix the lower and upper bounds of the grid on which
+            the PDF is computer. *If the KDE is bounded, you should always use
+            the bounds as border*.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the PDF has bin evaluated
+        values : ndarray
+            Values of the PDF for each position of the grid.
+        """
         if span is not None:
             span = self.trans(span[0]), self.trans(span[1])
         xs, ys = self.method.grid(N, cut, span)
@@ -1917,48 +2247,230 @@ class TransformKDE1D(KDE1DMethod):
         return xs, out
 
     def cdf(self, points, out=None):
+        r"""
+        Compute the CDF of the estimated distribution, defined as:
+
+        .. math::
+
+            cdf(x) = P(X \leq x) = \int_l^x p(t) dt
+
+        where :math:`l` is the lower bound of the distribution domain and
+        :math:`p` the density of probability
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the CDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        out: ndarray
+            The CDF for the points parameters
+        """
         return self.method.cdf(self.trans(points), out)
 
     def cdf_grid(self, N=None, cut=None):
+        """
+        Evaluate the CDF of the distribution on a regular grid with at least
+        ``N`` elements.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the CDF has bin evaluated
+        values : ndarray
+            Values of the CDF for each position of the grid.
+        """
         xs, ys = self.method.cdf_grid(N, cut)
         xs.transform(self.trans.inv)
         return xs, ys
 
     def sf(self, points, out=None):
+        r"""
+        Compute the survival function, defined as:
+
+        .. math::
+
+            sf(x) = P(X \geq x) = \int_x^u p(t) dt = 1 - cdf(x)
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the survival function on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        ndarray
+            Returns the ``out`` variable, updated with the survival function.
+        """
         return self.method.sf(self.trans(points), out)
 
     def sf_grid(self, N=None, cut=None):
+        r"""
+        Compute the survival function on a grid.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the survival function has bin evaluated
+        values : ndarray
+            Values of the inverse survival function for each position of the grid.
+        """
         xs, ys = self.method.sf_grid(N, cut)
         xs.transform(self.trans.inv)
         return xs, ys
 
     def icdf(self, points, out=None):
+        r"""
+        Compute the inverse cumulative distribution (quantile) function,
+        defined as:
+
+        .. math::
+
+            icdf(p) = \inf\left\{x\in\mathbb{R} : cdf(x) \geq p\right\}
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the iCDF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        ndarray
+            Returns the ``out`` variable, updated with the iCDF.
+
+        Notes
+        -----
+        This method computes the icdf in the transformed axis, and transform the result back.
+        """
         out = self.method.icdf(points, out)
         self.trans.inv(out, out=out)
         return out
 
     def icdf_grid(self, N=None, cut=None):
+        r"""
+        Compute the inverse cumulative distribution (quantile) function on
+        a grid.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+
+        Returns
+        -------
+        mesh : :py:class:`Grid`
+            Grid on which the inverse CDF has bin evaluated
+        values : ndarray
+            Values of the inverse CDF for each position of the grid.
+
+        Notes
+        -----
+        This method computes the icdf in the transformed axis, and transform the result back.
+        """
         xs, ys = self.method.icdf_grid(N, cut)
         self.trans.inv(ys, out=ys)
         return xs, ys
 
     def isf(self, points, out=None):
+        r"""
+        Compute the inverse survival function, defined as:
+
+        .. math::
+
+            isf(p) = \sup\left\{x\in\mathbb{R} : sf(x) \leq p\right\}
+
+        Parameters
+        ----------
+        points: ndarray
+            Points to evaluate the iSF on
+        out: ndarray
+            Result object. If must have the same shapes as ``points``
+
+        Returns
+        -------
+        ndarray
+            Returns the ``out`` variable, updated with the inverse survival function.
+
+        Notes
+        -----
+        This method computes the isf in the transformed axis, and transform the result back.
+        """
         out = self.method.isf(points, out)
         self.trans.inv(out, out=out)
         return out
 
     def isf_grid(self, N=None, cut=None):
+        """
+        Compute the inverse survival function on a grid.
+
+        Parameters
+        ----------
+        N: int
+            minimum number of element in the returned grid. Most
+            methods will want to round it to the next power of 2.
+        cut: float
+            for unbounded domains, how far from the last data
+            point should the grid go, as a fraction of the bandwidth.
+
+        Returns
+        -------
+        (ndarray, ndarray)
+            The array of positions the CDF has been estimated on, and the
+            estimations.
+
+        Notes
+        -----
+        This method computes the isf in the transformed axis, and transform the result back.
+        """
         xs, ys = self.method.isf_grid(N, cut)
         self.trans.inv(ys, out=ys)
         return xs, ys
 
     def transform_axis(self, values):
+        '''
+        Function used to transform an axis, or None for no transformation
+        '''
         return self.trans(values)
 
     def restore_axis(self, transformed_values):
+        '''
+        Inverse function of transform_axis
+        '''
         return self.trans.inv(transformed_values)
 
     def transform_bins(self, mesh, bins, axis=-1):
+        '''
+        Function used to adapt the bin values when restoring an axis
+        '''
         out = np.empty_like(bins)
         xs = mesh.sparse()[axis]
         return transform_distribution(xs, bins, self.trans.Dinv, out=out)
@@ -1982,8 +2494,8 @@ def _add_fwd_attr(cls, to_fwd, attr):
 
     setattr(cls, attr, property(getter, setter, deleter, doc=doc))
 
-for attr in TransformKDE1D._fwd_attrs:
-    _add_fwd_attr(TransformKDE1D, 'method', attr)
+for attr in Transform1D._fwd_attrs:
+    _add_fwd_attr(Transform1D, 'method', attr)
 
 #: Alias toward the default, unbounded, method
 Unbounded1D = Reflection1D

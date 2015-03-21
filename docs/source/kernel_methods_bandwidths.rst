@@ -3,81 +3,29 @@
 Module :py:mod:`.bandwidths`
 ============================
 
-.. automodule:: statsmodels.kernel_methods.bandwidths
+Methods
+-------
 
-List of methods:
+.. autosummary::
+    :toctree: generated/
 
-* :py:func:`silverman`
-* :py:func:`silverman_full`
-* :py:func:`scotts`
-* :py:func:`scotts_full`
-* :py:class:`botev`
-* :py:class:`Multivariate`
-* :py:func:`crossvalidation`
+    bandwidths.silverman
+    bandwidths.silverman_full
+    bandwidths.scotts
+    bandwidths.scotts_full
+    bandwidths.botev
+    bandwidths.Multivariate
+    bw_crossvalidation.crossvalidation
 
-Utility classes and functions:
+Utility classes and functions
+-----------------------------
 
-* :py:func:`full_variance`
-* :py:func:`diagonal_variance`
-* :py:class:`CVFunc`
-* :py:class:`CV_IMSE`
-* :py:class:`CV_LogLikelihood`
-* :py:func:`leave_some_out`
+.. autosummary::
+    :toctree: generated/
 
-.. autofunction:: silverman
-
-----------------
-
-.. autofunction:: silverman_full
-
-----------------
-
-.. autofunction:: scotts
-
-----------------
-
-.. autofunction:: scotts_full
-
-----------------
-
-.. autoclass:: botev
-    :members:
-    :special-members: __call__
-
-----------------
-
-.. autoclass:: Multivariate
-    :members:
-
-----------------
-
-.. autofunction:: crossvalidation
-
-----------------
-
-.. autofunction:: full_variance
-
-----------------
-
-.. autofunction:: diagonal_variance
-
-----------------
-
-.. autoclass:: CVFunc
-    :members:
-
-----------------
-
-.. autoclass:: CV_IMSE
-
-    Base class: :py:class:`CVFunc`
-
-----------------
-
-.. autoclass:: CV_LogLikelihood
-
-    Base class: :py:class:`CVFunc`
-
-----------------
-
-.. autofunction:: leave_some_out
+    bandwidths.full_variance
+    bandwidths.diagonal_variance
+    bw_crossvalidation.CVFunc
+    bw_crossvalidation.CV_IMSE
+    bw_crossvalidation.CV_LogLikelihood
+    bw_crossvalidation.leave_some_out

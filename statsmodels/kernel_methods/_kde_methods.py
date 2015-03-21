@@ -71,6 +71,14 @@ class KDEMethod(object):
     This is the base class for KDE methods.
 
     Although inheriting from it is not required, it is recommended as it will provide quite a few useful services.
+
+    Notes
+    -----
+    The kernel must be an object modeled on :py:class:`kernels.Kernels` or on
+    :py:class:`kernels.Kernel1D` for 1D kernels. It is recommended to inherit
+    one of these classes to provide numerical approximation for all methods.
+
+    By default, the kernel class is :py:class:`pyqt_fit.kernels.normal`
     """
     def __init__(self):
         self._exog = None
@@ -90,13 +98,15 @@ class KDEMethod(object):
 
     @property
     def fitted(self):
+        """
+        Whether this is the output of the `KDE.fit` method or not.
+        """
         return self._fitted
 
     @property
     def exog(self):
         """
-        ndarray
-            Exogenous data set. Its shape is NxD for N points in D dimension.
+        Exogenous data set. Its shape is NxD for N points in D dimension.
         """
         return self._exog
 
@@ -110,8 +120,7 @@ class KDEMethod(object):
     @property
     def ndim(self):
         """
-        int
-            Number of dimensions of the problem
+        Number of dimensions of the problem
         """
         if self._exog is None:
             return 1
@@ -120,7 +129,6 @@ class KDEMethod(object):
     @property
     def npts(self):
         """
-        int
         Number of points in the exogenous dataset.
         """
         return self._exog.shape[0]
@@ -128,11 +136,7 @@ class KDEMethod(object):
     @property
     def kernel(self):
         r"""
-        Kernel class. This must be an object modeled on :py:class:`kernels.Kernels` or on :py:class:`kernels.Kernel1D`
-        for 1D kernels. It is recommended to inherit one of these classes to provide numerical approximation for all
-        methods.
-
-        By default, the kernel class is :py:class:`pyqt_fit.kernels.normal`
+        Kernel used for the density estimation.
         """
         return self._kernel
 
@@ -204,6 +208,9 @@ class KDEMethod(object):
 
     @property
     def total_weights(self):
+        """
+        Sum of the weights of the data
+        """
         return self._total_weights
 
     @property
