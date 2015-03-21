@@ -89,9 +89,9 @@ def rfftnsize(Ns):
 def rfftnfreq(Ns, dx=None):
     """
     Return the Discrete Fourier Transform sample frequencies
-    (for usage with :py:func:`scipy.fftpack.rfftn`, :py:func:`scipy.fftpack.irfftn`).
+    (for usage with :py:func:`numpy.fft.rfftn`, :py:func:`numpy.fft.irfftn`).
 
-    See :py:func:`scipy.fftpack.rfftfreq` and :py:func:`scipy.fftpack.rfftn` for details.
+    See :py:func:`scipy.fftpack.rfftfreq` and :py:func:`numpy.fft.rfftn` for details.
 
     Parameters
     ----------
@@ -119,7 +119,7 @@ def rfftnfreq(Ns, dx=None):
 def fftsamples(N, dx=1.0):
     """
     Returns the array of sample positions needed to comput the FFT with N samples.
-    (for usage with :py:func:`scipy.fftpack.fft`, :py:func:`scipy.fftpack.rfft`).
+    (for usage with :py:func:`scipy.fftpack.fft`, :py:func:`numpy.fft.rfft`).
 
     Parameters
     ----------
@@ -168,7 +168,7 @@ def fftnsamples(Ns, dx=None):
 def dctfreq(N, dx=1.0):
     """
     Return the Discrete Cosine Transform sample frequencies
-    (for usage with dct, idct).
+    (for usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`).
 
     Parameters
     ----------
@@ -188,7 +188,7 @@ def dctfreq(N, dx=1.0):
 def dctnfreq(Ns, dx=None):
     """
     Return the Discrete Cosine Transform sample frequencies
-    (for usage with :py:func:`scipy.fftpack.dctn`, :py:func:`scipy.fftpack.idctn`).
+    (for usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`).
 
     Parameters
     ----------
