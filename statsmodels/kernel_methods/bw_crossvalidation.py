@@ -234,20 +234,32 @@ class CVFunc(object):
         LSO_est = LSO_model.fit()
 
         self.LSO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **lso_args)
-        self.bw_min = (test_est.bandwidth * 1e-3).min()
+        bw = np.asarray(test_est.bandwidth)
+        self._is_cov = bw.ndim == 2
+        if self._is_cov:
+            ndim = bw.shape[0]
+            self.ndim = ndim
+            triu = np.triu_indices(ndim, 1)
+            self._triu = triu
+            self._size_triu = len(triu[0])
+            self._init_bandwidth = np.concatenate([bw[triu], bw.diagonal()])
+        else:
+            self.ndim = 1
+            self._init_bandwidth = bw
+        self.bw_min = (bw*1e-4).min()
         self.test_est = test_est
         self.LSO_est = LSO_est
         self.grid_size = grid_size
         self.use_grid = use_grid
 
-        self._bw_shape = test_est.bandwidth.shape
+        self._bw_shape = bw.shape
 
     @property
     def init_bandwidth(self):
         """
         Initial bandwidth
         """
-        return self.test_est.bandwidth
+        return self._init_bandwidth
 
     @property
     def bw_shape(self):
@@ -256,11 +268,21 @@ class CVFunc(object):
         '''
         return self._bw_shape
 
+    def bandwidth(self, bw):
+        '''
+        Create the correct bandwidth from the estimated parameters
+        '''
+        if self._is_cov:
+            C = np.diag(bw[-self.ndim:])
+            T = np.zeros_like(C)
+            T[self._triu] = bw[:self._size_triu]
+            return C + T + T.T
+        return bw
+
     def __call__(self, bw):
         if np.any(bw <= self.bw_min):
             return np.inf
-        bw = bw.reshape(self.bw_shape)
-        return self.value(bw)
+        return self.value(self.bandwidth(bw))
 
     def value(self, bw):
         """
@@ -419,4 +441,4 @@ class crossvalidation(object):
         if not res.success:
             print("Error, could not find minimum: '{0}'".format(res.message))
             return func.init_bandwidth
-        return res.x.reshape(func.init_bandwidth.shape)
+        return func.bandwidth(res.x)
