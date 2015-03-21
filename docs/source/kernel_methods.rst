@@ -31,6 +31,7 @@ Here is a list of example notebooks:
 .. toctree::
 
     examples/notebooks/generated/kernel_methods_kde1d
+    examples/notebooks/generated/kernel_methods_crossvalidation
 
 References
 ----------
