@@ -13,13 +13,15 @@ List of methods:
 * :py:func:`scotts_full`
 * :py:class:`botev`
 * :py:class:`Multivariate`
-* :py:func:`lsq_crossvalidation`
+* :py:func:`crossvalidation`
 
 Utility classes and functions:
 
 * :py:func:`full_variance`
 * :py:func:`diagonal_variance`
-* :py:class:`ContinuousIMSE`
+* :py:class:`CVFunc`
+* :py:class:`CV_IMSE`
+* :py:class:`CV_LogLikelihood`
 * :py:func:`leave_some_out`
 
 .. autofunction:: silverman
@@ -49,7 +51,7 @@ Utility classes and functions:
 
 ----------------
 
-.. autofunction:: lsq_crossvalidation
+.. autofunction:: crossvalidation
 
 ----------------
 
@@ -61,11 +63,21 @@ Utility classes and functions:
 
 ----------------
 
-.. autoclass:: ContinuousIMSE
+.. autoclass:: CVFunc
     :members:
 
 ----------------
 
+.. autoclass:: CV_IMSE
+
+    Base class: :py:class:`CVFunc`
+
+----------------
+
+.. autoclass:: CV_LogLikelihood
+
+    Base class: :py:class:`CVFunc`
+
+----------------
+
 .. autofunction:: leave_some_out
-
-

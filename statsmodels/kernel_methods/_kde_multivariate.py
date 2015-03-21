@@ -245,7 +245,7 @@ class MultivariateKDE(KDEMethod):
                 bin_data = True
 
         fitted = self.copy()
-        fitted._bandwidth = bw
+        #fitted._bandwidth = bw
         fitted._axis_type = axis_type
         fitted._kernels = kernels
         fitted._exog = kde.exog
@@ -256,7 +256,28 @@ class MultivariateKDE(KDEMethod):
         fitted._weights = kde.weights
         fitted._adjust = kde.adjust
         fitted._total_weights = kde.total_weights
+        fitted._fitted = True
         return fitted
+
+    @property
+    def bandwidth(self):
+        if self._fitted:
+            result = np.empty((self.ndim,), dtype=float)
+            for d in range(self.ndim):
+                result[d] = self.methods[d].bandwidth
+            return result
+        return self._bandwidth
+
+    @bandwidth.setter
+    def bandwidth(self, value):
+        if self._fitted:
+            value = np.asarray(value)
+            if value.shape != (self.ndim,):
+                raise ValueError("The shape of the bandwidth must be (D,)")
+            for d in range(self.ndim):
+                self.methods[d].bandwidth = value[d]
+        else:
+            self._bandwidth = value
 
     @property
     def bin_type(self):

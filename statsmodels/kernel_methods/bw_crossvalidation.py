@@ -179,9 +179,12 @@ def leave_some_out(exog, *data, **kwords):
     return LeaveOneOut(data, is_sel, npts)
 
 
-class ContinuousIMSE(object):
+class CVFunc(object):
     """
-    Compute the integrated mean square error for continuous axes.
+    Base class for cross-validation functions.
+
+    This class setup the 'leave some out' objects. The derived class should
+    implement the __call__ method.
 
     Parameters
     ----------
@@ -199,9 +202,23 @@ class ContinuousIMSE(object):
         many points need to be evaluated each time.
     lso_args: dict
         Argument forwardede to the :py:func:`leave_some_out` function
-    Notes
-    -----
-    We need to check how different it would be for discrete axes.
+
+    Attributes
+    ----------
+    test_model : object
+        Model used to estimate the current fit
+    test_est : object
+        Fitted test model
+    LSO_model : object
+        Copy of the model, modified for the needs of the current optimization
+    LSO_est : object
+        Fitted LSO model
+    bw_min : float
+        Minimum reasonable bandwidth (default: 1e-3*initial bandwidth)
+    grid_size: int or list of int
+        Copy of the `grid_size` argument
+    use_grid: bool
+        Copy of the `use_grid` argument
     """
     def __init__(self, model, initial_method=None, grid_size=None, use_grid=False, **lso_args):
         from . import bandwidths
@@ -212,47 +229,132 @@ class ContinuousIMSE(object):
             test_model.bandwidth = initial_method
         test_est = test_model.fit()
 
-        LOO_model = model.copy()
-        LOO_model.bandwidth = test_est.bandwidth
-        LOO_est = LOO_model.fit()
+        LSO_model = model.copy()
+        LSO_model.bandwidth = test_est.bandwidth
+        LSO_est = LSO_model.fit()
 
-        self.LOO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **lso_args)
+        self.LSO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **lso_args)
         self.bw_min = test_est.bandwidth * 1e-3
         self.test_est = test_est
-        self.LOO_est = LOO_est
+        self.LSO_est = LSO_est
         self.grid_size = grid_size
         self.use_grid = use_grid
 
     @property
     def init_bandwidth(self):
+        """
+        Initial bandwidth
+        """
         return self.test_est.bandwidth
+
+    def __call__(self, value):
+        """
+        Return the quantity to be minimise.
+
+        Derived classes will need to override this method.
+        """
+        raise NotImplementedError()
+
+
+class CV_IMSE(CVFunc):
+    """
+    Compute the integrated mean square error by cross-validation
+
+    Parameters
+    ----------
+    model: :py:class:`.kde.KDE`
+        Model to be fitted
+    initial_method: callable or value
+        Initial value for the bandwidth
+    grid_size: int or tuple of int
+        Size of the grid to use to compute the square of the estimated distribution
+    use_grid: bool
+        If True, instead of evaluating the function at the points needed for
+        the cross-validation, the points will be estimated by linear
+        interpolation on a grid the same size as the one used for the
+        distribution estimation. This is only useful if folding is used, as
+        many points need to be evaluated each time.
+    lso_args: dict
+        Argument forwardede to the :py:func:`leave_some_out` function
+    """
 
     def __call__(self, bw):
         if np.any(bw <= self.bw_min):
             return np.inf
-        LOO_est = self.LOO_est
+        LSO_est = self.LSO_est
         test_est = self.test_est
 
-        LOO_est.bandwidth = test_est.bandwidth = bw
+        LSO_est.bandwidth = test_est.bandwidth = bw
         exog = test_est.exog
         Fx, Fy = test_est.grid(N=self.grid_size)
         F = Fx.integrate(Fy ** 2)
         L = 0
         use_grid = self.use_grid
         interp = None
-        for i, (Xi, Wi, Li) in self.LOO:
-            LOO_est.update_inputs(Xi, Wi, Li)
+        for i, (Xi, Wi, Li) in self.LSO:
+            LSO_est.update_inputs(Xi, Wi, Li)
             if use_grid:
-                gr, pdf = LOO_est.grid(N=self.grid_size)
+                gr, pdf = LSO_est.grid(N=self.grid_size)
                 interp = GridInterpolator(gr, pdf)
                 vals = interp(exog[i])
             else:
-                vals = LOO_est.pdf(exog[i])
+                vals = LSO_est.pdf(exog[i])
             L += np.sum(vals)
-        return F - 2 * L / self.LOO.nb_tests
+        return F - 2 * L / self.LSO.nb_tests
+
+class CV_LogLikelihood(CVFunc):
+    """
+    Compute the log-likelihood of the data by cross-validation
+
+    Parameters
+    ----------
+    model: :py:class:`.kde.KDE`
+        Model to be fitted
+    initial_method: callable or value
+        Initial value for the bandwidth
+    grid_size: int or tuple of int
+        Size of the grid to use to compute the square of the estimated distribution
+    use_grid: bool
+        If True, instead of evaluating the function at the points needed for
+        the cross-validation, the points will be estimated by linear
+        interpolation on a grid the same size as the one used for the
+        distribution estimation. This is only useful if folding is used, as
+        many points need to be evaluated each time.
+    lso_args: dict
+        Argument forwardede to the :py:func:`leave_some_out` function
+
+    Notes
+    -----
+
+    The function returned is actually the opposite of the log likelihood, so
+    the cross validation function will compute the maximum of the
+    log-likelihood.
+    """
+
+    def __call__(self, bw):
+        if np.any(bw <= self.bw_min):
+            return np.inf
+        LSO_est = self.LSO_est
+        test_est = self.test_est
+
+        LSO_est.bandwidth = bw
+        exog = test_est.exog
+        L = 0
+        use_grid = self.use_grid
+        interp = None
+        for i, (Xi, Wi, Li) in self.LSO:
+            LSO_est.update_inputs(Xi, Wi, Li)
+            if use_grid:
+                gr, pdf = LSO_est.grid(N=self.grid_size)
+                interp = GridInterpolator(gr, pdf)
+                vals = interp(exog[i])
+            else:
+                vals = LSO_est.pdf(exog[i])
+            L -= np.sum(np.log(vals))
+        return L
 
 
-class lsq_crossvalidation(object):
+class crossvalidation(object):
     r"""
     Implement the Cross-Validation Least Square bandwidth estimation method.
 
@@ -270,24 +372,34 @@ class lsq_crossvalidation(object):
 
     Parameters
     ----------
-    imse: class
-        Class from which the Integrated Mean Square Error object is created..
-        If None, it will use :py:class:`ContinuousIMSE`
-    imse_args: dictionary
-        Arguments for the creation of the IMSE object.
+    func: callable
+        Function that will create the minimiser.
+    func_args: tuple
+        Positional arguments for the creation of the function object.
+    func_kwargs: dictionary
+        Named arguments for the creation of the function object.
+
+    Notes
+    -----
+
+    The call creating the minimiser is::
+
+        func(model, *func_args, **func_kwargs)
+
+    The returned callable is passed to the :py:func:`scipy.optimize.minimize`
+    function. It must also have a `init_bandwidth` attribute giving a first
+    estimate of the bandwidth.
     """
 
-    def __init__(self, imse=None, imse_args={}):
-        if imse is None:
-            self.imse = ContinuousIMSE
-        else:
-            self.imse = imse
-        self.imse_args = imse_args
+    def __init__(self, func=CV_LogLikelihood, *func_args, **func_kwargs):
+        self.func = func
+        self.func_args = func_args
+        self.func_kwargs = func_kwargs
 
     def __call__(self, model):
-        imse = self.imse(model, **self.imse_args)
-        res = optimize.minimize(imse, x0=imse.init_bandwidth, tol=1e-3, options=dict(maxiter=1e3), method='Nelder-Mead')
+        func = self.func(model, *self.func_args, **self.func_kwargs)
+        res = optimize.minimize(func, x0=func.init_bandwidth, tol=1e-3, method='Nelder-Mead')
         if not res.success:
             print("Error, could not find minimum: '{0}'".format(res.message))
-            return imse.init_bandwidth
+            return func.init_bandwidth
         return res.x
