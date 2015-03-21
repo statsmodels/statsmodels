@@ -15,7 +15,7 @@ def _spread(X):
 
     References
     ----------
-    Silverman (1986) p.47
+    [KM6] Silverman (1986) p.47
     """
     Q1, Q3 = np.percentile(X, [25, 75], axis=0)
     IQR = (Q3 - Q1) / 1.349

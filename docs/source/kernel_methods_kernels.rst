@@ -3,158 +3,58 @@
 Module :py:mod:`.kernels`
 =========================
 
-.. automodule:: statsmodels.kernel_methods.kernels
+Kernel base classes
+-------------------
 
-Kernel base classes:
+.. autosummary::
+    :toctree: generated/
 
-* :py:class:`Kernel1D`
-* :py:class:`KernelnD`
+    kernels.Kernel1D
+    kernels.KernelnD
 
-List of 1D kernels:
+1D kernels
+----------
 
-* :py:class:`from1DPDF`
-* :py:class:`normal1d`
-* :py:class:`tricube`
-* :py:class:`Epanechnikov`
-* :py:class:`normal_order4`
-* :py:class:`Epanechnikov_order4`
+.. autosummary::
+    :toctree: generated/
 
-List of discrete kernels:
+    kernels.from1DPDF
+    kernels.normal1d
+    _kernels1d.tricube
+    _kernels1d.Epanechnikov
+    _kernels1d.normal_order4
+    _kernels1d.Epanechnikov_order4
 
-* :py:class:`WangRyzin`
-* :py:class:`AitchisonAitken`
-
-List of multi-dimensional kernels:
-
-* :py:class:`normal`
-
-List of utility functions:
-
-* :py:func:`rfftfreq`
-* :py:func:`rfftsize`
-* :py:func:`fftsamples`
-* :py:func:`rfftnfreq`
-* :py:func:`rfftnsize`
-* :py:func:`fftnsamples`
-* :py:func:`dctfreq`
-* :py:func:`dctsamples`
-* :py:func:`dctnfreq`
-* :py:func:`dctnsamples`
-
-.. autoclass:: Kernel1D
-    :members:
-    :special-members: __call__
-
+Discrete kernels
 ----------------
 
-.. autoclass:: KernelnD
-    :members:
-    :special-members: __call__
+.. autosummary::
+    :toctree: generated/
 
-----------------
+    _kernelsnc.WangRyzin
+    _kernelsnc.AitchisonAitken
 
-.. autoclass:: normal1d
-    :members:
-    :special-members: __call__
+Multi-dimensional kernels
+-------------------------
 
-    Base class: :py:class:`Kernel1D`
+.. autosummary::
+    :toctree: generated/
 
-----------------
+    kernels.normal
 
-.. autoclass:: from1DPDF
-    :members:
-    :special-members: __call__
+Utility functions
+-----------------
 
-    Base class: :py:class:`Kernel1D`
+.. autosummary::
+    :toctree: generated/
 
-----------------
-
-.. autoclass:: tricube
-    :members:
-    :special-members: __call__
-
-    Base class: :py:class:`Kernel1D`
-
-----------------
-
-.. autoclass:: Epanechnikov
-    :members:
-    :special-members: __call__
-
-    Base class: :py:class:`Kernel1D`
-
-----------------
-
-.. autoclass:: normal_order4
-    :members:
-    :special-members: __call__
-
-    Base class: :py:class:`Kernel1D`
-
-----------------
-
-.. autoclass:: Epanechnikov_order4
-    :members:
-    :special-members: __call__
-
-    Base class: :py:class:`Kernel1D`
-
-----------------
-
-.. autoclass:: WangRyzin
-    :members:
-    :special-members: __call__
-
-----------------
-
-.. autoclass:: AitchisonAitken
-    :members:
-    :special-members: __call__
-
-----------------
-
-.. autoclass:: normal
-    :members:
-    :special-members: __call__
-
-    Base class: :py:class:`KernelnD`
-
-----------------
-
-.. autofunction:: rfftfreq
-
-----------------
-
-.. autofunction:: rfftsize
-
-----------------
-
-.. autofunction:: fftsamples
-
-----------------
-
-.. autofunction:: rfftnfreq
-
-----------------
-
-.. autofunction:: rfftnsize
-
-----------------
-
-.. autofunction:: fftnsamples
-
-----------------
-
-.. autofunction:: dctfreq
-
-----------------
-
-.. autofunction:: dctsamples
-
-----------------
-
-.. autofunction:: dctnfreq
-
-----------------
-
-.. autofunction:: dctnsamples
+    kernels.rfftfreq
+    kernels.rfftsize
+    kernels.fftsamples
+    kernels.rfftnfreq
+    kernels.rfftnsize
+    kernels.fftnsamples
+    kernels.dctfreq
+    kernels.dctsamples
+    kernels.dctnfreq
+    kernels.dctnsamples
