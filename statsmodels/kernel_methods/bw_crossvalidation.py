@@ -183,11 +183,27 @@ class ContinuousIMSE(object):
     """
     Compute the integrated mean square error for continuous axes.
 
+    Parameters
+    ----------
+    model: :py:class:`.kde.KDE`
+        Model to be fitted
+    initial_method: callable or value
+        Initial value for the bandwidth
+    grid_size: int or tuple of int
+        Size of the grid to use to compute the square of the estimated distribution
+    use_grid: bool
+        If True, instead of evaluating the function at the points needed for
+        the cross-validation, the points will be estimated by linear
+        interpolation on a grid the same size as the one used for the
+        distribution estimation. This is only useful if folding is used, as
+        many points need to be evaluated each time.
+    lso_args: dict
+        Argument forwardede to the :py:func:`leave_some_out` function
     Notes
     -----
     We need to check how different it would be for discrete axes.
     """
-    def __init__(self, model, initial_method=None, grid_size=None, use_grid=False, **loo_args):
+    def __init__(self, model, initial_method=None, grid_size=None, use_grid=False, **lso_args):
         from . import bandwidths
         test_model = model.copy()
         if initial_method is None:
@@ -195,13 +211,12 @@ class ContinuousIMSE(object):
         else:
             test_model.bandwidth = initial_method
         test_est = test_model.fit()
-        #print("Initial bandwidth: {0}".format(test_est.bandwidth))
 
         LOO_model = model.copy()
         LOO_model.bandwidth = test_est.bandwidth
         LOO_est = LOO_model.fit()
 
-        self.LOO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **loo_args)
+        self.LOO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **lso_args)
         self.bw_min = test_est.bandwidth * 1e-3
         self.test_est = test_est
         self.LOO_est = LOO_est
@@ -256,7 +271,8 @@ class lsq_crossvalidation(object):
     Parameters
     ----------
     imse: class
-        Class from which the Integrated Mean Square Error object is created.. If not provided, it will use :py:class:`ContinuousIMSE`
+        Class from which the Integrated Mean Square Error object is created..
+        If None, it will use :py:class:`ContinuousIMSE`
     imse_args: dictionary
         Arguments for the creation of the IMSE object.
     """
