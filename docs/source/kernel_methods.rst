@@ -32,6 +32,7 @@ Here is a list of example notebooks:
 
     examples/notebooks/generated/kernel_methods_kde1d
     examples/notebooks/generated/kernel_methods_crossvalidation
+    examples/notebooks/generated/kernel_methods_kdend
 
 References
 ----------

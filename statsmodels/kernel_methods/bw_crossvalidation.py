@@ -234,11 +234,13 @@ class CVFunc(object):
         LSO_est = LSO_model.fit()
 
         self.LSO = leave_some_out(test_est.exog, test_est.weights, test_est.adjust, **lso_args)
-        self.bw_min = test_est.bandwidth * 1e-3
+        self.bw_min = (test_est.bandwidth * 1e-3).min()
         self.test_est = test_est
         self.LSO_est = LSO_est
         self.grid_size = grid_size
         self.use_grid = use_grid
+
+        self._bw_shape = test_est.bandwidth.shape
 
     @property
     def init_bandwidth(self):
@@ -247,7 +249,20 @@ class CVFunc(object):
         """
         return self.test_est.bandwidth
 
-    def __call__(self, value):
+    @property
+    def bw_shape(self):
+        '''
+        Shape of the bandwidth
+        '''
+        return self._bw_shape
+
+    def __call__(self, bw):
+        if np.any(bw <= self.bw_min):
+            return np.inf
+        bw = bw.reshape(self.bw_shape)
+        return self.value(bw)
+
+    def value(self, bw):
         """
         Return the quantity to be minimise.
 
@@ -278,9 +293,10 @@ class CV_IMSE(CVFunc):
         Argument forwardede to the :py:func:`leave_some_out` function
     """
 
-    def __call__(self, bw):
+    def value(self, bw):
         if np.any(bw <= self.bw_min):
             return np.inf
+        bw = bw.reshape(self.bw_shape)
         LSO_est = self.LSO_est
         test_est = self.test_est
 
@@ -331,9 +347,10 @@ class CV_LogLikelihood(CVFunc):
     log-likelihood.
     """
 
-    def __call__(self, bw):
+    def value(self, bw):
         if np.any(bw <= self.bw_min):
             return np.inf
+        bw = bw.reshape(self.bw_shape)
         LSO_est = self.LSO_est
         test_est = self.test_est
 
@@ -402,4 +419,4 @@ class crossvalidation(object):
         if not res.success:
             print("Error, could not find minimum: '{0}'".format(res.message))
             return func.init_bandwidth
-        return res.x
+        return res.x.reshape(func.init_bandwidth.shape)
