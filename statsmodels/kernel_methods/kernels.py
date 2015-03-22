@@ -97,24 +97,39 @@ def rfftnfreq(Ns, dx=None):
     ----------
     Ns: list of int
         Number of samples for each dimension
-    dx: None of list of float
+    dx: None, 1D or 2D array
         If not None, this must be of same length as Ns and is the space between samples along that axis
 
     Returns
     -------
     list of ndarray
-        Sparse grid for the frequencies
+        Sparse grid for the frequencies or dx is 1D, a full grid if dx is 2D.
+
+    Notes
+    -----
+    If dx is a 2D array, this corresponds to the bandwidth matrix.
     """
     ndim = len(Ns)
     if dx is None:
-        dx = [1.0]*ndim
-    elif len(dx) != ndim:
-        raise ValueError("Error, dx must be of same length as Ns")
+        dx = np.ones((ndim,), dtype=float)
+    else:
+        dx = np.asarray(dx)
+        if dx.ndim == 1 and dx.shape != (ndim,):
+            raise ValueError("If 1D, dx must be of same length as Ns")
+        elif dx.ndim == 2 and dx.shape != (ndim, ndim):
+            raise ValueError("If 2D, dx must be of a square matrix with as many dimensions as Ns")
+    trans = None
+    if dx.ndim == 2:
+        trans = dx
+        dx = np.ones((ndim,), dtype=float)
     fs = []
     for d in range(ndim-1):
         fs.append(np.fft.fftfreq(Ns[d], dx[d]))
     fs.append(rfftfreq(Ns[-1], dx[-1]))
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    if trans is None:
+        return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
+    return np.tensordot(trans, grid, axes=([1], [0]))
 
 def fftsamples(N, dx=1.0):
     """
