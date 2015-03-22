@@ -95,7 +95,7 @@ References
 JL Schafer: 'Multiple Imputation: A Primer', Stat Methods Med Res,
 1999.
 
-T E Raghunathan et al.: 'A Multivariate Technique for Multiply
+TE Raghunathan et al.: 'A Multivariate Technique for Multiply
 Imputing Missing Values Using a Sequence of Regression Models', Survey
 Methodology, 2001.
 
@@ -151,9 +151,6 @@ class MICEData(object):
         The data set.
     perturbation_method : string
         The default perturbation method
-    followed_by : dict-like
-        A map from variable names to lists of variables that 'follow'
-        that variable when imputing.  See notes for details.
     k_pmm : int
         The number of nearest neighbors to use during predictive mean
         matching.  Can also be specified in `fit`.
@@ -184,31 +181,17 @@ class MICEData(object):
     estimated values obtained when fitting a bootstrapped version of
     the data set).
 
-    The `followed_by` dictionary is used is there are auxiliary
-    variables that must be linked to a given variable when doing the
-    imputation.  For example, in duration (survival) models, the
-    censoring status variable will generally 'follow' its
-    corresponding event time variable.  Whichever observed event time
-    is selected by PMM to impute a missing event time, the censoring
-    status for the same case will be used to impute the missing
-    censoring status variable.
-
     `history_callback` can be implemented to have side effects such as
     saving the current imputed data set to disk.
     """ % {'_mice_data_example_1': _mice_data_example_1,
            '_mice_data_example_2': _mice_data_example_2}
 
     def __init__(self, data, perturbation_method='gaussian',
-                 followed_by=None, k_pmm=20, history_callback=None):
+                 k_pmm=20, history_callback=None):
 
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
         self.data = data.dropna(how='all').reset_index(drop=True)
-
-        self.followed_by = followed_by if followed_by is not None else {}
-        self._followers = set([])
-        for x in self.followed_by.values():
-            self._followers |= set(x)
 
         self.history_callback = history_callback
         self.history = []
@@ -248,12 +231,11 @@ class MICEData(object):
 
         # Set default imputers.
         for vname in data.columns:
-            if vname not in self._followers:
-                self.set_imputer(vname)
+            self.set_imputer(vname)
 
         # The order in which variables are imputed in each cycle.
         # Impute variables with the fewest missing values first.
-        vnames = [x for x in data.columns if x not in self._followers]
+        vnames =list(data.columns)
         nmiss = [len(self.ix_miss[v]) for v in vnames]
         nmiss = np.asarray(nmiss)
         ii = np.argsort(nmiss)
@@ -302,10 +284,11 @@ class MICEData(object):
         formula : string
             Conditional formula for imputation. Defaults to a formula
             with main effects for all other variables in dataset.  The
-            formula should only include an expression for the mean,
+            formula should only include an expression for the mean
             structure, e.g. use 'x1 + x2' not 'x4 ~ x1 + x2'.
         model_class : statsmodels model
-            Conditional model for imputation. Defaults to OLS.
+            Conditional model for imputation. Defaults to OLS.  See below
+            for more information.
         init_kwds : dit-like
             Keyword arguments passed to the model init method.
         fit_kwds : dict-like
@@ -319,10 +302,17 @@ class MICEData(object):
             Either 'gaussian' or 'bootstrap'. Determines the method
             for perturbing parameters in the conditional model.  If
             None, uses the default specified in init.
-        """
 
-        if endog_name in self._followers:
-            raise ValueError("imputer may not be set for a variable in `followed_by`")
+        Notes
+        -----
+        The model class must meet the following conditions:
+            * A model must have a 'fit' method that returns an object.
+            * The object returned from `fit` must have a `params` attribute
+              that is an array-like object.
+            * The object returned from `fit` must have a cov_params method
+              that returns a square array-like object.
+            * The model must have a `predict` method.
+        """
 
         if formula is None:
             main_effects = [x for x in self.data.columns
@@ -410,9 +400,6 @@ class MICEData(object):
         exog_obs : DataFrame
             Current values of the predictors where the variable to be
             imputed is observed.
-        following_obs : DataFrame
-            Current values of the variables that 'follow' the variable
-            to be imputed.
         exog_miss : DataFrame
             Current values of the predictors where the variable to be
             Imputed is missing.
@@ -437,12 +424,6 @@ class MICEData(object):
         ixm = self.ix_miss[vname]
         exog_miss = np.asarray(exog.iloc[ixm, :])
 
-        # Following variables with observed vname value
-        following_obs = {}
-        if vname in self.followed_by:
-            for k in self.followed_by[vname]:
-                following_obs[k] = np.asarray(self.data[k].iloc[ixo])
-
         predict_obs_kwds = {}
         if vname in self.predict_kwds:
             kwds = self.predict_kwds[vname]
@@ -453,7 +434,7 @@ class MICEData(object):
             kwds = self.predict_kwds[vname]
             predict_miss_kwds = self._process_kwds(kwds, ix)
 
-        return endog_obs, exog_obs, following_obs, exog_miss, predict_obs_kwds, predict_miss_kwds
+        return endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds
 
 
     def _process_kwds(self, kwds, ix):
@@ -1021,7 +1002,7 @@ class MICEData(object):
 
         k_pmm = self.k_pmm
 
-        endog_obs, exog_obs, following_obs, exog_miss, predict_obs_kwds, predict_miss_kwds =\
+        endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds =\
                    self.get_split_data(vname)
 
         # Predict imputed variable for both missing and non-missing
@@ -1037,9 +1018,6 @@ class MICEData(object):
         # cases with observed values.
         ii = np.argsort(pendog_obs)
         endog_obs = endog_obs[ii]
-        if following_obs is not None:
-            for k in following_obs:
-                following_obs[k] = following_obs[k][ii]
         pendog_obs = pendog_obs[ii]
 
         # Find the closest match to the predicted endog values for
@@ -1072,11 +1050,6 @@ class MICEData(object):
 
         imputed_miss = np.array(endog_obs[iz])
         self._store_changes(vname, imputed_miss)
-
-        if vname in self.followed_by:
-            for k in self.followed_by[vname]:
-                imputed = following_obs[k][iz]
-                self._store_changes(k, imputed)
 
 
 _mice_example_1 = """

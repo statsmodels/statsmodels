@@ -102,7 +102,7 @@ class Test_MICEData(object):
         # Should make a copy
         assert(not (df is imp_data.data))
 
-        (endog_obs, exog_obs, following_obs, exog_miss,
+        (endog_obs, exog_obs, exog_miss,
          predict_obs_kwds, predict_miss_kwds) = imp_data.get_split_data('x3')
         assert_equal(len(endog_obs), 190)
         assert_equal(exog_obs.shape, [190, 6])
@@ -129,30 +129,6 @@ class Test_MICEData(object):
 
         # The returned dataframes are all the same object
         assert(all_x[0] is all_x[1])
-
-
-    def test_following(self):
-        """
-        Test imputations in which one variable follows another.
-        """
-
-        df = gendat()
-        df["x2"] = np.nan
-        df.x2[0:50] = 0
-        df.x2[50:100] = 1
-        df.x2[100:150] = 2
-        df["x3"] = np.nan
-        df.x3[0:50] = 3
-        df.x3[50:100] = 4
-        df.x3[100:125] = 5
-        df.x3[125:150] = 6
-        imp_data = mice.MICEData(df, followed_by={"x2": ["x3"]})
-
-        x = next(imp_data)
-
-        for a,b in (0, 3), (1, 4):
-            ii = np.flatnonzero(df.x3 == b)
-            assert_allclose(df.x2.iloc[ii], a)
 
 
     def test_pertmeth(self):
@@ -197,7 +173,7 @@ class Test_MICEData(object):
 
         from statsmodels.duration.hazard_regression import PHReg
 
-        idata = mice.MICEData(df, followed_by={"time": ["status"]})
+        idata = mice.MICEData(df)
         idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg, init_kwds={"status": mice.PatsyFormula("status")})
 
         x = next(idata)
@@ -334,6 +310,29 @@ class Test_MICE(object):
             j += 1
             if j == 3:
                 break
+
+
+    def test_combine(self):
+
+        np.random.seed(3897)
+        x1 = np.random.normal(size=300)
+        x2 = np.random.normal(size=300)
+        y = x1 + x2 + np.random.normal(size=300)
+        x1[0:100] = np.nan
+        x2[250:] = np.nan
+        df = pd.DataFrame({"x1": x1, "x2": x2, "y": y})
+        idata = mice.MICEData(df)
+        mi = mice.MICE("y ~ x1 + x2", sm.OLS, idata, n_skip=20)
+        result = mi.fit(10, 20)
+
+        fmi = np.asarray([0.24771511,  0.29129309,  0.24865246])
+        assert_allclose(result.frac_miss_info, fmi, atol=1e-5)
+
+        params = np.asarray([-0.05883389,  0.97487158,  1.00977228])
+        assert_allclose(result.params, params, atol=1e-5)
+
+        tvalues = np.asarray([ -0.88614249,  13.79467977,  14.30386482])
+        assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 
 if  __name__=="__main__":
