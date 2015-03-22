@@ -335,7 +335,7 @@ class MICEData(object):
             self.fit_kwds[endog_name] = fit_kwds
 
         if predict_kwds is not None:
-            self.predict_kwds[vname] = predict_kwds
+            self.predict_kwds[endog_name] = predict_kwds
 
         if perturbation_method is not None:
             self.perturbation_method[endog_name] = perturbation_method
@@ -427,12 +427,12 @@ class MICEData(object):
         predict_obs_kwds = {}
         if vname in self.predict_kwds:
             kwds = self.predict_kwds[vname]
-            predict_obs_kwds = self._process_kwds(kwds, ix)
+            predict_obs_kwds = self._process_kwds(kwds, ixo)
 
         predict_miss_kwds = {}
         if vname in self.predict_kwds:
             kwds = self.predict_kwds[vname]
-            predict_miss_kwds = self._process_kwds(kwds, ix)
+            predict_miss_kwds = self._process_kwds(kwds, ixo)
 
         return endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds
 

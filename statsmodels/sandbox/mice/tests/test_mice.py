@@ -174,7 +174,9 @@ class Test_MICEData(object):
         from statsmodels.duration.hazard_regression import PHReg
 
         idata = mice.MICEData(df)
-        idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg, init_kwds={"status": mice.PatsyFormula("status")})
+        idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
+                          init_kwds={"status": mice.PatsyFormula("status")},
+                          predict_kwds={"pred_type": "hr"})
 
         x = next(idata)
 
