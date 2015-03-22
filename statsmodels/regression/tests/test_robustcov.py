@@ -816,7 +816,7 @@ class TestWLSOLSRobustSmall(object):
         assert_allclose(res1.params, res2.params, rtol=1e-13)
         assert_allclose(res1.cov_params(), res2.cov_params(), rtol=1e-13)
         assert_allclose(res1.bse, res2.bse, rtol=1e-13)
-        assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-13)
+        assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-12)
 
         tt = res2.t_test(np.eye(len(res2.params)),
                          cov_p=res2.normalized_cov_params)
