@@ -215,7 +215,7 @@ class CVFunc(object):
         Fitted LSO model
     bw_min : float
         Minimum reasonable bandwidth (default: 1e-3*initial bandwidth)
-    grid_size: int or list of int
+    grid_size : int or list of int
         Copy of the `grid_size` argument
     use_grid: bool
         Copy of the `use_grid` argument
@@ -299,19 +299,19 @@ class CV_IMSE(CVFunc):
 
     Parameters
     ----------
-    model: :py:class:`.kde.KDE`
+    model : :py:class:`.kde.KDE`
         Model to be fitted
-    initial_method: callable or value
+    initial_method : callable or value
         Initial value for the bandwidth
-    grid_size: int or tuple of int
+    grid_size : int or tuple of int
         Size of the grid to use to compute the square of the estimated distribution
-    use_grid: bool
+    use_grid : bool
         If True, instead of evaluating the function at the points needed for
         the cross-validation, the points will be estimated by linear
         interpolation on a grid the same size as the one used for the
         distribution estimation. This is only useful if folding is used, as
         many points need to be evaluated each time.
-    lso_args: dict
+    lso_args : dict
         Argument forwardede to the :py:func:`leave_some_out` function
     """
 
@@ -346,19 +346,19 @@ class CV_LogLikelihood(CVFunc):
 
     Parameters
     ----------
-    model: :py:class:`.kde.KDE`
+    model : :py:class:`.kde.KDE`
         Model to be fitted
-    initial_method: callable or value
+    initial_method : callable or value
         Initial value for the bandwidth
-    grid_size: int or tuple of int
+    grid_size : int or tuple of int
         Size of the grid to use to compute the square of the estimated distribution
-    use_grid: bool
+    use_grid : bool
         If True, instead of evaluating the function at the points needed for
         the cross-validation, the points will be estimated by linear
         interpolation on a grid the same size as the one used for the
         distribution estimation. This is only useful if folding is used, as
         many points need to be evaluated each time.
-    lso_args: dict
+    lso_args : dict
         Argument forwardede to the :py:func:`leave_some_out` function
 
     Notes
