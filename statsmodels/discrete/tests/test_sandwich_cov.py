@@ -60,7 +60,7 @@ class CheckCountRobustMixin(object):
 
         assert_allclose(res1._results.params, res2_params, 1e-4)
 
-        assert_allclose(self.bse_rob / self.corr_fact, res2_bse, 1e-5)
+        assert_allclose(self.bse_rob / self.corr_fact, res2_bse, 6e-5)
 
     @classmethod
     def get_robust_clu(cls):

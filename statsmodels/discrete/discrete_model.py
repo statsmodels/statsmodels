@@ -2271,7 +2271,7 @@ class NegativeBinomial(CountModel):
             # Use poisson fit as first guess.
             #TODO, Warning: this assumes exposure is logged
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if len(offset) == 1 and offset == 0:
+            if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0).params
@@ -2309,7 +2309,8 @@ class NegativeBinomial(CountModel):
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
             # don't penalize alpha if alpha is scalar
-            alpha = alpha * np.ones(len(start_params))
+            k_params = self.exog.shape[1] + self.k_extra
+            alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
         # alpha for regularized poisson to get starting values
@@ -2318,7 +2319,12 @@ class NegativeBinomial(CountModel):
         self._transparams = False
         if start_params is None:
             # Use poisson fit as first guess.
-            start_params = Poisson(self.endog, self.exog).fit_regularized(
+            #TODO, Warning: this assumes exposure is logged
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
                 alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
