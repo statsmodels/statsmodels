@@ -525,7 +525,7 @@ class TestMissingArray(object):
         np.testing.assert_array_equal(data.exog, X)
 
     def test_none(self):
-        data = sm_data.handle_data(self.y, self.X, 'none')
+        data = sm_data.handle_data(self.y, self.X, 'none', hasconst=False)
         np.testing.assert_array_equal(data.endog, self.y)
         np.testing.assert_array_equal(data.exog, self.X)
 
@@ -594,7 +594,7 @@ class TestMissingPandas(object):
         ptesting.assert_frame_equal(data.orig_exog, self.X.ix[idx])
 
     def test_none(self):
-        data = sm_data.handle_data(self.y, self.X, 'none')
+        data = sm_data.handle_data(self.y, self.X, 'none', hasconst=False)
         np.testing.assert_array_equal(data.endog, self.y.values)
         np.testing.assert_array_equal(data.exog, self.X.values)
 

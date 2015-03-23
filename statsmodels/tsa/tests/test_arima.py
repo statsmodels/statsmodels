@@ -1764,6 +1764,7 @@ def test_arimax():
     assert_almost_equal(res.model.loglike(np.array(params)), stata_llf, 6)
 
     X = dta.diff()
+    X.iloc[0] = 0
     res = ARIMA(y, (2, 1, 1), X).fit(disp=False)
 
     # gretl won't estimate this - looks like maybe a bug on their part,
