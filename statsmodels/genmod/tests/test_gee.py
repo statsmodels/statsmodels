@@ -1240,6 +1240,8 @@ class TestGEE(object):
         model4 = sm.GEE(endog, exog, groups, cov_struct=sm.cov_struct.Fixed(covmats))
         result4 = model4.fit()
 
+        smry = result4.summary()
+
         assert_allclose(result3.params, result4.params, atol=1e-6)
         assert_allclose(result3.tvalues, result4.tvalues, atol=1e-6)
 

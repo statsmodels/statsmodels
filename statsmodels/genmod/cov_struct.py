@@ -1191,20 +1191,35 @@ class Fixed(CovStruct):
     Parameters
     ----------
     struct: sequence type
-      List of numpy array corresponding 
-      to the fixed structure for each group. 
+      List of numpy array corresponding to the fixed structure for each group. 
+    is_cor: bool
+      If True, the family variance is used to convert the provided matrices to covariance matrices.  
+      If False, the provided matrices are treated as being `cov[endog | exog]` without further adjustment.
     """
 
-    def __init__(self, struct):
+    def __init__(self, struct, is_cor=True):
 
         super(Fixed, self).__init__()
+        self._struct_inv = [np.linalg.inv(x) for x in struct]
         self.struct = struct #list of numpy array
+        self.is_cor = is_cor
 
     def update(self, params):
-        pass
+
+       pass
 
     def covariance_matrix(self, expval, index):
-        return self.struct[index], True
+
+        return self.struct[index], self.is_cor
+
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
+
+        vmati = self._struct_inv[index]
+        if self.is_cor:
+            sdi = 1 / stdev
+            vmati = vmati * np.outer(sdi, sdi)
+
+        return [np.dot(vmati, x) for x in rhs]
 
     def summary(self):
 
