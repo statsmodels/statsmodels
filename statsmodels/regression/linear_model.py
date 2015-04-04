@@ -388,13 +388,22 @@ class RegressionModel(base.LikelihoodModel):
         exog : array-like
             The predictor variable matrix.
         dist_class : class
-            A random number generator class.  Must take 'mean' and
+            A random number generator class.  Must take 'loc' and
             'scale' as arguments and return a random number generator
             implementing an `rvs` method for simulating random values.
             Defaults to Gaussian.
 
-        Returns a frozen Gaussian random number generator object.  Use
-        the ``rvs`` method to generate random values.
+        Returns a frozen random number generator object with mean and
+        variance determined by the fitted linear model.  Use the
+        ``rvs`` method to generate random values.
+
+        Notes
+        -----
+        Due to the behavior of ``scipy.stats.distributions objects``,
+        the returned random number generator must be called with
+        ``gen.rvs(n)`` where ``n`` is the number of observations in
+        the data set used to fit the model.  If any other value is
+        used for ``n``, misleading results will be produced.
         """
         fit = self.predict(params, exog)
         if dist_class is None:

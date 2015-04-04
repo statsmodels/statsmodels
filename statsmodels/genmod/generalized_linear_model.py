@@ -666,6 +666,14 @@ class GLM(base.LikelihoodModel):
 
         Returns a frozen random number generator object.  Use the
         ``rvs`` method to generate random values.
+
+        Notes
+        -----
+        Due to the behavior of ``scipy.stats.distributions objects``,
+        the returned random number generator must be called with
+        ``gen.rvs(n)`` where ``n`` is the number of observations in
+        the data set used to fit the model.  If any other value is
+        used for ``n``, misleading results will be produced.
         """
 
         fit = self.predict(params, exog, exposure, offset, linear=False)
@@ -681,8 +689,12 @@ class GLM(base.LikelihoodModel):
         elif isinstance(self.family, families.Poisson):
             return dist.poisson(mu=fit)
 
+        elif isinstance(self.family, families.Gamma):
+            alpha = fit / float(scale)
+            return dist.gamma(alpha, scale=scale)
+
         else:
-            raise ValueError("get_distribution not implemented or %s" % self.family.name)
+            raise ValueError("get_distribution not implemented for %s" % self.family.name)
 
 
 
