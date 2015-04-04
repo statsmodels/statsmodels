@@ -649,6 +649,43 @@ class GLM(base.LikelihoodModel):
         else:
             return self.family.fitted(linpred)
 
+
+    def get_distribution(self, params, scale=1, exog=None, exposure=None,
+                         offset=None):
+        """
+        Returns a random number generator for the predictive distribution.
+
+        Parameters
+        ----------
+        params : array-like
+            The model parameters.
+        scale : scalar
+            The scale parameter.
+        exog : array-like
+            The predictor variable matrix.
+
+        Returns a frozen random number generator object.  Use the
+        ``rvs`` method to generate random values.
+        """
+
+        fit = self.predict(params, exog, exposure, offset, linear=False)
+
+        import scipy.stats.distributions as dist
+
+        if isinstance(self.family, families.Gaussian):
+            return dist.norm(loc=fit, scale=np.sqrt(scale))
+
+        elif isinstance(self.family, families.Binomial):
+            return dist.binom(n=1, p=fit)
+
+        elif isinstance(self.family, families.Poisson):
+            return dist.poisson(mu=fit)
+
+        else:
+            raise ValueError("get_distribution not implemented or %s" % self.family.name)
+
+
+
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):

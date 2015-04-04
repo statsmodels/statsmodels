@@ -374,6 +374,36 @@ class RegressionModel(base.LikelihoodModel):
             exog = self.exog
         return np.dot(exog, params)
 
+
+    def get_distribution(self, params, scale, exog=None, dist_class=None):
+        """
+        Returns a random number generator for the predictive distribution.
+
+        Parameters
+        ----------
+        params : array-like
+            The model parameters (regression coefficients).
+        scale : scalar
+            The variance parameter.
+        exog : array-like
+            The predictor variable matrix.
+        dist_class : class
+            A random number generator class.  Must take 'mean' and
+            'scale' as arguments and return a random number generator
+            implementing an `rvs` method for simulating random values.
+            Defaults to Gaussian.
+
+        Returns a frozen Gaussian random number generator object.  Use
+        the ``rvs`` method to generate random values.
+        """
+        fit = self.predict(params, exog)
+        if dist_class is None:
+            from scipy.stats.distributions import norm
+            dist_class = norm
+        gen = dist_class(loc=fit, scale=np.sqrt(scale))
+        return gen
+
+
 class GLS(RegressionModel):
     __doc__ = """
     Generalized least squares model with a general covariance structure.
