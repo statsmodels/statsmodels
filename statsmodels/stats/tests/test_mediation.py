@@ -1,7 +1,7 @@
 import numpy as np
 import statsmodels.api as sm
 import os
-from statsmodels.sandbox.mediation import Mediation
+from statsmodels.stats.mediation import Mediation
 import pandas as pd
 from numpy.testing import assert_allclose
 import patsy
