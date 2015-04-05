@@ -524,11 +524,6 @@ class Gaussian(Family):
             (1/2.)*log(2*pi*`scale`))
         """
 
-        va = scale * self.variance(mu)
-        sresid = (endog - mu)**2 / va
-        llf = -np.sum(np.log(2 * np.pi * va)) / 2
-        llf -= np.sum(sresid) / 2
-
         # FIXME: This is the profile likelihood after optimizing
         # scale.  Note that this implicitly uses the MLE for scale,
         # not the unbiased estimate accounting for the model df.  Also
@@ -536,12 +531,11 @@ class Gaussian(Family):
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # Recalculate the scale as the MLE
             scale = np.sum((endog - mu)**2) / len(endog)
-            va = scale * self.variance(mu)
-            sresid = (endog - mu)**2 / va
-            llf = -np.sum(np.log(2 * np.pi * va)) / 2
-            llf -= np.sum(sresid) / 2
-            return llf
 
+        va = scale * self.variance(mu)
+        sresid = (endog - mu)**2 / va
+        llf = -np.sum(np.log(2 * np.pi * va)) / 2
+        llf -= np.sum(sresid) / 2
         return llf
 
 
