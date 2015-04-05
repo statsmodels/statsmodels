@@ -457,10 +457,11 @@ class Gaussian(Family):
 
         Notes
         --------
-        `resid_dev` = (`endog` - `mu`)/sqrt(variance(`mu`))
+        `resid_dev` = (`endog` - `mu`) / sqrt(variance(`mu`) * `scale`)
         """
 
-        return (endog - mu) / np.sqrt(self.variance(mu))/scale
+        return (endog - mu) / np.sqrt(self.variance(mu) * scale)
+
 
     def deviance(self, endog, mu, scale=1.):
         """
@@ -482,9 +483,10 @@ class Gaussian(Family):
 
         Notes
         --------
-        `deviance` = sum((endog-mu)**2)
+        `deviance` = sum((endog-mu)**2 / variance(mu)) / scale
         """
-        return np.sum((endog-mu)**2)/scale
+        return np.sum((endog - mu)**2 / self.variance(mu)) / scale
+
 
     def loglike(self, endog, mu, scale=1.):
         """
@@ -507,6 +509,10 @@ class Gaussian(Family):
 
         Notes
         -----
+
+        TODO: this is unclear and will need to be updated contingent
+        on what we do below.
+
         If the link is the identity link function then the
         loglikelihood function is the same as the classical OLS model.
         llf = -(nobs/2)*(log(SSR) + (1 + log(2*pi/nobs)))
@@ -517,17 +523,27 @@ class Gaussian(Family):
         llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
             (1/2.)*log(2*pi*`scale`))
         """
+
+        va = scale * self.variance(mu)
+        sresid = (endog - mu)**2 / va
+        llf = -np.sum(np.log(2 * np.pi * va)) / 2
+        llf -= np.sum(sresid) / 2
+
+        # FIXME: This is the profile likelihood after optimizing
+        # scale.  Note that this implicitly uses the MLE for scale,
+        # not the unbiased estimate accounting for the model df.  Also
+        # if scale is passed as an argument it is ignored.
         if isinstance(self.link, L.Power) and self.link.power == 1:
-            # This is just the loglikelihood for classical OLS
-            nobs2 = endog.shape[0]/2.
-            SSR = ss(endog-self.fitted(mu))
-            llf = -np.log(SSR) * nobs2
-            llf -= (1+np.log(np.pi/nobs2))*nobs2
+            # Recalculate the scale as the MLE
+            scale = np.sum((endog - mu)**2) / len(endog)
+            va = scale * self.variance(mu)
+            sresid = (endog - mu)**2 / va
+            llf = -np.sum(np.log(2 * np.pi * va)) / 2
+            llf -= np.sum(sresid) / 2
             return llf
-        else:
-            # Return the loglikelihood for Gaussian GLM
-            return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
-                          - .5*np.log(2 * np.pi * scale))
+
+        return llf
+
 
     def resid_anscombe(self, endog, mu):
         """
