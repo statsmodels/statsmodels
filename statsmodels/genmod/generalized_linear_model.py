@@ -536,7 +536,16 @@ class GLM(base.LikelihoodModel):
         history['deviance'].append(self.family.deviance(self.endog, mu))
         return history
 
-    def estimate_scale(self, mu):
+
+    def _estimate_x2_scale(self, mu):
+        """
+        chi^2 estimate of the scale parameter.
+        """
+        resid = self.endog - mu
+        return (np.power(resid, 2) / self.family.variance(mu)).sum() / self.df_resid
+
+
+    def estimate_scale(self, mu, scaletype=None):
         """
         Estimates the dispersion/scale.
 
@@ -545,46 +554,54 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         mu : array
-            mu is the mean response estimate
+            `mu` is the mean response estimate
+        scaletype : string or float, optional
+            `scaletype` can be 'X2', 'dev', 'mle', or a float The
+            default value is None, which uses the model `scaletype`
+            attribute which is set when calling `fit`.
 
         Returns
         -------
-        Estimate of scale
-
-        Notes
-        -----
-        The default scale for Binomial and Poisson families is 1.  The default
-        for the other families is Pearson's Chi-Square estimate.
+        Estimate of the scale parameter
 
         See also
         --------
         statsmodels.glm.fit for more information
         """
-        if not self.scaletype:
+        if scaletype is None:
+            scaletype = self.scaletype
+
+        if not scaletype:
             if isinstance(self.family, (families.Binomial, families.Poisson)):
                 return 1.
             else:
-                resid = self.endog - mu
-                return ((np.power(resid, 2) / self.family.variance(mu)).sum()
-                        / self.df_resid)
+                return self._estimate_x2_scale(mu)
 
-        if isinstance(self.scaletype, float):
-            return np.array(self.scaletype)
+        if isinstance(scaletype, float):
+            return np.array(scaletype)
 
-        if isinstance(self.scaletype, str):
-            if self.scaletype.lower() == 'x2':
-                resid = self.endog - mu
-                return ((np.power(resid, 2) / self.family.variance(mu)).sum()
-                        / self.df_resid)
-            elif self.scaletype.lower() == 'dev':
-                return self.family.deviance(self.endog, mu)/self.df_resid
+        if isinstance(scaletype, str):
+            if scaletype.lower() == 'x2':
+                return self._estimate_x2_scale(mu)
+            elif scaletype.lower() == 'dev':
+                return self.family.deviance(self.endog, mu) / self.df_resid
+            elif scaletype.lower() == 'mle':
+                if isinstance(self.family, families.Gaussian):
+                    resid = self.endog - mu
+                    return np.mean(resid**2)
+                elif isinstance(self.family, (families.Binomial, families.Poisson)):
+                    return 1.
+                else:
+                    # TODO: this may not be the MLE but it produces
+                    # llf results that match R/Stata.
+                    return self._estimate_x2_scale(mu)
             else:
                 raise ValueError("Scale %s with type %s not understood" %
-                                 (self.scaletype, type(self.scaletype)))
+                                 (scaletype, type(scaletype)))
 
         else:
             raise ValueError("Scale %s with type %s not understood" %
-                             (self.scaletype, type(self.scaletype)))
+                             (scaletype, type(scaletype)))
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
@@ -1098,7 +1115,11 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def llf(self):
         _modelfamily = self.family
-        val = _modelfamily.loglike(self._endog, self.mu, scale=self.scale)
+        scale = self.scale
+        # Always use MLE scale estimate for the log likelihood function.
+        if self.model.scaletype != 'mle':
+            scale = self.model.estimate_scale(self.mu, scaletype='mle')
+        val = _modelfamily.loglike(self._endog, self.mu, scale=scale)
         return val
 
     @cache_readonly
