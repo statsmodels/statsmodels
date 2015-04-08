@@ -65,7 +65,6 @@ def test_score_misc():
 
     # Test that the score function works
     mod.score(mod.params)
-    mod.score(mod.params, initial_state=res.initial_state, initial_state_cov=res.initial_state_cov)
 
 def test_from_formula():
     assert_raises(NotImplementedError, lambda: MLEModel.from_formula(1,2,3))

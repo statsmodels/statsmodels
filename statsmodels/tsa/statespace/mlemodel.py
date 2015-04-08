@@ -13,7 +13,9 @@ from .kalman_filter import FilterResults
 
 import statsmodels.tsa.base.tsa_model as tsbase
 from .model import Model
-from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
+from statsmodels.tools.numdiff import (
+    _get_epsilon, approx_hess_cs, approx_fprime_cs
+)
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 
@@ -98,6 +100,8 @@ class MLEModel(Model):
     statsmodels.tsa.statespace.representation.Representation
     """
 
+    hessian_method = 'opg'
+
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
         # Set the default results class to be MLEResults
@@ -118,6 +122,7 @@ class MLEModel(Model):
     def fit(self, start_params=None, transformed=True,
             method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
+            hessian_method=None,
             bfgs_tune=False, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
@@ -159,6 +164,11 @@ class MLEModel(Model):
         return_params : boolean, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
+        hessian_method : {'opg','oim','cs'}, optional
+            The method by which the Hessian is numerically approximated. 'opg'
+            uses outer product of gradients, 'oim' uses the information
+            matrix formula from Harvey (1989), and 'cs' uses second-order
+            complex step differentiation.
         bfgs_tune : boolean, optional
             BFGS methods by default use internal methods for approximating the
             score and hessian by finite differences. If `bfgs_tune=True` the
@@ -181,6 +191,10 @@ class MLEModel(Model):
         if start_params is None:
             start_params = self.start_params
             transformed = True
+
+        # Update the hessian method
+        if hessian_method is not None:
+            self.hessian_method = hessian_method
 
         # Unconstrain the starting parameters
         if transformed:
@@ -230,6 +244,10 @@ class MLEModel(Model):
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
+
+            if 'information_matrix_type' in kwargs:
+                res.information_matrix_type = kwargs['information_matrix_type']
+
             return res
 
     def loglike(self, params=None, average_loglike=False, transformed=True,
@@ -314,6 +332,117 @@ class MLEModel(Model):
             self.update(params, transformed=transformed, set_params=set_params)
 
         return super(MLEModel, self).loglikeobs(**kwargs)
+
+    def observed_information_matrix(self, params, **kwargs):
+        """
+        Observed information matrix
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        This method is from Harvey (1989), which shows that the information
+        matrix only depends on terms from the gradient. This implementation is
+        partially analytic and partially numeric approximation, therefore,
+        because it uses the analytic formula for the information matrix, with
+        numerically computed elements of the gradient.
+
+        References
+        ----------
+        Harvey, Andrew C. 1990.
+        Forecasting, Structural Time Series Models and the Kalman Filter.
+        Cambridge University Press.
+
+        """
+        # Setup
+        n = len(params)
+        epsilon = _get_epsilon(params, 1, None, n)
+        increments = np.identity(n) * 1j * epsilon
+
+        # Get values at the params themselves
+        self.update(params)
+        res = self.filter(**kwargs)
+
+        dtype = self.dtype
+        inv_forecasts_error_cov = (
+            np.linalg.inv(res.forecasts_error_cov.transpose()).transpose()
+        )
+
+        # Compute partial derivatives
+        partials_forecasts_error = (
+            np.zeros((self.k_endog, self.nobs, n))
+        )
+        partials_forecasts_error_cov = (
+            np.zeros((self.k_endog, self.k_endog, self.nobs, n))
+        )
+        for i, ih in enumerate(increments):
+            self.update(params + ih)
+            res = self.filter(**kwargs)
+
+            partials_forecasts_error[:, :, i] = (
+                res.forecasts_error.imag / epsilon[i]
+            )
+
+            partials_forecasts_error_cov[:, :, :, i] = (
+                res.forecasts_error_cov.imag / epsilon[i]
+            )
+
+        # Compute the information matrix
+        tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
+
+        information_matrix = np.zeros((n, n), dtype=dtype)
+        for t in range(self.loglikelihood_burn, self.nobs):
+            for i in range(n):
+                tmp[:, :, t, i] = np.dot(
+                    inv_forecasts_error_cov[:, :, t],
+                    partials_forecasts_error_cov[:, :, t, i]
+                )
+            for i in range(n):
+                for j in range(n):
+                    information_matrix[i, j] += (
+                        0.5 * np.trace(np.dot(tmp[:, :, t, i],
+                                              tmp[:, :, t, j]))
+                    )
+                    information_matrix[i, j] += np.inner(
+                        partials_forecasts_error[:, t, i],
+                        np.dot(inv_forecasts_error_cov[:,:,t],
+                               partials_forecasts_error[:, t, j])
+                    )
+        return information_matrix
+
+
+    def opg_information_matrix(self, params, **kwargs):
+        """
+        Outer product of gradients information matrix
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        **kwargs
+            Additional arguments to the `loglikeobs` method.
+
+        References
+        ----------
+        Berndt, Ernst R., Bronwyn Hall, Robert Hall, and Jerry Hausman. 1974.
+        Estimation and Inference in Nonlinear Structural Models.
+        NBER Chapters. National Bureau of Economic Research, Inc.
+
+        """
+        self.update(params)
+        scoreobs = approx_fprime_cs(params, self.loglikeobs,
+                                    kwargs=kwargs).transpose()
+        return np.inner(scoreobs, scoreobs)
+
+
     def score(self, params, *args, **kwargs):
         """
         Compute the score function at params.
@@ -346,34 +475,13 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        initial_state = kwargs.pop('initial_state', None)
-        initial_state_cov = kwargs.pop('initial_state_cov', None)
-        if initial_state is not None and initial_state_cov is not None:
-            # If initialization is stationary, we don't want to recalculate the
-            # initial_state_cov for each new set of parameters here
-            initialization = self.initialization
-            _initial_state = self._initial_state
-            _initial_state_cov = self._initial_state_cov
-            _initial_variance = self._initial_variance
-
-            self.initialize_known(initial_state, initial_state_cov)
-
-        score = approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args,
-                                 kwargs=kwargs)
-
-        if initial_state is not None and initial_state_cov is not None:
-            # Reset the initialization
-            self.initialization = initialization
-            self._initial_state = _initial_state
-            self._initial_state_cov = _initial_state_cov
-            self._initial_variance = _initial_variance
-
-        return score
+        return approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args,
+                                kwargs=kwargs)
 
     def hessian(self, params, *args, **kwargs):
         """
         Hessian matrix of the likelihood function, evaluated at the given
-        parameters.
+        parameters
 
         Parameters
         ----------
@@ -395,6 +503,33 @@ class MLEModel(Model):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
+        if self.hessian_method == 'cs':
+            hessian = self._hessian_cs(params, *args, **kwargs)
+        elif self.hessian_method == 'oim':
+            hessian = self._hessian_oim(params)
+        elif self.hessian_method == 'opg':
+            hessian = self._hessian_opg(params)
+        else:
+            raise NotImplementedError('Invalid Hessian calculation method.')
+        return hessian
+
+    def _hessian_oim(self, params):
+        """
+        Hessian matrix computed using the Harvey (1989) information matrix
+        """
+        return -self.observed_information_matrix(params)
+
+    def _hessian_opg(self, params):
+        """
+        Hessian matrix computed using the outer product of gradients
+        information matrix
+        """
+        return -self.opg_information_matrix(params)
+
+    def _hessian_cs(self, params, *args, **kwargs):
+        """
+        Hessian matrix computed by complex step differentiation.
+        """
         nargs = len(args)
         if nargs < 1:
             kwargs.setdefault('average_loglike', True)
@@ -403,29 +538,9 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        initial_state = kwargs.pop('initial_state', None)
-        initial_state_cov = kwargs.pop('initial_state_cov', None)
-        if initial_state is not None and initial_state_cov is not None:
-            # If initialization is stationary, we don't want to recalculate the
-            # initial_state_cov for each new set of parameters here
-            initialization = self.initialization
-            _initial_state = self._initial_state
-            _initial_state_cov = self._initial_state_cov
-            _initial_variance = self._initial_variance
-
-            self.initialize_known(initial_state, initial_state_cov)
-
-        hessian = approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args,
-                                 kwargs=kwargs)
-
-        if initial_state is not None and initial_state_cov is not None:
-            # Reset the initialization
-            self.initialization = initialization
-            self._initial_state = _initial_state
-            self._initial_state_cov = _initial_state_cov
-            self._initial_variance = _initial_variance
-
-        return hessian
+        self.update(params)
+        return approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args,
+                              kwargs=kwargs)
 
     @property
     def start_params(self):
@@ -633,6 +748,9 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
+
+    information_matrix_type = 'opg'
+
     def __init__(self, model):
         self.data = model.data
 
@@ -678,20 +796,30 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     @cache_readonly
     def cov_params_default(self):
         """
+        (array) The variance / covariance matrix.
+        """
+        if self.information_matrix_type == 'cs':
+            return self.cov_params_cs
+        elif self.information_matrix_type == 'delta':
+            return self.cov_params_delta
+        elif self.information_matrix_type == 'oim':
+            return self.cov_params_oim
+        elif self.information_matrix_type == 'opg':
+            return self.cov_params_opg
+        else:
+            raise NotImplementedError('Invalid covariance matrix type.')
+
+    @cache_readonly
+    def cov_params_cs(self):
+        """
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian computed without using parameter transformations.
         """
-        hessian = self.model.hessian(
-            self._params, set_params=False, transformed=True,
-            initial_state=self.initial_state,
-            initial_state_cov=self.initial_state_cov
+        hessian = self.model.hessian_cs(
+            self._params, set_params=False, transformed=True
         )
 
-        # Reset the matrices to the saved parameters (since they were
-        # overwritten in the hessian call)
-        self.model.update(self.model.params)
-
-        return -np.linalg.inv(hessian*self.nobs)
+        return -np.linalg.inv(hessian * self.nobs)
 
     @cache_readonly
     def cov_params_delta(self):
@@ -703,17 +831,27 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         unconstrained = self.model.untransform_params(self._params)
         jacobian = self.model.transform_jacobian(unconstrained)
-        hessian = self.model.hessian(
-            unconstrained, set_params=False,
-            initial_state=self.initial_state,
-            initial_state_cov=self.initial_state_cov
-        )
-
-        # Reset the matrices to the saved parameters (since they were
-        # overwritten in the hessian call)
-        self.model.update(self.model.params)
+        hessian = self.model.hessian_cs(unconstrained, set_params=False)
 
         return jacobian.dot(-np.linalg.inv(hessian*self.nobs)).dot(jacobian.T)
+
+    @cache_readonly
+    def cov_params_oim(self):
+        """
+        (array) The variance / covariance matrix. Computed using the method
+        from Harvey (1989).
+        """
+        return np.linalg.inv(
+            self.model.observed_information_matrix(self._params)
+        )
+
+    @cache_readonly
+    def cov_params_opg(self):
+        """
+        (array) The variance / covariance matrix. Computed using the outer
+        product of gradients method.
+        """
+        return np.linalg.inv(self.model.opg_information_matrix(self._params))
 
     def fittedvalues(self):
         """
