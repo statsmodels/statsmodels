@@ -282,6 +282,38 @@ class MLEModel(Model):
         else:
             return loglike
 
+    def loglikeobs(self, params=None, transformed=True, set_params=True,
+                **kwargs):
+        """
+        Loglikelihood per observation evaluation
+
+        This differs from `loglike` in that `loglikeobs` returns a vector of
+        loglikelihood observations.
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        transformed : boolean, optional
+            Whether or not `params` is already transformed. Default is True.
+        set_params : boolean
+            Whether or not to copy `params` to the model object's params
+            attribute. Default is True.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        If `loglikelihood_burn` is positive, then the entries in the returned
+        loglikelihood vector are set to be zero for those initial time periods.
+
+        """
+        if params is not None:
+            self.update(params, transformed=transformed, set_params=set_params)
+
+        return super(MLEModel, self).loglikeobs(**kwargs)
     def score(self, params, *args, **kwargs):
         """
         Compute the score function at params.
