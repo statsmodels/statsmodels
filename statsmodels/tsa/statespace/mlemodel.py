@@ -475,8 +475,7 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        return approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args,
-                                kwargs=kwargs)
+        return approx_fprime_cs(params, self.loglike, args=args, kwargs=kwargs)
 
     def hessian(self, params, *args, **kwargs):
         """
@@ -539,8 +538,7 @@ class MLEModel(Model):
             kwargs.setdefault('set_params', False)
 
         self.update(params)
-        return approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args,
-                              kwargs=kwargs)
+        return approx_hess_cs(params, self.loglike, args=args, kwargs=kwargs)
 
     @property
     def start_params(self):
