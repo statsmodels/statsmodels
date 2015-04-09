@@ -416,7 +416,7 @@ class MLEModel(Model):
                         np.dot(inv_forecasts_error_cov[:,:,t],
                                partials_forecasts_error[:, t, j])
                     )
-        return information_matrix
+        return information_matrix / (self.nobs - self.loglikelihood_burn)
 
 
     def opg_information_matrix(self, params, **kwargs):
@@ -439,7 +439,10 @@ class MLEModel(Model):
 
         """
         score_obs = self.score_obs(params, **kwargs).transpose()
-        return np.inner(score_obs, score_obs)
+        return (
+            np.inner(score_obs, score_obs) /
+            (self.nobs - self.loglikelihood_burn)
+        )
 
 
     def score(self, params, *args, **kwargs):
@@ -867,6 +870,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         from Harvey (1989).
         """
         return np.linalg.inv(
+            (self.model.nobs - self.model.loglikelihood_burn) *
             self.model.observed_information_matrix(self._params)
         )
 
@@ -876,7 +880,10 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the outer
         product of gradients method.
         """
-        return np.linalg.inv(self.model.opg_information_matrix(self._params))
+        return np.linalg.inv(
+            (self.model.nobs - self.model.loglikelihood_burn) * 
+            self.model.opg_information_matrix(self._params)
+        )
 
     def fittedvalues(self):
         """
