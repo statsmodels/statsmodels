@@ -369,11 +369,9 @@ class MLEModel(Model):
         # Get values at the params themselves
         self.update(params)
         res = self.filter(**kwargs)
-
         dtype = self.dtype
-        inv_forecasts_error_cov = (
-            np.linalg.inv(res.forecasts_error_cov.transpose()).transpose()
-        )
+        # Save this for inversion later
+        inv_forecasts_error_cov = res.forecasts_error_cov.copy()
 
         # Compute partial derivatives
         partials_forecasts_error = (
@@ -399,6 +397,9 @@ class MLEModel(Model):
 
         information_matrix = np.zeros((n, n), dtype=dtype)
         for t in range(self.loglikelihood_burn, self.nobs):
+            inv_forecasts_error_cov[:, :, t] = (
+                np.linalg.inv(inv_forecasts_error_cov[:, :, t])
+            )
             for i in range(n):
                 tmp[:, :, t, i] = np.dot(
                     inv_forecasts_error_cov[:, :, t],
