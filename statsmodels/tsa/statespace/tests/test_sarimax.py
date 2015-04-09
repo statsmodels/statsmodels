@@ -634,6 +634,14 @@ class SARIMAXCoverageTest(object):
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
+        # And make sure no expections are thrown calculating any of the
+        # covariance matrix types
+        self.result.cov_params_default
+        self.result.cov_params_cs
+        self.result.cov_params_delta
+        self.result.cov_params_oim
+        self.result.cov_params_opg
+
     def test_init_keys_replicate(self):
         mod1 = self.model
         mod1.update(self.true_params)  # test with side effect ?
@@ -1195,6 +1203,23 @@ class Test_seasonal_arma_trend_ct(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         self.true_params[:2] = (1 - self.true_params[2:5].sum()) * self.true_params[:2]
 
+    def test_results(self):
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
+
+        # Just make sure that no exceptions are thrown during summary
+        self.result.summary()
+
+        # And make sure no expections are thrown calculating any of the
+        # covariance matrix types
+        self.result.cov_params_default
+        # Known failure due to the complex step inducing non-stationary
+        # parameters, causing a failure in the solve_discrete_lyapunov call
+        # self.result.cov_params_cs
+        # self.result.cov_params_delta
+        self.result.cov_params_oim
+        self.result.cov_params_opg
+
 class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
     # arima wpi c t3, sarima(3,0,2,4) noconstant vce(oim)
@@ -1234,6 +1259,23 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         kwargs['order'] = (0,2,0)
         kwargs['seasonal_order'] = (3,2,2,4)
         super(Test_seasonal_arma_diff_seasonal_diff, self).__init__(47, *args, **kwargs)
+
+    def test_results(self):
+        self.model.update(self.true_params)
+        self.result = self.model.filter()
+
+        # Just make sure that no exceptions are thrown during summary
+        self.result.summary()
+
+        # And make sure no expections are thrown calculating any of the
+        # covariance matrix types
+        self.result.cov_params_default
+        # Known failure due to the complex step inducing non-stationary
+        # parameters, causing a failure in the solve_discrete_lyapunov call
+        # self.result.cov_params_cs
+        # self.result.cov_params_delta
+        self.result.cov_params_oim
+        self.result.cov_params_opg
 
 class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
     # // SARMA and diffuse initialization
