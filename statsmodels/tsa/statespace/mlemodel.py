@@ -438,10 +438,8 @@ class MLEModel(Model):
         NBER Chapters. National Bureau of Economic Research, Inc.
 
         """
-        self.update(params)
-        scoreobs = approx_fprime_cs(params, self.loglikeobs,
-                                    kwargs=kwargs).transpose()
-        return np.inner(scoreobs, scoreobs)
+        score_obs = self.score_obs(params, **kwargs).transpose()
+        return np.inner(score_obs, score_obs)
 
 
     def score(self, params, *args, **kwargs):
@@ -477,6 +475,30 @@ class MLEModel(Model):
             kwargs.setdefault('set_params', False)
 
         return approx_fprime_cs(params, self.loglike, args=args, kwargs=kwargs)
+
+    def score_obs(self, params, **kwargs):
+        """
+        Compute the score per observation, evaluated at params
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the score.
+        *args, **kwargs
+            Additional arguments to the `loglike` method.
+
+        Returns
+        ----------
+        score : array (nobs, k_vars)
+            Score per observation, evaluated at `params`.
+
+        Notes
+        -----
+        This is a numerical approximation.
+
+        """
+        self.update(params)
+        return approx_fprime_cs(params, self.loglikeobs, kwargs=kwargs)
 
     def hessian(self, params, *args, **kwargs):
         """
