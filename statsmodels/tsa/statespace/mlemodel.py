@@ -747,8 +747,6 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
 
-    information_matrix_type = 'opg'
-
     def __init__(self, model):
         self.data = model.data
 
@@ -773,6 +771,12 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         # Setup the cache
         self._cache = resettable_cache()
+
+        # Setup covariance matrix notes dictionary
+        if not hasattr(self, 'cov_kwds'):
+            self.cov_kwds = {}
+        self.information_matrix_type = 'opg'
+
 
     @cache_readonly
     def aic(self):
@@ -864,6 +868,36 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         """
         # return -2*self.llf + 2*np.log(np.log(self.nobs))*self.params.shape[0]
         return hqic(self.llf, self.nobs, self.params.shape[0])
+
+    @property
+    def information_matrix_type(self):
+        return self._information_matrix_type
+    @information_matrix_type.setter
+    def information_matrix_type(self, value):
+        if value == 'cs':
+            self.cov_kwds['information_matrix'] = (
+                'Information matrix calculated using numerical differentiation'
+            )
+        elif value == 'delta':
+            self.cov_kwds['information_matrix'] = (
+                'Information matrix calculated using numerical differentiation'
+                ' and the delta method (method of propagation of errors)'
+            )
+        elif value == 'oim':
+            self.cov_kwds['information_matrix'] = (
+                'Information matrix calculated using the observed information'
+                ' matrix described in Harvey (1989)'
+            )
+        elif value == 'opg':
+            self.cov_kwds['information_matrix'] = (
+                'Information matrix calculated using the outer product of'
+                ' gradients'
+            )
+        else:
+            raise NotImplementedError('Invalid covariance matrix type.')
+
+        self._information_matrix_type = value
+    
 
     @cache_readonly
     def llf(self):
@@ -1064,10 +1098,20 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             ('HQIC', ["%#5.3f" % self.hqic])
         ]
 
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
         summary.add_table_params(self, alpha=alpha, xname=self._param_names,
                                  use_t=False)
+
+        params_table = summary.tables[1]
+        row = params_table._Row(
+            ['', '', self._information_matrix_type.upper(), '', '', ''],
+            datatype=0
+        )
+        params_table.insert(0, row)
 
         return summary
