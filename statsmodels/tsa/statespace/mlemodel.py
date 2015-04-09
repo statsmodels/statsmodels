@@ -815,7 +815,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian computed without using parameter transformations.
         """
-        hessian = self.model.hessian_cs(
+        hessian = self.model._hessian_cs(
             self._params, set_params=False, transformed=True
         )
 
@@ -831,7 +831,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         unconstrained = self.model.untransform_params(self._params)
         jacobian = self.model.transform_jacobian(unconstrained)
-        hessian = self.model.hessian_cs(unconstrained, set_params=False)
+        hessian = self.model._hessian_cs(unconstrained, set_params=False)
 
         return jacobian.dot(-np.linalg.inv(hessian*self.nobs)).dot(jacobian.T)
 
