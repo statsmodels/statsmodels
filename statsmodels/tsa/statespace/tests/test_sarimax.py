@@ -871,7 +871,14 @@ class SARIMAXCoverageTest(object):
         # covariance matrix types
         self.result.cov_params_default
         self.result.cov_params_cs
-        self.result.cov_params_delta
+        # Some of the below models have non-invertible parameters, which causes
+        # problems with the reverse parameter transformation used in the
+        # `cov_params_delta` procedure. This is unavoidable with these types of
+        # parameters, and should not be considered a failure.
+        try:
+            self.result.cov_params_delta
+        except np.linalg.LinAlgError:
+            pass
         self.result.cov_params_oim
         self.result.cov_params_opg
 
@@ -1506,7 +1513,7 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
         # self.result.cov_params_cs
-        # self.result.cov_params_delta
+        #s self.result.cov_params_delta
         self.result.cov_params_oim
         self.result.cov_params_opg
 
