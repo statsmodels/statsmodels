@@ -100,7 +100,7 @@ class MLEModel(Model):
     statsmodels.tsa.statespace.representation.Representation
     """
 
-    hessian_method = 'opg'
+    hessian_method = 'cs'
 
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
