@@ -148,6 +148,7 @@ class TestARIMAStationary(ARIMA):
         self.result = self.model.filter()
 
     def test_bse(self):
+        # Default covariance type (OPG)
         assert_allclose(
             self.result.bse[1], self.true['se_ar_opg'],
             atol=1e-3,
@@ -155,6 +156,17 @@ class TestARIMAStationary(ARIMA):
         assert_allclose(
             self.result.bse[2], self.true['se_ma_opg'],
             atol=1e-3,
+        )
+
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[1], self.true['se_ar_oim'],
+            atol=1e-3,
+        )
+        assert_allclose(
+            oim_bse[2], self.true['se_ma_oim'],
+            atol=1e-2,
         )
 
 
@@ -176,6 +188,17 @@ class TestARIMADiffuse(ARIMA):
         assert_allclose(
             self.result.bse[2], self.true['se_ma_opg'],
             atol=1e-3,
+        )
+
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[1], self.true['se_ar_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[2], self.true['se_ma_oim'],
+            atol=1e-2, rtol=1e-1
         )
 
 
@@ -229,6 +252,17 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
             atol=1e-3,
         )
 
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[1], self.true['se_ar_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[2:4], self.true['se_ma_oim'],
+            atol=1e-1
+        )
+
 
 class Airline(SARIMAXStataTests):
     """
@@ -278,6 +312,17 @@ class TestAirlineHamilton(Airline):
             atol=1e-3,
         )
 
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[0], self.true['se_ma_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[1], self.true['se_seasonal_ma_oim'],
+            atol=1e-1
+        )
+
 
 class TestAirlineHarvey(Airline):
     def __init__(self):
@@ -294,6 +339,17 @@ class TestAirlineHarvey(Airline):
         assert_allclose(
             self.result.bse[1], self.true['se_seasonal_ma_opg'],
             atol=1e-3,
+        )
+
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[0], self.true['se_ma_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[1], self.true['se_seasonal_ma_oim'],
+            atol=1e-1
         )
 
 
@@ -329,6 +385,17 @@ class TestAirlineStateDifferencing(Airline):
         assert_allclose(
             self.result.bse[1], self.true['se_seasonal_ma_opg'],
             atol=1e-4,
+        )
+
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[0], self.true['se_ma_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[1], self.true['se_seasonal_ma_oim'],
+            atol=1e-1
         )
 
 
@@ -386,6 +453,25 @@ class TestFriedmanMLERegression(Friedman):
         )
         assert_allclose(
             self.result.bse[3], self.true['se_ma_opg'],
+            atol=1e-2,
+        )
+
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[0], self.true['se_exog_oim'][0],
+            rtol=1e-1
+        )
+        assert_allclose(
+            oim_bse[1], self.true['se_exog_oim'][1],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[2], self.true['se_ar_oim'],
+            atol=1e-2,
+        )
+        assert_allclose(
+            oim_bse[3], self.true['se_ma_oim'],
             atol=1e-2,
         )
 
@@ -449,6 +535,17 @@ class TestFriedmanStateRegression(Friedman):
         assert_allclose(
             self.result.bse[1], self.true['se_ma_opg'],
             atol=1e-2
+        )
+
+        # OIM covariance type
+        oim_bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(
+            oim_bse[0], self.true['se_ar_oim'],
+            atol=1e-1,
+        )
+        assert_allclose(
+            oim_bse[1], self.true['se_ma_oim'],
+            atol=1e-2, rtol=1e-2
         )
 
 
