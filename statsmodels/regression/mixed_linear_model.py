@@ -56,31 +56,36 @@ Notation:
   + Z * cov_re * Z', where Z is the design matrix for the random
   effects in one group.
 
-Notes:
+Note on profile likelihoods:
 
-1. Three different parameterizations are used here in different
-places.  The regression slopes (usually called `fe_params`) are
-identical in all three parameterizations, but the variance parameters
-differ.  The parameterizations are:
+The internal calculations always profile the scale parameter out of
+the model.  A keyword argument to `fit` named `profile_fe_params`
+triggers use of GLS to profile the fixed effects parameters
+(a.k.a. beta) out of the likelihood.  When this parameter is set to
+True, the state of the fixed effects parameters on entry to the
+likelihood, score, and hessian functions is ignored, and is updated
+with the exact optimal value for the current random effects
+parameters.
 
-* The "natural parameterization" in which cov(endog) = scale*I + Z *
-  cov_re * Z', as described above.  This is the main parameterization
-  visible to the user.
+Note on parameterizations:
 
-* The "profile parameterization" in which cov(endog) = I +
-  Z * cov_re1 * Z'.  This is the parameterization of the profile
+1. Three different parameterizations of the variance/covariance
+structures are used here in different places.  The regression slopes
+(usually called `fe_params`) are identical in all three
+parameterizations, but the variance parameters differ.  The
+parameterizations are:
+
+* The natural parameterization in which ``cov(endog | exog) = scale*I'
+  + Z * cov_re * Z'``, as described above.  This is the
+  parameterization visible to the user.
+
+* The profile parameterization in which ``cov(endog | exog) = I + Z *
+  cov_re_unscaled * Z'``.  This is the parameterization of the profile
   likelihood that is maximized to produce parameter estimates.
-  (see Lindstrom and Bates for details).  The "natural" cov_re is
-  equal to the "profile" cov_re1 times scale.
 
-* The "square root parameterization" in which we work with the
-  Cholesky factor of cov_re1 instead of cov_re1 directly.
-
-All three parameterizations can be "packed" by concatenating fe_params
-together with the lower triangle of the dependence structure.  Note
-that when unpacking, it is important to either square or reflect the
-dependence structure depending on which parameterization is being
-used.
+* The square root parameterization in which we work with the
+  Cholesky factor of cov_re_unscaled instead of cov_re_unscaled
+  directly.
 
 2. The situation where the random effects covariance matrix is
 singular is numerically challenging.  Small changes in the covariance
@@ -553,6 +558,11 @@ class MixedLM(base.LikelihoodModel):
             self.exog_names = ["FE%d" % (k + 1) for k in
                                range(self.exog.shape[1])]
 
+        # Usually this is set in `fit`, but in case someone wants to
+        # calculate likelihoods and scores without fitting a model, we
+        # give this a default value.
+        self._profile_fe_params = False
+
     def _make_param_names(self, exog_re):
         """
         Returns the full parameter names list, just the exogenous random
@@ -825,6 +835,47 @@ class MixedLM(base.LikelihoodModel):
         return MixedLMResultsWrapper(results)
 
 
+    def update_fe_params(self, params):
+        """
+        Use GLS to update the fixed effects parameter estimates.
+
+        Parameters
+        ----------
+        params : MixedLMParams instance
+            The random effects structure of `params` is used in the
+            GLS to update the fixed effects parameters.
+
+        Returns
+        -------
+        The `params` object with its `fe_params` component updated.
+        """
+
+        cov_re = params.get_cov_re()
+        cov_re_inv = np.linalg.inv(cov_re)
+
+        if not hasattr(self, "_endex_li"):
+            self._endex_li = []
+            for i in range(self.n_groups):
+                mat = np.concatenate((self.exog_li[i], self.endog_li[i][:, None]), axis=1)
+                self._endex_li.append(mat)
+
+        xtxy = 0.
+        for i in range(self.n_groups):
+
+            exog = self.exog_li[i]
+            ex_r = self.exog_re_li[i]
+            ex2_r = self.exog_re2_li[i]
+
+            u = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                           self._endex_li[i])
+            xtxy += np.dot(exog.T, u)
+
+        fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
+        params.set_fe_params(fe_params)
+
+        return params
+
+
     def _reparam(self):
         """
         Returns parameters of the map converting parameters from the
@@ -951,6 +1002,9 @@ class MixedLM(base.LikelihoodModel):
             params = MixedLMParams.from_packed(params, self.k_fe,
                                                self.use_sqrt)
 
+        if self._profile_fe_params:
+            params = self.update_fe_params(params)
+
         fe_params = params.get_fe_params()
         cov_re = params.get_cov_re()
         try:
@@ -1047,10 +1101,21 @@ class MixedLM(base.LikelihoodModel):
         respect to any parameterization.
         """
 
+        if self._profile_fe_params:
+            params_object = MixedLMParams.from_packed(params,
+                                          self.k_fe, self.use_sqrt)
+            params_object = self.update_fe_params(params_object)
+            params = params_object.get_packed()
+
         if self.use_sqrt:
-            return self.score_sqrt(params)
+            score = self.score_sqrt(params)
         else:
-            return self.score_full(params)
+            score = self.score_full(params)
+
+        if self._profile_fe_params:
+            score[0:self.k_fe] = 0
+
+        return score
 
 
     def hessian(self, params):
@@ -1065,10 +1130,18 @@ class MixedLM(base.LikelihoodModel):
         any parameterization.
         """
 
+        if self._profile_fe_params:
+            params_object = MixedLMParams.from_packed(params,
+                                          self.k_fe, self.use_sqrt)
+            params_object = self.update_fe_params(params_object)
+            params = params_object.get_packed()
+
         if self.use_sqrt:
-            return self.hessian_sqrt(params)
+            hess = self.hessian_sqrt(params)
         else:
-            return self.hessian_full(params)
+            hess = self.hessian_full(params)
+
+        return hess
 
     def score_full(self, params):
         """
@@ -1173,15 +1246,18 @@ class MixedLM(base.LikelihoodModel):
             # gradient.
             score_re -= 0.5 * dlv
 
-            # Needed for the fixed effects params gradient
             rvir += np.dot(resid, vir)
-            xtvir += np.dot(exog.T, vir)
+
+            # Only needed for the fixed effects params gradient
+            if not self._profile_fe_params:
+                xtvir += np.dot(exog.T, vir)
 
         fac = self.n_totobs
         if self.reml:
             fac -= self.exog.shape[1]
 
-        score_fe += fac * xtvir / rvir
+        if not self._profile_fe_params:
+            score_fe += fac * xtvir / rvir
         score_re += 0.5 * fac * rvavr / rvir
 
         if self.reml:
@@ -1257,7 +1333,7 @@ class MixedLM(base.LikelihoodModel):
 
         Notes
         -----
-        Tf provided as a MixedLMParams object, the input may be of
+        If provided as a MixedLMParams object, the input may be of
         any parameterization.
         """
 
@@ -1387,6 +1463,10 @@ class MixedLM(base.LikelihoodModel):
         for itr in range(n_iter):
 
             gro = self.score(params)
+
+            if self._profile_fe_params:
+                gro[0:self.k_fe] = 0
+
             gr = gro / np.max(np.abs(gro))
 
             sl = 0.5
@@ -1594,7 +1674,8 @@ class MixedLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, reml=True, niter_em=0,
             niter_sa=0, do_cg=True, fe_pen=None, cov_pen=None,
-            free=None, full_output=False, **kwargs):
+            free=None, full_output=False, profile_fe_params=True,
+            **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1632,6 +1713,10 @@ class MixedLM(base.LikelihoodModel):
             `free` must agree with that of the parent model.
         full_output : bool
             If true, attach iteration history to results
+        profile_fe_params : bool
+            If True, the profile likelihood of the variance parameters
+            is optimized, using GLS to optimize over the mean
+            structure parameters.
 
         Returns
         -------
@@ -1657,9 +1742,9 @@ class MixedLM(base.LikelihoodModel):
         else:
             hist = None
 
-        params = self.starting_values(start_params)
-
         success = False
+
+        params = self.starting_values(start_params)
 
         # EM iterations
         if niter_em > 0:
@@ -1672,6 +1757,8 @@ class MixedLM(base.LikelihoodModel):
             params.set_fe_params(fe_params)
             # Switch to profile parameterization.
             params.set_cov_re(cov_re / scale)
+
+        self._profile_fe_params = profile_fe_params
 
         # Try up to 10 times to make the optimization work.  Usually
         # only one cycle is used.
@@ -1699,6 +1786,11 @@ class MixedLM(base.LikelihoodModel):
                 if hist is not None:
                     hist.append(rslt.mle_retvals)
                 break
+
+        if self._profile_fe_params:
+            params = self.update_fe_params(params)
+
+        self._profile_fe_params = False
 
         if not success:
             msg = "Gradient optimization failed."

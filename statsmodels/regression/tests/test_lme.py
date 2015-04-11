@@ -6,6 +6,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            dec, assert_)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
+import statsmodels.api as sm
 import os
 import csv
 
@@ -394,6 +395,29 @@ def test_mixed_lm_wrapper():
     bse_re = result.bse_re
     assert_(bse_re.index.tolist() == re_names_full)
 
+
+def test_fit_profile_options():
+
+    E = np.kron(np.random.normal(size=500), np.ones(4))
+    X = np.random.normal(size=(2000, 20))
+    Y = np.random.normal(size=2000) + E
+    Z = np.random.normal(size=(2000, 2))
+    Z[:, 0] = 1
+    Z[:, 1] = np.random.normal(size=2000)
+    icepts = np.kron(np.random.normal(size=500), np.ones(4))
+    Y += icepts * Z[:, 0]
+    slopes = np.kron(np.random.normal(size=500), np.ones(4))
+    Y += slopes * Z[:, 1]
+    groups = np.kron(np.arange(500), np.ones(4))
+
+    results = []
+    for profile_fe_params in False, True:
+        model = sm.MixedLM(Y, X, groups=groups)
+        result = model.fit(full_output=True, profile_fe_params=profile_fe_params)
+        results.append(result)
+
+    assert_allclose(results[0].params, results[1].params, atol=1e-5, rtol=1e-5)
+    assert_allclose(results[0].bse, results[1].bse, atol=1e-5, rtol=1e-5)
 
 
 
