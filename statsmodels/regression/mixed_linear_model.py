@@ -88,12 +88,11 @@ parameters may lead to large changes in the likelihood and
 derivatives.
 
 3. The optimization strategy is to first use OLS to get starting
-values for the mean structure.  Then we optionally perform a few EM
-steps, followed by optionally performing a few steepest ascent steps.
-This is followed by conjugate gradient optimization using one of the
-scipy gradient optimizers.  The EM and steepest ascent steps are used
-to get adequate starting values for the conjugate gradient
-optimization, which is much faster.
+values for the mean structure.  Then we optionally perform a few
+steepest ascent steps.  This is followed by conjugate gradient
+optimization using one of the scipy gradient optimizers.  The steepest
+ascent steps are used to get adequate starting values for the
+conjugate gradient optimization, which is much faster.
 """
 
 import numpy as np
@@ -138,10 +137,6 @@ class MixedLMParams(object):
         The number of covariates with fixed effects.
     k_re : integer
         The number of covariates with random effects.
-    use_sqrt : boolean
-        If True, the covariance matrix is stored using as the lower
-        triangle of its Cholesky square root, otherwise it is stored
-        as the lower triangle of the covariance matrix.
 
     Notes
     -----
@@ -149,17 +144,16 @@ class MixedLMParams(object):
     the scale parameter has been profiled out.
     """
 
-    def __init__(self, k_fe, k_re, use_sqrt=True):
+    def __init__(self, k_fe, k_re):
 
         self.k_fe = k_fe
         self.k_re = k_re
         self.k_re2 = k_re * (k_re + 1) // 2
         self.k_tot = self.k_fe + self.k_re2
-        self.use_sqrt = use_sqrt
         self._ix = np.tril_indices(self.k_re)
-        self._params = np.zeros(self.k_tot)
 
-    def from_packed(params, k_fe, use_sqrt):
+
+    def from_packed(params, k_fe, use_sqrt, with_fe):
         """
         Create a MixedLMParams object from packed parameter vector.
 
@@ -170,29 +164,52 @@ class MixedLMParams(object):
         k_fe : integer
             The number of covariates with fixed effects
         use_sqrt : boolean
-            If True, the random effects covariance matrix is stored as
-            its Cholesky factor, otherwise the lower triangle of the
-            covariance matrix is stored.
+            If True, the random effects covariance matrix is provided
+            as its Cholesky factor, otherwise the lower triangle of
+            the covariance matrix is stored.
+        with_fe : boolean
+            If True, `params` contains fixed effects parameters.
+            Otherwise, the fixed effects parameters are set to zero.
 
         Returns
         -------
         A MixedLMParams object.
         """
 
-        k_re2 = len(params) - k_fe
+        # The number of covariance parameters.
+        if with_fe:
+            k_re2 = len(params) - k_fe
+        else:
+            k_re2 = len(params)
+
         k_re = (-1 + np.sqrt(1 + 8*k_re2)) / 2
         if k_re != int(k_re):
             raise ValueError("Length of `packed` not compatible with value of `fe`.")
         k_re = int(k_re)
 
-        pa = MixedLMParams(k_fe, k_re, use_sqrt)
-        pa.set_packed(params)
+        pa = MixedLMParams(k_fe, k_re)
+
+        cov_re = np.zeros((k_re, k_re))
+        ix = pa._ix
+        if with_fe:
+            pa.fe_params = params[0:k_fe]
+            cov_re[ix] = params[k_fe:]
+        else:
+            pa.fe_params = np.zeros(k_fe)
+            cov_re[ix] = params
+
+        if use_sqrt:
+            cov_re = np.dot(cov_re, cov_re.T)
+        else:
+            cov_re = (cov_re + cov_re.T) - np.diag(np.diag(cov_re))
+
+        pa.cov_re = cov_re
+
         return pa
 
     from_packed = staticmethod(from_packed)
 
-    def from_components(fe_params, cov_re=None, cov_re_sqrt=None,
-                        use_sqrt=True):
+    def from_components(fe_params, cov_re=None, cov_re_sqrt=None):
         """
         Create a MixedLMParams object from each parameter component.
 
@@ -206,10 +223,6 @@ class MixedLMParams(object):
         cov_re_sqrt : array-like
             The Cholesky (lower triangular) square root of the random
             effects covariance matrix.
-        use_sqrt : boolean
-            If True, the random effects covariance matrix is stored as
-            the lower triangle of its Cholesky factor, otherwise the
-            lower triangle of the covariance matrix is stored.
 
         Returns
         -------
@@ -218,9 +231,12 @@ class MixedLMParams(object):
 
         k_fe = len(fe_params)
         k_re = cov_re.shape[0]
-        pa = MixedLMParams(k_fe, k_re, use_sqrt)
-        pa.set_fe_params(fe_params)
-        pa.set_cov_re(cov_re)
+        pa = MixedLMParams(k_fe, k_re)
+        pa.fe_params = fe_params
+        if cov_re_sqrt is not None:
+            pa.cov_re = np.dot(cov_re_sqrt, cov_re_sqrt.T)
+        elif cov_re is not None:
+            pa.cov_re = cov_re
 
         return pa
 
@@ -230,14 +246,14 @@ class MixedLMParams(object):
         """
         Returns a copy of the object.
         """
-
-        obj = MixedLMParams(self.k_fe, self.k_re, self.use_sqrt)
-        obj.set_packed(self.get_packed().copy())
+        obj = MixedLMParams(self.k_fe, self.k_re)
+        obj.fe_params = self.fe_params.copy()
+        obj.cov_re = self.cov_re.copy()
         return obj
 
-    def get_packed(self, use_sqrt=None):
+    def get_packed(self, use_sqrt=None, with_fe=False):
         """
-        Returns the model parameters packed into a single vector.
+        Returns the covariance parameters packed into a single vector.
 
         Parameters
         ----------
@@ -246,85 +262,17 @@ class MixedLMParams(object):
             `use_sqrt`.  Otherwise it is set to the given value.
         """
 
-        if (use_sqrt is None) or (use_sqrt == self.use_sqrt):
-            return self._params
-
-        pa = self._params.copy()
-        cov_re = self.get_cov_re()
-
         if use_sqrt:
-            L = np.linalg.cholesky(cov_re)
-            pa[self.k_fe:] = L[self._ix]
+            L = np.linalg.cholesky(self.cov_re)
+            cpa = L[self._ix]
         else:
-            pa[self.k_fe:] = cov_re[self._ix]
+            cpa = self.cov_re[self._ix]
 
-        return pa
-
-    def set_packed(self, params):
-        """
-        Sets the packed parameter vector to the given vector, without
-        any validity checking.
-        """
-        self._params = params
-
-    def get_fe_params(self):
-        """
-        Returns the fixed effects paramaters as a ndarray.
-        """
-        return self._params[0:self.k_fe]
-
-    def set_fe_params(self, fe_params):
-        """
-        Set the fixed effect parameters to the given vector.
-        """
-        self._params[0:self.k_fe] = fe_params
-
-    def set_cov_re(self, cov_re=None, cov_re_sqrt=None):
-        """
-        Set the random effects covariance matrix to the given value.
-
-        Parameters
-        ----------
-        cov_re : array-like
-            The random effects covariance matrix.
-        cov_re_sqrt : array-like
-            The Cholesky square root of the random effects covariance
-            matrix.  Only the lower triangle is read.
-
-        Notes
-        -----
-        The first of `cov_re` and `cov_re_sqrt` that is not None is
-        used.
-        """
-
-        if cov_re is not None:
-            if self.use_sqrt:
-                cov_re_sqrt = np.linalg.cholesky(cov_re)
-                self._params[self.k_fe:] = cov_re_sqrt[self._ix]
-            else:
-                self._params[self.k_fe:] = cov_re[self._ix]
-
-        elif cov_re_sqrt is not None:
-            if self.use_sqrt:
-                self._params[self.k_fe:] = cov_re_sqrt[self._ix]
-            else:
-                cov_re = np.dot(cov_re_sqrt, cov_re_sqrt.T)
-                self._params[self.k_fe:] = cov_re[self._ix]
-
-    def get_cov_re(self):
-        """
-        Returns the random effects covariance matrix.
-        """
-        pa = self._params[self.k_fe:]
-
-        cov_re = np.zeros((self.k_re, self.k_re))
-        cov_re[self._ix] = pa
-        if self.use_sqrt:
-            cov_re = np.dot(cov_re, cov_re.T)
+        if with_fe:
+            return np.concatenate((self.fe_params, cpa))
         else:
-            cov_re = (cov_re + cov_re.T) - np.diag(np.diag(cov_re))
+            return cpa
 
-        return cov_re
 
 
 # This is a global switch to use direct linear algebra calculations
@@ -468,6 +416,7 @@ class MixedLM(base.LikelihoodModel):
         self.reml = True
         self.fe_pen = None
         self.re_pen = None
+        self._profile_fe_params = True
 
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
@@ -810,7 +759,10 @@ class MixedLM(base.LikelihoodModel):
         hess1 = hess[ii, :][:, ii]
         pcov[np.ix_(ii,ii)] = np.linalg.inv(-hess1)
 
+        params_object = MixedLMParams.from_components(fe_params, cov_re=cov_re)
+
         results = MixedLMResults(self, params_prof, pcov / scale)
+        results.params_object = params_object
         results.fe_params = fe_params
         results.cov_re = cov_re
         results.scale = scale
@@ -823,6 +775,44 @@ class MixedLM(base.LikelihoodModel):
         results.k_re2 = self.k_re2
 
         return MixedLMResultsWrapper(results)
+
+
+    def get_fe_params(self, cov_re):
+        """
+        Use GLS to update the fixed effects parameter estimates.
+
+        Parameters
+        ----------
+        cov_re : array-like
+            The covariance matrix of the random effects.
+
+        Returns
+        -------
+        The GLS estimates of the fixed effects parameters.
+        """
+
+        cov_re_inv = np.linalg.inv(cov_re)
+
+        if not hasattr(self, "_endex_li"):
+            self._endex_li = []
+            for i in range(self.n_groups):
+                mat = np.concatenate((self.exog_li[i], self.endog_li[i][:, None]), axis=1)
+                self._endex_li.append(mat)
+
+        xtxy = 0.
+        for i in range(self.n_groups):
+
+            exog = self.exog_li[i]
+            ex_r = self.exog_re_li[i]
+            ex2_r = self.exog_re2_li[i]
+
+            u = _smw_solve(1., ex_r, ex2_r, cov_re, cov_re_inv,
+                           self._endex_li[i])
+            xtxy += np.dot(exog.T, u)
+
+        fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
+
+        return fe_params
 
 
     def _reparam(self):
@@ -875,6 +865,8 @@ class MixedLM(base.LikelihoodModel):
         return lin, quad
 
 
+
+
     def hessian_sqrt(self, params):
         """
         Returns the Hessian matrix of the log-likelihood evaluated at
@@ -900,13 +892,13 @@ class MixedLM(base.LikelihoodModel):
         """
 
         if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe,
-                                               self.use_sqrt)
+            params = MixedLMParams.from_packed(params, self.k_fe)
 
-        score0 = self.score_full(params)
+        score_fe0, score_re0 = self.score_full(params)
+        score0 = np.concatenate((score_fe0, score_re0))
         hess0 = self.hessian_full(params)
 
-        params_vec = params.get_packed(use_sqrt=True)
+        params_vec = params.get_packed(use_sqrt=True, with_fe=True)
 
         lin, quad = self._reparam()
         k_tot = self.k_fe + self.k_re2
@@ -923,7 +915,8 @@ class MixedLM(base.LikelihoodModel):
 
         return hess
 
-    def loglike(self, params):
+
+    def loglike(self, params, profile_fe=True):
         """
         Evaluate the (profile) log-likelihood of the linear mixed
         effects model.
@@ -932,7 +925,11 @@ class MixedLM(base.LikelihoodModel):
         ----------
         params : MixedLMParams, or array-like.
             The parameter value.  If array-like, must be a packed
-            parameter vector compatible with this model.
+            parameter vector containing only the covariance
+            parameters.
+        profile_fe : boolean
+            If True, replace the provided value of `params_fe` with
+            the GLS estimates.
 
         Returns
         -------
@@ -949,10 +946,16 @@ class MixedLM(base.LikelihoodModel):
 
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(params, self.k_fe,
-                                               self.use_sqrt)
+                                               self.use_sqrt,
+                                               with_fe=False)
 
-        fe_params = params.get_fe_params()
-        cov_re = params.get_cov_re()
+        # Move to the profile set
+        cov_re = params.cov_re
+        if profile_fe:
+            fe_params = self.get_fe_params(cov_re)
+        else:
+            fe_params = params.fe_params
+
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
@@ -1012,6 +1015,7 @@ class MixedLM(base.LikelihoodModel):
 
         return likeval
 
+
     def _gen_dV_dPsi(self, ex_r, max_ix=None):
         """
         A generator that yields the derivative of the covariance
@@ -1035,7 +1039,7 @@ class MixedLM(base.LikelihoodModel):
                 yield jj,mat
                 jj += 1
 
-    def score(self, params):
+    def score(self, params, profile_fe=True):
         """
         Returns the score vector of the profile log-likelihood.
 
@@ -1047,10 +1051,27 @@ class MixedLM(base.LikelihoodModel):
         respect to any parameterization.
         """
 
+        if type(params) is not MixedLMParams:
+            params = MixedLMParams.from_packed(params, self.k_fe,
+                                               self.use_sqrt,
+                                               with_fe=False)
+
+        if profile_fe:
+            params.fe_params = self.get_fe_params(params.cov_re)
+
         if self.use_sqrt:
-            return self.score_sqrt(params)
+            score_fe, score_re = self.score_sqrt(params)
         else:
-            return self.score_full(params)
+            score_fe, score_re = self.score_full(params)
+
+        if self._freepat is not None:
+            score_fe *= self._freepat.fe_params
+            score_re *= self._freepat.cov_re[self._freepat._ix]
+
+        if profile_fe:
+            return score_re
+        else:
+            return np.concatenate((score_fe, score_re))
 
 
     def hessian(self, params):
@@ -1066,9 +1087,12 @@ class MixedLM(base.LikelihoodModel):
         """
 
         if self.use_sqrt:
-            return self.hessian_sqrt(params)
+            hess = self.hessian_sqrt(params)
         else:
-            return self.hessian_full(params)
+            hess = self.hessian_full(params)
+
+        return hess
+
 
     def score_full(self, params):
         """
@@ -1081,8 +1105,8 @@ class MixedLM(base.LikelihoodModel):
         ----------
         params : MixedLMParams or array-like
             The parameter at which the score function is evaluated.
-            If array-like, must contain packed parameter values that
-            are compatible with the current model.
+            If array-like, must contain the packed covariance matrix,
+            without fe_params.
 
         Returns
         -------
@@ -1098,12 +1122,9 @@ class MixedLM(base.LikelihoodModel):
         any parameterization.
         """
 
-        if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe,
-                                               self.use_sqrt)
+        cov_re = params.cov_re
+        fe_params = params.fe_params
 
-        fe_params = params.get_fe_params()
-        cov_re = params.get_cov_re()
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
@@ -1189,12 +1210,8 @@ class MixedLM(base.LikelihoodModel):
                 score_re[j] += 0.5 * np.trace(np.linalg.solve(
                     xtvix, xtax[j]))
 
-        score_vec = np.concatenate((score_fe, score_re))
+        return score_fe, score_re
 
-        if self._freepat is not None:
-            return self._freepat.get_packed() * score_vec
-        else:
-            return score_vec
 
     def score_sqrt(self, params):
         """
@@ -1218,24 +1235,21 @@ class MixedLM(base.LikelihoodModel):
         any parameterization.
         """
 
-        if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe,
-                                               self.use_sqrt)
-
-        score_full = self.score_full(params)
-        params_vec = params.get_packed(use_sqrt=True)
+        score_fe, score_re = self.score_full(params)
+        params_vec = params.get_packed(use_sqrt=True, with_fe=True)
 
         lin, quad = self._reparam()
 
+        score_full = np.concatenate((score_fe, score_re))
         scr = 0.
         for i in range(len(params_vec)):
             v = lin[i] + 2 * np.dot(quad[i], params_vec)
             scr += score_full[i] * v
+        score_fe = scr[0:self.k_fe]
+        score_re = scr[self.k_fe:]
 
-        if self._freepat is not None:
-            return self._freepat.get_packed() * scr
-        else:
-            return scr
+        return score_fe, score_re
+
 
     def hessian_full(self, params):
         """
@@ -1254,19 +1268,15 @@ class MixedLM(base.LikelihoodModel):
         -------
         hess : 2d ndarray
             The Hessian matrix, evaluated at `params`.
-
-        Notes
-        -----
-        Tf provided as a MixedLMParams object, the input may be of
-        any parameterization.
         """
 
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(params, self.k_fe,
-                                               self.use_sqrt)
+                                               use_sqrt=self.use_sqrt,
+                                               with_fe=True)
 
-        fe_params = params.get_fe_params()
-        cov_re = params.get_cov_re()
+        fe_params = params.fe_params
+        cov_re = params.cov_re
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
@@ -1361,6 +1371,7 @@ class MixedLM(base.LikelihoodModel):
 
         return hess
 
+
     def steepest_ascent(self, params, n_iter):
         """
         Take steepest ascent steps to increase the log-likelihood
@@ -1371,7 +1382,7 @@ class MixedLM(base.LikelihoodModel):
         params : array-like
             The starting point of the optimization.
         n_iter: non-negative integer
-            Return once this number of iterations have occured.
+            Number of iterations to perform.
 
         Returns
         -------
@@ -1381,148 +1392,28 @@ class MixedLM(base.LikelihoodModel):
 
         fval = self.loglike(params)
 
-        params = params.copy()
-        params1 = params.copy()
+        cov_re = params.cov_re
+        if self.use_sqrt:
+            cov_re_sqrt = np.linalg.cholesky(cov_re)
+            pa = cov_re_sqrt[params._ix]
+        else:
+            pa = cov_re[params._ix]
 
         for itr in range(n_iter):
 
-            gro = self.score(params)
-            gr = gro / np.max(np.abs(gro))
+            grad = self.score(pa)
+            grad = grad / np.max(np.abs(grad))
 
             sl = 0.5
             while sl > 1e-20:
-                params1._params = params._params + sl*gr
-                fval1 = self.loglike(params1)
+                pa1 = pa + sl*grad
+                fval1 = self.loglike(pa1)
                 if fval1 > fval:
-                    cov_re = params1.get_cov_re()
-                    if np.min(np.diag(cov_re)) > 1e-2:
-                        params, params1 = params1, params
-                        fval = fval1
-                        break
+                    pa = pa1
+                    fval = fval1
                 sl /= 2
 
-        return params
-
-    def Estep(self, fe_params, cov_re, scale):
-        """
-        The E-step of the EM algorithm.
-
-        This is for ML (not REML), but it seems to be good enough to use for
-        REML starting values.
-
-        Parameters
-        ----------
-        fe_params : 1d ndarray
-            The current value of the fixed effect coefficients
-        cov_re : 2d ndarray
-            The current value of the covariance matrix of random
-            effects
-        scale : positive scalar
-            The current value of the error variance
-
-        Returns
-        -------
-        m1x : 1d ndarray
-            sum_groups :math:`X'*Z*E[gamma | Y]`, where X and Z are the fixed
-            and random effects covariates, gamma is the random
-            effects, and Y is the observed data
-        m1y : scalar
-            sum_groups :math:`Y'*E[gamma | Y]`
-        m2 : 2d ndarray
-           sum_groups :math:`E[gamma * gamma' | Y]`
-        m2xx : 2d ndarray
-            sum_groups :math:`Z'*Z * E[gamma * gamma' | Y]`
-        """
-
-        m1x, m1y, m2, m2xx = 0., 0., 0., 0.
-        try:
-            cov_re_inv = np.linalg.inv(cov_re)
-        except np.linalg.LinAlgError:
-            cov_re_inv = None
-
-        for k in range(self.n_groups):
-
-            # Get the residuals
-            expval = np.dot(self.exog_li[k], fe_params)
-            resid = self.endog_li[k] - expval
-
-            # Contruct the marginal covariance matrix for this group
-            ex_r = self.exog_re_li[k]
-            ex2_r = self.exog_re2_li[k]
-
-            vr1 = _smw_solve(scale, ex_r, ex2_r, cov_re, cov_re_inv,
-                             resid)
-            vr1 = np.dot(ex_r.T, vr1)
-            vr1 = np.dot(cov_re, vr1)
-
-            vr2 = _smw_solve(scale, ex_r, ex2_r, cov_re, cov_re_inv,
-                            self.exog_re_li[k])
-            vr2 = np.dot(vr2, cov_re)
-            vr2 = np.dot(ex_r.T, vr2)
-            vr2 = np.dot(cov_re, vr2)
-
-            rg = np.dot(ex_r, vr1)
-            m1x += np.dot(self.exog_li[k].T, rg)
-            m1y += np.dot(self.endog_li[k].T, rg)
-            egg = cov_re - vr2 + np.outer(vr1, vr1)
-            m2 += egg
-            m2xx += np.dot(np.dot(ex_r.T, ex_r), egg)
-
-        return m1x, m1y, m2, m2xx
-
-
-    def EM(self, fe_params, cov_re, scale, niter_em=10,
-           hist=None):
-        """
-        Run the EM algorithm from a given starting point.  This is for
-        ML (not REML), but it seems to be good enough to use for REML
-        starting values.
-
-        Returns
-        -------
-        fe_params : 1d ndarray
-            The final value of the fixed effects coefficients
-        cov_re : 2d ndarray
-            The final value of the random effects covariance
-            matrix
-        scale : float
-            The final value of the error variance
-
-        Notes
-        -----
-        This uses the parameterization of the likelihood
-        :math:`scale*I + Z'*V*Z`, note that this differs from the profile
-        likelihood used in the gradient calculations.
-        """
-
-        xxtot = 0.
-        for x in self.exog_li:
-            xxtot += np.dot(x.T, x)
-
-        xytot = 0.
-        for x,y in zip(self.exog_li, self.endog_li):
-            xytot += np.dot(x.T, y)
-
-        pp = []
-        for itr in range(niter_em):
-
-            m1x, m1y, m2, m2xx = self.Estep(fe_params, cov_re, scale)
-
-            fe_params = np.linalg.solve(xxtot, xytot - m1x)
-            cov_re = m2 / self.n_groups
-
-            scale = 0.
-            for x,y in zip(self.exog_li, self.endog_li):
-                scale += np.sum((y - np.dot(x, fe_params))**2)
-            scale -= 2 * m1y
-            scale += 2 * np.dot(fe_params, m1x)
-            scale += np.trace(m2xx)
-            scale /= self.n_totobs
-
-            if hist is not None:
-                hist.append(["EM", fe_params, cov_re, scale])
-
-        return fe_params, cov_re, scale
+        return pa
 
 
     def get_scale(self, fe_params, cov_re):
@@ -1570,31 +1461,10 @@ class MixedLM(base.LikelihoodModel):
 
         return qf
 
-    def starting_values(self, start_params):
 
-        # It's already in the desired form.
-        if type(start_params) is MixedLMParams:
-            return start_params
-
-        # Given a packed parameter vector, assume it has the same
-        # dimensions as the current model.
-        if type(start_params) in [np.ndarray, pd.Series]:
-            return MixedLMParams.from_packed(start_params,
-                                   self.k_fe, self.use_sqrt)
-
-        # Very crude starting values.
-        from statsmodels.regression.linear_model import OLS
-        fe_params = OLS(self.endog, self.exog).fit().params
-        cov_re = np.eye(self.k_re)
-        pa = MixedLMParams.from_components(fe_params, cov_re=cov_re,
-                                           use_sqrt=self.use_sqrt)
-
-        return pa
-
-
-    def fit(self, start_params=None, reml=True, niter_em=0,
-            niter_sa=0, do_cg=True, fe_pen=None, cov_pen=None,
-            free=None, full_output=False, **kwargs):
+    def fit(self, start_params=None, reml=True, niter_sa=0,
+            do_cg=True, fe_pen=None, cov_pen=None, free=None,
+            vcomp=None, full_output=False, **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1609,15 +1479,10 @@ class MixedLM(base.LikelihoodModel):
             fit the standard likelihood using ML.
         niter_sa : integer
             The number of steepest ascent iterations
-        niter_em : non-negative integer
-            The number of EM steps.  The EM steps always
-            preceed steepest descent and conjugate gradient
-            optimization.  The EM algorithm implemented here
-            is for ML estimation.
         do_cg : bool
             If True, a conjugate gradient algorithm is
             used for optimization (following any steepest
-            descent or EM steps).
+            descent steps).
         cov_pen : CovariancePenalty object
             A penalty for the random effects covariance matrix
         fe_pen : Penalty object
@@ -1657,21 +1522,11 @@ class MixedLM(base.LikelihoodModel):
         else:
             hist = None
 
-        params = self.starting_values(start_params)
-
         success = False
 
-        # EM iterations
-        if niter_em > 0:
-            fe_params = params.get_fe_params()
-            cov_re = params.get_cov_re()
-            scale = 1.
-            fe_params, cov_re, scale = self.EM(fe_params, cov_re,
-                                   scale, niter_em, hist)
-
-            params.set_fe_params(fe_params)
-            # Switch to profile parameterization.
-            params.set_cov_re(cov_re / scale)
+        params = MixedLMParams(self.k_fe, self.k_re)
+        params.fe_params = np.zeros(self.k_fe)
+        params.cov_re = np.eye(self.k_re)
 
         # Try up to 10 times to make the optimization work.  Usually
         # only one cycle is used.
@@ -1686,15 +1541,14 @@ class MixedLM(base.LikelihoodModel):
                         kwargs["disp"] = False
                     # Only bfgs and lbfgs seem to work
                     kwargs["method"] = "bfgs"
-                    pa = params.get_packed()
-                    rslt = super(MixedLM, self).fit(start_params=pa,
+                    rslt = super(MixedLM, self).fit(start_params=params,
                                                     skip_hessian=True,
                                                     **kwargs)
                 except np.linalg.LinAlgError:
                     continue
 
                 # The optimization succeeded
-                params.set_packed(rslt.params)
+                params = rslt.params
                 success = True
                 if hist is not None:
                     hist.append(rslt.mle_retvals)
@@ -1704,11 +1558,15 @@ class MixedLM(base.LikelihoodModel):
             msg = "Gradient optimization failed."
             warnings.warn(msg, ConvergenceWarning)
 
+        self._profile_fe_params = False
+
         # Convert to the final parameterization (i.e. undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
-        fe_params = params.get_fe_params()
-        cov_re_unscaled = params.get_cov_re()
+        params = MixedLMParams.from_packed(params, self.k_fe, self.use_sqrt, with_fe=False)
+        cov_re_unscaled = params.cov_re
+        fe_params = self.get_fe_params(cov_re_unscaled)
+        params.fe_params = fe_params
         scale = self.get_scale(fe_params, cov_re_unscaled)
         cov_re = scale * cov_re_unscaled
 
@@ -1723,7 +1581,7 @@ class MixedLM(base.LikelihoodModel):
         hess = self.hessian_full(params)
         if free is not None:
             pcov = np.zeros_like(hess)
-            pat = self._freepat.get_packed()
+            pat = self._freepat.get_packed(with_fe=True)
             ii = np.flatnonzero(pat)
             if len(ii) > 0:
                 hess1 = hess[np.ix_(ii, ii)]
@@ -1732,7 +1590,7 @@ class MixedLM(base.LikelihoodModel):
             pcov = np.linalg.inv(-hess)
 
         # Prepare a results class instance
-        params_packed = params.get_packed()
+        params_packed = params.get_packed(use_sqrt=False, with_fe=True)
         results = MixedLMResults(self, params_packed, pcov / scale)
         results.params_object = params
         results.fe_params = fe_params
@@ -1991,6 +1849,12 @@ class MixedLMResults(base.LikelihoodModelResults):
 
         return smry
 
+
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params_object, profile_fe=False)
+
+
     def profile_re(self, re_ix, num_low=5, dist_low=1., num_high=5,
                    dist_high=1.):
         """
@@ -2042,9 +1906,9 @@ class MixedLMResults(base.LikelihoodModelResults):
         # Permute the covariance structure to match the permuted
         # design matrix.
         params = self.params_object.copy()
-        cov_re_unscaled = params.get_cov_re()
+        cov_re_unscaled = params.cov_re
         cov_re_unscaled = cov_re_unscaled[np.ix_(ix, ix)]
-        params.set_cov_re(cov_re_unscaled)
+        params.cov_re = cov_re_unscaled
 
         # Convert dist_low and dist_high to the profile
         # parameterization
@@ -2063,19 +1927,16 @@ class MixedLMResults(base.LikelihoodModelResults):
         rvalues = np.concatenate((left, right))
 
         # Indicators of which parameters are free and fixed.
-        free = MixedLMParams(k_fe, k_re, self.use_sqrt)
+        free = MixedLMParams(k_fe, k_re)
         if self.freepat is None:
-            free.set_fe_params(np.ones(k_fe))
+            free.fe_params = np.ones(k_fe)
             mat = np.ones((k_re, k_re))
         else:
-            free.set_fe_params(self.freepat.get_fe_params())
-            mat = self.freepat.get_cov_re()
+            free.fe_params = self.freepat.fe_params
+            mat = self.freepat.cov_re
             mat = mat[np.ix_(ix, ix)]
         mat[0, 0] = 0
-        if self.use_sqrt:
-            free.set_cov_re(cov_re_sqrt=mat)
-        else:
-            free.set_cov_re(cov_re=mat)
+        free.cov_re = mat
 
         klass = self.model.__class__
         init_kwargs = pmodel._get_init_kwds()
@@ -2086,7 +1947,7 @@ class MixedLMResults(base.LikelihoodModelResults):
 
             model = klass(endog, exog, **init_kwargs)
 
-            cov_re = params.get_cov_re()
+            cov_re = params.cov_re.copy()
             cov_re[0, 0] = x
 
             # Shrink the covariance parameters until a PSD covariance
@@ -2104,7 +1965,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             if not success:
                 raise ValueError("unable to find PSD covariance matrix along likelihood profile")
 
-            params.set_cov_re(cov_re)
+            params.cov_re = cov_re
             # TODO should use fit_kwargs
             rslt = model.fit(start_params=params, free=free,
                              reml=self.reml, cov_pen=self.cov_pen)._results
