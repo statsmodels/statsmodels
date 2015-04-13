@@ -73,7 +73,7 @@ def loglike_function(model, profile_fe):
     the given model.
     """
     def f(x):
-        params = MixedLMParams.from_packed(x, model.k_fe, model.use_sqrt, with_fe=not profile_fe)
+        params = MixedLMParams.from_packed(x, model.k_fe, model.k_re, model.use_sqrt, with_fe=not profile_fe)
         return -model.loglike(params, profile_fe=profile_fe)
 
     return f
@@ -136,7 +136,8 @@ class TestMixedLM(object):
                             fe_params = np.random.normal(size=k_fe)
                             cov_re = np.random.normal(size=(k_re, k_re))
                             cov_re = np.dot(cov_re.T, cov_re)
-                            params = MixedLMParams.from_components(fe_params, cov_re)
+                            params = MixedLMParams.from_components(fe_params, cov_re=cov_re,
+                                                                   vcomp=np.array([]))
                             params_vec = params.get_packed(with_fe=not profile_fe, use_sqrt=use_sqrt)
 
                             # Check scores
@@ -310,9 +311,10 @@ class TestMixedLM(object):
         else: # Independent random effects
             k_fe = rslt.exog_fe.shape[1]
             k_re = rslt.exog_re.shape[1]
-            free = MixedLMParams(k_fe, k_re)
+            free = MixedLMParams(k_fe, k_re, 0)
             free.fe_params = np.ones(k_fe)
             free.cov_re = np.eye(k_re)
+            free.vcomp = np.array([])
             mdf = md.fit(reml=reml, gtol=1e-7, free=free)
 
         assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
