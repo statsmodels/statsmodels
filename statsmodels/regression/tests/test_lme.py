@@ -207,6 +207,7 @@ class TestMixedLM(object):
         exog_re = np.random.normal(size=(400, 2))
         groups = np.kron(np.arange(100), np.ones(4))
         slopes = np.random.normal(size=(100, 2))
+        slopes[:, 1] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
         errors = slopes.sum(1) + np.random.normal(size=400)
         endog = exog.sum(1) + errors
@@ -230,7 +231,8 @@ class TestMixedLM(object):
 
         assert_allclose(result1.fe_params, result2.fe_params, atol=1e-4)
         assert_allclose(np.diag(result1.cov_re), result2.vcomp, atol=1e-2, rtol=1e-4)
-        assert_allclose(result1.bse[[0, 1, 3]], result2.bse, atol=1e-1, rtol=1e-2)
+        assert_allclose(result1.bse[[0, 1, 3]], result2.bse, atol=1e-2, rtol=1e-2)
+
 
     def test_vcomp_2(self):
 

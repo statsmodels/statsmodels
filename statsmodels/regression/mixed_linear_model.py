@@ -1372,16 +1372,15 @@ class MixedLM(base.LikelihoodModel):
         score_fe += fac * xtvir / rvir
 
         if self.k_re > 0:
-            score_re += 0.5 * fac * rvavr / rvir
+            score_re += 0.5 * fac * rvavr[0:self.k_re2] / rvir
         if self.k_vc > 0:
-            score_vc += 0.5 * fac * rvavr / rvir
+            score_vc += 0.5 * fac * rvavr[self.k_re2:] / rvir
 
         if self.reml:
-            if self.k_re > 0:
-                for j in range(self.k_re2):
-                    score_re[j] += 0.5 * np.trace(np.linalg.solve(xtvix, xtax[j]))
-                for j in range(self.k_vc):
-                    score_vc[j] += 0.5 * np.trace(np.linalg.solve(xtvix, xtax[self.k_re2 + j]))
+            for j in range(self.k_re2):
+                score_re[j] += 0.5 * np.trace(np.linalg.solve(xtvix, xtax[j]))
+            for j in range(self.k_vc):
+                score_vc[j] += 0.5 * np.trace(np.linalg.solve(xtvix, xtax[self.k_re2 + j]))
 
         return score_fe, score_re, score_vc
 
@@ -1780,7 +1779,6 @@ class MixedLM(base.LikelihoodModel):
                 break
 
         converged = rslt.mle_retvals['converged']
-        print(rslt.mle_retvals)
         if not converged:
             msg = "Gradient optimization failed."
             warnings.warn(msg, ConvergenceWarning)
