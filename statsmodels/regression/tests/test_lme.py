@@ -192,9 +192,70 @@ class TestMixedLM(object):
         groups = np.kron(np.arange(n_grp), np.ones(gsize))
         g_errors = np.kron(np.random.normal(size=100), np.ones(gsize))
         endog = exog.sum(1) + g_errors + np.random.normal(size=n_grp * gsize)
-        rslt = MixedLM(endog, exog, groups).fit(niter_em=10)
+        rslt = MixedLM(endog, exog, groups).fit()
         prof = rslt.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
                                num_high=1)
+
+
+    def test_vcomp_1(self):
+        """
+        Fit the same model using constrained random effects and variance components.
+        """
+
+        np.random.seed(4279)
+        exog = np.random.normal(size=(400, 1))
+        exog_re = np.random.normal(size=(400, 2))
+        groups = np.kron(np.arange(100), np.ones(4))
+        slopes = np.random.normal(size=(100, 2))
+        slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
+        errors = slopes.sum(1) + np.random.normal(size=400)
+        endog = exog.sum(1) + errors
+
+        free = MixedLMParams(1, 2, 0)
+        free.fe_params = np.ones(1)
+        free.cov_re = np.eye(2)
+        free.vcomp = np.zeros(0)
+
+        model1 = MixedLM(endog, exog, groups, exog_re=exog_re)
+        result1 = model1.fit(free=free)
+
+        exog_vc = {"a": {}, "b": {}}
+        for k,group in enumerate(model1.group_labels):
+            ix = model1.row_indices[group]
+            exog_vc["a"][group] = exog_re[ix, 0:1]
+            exog_vc["b"][group] = exog_re[ix, 1:2]
+        model2 = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+        result2 = model2.fit()
+        result2.summary()
+
+        assert_allclose(result1.fe_params, result2.fe_params, atol=1e-4)
+        assert_allclose(np.diag(result1.cov_re), result2.vcomp, atol=1e-2, rtol=1e-4)
+        assert_allclose(result1.bse[[0, 1, 3]], result2.bse, atol=1e-1, rtol=1e-2)
+
+    def test_vcomp_2(self):
+
+        np.random.seed(4279)
+        exog = np.random.normal(size=(400, 1))
+        exog_re_a = np.random.normal(size=(400, 2))
+        exog_re_b = np.random.normal(size=(400, 2))
+        groups = np.kron(np.arange(100), np.ones(4))
+        slopes_a = np.random.normal(size=(100, 2))
+        slopes_a = np.kron(slopes_a, np.ones((4, 1))) * exog_re_a
+        slopes_b = 2 * np.random.normal(size=(100, 2))
+        slopes_b = np.kron(slopes_b, np.ones((4, 1))) * exog_re_b
+        errors = slopes_a.sum(1) + slopes_b.sum(1) + np.random.normal(size=400)
+        endog = exog.sum(1) + errors
+
+        exog_vc = {"a": {}, "b": {}}
+        for k,group in enumerate(range(100)):
+            ix = np.flatnonzero(groups == group)
+            exog_vc["a"][group] = exog_re_a[ix, :]
+            exog_vc["b"][group] = exog_re_b[ix, :]
+        model2 = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+        result2 = model2.fit()
+        result2.summary()
+        1/0
+
 
     def test_formulas(self):
         np.random.seed(2410)
