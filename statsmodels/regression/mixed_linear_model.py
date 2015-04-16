@@ -245,19 +245,25 @@ class MixedLMParams(object):
         A MixedLMParams object.
         """
 
-        k_fe = len(fe_params) if fe_params is not None else 0
-        k_vc = len(vcomp) if vcomp is not None else 0
-        k_re = cov_re.shape[0] if cov_re is not None else cov_re.shape[0]
+        if vcomp is None:
+            vcomp = np.empty(0)
+        if fe_params is None:
+            fe_params = np.empty(0)
+        if cov_re is None and cov_re_sqrt is None:
+            cov_re = np.empty((0, 0))
+
+        k_fe = len(fe_params)
+        k_vc = len(vcomp)
+        k_re = cov_re.shape[0] if cov_re is not None else cov_re_sqrt.shape[0]
+
         pa = MixedLMParams(k_fe, k_re, k_vc)
         pa.fe_params = fe_params
         if cov_re_sqrt is not None:
             pa.cov_re = np.dot(cov_re_sqrt, cov_re_sqrt.T)
         elif cov_re is not None:
             pa.cov_re = cov_re
-        if vcomp is not None:
-            pa.vcomp = vcomp
-        else:
-            pa.vcomp = np.array([])
+
+        pa.vcomp = vcomp
 
         return pa
 
@@ -452,6 +458,9 @@ class MixedLM(base.LikelihoodModel):
         self.fe_pen = None
         self.re_pen = None
 
+        # Needs to run early so that the names are sorted.
+        self._setup_vcomp(exog_vc)
+
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
         # TODO: Can this be moved up in the class hierarchy?
@@ -470,8 +479,6 @@ class MixedLM(base.LikelihoodModel):
         super(MixedLM, self).__init__(endog, exog, groups=groups,
                                       exog_re=exog_re, missing=missing,
                                       **kwargs)
-
-        self._setup_vcomp(exog_vc)
 
         self._init_keys.extend(["use_sqrt"])
 
@@ -667,9 +674,10 @@ class MixedLM(base.LikelihoodModel):
         mod.data.param_names = param_names
         mod.data.exog_re_names = exog_re_names
         mod.data.exog_re_names_full = exog_re_names_full
-        mod.data.vcomp_names = self._vc_names
+        mod.data.vcomp_names = mod._vc_names
 
         return mod
+
 
     def group_list(self, array):
         """
@@ -836,6 +844,7 @@ class MixedLM(base.LikelihoodModel):
         results.k_fe = self.k_fe
         results.k_re = self.k_re
         results.k_re2 = self.k_re2
+        results.k_vc = self.k_vc
 
         return MixedLMResultsWrapper(results)
 
@@ -946,6 +955,11 @@ class MixedLM(base.LikelihoodModel):
         return lin, quad
 
 
+    # This isn't useful for anything.  For standard error calculation
+    # we only need hessian_full.  For optimization this is not the
+    # right Hessian because it does account for the profiling over
+    # fe_params.  The correct Hessian for optimization is too
+    # difficult and expensive to calculate.
     def hessian_sqrt(self, params):
         """
         Returns the Hessian matrix of the log-likelihood evaluated at
@@ -1037,7 +1051,7 @@ class MixedLM(base.LikelihoodModel):
 
         group = self.group_labels[group_ix]
         ex = [ex_r] if self.k_re > 0 else []
-        for j,k in enumerate(self.exog_vc):
+        for j,k in enumerate(self._vc_names):
             if group not in self.exog_vc[k]:
                 continue
             ex.append(self.exog_vc[k][group])
@@ -1124,8 +1138,7 @@ class MixedLM(base.LikelihoodModel):
             resid = resid_all[self.row_indices[group]]
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = _smw_logdet(1., ex_r, ex2_r, cov_aug, cov_aug_inv,
-                             cov_aug_logdet)
+            ld = _smw_logdet(1., ex_r, ex2_r, cov_aug, cov_aug_inv, cov_aug_logdet)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
@@ -1178,7 +1191,9 @@ class MixedLM(base.LikelihoodModel):
                 jj += 1
 
         # Variance components
-        for ky in self.exog_vc:
+        for ky in self._vc_names:
+            if max_ix is not None and jj > max_ix:
+                return
             if group in self.exog_vc[ky]:
                 mat = self.exog_vc[ky][group]
                 yield jj, mat, mat, True
@@ -1457,7 +1472,7 @@ class MixedLM(base.LikelihoodModel):
             except np.linalg.LinAlgError:
                 cov_re_inv = None
         else:
-            cov_re_inv = np.zeros(0)
+            cov_re_inv = np.empty(0)
 
         # Blocks for the fixed and random effects parameters.
         hess_fe = 0.
@@ -1497,32 +1512,35 @@ class MixedLM(base.LikelihoodModel):
 
                 ul = np.dot(viexog.T, matl1)
                 ur = np.dot(matr1.T, vir)
-                hess_fere[jj1,:] += np.dot(ul, ur)
+                hess_fere[jj1, :] += np.dot(ul, ur)
                 if not sym1:
                     ul = np.dot(viexog.T, matr1)
                     ur = np.dot(matl1.T, vir)
-                    hess_fere[jj1,:] += np.dot(ul, ur)
+                    hess_fere[jj1, :] += np.dot(ul, ur)
 
                 if self.reml:
                     ul = np.dot(viexog.T, matl1)
-                    ur = ul.T if sym1 else np.dot(matr1.T, viexog)
-                    xtax[jj1] += np.dot(ul, ur) * (1 if sym1 else 2)
+                    ur = ul if sym1 else np.dot(viexog.T, matr1)
+                    ulr = np.dot(ul, ur.T)
+                    xtax[jj1] += ulr
+                    if not sym1:
+                        xtax[jj1] += ulr.T
 
                 ul = np.dot(vir, matl1)
-                ur = ul.T if sym1 else np.dot(matr1.T, vir)
+                ur = ul if sym1 else np.dot(vir, matr1)
                 B[jj1] += np.dot(ul, ur) * (1 if sym1 else 2)
 
+                # V^{-1} * dV/d_theta
                 E = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matl1)
                 E = np.dot(E, matr1.T)
                 if not sym1:
-                    E_ = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matr1)
-                    E += np.dot(E_, matl1.T)
+                    E1 = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matr1)
+                    E += np.dot(E1, matl1.T)
 
                 for jj2,matl2,matr2,sym2 in self._gen_dV_dPsi(ex_r, group, jj1):
 
                     re = np.dot(matr2.T, E)
                     rev = np.dot(re, vir[:, None])
-
                     vl = np.dot(vir[None, :], matl2)
                     vt = 2*np.dot(vl, rev)
 
@@ -1537,12 +1555,10 @@ class MixedLM(base.LikelihoodModel):
                         D[jj2, jj1] += vt
 
                     R = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matl2)
-                    R = np.dot(R, re)
-                    rt = np.trace(R) / 2
+                    rt = np.sum(R * re.T) / 2 # trace dot
                     if not sym2:
                         R = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matr2)
-                        R = np.dot(R, le)
-                        rt += np.trace(R) / 2
+                        rt += np.sum(R * le.T) / 2 # trace dot
 
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -1552,22 +1568,23 @@ class MixedLM(base.LikelihoodModel):
                         ev = np.dot(E, viexog)
                         u1 = np.dot(viexog.T, matl2)
                         u2 = np.dot(matr2.T, ev)
-                        F[jj1][jj2] += np.dot(u1, u2)
+                        um = np.dot(u1, u2)
+                        F[jj1][jj2] += um + um.T
                         if not sym2:
                             u1 = np.dot(viexog.T, matr2)
                             u2 = np.dot(matl2.T, ev)
-                            F[jj1][jj2] += np.dot(u1, u2)
+                            um = np.dot(u1, u2)
+                            F[jj1][jj2] += um + um.T
 
         hess_fe -= fac * xtvix / rvir
         hess_re = hess_re - 0.5 * fac * (D/rvir - np.outer(B, B) / rvir**2)
         hess_fere = -fac * hess_fere / rvir
 
         if self.reml:
-            for j1 in range(self.k_re2):
-                Q1 = np.linalg.solve(xtvix, xtax[j1])
+            QL = [np.linalg.solve(xtvix, x) for x in xtax]
+            for j1 in range(self.k_re2 + self.k_vc):
                 for j2 in range(j1 + 1):
-                    Q2 = np.linalg.solve(xtvix, xtax[j2])
-                    a = np.sum(Q1.T * Q2) # trace dot
+                    a = np.sum(QL[j1].T * QL[j2]) # trace dot
                     a -= np.trace(np.linalg.solve(xtvix, F[j1][j2]))
                     a *= 0.5
                     hess_re[j1, j2] += a
@@ -1688,7 +1705,7 @@ class MixedLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, reml=True, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            vcomp=None, full_output=False, **kwargs):
+            full_output=False, **kwargs):
         """
         Fit a linear mixed model to the data.
 
