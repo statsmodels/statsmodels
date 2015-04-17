@@ -1,5 +1,9 @@
 """
-Linear mixed effects models for Statsmodels
+Linear mixed effects models.
+
+The MixedLM class fits linear mixed effects models to data.  This is a
+group-based mixed effects model that does not efficiently handle
+crossed random effects.
 
 The data are partitioned into disjoint groups.  The probability model
 for group i is:
@@ -12,10 +16,9 @@ where
 * Y is a n_i dimensional response vector
 * X is a n_i x k_fe design matrix for the fixed effects
 * beta is a k_fe-dimensional vector of fixed effects slopes
-* Z is a n_i x k_re design matrix for the random effects
-* gamma is a k_re-dimensional random vector with mean 0
-  and covariance matrix Psi; note that each group
-  gets its own independent realization of gamma.
+* Z is a design matrix for the random effects with n_i rows
+* gamma is a random vector with mean 0 and covariance matrix Psi; note
+  that each group gets its own independent realization of gamma.
 * epsilon is a n_i dimensional vector of iid normal
   errors with mean 0 and variance sigma^2; the epsilon
   values are independent both within and between groups
@@ -24,8 +27,20 @@ Y, X and Z must be entirely observed.  beta, Psi, and sigma^2 are
 estimated using ML or REML estimation, and gamma and epsilon are
 random so define the probability model.
 
-The mean structure is E[Y|X,Z] = X*beta.  If only the mean structure
-is of interest, GEE is a good alternative to mixed models.
+The mean structure is E[Y | X, Z] = X*beta.  If only the mean
+structure is of interest, GEE is a good alternative to mixed models.
+
+Two types of random effects are supported.  Standard random effects
+are correlated with each other in arbitary ways.  Every group has the
+same number of standard random effects, with the same joint
+distribution (but with independent realizations across the groups).
+
+Variance components are uncorrelated with each other, and with the
+standard random effects.  Each variance component has mean zero, and
+is associated with a particular unknown variance parameter.  Multiple
+(independent) variance components within a group can be associated
+with the same variance parameter, and the number of variance
+components per variance parameter can differ across the groups.
 
 The primary reference for the implementation details is:
 
@@ -56,6 +71,11 @@ Notation:
   + Z * cov_re * Z', where Z is the design matrix for the random
   effects in one group.
 
+* `vcomp` is a vector of variance parameters.  The length of `vcomp`
+  is determined by the number of keys in either the `exog_vc` argument
+  to ``MixedLM``, or the `vc_formula` argument when using formulas to
+  fit a model.
+
 Notes:
 
 1. Three different parameterizations are used here in different
@@ -71,28 +91,35 @@ differ.  The parameterizations are:
   Z * cov_re1 * Z'.  This is the parameterization of the profile
   likelihood that is maximized to produce parameter estimates.
   (see Lindstrom and Bates for details).  The "natural" cov_re is
-  equal to the "profile" cov_re1 times scale.
+  equal to the "profile" cov_re1 times the scale.
 
-* The "square root parameterization" in which we work with the
-  Cholesky factor of cov_re1 instead of cov_re1 directly.
+* The "square root parameterization" in which we work with the Cholesky
+  factor of cov_re1 instead of cov_re1 directly.  This is hidden from the
+  user.
 
-All three parameterizations can be "packed" by concatenating fe_params
-together with the lower triangle of the dependence structure.  Note
-that when unpacking, it is important to either square or reflect the
-dependence structure depending on which parameterization is being
+All three parameterizations can be "packed" by (optionally) concatenating
+fe_params together with the lower triangle or Cholesky square root of the
+dependence structure.  The final component of the packed parameter vector
+are the variance component estimates.  Thes are stored as square roots if
+(and only if) the random effects covariance matrix is stored as its Choleky
+factor.  Note that when unpacking, it is important to either square or reflect
+the dependence structure depending on which parameterization is being
 used.
 
-2. The situation where the random effects covariance matrix is
-singular is numerically challenging.  Small changes in the covariance
-parameters may lead to large changes in the likelihood and
-derivatives.
+Two score methods are implemented.  One takes the score with respect
+to the elements of the random effects covariance matrix (used for
+inference once the MLE is reached), and the other takes the score with
+respect to the parameters of the Choleky square root of the random
+effects covariance matrix (used for optimization).
 
-3. The optimization strategy is to first use OLS to get starting
-values for the mean structure.  Then we optionally perform a few
-steepest ascent steps.  This is followed by conjugate gradient
-optimization using one of the scipy gradient optimizers.  The steepest
-ascent steps are used to get adequate starting values for the
-conjugate gradient optimization, which is much faster.
+The numerical optimization uses GLS to avoid explicitly optimizing
+over the fixed effects parameters.  The likelihood that is optimized
+is profiled over both the scale parameter (a scalar) and the fixed
+effects parameters (if any).  As a result of this profiling, it is
+difficult and unnecessary to calculate the Hessian of the profiled log
+likelihood function, so calculation that is not implemented here.
+Therefore, optimization methods requiring the Hessian matrix such as
+the Newon-Raphson algorihm cannot be used for model fitting.
 """
 
 import numpy as np
@@ -427,7 +454,8 @@ class MixedLM(base.LikelihoodModel):
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each group.
     exog_vc : dict-like
-        TODO
+        A dicationary containing specifications of the variance
+        component terms.  See below for details.
     use_sqrt : bool
         If True, optimization is carried out using the lower
         triangle of the square root of the random effects
@@ -438,7 +466,16 @@ class MixedLM(base.LikelihoodModel):
 
     Notes
     -----
-    The covariates in `exog`, `exog_re` and `exog_vx` may (but need
+    `exog_vc` is a dictionary of dictionaries.  Specifically,
+    `exog_vc[a][g]` is a matrix whose columns are linearly combined
+    using independent random coefficients.  This random term then
+    contributes to the variance structure of the data for group `g`.
+    The random coefficients all have mean zero, and have the same
+    variance.  The matrix must be `m x k`, where `m` is the number of
+    observations in group `g`.  The number of columns may differ among
+    the top-level groups.
+
+    The covariates in `exog`, `exog_re` and `exog_vc` may (but need
     not) partially or wholly overlap.
 
     `use_sqrt` should almost always be set to True.  The main use case
@@ -554,6 +591,17 @@ class MixedLM(base.LikelihoodModel):
             self.exog_names = ["FE%d" % (k + 1) for k in
                                range(self.exog.shape[1])]
 
+        # Precompute these which are needed many times
+        self._aex_r = []
+        self._aex_r2 = []
+        for i in range(self.n_groups):
+            a, b = self._augment_exog(i)
+            self._aex_r.append(a)
+            self._aex_r2.append(b)
+
+        self._lin, self._quad = self._reparam()
+
+
 
     def _setup_vcomp(self, exog_vc):
         if exog_vc is None:
@@ -590,8 +638,8 @@ class MixedLM(base.LikelihoodModel):
         return exog_names + param_names + vc_names, exog_re_names, param_names
 
     @classmethod
-    def from_formula(cls, formula, data, re_formula=None, subset=None,
-                     *args, **kwargs):
+    def from_formula(cls, formula, data, re_formula=None, vc_formula=None,
+                     subset=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -605,6 +653,12 @@ class MixedLM(base.LikelihoodModel):
             A one-sided formula defining the variance structure of the
             model.  The default gives a random intercept for each
             group.
+        vc_formula : dict-like
+            Formulas describing variance components.  `vc_formula[vc]` is
+            the formula for the component with variance parameter named
+            `vc`.  The formula is processed into a matrix, and the columns
+            of this matrix are linearly combined with independent random
+            coefficients having mean zero and a common variance.
         subset : array-like
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
@@ -633,9 +687,57 @@ class MixedLM(base.LikelihoodModel):
         If `re_formula` is not provided, the default is a random
         intercept for each group.
 
+        If the variance component is intended to produce random
+        intercepts for disjoint subsets of a group, specified by
+        string labels or a categorical data value, always use '0 +' in
+        the formula so that no overall intercept is included.
+
+        If the variance components specify random slopes and you do
+        not also want a random group-level intercept in the model,
+        then use '0 +' in the formula to exclude the intercept.
+
+        The variance components formulas are processed separately for
+        each group.  If a variable is categorical the results will not
+        be affected by whether the group labels are distinct or
+        re-used over the top-level groups.
+
         This method currently does not correctly handle missing
         values, so missing values should be explicitly dropped from
         the DataFrame before calling this method.
+
+        Examples
+        --------
+        Suppose we have an educational data set with students nested
+        in classrooms nested in schools.  The students take a test,
+        and we want to relate the test scores to the students age,
+        while accounting for the effects of classrooms and schools.
+        The school will be the top-level group, and the classroom is a
+        nested group that is specified as a variance component.  The
+        schools may have different number of classrooms, and the
+        classroom labels may (but need not be) different across the
+        schools.
+
+        >>> vc = {'classroom': '0 + C(classroom)'}
+        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
+                                  re_formula='1', groups='school', data=data)
+
+        Now suppose we also have a previous test score called
+        'pretest'.  If we want the relationship between pretest
+        scores and the current test to vary by classroom, we can
+        specify a random slope for the pretest score
+
+        >>> vc = {'classroom': '0 + C(classroom)', 'pretest': '0 + pretest'}
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+                                  re_formula='1', groups='school', data=data)
+
+        The following model is almost equivalent to the previous one,
+        but here the classroom random intercept and pretest slope may
+        be correlated.
+
+        >>> vc = {'classroom': '0 + C(classroom)'}
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+                                  re_formula='1 + pretest', groups='school',
+                                  data=data)
         """
 
         if "groups" not in kwargs.keys():
@@ -657,13 +759,38 @@ class MixedLM(base.LikelihoodModel):
             exog_re_names = exog_re.design_info.column_names
             exog_re = np.asarray(exog_re)
         else:
-            exog_re = np.ones((data.shape[0], 1),
-                              dtype=np.float64)
+            exog_re = np.ones((data.shape[0], 1))
             exog_re_names = ["Intercept"]
+
+        if vc_formula is not None:
+            eval_env = kwargs.get('eval_env', None)
+            if eval_env is None:
+                eval_env = 1
+            elif eval_env == -1:
+                from patsy import EvalEnvironment
+                eval_env = EvalEnvironment({})
+
+            exog_vc = {}
+            data["_group"] = kwargs["groups"]
+            gb = data.groupby("_group")
+            kylist = list(gb.groups.keys())
+            kylist.sort()
+            for vc_name in vc_formula.keys():
+                exog_vc[vc_name] = {}
+                for group_ix, group in enumerate(kylist):
+                    ii = gb.groups[group]
+                    vcg = vc_formula[vc_name]
+                    mat = patsy.dmatrix(vcg, data.loc[ii, :], eval_env=eval_env,
+                                        return_type='dataframe')
+                    exog_vc[vc_name][group] = np.asarray(mat)
+            exog_vc = exog_vc
+        else:
+            exog_vc = None
 
         mod = super(MixedLM, cls).from_formula(formula, data,
                                                subset=None,
                                                exog_re=exog_re,
+                                               exog_vc=exog_vc,
                                                *args, **kwargs)
 
         # expand re names to account for pairs of RE
@@ -822,7 +949,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Get the Hessian including only the nonzero fixed effects,
         # then blow back up to the full size after inverting.
-        hess = self.hessian_full(params_prof)
+        hess = self.hessian(params_prof)
         pcov = np.nan * np.ones_like(hess)
         ii = np.abs(params_prof) > ceps
         ii[self.k_fe:] = True
@@ -885,7 +1012,7 @@ class MixedLM(base.LikelihoodModel):
                 self._endex_li[i] = mat
 
             exog = self.exog_li[i]
-            ex_r, ex2_r = self._augment_exog(i)
+            ex_r, ex2_r = self._aex_r[i], self._aex_r2[i]
             u = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, self._endex_li[i])
             xtxy += np.dot(exog.T, u)
 
@@ -953,60 +1080,6 @@ class MixedLM(base.LikelihoodModel):
             quad[k][k, k] = 1
 
         return lin, quad
-
-
-    # This isn't useful for anything.  For standard error calculation
-    # we only need hessian_full.  For optimization this is not the
-    # right Hessian because it does account for the profiling over
-    # fe_params.  The correct Hessian for optimization is too
-    # difficult and expensive to calculate.
-    def hessian_sqrt(self, params):
-        """
-        Returns the Hessian matrix of the log-likelihood evaluated at
-        a given point, calculated with respect to the parameterization
-        in which the random effects covariance matrix is represented
-        through its Cholesky square root.
-
-        Parameters
-        ----------
-        params : MixedLMParams or array-like
-            The model parameters.  If array-like, must contain packed
-            parameters that are compatible with this model.
-
-        Returns
-        -------
-        The Hessian matrix of the profile log likelihood function,
-        evaluated at `params`.
-
-        Notes
-        -----
-        If `params` is provided as a MixedLMParams object it may be of
-        any parameterization.
-        """
-
-        if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe, self.k_re)
-
-        score_fe0, score_re0, score_vc0 = self.score_full(params)
-        score0 = np.concatenate((score_fe0, score_re0, score_vc0))
-        hess0 = self.hessian_full(params)
-
-        params_vec = params.get_packed(use_sqrt=True, with_fe=True)
-
-        lin, quad = self._reparam()
-        k_tot = self.k_fe + self.k_re2
-
-        # Convert Hessian to new coordinates
-        hess = 0.
-        for i in range(k_tot):
-            hess += 2 * score0[i] * quad[i]
-        for i in range(k_tot):
-            vi = lin[i] + 2*np.dot(quad[i], params_vec)
-            for j in range(k_tot):
-                vj = lin[j] + 2*np.dot(quad[j], params_vec)
-                hess += hess0[i, j] * np.outer(vi, vj)
-
-        return hess
 
 
     def _augment_cov_re(self, cov_re, cov_re_inv, vcomp, group):
@@ -1134,7 +1207,7 @@ class MixedLM(base.LikelihoodModel):
             cov_aug_logdet = cov_re_logdet + adj_logdet
 
             exog = self.exog_li[k]
-            ex_r, ex2_r = self._augment_exog(k)
+            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
             resid = resid_all[self.row_indices[group]]
 
             # Part 1 of the log likelihood (for both ML and REML)
@@ -1208,8 +1281,7 @@ class MixedLM(base.LikelihoodModel):
         -----
         The score vector that is returned is computed with respect to
         the parameterization defined by this model instance's
-        `use_sqrt` attribute.  The input value `params` can be with
-        respect to any parameterization.
+        `use_sqrt` attribute.
         """
 
         if type(params) is not MixedLMParams:
@@ -1221,9 +1293,9 @@ class MixedLM(base.LikelihoodModel):
             params.fe_params = self.get_fe_params(params.cov_re, params.vcomp)
 
         if self.use_sqrt:
-            score_fe, score_re, score_vc = self.score_sqrt(params)
+            score_fe, score_re, score_vc = self.score_sqrt(params, calc_fe=not profile_fe)
         else:
-            score_fe, score_re, score_vc = self.score_full(params)
+            score_fe, score_re, score_vc = self.score_full(params, calc_fe=not profile_fe)
 
         if self._freepat is not None:
             score_fe *= self._freepat.fe_params
@@ -1236,28 +1308,10 @@ class MixedLM(base.LikelihoodModel):
             return np.concatenate((score_fe, score_re, score_vc))
 
 
-    def hessian(self, params):
+    def score_full(self, params, calc_fe):
         """
-        Returns the Hessian matrix of the profile log-likelihood.
+        Returns the score with respect to untransformed parameters.
 
-        Notes
-        -----
-        The Hessian matrix that is returned is computed with respect
-        to the parameterization defined by this model's `use_sqrt`
-        attribute.  The input value `params` can be with respect to
-        any parameterization.
-        """
-
-        if self.use_sqrt:
-            hess = self.hessian_sqrt(params)
-        else:
-            hess = self.hessian_full(params)
-
-        return hess
-
-
-    def score_full(self, params):
-        """
         Calculates the score vector for the profiled log-likelihood of
         the mixed effects model with respect to the parameterization
         in which the random effects covariance matrix is represented
@@ -1267,21 +1321,30 @@ class MixedLM(base.LikelihoodModel):
         ----------
         params : MixedLMParams or array-like
             The parameter at which the score function is evaluated.
-            If array-like, must contain the packed covariance matrix,
-            without fe_params.
+            If array-like, must contain the packed random effects
+            parameters (cov_re and vcomp) without fe_params.
+        calc_fe : boolean
+            If True, calculate the score vector for the fixed effects
+            parameters.  If False, this vector is not calculated, and
+            a vector of zeros is returned in its place.
 
         Returns
         -------
-        The score vector, calculated at `params`.
+        score_fe : array-like
+            The score vector with respect to the fixed effects
+            parameters.
+        score_re : array-like
+            The score vector with respect to the random effects
+            parameters (excluding variance components parameters).
+        score_vc : array-like
+            The score vector with respect to variance components
+            parameters.
 
         Notes
         -----
-        The score vector that is returned is taken with respect to the
-        parameterization in which `cov_re` is represented through its
-        lower triangle (without taking the Cholesky square root).
-
-        The input, if provided as a MixedLMParams object, can be of
-        any parameterization.
+        `score_re` is taken with respect to the parameterization in
+        which `cov_re` is represented through its lower triangle
+        (without taking the Cholesky square root).
         """
 
         fe_params = params.fe_params
@@ -1302,7 +1365,7 @@ class MixedLM(base.LikelihoodModel):
             score_re -= self.cov_pen.grad(cov_re, cov_re_inv)
 
         # Handle the fixed effects penalty.
-        if self.fe_pen is not None:
+        if calc_fe and (self.fe_pen is not None):
             score_fe -= self.fe_pen.grad(fe_params)
 
         # resid' V^{-1} resid, summed over the groups (a scalar)
@@ -1331,7 +1394,7 @@ class MixedLM(base.LikelihoodModel):
             cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, lab)
 
             exog = self.exog_li[k]
-            ex_r, ex2_r = self._augment_exog(k)
+            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
 
             # The residuals
             resid = self.endog_li[k]
@@ -1376,15 +1439,17 @@ class MixedLM(base.LikelihoodModel):
             if self.k_vc > 0:
                 score_vc -= 0.5 * dlv[self.k_re2:]
 
-            # Needed for the fixed effects params gradient
             rvir += np.dot(resid, vir)
-            xtvir += np.dot(exog.T, vir)
+
+            if calc_fe:
+                xtvir += np.dot(exog.T, vir)
 
         fac = self.n_totobs
         if self.reml:
             fac -= self.k_fe
 
-        score_fe += fac * xtvir / rvir
+        if calc_fe and self.k_fe > 0:
+            score_fe += fac * xtvir / rvir
 
         if self.k_re > 0:
             score_re += 0.5 * fac * rvavr[0:self.k_re2] / rvir
@@ -1400,37 +1465,44 @@ class MixedLM(base.LikelihoodModel):
         return score_fe, score_re, score_vc
 
 
-    def score_sqrt(self, params):
+    def score_sqrt(self, params, calc_fe=True):
         """
-        Returns the score vector with respect to the parameterization
-        in which the random effects covariance matrix is represented
-        through its Cholesky square root.
+        Returns the score with respect to transformed parameters.
+
+        Calculates the score vector with respect to the
+        parameterization in which the random effects covariance matrix
+        is represented through its Cholesky square root.
 
         Parameters
         ----------
         params : MixedLMParams or array-like
             The model parameters.  If array-like must contain packed
             parameters that are compatible with this model instance.
+        calc_fe : boolean
+            If True, calculate the score vector for the fixed effects
+            parameters.  If False, this vector is not calculated, and
+            a vector of zeros is returned in its place.
 
         Returns
         -------
-        The score vector.
-
-        Notes
-        -----
-        The input, if provided as a MixedLMParams object, can be of
-        any parameterization.
+        score_fe : array-like
+            The score vector with respect to the fixed effects
+            parameters.
+        score_re : array-like
+            The score vector with respect to the random effects
+            parameters (excluding variance components parameters).
+        score_vc : array-like
+            The score vector with respect to variance components
+            parameters.
         """
 
-        score_fe, score_re, score_vc = self.score_full(params)
+        score_fe, score_re, score_vc = self.score_full(params, calc_fe=calc_fe)
         params_vec = params.get_packed(use_sqrt=True, with_fe=True)
-
-        lin, quad = self._reparam()
 
         score_full = np.concatenate((score_fe, score_re, score_vc))
         scr = 0.
         for i in range(len(params_vec)):
-            v = lin[i] + 2 * np.dot(quad[i], params_vec)
+            v = self._lin[i] + 2 * np.dot(self._quad[i], params_vec)
             scr += score_full[i] * v
         score_fe = scr[0:self.k_fe]
         score_re = scr[self.k_fe:self.k_fe + self.k_re2]
@@ -1439,11 +1511,14 @@ class MixedLM(base.LikelihoodModel):
         return score_fe, score_re, score_vc
 
 
-    def hessian_full(self, params):
+    def hessian(self, params):
         """
-        Calculates the Hessian matrix for the mixed effects model with
-        respect to the parameterization in which the covariance matrix
-        is represented directly (without square-root transformation).
+        Returns the model's Hessian matrix.
+
+        Calculates the Hessian matrix for the linear mixed effects
+        model with respect to the parameterization in which the
+        covariance matrix is represented directly (without square-root
+        transformation).
 
         Parameters
         ----------
@@ -1495,7 +1570,7 @@ class MixedLM(base.LikelihoodModel):
             cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
             exog = self.exog_li[k]
-            ex_r, ex2_r = self._augment_exog(k)
+            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
 
             # The residuals
             resid = self.endog_li[k]
@@ -1604,8 +1679,7 @@ class MixedLM(base.LikelihoodModel):
 
     def steepest_ascent(self, params, n_iter):
         """
-        Take steepest ascent steps to increase the log-likelihood
-        function.
+        Take steepest ascent steps on the log likelihood.
 
         Parameters
         ----------
@@ -1684,7 +1758,7 @@ class MixedLM(base.LikelihoodModel):
             cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, k)
 
             exog = self.exog_li[k]
-            ex_r, ex2_r = self._augment_exog(k)
+            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
 
             # The residuals
             resid = self.endog_li[k]
@@ -1822,7 +1896,7 @@ class MixedLM(base.LikelihoodModel):
         # Hessian with respect to the random effects covariance matrix
         # (not its square root).  It is used for obtaining standard
         # errors, not for optimization.
-        hess = self.hessian_full(params)
+        hess = self.hessian(params)
         if free is not None:
             pcov = np.zeros_like(hess)
             pat = self._freepat.get_packed(with_fe=True)
