@@ -236,36 +236,68 @@ class TestMixedLM(object):
 
 
     def test_vcomp_2(self):
+        """
+        Simulated data comparison to R
+        """
 
         np.random.seed(6241)
-        n = 800
-        exog = np.random.normal(size=(n, 1))
+        n = 1600
+        exog = np.random.normal(size=(n, 2))
         ex_vc = []
-        groups = np.kron(np.arange(n/4), np.ones(4))
+        groups = np.kron(np.arange(n / 16), np.ones(16))
+
+        # Build up the random error vector
         errors = 0
+
+        # The random effects
         exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n/4, 2))
-        slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
+        slopes = np.random.normal(size=(n / 16, 2))
+        slopes = np.kron(slopes, np.ones((16, 1))) * exog_re
         errors += slopes.sum(1)
-        ex_vc = np.random.normal(size=(n, 4))
-        slopes = np.random.normal(size=(n/4, 4))
-        slopes[:, 2:] *= 2
-        slopes = np.kron(slopes, np.ones((4, 1))) * ex_vc
-        errors += slopes.sum(1)
+
+        # First variance component
+        subgroups1 = np.kron(np.arange(n / 4), np.ones(4))
+        errors += np.kron(2*np.random.normal(size=n/4), np.ones(4))
+
+        # Second variance component
+        subgroups2 = np.kron(np.arange(n / 2), np.ones(2))
+        errors += np.kron(2*np.random.normal(size=n/2), np.ones(2))
+
+        # iid errors
         errors += np.random.normal(size=n)
+
         endog = exog.sum(1) + errors
 
-        exog_vc = {"a": {}, "b": {}}
-        for k,group in enumerate(range(int(n/4))):
-            ix = np.flatnonzero(groups == group)
-            exog_vc["a"][group] = ex_vc[ix, 0:2]
-            exog_vc["b"][group] = ex_vc[ix, 2:]
-        model1 = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
+        df = pd.DataFrame(index=range(n))
+        df["y"] = endog
+        df["groups"] = groups
+        df["x1"] = exog[:, 0]
+        df["x2"] = exog[:, 1]
+        df["z1"] = exog_re[:, 0]
+        df["z2"] = exog_re[:, 1]
+        df["v1"] = subgroups1
+        df["v2"] = subgroups2
+
+        # Equivalent model in R:
+        # df.to_csv("tst.csv")
+        # model = lmer(y ~ x1 + x2 + (0 + z1 + z2 | groups) + (1 | v1) + (1 | v2), df)
+
+        vcf = {"a": "0 + C(v1)", "b": "0 + C(v2)"}
+        model1 = MixedLM.from_formula("y ~ x1 + x2", groups=groups, re_formula="0+z1+z2",
+                                      vc_formula=vcf, data=df)
         result1 = model1.fit()
+
+        # Compare to R
+        assert_allclose(result1.fe_params, [0.16527, 0.99911, 0.96217], rtol=1e-4)
+        assert_allclose(result1.cov_re, [[1.244,  0.146], [0.146  , 1.371]], rtol=1e-3)
+        assert_allclose(result1.vcomp, [4.024, 3.997], rtol=1e-3)
+        assert_allclose(result1.bse.iloc[0:3], [0.12610, 0.03938, 0.03848], rtol=1e-3)
 
 
     def test_pastes_vcomp(self):
-        # pastes data from lme4
+        """
+        pastes data from lme4
+        """
 
         data = pd.read_csv("results/pastes.csv")
         vcf = {"cask" : "0 + cask"}
