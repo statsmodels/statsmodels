@@ -527,7 +527,7 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
-            self.data.param_names = self.exog_names + ['Intercept RE']
+            self.data.param_names = self.exog_names + ['Group RE']
 
         elif exog_re is not None:
             # Process exog_re the same way that exog is handled
@@ -602,7 +602,6 @@ class MixedLM(base.LikelihoodModel):
         self._lin, self._quad = self._reparam()
 
 
-
     def _setup_vcomp(self, exog_vc):
         if exog_vc is None:
             exog_vc = {}
@@ -633,7 +632,7 @@ class MixedLM(base.LikelihoodModel):
                                        exog_re_names[i] + " RE")
                 jj += 1
 
-        vc_names = self._vc_names
+        vc_names = [x + " RE" for x in self._vc_names]
 
         return exog_names + param_names + vc_names, exog_re_names, param_names
 
@@ -745,7 +744,9 @@ class MixedLM(base.LikelihoodModel):
 
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
+        group_name = "Group"
         if type(kwargs["groups"]) == str:
+            group_name = kwargs["groups"]
             kwargs["groups"] = np.asarray(data[kwargs["groups"]])
 
         if re_formula is not None:
@@ -760,7 +761,7 @@ class MixedLM(base.LikelihoodModel):
             exog_re = np.asarray(exog_re)
         else:
             exog_re = np.ones((data.shape[0], 1))
-            exog_re_names = ["Intercept"]
+            exog_re_names = [group_name]
 
         if vc_formula is not None:
             eval_env = kwargs.get('eval_env', None)
@@ -994,7 +995,7 @@ class MixedLM(base.LikelihoodModel):
             return np.array([])
 
         if self.k_re == 0:
-            cov_re_inv = np.zeros((0,0))
+            cov_re_inv = np.empty((0,0))
         else:
             cov_re_inv = np.linalg.inv(cov_re)
 
@@ -1003,17 +1004,17 @@ class MixedLM(base.LikelihoodModel):
             self._endex_li = [None] * self.n_groups
 
         xtxy = 0.
-        for i in range(self.n_groups):
+        for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, i)
+            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
-            if self._endex_li[i] is None:
-                mat = np.concatenate((self.exog_li[i], self.endog_li[i][:, None]), axis=1)
-                self._endex_li[i] = mat
+            if self._endex_li[group_ix] is None:
+                mat = np.concatenate((self.exog_li[group_ix], self.endog_li[group_ix][:, None]), axis=1)
+                self._endex_li[group_ix] = mat
 
-            exog = self.exog_li[i]
-            ex_r, ex2_r = self._aex_r[i], self._aex_r2[i]
-            u = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, self._endex_li[i])
+            exog = self.exog_li[group_ix]
+            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
+            u = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
         fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
@@ -1193,11 +1194,11 @@ class MixedLM(base.LikelihoodModel):
         likeval = 0.
 
         # Handle the covariance penalty
-        if self.cov_pen is not None:
+        if (self.cov_pen is not None) and (self.k_re > 0):
             likeval -= self.cov_pen.func(cov_re, cov_re_inv)
 
         # Handle the fixed effects penalty
-        if self.fe_pen is not None:
+        if (self.fe_pen is not None):
             likeval -= self.fe_pen.func(fe_params)
 
         xvx, qf = 0., 0.
@@ -1457,10 +1458,11 @@ class MixedLM(base.LikelihoodModel):
             score_vc += 0.5 * fac * rvavr[self.k_re2:] / rvir
 
         if self.reml:
+            xtvixi = np.linalg.inv(xtvix)
             for j in range(self.k_re2):
-                score_re[j] += 0.5 * np.trace(np.linalg.solve(xtvix, xtax[j]))
+                score_re[j] += 0.5 * np.sum(xtvixi.T * xtax[j]) # trace dot
             for j in range(self.k_vc):
-                score_vc[j] += 0.5 * np.trace(np.linalg.solve(xtvix, xtax[self.k_re2 + j]))
+                score_vc[j] += 0.5 * np.sum(xtvixi.T * xtax[self.k_re2 + j]) # trace dot
 
         return score_fe, score_re, score_vc
 
@@ -1753,15 +1755,15 @@ class MixedLM(base.LikelihoodModel):
             cov_re_inv = None
 
         qf = 0.
-        for k in range(self.n_groups):
+        for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, k)
+            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
-            exog = self.exog_li[k]
-            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
+            exog = self.exog_li[group_ix]
+            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
 
             # The residuals
-            resid = self.endog_li[k]
+            resid = self.endog_li[group_ix]
             if self.k_fe > 0:
                 expval = np.dot(exog, fe_params)
                 resid = resid - expval

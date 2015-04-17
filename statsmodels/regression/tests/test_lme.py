@@ -264,6 +264,19 @@ class TestMixedLM(object):
         result1 = model1.fit()
 
 
+    def test_pastes_vcomp(self):
+        # pastes data from lme4
+
+        data = pd.read_csv("results/pastes.csv")
+        vcf = {"cask" : "0 + cask"}
+        model = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                     vc_formula=vcf, data=data)
+        result = model.fit()
+        assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+        assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)
+        assert_allclose(result.scale, 0.678, rtol=1e-3)
+
+
     def test_vcomp_formula(self):
 
         np.random.seed(6241)
@@ -367,8 +380,8 @@ class TestMixedLM(object):
             rslt4 = mod4.fit(start_params=rslt2.params)
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
-        assert_(mod5.data.exog_re_names == ["Intercept"])
-        assert_(mod5.data.exog_re_names_full == ["Intercept RE"])
+        assert_(mod5.data.exog_re_names == ["groups"])
+        assert_(mod5.data.exog_re_names_full == ["groups RE"])
         rslt5 = mod5.fit(start_params=rslt2.params)
         assert_almost_equal(rslt4.params, rslt5.params)
 
