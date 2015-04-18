@@ -473,6 +473,11 @@ class MixedLM(base.LikelihoodModel):
                  exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
+        _allowed_kwargs = ["missing_idx", "design_info", "formula"]
+        for x in kwargs.keys():
+            if x not in _allowed_kwargs:
+                raise ValueError("argument %s not permitted for MixedLM initialization" % x)
+
         self.use_sqrt = use_sqrt
 
         # Some defaults
@@ -502,7 +507,7 @@ class MixedLM(base.LikelihoodModel):
                                       exog_re=exog_re, missing=missing,
                                       **kwargs)
 
-        self._init_keys.extend(["use_sqrt"])
+        self._init_keys.extend(["use_sqrt", "exog_vc"])
 
         self.k_fe = exog.shape[1] # Number of fixed effects parameters
 
@@ -1294,7 +1299,7 @@ class MixedLM(base.LikelihoodModel):
         if self._freepat is not None:
             score_fe *= self._freepat.fe_params
             score_re *= self._freepat.cov_re[self._freepat._ix]
-            # free not used for variance components
+            score_vc *= self._freepat.vcomp
 
         if profile_fe:
             return np.concatenate((score_re, score_vc))
@@ -1664,56 +1669,6 @@ class MixedLM(base.LikelihoodModel):
         return hess
 
 
-    def steepest_ascent(self, params, n_iter):
-        """
-        Take steepest ascent steps on the log likelihood.
-
-        Parameters
-        ----------
-        params : array-like
-            The starting point of the optimization.
-        n_iter: non-negative integer
-            Number of iterations to perform.
-
-        Returns
-        -------
-        A MixedLMParameters object containing the final value of the
-        optimization.
-        """
-
-        if n_iter == 0:
-            return params
-
-        fval = self.loglike(params)
-
-        cov_re = params.cov_re
-        if self.k_re > 0:
-            if self.use_sqrt:
-                cov_re_sqrt = np.linalg.cholesky(cov_re)
-                pa = cov_re_sqrt[params._ix]
-            else:
-                pa = cov_re[params._ix]
-        else:
-            cov_re_sqrt = np.zeros((0, 0))
-            pa = np.zeros(0)
-
-        for itr in range(n_iter):
-
-            grad = self.score(pa)
-            grad = grad / np.max(np.abs(grad))
-
-            sl = 0.5
-            while sl > 1e-20:
-                pa1 = pa + sl*grad
-                fval1 = self.loglike(pa1)
-                if fval1 > fval:
-                    pa = pa1
-                    fval = fval1
-                sl /= 2
-
-        return pa
-
-
     def get_scale(self, fe_params, cov_re, vcomp):
         """
         Returns the estimated error variance based on given estimates
@@ -1775,18 +1730,17 @@ class MixedLM(base.LikelihoodModel):
         Parameters
         ----------
         start_params: array-like or MixedLMParams
-            If a `MixedLMParams` the state provides the starting
-            value.  If array-like, this is the packed parameter
-            vector, assumed to be in the same state as this model.
+            Starting values for the profile log-likeihood.  If not a
+            `MixedLMParams` instance, this should be an array
+            containing the packed parameters for the profile
+            log-likelihood, including the fixed effects
+            parameters.
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
-        niter_sa : integer
-            The number of steepest ascent iterations
         do_cg : bool
             If True, a conjugate gradient algorithm is
-            used for optimization (following any steepest
-            descent steps).
+            used for optimization.
         cov_pen : CovariancePenalty object
             A penalty for the random effects covariance matrix
         fe_pen : Penalty object
@@ -1797,23 +1751,19 @@ class MixedLM(base.LikelihoodModel):
             correspondinig parameter is estimated, a 0 indicates that
             it is fixed at its starting value.  Setting the `cov_re`
             component to the identity matrix fits a model with
-            independent random effects.  The state of `use_sqrt` for
-            `free` must agree with that of the parent model.
+            independent random effects.
         full_output : bool
             If true, attach iteration history to results
 
         Returns
         -------
         A MixedLMResults instance.
-
-        Notes
-        -----
-        If `start` is provided as an array, it must have the same
-        `use_sqrt` state as the parent model.
-
-        The value of `free` must have the same `use_sqrt` state as the
-        parent model.
         """
+
+        _allowed_kwargs = ['gtol']
+        for x in kwargs.keys():
+            if x not in _allowed_kwargs:
+                raise ValueError("Argument %s not allowed for MixedLM.fit" % x)
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -1828,35 +1778,36 @@ class MixedLM(base.LikelihoodModel):
 
         success = False
 
-        params = MixedLMParams(self.k_fe, self.k_re, self.k_vc)
-        params.fe_params = np.zeros(self.k_fe)
-        params.cov_re = np.eye(self.k_re)
-        params.vcomp = np.ones(self.k_vc)
+        if start_params is None:
+            params = MixedLMParams(self.k_fe, self.k_re, self.k_vc)
+            params.fe_params = np.zeros(self.k_fe)
+            params.cov_re = np.eye(self.k_re)
+            params.vcomp = np.ones(self.k_vc)
+        else:
+            if isinstance(start_params, MixedLMParams):
+                params = start_params
+            else:
+                params = MixedLMParams.from_packed(start_params, self.k_fe,
+                                                   self.k_re, self.use_sqrt,
+                                                   with_fe=True)
 
         # Try up to 10 times to make the optimization work.  Usually
         # only one cycle is used.
         if do_cg:
-            for cycle in range(10):
+            kwargs["retall"] = hist is not None
+            if "disp" not in kwargs:
+                kwargs["disp"] = False
+            # Only bfgs and lbfgs seem to work (TODO: not checked recently)
+            kwargs["method"] = "bfgs"
+            packed = params.get_packed(use_sqrt=self.use_sqrt, with_fe=False)
+            rslt = super(MixedLM, self).fit(start_params=packed,
+                                            skip_hessian=True,
+                                            **kwargs)
 
-                params = self.steepest_ascent(params, niter_sa)
-                try:
-                    kwargs["retall"] = hist is not None
-                    if "disp" not in kwargs:
-                        kwargs["disp"] = False
-                    # Only bfgs and lbfgs seem to work
-                    kwargs["method"] = "bfgs"
-                    packed = params.get_packed(use_sqrt=self.use_sqrt, with_fe=False)
-                    rslt = super(MixedLM, self).fit(start_params=packed,
-                                                    skip_hessian=True,
-                                                    **kwargs)
-                except np.linalg.LinAlgError:
-                    continue
-
-                # The optimization succeeded
-                params = rslt.params
-                if hist is not None:
-                    hist.append(rslt.mle_retvals)
-                break
+            # The optimization succeeded
+            params = rslt.params
+            if hist is not None:
+                hist.append(rslt.mle_retvals)
 
         converged = rslt.mle_retvals['converged']
         if not converged:
@@ -2169,17 +2120,21 @@ class MixedLMResults(base.LikelihoodModelResults):
         return self.model.loglike(self.params_object, profile_fe=False)
 
 
-    def profile_re(self, re_ix, num_low=5, dist_low=1., num_high=5,
+    def profile_re(self, re_ix, vtype, num_low=5, dist_low=1., num_high=5,
                    dist_high=1.):
         """
-        Calculate a series of values along a 1-dimensional profile
-        likelihood.
+        Profile-likelihood inference for variance parameters.
 
         Parameters
         ----------
         re_ix : integer
-            The index of the variance parameter for which to construct
-            a profile likelihood.
+            If vtype is `re`, this value is the index of the variance
+            parameter for which to construct a profile likelihood.  If
+            `vtype` is 'vc' then `re_ix` is the name of the variance
+            parameter to be profiled.
+        vtype : string
+            Either 're' or 'vc', depending on whether the profile
+            analysis is for a random effect or a variance component.
         num_low : integer
             The number of points at which to calculate the likelihood
             below the MLE of the parameter of interest.
@@ -2201,39 +2156,47 @@ class MixedLMResults(base.LikelihoodModelResults):
 
         Notes
         -----
-        Only variance parameters can be profiled.  `re_ix` is the index
-        of the random effect that is profiled.
+        Only variance parameters can be profiled.
         """
 
         pmodel = self.model
-        k_fe = pmodel.exog.shape[1]
-        k_re = pmodel.exog_re.shape[1]
+        k_fe = pmodel.k_fe
+        k_re = pmodel.k_re
         k_vc = pmodel.k_vc
         endog, exog, groups = pmodel.endog, pmodel.exog, pmodel.groups
 
         # Need to permute the columns of the random effects design
         # matrix so that the profiled variable is in the first column.
-        ix = np.arange(k_re)
-        ix[0] = re_ix
-        ix[re_ix] = 0
-        exog_re = pmodel.exog_re.copy()[:, ix]
+        if vtype == 're':
+            ix = np.arange(k_re)
+            ix[0] = re_ix
+            ix[re_ix] = 0
+            exog_re = pmodel.exog_re.copy()[:, ix]
 
-        # Permute the covariance structure to match the permuted
-        # design matrix.
-        params = self.params_object.copy()
-        cov_re_unscaled = params.cov_re
-        cov_re_unscaled = cov_re_unscaled[np.ix_(ix, ix)]
-        params.cov_re = cov_re_unscaled
+            # Permute the covariance structure to match the permuted
+            # design matrix.
+            params = self.params_object.copy()
+            cov_re_unscaled = params.cov_re
+            cov_re_unscaled = cov_re_unscaled[np.ix_(ix, ix)]
+            params.cov_re = cov_re_unscaled
+            ru0 = cov_re_unscaled[0, 0]
 
-        # Convert dist_low and dist_high to the profile
-        # parameterization
-        cov_re = self.scale * cov_re_unscaled
-        low = (cov_re[0, 0] - dist_low) / self.scale
-        high = (cov_re[0, 0] + dist_high) / self.scale
+            # Convert dist_low and dist_high to the profile
+            # parameterization
+            cov_re = self.scale * cov_re_unscaled
+            low = (cov_re[0, 0] - dist_low) / self.scale
+            high = (cov_re[0, 0] + dist_high) / self.scale
+
+        elif vtype == 'vc':
+            re_ix = self.model._vc_names.index(re_ix)
+            params = self.params_object.copy()
+            vcomp = self.vcomp
+            low = (vcomp[re_ix] - dist_low) / self.scale
+            high = (vcomp[re_ix] + dist_high) / self.scale
+            ru0 = vcomp[re_ix] / self.scale
 
         # Define the sequence of values to which the parameter of
         # interest will be constrained.
-        ru0 = cov_re_unscaled[0, 0]
         if low <= 0:
             raise ValueError("dist_low is too large and would result in a "
                              "negative variance. Try a smaller value.")
@@ -2245,48 +2208,44 @@ class MixedLMResults(base.LikelihoodModelResults):
         free = MixedLMParams(k_fe, k_re, k_vc)
         if self.freepat is None:
             free.fe_params = np.ones(k_fe)
-            free.vcomp = np.ones(k_vc)
+            vcomp = np.ones(k_vc)
             mat = np.ones((k_re, k_re))
         else:
+            # If a freepat already has been specified, we add the
+            # constraint to it.
             free.fe_params = self.freepat.fe_params
-            free.vcomp = self.freepat.vcomp
+            vcomp = self.freepat.vcomp
             mat = self.freepat.cov_re
-            mat = mat[np.ix_(ix, ix)]
-        mat[0, 0] = 0
+            if vtype == 're':
+                mat = mat[np.ix_(ix, ix)]
+        if vtype == 're':
+            mat[0, 0] = 0
+        else:
+            vcomp[re_ix] = 0
         free.cov_re = mat
+        free.vcomp = vcomp
 
         klass = self.model.__class__
         init_kwargs = pmodel._get_init_kwds()
-        init_kwargs['exog_re'] = exog_re
+        if vtype == 're':
+            init_kwargs['exog_re'] = exog_re
 
         likev = []
         for x in rvalues:
 
             model = klass(endog, exog, **init_kwargs)
 
-            cov_re = params.cov_re.copy()
-            cov_re[0, 0] = x
+            if vtype == 're':
+                cov_re = params.cov_re.copy()
+                cov_re[0, 0] = x
+                params.cov_re = cov_re
+            else:
+                params.vcomp[re_ix] = x
 
-            # Shrink the covariance parameters until a PSD covariance
-            # matrix is obtained.
-            dg = np.diag(cov_re).copy()
-            success = False
-            for ks in range(50):
-                try:
-                    np.linalg.cholesky(cov_re)
-                    success = True
-                    break
-                except np.linalg.LinAlgError:
-                    cov_re /= 2
-                    np.fill_diagonal(cov_re, dg)
-            if not success:
-                raise ValueError("unable to find PSD covariance matrix along likelihood profile")
-
-            params.cov_re = cov_re
             # TODO should use fit_kwargs
             rslt = model.fit(start_params=params, free=free,
                              reml=self.reml, cov_pen=self.cov_pen)._results
-            likev.append([rslt.cov_re[0, 0], rslt.llf])
+            likev.append([x * rslt.scale, rslt.llf])
 
         likev = np.asarray(likev)
 

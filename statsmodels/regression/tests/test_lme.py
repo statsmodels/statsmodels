@@ -183,19 +183,37 @@ class TestMixedLM(object):
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
 
-    def test_profile(self):
+    def test_profile_inference(self):
         # Smoke test
         np.random.seed(9814)
-        k_fe = 4
+        k_fe = 2
         gsize = 3
         n_grp = 100
         exog = np.random.normal(size=(n_grp * gsize, k_fe))
+        exog_re = np.ones((n_grp * gsize, 1))
         groups = np.kron(np.arange(n_grp), np.ones(gsize))
+        vca = np.random.normal(size=n_grp * gsize)
+        vcb = np.random.normal(size=n_grp * gsize)
+        errors = 0
         g_errors = np.kron(np.random.normal(size=100), np.ones(gsize))
-        endog = exog.sum(1) + g_errors + np.random.normal(size=n_grp * gsize)
-        rslt = MixedLM(endog, exog, groups).fit()
-        prof = rslt.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
-                               num_high=1)
+        errors += g_errors + exog_re[:, 0]
+        rc = np.random.normal(size=n_grp)
+        errors += np.kron(rc, np.ones(gsize)) * vca
+        rc = np.random.normal(size=n_grp)
+        errors += np.kron(rc, np.ones(gsize)) * vcb
+        errors += np.random.normal(size=n_grp * gsize)
+
+        endog = exog.sum(1) + errors
+        vc = {"a" : {}, "b" : {}}
+        for k in range(n_grp):
+            ii = np.flatnonzero(groups == k)
+            vc["a"][k] = vca[ii][:, None]
+            vc["b"][k] = vcb[ii][:, None]
+        rslt = MixedLM(endog, exog, groups=groups, exog_re=exog_re, exog_vc=vc).fit()
+        prof_re = rslt.profile_re(0, vtype='re', dist_low=1, num_low=3, dist_high=1,
+                                  num_high=3)
+        prof_vc = rslt.profile_re('b', vtype='vc', dist_low=0.5, num_low=3, dist_high=0.5,
+                                  num_high=3)
 
 
     def test_vcomp_1(self):
