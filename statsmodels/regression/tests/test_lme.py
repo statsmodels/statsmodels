@@ -317,7 +317,11 @@ class TestMixedLM(object):
         pastes data from lme4
         """
 
-        data = pd.read_csv("results/pastes.csv")
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'pastes.csv')
+
+        data = pd.read_csv(fname)
         vcf = {"cask" : "0 + cask"}
         model = MixedLM.from_formula("strength ~ 1", groups="batch",
                                      vc_formula=vcf, data=data)
