@@ -2,8 +2,8 @@
 Linear mixed effects models.
 
 The MixedLM class fits linear mixed effects models to data.  This is a
-group-based mixed effects model that does not efficiently handle
-crossed random effects.
+group-based implementation that does not efficiently handle crossed
+random effects.
 
 The data are partitioned into disjoint groups.  The probability model
 for group i is:
@@ -13,12 +13,22 @@ Y = X*beta + Z*gamma + epsilon
 where
 
 * n_i is the number of observations in group i
+
 * Y is a n_i dimensional response vector
+
 * X is a n_i x k_fe design matrix for the fixed effects
-* beta is a k_fe-dimensional vector of fixed effects slopes
-* Z is a design matrix for the random effects with n_i rows
-* gamma is a random vector with mean 0 and covariance matrix Psi; note
-  that each group gets its own independent realization of gamma.
+
+* beta is a k_fe-dimensional vector of fixed effects parameters
+
+* Z is a design matrix for the random effects with n_i rows.  The
+  number of columns in Z can vary by group as discussed below.
+
+* gamma is a random vector with mean 0.  The covariance matrix for the
+  first `k_re` elements of `gamma` is common to all groups.  The
+  remaining elements of `gamma` are variance components as discussed
+  in more detail below. Each group gets its own independent
+  realization of gamma.
+
 * epsilon is a n_i dimensional vector of iid normal
   errors with mean 0 and variance sigma^2; the epsilon
   values are independent both within and between groups
@@ -32,7 +42,7 @@ structure is of interest, GEE is a good alternative to mixed models.
 
 Two types of random effects are supported.  Standard random effects
 are correlated with each other in arbitary ways.  Every group has the
-same number of standard random effects, with the same joint
+same number (`k_re`) of standard random effects, with the same joint
 distribution (but with independent realizations across the groups).
 
 Variance components are uncorrelated with each other, and with the
@@ -54,7 +64,7 @@ See also this more recent document:
 http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
 
 All the likelihood, gradient, and Hessian calculations closely follow
-Lindstrom and Bates.
+Lindstrom and Bates 1988.
 
 The following two documents are written more from the perspective of
 users:
@@ -97,12 +107,13 @@ differ.  The parameterizations are:
   factor of cov_re1 instead of cov_re1 directly.  This is hidden from the
   user.
 
-All three parameterizations can be "packed" by (optionally) concatenating
-fe_params together with the lower triangle or Cholesky square root of the
-dependence structure.  The final component of the packed parameter vector
-are the variance component estimates.  Thes are stored as square roots if
-(and only if) the random effects covariance matrix is stored as its Choleky
-factor.  Note that when unpacking, it is important to either square or reflect
+All three parameterizations can be packed into a vector by
+(optionally) concatenating `fe_params` together with the lower
+triangle or Cholesky square root of the dependence structure.  The
+final component of the packed parameter vector are the variance
+component estimates.  Thes are stored as square roots if (and only if)
+the random effects covariance matrix is stored as its Choleky factor.
+Note that when unpacking, it is important to either square or reflect
 the dependence structure depending on which parameterization is being
 used.
 
@@ -117,7 +128,7 @@ over the fixed effects parameters.  The likelihood that is optimized
 is profiled over both the scale parameter (a scalar) and the fixed
 effects parameters (if any).  As a result of this profiling, it is
 difficult and unnecessary to calculate the Hessian of the profiled log
-likelihood function, so calculation that is not implemented here.
+likelihood function, so that calculation is not implemented here.
 Therefore, optimization methods requiring the Hessian matrix such as
 the Newon-Raphson algorihm cannot be used for model fitting.
 """
@@ -340,16 +351,9 @@ class MixedLMParams(object):
         return pa
 
 
-# This is a global switch to use direct linear algebra calculations
-# for solving factor-structured linear systems and calculating
-# factor-structured determinants.  If False, use the
-# Sherman-Morrison-Woodbury update which is more efficient for
-# factor-structured matrices.  Should be False except when testing.
-_no_smw = False
-
-def _smw_solve(s, A, AtA, B, BI, rhs):
+def _smw_solver(s, A, AtA, B, BI):
     """
-    Solves the system (s*I + A*B*A') * x = rhs for x and returns x.
+    Solves the system (s*I + A*B*A') * x = rhs for an arbitrary rhs.
 
     Parameters
     ----------
@@ -362,34 +366,25 @@ def _smw_solve(s, A, AtA, B, BI, rhs):
     B : square symmetric ndarray
         See above for usage
     BI : square symmetric ndarray
-        The inverse of `B`.  Can be None if B is singular
-    rhs : ndarray
-        See above for usage
+        The inverse of `B`.
 
     Returns
     -------
-    x : ndarray
-        See above
-
-    If the global variable `_no_smw` is True, this routine uses direct
-    linear algebra calculations.  Otherwise it uses the
-    Sherman-Morrison-Woodbury identity to speed up the calculation.
+    A function that takes `rhs` as an input argument and returns a
+    solution to the linear system defined above.
     """
-
-    # Direct calculation
-    if _no_smw or BI is None:
-        mat = np.dot(A, np.dot(B, A.T))
-        # Add constant to diagonal
-        mat.flat[::mat.shape[0]+1] += s
-        return np.linalg.solve(mat, rhs)
 
     # Use SMW identity
     qmat = BI + AtA / s
-    u = np.dot(A.T, rhs)
-    qmat = np.linalg.solve(qmat, u)
-    qmat = np.dot(A, qmat)
-    rslt = rhs / s - qmat / s**2
-    return rslt
+    qmati = np.linalg.solve(qmat, A.T)
+
+    def solver(rhs):
+        ql = np.dot(qmati, rhs)
+        ql = np.dot(A, ql)
+        rslt = rhs / s - ql / s**2
+        return rslt
+
+    return solver
 
 
 def _smw_logdet(s, A, AtA, B, BI, B_logdet):
@@ -418,19 +413,9 @@ def _smw_logdet(s, A, AtA, B, BI, B_logdet):
     """
 
     p = A.shape[0]
-
-    if _no_smw or BI is None:
-        mat = np.dot(A, np.dot(B, A.T))
-        # Add constant to diagonal
-        mat.flat[::p+1] += s
-        _, ld = np.linalg.slogdet(mat)
-        return ld
-
     ld = p * np.log(s)
-
     qmat = BI + AtA / s
     _, ld1 = np.linalg.slogdet(qmat)
-
     return B_logdet + ld + ld1
 
 
@@ -591,7 +576,7 @@ class MixedLM(base.LikelihoodModel):
             self.exog_names = ["FE%d" % (k + 1) for k in
                                range(self.exog.shape[1])]
 
-        # Precompute these which are needed many times
+        # Precompute this
         self._aex_r = []
         self._aex_r2 = []
         for i in range(self.n_groups):
@@ -599,6 +584,7 @@ class MixedLM(base.LikelihoodModel):
             self._aex_r.append(a)
             self._aex_r2.append(b)
 
+        # Precompute this
         self._lin, self._quad = self._reparam()
 
 
@@ -924,10 +910,10 @@ class MixedLM(base.LikelihoodModel):
                     ex_r = self.exog_re_li[k]
                     ex2_r = self.exog_re2_li[k]
                     resid = resid_all[self.row_indices[lab]]
+                    solver = _smw_solver(scale, ex_r, ex2_r, cov_re, cov_re_inv)
 
-                    x = exog[:,j]
-                    u = _smw_solve(scale, ex_r, ex2_r, cov_re,
-                                   cov_re_inv, x)
+                    x = exog[:, j]
+                    u = solver(x)
                     a += np.dot(u, x)
                     b -= 2 * np.dot(u, resid)
 
@@ -1001,20 +987,18 @@ class MixedLM(base.LikelihoodModel):
 
         # Cache these quantities that don't change.
         if not hasattr(self, "_endex_li"):
-            self._endex_li = [None] * self.n_groups
+            self._endex_li = []
+            for group_ix, _ in enumerate(self.group_labels):
+                mat = np.concatenate((self.exog_li[group_ix], self.endog_li[group_ix][:, None]), axis=1)
+                self._endex_li.append(mat)
 
         xtxy = 0.
         for group_ix, group in enumerate(self.group_labels):
-
             cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
-
-            if self._endex_li[group_ix] is None:
-                mat = np.concatenate((self.exog_li[group_ix], self.endog_li[group_ix][:, None]), axis=1)
-                self._endex_li[group_ix] = mat
-
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            u = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, self._endex_li[group_ix])
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+            u = solver(self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
         fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
@@ -1156,11 +1140,9 @@ class MixedLM(base.LikelihoodModel):
 
         Notes
         -----
-        This is the profile likelihood in which the scale parameter
-        `scale` has been profiled out.
-
-        The input parameter state, if provided as a MixedLMParams
-        object, can be with respect to any parameterization.
+        The scale parameter `scale` is always profiled out of the
+        log-likelihood.  In addition, if `profile_fe` is true the
+        fixed effects parameters are also profiled out.
         """
 
         if type(params) is not MixedLMParams:
@@ -1209,6 +1191,8 @@ class MixedLM(base.LikelihoodModel):
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+
             resid = resid_all[self.row_indices[group]]
 
             # Part 1 of the log likelihood (for both ML and REML)
@@ -1216,13 +1200,12 @@ class MixedLM(base.LikelihoodModel):
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            u = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, resid)
+            u = solver(resid)
             qf += np.dot(resid, u)
 
             # Adjustment for REML
             if self.reml:
-                mat = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv,
-                                 exog)
+                mat = solver(exog)
                 xvx += np.dot(exog.T, mat)
 
         if self.reml:
@@ -1242,17 +1225,25 @@ class MixedLM(base.LikelihoodModel):
         return likeval
 
 
-    def _gen_dV_dPsi(self, ex_r, group, max_ix=None):
+    def _gen_dV_dPsi(self, ex_r, solver, group, max_ix=None):
         """
-        A generator that yields the derivative of the covariance
-        matrix V (=I + Z*Psi*Z') with respect to the free elements of
-        Psi.  Each call to the generator yields the index of Psi with
-        respect to which the derivative is taken, and the derivative
-        matrix with respect to that element of Psi.  Psi is a
-        symmetric matrix, so the free elements are the lower triangle.
-        If max_ix is not None, the iterations terminate after max_ix
-        values are yielded.
+        A generator that yields the element-wise derivative of the
+        marginal covariance matrix with respect to the random effects
+        variance and covariance parameters.
+
+        ex_r : array-like
+            The random effects design matrix
+        solver : function
+            A function that given x returns V^{-1}x, where V
+            is the group's marginal covariance matrix.
+        group : scalar
+            The group label
+        max_ix : integer or None
+            If not None, the generator ends when this index
+            is reached.
         """
+
+        axr = solver(ex_r)
 
         # Regular random effects
         jj = 0
@@ -1261,16 +1252,18 @@ class MixedLM(base.LikelihoodModel):
                 if max_ix is not None and jj > max_ix:
                     return
                 mat_l, mat_r = ex_r[:,j1:j1+1], ex_r[:,j2:j2+1] # Need 2d
-                yield jj, mat_l, mat_r, j1 == j2
+                vsl, vsr = axr[:,j1:j1+1], axr[:,j2:j2+1]
+                yield jj, mat_l, mat_r, vsl, vsr, j1 == j2
                 jj += 1
 
         # Variance components
         for ky in self._vc_names:
-            if max_ix is not None and jj > max_ix:
-                return
             if group in self.exog_vc[ky]:
+                if max_ix is not None and jj > max_ix:
+                    return
                 mat = self.exog_vc[ky][group]
-                yield jj, mat, mat, True
+                axmat = solver(mat)
+                yield jj, mat, mat, axmat, axmat, True
                 jj += 1
 
 
@@ -1390,32 +1383,30 @@ class MixedLM(base.LikelihoodModel):
         # resid' V^{-1} dV/dQ_jj V^{-1} resid (a scalar)
         rvavr = np.zeros(self.k_re2 + self.k_vc)
 
-        for k, lab in enumerate(self.group_labels):
+        for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, lab)
+            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
-            exog = self.exog_li[k]
-            ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
+            exog = self.exog_li[group_ix]
+            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
 
             # The residuals
-            resid = self.endog_li[k]
+            resid = self.endog_li[group_ix]
             if self.k_fe > 0:
                 expval = np.dot(exog, fe_params)
                 resid = resid - expval
 
             if self.reml:
-                viexog = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, exog)
+                viexog = solver(exog)
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
-            jj = 0
-            vex = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, ex_r)
-            vir = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, resid)
-            for jj, matl, matr, sym in self._gen_dV_dPsi(ex_r, lab):
-                vsl = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matl)
+            vex = solver(ex_r)
+            vir = solver(resid)
+            for jj, matl, matr, vsl, vsr, sym in self._gen_dV_dPsi(ex_r, solver, group):
                 dlv[jj] = np.sum(matr * vsl) # trace dot
                 if not sym:
-                    vsr = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matr)
                     dlv[jj] += np.sum(matl * vsr) # trace dot
 
                 ul = np.dot(vir, matl)
@@ -1544,12 +1535,9 @@ class MixedLM(base.LikelihoodModel):
         vcomp = params.vcomp
         cov_re = params.cov_re
         if self.k_re > 0:
-            try:
-                cov_re_inv = np.linalg.inv(cov_re)
-            except np.linalg.LinAlgError:
-                cov_re_inv = None
+            cov_re_inv = np.linalg.inv(cov_re)
         else:
-            cov_re_inv = np.empty(0)
+            cov_re_inv = np.empty((0, 0))
 
         # Blocks for the fixed and random effects parameters.
         hess_fe = 0.
@@ -1573,6 +1561,7 @@ class MixedLM(base.LikelihoodModel):
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
 
             # The residuals
             resid = self.endog_li[k]
@@ -1580,12 +1569,12 @@ class MixedLM(base.LikelihoodModel):
                 expval = np.dot(exog, fe_params)
                 resid = resid - expval
 
-            viexog = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, exog)
+            viexog = solver(exog)
             xtvix += np.dot(exog.T, viexog)
-            vir = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, resid)
+            vir = solver(resid)
             rvir += np.dot(resid, vir)
 
-            for jj1,matl1,matr1,sym1 in self._gen_dV_dPsi(ex_r, group):
+            for jj1, matl1, matr1, vsl1, vsr1, sym1 in self._gen_dV_dPsi(ex_r, solver, group):
 
                 ul = np.dot(viexog.T, matl1)
                 ur = np.dot(matr1.T, vir)
@@ -1608,13 +1597,11 @@ class MixedLM(base.LikelihoodModel):
                 B[jj1] += np.dot(ul, ur) * (1 if sym1 else 2)
 
                 # V^{-1} * dV/d_theta
-                E = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matl1)
-                E = np.dot(E, matr1.T)
+                E = np.dot(vsl1, matr1.T)
                 if not sym1:
-                    E1 = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matr1)
-                    E += np.dot(E1, matl1.T)
+                    E += np.dot(vsr1, matl1.T)
 
-                for jj2,matl2,matr2,sym2 in self._gen_dV_dPsi(ex_r, group, jj1):
+                for jj2, matl2, matr2, vsl2, vsr2, sym2 in self._gen_dV_dPsi(ex_r, solver, group, jj1):
 
                     re = np.dot(matr2.T, E)
                     rev = np.dot(re, vir[:, None])
@@ -1631,11 +1618,9 @@ class MixedLM(base.LikelihoodModel):
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
 
-                    R = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matl2)
-                    rt = np.sum(R * re.T) / 2 # trace dot
+                    rt = np.sum(vsl2 * re.T) / 2 # trace dot
                     if not sym2:
-                        R = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, matr2)
-                        rt += np.sum(R * le.T) / 2 # trace dot
+                        rt += np.sum(vsr2 * le.T) / 2 # trace dot
 
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -1762,13 +1747,15 @@ class MixedLM(base.LikelihoodModel):
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
 
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+
             # The residuals
             resid = self.endog_li[group_ix]
             if self.k_fe > 0:
                 expval = np.dot(exog, fe_params)
                 resid = resid - expval
 
-            mat = _smw_solve(1., ex_r, ex2_r, cov_aug, cov_aug_inv, resid)
+            mat = solver(resid)
             qf += np.dot(resid, mat)
 
         if self.reml:
@@ -2025,8 +2012,8 @@ class MixedLMResults(base.LikelihoodModelResults):
             expval = np.dot(exog, self.fe_params)
             resid = endog - expval
 
-            vresid = _smw_solve(self.scale, ex_r, ex2_r, self.cov_re,
-                                cov_re_inv, resid)
+            solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re, cov_re_inv)
+            vresid = solver(resid)
 
             ranef_dict[label] = np.dot(self.cov_re,
                                        np.dot(ex_r.T, vresid))
@@ -2063,9 +2050,10 @@ class MixedLMResults(base.LikelihoodModelResults):
             ex2_r = self.model.exog_re2_li[k]
             label = self.model.group_labels[k]
 
+            solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re,  cov_re_inv)
+
             mat1 = np.dot(ex_r, self.cov_re)
-            mat2 = _smw_solve(self.scale, ex_r, ex2_r, self.cov_re,
-                              cov_re_inv, mat1)
+            mat2 = solver(mat1)
             mat2 = np.dot(mat1.T, mat2)
 
             ranef_dict[label] = self.cov_re - mat2
