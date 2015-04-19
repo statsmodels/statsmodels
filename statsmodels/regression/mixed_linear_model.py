@@ -1723,7 +1723,7 @@ class MixedLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, reml=True, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, **kwargs):
+            full_output=False, method='bfgs', **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1751,19 +1751,26 @@ class MixedLM(base.LikelihoodModel):
             correspondinig parameter is estimated, a 0 indicates that
             it is fixed at its starting value.  Setting the `cov_re`
             component to the identity matrix fits a model with
-            independent random effects.
+            independent random effects.  Note that some optimization
+            methods do not respect this contraint (bfgs and lbfgs both
+            work).
         full_output : bool
             If true, attach iteration history to results
+        method : string
+            Optimization method.
 
         Returns
         -------
         A MixedLMResults instance.
         """
 
-        _allowed_kwargs = ['gtol']
+        _allowed_kwargs = ['gtol', 'maxiter']
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError("Argument %s not allowed for MixedLM.fit" % x)
+
+        if method.lower() in ["newton", "ncg"]:
+            raise ValueError("method %s not available for MixedLM" % method)
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -1797,11 +1804,10 @@ class MixedLM(base.LikelihoodModel):
             kwargs["retall"] = hist is not None
             if "disp" not in kwargs:
                 kwargs["disp"] = False
-            # Only bfgs and lbfgs seem to work (TODO: not checked recently)
-            kwargs["method"] = "bfgs"
             packed = params.get_packed(use_sqrt=self.use_sqrt, with_fe=False)
             rslt = super(MixedLM, self).fit(start_params=packed,
                                             skip_hessian=True,
+                                            method=method,
                                             **kwargs)
 
             # The optimization succeeded
