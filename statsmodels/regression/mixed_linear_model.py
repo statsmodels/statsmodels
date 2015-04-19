@@ -1230,7 +1230,7 @@ class MixedLM(base.LikelihoodModel):
         return likeval
 
 
-    def _gen_dV_dPsi(self, ex_r, solver, group, max_ix=None):
+    def _gen_dV_dPar(self, ex_r, solver, group, max_ix=None):
         """
         A generator that yields the element-wise derivative of the
         marginal covariance matrix with respect to the random effects
@@ -1409,7 +1409,7 @@ class MixedLM(base.LikelihoodModel):
             # Contributions to the covariance parameter gradient
             vex = solver(ex_r)
             vir = solver(resid)
-            for jj, matl, matr, vsl, vsr, sym in self._gen_dV_dPsi(ex_r, solver, group):
+            for jj, matl, matr, vsl, vsr, sym in self._gen_dV_dPar(ex_r, solver, group):
                 dlv[jj] = np.sum(matr * vsl) # trace dot
                 if not sym:
                     dlv[jj] += np.sum(matl * vsr) # trace dot
@@ -1579,7 +1579,7 @@ class MixedLM(base.LikelihoodModel):
             vir = solver(resid)
             rvir += np.dot(resid, vir)
 
-            for jj1, matl1, matr1, vsl1, vsr1, sym1 in self._gen_dV_dPsi(ex_r, solver, group):
+            for jj1, matl1, matr1, vsl1, vsr1, sym1 in self._gen_dV_dPar(ex_r, solver, group):
 
                 ul = np.dot(viexog.T, matl1)
                 ur = np.dot(matr1.T, vir)
@@ -1606,7 +1606,7 @@ class MixedLM(base.LikelihoodModel):
                 if not sym1:
                     E += np.dot(vsr1, matl1.T)
 
-                for jj2, matl2, matr2, vsl2, vsr2, sym2 in self._gen_dV_dPsi(ex_r, solver, group, jj1):
+                for jj2, matl2, matr2, vsl2, vsr2, sym2 in self._gen_dV_dPar(ex_r, solver, group, jj1):
 
                     re = np.dot(matr2.T, E)
                     rev = np.dot(re, vir[:, None])
