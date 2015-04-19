@@ -674,9 +674,6 @@ class MixedLM(base.LikelihoodModel):
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
 
-        If `re_formula` is not provided, the default is a random
-        intercept for each group.
-
         If the variance component is intended to produce random
         intercepts for disjoint subsets of a group, specified by
         string labels or a categorical data value, always use '0 +' in
@@ -751,8 +748,11 @@ class MixedLM(base.LikelihoodModel):
             exog_re_names = exog_re.design_info.column_names
             exog_re = np.asarray(exog_re)
         else:
-            exog_re = np.ones((data.shape[0], 1))
-            exog_re_names = [group_name]
+            exog_re = None
+            if vc_formula is None:
+                exog_re_names = ["groups"]
+            else:
+                exog_re_names = []
 
         if vc_formula is not None:
             eval_env = kwargs.get('eval_env', None)

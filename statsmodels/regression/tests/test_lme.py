@@ -324,7 +324,8 @@ class TestMixedLM(object):
         data = pd.read_csv(fname)
         vcf = {"cask" : "0 + cask"}
         model = MixedLM.from_formula("strength ~ 1", groups="batch",
-                                     vc_formula=vcf, data=data)
+                                     re_formula="1", vc_formula=vcf,
+                                     data=data)
         result = model.fit()
         assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
         assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)
