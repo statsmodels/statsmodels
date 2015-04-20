@@ -798,6 +798,38 @@ class MixedLM(base.LikelihoodModel):
         return mod
 
 
+    def predict(self, params, exog=None):
+        """
+        Return predicted values from a design matrix.
+
+        Parameters
+        ----------
+        params : array-like
+            Parameters of a mixed linear model.  Can be either a
+            MixedLMParams instance, or a vector containing the packed
+            model parameters in which the fixed effects parameters are
+            at the beginning of the vector, or a vector containing
+            only the fixed effects parameters.
+        exog : array-like, optional
+            Design / exogenous data for the fixed effects. Model exog
+            is used if None.
+
+        Returns
+        -------
+        An array of fitted values.  Note that these predicted values
+        only reflect the fixed effects mean structure of the model.
+        """
+        if exog is None:
+            exog = self.exog
+
+        if isinstance(params, MixedLMParams):
+            params = params.fe_params
+        else:
+            params = params[0:self.k_fe]
+
+        return np.dot(exog, params)
+
+
     def group_list(self, array):
         """
         Returns `array` split into subarrays corresponding to the
@@ -1738,9 +1770,6 @@ class MixedLM(base.LikelihoodModel):
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
-        do_cg : bool
-            If True, a conjugate gradient algorithm is
-            used for optimization.
         cov_pen : CovariancePenalty object
             A penalty for the random effects covariance matrix
         fe_pen : Penalty object
@@ -1798,8 +1827,6 @@ class MixedLM(base.LikelihoodModel):
                                                    self.k_re, self.use_sqrt,
                                                    with_fe=True)
 
-        # Try up to 10 times to make the optimization work.  Usually
-        # only one cycle is used.
         if do_cg:
             kwargs["retall"] = hist is not None
             if "disp" not in kwargs:
@@ -1954,7 +1981,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
         except np.linalg.LinAlgError:
-            cov_re_inv = None
+            raise ValueError("Cannot predict random effects from singular covariance structure.")
 
         ranef_dict = {}
         for k in range(self.model.n_groups):
@@ -1966,14 +1993,15 @@ class MixedLMResults(base.LikelihoodModelResults):
             label = self.model.group_labels[k]
 
             # Get the residuals
-            expval = np.dot(exog, self.fe_params)
-            resid = endog - expval
+            resid = endog
+            if self.k_fe > 0:
+                expval = np.dot(exog, self.fe_params)
+                resid = resid - expval
 
             solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re, cov_re_inv)
             vresid = solver(resid)
 
-            ranef_dict[label] = np.dot(self.cov_re,
-                                       np.dot(ex_r.T, vresid))
+            ranef_dict[label] = np.dot(self.cov_re, np.dot(ex_r.T, vresid))
 
         column_names = dict(zip(range(self.k_re),
                                       self.model.data.exog_re_names))
@@ -2019,6 +2047,21 @@ class MixedLMResults(base.LikelihoodModelResults):
 
 
         return ranef_dict
+
+
+    # Need to override since t-tests are only used for fixed effects parameters.
+    def t_test(self, r_matrix, scale=None, use_t=None):
+        # TODO : docstring
+
+        if r_matrix.shape[1] != self.k_fe:
+            raise ValueError("r_matrix for t-test should have %d columns" % self.k_fe)
+
+        d = self.k_re2 + self.k_vc
+        z0 = np.zeros((r_matrix.shape[0], d))
+        r_matrix = np.concatenate((r_matrix, z0), axis=1)
+        tst_rslt = super(MixedLMResults, self).t_test(r_matrix, scale=scale, use_t=use_t)
+        return tst_rslt
+
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
                 title=None, alpha=.05):
