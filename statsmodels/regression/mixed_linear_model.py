@@ -747,6 +747,8 @@ class MixedLM(base.LikelihoodModel):
             exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
             exog_re_names = exog_re.design_info.column_names
             exog_re = np.asarray(exog_re)
+            if exog_re.ndim == 1:
+                exog_re = exog_re[:, None]
         else:
             exog_re = None
             if vc_formula is None:
@@ -2051,7 +2053,32 @@ class MixedLMResults(base.LikelihoodModelResults):
 
     # Need to override since t-tests are only used for fixed effects parameters.
     def t_test(self, r_matrix, scale=None, use_t=None):
-        # TODO : docstring
+        """
+        Compute a t-test for a each linear hypothesis of the form Rb = q
+
+        Parameters
+        ----------
+        r_matrix : array-like
+            If an array is given, a p x k 2d array or length k 1d
+            array specifying the linear restrictions. It is assumed
+            that the linear combination is equal to zero.
+        scale : float, optional
+            An optional `scale` to use.  Default is the scale specified
+            by the model fit.
+        use_t : bool, optional
+            If use_t is None, then the default of the model is used.
+            If use_t is True, then the p-values are based on the t
+            distribution.
+            If use_t is False, then the p-values are based on the normal
+            distribution.
+
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
+            The available results have the same elements as the parameter table
+            in `summary()`.
+        """
 
         if r_matrix.shape[1] != self.k_fe:
             raise ValueError("r_matrix for t-test should have %d columns" % self.k_fe)
