@@ -1840,7 +1840,7 @@ class MixedLM(base.LikelihoodModel):
                                             **kwargs)
 
             # The optimization succeeded
-            params = rslt.params
+            params = np.atleast_1d(rslt.params)
             if hist is not None:
                 hist.append(rslt.mle_retvals)
 
