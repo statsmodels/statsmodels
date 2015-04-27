@@ -93,7 +93,10 @@ class ModelData(object):
             # NOTE: there may be a more performant way to do this
             from patsy import dmatrices
             depth = 1  # hmm, have to have same eval env in calling ns
-            data = d['orig_endog'].join(d['orig_exog'])
+            try:
+                data = d['frame']
+            except KeyError:
+                data = d['orig_endog'].join(d['orig_exog'])
             _, design = dmatrices(d['formula'], data, eval_env=depth,
                                   return_type='dataframe')
             self.design_info = design.design_info
