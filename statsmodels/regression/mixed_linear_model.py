@@ -738,15 +738,20 @@ class MixedLM(base.LikelihoodModel):
             kwargs["groups"] = np.asarray(data[kwargs["groups"]])
 
         if re_formula is not None:
-            eval_env = kwargs.get('eval_env', None)
-            if eval_env is None:
-                eval_env = 1
-            elif eval_env == -1:
-                from patsy import EvalEnvironment
-                eval_env = EvalEnvironment({})
-            exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
-            exog_re_names = exog_re.design_info.column_names
-            exog_re = np.asarray(exog_re)
+            if re_formula.strip() == "1":
+                # Work around Patsy bug, fixed by 0.3.
+                exog_re = np.ones((data.shape[0], 1))
+                exog_re_names = ["Group"]
+            else:
+                eval_env = kwargs.get('eval_env', None)
+                if eval_env is None:
+                    eval_env = 1
+                elif eval_env == -1:
+                    from patsy import EvalEnvironment
+                    eval_env = EvalEnvironment({})
+                exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
+                exog_re_names = exog_re.design_info.column_names
+                exog_re = np.asarray(exog_re)
             if exog_re.ndim == 1:
                 exog_re = exog_re[:, None]
         else:
@@ -1872,15 +1877,20 @@ class MixedLM(base.LikelihoodModel):
         # (not its square root).  It is used for obtaining standard
         # errors, not for optimization.
         hess = self.hessian(params)
+        hess_diag = np.diag(hess)
         if free is not None:
             pcov = np.zeros_like(hess)
             pat = self._freepat.get_packed(with_fe=True)
             ii = np.flatnonzero(pat)
+            hess_diag = hess_diag[ii]
             if len(ii) > 0:
                 hess1 = hess[np.ix_(ii, ii)]
                 pcov[np.ix_(ii, ii)] = np.linalg.inv(-hess1)
         else:
             pcov = np.linalg.inv(-hess)
+        if np.any(hess_diag >= 0):
+            msg = "The Hessian matrix at the estimated parameter values is not positive definite."
+            warnings.warn(msg, ConvergenceWarning)
 
         # Prepare a results class instance
         params_packed = params.get_packed(use_sqrt=False, with_fe=True)
