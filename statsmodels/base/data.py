@@ -103,8 +103,8 @@ class ModelData(object):
                     _, design = dmatrices(d['formula'], data, eval_env=depth,
                                           return_type='dataframe')
                     break
-                except PatsyError as e: #NameError as e:
-                    #print('not in depth %d' % depth)
+                except (NameError, PatsyError) as e:
+                    print('not in depth %d' % depth)
                     exc.append(e)   # why do I need a reference from outside except block
                     pass
             else:
