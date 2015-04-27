@@ -226,6 +226,43 @@ class TestPickleFormula(RemoveDataPickle):
         self.results = sm.OLS.from_formula("Y ~ A + B + C", data=X).fit()
 
 
+class TestPickleFormula2(RemoveDataPickle):
+    @classmethod
+    def setup_class(cls):
+        nobs = 500
+        np.random.seed(987689)
+        data = np.random.randn(nobs, 4)
+        data[:,0] = data[:, 1:].sum(1)
+        cls.data = pd.DataFrame(data, columns=["Y", "A", "B", "C"])
+        cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
+                              columns=cls.data.columns[1:])
+        cls.l_max = 900000  # have to pickle endo/exog to unpickle form.
+
+    def setup(self):
+        self.results = sm.OLS.from_formula("Y ~ A + B + C", data=self.data).fit()
+
+
+class TestPickleFormula3(TestPickleFormula2):
+
+    def setup(self):
+        self.results = sm.OLS.from_formula("Y ~ A + B * C", data=self.data).fit()
+
+
+class TestPickleFormula4(TestPickleFormula2):
+
+    def setup(self):
+        self.results = sm.OLS.from_formula("Y ~ np.log(A) + B * C", data=self.data).fit()
+
+# we need log in module namespace for the following test
+from numpy import log
+class TestPickleFormula5(TestPickleFormula2):
+
+    def setup(self):
+        # if we import here, then unpickling fails -> exception in test
+        #from numpy import log
+        self.results = sm.OLS.from_formula("Y ~ log(A) + B * C", data=self.data).fit()
+
+
 if __name__ == '__main__':
     for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
                 TestRemoveDataPicklePoisson,

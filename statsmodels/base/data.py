@@ -98,7 +98,7 @@ class ModelData(object):
             except KeyError:
                 data = d['orig_endog'].join(d['orig_exog'])
 
-            for depth in [2, 3, 1, 0, 4]:
+            for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
                 try:
                     _, design = dmatrices(d['formula'], data, eval_env=depth,
                                           return_type='dataframe')
