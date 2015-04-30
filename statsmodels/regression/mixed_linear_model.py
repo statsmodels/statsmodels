@@ -1916,7 +1916,7 @@ class MixedLM(base.LikelihoodModel):
         return MixedLMResultsWrapper(results)
 
 
-class MixedLMResults(base.LikelihoodModelResults):
+class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
     Class to contain results of fitting a linear mixed effects model.
 
@@ -1956,6 +1956,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         self.nobs = self.model.nobs
         self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
 
+
     @cache_readonly
     def bse_fe(self):
         """
@@ -1964,6 +1965,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         """
         p = self.model.exog.shape[1]
         return np.sqrt(np.diag(self.cov_params())[0:p])
+
 
     @cache_readonly
     def bse_re(self):
@@ -2019,6 +2021,7 @@ class MixedLMResults(base.LikelihoodModelResults):
                                       self.model.data.exog_re_names))
         df = DataFrame.from_dict(ranef_dict, orient='index')
         return df.rename(columns=column_names).ix[self.model.group_labels]
+
 
     @cache_readonly
     def random_effects_cov(self):
@@ -2204,6 +2207,20 @@ class MixedLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params_object, profile_fe=False)
+
+
+    @cache_readonly
+    def aic(self):
+        if self.reml:
+            return np.nan
+        return -2 * (self.llf - len(self.params) - 1)
+
+
+    @cache_readonly
+    def bic(self):
+        if self.reml:
+            return np.nan
+        return -2 * self.llf + np.log(self.nobs) * (len(self.params) + 1)
 
 
     def profile_re(self, re_ix, vtype, num_low=5, dist_low=1., num_high=5,

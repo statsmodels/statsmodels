@@ -316,12 +316,17 @@ class TestMixedLM(object):
     def test_pastes_vcomp(self):
         """
         pastes data from lme4
+
+        Fit in R using formula:
+
+        strength ~ (1|batch) + (1|batch:cask)
         """
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
         fname = os.path.join(rdir, 'pastes.csv')
 
+        # REML
         data = pd.read_csv(fname)
         vcf = {"cask" : "0 + cask"}
         model = MixedLM.from_formula("strength ~ 1", groups="batch",
@@ -329,8 +334,27 @@ class TestMixedLM(object):
                                      data=data)
         result = model.fit()
         assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+        assert_allclose(result.bse.iloc[0], 0.6769, rtol=1e-3)
         assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)
         assert_allclose(result.scale, 0.678, rtol=1e-3)
+        assert_allclose(result.llf, -123.49, rtol=1e-1)
+        assert_equal(result.aic, np.nan)
+        assert_equal(result.bic, np.nan)
+
+        # ML
+        data = pd.read_csv(fname)
+        vcf = {"cask" : "0 + cask"}
+        model = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                     re_formula="1", vc_formula=vcf,
+                                     data=data)
+        result = model.fit(reml=False)
+        assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+        assert_allclose(result.bse.iloc[0], 0.642, rtol=1e-3)
+        assert_allclose(result.cov_re.iloc[0, 0], 1.199, rtol=1e-3)
+        assert_allclose(result.scale, 0.67799, rtol=1e-3)
+        assert_allclose(result.llf, -123.997, rtol=1e-1)
+        assert_allclose(result.aic, 255.9944, rtol=1e-3)
+        assert_allclose(result.bic, 264.3718, rtol=1e-3)
 
 
     def test_vcomp_formula(self):
