@@ -467,6 +467,41 @@ class MixedLM(base.LikelihoodModel):
     for use_sqrt=False is when complicated patterns of fixed values in
     the covariance structure are set (using the `free` argument to
     `fit`) that cannot be expressed in terms of the Cholesky factor L.
+
+    Examples
+    --------
+    A basic mixed model with fixed effects for the columns of
+    ``exog`` and a random intercept for each distinct value of
+    ``group``:
+
+    >>> model = sm.MixedLM(endog, exog, groups)
+    >>> result = model.fit()
+
+    A mixed model with fixed effects for the columns of ``exog`` and
+    correlated random coefficients for the columns of ``exog_re``:
+
+    >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
+    >>> result = model.fit()
+
+    A mixed model with fixed effects for the columns of ``exog`` and
+    independent random coefficients for the columns of ``exog_re``:
+
+    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]),
+                     cov_re=np.eye(exog_re.shape[1]))
+    >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
+    >>> result = model.fit(free=free)
+
+    A different way to specify independent random coefficients for the
+    columns of ``exog_re``.  In this example ``groups`` must be a
+    Pandas Series with compatible indexing with ``exog_re``, and
+    ``exog_re`` has two columns.
+
+    >>> g = pd.groupby(groups, by=groups).groups
+    >>> vc = {}
+    >>> vc['1'] = {k : exog_re.loc[g[k], 0] for k in g}
+    >>> vc['2'] = {k : exog_re.loc[g[k], 1] for k in g}
+    >>> model = sm.MixedLM(endog, exog, groups, vcomp=vc)
+    >>> result = model.fit()
     """
 
     def __init__(self, endog, exog, groups, exog_re=None,
@@ -696,13 +731,13 @@ class MixedLM(base.LikelihoodModel):
         --------
         Suppose we have an educational data set with students nested
         in classrooms nested in schools.  The students take a test,
-        and we want to relate the test scores to the students age,
+        and we want to relate the test scores to the students' ages,
         while accounting for the effects of classrooms and schools.
         The school will be the top-level group, and the classroom is a
-        nested group that is specified as a variance component.  The
-        schools may have different number of classrooms, and the
-        classroom labels may (but need not be) different across the
-        schools.
+        nested group that is specified as a variance component.  Note
+        that the schools may have different number of classrooms, and
+        the classroom labels may (but need not be) different across
+        the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
         >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
