@@ -52,11 +52,11 @@ become the imputed values for one imputed data set.
 By default, each variable with missing variables is modeled using a
 linear regression with main effects for all other variables in the
 data set.  Note that even when the imputation model is linear, the PMM
-procedure preserves the domain of each variable.  Thus, if all
-observed values for a given variable are positive, all imputed values
-for the variable will always be positive.  The user also has the
-option to specify which model is used to produce imputed values for
-each variable.
+procedure preserves the domain of each variable.  Thus, for example,
+if all observed values for a given variable are positive, all imputed
+values for the variable will always be positive.  The user also has
+the option to specify which model is used to produce imputed values
+for each variable.
 
 .. code
 
