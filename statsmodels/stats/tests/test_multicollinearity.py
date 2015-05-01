@@ -61,9 +61,8 @@ class CheckMuLtiCollinear(object):
         nobs, k_vars = self.xf.shape
         ols_results = []
 
-        idx = list(range(k_vars))
         for k in range(1, k_vars):
-            idx_k = idx.copy()
+            idx_k = list(range(k_vars))
             del idx_k[k]
             ols_results.append(OLS(xf[:,k], xf[:, idx_k]).fit())
 
