@@ -413,3 +413,21 @@ def vif_ridge(corr_x, pen_factors, is_corr=True):
         vif = minv.dot(corr).dot(minv)
         res.append(np.diag(vif))
     return np.asarray(res)
+
+
+def collinear_index(data, atol=1e-14, rtol=1e-13):
+    """find sequential index of perfectly collinear columns
+
+    This function uses QR decomposition to detect columns that are perfectly collinear
+    with earlier columns.
+
+    TODO: I think we need to use r**2 for easier interpretation of tolerance, or use std
+    for relative tolerance
+
+    TODO: API reverse return ?   (this was written as helper function for fit_transformed)
+    """
+    x = np.asarray(data)
+    tol = atol + rtol * x.var(0)
+    r = np.linalg.qr(x, mode='r')
+    idx_redundant = np.where(np.abs(r.diagonal())**2 < tol)[0]
+    return idx_redundant
