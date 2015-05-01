@@ -40,6 +40,7 @@ class CheckMuLtiCollinear(object):
 
     def test_sequential(self):
         xf = self.xf
+        x = self.x
         ols_results = [OLS(xf[:,k], xf[:, :k]).fit()
                            for k in range(1, xf.shape[1])]
         rsquared0 = np.array([res.rsquared for res in ols_results])
@@ -55,9 +56,25 @@ class CheckMuLtiCollinear(object):
         #assert_array_less(1e30, mcoll.vif[mask_inf])
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
 
+        if not np.isinf(vif0).any():
+            # The following requires nonsingular matrix because of Cholesky
+            # check moment matrix as input
+            x_dm = x - x.mean(0)  # standardize doesn't demean
+            mcoll2 = MultiCollinearitySequential(None,
+                                                 moment_matrix=x_dm.T.dot(x_dm))
+            assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+            assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
+
+            # check correlation matrix as input
+            mcoll2 = MultiCollinearitySequential(None,
+                                                 np.corrcoef(x, rowvar=False),
+                                                 standardize=False)
+            assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+            assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
+
 
     def test_multicoll(self):
-        xf = np.asarray(self.xf)
+        xf = np.asarray(self.xf)  # convert from pandas DataFrame, for OLS only
         nobs, k_vars = self.xf.shape
         ols_results = []
 
@@ -82,6 +99,19 @@ class CheckMuLtiCollinear(object):
 
         if self.check_pandas:
             assert_equal(vif1_.index.values, self.names)
+
+        # check moment matrix as input
+        x_dm = self.x - self.x.mean(0)  # standardize doesn't demean
+        mcoll2 = MultiCollinearity(None, moment_matrix=x_dm.T.dot(x_dm))
+        assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+        # the following has floating point noise, mcoll.vif has inf
+        assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e-14)
+
+        # check correlation matrix as input
+        mcoll2 = MultiCollinearity(None, np.corrcoef(self.x, rowvar=False),
+                                   standardize=False)
+        assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
+        assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
 
 class TestMultiCollinearSingular1(CheckMuLtiCollinear):
