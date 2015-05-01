@@ -318,15 +318,19 @@ class MixedLMParams(object):
         return obj
 
 
-    def get_packed(self, use_sqrt=None, with_fe=False):
+    def get_packed(self, use_sqrt, with_fe=False):
         """
-        Returns the parameters packed into a single vector.
+        Return the model parameters packed into a single vector.
 
         Parameters
         ----------
-        use_sqrt : None or bool
-            If None, `use_sqrt` has the value of this instance's
-            `use_sqrt`.  Otherwise it is set to the given value.
+        use_sqrt : bool
+            If True, the Cholesky square root of `cov_re` is
+            included in the packed result.  Otherwise the
+            lower triangle of `cov_re` is included.
+        with_fe : bool
+            If True, the fixed effects parameters are included
+            in the packed result, otherwise they are omitted.
         """
 
         if self.k_re > 0:
@@ -1915,7 +1919,7 @@ class MixedLM(base.LikelihoodModel):
         hess_diag = np.diag(hess)
         if free is not None:
             pcov = np.zeros_like(hess)
-            pat = self._freepat.get_packed(with_fe=True)
+            pat = self._freepat.get_packed(use_sqrt=False, with_fe=True)
             ii = np.flatnonzero(pat)
             hess_diag = hess_diag[ii]
             if len(ii) > 0:
@@ -2248,14 +2252,22 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     def aic(self):
         if self.reml:
             return np.nan
-        return -2 * (self.llf - len(self.params) - 1)
+        if self.freepat is not None:
+            df = self.freepat.get_packed(use_sqrt=False, with_fe=True).sum() + 1
+        else:
+            df = self.params.size + 1
+        return -2 * (self.llf - df)
 
 
     @cache_readonly
     def bic(self):
         if self.reml:
             return np.nan
-        return -2 * self.llf + np.log(self.nobs) * (len(self.params) + 1)
+        if self.freepat is not None:
+            df = self.freepat.get_packed(use_sqrt=False, with_fe=True).sum() + 1
+        else:
+            df = self.params.size + 1
+        return -2 * self.llf + np.log(self.nobs) * df
 
 
     def profile_re(self, re_ix, vtype, num_low=5, dist_low=1., num_high=5,
