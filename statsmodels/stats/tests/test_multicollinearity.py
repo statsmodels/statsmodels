@@ -103,13 +103,13 @@ class CheckMuLtiCollinear(object):
         mcoll = MultiCollinearity(self.x)
 
         assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-13)
-        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
+        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e14)
 
         vif1_ = vif(self.x)
         vif1 = np.asarray(vif1_)   # check values if pandas.Series
         # TODO: why does mcoll.vif have infs but vif1 doesn't?
-        assert_allclose_large(vif1, mcoll.vif, rtol=1e-13, ltol=1e-14)
-        assert_allclose_large(vif1, vif0, rtol=1e-13, ltol=1e-14)
+        assert_allclose_large(vif1, mcoll.vif, rtol=1e-13, ltol=1e14)
+        assert_allclose_large(vif1, vif0, rtol=1e-13, ltol=1e14)
 
         if self.check_pandas:
             assert_equal(vif1_.index.values, self.names)
@@ -119,13 +119,17 @@ class CheckMuLtiCollinear(object):
         mcoll2 = MultiCollinearity(None, moment_matrix=x_dm.T.dot(x_dm))
         assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
         # the following has floating point noise, mcoll.vif has inf
-        assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e-14)
+        assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e14)
 
         # check correlation matrix as input
         corr = np.corrcoef(self.x, rowvar=False)
         mcoll2 = MultiCollinearity(None, corr, standardize=False)
         assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
         assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
+
+        corr = np.corrcoef(self.x, rowvar=False)
+        vif1 = vif(None, moment_matrix=corr)
+        assert_allclose_large(vif1, mcoll.vif, rtol=1e-13)
 
         evals = np.linalg.svd(corr, compute_uv=False)
         assert_allclose(mcoll2.eigenvalues, evals, rtol=1e-13, atol=1e-14)
@@ -135,6 +139,13 @@ class CheckMuLtiCollinear(object):
         assert_allclose_large(evals[0] / evals[-1],
                               mcoll2.condition_number**2,
                               rtol=1e-13)
+
+        # test if standardize is false, equivalence with constant column
+        mcoll_ns = MultiCollinearity(xf, standardize=False)
+        vif_nc = mcoll_ns.vif[1:] * xf.var(0)[1:]
+        assert_allclose_large(vif_nc, mcoll.vif, rtol=1e-13, ltol=1e14)
+        vif_nc2 = vif(xf, standardize=False)[1:] * xf.var(0)[1:]
+        assert_allclose_large(vif_nc2, mcoll.vif, rtol=1e-13, ltol=1e14)
 
 
 class TestMultiCollinearSingular1(CheckMuLtiCollinear):

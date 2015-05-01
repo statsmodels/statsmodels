@@ -79,7 +79,7 @@ class MultiCollinearity(object):
                     raise ValueError('If standardize is true, then data should ' +
                                      'not include a constant')
             else:
-                xm = np.dot(x.T, x)
+                xm = np.dot(x.T, x) / float(x.shape[0])
 
         self.k_vars = xm.shape[1]
         self.mom = xm
@@ -281,7 +281,7 @@ def vif(data, standardize=True, moment_matrix=None):
                 raise ValueError('If standardize is true, then data should ' +
                                  'not include a constant')
         else:
-            xm = np.dot(x.T, x)
+            xm = np.dot(x.T, x) / float(x.shape[0])
 
     vif_ = np.abs(np.diag(np.linalg.inv(xm)))
 
