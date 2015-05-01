@@ -14,7 +14,7 @@ from statsmodels.stats.multicollinearity import (vif, vif_selection,
                          MultiCollinearity, MultiCollinearitySequential)
 
 
-def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e30):
+def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e14):
     """ assert x and y are allclose or x is large if y is inf
     """
     mask_inf = np.isinf(y) & ~np.isinf(x)
@@ -47,13 +47,13 @@ class CheckMuLtiCollinear(object):
 
         mcoll = MultiCollinearitySequential(self.x)
 
-        assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-13, atol=1e-15)
+        assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-12, atol=1e-15)
         # infs could be just large values because of floating point imprecision
         #assert_allclose(mcoll.vif, vif0, rtol=1e-13)
         #mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
         #assert_allclose(mcoll.vif[~mask_inf], vif0[~mask_inf], rtol=1e-13)
         #assert_array_less(1e30, mcoll.vif[mask_inf])
-        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13)
+        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
 
 
     def test_multicoll(self):
@@ -73,7 +73,7 @@ class CheckMuLtiCollinear(object):
         mcoll = MultiCollinearity(self.x)
 
         assert_allclose(mcoll.partial_corr, rsquared0, rtol=1e-13)
-        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13)
+        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
 
         vif1_ = vif(self.x)
         vif1 = np.asarray(vif1_)   # check values if pandas.Series
