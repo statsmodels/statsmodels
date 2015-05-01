@@ -12,7 +12,8 @@ from numpy.testing import (assert_allclose, assert_array_less, assert_equal,
 import statsmodels.stats.outliers_influence as smio
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multicollinearity import (vif, vif_selection, vif_ridge,
-                         MultiCollinearity, MultiCollinearitySequential)
+                         MultiCollinearity, MultiCollinearitySequential,
+                         collinear_index)
 
 
 def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e14):
@@ -72,6 +73,12 @@ class CheckMuLtiCollinear(object):
                                                  standardize=False)
             assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
+
+        # Note we need a constant since x is not demeaned
+        singular_columns = collinear_index(xf)
+        # I haven't checked what the equvalent threshold is exactly
+        # subtracting 1 from index to ignore constant column
+        assert_equal(singular_columns - 1, np.nonzero(mcoll.vif > 1e14)[0])
 
 
     def test_multicoll(self):
