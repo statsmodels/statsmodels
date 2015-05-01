@@ -7,10 +7,11 @@ License: BSD-3
 """
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less, assert_equal
+from numpy.testing import (assert_allclose, assert_array_less, assert_equal,
+                           assert_almost_equal)
 import statsmodels.stats.outliers_influence as smio
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.multicollinearity import (vif, vif_selection,
+from statsmodels.stats.multicollinearity import (vif, vif_selection, vif_ridge,
                          MultiCollinearity, MultiCollinearitySequential)
 
 
@@ -149,3 +150,90 @@ class TestMultiCollinearPandas(CheckMuLtiCollinear):
         cls.names = ['var%d' % i for i in range(cls.x.shape[1])]
         cls.x = pandas.DataFrame(cls.x, columns=cls.names)
         cls.check_pandas = True
+
+
+def test_vif_ridge():
+
+    dta = np.array('''
+    49 15.9 149.3 4.2 108.1
+    50 16.4 161.2 4.1 114.8
+    51 19 171.5 3.1 123.2
+    52 19.1 175.5 3.1 126.9
+    53 18.8 180.8 1.1 132.1
+    54 20.4 190.7 2.2 137.7
+    55 22.7 202.1 2.1 146
+    56 26.5 212.4 5.6 154.1
+    57 28.1 226.1 5 162.3
+    58 27.6 231.9 5.1 164.3
+    59 26.3 239 0.7 167.6
+    60 31.1 258 5.6 176.8
+    61 33.3 269.8 3.9 186.6
+    62 37 288.4 3.1 199.7
+    63 43.3 304.5 4.6 213.9
+    64 49 323.4 7 223.8
+    65 50.3 336.8 1.2 232
+    66 56.6 353.9 4.5 242.9'''.split(), float).reshape(-1, 5)
+
+    #Obs    _RIDGE_     DOPROD     STOCK      CONSUM
+
+    results_vif = np.array('''
+      2     0.000     185.997    1.01891    186.110
+      5     0.001      98.981    1.00845     99.041
+      8     0.003      41.779    0.99890     41.804
+     11     0.005      22.988    0.99311     23.001
+     14     0.007      14.570    0.98836     14.579
+     17     0.009      10.089    0.98401     10.095
+     20     0.010       8.599    0.98192      8.604
+     23     0.012       6.480    0.97783      6.483
+     26     0.014       5.075    0.97384      5.078
+     29     0.016       4.097    0.96991      4.099
+     32     0.018       3.388    0.96603      3.389
+     35     0.020       2.858    0.96219      2.859
+     38     0.022       2.452    0.95838      2.452
+     41     0.024       2.133    0.95461      2.134
+     44     0.026       1.878    0.95086      1.879
+     47     0.028       1.672    0.94714      1.672
+     50     0.030       1.502    0.94345      1.502
+     53     0.030       1.502    0.94345      1.502
+     56     0.040       0.979    0.92532      0.979
+     59     0.050       0.723    0.90773      0.723
+     62     0.060       0.579    0.89065      0.578
+     65     0.070       0.489    0.87405      0.488
+     68     0.080       0.429    0.85792      0.428
+     71     0.090       0.386    0.84222      0.386
+     74     0.100       0.355    0.82696      0.355
+     77     0.200       0.240    0.69474      0.240
+     80     0.300       0.204    0.59187      0.204
+     83     0.400       0.182    0.51027      0.182
+     86     0.500       0.166    0.44446      0.165
+     89     0.600       0.152    0.39061      0.152
+     92     0.700       0.140    0.34598      0.140
+     95     0.800       0.130    0.30859      0.130
+     98     0.900       0.121    0.27695      0.121
+    101     1.000       0.113    0.24994      0.112'''.split(), float).reshape(-1, 5)
+
+
+
+    import pandas as pd
+    example = pd.DataFrame(dta, columns='YEAR IMPORT DOPROD STOCK CONSUM'.lower().split())
+
+    x = example['doprod stock consum'.split()].values
+    y = example['import'].values
+
+    x = x[:11]
+    y = y[:11]
+    xxs = np.corrcoef(x, rowvar=0, bias=True)
+
+    res_vif = vif_ridge(xxs, [0.01])
+
+    pen_factors = results_vif[:,1]
+    res_vif = vif_ridge(xxs, pen_factors)
+
+    assert_almost_equal(res_vif, results_vif[:,2:], decimal=3)
+
+    from statsmodels.tools.tools import add_constant
+    exog = add_constant(x)
+
+    xxi = np.linalg.inv(exog.T.dot(exog))
+    vif_ols = (np.diag(xxi) * exog.var(0) * len(x))[1:]
+    assert_allclose(res_vif[0], vif_ols, rtol=2e-12)
