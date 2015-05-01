@@ -375,3 +375,41 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
         return data.columns[xidx[::-1]], None   # TODO: do we need iloc ?
     else:
         return xidx[::-1], None
+
+
+def vif_ridge(corr_x, pen_factors, is_corr=True):
+    """variance inflation factor for Ridge regression
+
+    assumes penalization is on standardized variables
+    data should not include a constant
+
+    Parameters
+    ----------
+    corr_x : array_like
+        correlation matrix if is_corr=True or original data if is_corr is False.
+    pen_factors : iterable
+        iterable of Ridge penalization factors
+    is_corr : bool
+        Boolean to indicate how corr_x is interpreted, see corr_x
+
+    Returns
+    -------
+    vif : ndarray
+        variance inflation factors for parameters in columns and ridge
+        penalization factors in rows
+
+    could be optimized for repeated calculations
+    """
+    corr_x = np.asarray(corr_x)
+    if not is_corr:
+        corr = np.corrcoef(corr_x, rowvar=0, bias=True)
+    else:
+        corr = corr_x
+
+    eye = np.eye(corr.shape[1])
+    res = []
+    for k in pen_factors:
+        minv = np.linalg.inv(corr + k * eye)
+        vif = minv.dot(corr).dot(minv)
+        res.append(np.diag(vif))
+    return np.asarray(res)
