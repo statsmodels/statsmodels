@@ -22,6 +22,32 @@ class MultiCollinearity(object):
 
     see class MultiCollinearSequential where all variables are analyzed in given sequence.
 
+    Parameters
+    ----------
+    data : array_like
+        data with observations in rows and variables in columns. This is ignored if
+        moment_matrix is not None.
+    moment_matrix : None or ndarray
+        Optional moment or correlation matrix to be used for the analysis. If it is provided
+        then data is ignored.
+    standardize : bool, default True
+        If true and data are provided, then the data will be standardized to mean zero and
+        standard deviation equal to one, which is equivalent to using the correlation matrix.
+        TODO: This might be replaced by separate demean option. Variance inflation factor
+        can be calculated for data that is scaled but not demeaned.
+        See Notes
+
+    Notes
+    -----
+    The default treatment assumes that there is no constant in the data array or in the
+    moment matrix. However, VIF is defined under the assumption of a constant in the
+    corrsponding regression. Use `standardize=False` if demeaning is not desired.
+
+    THe only case I know so far is if we have a categorical factor in the design matrix but
+    no constant, that is the constant is implicit in the full dummy set. Using VIF with demeaned
+    data will show that the dummy set is perfectly collinear (up to floating point precision).
+
+
     """
 
     def __init__(self, data, moment_matrix=None, standardize=True):
@@ -49,6 +75,8 @@ class MultiCollinearity(object):
 
     @cache_readonly
     def vif(self):
+        """Variance inflation factor based on moment or correlation matrix.
+        """
         # np.diag returns read only array, need copy
         vif_ = np.diag(np.linalg.inv(self.mom)).copy()
         # It is possible that singular matrix has slightly negative eigenvalues,
@@ -59,16 +87,27 @@ class MultiCollinearity(object):
 
     @property
     def partial_corr(self):
-        """
-        this assumes standardize is true
+        """Partial correlation of one variable with all others
+
+        This corresponds to R^2 in a linear regression of one variable on all others,
+        including a constant if standarize is true.
+
+        The interpretation as correlation assumes that standardize is true.
 
         not cached
+
+        TODO: we might want to use name `partial_corr` for partial correlation of pairs
+        given all others.
         """
         return 1. - 1. / self.vif
 
 
     @cache_readonly
     def eigenvalues(self):
+        """eigenvalue of the correlation matrix
+
+        Note: Small negative eigenvalues indicating a singular matrix are set to zero.
+        """
         evals = np.sort(np.linalg.eigvalsh(self.mom))[::-1]
         # set small negative eigenvalues to zero
         mask = evals > 1e-14 & evals < 0
@@ -80,7 +119,7 @@ class MultiCollinearity(object):
     def condition_number(self):
         """Normalized condition number of data matrix.
 
-        Calculated as ratio of largest to smallest eigenvalue of
+        Calculated as ratio of largest to smallest eigenvalue of the
         correlation matrix.
         """
         eigvals = self.eigenvalues
@@ -94,6 +133,22 @@ class MultiCollinearitySequential(MultiCollinearity):
     a column based on information in all previous columns.
 
     see class MultiCollinear where all variables are treated symmetrically.
+
+    Parameters
+    ----------
+    data : array_like
+        data with observations in rows and variables in columns. This is ignored if
+        moment_matrix is not None. Data can be of smaller than full rank.
+    moment_matrix : None or ndarray
+        Optional moment or correlation matrix to be used for the analysis. If it is provided
+        then data is ignored.
+        The moment_matrix needs to be nonsingular because Cholesky decomposition is used.
+    standardize : bool, default True
+        If true and data are provided, then the data will be standardized to mean zero and
+        standard deviation equal to one, which is equivalent to using the correlation matrix.
+        TODO: This might be replaced by separate demean option. Variance inflation factor
+        can be calculated for data that is scaled but not demeaned.
+        See Notes in class MultiCollinear
 
     """
 
@@ -121,39 +176,65 @@ class MultiCollinearitySequential(MultiCollinearity):
 
     @cache_readonly
     def vif(self):
+        """Variance inflation factor.
+        """
         return self.tss / self.rss
 
     @property
     def tss(self):
+        """Total sum of squares of squares in sequence of regression"""
         return self.triu2.sum(0)
 
     @property
     def rss(self):
+        """Residual sum of squares of squares in sequence of regression"""
         return np.diag(self.triu2)
 
     @property
     def partial_corr(self):
-        """
-        this assumes standardize is true
+        """Partial correlation of one variable with all previous variables
+
+        This corresponds to R^2 in a linear regression of one variable on all other
+        variables that are before in the sequence, including a constant if standarize
+        is true.
+
+        The interpretation as correlation assumes that standardize is true.
 
         not cached
+
+        TODO: we might want to use name `partial_corr` for partial correlation of pairs
+        given all others.
         """
         return 1 - self.rss / self.tss
 
 
 def vif(data, standardize=True, moment_matrix=None):
-    """Recursively drop variables if VIF is above threshold
+    """Variance inflation factor
 
-    default threshold is just a number, maybe don't use a default
+    The standard interpretation requires standardize is true, or that the data is already
+    standardized or that a given moment_matrix is a correlation matrix.
 
-    Notes
-    -----
-    This avoids a loop to calculate the vif at a given set of variables, but
-    has one matrix inverse at each set.
+    Parameters
+    ----------
+    data : array_like
+        data with observations in rows and variables in columns. This is ignored if
+        moment_matrix is not None. Data can be of smaller than full rank.
+    moment_matrix : None or ndarray
+        Optional moment or correlation matrix to be used for the analysis. If it is provided
+        then data is ignored.
+        The moment_matrix needs to be nonsingular because Cholesky decomposition is used.
+    standardize : bool, default True
+        If true and data are provided, then the data will be standardized to mean zero and
+        standard deviation equal to one, which is equivalent to using the correlation matrix.
+        TODO: This might be replaced by separate demean option. Variance inflation factor
+        can be calculated for data that is scaled but not demeaned.
+        See Notes in class MultiCollinear
 
-    TODO: replace inv by sweep algorithm,
-    question: how do we start sweep in backwards selection?
-
+    Return
+    ------
+    vif : ndarray or pandas.Series
+        variance inflation factor. This will be a pandas Series if the data has a `columns`
+        attribute as provided by a pandas DataFrame.
 
     """
     # most parts are duplicate code, copied from vif_selection
@@ -206,6 +287,28 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
     vif. However, which variable of those that have theoretically equal vif
     may be random because of floating point imprecision.
 
+    Parameters
+    ----------
+    data : array_like
+        data with observations in rows and variables in columns. This is ignored if
+        moment_matrix is not None. Data can be of smaller than full rank.
+    moment_matrix : None or ndarray
+        Optional moment or correlation matrix to be used for the analysis. If it is provided
+        then data is ignored.
+        The moment_matrix needs to be nonsingular because Cholesky decomposition is used.
+    standardize : bool, default True
+        If true and data are provided, then the data will be standardized to mean zero and
+        standard deviation equal to one, which is equivalent to using the correlation matrix.
+        TODO: This might be replaced by separate demean option. Variance inflation factor
+        can be calculated for data that is scaled but not demeaned.
+        See Notes in class MultiCollinear
+
+    Return
+    ------
+    keep : ndarray or DataFrame columns
+        Indices or column names that are still included after dropping variables
+    results : None
+        currently not used, place holder for additional results
 
     """
     x = np.asarray(data)
