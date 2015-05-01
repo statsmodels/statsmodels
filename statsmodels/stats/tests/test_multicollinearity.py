@@ -23,19 +23,21 @@ def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e14):
     assert_allclose(x[~mask_inf], y[~mask_inf], rtol=rtol, atol=atol)
     assert_array_less(ltol, x[mask_inf])
 
+def _get_data(nobs=100, k_vars=4):
+    np.random.seed(987536)
+    nobs = 100
+    rho_coeff = np.linspace(0.5, 0.9, k_vars - 1)
+    x = np.random.randn(nobs, k_vars - 1) * (1 - rho_coeff)
+    x += rho_coeff * np.random.randn(nobs, 1)
+    return x
 
 class CheckMuLtiCollinear(object):
 
 
     @classmethod
     def get_data(cls):
-        np.random.seed(987536)
         nobs, k_vars = 100, 4
-        rho_coeff = np.linspace(0.5, 0.9, k_vars - 1)
-        x = np.random.randn(nobs, k_vars - 1) * (1 - rho_coeff)
-        x += rho_coeff * np.random.randn(nobs, 1)
-
-        cls.x = x
+        cls.x = x =  _get_data(nobs=nobs, k_vars=k_vars)
         cls.xs = (x - x.mean(0)) / x.std(0)
         cls.xf = np.column_stack((np.ones(nobs), x))
         cls.check_pandas = False
@@ -118,10 +120,19 @@ class CheckMuLtiCollinear(object):
         assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e-14)
 
         # check correlation matrix as input
-        mcoll2 = MultiCollinearity(None, np.corrcoef(self.x, rowvar=False),
-                                   standardize=False)
+        corr = np.corrcoef(self.x, rowvar=False)
+        mcoll2 = MultiCollinearity(None, corr, standardize=False)
         assert_allclose(mcoll2.partial_corr, mcoll.partial_corr, rtol=1e-13)
         assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
+
+        evals = np.linalg.svd(corr, compute_uv=False)
+        assert_allclose(mcoll2.eigenvalues, evals, rtol=1e-13, atol=1e-14)
+        # we shouldn't have tiny negative eigenvalues, those are set to zero
+        assert_equal(mcoll2.eigenvalues[mcoll2.eigenvalues < 0], np.array([]))
+        # Note: assert_allclose_large is asymmetric and we need inf in second
+        assert_allclose_large(evals[0] / evals[-1],
+                              mcoll2.condition_number**2,
+                              rtol=1e-13)
 
 
 class TestMultiCollinearSingular1(CheckMuLtiCollinear):
@@ -159,6 +170,22 @@ class TestMultiCollinearPandas(CheckMuLtiCollinear):
         cls.names = ['var%d' % i for i in range(cls.x.shape[1])]
         cls.x = pandas.DataFrame(cls.x, columns=cls.names)
         cls.check_pandas = True
+
+def test_vif_selection():
+    x = _get_data(nobs=100, k_vars=15)
+    idx, _ = vif_selection(x)
+    assert_equal(idx, np.arange(10, dtype=int))
+    assert_array_less(vif(x[:, idx]), 10)
+
+    idx, _ = vif_selection(x[:, ::-1])
+    assert_equal(idx, np.arange(4, 14, dtype=int))
+    assert_array_less(vif(x[:, x.shape[1] - np.array(idx) - 1]), 10)
+
+    threshold = 5
+    idx, _ = vif_selection(x[:, ::-1], threshold=threshold)
+    assert_equal(idx, np.arange(7, 14, dtype=int))
+    assert_array_less(vif(x[:, x.shape[1] - np.array(idx) - 1]), threshold)
+
 
 
 def test_vif_ridge():

@@ -121,7 +121,7 @@ class MultiCollinearity(object):
         """
         evals = np.sort(np.linalg.eigvalsh(self.mom))[::-1]
         # set small negative eigenvalues to zero
-        mask = evals > 1e-14 & evals < 0
+        mask = (evals > -1e-14) & (evals < 0)
         evals[mask] = 0
         return evals
 
@@ -358,7 +358,7 @@ def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
     for i in range(k_vars):
         vif = np.abs(np.diag(np.linalg.inv(xc_remain)))
         max_idx = np.argmax(vif)
-        print('dropping', max_idx, vif[max_idx], xidx[max_idx])
+        #print('dropping', max_idx, vif[max_idx], xidx[max_idx])
         if vif[max_idx] <= threshold:
             break
         else:
