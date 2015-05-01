@@ -315,7 +315,7 @@ class Mediation(object):
 
 
 def _pvalue(vec):
-    return 2 * min(sum(vec > 0), sum(vec < 0)) / len(vec)
+    return 2 * min(sum(vec > 0), sum(vec < 0)) / float(len(vec))
 
 
 class MediationResults(object):
