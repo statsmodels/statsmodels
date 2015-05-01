@@ -15,9 +15,9 @@ from statsmodels.stats.multicollinearity import (vif, vif_selection,
 
 
 def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e14):
-    """ assert x and y are allclose or x is large if y is inf
+    """ assert x and y are allclose or x and y are larger than ltol
     """
-    mask_inf = np.isinf(y) & ~np.isinf(x)
+    mask_inf = ((y >= ltol) | np.isinf(y)) & ~np.isinf(x)
     assert_allclose(x[~mask_inf], y[~mask_inf], rtol=rtol, atol=atol)
     assert_array_less(ltol, x[mask_inf])
 
