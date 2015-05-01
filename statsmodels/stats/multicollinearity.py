@@ -421,13 +421,40 @@ def collinear_index(data, atol=1e-14, rtol=1e-13):
     This function uses QR decomposition to detect columns that are perfectly collinear
     with earlier columns.
 
-    TODO: I think we need to use r**2 for easier interpretation of tolerance, or use std
-    for relative tolerance
+    Warning: This function does not include a constant, data is treated as a design matrix.
+    If a constant is part of the design, then it is recommended to put it in the first
+    column with for example `add_constant`.
 
-    TODO: API reverse return ?   (this was written as helper function for fit_transformed)
+    Parameters
+    ----------
+    data : array_like, 2-D
+        data is assumed to have observations in rows and variables in columns.
+    atol, rtol : float
+        Absolute and relative tolerance for the residual sum of squares of the sequential
+        regression. `rtol` is relative to the variance of the variable.
+
+    Returns
+    -------
+    idx_collinear : array of int or string
+        Index of columns that are collinear with preceding columns.
+        If data has a `columns` attribute, then the names of columns are returned.
+    idx_keep : array of int or string
+        Index of columns that are not collinear with preceding columns.
+        If data has a `columns` attribute, then the names of columns are returned.
+
+    See Also
+    --------
+    `MutliCollinearitySequential` : class with more sequential results
     """
     x = np.asarray(data)
     tol = atol + rtol * x.var(0)
     r = np.linalg.qr(x, mode='r')
-    idx_redundant = np.where(np.abs(r.diagonal())**2 < tol)[0]
-    return idx_redundant
+    mask = np.abs(r.diagonal()) < np.sqrt(tol)
+    idx_collinear = np.where(mask)[0]
+    idx_keep = np.where(~mask)[0]
+
+    if not hasattr(data, 'columns'):
+        return idx_collinear, idx_keep
+    else:
+        names = data.columns.values
+        names[idx_collinear], names[idx_keep]

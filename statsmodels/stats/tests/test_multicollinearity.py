@@ -75,10 +75,12 @@ class CheckMuLtiCollinear(object):
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
         # Note we need a constant since x is not demeaned
-        singular_columns = collinear_index(xf)
+        collinear_columns, keep_columns = collinear_index(xf)
+        not_coll = [i for i in range(xf.shape[1]) if not i in collinear_columns]
+        assert_equal(not_coll, keep_columns)
         # I haven't checked what the equvalent threshold is exactly
         # subtracting 1 from index to ignore constant column
-        assert_equal(singular_columns - 1, np.nonzero(mcoll.vif > 1e14)[0])
+        assert_equal(collinear_columns - 1, np.nonzero(mcoll.vif > 1e14)[0])
 
 
     def test_multicoll(self):
