@@ -51,17 +51,26 @@ class MultiCollinearity(object):
     """
 
     def __init__(self, data, moment_matrix=None, standardize=True):
-        x = np.asarray(data)
+
         if hasattr(data, 'columns'):
             self.columns = data.columns
         else:
             self.columns = None
 
-        self.k_vars = x.shape[1]
+        if data is not None:
+            x = np.asarray(data)
+
         # TODO: use pandas corrcoef below to have nan handling ?
 
         if moment_matrix is not None:
-            xm = np.asarray(moment_matrix, copy=True)
+            xm = np.asarray(moment_matrix)
+            if standardize:
+                # check if we have correlation matrix,
+                # we cannot demean but we can scale
+                # (We could demean if const is included in uncentred moment matrix)
+                if (np.diag(xm) != 1).any():
+                    xstd = np.sqrt(np.diag(xm))
+                    xm = xm / np.outer(xstd, xstd)
         else:
             if standardize:
                 xm = np.corrcoef(x, rowvar=0)
@@ -71,6 +80,8 @@ class MultiCollinearity(object):
                                      'not include a constant')
             else:
                 xm = np.dot(x.T, x)
+
+        self.k_vars = xm.shape[1]
         self.mom = xm
 
     @cache_readonly
@@ -153,16 +164,27 @@ class MultiCollinearitySequential(MultiCollinearity):
     """
 
     def __init__(self, data, moment_matrix=None, standardize=True):
-        x = np.asarray(data)
+
         if hasattr(data, 'columns'):
             self.columns = data.columns
         else:
             self.columns = None
 
-        self.k_vars = x.shape[1]
+        if data is not None:
+            x = np.asarray(data)
 
         if moment_matrix is not None:
-            triu = np.linalg.cholesky(moment_matrix).T
+            xm = np.asarray(moment_matrix)
+            if standardize:
+                # check if we have correlation matrix,
+                # we cannot demean but we can scale
+                # (We could demean if const is included in uncentred moment matrix)
+                if (np.diag(xm) != 1).any():
+                    xstd = np.sqrt(np.diag(xm))
+                    xm = xm / np.outer(xstd, xstd)
+
+            triu = np.linalg.cholesky(xm).T
+
         else:
             if standardize:
                 x = (x - x.mean(0)) / x.std(0)
@@ -172,6 +194,7 @@ class MultiCollinearitySequential(MultiCollinearity):
                                      'not include a constant')
             triu = np.linalg.qr(x, mode='r')
         # Note: we only need elementwise squares, signs in qr are irrelevant
+        self.k_vars = triu.shape[1]
         self.triu2 = triu**2
 
     @cache_readonly
