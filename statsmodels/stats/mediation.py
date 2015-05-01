@@ -251,7 +251,7 @@ class Mediation(object):
             endog = endog[ii]
             exog = exog[ii, :]
         outcome_model = klass(endog, exog, **init_kwargs)
-        return model.fit(**fit_kwargs)
+        return outcome_model.fit(**fit_kwargs)
 
 
     def fit(self, method="parametric", n_rep=1000):
@@ -309,7 +309,13 @@ class Mediation(object):
         self.indirect_effects = indirect_effects
         self.direct_effects = direct_effects
 
-        return MediationResults(self.indirect_effects, self.direct_effects)
+        rslt = MediationResults(self.indirect_effects, self.direct_effects)
+        rslt.method = method
+        return rslt
+
+
+def _pvalue(vec):
+    return 2 * min(sum(vec > 0), sum(vec < 0)) / len(vec)
 
 
 class MediationResults(object):
@@ -329,7 +335,6 @@ class MediationResults(object):
         self.ACME_tx = indirect_effects_avg[1]
         self.ADE_ctrl = direct_effects_avg[0]
         self.ADE_tx = direct_effects_avg[1]
-
         self.total_effect = (self.ACME_ctrl + self.ACME_tx + self.ADE_ctrl + self.ADE_tx) / 2
 
         self.prop_med_ctrl = self.ACME_ctrl / self.total_effect
@@ -340,9 +345,9 @@ class MediationResults(object):
         self.ADE_avg = (self.ADE_ctrl + self.ADE_tx) / 2
 
 
-    def summary(self):
+    def summary(self, alpha=0.05):
 
-        columns = ["Estimate", "95% lower bound", "95% upper bound"]
+        columns = ["Estimate", "Lower CI bound", "Upper CI bound", "P-value"]
         index = ["ACME (control)", "ACME (treated)", "ADE (control)", "ADE (treated)",
                  "Total effect", "Prop. mediated (control)", "Prop. mediated (treated)",
                  "ACME (average)", "ADE (average)", "Prop. mediated (average)"]
@@ -358,8 +363,9 @@ class MediationResults(object):
                 smry.iloc[i, 0] = np.median(vec)
             else:
                 smry.iloc[i, 0] = vec.mean()
-            smry.iloc[i, 1] = np.percentile(vec, 2.5)
-            smry.iloc[i, 2] = np.percentile(vec, 97.5)
+            smry.iloc[i, 1] = np.percentile(vec, 100 * alpha / 2)
+            smry.iloc[i, 2] = np.percentile(vec, 100 * (1 - alpha / 2))
+            smry.iloc[i, 3] = _pvalue(vec)
 
         smry = smry.convert_objects(convert_numeric=True)
 
