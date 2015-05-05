@@ -1308,11 +1308,17 @@ class GLMResults(base.LikelihoodModelResults):
         chisqsum = np.sum(chisq)
         return chisqsum
 
+
     @cache_readonly
     def fittedvalues(self):
-        if not hasattr(self, "mu"):
-            self.mu = self.model.predict(self.params)
         return self.mu
+
+
+    @cache_readonly
+    def mu(self):
+        if not hasattr(self, "_mu"):
+            self._mu = self.model.predict(self.params)
+        return self._mu
 
 
     @cache_readonly

@@ -1,6 +1,10 @@
 import numpy as np
 import statsmodels.base.wrapper as wrap
 
+"""
+Elastic net regularization.
+"""
+
 
 def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     """
