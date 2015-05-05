@@ -1651,7 +1651,21 @@ class TestRegularized(object):
                 model = GLM(endog, exog, family=fam())
                 sm_result = model.fit_regularized(L1_wt=L1_wt, alpha=alpha)
 
+                # Agreement is OK, see below for further check
                 assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
+
+                # The penalized log-likelihood that we are maximizing.
+                def plf(params):
+                    llf = model.loglike(params) / len(endog)
+                    llf = llf - alpha * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    return llf
+
+                # Confirm that we are doing better than glmnet.
+                from numpy.testing import assert_equal
+                llf_r = plf(params)
+                llf_sm = plf(sm_result.params)
+                assert_equal(np.sign(llf_sm - llf_r), 1)
+
 
 
 if __name__=="__main__":
