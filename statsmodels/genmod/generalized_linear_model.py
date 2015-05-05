@@ -1141,7 +1141,6 @@ class GLM(base.LikelihoodModel):
         res._results.results_constrained = res_constr
         # TODO: the next is not the best. history should bin in results
         res._results.model.history = res_constr.model.history
-        res._results.mu = res_constr.mu
         return res
 
 
@@ -1257,7 +1256,9 @@ class GLMResults(base.LikelihoodModelResults):
         # for remove data and pickle without large arrays
         self._data_attr.extend(['results_constrained', '_freq_weights'])
         self.data_in_cache = getattr(self, 'data_in_cache', [])
-        self.data_in_cache.extend(['null'])
+        self.data_in_cache.extend(['null', 'mu'])
+        self._data_attr_model = getattr(self, '_data_attr_model', [])
+        self._data_attr_model.append('mu')
 
         # robust covariance
         from statsmodels.base.covtype import get_robustcov_results
@@ -1316,9 +1317,7 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def mu(self):
-        if not hasattr(self, "_mu"):
-            self._mu = self.model.predict(self.params)
-        return self._mu
+        return self.model.predict(self.params)
 
 
     @cache_readonly

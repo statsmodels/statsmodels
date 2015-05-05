@@ -1705,10 +1705,20 @@ class LikelihoodModelResults(Results):
         Not fully tested for time series models, tsa, and might delete too much
         for prediction or not all that would be possible.
 
-        The list of arrays to delete is maintained as an attribute of the
-        result and model instance, except for cached values. These lists could
-        be changed before calling remove_data.
+        The lists of arrays to delete are maintained as attributes of
+        the result and model instance, except for cached values. These
+        lists could be changed before calling remove_data.
 
+        The attributes to remove are named in:
+
+        model._data_attr : arrays attached to both the model instance
+            and the results instance with the same attribute name.
+
+        result.data_in_cache : arrays that may exist as values in
+            result._cache (TODO : should privatize name)
+
+        result._data_attr_model : arrays attached to the model
+            instance but not to the results instance
         '''
         def wipe(obj, att):
             #get to last element in attribute path
@@ -1725,8 +1735,9 @@ class LikelihoodModelResults(Results):
             except AttributeError:
                 pass
 
+        model_only = ['model.' + i for i in getattr(self, "_data_attr_model", [])]
         model_attr = ['model.' + i for i in self.model._data_attr]
-        for att in self._data_attr + model_attr:
+        for att in self._data_attr + model_attr + model_only:
             #print('removing', att)
             wipe(self, att)
 
