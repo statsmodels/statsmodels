@@ -1104,6 +1104,22 @@ class Cpunish(object):
             1.8473219,  2.8643241,  3.1211989,  3.3382067,  2.5269969,
             0.8972542, 0.9793332,  0.5346209,  1.9790936])
 
+
+class Cpunish_offset(Cpunish):
+    '''
+    Same model as Cpunish but with offset of 100.  Many things do not change.
+    '''
+    def __init__(self):
+        super(Cpunish_offset, self).__init__()
+
+        self.params = (-1.140665e+01, 2.611017e-04, 7.781801e-02,
+                       -9.493111e-02, 2.969349e-01, 2.301183e+00,
+                       -1.872207e+01)
+        self.bse = (4.147e+00, 5.187e-05, 7.940e-02, 2.292e-02,
+                    4.375e-01, 4.284e-01, 4.284e+00)
+
+
+
 class InvGauss(object):
     '''
     Usef

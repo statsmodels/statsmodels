@@ -1028,6 +1028,9 @@ class TestRegularizedFit(object):
             # Smoke test for summary
             smry = rslt.summary()
 
+            # Smoke test for profile likeihood
+            result = mod.fit_regularized(L1_wt=L1_wt, alpha=lam, profile_scale=True)
+
 
 def test_formula_missing_cat():
     # gh-805

@@ -350,7 +350,7 @@ class TestPHReg(object):
                 rslt = mod.fit_regularized(alpha=s)
 
                 # The agreement isn't very high, the issue may be on
-                # their side.  They seem to use some approximations
+                # the R side.  They seem to use some approximations
                 # that we are not using.
                 assert_allclose(rslt.params, coef, rtol=0.3)
 
