@@ -2,10 +2,16 @@ import numpy as np
 import statsmodels.base.wrapper as wrap
 
 
-# All the negative smooth penalized log-likelihood functions.  These
-# functions only account for the likelihod and any smooth penalty.
-# The non-smooth penalty is not accounted for here.
 def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
+    """
+    Negative penalized log-likelihood functions.
+
+    Returns the negative penalized log-likelihood, its derivative, and
+    its Hessian.  The penalty only includes the smooth (L2) term.
+
+    All three functions have arguments (x, model), where ``x`` is a
+    point in the parmeter space and ``model`` is an arbitrary model.
+    """
 
     def nploglike(params, model):
         nobs = model.nobs
@@ -37,8 +43,9 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
 
     Parameters
     ----------
-    model : ...
-        ...
+    model : model object
+        A statsmodels object implementing ``log-like``, ``score``, and
+        ``hessian``.
     method :
         Only the coordinate descent algorithm is implemented.
     maxiter : integer
@@ -64,10 +71,18 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
         replaced with zero.
     return_object : bool
         If False, only the parameter estimates are returned.
+    loglike_kwds : dict-like or None
+        Keyword arguments for the log-likelihood function.
+    score_kwds : dict-like or None
+        Keyword arguments for the score function.
+    hess_kwds : dict-like or None
+        Keyword arguments for the Hessian function.
 
     Returns
     -------
-    A results object of the same type returned by `fit`.
+    If `return_object` is true, a results object of the same type
+    returned by `model.fit`, otherise returns the estimated parameter
+    vector.
 
     Notes
     -----
@@ -87,9 +102,6 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
 
     then optimize the L1 penalized version of this function along
     a coordinate axis.
-
-    This is a generic implementation that may be reimplemented in
-    specific models for better performance.
     """
 
     k_exog = model.exog.shape[1]

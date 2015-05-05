@@ -625,7 +625,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 #class TestGlmNegbinomial_nbinom(CheckModelResultsMixin):
 #    pass
 
-#NOTE: hacked together version to test poisson offset
+
 class TestGlmPoissonOffset(CheckModelResultsMixin):
     @classmethod
     def setupClass(cls):
