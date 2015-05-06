@@ -818,15 +818,20 @@ class OLS(WLS):
 
         from statsmodels.base import elastic_net
 
+        # In the future we could add support for other penalties, e.g. SCAD.
         if method != "elastic_net":
             raise ValueError("method for fit_regularied must be elastic_net")
 
+        # Set default parameters.
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         for ky in defaults:
             if ky not in kwargs:
                 kwargs[ky] = defaults[ky]
 
+        # If a scale parameter is passed in, the non-profile
+        # likelihood (residual sum of squares divided by -2) is used,
+        # otherwise the profile likelihood is used.
         if profile_scale:
             loglike_kwds = {}
             score_kwds = {}
@@ -836,14 +841,14 @@ class OLS(WLS):
             score_kwds = {"scale": 1}
             hess_kwds = {"scale": 1}
 
-        return elastic_net._fit(self, method=method,
-                                alpha=alpha,
-                                start_params=start_params,
-                                return_object=True,
-                                loglike_kwds=loglike_kwds,
-                                score_kwds=score_kwds,
-                                hess_kwds=hess_kwds,
-                                **kwargs)
+        return elastic_net.fit(self, method=method,
+                               alpha=alpha,
+                               start_params=start_params,
+                               return_object=True,
+                               loglike_kwds=loglike_kwds,
+                               score_kwds=score_kwds,
+                               hess_kwds=hess_kwds,
+                               **kwargs)
 
 
 class GLSAR(GLS):

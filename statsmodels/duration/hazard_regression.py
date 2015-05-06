@@ -505,11 +505,11 @@ class PHReg(model.LikelihoodModel):
             if ky not in kwargs:
                 kwargs[ky] = defaults[ky]
 
-        return elastic_net._fit(self, method=method,
-                                alpha=alpha,
-                                start_params=start_params,
-                                return_object=True,
-                                **kwargs)
+        return elastic_net.fit(self, method=method,
+                               alpha=alpha,
+                               start_params=start_params,
+                               return_object=True,
+                               **kwargs)
 
 
     def loglike(self, params):

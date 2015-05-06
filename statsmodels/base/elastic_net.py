@@ -3,6 +3,20 @@ import statsmodels.base.wrapper as wrap
 
 """
 Elastic net regularization.
+
+Routines for fitting regression models using elastic net
+regularization.  The elastic net minimizes the objective function
+
+-llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 + L1_wt * sum(abs(params)))
+
+The algorithm implemented here closely follows the implementation in
+the R glmnet package, documented here:
+
+http://cran.r-project.org/web/packages/glmnet/index.html
+
+and here:
+
+http://www.jstatsoft.org/v33/i01/paper
 """
 
 
@@ -13,21 +27,22 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     Returns the negative penalized log-likelihood, its derivative, and
     its Hessian.  The penalty only includes the smooth (L2) term.
 
-    All three functions have arguments (x, model), where ``x`` is a
-    point in the parmeter space and ``model`` is an arbitrary model.
+    All three functions have argument signature (x, model), where
+    ``x`` is a point in the parameter space and ``model`` is an
+    arbitrary statsmodels regression model.
     """
 
     def nploglike(params, model):
         nobs = model.nobs
-        pen = alpha[k] * (1 - L1_wt) * np.sum(params**2) / 2
+        pen_llf = alpha[k] * (1 - L1_wt) * np.sum(params**2) / 2
         llf = model.loglike(np.r_[params], **loglike_kwds)
-        return - llf / nobs + pen
+        return - llf / nobs + pen_llf
 
     def npscore(params, model):
         nobs = model.nobs
-        l2_grad = alpha[k] * (1 - L1_wt) * params
+        pen_grad = alpha[k] * (1 - L1_wt) * params
         gr = -model.score(np.r_[params], **score_kwds)[0] / nobs
-        return gr + l2_grad
+        return gr + pen_grad
 
     def nphess(params, model):
         nobs = model.nobs
@@ -38,12 +53,12 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
 
 
 
-def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
+def fit(model, method="coord_descent", maxiter=100, alpha=0.,
          L1_wt=1., start_params=None, cnvrg_tol=1e-7, zero_tol=1e-8,
          return_object=False, loglike_kwds=None, score_kwds=None,
-         hess_kwds=None, **kwargs):
+         hess_kwds=None):
     """
-    Return a regularized fit to a regression model.
+    Return an elastic net regularized fit to a regression model.
 
     Parameters
     ----------
@@ -104,8 +119,8 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
 
     -loglike/n + alpha*(1-L1_wt)*|params|_2^2/2
 
-    then optimize the L1 penalized version of this function along
-    a coordinate axis.
+    then repeatedly optimize the L1 penalized version of this function
+    along coordinate axes.
     """
 
     k_exog = model.exog.shape[1]
@@ -142,6 +157,7 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
 
             # Under the active set method, if a parameter becomes
             # zero we don't try to change it again.
+            # TODO : give the user the option to switch this off
             if params_zero[k]:
                 continue
 
@@ -158,6 +174,7 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
             model_1var = model.__class__(model.endog, model.exog[:, k], offset=offset,
                                          **init_args)
 
+            # Do the one-dimensional optimization.
             func, grad, hess = fgh_list[k]
             params[k] = _opt_1d(func, grad, hess, model_1var, params[k], alpha[k]*L1_wt, tol=btol)
 
@@ -182,15 +199,18 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
     # post-estimation results.
     ii = np.flatnonzero(params)
     cov = np.zeros((k_exog, k_exog))
+    init_args = dict([(k, getattr(model, k)) for k in model._init_keys])
     if len(ii) > 0:
         model1 = model.__class__(model.endog, model.exog[:, ii],
-                               **kwargs)
+                               **init_args)
         rslt = model1.fit()
         cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
     else:
-        model1 = model.__class__(model.endog, model.exog[:, 0], **kwargs)
+        # Hack: no variables were selected but we need to run fit in
+        # order to get the correct results class.  So just fit a model
+        # with one variable.
+        model1 = model.__class__(model.endog, model.exog[:, 0], **init_args)
         rslt = model1.fit()
-        cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
 
     # fit may return a results or a results wrapper
     if issubclass(rslt.__class__, wrap.ResultsWrapper):
@@ -204,6 +224,7 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
     else:
         scale = 1.
 
+    # Assuming a standard signature for creating results classes.
     refit = klass(model, params, cov, scale=scale)
     refit.regularized = True
 

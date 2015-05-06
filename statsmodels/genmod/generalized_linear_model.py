@@ -258,9 +258,9 @@ class GLM(base.LikelihoodModel):
                            self.freq_weights)
         if offset is None:
             delattr(self, 'offset')
+            self._init_keys.remove('offset')
         if exposure is None:
             delattr(self, 'exposure')
-
         self.nobs = self.endog.shape[0]
 
         #things to remove_data
@@ -1073,11 +1073,11 @@ class GLM(base.LikelihoodModel):
             if ky not in kwargs:
                 kwargs[ky] = defaults[ky]
 
-        result = elastic_net._fit(self, method=method,
-                                  alpha=alpha,
-                                  start_params=start_params,
-                                  return_object=True,
-                                  **kwargs)
+        result = elastic_net.fit(self, method=method,
+                                 alpha=alpha,
+                                 start_params=start_params,
+                                 return_object=True,
+                                 **kwargs)
 
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)
