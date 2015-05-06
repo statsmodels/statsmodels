@@ -128,8 +128,8 @@ def _fit(model, method="coord_descent", maxiter=100, alpha=0.,
     btol = 1e-8
     params_zero = np.zeros(len(params), dtype=bool)
 
-    init_args = {k : getattr(model, k) for k in model._init_keys
-                 if k != "offset" and hasattr(model, k)}
+    init_args = dict([(k, getattr(model, k)) for k in model._init_keys
+                      if k != "offset" and hasattr(model, k)])
 
     fgh_list = [_gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
                 for k in range(k_exog)]
