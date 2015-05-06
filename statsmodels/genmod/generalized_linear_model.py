@@ -281,7 +281,7 @@ class GLM(base.LikelihoodModel):
         expval = self.family.link.inverse(lin_pred)
         if scale is None:
             scale = self.estimate_scale(expval)
-        return self.family.loglike(expval, self.endog, scale)
+        return self.family.loglike(self.endog, expval, scale)
 
     def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
