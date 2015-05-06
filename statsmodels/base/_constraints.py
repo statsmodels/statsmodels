@@ -250,7 +250,10 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     #need copy, because we don't want to change it, we don't need deepcopy
     import copy
     init_kwds = copy.copy(self._get_init_kwds())
-    del init_kwds['offset']  # TODO: refactor to combine with above or offset_all
+
+    # TODO: refactor to combine with above or offset_all
+    if 'offset' in init_kwds:
+        del init_kwds['offset']
 
     # using offset as keywords is not supported in all modules
     mod_constr = self.__class__(endog, exogp_st, offset=offset, **init_kwds)

@@ -17,6 +17,9 @@ http://cran.r-project.org/web/packages/glmnet/index.html
 and here:
 
 http://www.jstatsoft.org/v33/i01/paper
+
+This routine should work for any regression model that implements
+loglike, score, and hess.
 """
 
 
@@ -255,9 +258,9 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
 
     Notes
     -----
-    ``func``, ``grad``, and ``hess`` have arguments (x, model), where
-    ``x`` is a point in the parameter space and ``model`` is the model
-    being fit.
+    ``func``, ``grad``, and ``hess`` have argument signature (x,
+    model), where ``x`` is a point in the parameter space and
+    ``model`` is the model being fit.
 
     If the log-likelihood for the model is exactly quadratic, the
     global minimum is returned in one step.  Otherwise numerical
