@@ -153,7 +153,7 @@ class MixedLMParams(object):
 
         self.k_fe = k_fe
         self.k_re = k_re
-        self.k_re2 = k_re * (k_re + 1) / 2
+        self.k_re2 = k_re * (k_re + 1) // 2
         self.k_tot = self.k_fe + self.k_re2
         self.use_sqrt = use_sqrt
         self._ix = np.tril_indices(self.k_re)
