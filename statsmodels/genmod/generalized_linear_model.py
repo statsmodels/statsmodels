@@ -283,6 +283,18 @@ class GLM(base.LikelihoodModel):
             scale = self.estimate_scale(expval)
         return self.family.loglike(self.endog, expval, scale)
 
+
+    def loglikeobs(self, params, scale=None):
+        """
+        Evaluate the log-likelihood contribution of each observation.
+        """
+        lin_pred = np.dot(self.exog, params) + self._offset_exposure
+        expval = self.family.link.inverse(lin_pred)
+        if scale is None:
+            scale = self.estimate_scale(expval)
+        return self.family.loglikeobs(self.endog, expval, scale)
+
+
     def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
 

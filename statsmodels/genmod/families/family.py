@@ -377,6 +377,33 @@ class Poisson(Family):
         """
         return scale * np.sum(-mu + endog*np.log(mu)-special.gammaln(endog+1))
 
+    def loglikeobs(self, endog, mu, scale=1.):
+        """
+        The log-likelihood contribution in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            The scale parameter, defaults to 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,scale) as defined below.
+
+        Notes
+        -----
+        llf = scale * (-mu + endog*log(mu) - gammaln(endog+1))
+        where gammaln is the log gamma function
+        """
+        return scale * (-mu + endog*np.log(mu)-special.gammaln(endog+1))
+
+
     def resid_anscombe(self, endog, mu):
         """
         Anscombe residuals for the Poisson exponential family distribution
@@ -528,6 +555,49 @@ class Gaussian(Family):
             # Return the loglikelihood for Gaussian GLM
             return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
                           - .5*np.log(2 * np.pi * scale))
+
+
+    def loglikeobs(self, endog, mu, scale=None):
+        """
+        The log-likelihood in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            Scales the loglikelihood function. The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,scale) as defined below.
+
+        Notes
+        -----
+        If the link is the identity link function then the
+        loglikelihood function is the same as the classical OLS model.
+        llf = -(nobs/2)*(log(SSR) + (1 + log(2*pi/nobs)))
+        where SSR = sum((endog-link^(-1)(mu))**2)
+
+        If the links is not the identity link then the loglikelihood
+        function is defined as
+        llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
+            (1/2.)*log(2*pi*`scale`))
+        """
+        #if isinstance(self.link, L.Power) and self.link.power == 1:
+        if scale is None:
+            # This is just the loglikelihood for classical OLS
+            nobs = endog.shape[0]
+            ssr = ss(endog-self.fitted(mu))
+            scale = ssr / nobs
+
+        return ((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
+                          - .5*np.log(2 * np.pi * scale))
+
 
     def resid_anscombe(self, endog, mu):
         """
@@ -683,6 +753,37 @@ class Gamma(Family):
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
         # our results due to an assumed difference in implementation
+
+
+    def loglikeobs(self, endog, mu, scale=1.):
+        """
+        The log-likelihood contribution in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,scale) as defined below.
+
+        Notes
+        --------
+        llf = -1/scale * sum(endog/mu + log(mu) + (scale-1)*log(endog) +\
+              log(scale) + scale*gammaln(1/scale))
+        where gammaln is the log gamma function.
+        """
+        return - 1./scale * (endog/mu + np.log(mu) + (scale - 1) *
+                                   np.log(endog) + np.log(scale) + scale *
+                                   special.gammaln(1./scale))
+
 
     def resid_anscombe(self, endog, mu):
         """
@@ -921,6 +1022,52 @@ class Binomial(Family):
                                   np.log(mu/(1 - mu)) + self.n *
                                   np.log(1 - mu))
 
+
+    def loglikeobs(self, endog, mu, scale=1.):
+        """
+        The log-likelihood contribution in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            Not used for the Binomial GLM.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,scale) as defined below.
+
+        Notes
+        --------
+        If `endog` is binary:
+        `llf` = scale * (endog*log(mu/(1-mu))+log(1-mu))
+
+        If `endog` is binomial:
+        `llf` = scale * (gammaln(n+1) - gammaln(y+1) - gammaln(n-y+1) +\
+                y*log(mu/(1-mu)) + n*log(1-mu)
+
+        where gammaln is the log gamma function and y = endog*n with endog
+        and n as defined in Binomial initialize.  This simply makes y the
+        original number of successes.
+        """
+
+        if np.shape(self.n) == () and self.n == 1:
+            return scale * (endog * np.log(mu/(1 - mu) + 1e-200) +
+                                  np.log(1 - mu))
+        else:
+            y = endog * self.n  # convert back to successes
+            return scale * (special.gammaln(self.n + 1) -
+                                  special.gammaln(y + 1) -
+                                  special.gammaln(self.n - y + 1) + y *
+                                  np.log(mu/(1 - mu)) + self.n *
+                                  np.log(1 - mu))
+
+
     def resid_anscombe(self, endog, mu):
         '''
         The Anscombe residuals
@@ -1081,6 +1228,34 @@ class InverseGaussian(Family):
         """
         return -.5 * np.sum((endog - mu)**2/(endog * mu**2 * scale)
                             + np.log(scale * endog**3) + np.log(2 * np.pi))
+
+    def loglikeobs(self, endog, mu, scale=1.):
+        """
+        The log-likelihood contribution in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,scale) as defined below.
+
+        Notes
+        -----
+        `llf` = -(1/2.)*((endog-mu)**2/(endog*mu**2*scale)
+                 + log(scale*endog**3) + log(2*pi))
+        """
+        return -.5 * ((endog - mu)**2/(endog * mu**2 * scale)
+                            + np.log(scale * endog**3) + np.log(2 * np.pi))
+
 
     def resid_anscombe(self, endog, mu):
         """
@@ -1294,6 +1469,45 @@ class NegativeBinomial(Family):
         return (np.sum(endog * np.log(self.alpha * exp_lin_pred /
                                       (1 + self.alpha * exp_lin_pred)) -
                 np.log(1 + self.alpha * exp_lin_pred)/self.alpha + constant))
+
+
+    def loglikeobs(self, endog, mu, scale):
+        """
+        The log-likelihood contribution in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            The fitted mean response values
+        scale : float
+            The scale parameter
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,scale) as defined below.
+
+        Notes
+        -----
+        (endog*log(alpha*exp(lin_pred)/(1+alpha*exp(lin_pred))) -
+                log(1+alpha*exp(lin_pred))/alpha + constant)
+
+        where constant is defined as::
+
+           constant = gammaln(endog + 1/alpha) - gammaln(endog + 1) -
+                      gammaln(1/alpha)
+        """
+        lin_pred = self._link(mu)
+        constant = special.gammaln(endog + 1/self.alpha) - special.gammaln(endog+1)\
+                    -special.gammaln(1/self.alpha)
+        exp_lin_pred = np.exp(lin_pred)
+        return ((endog * np.log(self.alpha * exp_lin_pred /
+                                      (1 + self.alpha * exp_lin_pred)) -
+                np.log(1 + self.alpha * exp_lin_pred)/self.alpha + constant))
+
 
     def resid_anscombe(self, endog, mu):
         """
