@@ -66,7 +66,7 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
     Parameters
     ----------
     model : model object
-        A statsmodels object implementing ``log-like``, ``score``, and
+        A statsmodels object implementing ``loglike``, ``score``, and
         ``hessian``.
     method :
         Only the coordinate descent algorithm is implemented.
@@ -213,7 +213,7 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
         # order to get the correct results class.  So just fit a model
         # with one variable.
         model1 = model.__class__(model.endog, model.exog[:, 0], **init_args)
-        rslt = model1.fit()
+        rslt = model1.fit(maxiter=0)
 
     # fit may return a results or a results wrapper
     if issubclass(rslt.__class__, wrap.ResultsWrapper):

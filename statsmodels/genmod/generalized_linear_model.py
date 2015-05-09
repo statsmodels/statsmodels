@@ -928,12 +928,12 @@ class GLM(base.LikelihoodModel):
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
 
-        self.mu = self.predict(rslt.params)
-        self.scale = self.estimate_scale(self.mu)
+        mu = self.predict(rslt.params)
+        scale = self.estimate_scale(mu)
 
         glm_results = GLMResults(self, rslt.params,
-                                 rslt.normalized_cov_params / self.scale,
-                                 self.scale,
+                                 rslt.normalized_cov_params / scale,
+                                 scale,
                                  cov_type=cov_type, cov_kwds=cov_kwds,
                                  use_t=use_t)
 
