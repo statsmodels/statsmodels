@@ -260,7 +260,7 @@ class SCADSmoothed(SCAD):
         mask = np.abs(p) < self.c0
         value[mask] = 2 * self.aq2 * p[mask]
 
-        return value
+        return weights * value
 
 
     def deriv2(self, params):
