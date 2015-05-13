@@ -186,6 +186,66 @@ class CheckGenericMixin(object):
                 assert_(predicted_expected.equals(predicted_pandas))
 
 
+    def test_zero_constrained(self):
+        # not completely generic yet
+        if (isinstance(self.results.model, (sm.GEE))):#, sm.OLS, sm.WLS))):
+            raise SkipTest
+
+        use_start_params = not isinstance(self.results.model, (sm.RLM, sm.OLS, sm.WLS,
+                                                               sm.NegativeBinomial))
+        self.use_start_params = use_start_params  # attach for _get_constrained
+
+        keep_index = list(range(self.results.model.exog.shape[1]))
+        # index for params might include extra params
+        keep_index_p = list(range(self.results.params.shape[0]))
+        drop_index = [1]
+        for i in drop_index:
+            del keep_index[i]
+            del keep_index_p[i]
+
+        if use_start_params:
+            res1 = self.results.model._fit_zeros(keep_index,
+                                                 start_params=self.results.params[keep_index])
+        else:
+            res1 = self.results.model._fit_zeros(keep_index)
+
+        res2 = self._get_constrained(keep_index, keep_index_p)
+
+        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10)
+        assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
+        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
+        assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
+        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10)
+        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10)
+
+        if hasattr(res1, 'resid'):
+            # discrete models, Logit don't have `resid` yet
+            assert_allclose(res1.resid, res2.resid, rtol=1e-10)
+
+        ex = self.results.model.exog.mean(0)
+        predicted1 = res1.predict(ex)
+        predicted2 = res2.predict(ex[keep_index])
+        assert_allclose(predicted1, predicted2, rtol=1e-10)
+
+        ex = self.results.model.exog[:5]
+        predicted1 = res1.predict(ex)
+        predicted2 = res2.predict(ex[:, keep_index])
+        assert_allclose(predicted1, predicted2, rtol=1e-10)
+
+
+    def _get_constrained(self, keep_index, keep_index_p):
+        # override in some test classes, no fit_kwds yet, e.g. cov_type
+        mod2 = self.results.model
+        mod_cls = mod2.__class__
+        init_kwds = mod2._get_init_kwds()
+        mod = mod_cls(mod2.endog, mod2.exog[:, keep_index], **init_kwds)
+        if self.use_start_params:
+            res = mod.fit(start_params=self.results.params[keep_index_p])
+        else:
+            res = mod.fit()
+        return res
+
+
 #########  subclasses for individual models, unchanged from test_shrink_pickle
 # TODO: check if setup_class is faster than setup
 
@@ -208,6 +268,11 @@ class TestGenericOLSOneExog(CheckGenericMixin):
         np.random.seed(987689)
         y = x + np.random.randn(x.shape[0])
         self.results = sm.OLS(y, x).fit()
+
+    def test_zero_constrained(self):
+        # override, we cannot remove the only regressor
+        #raise SkipTest
+        pass
 
 
 class TestGenericWLS(CheckGenericMixin):
@@ -235,6 +300,7 @@ class TestGenericPoisson(CheckGenericMixin):
 
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
+
 
 class TestGenericNegativeBinomial(CheckGenericMixin):
 
