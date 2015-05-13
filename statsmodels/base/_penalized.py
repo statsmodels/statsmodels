@@ -19,9 +19,11 @@ class PenalizedMixin(object):
 
     """
 
-    def __init__(self, *args, penal=None, **kwds):
+    def __init__(self, *args, **kwds):
         super(PenalizedMixin, self).__init__(*args, **kwds)
 
+        penal = kwds.pop('penal', None)
+        # I keep the following instead of adding default in pop for future changes
         if penal is None:
             # TODO: switch to unpenalized by default
             self.penal = SCADSmoothed(0.1, c0=0.0001)
