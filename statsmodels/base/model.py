@@ -510,6 +510,106 @@ class LikelihoodModel(Model):
         mlefit.mle_settings = optim_settings
         return mlefit
 
+    def _fit_zeros(self, keep_index=None, start_params=None, return_auxiliary=False, **fit_kwds):
+        """experimental fit the model subject to zero constraints
+
+        Intended for internal use cases until we know what we need.
+        API will need to change to handle models with two exog.
+
+        This is essentially a simplified version of `fit_constrained`, and does not need
+        to use `offset`.
+
+        The estimation creates a new model with transformed design matrix,
+        exog, and converts the results back to the original parameterization.
+
+        Some subclasses could use a more efficient calculation than using a new model.
+
+        Parameters
+        ----------
+        keep_index : array_like (int or bool) or slice
+            variables that should be dropped.
+        start_params : None or array_like
+            starting values for the optimization. `start_params` needs to be
+            given in the original parameter space and are internally
+            transformed.
+        **fit_kwds : keyword arguments
+            fit_kwds are used in the optimization of the transformed model.
+
+        Returns
+        -------
+        results : Results instance
+
+        """
+
+        # not all models support start_params, drop if None, hide them in fit_kwds
+        if start_params is not None:
+            fit_kwds['start_params'] = start_params
+
+        # build auxiliary model and fit
+        init_kwds = self._get_init_kwds()
+        mod_constr = self.__class__(self.endog, self.exog[:, keep_index], **init_kwds)
+        res_constr = mod_constr.fit(**fit_kwds)
+
+        # create dummy results Instance, TODO: wire up properly
+        # TODO: this could be moved into separate private method if needed
+        # discrete L1 fit_regularized doens't reestimate AFAICS
+        #res = self.fit(maxiter=0, method='nm', disp=0,
+        # RLM doesn't have method, disp nor warn_convergence keywords
+        # OLS, WLS swallows extra kwds with **kwargs, but doesn't have method='nm'
+        try:
+            res = self.fit(maxiter=0, disp=0, method='nm',
+                           warn_convergence=False) # we get a wrapper back
+        except (TypeError, ValueError):
+            res = self.fit()
+
+        # Warning: make sure we are not just changing the wrapper instead of results #2400
+        if hasattr(res_constr.model, 'scale'):
+            # GLM problem, see #2399
+            res.model.scale = res._results.scale = res_constr.model.scale
+
+        if hasattr(res_constr, 'mle_retvals'):
+            # not available for not scipy optimization, e.g. glm irls
+            res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
+            res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
+                                                            'iterations', np.nan)
+            res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
+
+        # wee need to append index of extra params to keep_index as in NegativeBinomial
+        if hasattr(self, 'k_extra') and self.k_extra > 0:
+            # we cannot change the original, TODO: should we add keep_index_params?
+            import copy
+            keep_index = copy.copy(keep_index)
+            keep_index.extend(list(range(len(res.params)))[-self.k_extra:])
+
+        res._results.params[...] = 0
+        res._results.params[keep_index] = res_constr.params
+        # TODO: sandwiches, add cov_params_default ?
+        # fanxy indexing requires integer attay
+        keep_index = np.array(keep_index)
+        res._results.normalized_cov_params[...] = 0
+        res._results.normalized_cov_params[keep_index[:, None], keep_index] = res_constr.normalized_cov_params
+        k_constr = res_constr.df_resid - res._results.df_resid
+        res._results.keep_index = keep_index
+        res._results.df_resid = res_constr.df_resid
+        res._results.df_model = res_constr.df_model
+
+        res._results.k_constr = k_constr
+        res._results.results_constrained = res_constr
+
+        # special temporary workaround for RLM
+        # need to be able to override robust covariances
+        if hasattr(res.model, 'M'):
+            del res._results._cache['resid']
+            del res._results._cache['fittedvalues']
+            del res._results._cache['sresid']
+            cov = res._results._cache['bcov_scaled']
+            # inplace adjustment
+            cov[...] = 0
+            cov[keep_index[:, None], keep_index] = res_constr.bcov_scaled
+            res._results.cov_params_default = cov
+
+        return res
+
 
 # TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
