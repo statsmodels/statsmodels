@@ -316,6 +316,16 @@ class CheckGenericMixin(object):
         predicted2 = res2.predict(ex[:, keep_index])
         assert_allclose(predicted1, predicted2, rtol=1e-10)
 
+        # check fit optimizer arguments, if mle_settings is available
+        if hasattr(res2, 'mle_settings'):
+            assert_equal(res1.results_constrained.mle_settings['optimizer'],
+                         res2.mle_settings['optimizer'])
+            assert_allclose(res1.results_constrained.mle_settings['start_params'],
+                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+            assert_equal(res1.mle_settings['optimizer'], res2.mle_settings['optimizer'])
+            assert_allclose(res1.mle_settings['start_params'],
+                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+
 
 #########  subclasses for individual models, unchanged from test_shrink_pickle
 # TODO: check if setup_class is faster than setup

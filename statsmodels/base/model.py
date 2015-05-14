@@ -587,6 +587,9 @@ class LikelihoodModel(Model):
             res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
                                                             'iterations', np.nan)
             res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
+            # overwrite all settings
+            #res.mle_retvals.update(res_constr.mle_retvals)  #not yet
+            res.mle_settings.update(res_constr.mle_settings)
 
 
         k_params = len(res._results.params)
