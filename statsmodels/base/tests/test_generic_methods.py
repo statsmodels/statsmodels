@@ -284,9 +284,10 @@ class CheckGenericMixin(object):
 
         if use_start_params:
             start_params = np.zeros(k_vars + k_extra)
+            method =  self.results.mle_settings['optimizer']  #string not mutable
             sp =  self.results.mle_settings['start_params'].copy()
             start_params[keep_index_p] = sp #self.results.params
-            res1 = mod._fit_collinear(start_params=start_params)
+            res1 = mod._fit_collinear(start_params=start_params, method=method)
         else:
             res1 = mod._fit_collinear()
 
