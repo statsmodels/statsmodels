@@ -544,15 +544,25 @@ class LikelihoodModel(Model):
         results : Results instance
 
         """
+        # wee need to append index of extra params to keep_index as in NegativeBinomial
+        if hasattr(self, 'k_extra') and self.k_extra > 0:
+            # we cannot change the original, TODO: should we add keep_index_params?
+            keep_index = np.array(keep_index, copy=True)
+            keep_index_p = np.concatenate((keep_index,
+                                           list(range(self.exog.shape[1] + self.k_extra))[-self.k_extra:]))
+        else:
+            keep_index_p = keep_index
 
         # not all models support start_params, drop if None, hide them in fit_kwds
         if start_params is not None:
-            fit_kwds['start_params'] = start_params
+            fit_kwds['start_params'] = start_params[keep_index_p]
 
         # build auxiliary model and fit
         init_kwds = self._get_init_kwds()
         mod_constr = self.__class__(self.endog, self.exog[:, keep_index], **init_kwds)
         res_constr = mod_constr.fit(**fit_kwds)
+        #switch name, only need keep_index for params belos
+        keep_index = keep_index_p
 
         # create dummy results Instance, TODO: wire up properly
         # TODO: this could be moved into separate private method if needed
@@ -578,21 +588,23 @@ class LikelihoodModel(Model):
                                                             'iterations', np.nan)
             res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
 
-        # wee need to append index of extra params to keep_index as in NegativeBinomial
-        if hasattr(self, 'k_extra') and self.k_extra > 0:
-            # we cannot change the original, TODO: should we add keep_index_params?
-            import copy
-            keep_index = copy.copy(keep_index)
-            keep_index.extend(list(range(len(res.params)))[-self.k_extra:])
 
+        k_params = len(res._results.params)
         res._results.params[...] = 0
         res._results.params[keep_index] = res_constr.params
+        if not hasattr(res._results, 'normalized_cov_param') or res._results.normalized_cov_param is None:
+            res._results.normalized_cov_params = np.zeros((k_params, k_params))
+        else:
+            res._results.normalized_cov_params[...] = 0
+
         # TODO: sandwiches, add cov_params_default ?
         # fanxy indexing requires integer attay
         keep_index = np.array(keep_index)
-        res._results.normalized_cov_params[...] = 0
         res._results.normalized_cov_params[keep_index[:, None], keep_index] = res_constr.normalized_cov_params
         k_constr = res_constr.df_resid - res._results.df_resid
+        if hasattr(res_constr, 'cov_params_default'):
+            res._results.cov_params_default = np.zeros((k_params, k_params))
+            res._results.cov_params_default[keep_index[:, None], keep_index] = res_constr.cov_params_default
         res._results.keep_index = keep_index
         res._results.df_resid = res_constr.df_resid
         res._results.df_model = res_constr.df_model
@@ -614,6 +626,18 @@ class LikelihoodModel(Model):
 
 
         return res
+
+
+    def _fit_collinear(self, atol=1e-14, rtol=1e-13, **kwds):
+
+        # ------ copied from PR #2380 remove when merged
+        x = self.exog
+        tol = atol + rtol * x.var(0)
+        r = np.linalg.qr(x, mode='r')
+        mask = np.abs(r.diagonal()) < np.sqrt(tol)
+        #idx_collinear = np.where(mask)[0]
+        idx_keep = np.where(~mask)[0]
+        return self._fit_zeros(keep_index=idx_keep, **kwds)
 
 
 #TODO: the below is unfinished
