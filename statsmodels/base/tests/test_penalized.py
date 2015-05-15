@@ -38,8 +38,7 @@ class CheckPenalizedPoisson(object):
         beta = np.zeros(k_vars)
         beta[:k_nonzero] = 1. / np.arange(1, k_nonzero + 1)
         linpred = x.dot(beta)
-        mu = np.exp(linpred)
-        y = np.random.poisson(mu)
+        y = cls._generate_endog(linpred)
 
         cls.k_nonzero = k_nonzero
         cls.x = x
@@ -52,6 +51,12 @@ class CheckPenalizedPoisson(object):
         cls.k_params = k_vars
         cls._initialize()
 
+    @classmethod
+    def _generate_endog(self, linpred):
+        mu = np.exp(linpred)
+        np.random.seed(999)
+        y = np.random.poisson(mu)
+        return y
 
     def test_params_table(self):
         res1 = self.res1
@@ -80,6 +85,8 @@ class TestPenalizedPoissonNoPenal(CheckPenalizedPoisson):
         mod = PoissonPenalized(y, x)
         mod.pen_weight = 0
         cls.res1 = mod.fit(method='bfgs', maxiter=100)
+
+        cls.atol = 5e-6
 
 
 class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
@@ -132,6 +139,100 @@ class TestPenalizedPoissonOraclePenalized2(CheckPenalizedPoisson):
         mod = PoissonPenalized(y, x)
         mod.pen_weight *= 1.5  # meed to penalize more to get oracle selection
         #mod.penal.tau = 0.05
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 1e-8
+        cls.k_params = cls.k_nonzero
+
+    def test_zeros(self):
+
+        # first test for trimmed result
+        assert_equal(self.res1.params[self.k_nonzero:], 0)
+        # we also set bse to zero, TODO: check fit_regularized
+        assert_equal(self.res1.bse[self.k_nonzero:], 0)
+
+
+# copy and Replace
+
+class CheckPenalizedLogit(CheckPenalizedPoisson):
+
+    @classmethod
+    def _generate_endog(self, linpred):
+        mu = 1 / (1 + np.exp(-linpred + linpred.mean() - 0.5))
+        np.random.seed(999)
+        y = np.random.rand(len(mu)) < mu
+        return y
+
+
+class TestPenalizedLogitNoPenal(CheckPenalizedLogit):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+
+        modp = Logit(y, x)
+        cls.res2 = modp.fit()
+
+        mod = LogitPenalized(y, x)
+        mod.pen_weight = 0
+        cls.res1 = mod.fit()# method='bfgs', maxiter=100)
+
+        cls.atol = 1e-4  # why not closer ?
+
+
+class TestPenalizedLogitOracle(CheckPenalizedLogit):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        modp = Logit(y, x[:, :cls.k_nonzero])
+        cls.res2 = modp.fit()
+
+        mod = LogitPenalized(y, x)
+        mod.pen_weight *= .5
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 5e-3
+
+
+class TestPenalizedLogitOraclePenalized(CheckPenalizedLogit):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        modp = LogitPenalized(y, x[:, :cls.k_nonzero])
+        cls.res2 = modp.fit()
+
+        mod = LogitPenalized(y, x)
+        #mod.pen_weight *= 1.5
+        #mod.penal.tau = 0.05
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 1e-3
+
+
+class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        modp = LogitPenalized(y, x[:, :cls.k_nonzero])
+        cls.res2 = modp.fit()
+
+        mod = LogitPenalized(y, x)
+        mod.pen_weight *= 0.5  # meed to penalize more to get oracle selection
+        mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
