@@ -129,6 +129,7 @@ class PenalizedMixin(object):
             # temporary standin, only works for Poisson and GLM,
             # and is computationally inefficient
             drop_index = np.nonzero(np.abs(res.params) < 1e-4) [0]
+            keep_index = np.nonzero(np.abs(res.params) > 1e-4) [0]
             rmat = np.eye(len(res.params))[drop_index]
 
             # calling fit_constrained raise
@@ -136,7 +137,8 @@ class PenalizedMixin(object):
             # fit_constrained is calling fit, recursive endless loop
             if drop_index.any():
                 # todo : trim kwyword doesn't work, why not?
-                res_aux = self.fit_constrained(rmat, trim=False)
+                #res_aux = self.fit_constrained(rmat, trim=False)
+                res_aux = self._fit_zeros(keep_index)
                 return res_aux
             else:
                 return res
