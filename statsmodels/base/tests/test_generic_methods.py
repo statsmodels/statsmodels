@@ -280,51 +280,69 @@ class CheckGenericMixin(object):
             keep_index_p += list(range(k_vars, k_vars + mod.k_extra))
             k_extra = mod.k_extra
 
+        cov_types = ['nonrobust', 'HC0']
 
+        for cov_type in cov_types:
+            if cov_type != 'nonrobust' and (isinstance(self.results.model, (sm.RLM))):
+                raise SkipTest
 
-        if use_start_params:
-            start_params = np.zeros(k_vars + k_extra)
-            method =  self.results.mle_settings['optimizer']  #string not mutable
-            sp =  self.results.mle_settings['start_params'].copy()
-            start_params[keep_index_p] = sp #self.results.params
-            res1 = mod._fit_collinear(start_params=start_params, method=method, disp=0)
-        else:
-            res1 = mod._fit_collinear()
+            if use_start_params:
+                start_params = np.zeros(k_vars + k_extra)
+                method =  self.results.mle_settings['optimizer']  #string not mutable
+                sp =  self.results.mle_settings['start_params'].copy()
+                start_params[keep_index_p] = sp #self.results.params
+                res1 = mod._fit_collinear(cov_type=cov_type, start_params=start_params,
+                                          method=method, disp=0)
+                if cov_type != 'nonrobust':
+                    # reestimate original model to get robust cov
+                    res2 = self.results.model.fit(cov_type=cov_type,
+                                             start_params=sp,
+                                             method=method, disp=0)
+            else:
+                # more special casing RLM
+                if (isinstance(self.results.model, (sm.RLM))):
+                    res1 = mod._fit_collinear()
+                else:
+                    res1 = mod._fit_collinear(cov_type=cov_type)
+                if cov_type != 'nonrobust':
+                    # reestimate original model to get robust cov
+                    res2 = self.results.model.fit(cov_type=cov_type)
 
-        #res2 = self._get_constrained(keep_index, keep_index_p)
-        res2 = self.results
+            #res2 = self._get_constrained(keep_index, keep_index_p)
+            if cov_type == 'nonrobust':
+                res2 = self.results
 
-        # check fit optimizer arguments, if mle_settings is available
-        if hasattr(res2, 'mle_settings'):
-            assert_equal(res1.results_constrained.mle_settings['optimizer'],
-                         res2.mle_settings['optimizer'])
-            assert_allclose(res1.results_constrained.mle_settings['start_params'],
-                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
-            assert_equal(res1.mle_settings['optimizer'], res2.mle_settings['optimizer'])
-            assert_allclose(res1.mle_settings['start_params'],
-                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+            # check fit optimizer arguments, if mle_settings is available
+            if hasattr(res2, 'mle_settings'):
+                assert_equal(res1.results_constrained.mle_settings['optimizer'],
+                             res2.mle_settings['optimizer'])
+                assert_allclose(res1.results_constrained.mle_settings['start_params'],
+                                res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+                assert_equal(res1.mle_settings['optimizer'], res2.mle_settings['optimizer'])
+                assert_allclose(res1.mle_settings['start_params'],
+                                res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
 
-        # Poisson has reduced precision in params, difficult optimization?
-        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6) #rtol=1e-10)
-        assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
-        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
-        assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-8)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-6, atol=1e-30)
+            # Poisson has reduced precision in params, difficult optimization?
+            assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6) #rtol=1e-10)
+            assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
+            assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
+            assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
+            assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-8)
+            assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-6, atol=1e-30)
 
-        if hasattr(res1, 'resid'):
-            # discrete models, Logit don't have `resid` yet
-            assert_allclose(res1.resid, res2.resid, rtol=1e-5, atol=1e-10)
+            if hasattr(res1, 'resid'):
+                # discrete models, Logit don't have `resid` yet
+                assert_allclose(res1.resid, res2.resid, rtol=1e-5, atol=1e-10)
 
-        ex = res1.model.exog.mean(0)
-        predicted1 = res1.predict(ex)
-        predicted2 = res2.predict(ex[keep_index])
-        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
+            ex = res1.model.exog.mean(0)
+            predicted1 = res1.predict(ex)
+            predicted2 = res2.predict(ex[keep_index])
+            assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
-        ex = res1.model.exog[:5]
-        predicted1 = res1.predict(ex)
-        predicted2 = res2.predict(ex[:, keep_index])
-        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
+            ex = res1.model.exog[:5]
+            predicted1 = res1.predict(ex)
+            predicted2 = res2.predict(ex[:, keep_index])
+            assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
 
 
