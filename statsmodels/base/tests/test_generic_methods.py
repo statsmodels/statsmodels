@@ -314,17 +314,17 @@ class CheckGenericMixin(object):
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
-            assert_allclose(res1.resid, res2.resid, rtol=1e-10)
+            assert_allclose(res1.resid, res2.resid, rtol=1e-6, atol=1e-13)
 
         ex = res1.model.exog.mean(0)
         predicted1 = res1.predict(ex)
         predicted2 = res2.predict(ex[keep_index])
-        assert_allclose(predicted1, predicted2, rtol=1e-10)
+        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-13)
 
         ex = res1.model.exog[:5]
         predicted1 = res1.predict(ex)
         predicted2 = res2.predict(ex[:, keep_index])
-        assert_allclose(predicted1, predicted2, rtol=1e-10)
+        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-13)
 
 
 
