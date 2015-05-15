@@ -294,6 +294,16 @@ class CheckGenericMixin(object):
         #res2 = self._get_constrained(keep_index, keep_index_p)
         res2 = self.results
 
+        # check fit optimizer arguments, if mle_settings is available
+        if hasattr(res2, 'mle_settings'):
+            assert_equal(res1.results_constrained.mle_settings['optimizer'],
+                         res2.mle_settings['optimizer'])
+            assert_allclose(res1.results_constrained.mle_settings['start_params'],
+                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+            assert_equal(res1.mle_settings['optimizer'], res2.mle_settings['optimizer'])
+            assert_allclose(res1.mle_settings['start_params'],
+                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+
         # Poisson has reduced precision in params, difficult optimization?
         assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6) #rtol=1e-10)
         assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
@@ -316,15 +326,6 @@ class CheckGenericMixin(object):
         predicted2 = res2.predict(ex[:, keep_index])
         assert_allclose(predicted1, predicted2, rtol=1e-10)
 
-        # check fit optimizer arguments, if mle_settings is available
-        if hasattr(res2, 'mle_settings'):
-            assert_equal(res1.results_constrained.mle_settings['optimizer'],
-                         res2.mle_settings['optimizer'])
-            assert_allclose(res1.results_constrained.mle_settings['start_params'],
-                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
-            assert_equal(res1.mle_settings['optimizer'], res2.mle_settings['optimizer'])
-            assert_allclose(res1.mle_settings['start_params'],
-                            res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
 
 
 #########  subclasses for individual models, unchanged from test_shrink_pickle
