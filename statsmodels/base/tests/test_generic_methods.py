@@ -287,7 +287,7 @@ class CheckGenericMixin(object):
             method =  self.results.mle_settings['optimizer']  #string not mutable
             sp =  self.results.mle_settings['start_params'].copy()
             start_params[keep_index_p] = sp #self.results.params
-            res1 = mod._fit_collinear(start_params=start_params, method=method)
+            res1 = mod._fit_collinear(start_params=start_params, method=method, disp=0)
         else:
             res1 = mod._fit_collinear()
 
@@ -314,17 +314,17 @@ class CheckGenericMixin(object):
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
-            assert_allclose(res1.resid, res2.resid, rtol=1e-6, atol=1e-13)
+            assert_allclose(res1.resid, res2.resid, rtol=1e-6, atol=1e-11)
 
         ex = res1.model.exog.mean(0)
         predicted1 = res1.predict(ex)
         predicted2 = res2.predict(ex[keep_index])
-        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-13)
+        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
         ex = res1.model.exog[:5]
         predicted1 = res1.predict(ex)
         predicted2 = res2.predict(ex[:, keep_index])
-        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-13)
+        assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
 
 
@@ -391,11 +391,15 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        mod = sm.NegativeBinomial(data.endog, data.exog)
-        start_params = np.array([-0.0565406 , -0.21213599,  0.08783076,
+        #mod = sm.NegativeBinomial(data.endog, data.exog)
+        mod = sm.NegativeBinomial(data.endog, exog)
+        start_params = np.array([0.1, -0.0565406 , -0.21213599,  0.08783076,
                                  -0.02991835,  0.22901974,  0.0621026,
                                   0.06799283,  0.08406688,  0.18530969,
                                   1.36645452])
+        start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,
+                                 0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
+                                 0.17490962,  0.66461151,   1.2925957 ])
         self.results = mod.fit(start_params=start_params, disp=0)
 
 
