@@ -299,8 +299,8 @@ class CheckGenericMixin(object):
         assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
         assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
         assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10)
+        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-8)
+        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-6, atol=1e-30)
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
