@@ -514,7 +514,8 @@ class LikelihoodModel(Model):
         return mlefit
 
 
-    def _fit_zeros(self, keep_index=None, start_params=None, return_auxiliary=False, **fit_kwds):
+    def _fit_zeros(self, keep_index=None, start_params=None, return_auxiliary=False,
+                   k_params=None, **fit_kwds):
         """experimental fit the model subject to zero constraints
 
         Intended for internal use cases until we know what we need.
@@ -536,6 +537,8 @@ class LikelihoodModel(Model):
             starting values for the optimization. `start_params` needs to be
             given in the original parameter space and are internally
             transformed.
+        k_params : int or None
+            If None, then we try to infer from start_params or model.
         **fit_kwds : keyword arguments
             fit_kwds are used in the optimization of the transformed model.
 
@@ -556,6 +559,7 @@ class LikelihoodModel(Model):
         # not all models support start_params, drop if None, hide them in fit_kwds
         if start_params is not None:
             fit_kwds['start_params'] = start_params[keep_index_p]
+            k_params = len(start_params) # ignore k_params in this case, or verify consisteny?
 
         # build auxiliary model and fit
         init_kwds = self._get_init_kwds()
@@ -564,6 +568,15 @@ class LikelihoodModel(Model):
         #switch name, only need keep_index for params belos
         keep_index = keep_index_p
 
+        if k_params is None:
+            k_params = self.exog.shape[1]
+            k_params += getattr(self, 'k_extra', 0)
+
+
+        params_full = np.zeros(k_params)
+        params_full[keep_index] = res_constr.params
+
+
         # create dummy results Instance, TODO: wire up properly
         # TODO: this could be moved into separate private method if needed
         # discrete L1 fit_regularized doens't reestimate AFAICS
@@ -571,8 +584,10 @@ class LikelihoodModel(Model):
         # RLM doesn't have method, disp nor warn_convergence keywords
         # OLS, WLS swallows extra kwds with **kwargs, but doesn't have method='nm'
         try:
-            res = self.fit(maxiter=0, disp=0, method='nm',
-                           warn_convergence=False) # we get a wrapper back
+            # Note: addding full_output=False causes currently exceptions
+            res = self.fit(maxiter=0, disp=0, method='nm', skip_hessian=True,
+                           warn_convergence=False, start_params=params_full)
+            # we get a wrapper back
         except (TypeError, ValueError):
             res = self.fit()
 
@@ -582,19 +597,17 @@ class LikelihoodModel(Model):
             res.model.scale = res._results.scale = res_constr.model.scale
 
         if hasattr(res_constr, 'mle_retvals'):
+            res.mle_retvals = res_constr.mle_retvals
             # not available for not scipy optimization, e.g. glm irls
-            res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
-            res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
-                                                            'iterations', np.nan)
-            res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
+#             res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
+#             res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
+#                                                             'iterations', np.nan)
+#             res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
             # overwrite all settings
             #res.mle_retvals.update(res_constr.mle_retvals)  #not yet
             res.mle_settings.update(res_constr.mle_settings)
 
-
-        k_params = len(res._results.params)
-        res._results.params[...] = 0
-        res._results.params[keep_index] = res_constr.params
+        res._results.params = params_full
         if not hasattr(res._results, 'normalized_cov_param') or res._results.normalized_cov_param is None:
             res._results.normalized_cov_params = np.zeros((k_params, k_params))
         else:
