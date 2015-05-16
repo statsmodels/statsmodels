@@ -31,7 +31,12 @@ class PenalizedMixin(object):
             self.penal = penal
 
         # TODO: define pen_weight as average pen_weight? i.e. per observation
-        self.pen_weight = len(self.endog) #100.
+        # I would have prefered len(self.endog) * kwds.get('pen_weight', 1)
+        # or use pen_weight_factor in signature
+        self.pen_weight =  kwds.get('pen_weight', len(self.endog))
+
+        self._init_keys.extend(['penal', 'pen_weight'])
+
 
 
     def loglike(self, params, pen_weight=None):
@@ -138,7 +143,7 @@ class PenalizedMixin(object):
             if drop_index.any():
                 # todo : trim kwyword doesn't work, why not?
                 #res_aux = self.fit_constrained(rmat, trim=False)
-                res_aux = self._fit_zeros(keep_index)
+                res_aux = self._fit_zeros(keep_index, **kwds)
                 return res_aux
             else:
                 return res

@@ -107,6 +107,43 @@ class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
 
         cls.atol = 5e-3
 
+class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        cov_type = 'HC0'
+        modp = Poisson(y, x[:, :cls.k_nonzero])
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        mod = PoissonPenalized(y, x)
+        mod.pen_weight *= 1.5
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 5e-3
+
+    def test_cov_type(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        assert_equal(self.res1.cov_type, 'HC0')
+        # numbers are regression test using bfgs
+        params = np.array([0.96817787574701109, 0.43674374940137434,
+                           0.33096260487556745, 0.27415680046693747])
+        bse = np.array([0.028126650444581985, 0.033099984564283147,
+                        0.033184585514904545, 0.034282504130503301])
+        assert_allclose(res2.params[:self.k_nonzero], params)
+        assert_allclose(res2.bse[:self.k_nonzero], bse)
+        assert_allclose(res1.params[:self.k_nonzero], params, atol=self.atol)
+        assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=0.04)
+
+
+
+
 
 class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
     # TODO: check, adjust cov_type
@@ -115,12 +152,12 @@ class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = PoissonPenalized(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = PoissonPenalized(y, x)
         #mod.pen_weight *= 1.5
         #mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -134,12 +171,14 @@ class TestPenalizedPoissonOraclePenalized2(CheckPenalizedPoisson):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = PoissonPenalized(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit()
+        modp.pen_weight *= 10  # meed to penalize more to get oracle selection
+        modp.penal.tau = 0.05
+        cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = PoissonPenalized(y, x)
-        mod.pen_weight *= 1.5  # meed to penalize more to get oracle selection
-        #mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True)
+        mod.pen_weight *= 10  # meed to penalize more to get oracle selection
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -152,6 +191,48 @@ class TestPenalizedPoissonOraclePenalized2(CheckPenalizedPoisson):
         assert_equal(self.res1.params[self.k_nonzero:], 0)
         # we also set bse to zero, TODO: check fit_regularized
         assert_equal(self.res1.bse[self.k_nonzero:], 0)
+
+
+class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        cov_type = 'HC0'#'nonrobust'#'HC0'
+        modp = PoissonPenalized(y, x[:, :cls.k_nonzero])
+        modp.pen_weight *= 10  # meed to penalize more to get oracle selection
+        modp.penal.tau = 0.05
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        mod = PoissonPenalized(y, x)
+        mod.pen_weight *= 10  # meed to penalize more to get oracle selection
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, trim=True, disp=0)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 1e-12
+        cls.k_params = cls.k_nonzero
+
+
+    def test_cov_type(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        #assert_equal(self.res1.cov_type, 'HC0')
+        assert_equal(self.res1.results_constrained.cov_type, 'HC0')
+        # numbers are regression test using bfgs
+        params = np.array([0.9681779773984035, 0.43674302990429331,
+                           0.33096262545149246, 0.27415839700062317])
+        params = np.array([0.96817787574701109, 0.43674374940137434,
+                           0.33096260487556745, 0.27415680046693747])
+        bse = np.array([0.028126650444581985, 0.033099984564283147,
+                        0.033184585514904545, 0.034282504130503301])
+        assert_allclose(res2.params[:self.k_nonzero], params, atol=1e-5)
+        assert_allclose(res2.bse[:self.k_nonzero], bse, rtol=1e-6)
+        assert_allclose(res1.params[:self.k_nonzero], params, atol=1e-5)
+        assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=0.04)
 
 
 # copy and Replace
@@ -209,7 +290,7 @@ class TestPenalizedLogitOraclePenalized(CheckPenalizedLogit):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = LogitPenalized(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = LogitPenalized(y, x)
         #mod.pen_weight *= 1.5
@@ -228,12 +309,14 @@ class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = LogitPenalized(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit()
+        modp.pen_weight *= 0.5  # meed to penalize more to get oracle selection
+        modp.penal.tau = 0.05
+        cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = LogitPenalized(y, x)
         mod.pen_weight *= 0.5  # meed to penalize more to get oracle selection
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
