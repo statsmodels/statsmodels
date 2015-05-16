@@ -617,6 +617,10 @@ class LikelihoodModel(Model):
         if hasattr(res_constr, 'cov_params_default'):
             res._results.cov_params_default = np.zeros((k_params, k_params))
             res._results.cov_params_default[keep_index[:, None], keep_index] = res_constr.cov_params_default
+        if hasattr(res_constr, 'cov_type'):
+            res._results.cov_type = res_constr.cov_type
+            res._results.cov_kwds = res_constr.cov_kwds
+
         res._results.keep_index = keep_index
         res._results.df_resid = res_constr.df_resid
         res._results.df_model = res_constr.df_model
