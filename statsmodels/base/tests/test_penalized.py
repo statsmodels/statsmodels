@@ -131,6 +131,9 @@ class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
         res2 = self.res2
 
         assert_equal(self.res1.cov_type, 'HC0')
+        cov_kwds = {'description': 'Standard Errors are heteroscedasticity robust (HC0)',
+                    'adjust_df': False, 'use_t': False, 'scaling_factor': None}
+        assert_equal(self.res1.cov_kwds, cov_kwds)
         # numbers are regression test using bfgs
         params = np.array([0.96817787574701109, 0.43674374940137434,
                            0.33096260487556745, 0.27415680046693747])
@@ -220,8 +223,13 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
         res1 = self.res1
         res2 = self.res2
 
-        #assert_equal(self.res1.cov_type, 'HC0')
+        assert_equal(self.res1.cov_type, 'HC0')
         assert_equal(self.res1.results_constrained.cov_type, 'HC0')
+        cov_kwds = {'description': 'Standard Errors are heteroscedasticity robust (HC0)',
+                    'adjust_df': False, 'use_t': False, 'scaling_factor': None}
+        assert_equal(self.res1.cov_kwds, cov_kwds)
+        assert_equal(self.res1.cov_kwds, self.res1.results_constrained.cov_kwds)
+
         # numbers are regression test using bfgs
         params = np.array([0.9681779773984035, 0.43674302990429331,
                            0.33096262545149246, 0.27415839700062317])
