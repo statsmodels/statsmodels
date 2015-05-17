@@ -44,9 +44,9 @@ Technical Documentation
 
 The statistical model is assumed to be
 
- :math:`Y = X\beta + \mu`,  where :math:`\mu\sim N\left(0,\sigma^{2}\Sigma\right)`
+ :math:`Y = X\beta + \mu`,  where :math:`\mu\sim N\left(0,\Sigma\right).`
 
-depending on the assumption on :math:`\Sigma`, we have currently four classes available
+Depending on the properties of :math:`\Sigma`, we have currently four classes available:
 
 * GLS : generalized least squares for arbitrary covariance :math:`\Sigma`
 * OLS : ordinary least squares for i.i.d. errors :math:`\Sigma=\textbf{I}`
@@ -92,42 +92,38 @@ Econometrics references for regression models:
 Attributes
 ^^^^^^^^^^
 
-The following is more verbose description of the attributes which is mostly common to all
-regression classes
+The following is more verbose description of the attributes which is mostly
+common to all regression classes
 
 pinv_wexog : array
-    | `pinv_wexog` is the `p` x `n` Moore-Penrose pseudoinverse of the
-    | whitened design matrix. Approximately equal to
-    | :math:`\left(X^{T}\Sigma^{-1}X\right)^{-1}X^{T}\Psi`
-    | where :math:`\Psi` is given by :math:`\Psi\Psi^{T}=\Sigma^{-1}`
+    The `p` x `n` Moore-Penrose pseudoinverse of the whitened design matrix.
+    It is approximately equal to
+    :math:`\left(X^{T}\Sigma^{-1}X\right)^{-1}X^{T}\Psi`, where
+    :math:`\Psi` is defined such that :math:`\Psi\Psi^{T}=\Sigma^{-1}`.
 cholsimgainv : array
-    | n x n upper triangular matrix such that
-    | :math:`\Psi\Psi^{T}=\Sigma^{-1}`
-    | :math:`cholsigmainv=\Psi^{T}`
+    The `n` x `n` upper triangular matrix :math:`\Psi^{T}` that satisfies
+    :math:`\Psi\Psi^{T}=\Sigma^{-1}`.
 df_model : float
-    The model degrees of freedom is equal to `p` - 1, where `p` is the number
-    of regressors.  Note that the intercept is not counted as using a degree
-    of freedom here.
+    The model degrees of freedom. This is equal to `p` - 1, where `p` is the
+    number of regressors. Note that the intercept is not counted as using a
+    degree of freedom here.
 df_resid : float
-    The residual degrees of freedom is equal to the number of observations
-    `n` less the number of parameters `p`.  Note that the intercept is counted as
-    using a degree of freedom here.
+    The residual degrees of freedom. This is equal `n - p` where `n` is the
+    number of observations and `p` is the number of parameters. Note that the
+    intercept is counted as using a degree of freedom here.
 llf : float
     The value of the likelihood function of the fitted model.
 nobs : float
     The number of observations `n`
 normalized_cov_params : array
-    | A `p` x `p` array
-    | :math:`(X^{T}\Sigma^{-1}X)^{-1}`
+    A `p` x `p` array equal to :math:`(X^{T}\Sigma^{-1}X)^{-1}`.
 sigma : array
-    | `sigma` is the n x n strucutre of the covariance matrix of the error terms
-    | :math:`\mu\sim N\left(0,\sigma^{2}\Sigma\right)`
+    The `n` x `n` covariance matrix of the error terms:
+    :math:`\mu\sim N\left(0,\Sigma\right)`.
 wexog : array
-    | `wexog` is the whitened design matrix.
-    | :math:`\Psi^{T}X`
+    The whitened design matrix :math:`\Psi^{T}X`.
 wendog : array
-    | The whitened response variable.
-    | :math:`\Psi^{T}Y`
+    The whitened response variable :math:`\Psi^{T}Y`.
 
 Module Reference
 ----------------
