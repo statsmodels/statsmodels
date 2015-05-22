@@ -5,7 +5,7 @@ Methods for analyzing contingency tables.
 import numpy as np
 from scipy import stats
 import pandas as pd
-
+from __future__ import division
 
 def _handle_pandas_square(table):
     """
