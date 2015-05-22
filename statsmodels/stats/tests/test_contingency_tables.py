@@ -6,8 +6,13 @@ import numpy as np
 import statsmodels.stats.contingency_tables as ctab
 import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
+import os
 
-r_results = pd.read_csv("contingency_table_r_results.csv")
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+fname = "contingency_table_r_results.csv"
+fpath = os.path.join(cur_dir, 'results', fname)
+r_results = pd.read_csv(fpath)
+
 
 tables = [None, None, None]
 
