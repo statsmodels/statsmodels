@@ -75,7 +75,7 @@ def symmetry(table, method="bowker", return_object=True):
     if method.lower() != "bowker":
         raise ValueError("method for symmetry testing must be 'bowker'")
     table = _handle_pandas_square(table)
-    table = np.asarray(table)
+    table = np.asarray(table, dtype=np.float64)
     k, k2 = table.shape
     if k != k2:
         raise ValueError('table must be square')
@@ -134,7 +134,7 @@ def ordinal_association(table, row_scores=None, col_scores=None, method="lbl",
     factors, a Pearson chi^2 test can be used.
     """
 
-    table = np.asarray(table)
+    table = np.asarray(table, dtype=np.float64)
 
     method = method.lower()
     if method != "lbl":
@@ -324,7 +324,7 @@ def homogeneity(table, method="stuart_maxwell", return_object=True):
     symmetry
     """
     table = _handle_pandas_square(table)
-    table = np.asarray(table)
+    table = np.asarray(table, dtype=np.float64)
 
     if table.shape[0] != table.shape[1]:
         raise ValueError('table must be square')
@@ -415,7 +415,7 @@ def mcnemar(table, exact=True, correction=True):
     """
 
     table = _handle_pandas_square(table)
-    table = np.asarray(table)
+    table = np.asarray(table, dtype=np.float64)
     n1, n2 = table[0, 1], table[1, 0]
 
     if exact:
@@ -475,7 +475,7 @@ def cochrans_q(x, return_object=True):
     SAS Manual for NPAR TESTS
     """
 
-    x = np.asarray(x)
+    x = np.asarray(x, dtype=np.float64)
     gruni = np.unique(x)
     N, k = x.shape
     count_row_success = (x == gruni[-1]).sum(1, float)
