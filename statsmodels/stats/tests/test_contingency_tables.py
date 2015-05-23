@@ -224,6 +224,7 @@ class TestStratified1(CheckStratifiedMixin):
         tables[4] = np.array([[2, 5], [0, 0]])
 
         self.rslt = ctab.StratifiedTables(tables)
+        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
 
         self.common_odds = 7
         self.common_logodds = np.log(7)
@@ -288,6 +289,7 @@ class TestStratified3(CheckStratifiedMixin):
         tables[5] = np.array([[351, 22], [317, 24]])
 
         self.rslt = ctab.StratifiedTables(tables)
+        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
 
         self.common_odds = 1.101879
         self.common_logodds = np.log(1.101879)
