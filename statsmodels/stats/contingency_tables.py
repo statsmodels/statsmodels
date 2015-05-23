@@ -199,26 +199,33 @@ class StratifiedTables(object):
         A list containing 2x2 contingency tables.
     """
 
-    def __init__(self, tables):
-
-        self._cache = resettable_cache()
+    def __init__(self, tables, shift_zeros=False):
 
         # Create a data cube
         table = [x[:, :, None] for x in tables]
         table = np.concatenate(table, axis=2).astype(np.float64)
+
+        if shift_zeros:
+            zx = (table == 0).sum(0).sum(0)
+            ix = np.flatnonzero(zx > 0)
+            if len(ix) > 0:
+                table[:, :, ix] += 0.5
+
         self._table = table
 
+        self._cache = resettable_cache()
+
         # Quantities to precompute.  Table entries are [[a, b], [c,
-        # d]], 'ad' is 'a * d', 'apb' is 'a + b', etc.
+        # d]], 'ad' is 'a * d', 'apb' is 'a + b', 'dma' is 'd - a',
+        # etc.
         self._apb = table[0, 0, :] + table[0, 1, :]
         self._apc = table[0, 0, :] + table[1, 0, :]
         self._bpd = table[0, 1, :] + table[1, 1, :]
         self._cpd = table[1, 0, :] + table[1, 1, :]
         self._ad = table[0, 0, :] * table[1, 1, :]
         self._bc = table[0, 1, :] * table[1, 0, :]
-        self._acd = table[0, 0, :] * self._cpd
-        self._cab = table[1, 0, :] * self._apb
         self._apd = table[0, 0, :] + table[1, 1, :]
+        self._dma = table[1, 1, :] - table[0, 0, :]
         self._n = table.sum(0).sum(0)
 
 
@@ -287,7 +294,10 @@ class StratifiedTables(object):
         tables.
         """
 
-        risk_ratio = np.sum(self._acd / self._n) / np.sum(self._cab / self._n)
+        acd = self._table[0, 0, :] * self._cpd
+        cab = self._table[1, 0, :] * self._apb
+
+        risk_ratio = np.sum(acd / self._n) / np.sum(cab / self._n)
         return risk_ratio
 
 
@@ -295,6 +305,10 @@ class StratifiedTables(object):
     def common_logodds_se(self):
         """
         Returns the estimated standard error of the common log odds ratio.
+
+        References
+        ----------
+        Robins, Breslow and Greenland (Biometrics, 42:311–323)
         """
 
         adns = np.sum(self._ad / self._n)
@@ -334,7 +348,6 @@ class StratifiedTables(object):
 
         f = -stats.norm.ppf(alpha / 2)
 
-        # Confidence intervals for the log odds ratio.
         lcb = lor - f * lor_se
         ucb = lor + f * lor_se
 
@@ -365,14 +378,46 @@ class StratifiedTables(object):
         return lcb, ucb
 
 
-    def test_homog_odds(self):
+    def test_equal_odds(self, adjust=False):
         """
         Test that all odds ratios are identical.
 
-        This is the 'Breslow-Day' procedure.
+        This is the 'Breslow-Day' testing procedure.
 
-        Returns the chi^2 test statistic and p-value.
+        Parameters
+        ----------
+        adjust : boolean
+            Use the 'Tarone' adjustment to achieve the correct
+            asymptotic distribution.
+
+        Returns the test statistic and p-value.
         """
+
+        table = self._table
+
+        r = self.common_odds
+        a = 1 - r
+        b = r * (self._apb + self._apc) + self._dma
+        c = -r * self._apb * self._apc
+
+        # Expected value of first cell
+        e11 = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
+
+        # Variance of the first cell
+        v11 = 1 / e11 + 1 / (self._apc - e11) + 1 / (self._apb - e11) + 1 / (self._dma + e11)
+        v11 = 1 / v11
+
+        stat = np.sum((table[0, 0, :] - e11)**2 / v11)
+
+        if adjust:
+            adj = table[0, 0, :].sum() - e11.sum()
+            adj = adj**2
+            adj /= np.sum(v11)
+            stat -= adj
+
+        pvalue = 1 - stats.chi2.cdf(stat, table.shape[2] - 1)
+
+        return stat, pvalue
 
 
 def homogeneity(table, method="stuart_maxwell", return_object=True):

@@ -193,6 +193,16 @@ class CheckStratifiedMixin(object):
                         atol=1e-4)
 
 
+    def test_equal_odds(self):
+
+        if not hasattr(self, "or_homog"):
+            return
+
+        stat, pvalue = self.rslt_0.test_equal_odds()
+        assert_allclose(stat, self.or_homog, rtol=1e-4, atol=1e-4)
+        assert_allclose(pvalue, self.or_homog_p, rtol=1e-4, atol=1e-4)
+
+
 class TestStratified1(CheckStratifiedMixin):
     """
     data = array(c(0, 0, 6, 5,
@@ -243,6 +253,7 @@ class TestStratified2(CheckStratifiedMixin):
         tables[4] = np.array([[1, 0], [3, 2]])
 
         self.rslt = ctab.StratifiedTables(tables)
+        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
 
         self.common_odds = 3.5912
         self.common_logodds = np.log(3.5912)
@@ -252,3 +263,40 @@ class TestStratified2(CheckStratifiedMixin):
 
         self.or_lcb = 1.781135
         self.or_ucb = 7.240633
+
+
+class TestStratified3(CheckStratifiedMixin):
+    """
+    data = array(c(313, 512, 19, 89,
+                   207, 353, 8, 17,
+                   205, 120, 391, 202,
+                   278, 139, 244, 131,
+                   138, 53, 299, 94,
+                   351, 22, 317, 24),
+                   dim=c(2, 2, 6))
+    rslt = mantelhaen.test(data)
+    """
+
+    def __init__(self):
+
+        tables = [None] * 6
+        tables[0] = np.array([[313, 512], [19, 89]])
+        tables[1] = np.array([[207, 353], [8, 17]])
+        tables[2] = np.array([[205, 120], [391, 202]])
+        tables[3] = np.array([[278, 139], [244, 131]])
+        tables[4] = np.array([[138, 53], [299, 94]])
+        tables[5] = np.array([[351, 22], [317, 24]])
+
+        self.rslt = ctab.StratifiedTables(tables)
+
+        self.common_odds = 1.101879
+        self.common_logodds = np.log(1.101879)
+
+        self.mh_stat = 1.3368
+        self.mh_pvalue = 0.2476
+
+        self.or_lcb = 0.9402012
+        self.or_ucb = 1.2913602
+
+        self.or_homog = 18.83297
+        self.or_homog_p = 0.002064786
