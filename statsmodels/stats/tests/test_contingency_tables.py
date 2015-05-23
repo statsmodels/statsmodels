@@ -160,7 +160,7 @@ def test_cochranq():
     assert_allclose(pvalue1, pvalue2)
 
 
-def test_stratified_association():
+def test_stratified():
     """
     data = array(c(0, 0, 6, 5,
                    3, 0, 3, 6,
@@ -179,38 +179,50 @@ def test_stratified_association():
     rslt = mantelhaen.test(data)
     """
 
-    table = [None] * 5
-    table[0] = np.array([[0, 0], [6, 5]])
-    table[1] = np.array([[3, 0], [3, 6]])
-    table[2] = np.array([[6, 2], [0, 4]])
-    table[3] = np.array([[5, 6], [1, 0]])
-    table[4] = np.array([[2, 5], [0, 0]])
+    tables = [None] * 5
+    tables[0] = np.array([[0, 0], [6, 5]])
+    tables[1] = np.array([[3, 0], [3, 6]])
+    tables[2] = np.array([[6, 2], [0, 4]])
+    tables[3] = np.array([[5, 6], [1, 0]])
+    tables[4] = np.array([[2, 5], [0, 0]])
 
-    rslt = ctab.stratified_association(table)
+    rslt = ctab.StratifiedTables(tables)
 
-    assert_allclose(rslt.odds_ratio, 7)
-    assert_allclose(rslt.log_odds_ratio, np.log(7))
-    assert_allclose(rslt.stat, 3.9286, rtol=1e-4, atol=1e-5)
-    assert_allclose(rslt.pvalue, 0.04747, rtol=1e-4, atol=1e-4)
-    assert_allclose(rslt.odds_ratio_lcb, 1.026713, rtol=1e-4, atol=1e-4)
-    assert_allclose(rslt.odds_ratio_ucb, 47.725133, rtol=1e-4, atol=1e-4)
-    assert_allclose(rslt.odds_ratio_lcb, np.exp(rslt.log_odds_ratio_lcb))
-    assert_allclose(rslt.odds_ratio_ucb, np.exp(rslt.log_odds_ratio_ucb))
+    assert_allclose(rslt.common_odds, 7)
+    assert_allclose(rslt.common_logodds, np.log(7))
 
-    table = [None] * 5
-    table[0] = np.array([[20, 14], [10, 24]])
-    table[1] = np.array([[15, 12], [3, 15]])
-    table[2] = np.array([[3, 2], [3, 2]])
-    table[3] = np.array([[12, 3], [7, 5]])
-    table[4] = np.array([[1, 0], [3, 2]])
+    stat, pvalue = rslt.test_null_odds(correction=True)
+    assert_allclose(stat, 3.9286, rtol=1e-4, atol=1e-5)
+    assert_allclose(pvalue, 0.04747, rtol=1e-4, atol=1e-4)
 
-    rslt = ctab.stratified_association(table)
+    lcb, ucb = rslt.odds_ratio_confint()
+    assert_allclose(lcb, 1.026713, rtol=1e-4, atol=1e-4)
+    assert_allclose(ucb, 47.725133, rtol=1e-4, atol=1e-4)
 
-    assert_allclose(rslt.odds_ratio, 3.5912, atol=1e-5, rtol=1e-5)
-    assert_allclose(rslt.log_odds_ratio, np.log(3.5912), atol=1e-5, rtol=1e-5)
-    assert_allclose(rslt.stat, 11.8852, rtol=1e-4, atol=1e-5)
-    assert_allclose(rslt.pvalue, 0.0005658, rtol=1e-4, atol=1e-4)
-    assert_allclose(rslt.odds_ratio_lcb, 1.781135, rtol=1e-4, atol=1e-4)
-    assert_allclose(rslt.odds_ratio_ucb, 7.240633, rtol=1e-4, atol=1e-4)
-    assert_allclose(rslt.odds_ratio_lcb, np.exp(rslt.log_odds_ratio_lcb))
-    assert_allclose(rslt.odds_ratio_ucb, np.exp(rslt.log_odds_ratio_ucb))
+    lcb1, ucb1 = rslt.logodds_ratio_confint()
+    assert_allclose(lcb1, np.log(lcb))
+    assert_allclose(ucb1, np.log(ucb))
+
+    tables = [None] * 5
+    tables[0] = np.array([[20, 14], [10, 24]])
+    tables[1] = np.array([[15, 12], [3, 15]])
+    tables[2] = np.array([[3, 2], [3, 2]])
+    tables[3] = np.array([[12, 3], [7, 5]])
+    tables[4] = np.array([[1, 0], [3, 2]])
+
+    rslt = ctab.StratifiedTables(tables)
+
+    assert_allclose(rslt.common_odds, 3.5912, atol=1e-5, rtol=1e-5)
+    assert_allclose(rslt.common_logodds, np.log(3.5912), atol=1e-5, rtol=1e-5)
+
+    stat, pvalue = rslt.test_null_odds(correction=True)
+    assert_allclose(stat, 11.8852, rtol=1e-4, atol=1e-5)
+    assert_allclose(pvalue, 0.0005658, rtol=1e-4, atol=1e-4)
+
+    lcb, ucb = rslt.odds_ratio_confint()
+    assert_allclose(lcb, 1.781135, rtol=1e-4, atol=1e-4)
+    assert_allclose(ucb, 7.240633, rtol=1e-4, atol=1e-4)
+
+    lcb1, ucb1 = rslt.logodds_ratio_confint()
+    assert_allclose(lcb1, np.log(lcb))
+    assert_allclose(ucb1, np.log(ucb))

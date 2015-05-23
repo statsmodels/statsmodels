@@ -3,6 +3,7 @@ Methods for analyzing contingency tables.
 """
 
 from __future__ import division
+from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -184,100 +185,194 @@ def ordinal_association(table, row_scores=None, col_scores=None, method="lbl",
     return zscore, pvalue
 
 
-def stratified_association(table, method='cmh', correction=True, alpha=0.05,
-                           return_object=True):
+class StratifiedTables(object):
     """
-    Assess the common association in a family of contingency tables.
+    Analyses for a collection of stratified contingency tables.
 
-    This type of analysis is usually known as a 'Mantel-Haenszel' or
-    'Cochran-Mantel-Haenszel' test, or corresponding estimate of a
-    common odds ratio.
+    This class implements the 'Cochran-Mantel-Haenszel' and
+    'Breslow-Day' procedures for analyzing collections of 2x2
+    contingency tables.
 
     Parameters
     ----------
-    table : list
+    tables : list
         A list containing 2x2 contingency tables.
-    method : string
-        Only 'cmh', the Cochran-Mantel-Haenzsel approach is
-        currently available.
-    correction : bool
-        Use a continuity correction.
-    alpha : float
-        `1 - alpha` is the nominal coverage probability of the confidence
-        intervals for the common odds ratio and its log.
-    return_object : bool
-        Return an object rather than selected quantities.
-
-    Returns
-    -------
-    If `return_object` is False, returns the chi^2 test statistic and
-    p-value for the test of a common association parameter.  Otherwise
-    returns a bunch with attributes for the test statistic and
-    p-value, estimates of the common odds and risk ratios, and
-    standard errors and confidence intervals for the odds ratio.
     """
 
-    table = [x[:, :, None] for x in table]
-    table = np.concatenate(table, axis=2).astype(np.float64)
+    def __init__(self, tables):
 
-    apb = table[0, 0, :] + table[0, 1, :]
-    apc = table[0, 0, :] + table[1, 0, :]
-    bpd = table[0, 1, :] + table[1, 1, :]
-    cpd = table[1, 0, :] + table[1, 1, :]
-    n = table.sum(0).sum(0).astype(np.float64)
+        self._cache = resettable_cache()
 
-    # chi^2 test statistic for assessing that the common odds ratio is
-    # zero
-    stat = np.sum(table[0, 0, :]  - apb * apc / n)
-    stat = np.abs(stat)
-    if correction:
-        stat -= 0.5
-    stat = stat**2
-    denom = apb * apc * bpd * cpd / (n**2 * (n - 1))
-    denom = np.sum(denom)
-    stat /= denom
+        # Create a data cube
+        table = [x[:, :, None] for x in tables]
+        table = np.concatenate(table, axis=2).astype(np.float64)
+        self._table = table
 
-    # df is always 1
-    pvalue = 1 - stats.chi2.cdf(stat, 1)
+        # Quantities to precompute.  Table entries are [[a, b], [c,
+        # d]], 'ad' is 'a * d', 'apb' is 'a + b', etc.
+        self._apb = table[0, 0, :] + table[0, 1, :]
+        self._apc = table[0, 0, :] + table[1, 0, :]
+        self._bpd = table[0, 1, :] + table[1, 1, :]
+        self._cpd = table[1, 0, :] + table[1, 1, :]
+        self._ad = table[0, 0, :] * table[1, 1, :]
+        self._bc = table[0, 1, :] * table[1, 0, :]
+        self._acd = table[0, 0, :] * self._cpd
+        self._cab = table[1, 0, :] * self._apb
+        self._apd = table[0, 0, :] + table[1, 1, :]
+        self._n = table.sum(0).sum(0)
 
-    if return_object:
 
-        # Estimate the common odds and risk ratios
-        ad = table[0, 0, :] * table[1, 1, :]
-        bc = table[0, 1, :] * table[1, 0, :]
-        acd = table[0, 0, :] * cpd
-        cab = table[1, 0, :] * apb
-        apd = table[0, 0, :] + table[1, 1, :]
-        risk_ratio = np.sum(acd / n) / np.sum(cab / n)
-        odds_ratio = np.sum(ad / n) / np.sum(bc / n)
+    def test_null_odds(self, correction=False):
+        """
+        Test that all tables have odds ratio = 1.
 
-        # Standard error of the common log odds ratio
-        adns = np.sum(ad / n)
-        bcns = np.sum(bc / n)
-        lor_va = np.sum(apd * ad / n**2) / adns**2
-        lor_va += np.sum(apd * bc / n**2 + (1 - apd / n) * ad / n) / (adns * bcns)
-        lor_va += np.sum((1 - apd / n) * bc / n) / bcns**2
+        This is the 'Mantel-Haenszel' test.
+
+        Parameters
+        ----------
+        correction : boolean
+            If True, use the continuity correction when calculating the
+            test statistic.
+
+        Returns the chi^2 test statistic and p-value.
+        """
+
+        stat = np.sum(self._table[0, 0, :] - self._apb * self._apc / self._n)
+        stat = np.abs(stat)
+        if correction:
+            stat -= 0.5
+        stat = stat**2
+        denom = self._apb * self._apc * self._bpd * self._cpd
+        denom /= (self._n**2 * (self._n - 1))
+        denom = np.sum(denom)
+        stat /= denom
+
+        # df is always 1
+        pvalue = 1 - stats.chi2.cdf(stat, 1)
+
+        return stat, pvalue
+
+
+    @cache_readonly
+    def common_odds(self):
+        """
+        An estimate of the common odds ratio.
+
+        This is the Mantel-Haenszel estimate of a odds ratio that is
+        common to all tables.
+        """
+
+        odds_ratio = np.sum(self._ad / self._n) / np.sum(self._bc / self._n)
+        return odds_ratio
+
+
+    @cache_readonly
+    def common_logodds(self):
+        """
+        An estimate of the common log odds ratio.
+
+        This is the Mantel-Haenszel estimate of a risk ratio that is
+        common to all tables.
+        """
+
+        return np.log(self.common_odds)
+
+
+    @cache_readonly
+    def common_risk(self):
+        """
+        An estimate of the common risk ratio.
+
+        This is an estimate of a risk ratio that is common to all
+        tables.
+        """
+
+        risk_ratio = np.sum(self._acd / self._n) / np.sum(self._cab / self._n)
+        return risk_ratio
+
+
+    @cache_readonly
+    def common_logodds_se(self):
+        """
+        Returns the estimated standard error of the common log odds ratio.
+        """
+
+        adns = np.sum(self._ad / self._n)
+        bcns = np.sum(self._bc / self._n)
+        lor_va = np.sum(self._apd * self._ad / self._n**2) / adns**2
+        mid = self._apd * self._bc / self._n**2
+        mid += (1 - self._apd / self._n) * self._ad / self._n
+        mid = np.sum(mid)
+        mid /= (adns * bcns)
+        lor_va += mid
+        lor_va += np.sum((1 - self._apd / self._n) * self._bc / self._n) / bcns**2
         lor_va /= 2
         lor_se = np.sqrt(lor_va)
+        return lor_se
+
+
+    def logodds_ratio_confint(self, alpha=0.05):
+        """
+        A confidence interval for the log odds ratio.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            interval.
+
+        Returns
+        -------
+        lcb : float
+            The lower confidence limit.
+        ucb : float
+            The upper confidence limit.
+        """
+
+        lor = np.log(self.common_odds)
+        lor_se = self.common_logodds_se
 
         f = -stats.norm.ppf(alpha / 2)
 
-        b = _bunch()
-        b.risk_ratio = risk_ratio
-        b.odds_ratio = odds_ratio
-        b.log_odds_ratio = np.log(odds_ratio)
-        b.log_odds_ratio_se = lor_se
+        # Confidence intervals for the log odds ratio.
+        lcb = lor - f * lor_se
+        ucb = lor + f * lor_se
 
-        # Confidence intervals for the odds ratio and log odds ratio.
-        b.log_odds_ratio_lcb = b.log_odds_ratio - f * lor_se
-        b.log_odds_ratio_ucb = b.log_odds_ratio + f * lor_se
-        b.odds_ratio_lcb = np.exp(b.log_odds_ratio_lcb)
-        b.odds_ratio_ucb = np.exp(b.log_odds_ratio_ucb)
-        b.stat = stat
-        b.pvalue = pvalue
-        return b
+        return lcb, ucb
 
-    return stat, pvalue
+
+    def odds_ratio_confint(self, alpha=0.05):
+        """
+        A confidence interval for the odds ratio.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            interval.
+
+        Returns
+        -------
+        lcb : float
+            The lower confidence limit.
+        ucb : float
+            The upper confidence limit.
+        """
+
+        lcb, ucb = self.logodds_ratio_confint(alpha)
+        lcb = np.exp(lcb)
+        ucb = np.exp(ucb)
+        return lcb, ucb
+
+
+    def test_homog_odds(self):
+        """
+        Test that all odds ratios are identical.
+
+        This is the 'Breslow-Day' procedure.
+
+        Returns the chi^2 test statistic and p-value.
+        """
 
 
 def homogeneity(table, method="stuart_maxwell", return_object=True):
