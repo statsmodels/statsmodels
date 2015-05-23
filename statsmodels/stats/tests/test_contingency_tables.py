@@ -160,7 +160,40 @@ def test_cochranq():
     assert_allclose(pvalue1, pvalue2)
 
 
-def test_stratified():
+
+class CheckStratifiedMixin(object):
+
+    def test_common_odds(self):
+        assert_allclose(self.rslt.common_odds, self.common_odds,
+                        rtol=1e-4, atol=1e-4)
+
+
+    def test_common_logodds(self):
+        assert_allclose(self.rslt.common_logodds, self.common_logodds,
+                        rtol=1e-4, atol=1e-4)
+
+
+    def test_null_odds(self):
+        stat, pvalue = self.rslt.test_null_odds(correction=True)
+        assert_allclose(stat, self.mh_stat, rtol=1e-4, atol=1e-5)
+        assert_allclose(pvalue, self.mh_pvalue, rtol=1e-4, atol=1e-4)
+
+
+    def test_odds_ratio_confint(self):
+        lcb, ucb = self.rslt.odds_ratio_confint()
+        assert_allclose(lcb, self.or_lcb, rtol=1e-4, atol=1e-4)
+        assert_allclose(ucb, self.or_ucb, rtol=1e-4, atol=1e-4)
+
+
+    def test_logodds_ratio_confint(self):
+        lcb, ucb = self.rslt.logodds_ratio_confint()
+        assert_allclose(lcb, np.log(self.or_lcb), rtol=1e-4,
+                        atol=1e-4)
+        assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4,
+                        atol=1e-4)
+
+
+class TestStratified1(CheckStratifiedMixin):
     """
     data = array(c(0, 0, 6, 5,
                    3, 0, 3, 6,
@@ -169,7 +202,29 @@ def test_stratified():
                    2, 5, 0, 0),
                    dim=c(2, 2, 5))
     rslt = mantelhaen.test(data)
+    """
 
+    def __init__(self):
+
+        tables = [None] * 5
+        tables[0] = np.array([[0, 0], [6, 5]])
+        tables[1] = np.array([[3, 0], [3, 6]])
+        tables[2] = np.array([[6, 2], [0, 4]])
+        tables[3] = np.array([[5, 6], [1, 0]])
+        tables[4] = np.array([[2, 5], [0, 0]])
+
+        self.rslt = ctab.StratifiedTables(tables)
+
+        self.common_odds = 7
+        self.common_logodds = np.log(7)
+        self.mh_stat = 3.9286
+        self.mh_pvalue = 0.04747
+        self.or_lcb = 1.026713
+        self.or_ucb = 47.725133
+
+
+class TestStratified2(CheckStratifiedMixin):
+    """
     data = array(c(20, 14, 10, 24,
                    15, 12, 3, 15,
                    3, 2, 3, 2,
@@ -179,50 +234,21 @@ def test_stratified():
     rslt = mantelhaen.test(data)
     """
 
-    tables = [None] * 5
-    tables[0] = np.array([[0, 0], [6, 5]])
-    tables[1] = np.array([[3, 0], [3, 6]])
-    tables[2] = np.array([[6, 2], [0, 4]])
-    tables[3] = np.array([[5, 6], [1, 0]])
-    tables[4] = np.array([[2, 5], [0, 0]])
+    def __init__(self):
+        tables = [None] * 5
+        tables[0] = np.array([[20, 14], [10, 24]])
+        tables[1] = np.array([[15, 12], [3, 15]])
+        tables[2] = np.array([[3, 2], [3, 2]])
+        tables[3] = np.array([[12, 3], [7, 5]])
+        tables[4] = np.array([[1, 0], [3, 2]])
 
-    rslt = ctab.StratifiedTables(tables)
+        self.rslt = ctab.StratifiedTables(tables)
 
-    assert_allclose(rslt.common_odds, 7)
-    assert_allclose(rslt.common_logodds, np.log(7))
+        self.common_odds = 3.5912
+        self.common_logodds = np.log(3.5912)
 
-    stat, pvalue = rslt.test_null_odds(correction=True)
-    assert_allclose(stat, 3.9286, rtol=1e-4, atol=1e-5)
-    assert_allclose(pvalue, 0.04747, rtol=1e-4, atol=1e-4)
+        self.mh_stat = 11.8852
+        self.mh_pvalue = 0.0005658
 
-    lcb, ucb = rslt.odds_ratio_confint()
-    assert_allclose(lcb, 1.026713, rtol=1e-4, atol=1e-4)
-    assert_allclose(ucb, 47.725133, rtol=1e-4, atol=1e-4)
-
-    lcb1, ucb1 = rslt.logodds_ratio_confint()
-    assert_allclose(lcb1, np.log(lcb))
-    assert_allclose(ucb1, np.log(ucb))
-
-    tables = [None] * 5
-    tables[0] = np.array([[20, 14], [10, 24]])
-    tables[1] = np.array([[15, 12], [3, 15]])
-    tables[2] = np.array([[3, 2], [3, 2]])
-    tables[3] = np.array([[12, 3], [7, 5]])
-    tables[4] = np.array([[1, 0], [3, 2]])
-
-    rslt = ctab.StratifiedTables(tables)
-
-    assert_allclose(rslt.common_odds, 3.5912, atol=1e-5, rtol=1e-5)
-    assert_allclose(rslt.common_logodds, np.log(3.5912), atol=1e-5, rtol=1e-5)
-
-    stat, pvalue = rslt.test_null_odds(correction=True)
-    assert_allclose(stat, 11.8852, rtol=1e-4, atol=1e-5)
-    assert_allclose(pvalue, 0.0005658, rtol=1e-4, atol=1e-4)
-
-    lcb, ucb = rslt.odds_ratio_confint()
-    assert_allclose(lcb, 1.781135, rtol=1e-4, atol=1e-4)
-    assert_allclose(ucb, 7.240633, rtol=1e-4, atol=1e-4)
-
-    lcb1, ucb1 = rslt.logodds_ratio_confint()
-    assert_allclose(lcb1, np.log(lcb))
-    assert_allclose(ucb1, np.log(ucb))
+        self.or_lcb = 1.781135
+        self.or_ucb = 7.240633
