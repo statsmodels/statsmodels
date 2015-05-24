@@ -3,11 +3,18 @@ import nose.tools as ntools
 
 import numpy as np
 import numpy.testing as npt
-import matplotlib.pyplot as plt
+from numpy.testing import dec
+
 import pandas as pd
 
 from statsmodels.stats.robustros import RobustROSEstimator
 from statsmodels.compat.python import StringIO
+
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except:
+    have_matplotlib = False
 
 
 class CheckROSMixin(object):
@@ -105,10 +112,12 @@ class CheckROSMixin(object):
         data = self.data.values
         npt.assert_raises(ValueError, RobustROSEstimator, data)
 
+    @dec.skipif(not have_matplotlib)
     def test_plot_default(self):
         ax = self.ros.plot()
         ntools.assert_true(isinstance(ax, plt.Axes))
 
+    @dec.skipif(not have_matplotlib)
     def test_plot_ylogFalse_withAx(self):
         fig, ax = plt.subplots()
         ax = self.ros.plot(ylog=False, ax=ax)
