@@ -69,7 +69,7 @@ Module Reference
    homogeneity
    symmetry
    ordinal_association
-   stratified_association
+   StratifiedTables
    mcnemar
    cochrans_q
 

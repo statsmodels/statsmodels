@@ -7,6 +7,7 @@ from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import numpy as np
 from scipy import stats
 import pandas as pd
+from statsmodels import iolib
 
 def _handle_pandas_square(table):
     """
@@ -29,75 +30,168 @@ class _bunch(object):
     pass
 
 
-def symmetry(table, method="bowker", return_object=True):
+class TableSymmetry(object):
     """
-    Test for symmetry of a joint distribution.
+    Methods for analyzing a square contingency table.
 
-    This procedure tests the null hypothesis that the joint
-    distribution is symmetric around the main diagonal, that is
-
-    ..math::
-
-    p_{i, j} = p_{j, i}  for all i, j
-
-    Parameters
-    ----------
-    table : array_like, 2d, (k, k)
-        A square contingency table that contains the count for k
-        categories in rows and columns.
-
-    Returns
-    -------
-    statistic : float
-        chisquare test statistic
-    p-value : float
-        p-value of the test statistic based on chisquare distribution
-    df : int
-        degrees of freedom of the chisquare distribution
-
-    Notes
-    -----
-    The implementation is based on the SAS documentation. R includes
-    it in `mcnemar.test` if the table is not 2 by 2.  However a more
-    direct generalization of the McNemar test to large tables is
-    provided by the homogeneity test.
-
-    The p-value is based on the chi-square distribution which requires
-    that the sample size is not very small to be a good approximation
-    of the true distribution. For 2x2 contingency tables the exact
-    distribution can be obtained with `mcnemar`
-
-    See Also
-    --------
-    mcnemar
-    homogeneity
+    These methods should only be used when the rows and columns of the
+    table have the same categories.  If `table` is provided as a
+    Pandas array, the row and column indices will be extended to
+    create a scquare table.  Otherwise the table should be provided in
+    a square form.
     """
 
-    if method.lower() != "bowker":
-        raise ValueError("method for symmetry testing must be 'bowker'")
-    table = _handle_pandas_square(table)
-    table = np.asarray(table, dtype=np.float64)
-    k, k2 = table.shape
-    if k != k2:
-        raise ValueError('table must be square')
+    def __init__(self, table):
+        table = _handle_pandas_square(table)
+        table = np.asarray(table, dtype=np.float64)
+        k, k2 = table.shape
+        if k != k2:
+            raise ValueError('table must be square')
+        self._table = table
 
-    upp_idx = np.triu_indices(k, 1)
 
-    tril = table.T[upp_idx]   # lower triangle in column order
-    triu = table[upp_idx]     # upper triangle in row order
+    def symmetry(self, method="bowker"):
+        """
+        Test for symmetry of a joint distribution.
 
-    stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
-    df = k * (k-1) / 2.
-    pval = stats.chi2.sf(stat, df)
+        This procedure tests the null hypothesis that the joint
+        distribution is symmetric around the main diagonal, that is
 
-    if return_object:
-        b = _bunch()
-        b.stat = stat
-        b.df = df
-        b.pvalue = pvalue
-        return b
+        .. math::
 
-    return stat, pval, df
+        p_{i, j} = p_{j, i}  for all i, j
+
+        Returns
+        -------
+        statistic : float
+            chisquare test statistic
+        p-value : float
+            p-value of the test statistic based on chisquare distribution
+        df : int
+            degrees of freedom of the chisquare distribution
+
+        Notes
+        -----
+        The implementation is based on the SAS documentation. R includes
+        it in `mcnemar.test` if the table is not 2 by 2.  However a more
+        direct generalization of the McNemar test to large tables is
+        provided by the homogeneity test.
+
+        The p-value is based on the chi-square distribution which requires
+        that the sample size is not very small to be a good approximation
+        of the true distribution. For 2x2 contingency tables the exact
+        distribution can be obtained with `mcnemar`
+
+        See Also
+        --------
+        mcnemar
+        homogeneity
+        """
+
+        if method.lower() != "bowker":
+            raise ValueError("method for symmetry testing must be 'bowker'")
+
+        k = self._table.shape[0]
+        upp_idx = np.triu_indices(k, 1)
+
+        tril = self._table.T[upp_idx]   # lower triangle in column order
+        triu = self._table[upp_idx]     # upper triangle in row order
+
+        stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
+        df = k * (k-1) / 2.
+        pval = stats.chi2.sf(stat, df)
+
+        return stat, pval, df
+
+
+    def homogeneity(self, method="stuart_maxwell"):
+        """
+        Compare row and column marginal distributions.
+
+        Parameters
+        ----------
+        method : string
+            Either 'stuart_maxwell' or 'bhapkar', leading to two different
+            estimates of the covariance matrix for the estimated
+            difference between the row margins and the column margins.
+
+        Returns
+        -------
+        The following attributes, returned as a bunch if return_object is
+        True:
+
+        stat : float
+            The chi^2 test statistic
+        pvalue : float
+            The p-value of the test statistic
+        df : integer
+            The degrees of freedom of the reference distribution
+
+        Notes
+        -----
+        For a 2x2 table this is equivalent to McNemar's test.  More
+        generally the procedure tests the null hypothesis that the
+        marginal distribution of the row factor is equal to the marginal
+        distribution of the column factor.  For this to be meaningful, the
+        two factors must have the same sample space.
+        """
+
+        if self._table.shape[0] < 1:
+            raise ValueError('table is empty')
+        elif self._table.shape[0] == 1:
+            return 0., 1., 0
+
+        method = method.lower()
+        if method not in ["bhapkar", "stuart_maxwell"]:
+            raise ValueError("method '%s' for homogeneity not known" % method)
+
+        n_obs = self._table.sum()
+        pr = self._table.astype(np.float64) / n_obs
+
+        # Compute margins, eliminate last row/column so there is no
+        # degeneracy
+        row = pr.sum(1)[0:-1]
+        col = pr.sum(0)[0:-1]
+        pr = pr[0:-1, 0:-1]
+
+        # The estimated difference between row and column margins.
+        d = col - row
+
+        # The degrees of freedom of the chi^2 reference distribution.
+        df = pr.shape[0]
+
+        if method == "bhapkar":
+            vmat = -(pr + pr.T) - np.outer(d, d)
+            dv = col + row - 2*np.diag(pr) - d**2
+            np.fill_diagonal(vmat, dv)
+        elif method == "stuart_maxwell":
+            vmat = -(pr + pr.T)
+            dv = row + col - 2*np.diag(pr)
+            np.fill_diagonal(vmat, dv)
+
+        try:
+            stat = n_obs * np.dot(d, np.linalg.solve(vmat, d))
+        except np.linalg.LinAlgError:
+            warnings.warn("Unable to invert covariance matrix")
+            return np.nan, np.nan, df
+
+        pvalue = 1 - stats.chi2.cdf(stat, df)
+
+        return stat, pvalue, df
+
+
+    def summary(self, alpha=0.05):
+
+        headers = ["Statistic", "P-value", "DF"]
+        stubs = ["Symmetry", "Homogeneity"]
+        stat1, pvalue1, df1 = self.symmetry()
+        stat2, pvalue2, df2 = self.homogeneity()
+        data = [['%.3f' % stat1, '%.3f' % pvalue1, '%d' % df1],
+                ['%.3f' % stat2, '%.3f' % pvalue2, '%d' % df2]]
+        tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
+                                 table_dec_above='')
+
+        return tab
 
 
 def ordinal_association(table, row_scores=None, col_scores=None, method="lbl",
@@ -325,9 +419,9 @@ class StratifiedTables(object):
         return lor_se
 
 
-    def logodds_ratio_confint(self, alpha=0.05):
+    def common_logodds_confint(self, alpha=0.05):
         """
-        A confidence interval for the log odds ratio.
+        A confidence interval for the common log odds ratio.
 
         Parameters
         ----------
@@ -354,9 +448,9 @@ class StratifiedTables(object):
         return lcb, ucb
 
 
-    def odds_ratio_confint(self, alpha=0.05):
+    def common_odds_confint(self, alpha=0.05):
         """
-        A confidence interval for the odds ratio.
+        A confidence interval for the common odds ratio.
 
         Parameters
         ----------
@@ -372,7 +466,7 @@ class StratifiedTables(object):
             The upper confidence limit.
         """
 
-        lcb, ucb = self.logodds_ratio_confint(alpha)
+        lcb, ucb = self.common_logodds_confint(alpha)
         lcb = np.exp(lcb)
         ucb = np.exp(ucb)
         return lcb, ucb
@@ -420,104 +514,48 @@ class StratifiedTables(object):
         return stat, pvalue
 
 
-def homogeneity(table, method="stuart_maxwell", return_object=True):
-    """
-    Compare row and column marginal distributions.
+    def summary(self, alpha=0.05):
 
-    Parameters
-    ----------
-    table : array-like
-        A square contingency table.
-    method : string
-        Either 'stuart_maxwell' or 'bhapkar', leading to two different
-        estimates of the covariance matrix for the estimated
-        difference between the row margins and the column margins.
-    return_object : bool
-       If True, returns a bunch containing the test statistic,
-       p-value, and degrees of freedom as attributes.  Otherwise these
-       are returned individually.
+        def fmt(x):
+            if type(x) is str:
+                return x
+            return "%.3f" % x
 
-    Returns
-    -------
-    The following attributes, returned as a bunch if return_object is
-    True:
+        co_lcb, co_ucb = self.common_odds_confint(alpha=alpha)
+        clo_lcb, clo_ucb = self.common_logodds_confint(alpha=alpha)
+        headers = ["Estimate", "LCB", "UCB"]
+        stubs = ["Common odds", "Common log odds", "Common risk ratio", ""]
+        data = [[fmt(x) for x in [self.common_odds, co_lcb, co_ucb]],
+                [fmt(x) for x in [self.common_logodds, clo_lcb, clo_ucb]],
+                [fmt(x) for x in [self.common_risk, "", ""]],
+                ['', '', '']]
+        tab1 = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
+                                 table_dec_above='')
 
-    stat : float
-        The chi^2 test statistic
-    pvalue : float
-        The p-value of the test statistic
-    df : integer
-        The degrees of freedom of the reference distribution
+        headers = ["Statistic", "P-value", ""]
+        stubs = ["Test of OR=1", "Test constant OR"]
+        stat1, pvalue1 = self.test_null_odds()
+        stat2, pvalue2 = self.test_equal_odds()
+        data = [[fmt(x) for x in [stat1, pvalue1, ""]],
+                [fmt(x) for x in [stat2, pvalue2, ""]]]
+        tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
+        tab1.extend(tab2)
 
-    Notes
-    -----
-    For a 2x2 table this is equivalent to McNemar's test.  More
-    generally the procedure tests the null hypothesis that the
-    marginal distribution of the row factor is equal to the marginal
-    distribution of the column factor.  For this to be meaningful, the
-    two factors must have the same sample space.
+        headers = ["", "", ""]
+        stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
+        stat1, pvalue1 = self.test_null_odds()
+        stat2, pvalue2 = self.test_equal_odds()
+        ss = self._table.sum(0).sum(0)
+        data = [["%d" % self._table.shape[2], '', ''],
+                ["%d" % min(ss), '', ''],
+                ["%d" % max(ss), '', ''],
+                ["%.0f" % np.mean(ss), '', ''],
+                ["%d" % sum(ss), '', '', '']]
+        tab3 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
+        tab1.extend(tab3)
 
-    See also
-    --------
-    mcnemar
-    homogeneity
-    symmetry
-    """
-    table = _handle_pandas_square(table)
-    table = np.asarray(table, dtype=np.float64)
+        return tab1
 
-    if table.shape[0] != table.shape[1]:
-        raise ValueError('table must be square')
-
-    if table.shape[0] < 1:
-        raise ValueError('table is empty')
-    elif table.shape[0] == 1:
-        return 0., 1., 0
-
-    method = method.lower()
-    if method not in ["bhapkar", "stuart_maxwell"]:
-        raise ValueError("method '%s' for homogeneity not known" % method)
-
-    n_obs = table.sum()
-    pr = table.astype(np.float64) / n_obs
-
-    # Compute margins, eliminate last row/column so there is no
-    # degeneracy
-    row = pr.sum(1)[0:-1]
-    col = pr.sum(0)[0:-1]
-    pr = pr[0:-1, 0:-1]
-
-    # The estimated difference between row and column margins.
-    d = col - row
-
-    # The degrees of freedom of the chi^2 reference distribution.
-    df = pr.shape[0]
-
-    if method == "bhapkar":
-        vmat = -(pr + pr.T) - np.outer(d, d)
-        dv = col + row - 2*np.diag(pr) - d**2
-        np.fill_diagonal(vmat, dv)
-    elif method == "stuart_maxwell":
-        vmat = -(pr + pr.T)
-        dv = row + col - 2*np.diag(pr)
-        np.fill_diagonal(vmat, dv)
-
-    try:
-        stat = n_obs * np.dot(d, np.linalg.solve(vmat, d))
-    except np.linalg.LinAlgError:
-        warnings.warn("Unable to invert covariance matrix")
-        return np.nan, np.nan, df
-
-    pvalue = 1 - stats.chi2.cdf(stat, df)
-
-    if return_object:
-        b = _bunch()
-        b.stat = stat
-        b.df = df
-        b.pvalue = pvalue
-        return b
-
-    return stat, pvalue, df
 
 
 def mcnemar(table, exact=True, correction=True):

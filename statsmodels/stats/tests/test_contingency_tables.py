@@ -7,6 +7,7 @@ import statsmodels.stats.contingency_tables as ctab
 import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
 import os
+import statsmodels.api as sm
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fname = "contingency_table_r_results.csv"
@@ -31,13 +32,13 @@ tables[2] = np.asarray([[20, 10, 5],
 def test_homogeneity():
 
     for k,table in enumerate(tables):
-        stat, pvalue, df = ctab.homogeneity(table, return_object=False)
+        st = sm.stats.TableSymmetry(table)
+        stat, pvalue, df = st.homogeneity()
         assert_allclose(stat, r_results.loc[k, "homog_stat"])
         assert_allclose(df, r_results.loc[k, "homog_df"])
 
         # Test Bhapkar via its relationship to Stuart_Maxwell.
-        stat1, pvalue, df = ctab.homogeneity(table, method="bhapkar",
-                                             return_object=False)
+        stat1, pvalue, df = st.homogeneity(method="bhapkar")
         assert_allclose(stat1, stat / (1 - stat / table.sum()))
 
 
@@ -70,8 +71,8 @@ def test_ordinal_association():
 def test_symmetry():
 
     for k,table in enumerate(tables):
-
-        stat, pvalue, df = ctab.symmetry(table, return_object=False)
+        st = sm.stats.TableSymmetry(table)
+        stat, pvalue, df = st.symmetry()
         assert_allclose(stat, r_results.loc[k, "bowker_stat"])
         assert_equal(df, r_results.loc[k, "bowker_df"])
         assert_allclose(pvalue, r_results.loc[k, "bowker_pvalue"])
@@ -82,7 +83,9 @@ def test_mcnemar():
     # Use chi^2 without continuity correction
     stat1, pvalue1 = ctab.mcnemar(tables[0], exact=False,
                                   correction=False)
-    stat2, pvalue2, df = ctab.homogeneity(tables[0], return_object=False)
+
+    st = sm.stats.TableSymmetry(tables[0])
+    stat2, pvalue2, df = st.homogeneity()
     assert_allclose(stat1, stat2)
     assert_equal(df, 1)
 
@@ -179,14 +182,14 @@ class CheckStratifiedMixin(object):
         assert_allclose(pvalue, self.mh_pvalue, rtol=1e-4, atol=1e-4)
 
 
-    def test_odds_ratio_confint(self):
-        lcb, ucb = self.rslt.odds_ratio_confint()
+    def test_common_odds_confint(self):
+        lcb, ucb = self.rslt.common_odds_confint()
         assert_allclose(lcb, self.or_lcb, rtol=1e-4, atol=1e-4)
         assert_allclose(ucb, self.or_ucb, rtol=1e-4, atol=1e-4)
 
 
-    def test_logodds_ratio_confint(self):
-        lcb, ucb = self.rslt.logodds_ratio_confint()
+    def test_common_logodds_confint(self):
+        lcb, ucb = self.rslt.common_logodds_confint()
         assert_allclose(lcb, np.log(self.or_lcb), rtol=1e-4,
                         atol=1e-4)
         assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4,

@@ -52,5 +52,9 @@ from .anova import anova_lm
 from . import moment_helpers
 from .correlation_tools import corr_nearest, corr_clipped, cov_nearest
 
-from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q,
-                        symmetry_bowker, Runs, runstest_1samp, runstest_2samp)
+from statsmodels.sandbox.stats.runs import (Runs, runstest_1samp, runstest_2samp)
+
+from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
+                                                  TableSymmetry,
+                                                  ordinal_association,
+                                                  StratifiedTables)
