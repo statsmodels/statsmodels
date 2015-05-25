@@ -154,6 +154,8 @@ class RobustROSEstimator(object):
         self._result_df = data.copy()
         self._cohn = None
         self._estimated_values = None
+        if not lazy:
+            self.estimate()
 
     @property
     def cohn(self):
