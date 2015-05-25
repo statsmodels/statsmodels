@@ -4,12 +4,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+n = 2000
 data = pd.DataFrame()
-x = np.linspace(-1, 1, 200)
-z = np.linspace(-2, 0, 200)
+x = np.linspace(-1, 1, n)
+d = {"x": x}
+dm = dmatrix("bs(x, df=20, degree=2, include_intercept=True)", d)
+
+
+z = np.linspace(-2, 0, n)
+d["z"] = z
 y = x * x +  x + z
-d = {"x": x, "z": z}
-dm = dmatrix("bs(x, df=6, degree=3, include_intercept=True) + z - 1", d)
 
 
 
+plt.plot(dm)
+plt.show()
