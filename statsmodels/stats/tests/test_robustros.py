@@ -23,13 +23,15 @@ class CheckROSMixin(object):
         self.data = pd.DataFrame({'res': self.obs, 'cen': self.cen})
         self.ros = RobustROSEstimator(self.data, result='res',
                                       censorship='cen')
+        self.known_cols = [ 'res', 'cen']
         self.ros.estimate()
+        _ = self.ros.estimated_values
 
     def main_setup(self):
         self.setup_knowns()
-        self.known_debug_cols = [
-            'Zprelim', 'cen', 'det_limit_index', 'modeled',
-            'modeled_data', 'plot_pos', 'rank', 'res'
+        self.known_result_cols = [
+            'res', 'cen', 'det_limit_index', 'rank', 'plot_pos',
+            'Zprelim', 'modeled_data', 'modeled'
         ]
 
     def test_zero_data(self):
@@ -42,27 +44,13 @@ class CheckROSMixin(object):
         data.loc[0, 'res'] = -1.0
         npt.assert_raises(ValueError, RobustROSEstimator, data)
 
-    def test_data(self):
-        ntools.assert_true(hasattr(self.ros, 'data'))
-        ntools.assert_true(isinstance(self.ros.data, pd.DataFrame))
-
-    def test_data_cols(self):
-        known_cols = ['modeled', 'res', 'cen']
-        npt.assert_array_equal(self.ros.data.columns.tolist(), known_cols)
-
-    def test_debug_attr(self):
-        ntools.assert_true(hasattr(self.ros, 'debug'))
-        ntools.assert_true(isinstance(self.ros.data, pd.DataFrame))
-
-    def test_debug_cols(self):
-
-        npt.assert_array_equal(
-            sorted(self.ros.debug.columns.tolist()),
-            sorted(self.known_debug_cols)
-        )
+    def test__result_df_attr_and_columns(self):
+        ntools.assert_true(hasattr(self.ros, '_result_df'))
+        ntools.assert_true(isinstance(self.ros._result_df, pd.DataFrame))
+        npt.assert_array_equal(self.ros._result_df.columns.tolist(), self.known_result_cols)
 
     def test_plotting_positions(self):
-        pp = np.round(np.array(self.ros.debug.plot_pos), 3)
+        pp = np.round(np.array(self.ros._result_df['plot_pos']), 3)
         npt.assert_array_almost_equal(
             sorted(pp),
             sorted(self.known_plot_pos),
@@ -98,8 +86,9 @@ class CheckROSMixin(object):
             self.known_cohn_prob_exceedance, self.ros.cohn['prob_exceedance'], decimal=4
         )
 
-    def test_MR_rosEstimator(self):
-        modeled = np.array(self.ros.data.modeled)
+    def test_modeled_vales(self):
+        self.ros.estimate()
+        modeled = self.ros.estimated_values
         modeled.sort()
 
         npt.assert_array_almost_equal(self.known_modeled, modeled, decimal=2)
@@ -135,10 +124,10 @@ class CheckROSMixin(object):
     def test_scalars(self):
         ros = RobustROSEstimator(data=None, result=1, censorship='A')
 
-    def test_transform_in(self):
+    def test_default_transform_in(self):
         ntools.assert_equal(self.ros.transform_in, np.log)
 
-    def test_transform_out(self):
+    def test_default_transform_out(self):
         ntools.assert_equal(self.ros.transform_out, np.exp)
 
 
@@ -224,6 +213,7 @@ class testROSHelselAppendixB_withArrays(testROSHelselAppendixB):
         self.main_setup()
         self.ros = RobustROSEstimator(data=None, result=self.obs,
                                       censorship=self.cen)
+        self.known_cols = [ 'res', 'cen']
         self.ros.estimate()
 
 
@@ -343,12 +333,12 @@ class testROSNoNDs(CheckROSMixin):
             0.721,  0.770,  0.819,  0.868,  0.917,  0.966
             ])
         self.known_modeled.sort()
+        self.known_result_cols = [
+            'res', 'cen', 'det_limit_index', 'rank', 'modeled', 'plot_pos'
+        ]
 
     def main_setup(self):
         self.setup_knowns()
-        self.known_debug_cols = [
-            'rank', 'cen', 'det_limit_index', 'modeled', 'plot_pos', 'res'
-        ]
 
 
 class testROSoneND(CheckROSMixin):
@@ -380,9 +370,9 @@ class testROSoneND(CheckROSMixin):
 
     def main_setup(self):
         self.setup_knowns()
-        self.known_debug_cols = [
-            'Zprelim', 'cen', 'det_limit_index', 'modeled',
-            'modeled_data', 'plot_pos', 'rank', 'res'
+        self.known_result_cols = [
+            'res', 'cen', 'det_limit_index', 'rank', 'plot_pos',
+            'Zprelim', 'modeled_data', 'modeled'
         ]
 
 
@@ -417,8 +407,8 @@ class testROShalfDLs80pctNDs(CheckROSMixin):
 
     def main_setup(self):
         self.setup_knowns()
-        self.known_debug_cols = [
-            'cen', 'det_limit_index', 'modeled', 'plot_pos', 'rank', 'res'
+        self.known_result_cols = [
+            'res', 'cen', 'det_limit_index', 'rank', 'modeled', 'plot_pos'
         ]
 
 
@@ -443,7 +433,7 @@ class testROShalfDLs1noncensored(CheckROSMixin):
 
     def main_setup(self):
         self.setup_knowns()
-        self.known_debug_cols = [
-            'cen', 'det_limit_index', 'modeled', 'plot_pos', 'rank', 'res'
+        self.known_result_cols = [
+            'res', 'cen', 'det_limit_index', 'rank', 'modeled', 'plot_pos'
         ]
 

@@ -106,7 +106,8 @@ class RobustROSEstimator(object):
 
     def __init__(self, data=None, result='res', censorship='cen',
                  min_uncensored=2, max_fraction_censored=0.8,
-                 transform_in=np.log, transform_out=np.exp):
+                 transform_in=np.log, transform_out=np.exp,
+                 lazy=False):
 
         self.min_uncensored = min_uncensored
         self.max_fraction_censored = max_fraction_censored
@@ -149,16 +150,22 @@ class RobustROSEstimator(object):
         self.nobs = data.shape[0]
         self.ncen = data[data[self.censorship_name]].shape[0]
 
-        self._raw_data = data
+        self._raw_data = data.copy()
+        self._result_df = data.copy()
+        self._cohn = None
+        self._estimated_values = None
 
-        # sort the data, selecting only the results and censorship columns
-        self.data = data[[self.result_name, self.censorship_name]]
-        self.data = _ros_sort(self.data, result=self.result_name,
-                              censorship=self.censorship_name)
+    @property
+    def cohn(self):
+        if self._cohn is None:
+            self._cohn = self._get_cohn_numbers()
+        return self._cohn
 
-        # create a dataframe of detection limits and their parameters
-        # used in the ROS estimation
-        self.cohn = self._get_cohn_numbers()
+    @property
+    def estimated_values(self):
+        if self._estimated_values is None:
+            self._estimated_values = self._result_df['modeled'].values
+        return self._estimated_values
 
     def _get_cohn_numbers(self):
         '''
@@ -180,16 +187,16 @@ class RobustROSEstimator(object):
             The number of uncensored obs above the given threshold. (A_j)
             '''
             # index of results above the lower DL
-            above = self.data[self.result_name] >= row['lower']
+            above = self._result_df[self.result_name] >= row['lower']
 
             # index of results below the upper DL
-            below = self.data[self.result_name] < row['upper']
+            below = self._result_df[self.result_name] < row['upper']
 
             # index of non-detect results
-            detect = self.data[self.censorship_name] == False
+            detect = self._result_df[self.censorship_name] == False
 
             # return the number of results where all conditions are True
-            return self.data[above & below & detect].shape[0]
+            return self._result_df[above & below & detect].shape[0]
 
         def nobs_below(row):
             '''
@@ -197,20 +204,20 @@ class RobustROSEstimator(object):
             threshold. (B_j)
             '''
             # index of data less than the lower DL
-            less_than = self.data[self.result_name] < row['lower']
+            less_than = self._result_df[self.result_name] < row['lower']
 
             # index of data less than or equal to the lower DL
-            less_thanequal = self.data[self.result_name] <= row['lower']
+            less_thanequal = self._result_df[self.result_name] <= row['lower']
 
             # index of detects, non-detects
-            uncensored = self.data[self.censorship_name] == False
-            censored = self.data[self.censorship_name] == True
+            uncensored = self._result_df[self.censorship_name] == False
+            censored = self._result_df[self.censorship_name] == True
 
             # number results less than or equal to lower DL and non-detect
-            LTE_censored = self.data[less_thanequal & censored].shape[0]
+            LTE_censored = self._result_df[less_thanequal & censored].shape[0]
 
             # number of results less than lower DL and detected
-            LT_uncensored = self.data[less_than & uncensored].shape[0]
+            LT_uncensored = self._result_df[less_than & uncensored].shape[0]
 
             # return the sum
             return LTE_censored + LT_uncensored
@@ -219,20 +226,20 @@ class RobustROSEstimator(object):
             '''
             The number of censored observations at the given threshold (C_j)
             '''
-            censored_index = self.data[self.censorship_name]
-            censored_data = self.data[self.result_name][censored_index]
+            censored_index = self._result_df[self.censorship_name]
+            censored_data = self._result_df[self.result_name][censored_index]
             censored_below = censored_data == row['lower']
             return censored_below.sum()
 
         # unique values
-        censored_data = self.data[self.censorship_name]
-        cohn = pd.unique(self.data[self.result_name][censored_data])
+        censored_data = self._result_df[self.censorship_name]
+        cohn = pd.unique(self._result_df[self.result_name][censored_data])
 
         # if there is a results smaller than the minimum detection limit,
         # add that value to the array
         if cohn.shape[0] > 0:
-            if self.data[self.result_name].min() < cohn.min():
-                cohn = np.hstack([self.data[self.result_name].min(), cohn])
+            if self._result_df[self.result_name].min() < cohn.min():
+                cohn = np.hstack([self._result_df[self.result_name].min(), cohn])
 
             # create a dataframe
             cohn = pd.DataFrame(cohn, columns=['DL'])
@@ -262,7 +269,7 @@ class RobustROSEstimator(object):
 
         return cohn
 
-    def _compute_plotting_positions(self):
+    def _compute_plotting_positions(self, data):
         def _ros_plotting_pos(row):
             '''
             Helper function to compute the ROS'd plotting position
@@ -275,12 +282,12 @@ class RobustROSEstimator(object):
                 return (1 - dl_1['prob_exceedance']) + (dl_1['prob_exceedance'] - dl_2['prob_exceedance']) * \
                         row['rank'] / (dl_1['nuncen_above']+1)
 
-        self.data['plot_pos'] = self.data.apply(_ros_plotting_pos, axis=1)
+        data['plot_pos'] = data.apply(_ros_plotting_pos, axis=1)
 
         # correctly sort the plotting positions of the ND data:
-        ND_plotpos = self.data['plot_pos'][self.data[self.censorship_name]]
+        ND_plotpos = data['plot_pos'][data[self.censorship_name]]
         ND_plotpos.values.sort()
-        self.data.loc[self.data[self.censorship_name], 'plot_pos'] = ND_plotpos
+        data.loc[data[self.censorship_name], 'plot_pos'] = ND_plotpos
 
     def estimate(self):
         '''
@@ -292,7 +299,7 @@ class RobustROSEstimator(object):
             detection  limits (self.cohn) corresponding to each
             data point
             '''
-            det_limit_index = np.zeros(len(self.data[self.result_name]))
+            det_limit_index = np.zeros(len(self._result_df[self.result_name]))
             if self.cohn.shape[0] > 0:
                 index, = np.where(self.cohn['DL'] <= row[self.result_name])
                 det_limit_index = index[-1]
@@ -321,41 +328,43 @@ class RobustROSEstimator(object):
             else:
                 return row[self.result_name]
 
+        self._result_df = self._raw_data.copy()[[self.result_name, self.censorship_name]]
+        self._result_df = _ros_sort(self._result_df, result=self.result_name,
+                              censorship=self.censorship_name)
+
         # create a det_limit_index column that references self.cohn
-        self.data['det_limit_index'] = self.data.apply(_detection_limit_index, axis=1)
+        self._result_df['det_limit_index'] = self._result_df.apply(_detection_limit_index, axis=1)
 
         # compute the ranks of the data
-        self.data['rank'] = 1
+        self._result_df['rank'] = 1
         rank_columns = ['det_limit_index', self.censorship_name, 'rank']
         group_colums = ['det_limit_index', self.censorship_name]
-        rankgroups = self.data[rank_columns].groupby(by=group_colums)
-        self.data['rank'] = rankgroups.transform(lambda x: x.cumsum())
+        rankgroups = self._result_df[rank_columns].groupby(by=group_colums)
+        self._result_df['rank'] = rankgroups.transform(lambda x: x.cumsum())
 
         # detect/non-detect selectors
-        uncensored_mask = self.data[self.censorship_name] == False
-        censored_mask = self.data[self.censorship_name] == True
+        uncensored_mask = self._result_df[self.censorship_name] == False
+        censored_mask = self._result_df[self.censorship_name] == True
 
         # if there are no non-detects, just spit everything back out
         if self.ncen == 0:
-            self.data['modeled'] = self.data[self.result_name]
-            self.data.sort(columns=[self.result_name], inplace=True)
+            self._result_df['modeled'] = self._result_df[self.result_name]
+            self._result_df.sort(columns=[self.result_name], inplace=True)
             ppos, sorted_res = stats.probplot(
-                self.data[self.result_name], fit=False
+                self._result_df[self.result_name], fit=False
             )
-            self.data['plot_pos'] = stats.norm.cdf(ppos)
+            self._result_df['plot_pos'] = stats.norm.cdf(ppos)
 
         # if there are too few detects, use a fractoin of the detection limit
         elif (self.nobs - self.ncen < self.min_uncensored or
               self.ncen/self.nobs > self.max_fraction_censored):
 
-            self.data['modeled'] = self.data.apply(
-                _select_half_detection_limit, axis=1
-            )
+            self._result_df['modeled'] = self._result_df.apply(_select_half_detection_limit, axis=1)
 
             ppos, sorted_res = stats.probplot(
-                self.data[self.result_name], fit=False
+                self._result_df[self.result_name], fit=False
             )
-            self.data['plot_pos'] = stats.norm.cdf(ppos)
+            self._result_df['plot_pos'] = stats.norm.cdf(ppos)
 
         # in most cases, actually use the MR method to estimate NDs
         else:
@@ -373,35 +382,28 @@ class RobustROSEstimator(object):
 
 
             # compute the plotting position of the data (uses the PE stuff)
-            self._compute_plotting_positions()
+            self._compute_plotting_positions(self._result_df)
 
             # estimate a preliminary value of the Z-scores
-            self.data['Zprelim'] = stats.norm.ppf(self.data['plot_pos'])
+            self._result_df['Zprelim'] = stats.norm.ppf(self._result_df['plot_pos'])
 
             # fit a line to the logs of the detected data
             self.fit_params = stats.linregress(
-                self.data['Zprelim'][uncensored_mask],
-                self.transform_in(self.data[self.result_name][uncensored_mask])
+                self._result_df['Zprelim'][uncensored_mask],
+                self.transform_in(self._result_df[self.result_name][uncensored_mask])
             )
 
             # pull out the slope and intercept for use later
             slope, intercept = self.fit_params[:2]
 
             # model the data based on the best-fit curve
-            self.data['modeled_data'] = self.transform_out(
-                slope * self.data['Zprelim'][censored_mask] + intercept
+            self._result_df['modeled_data'] = self.transform_out(
+                slope * self._result_df['Zprelim'][censored_mask] + intercept
             )
 
             # select out the final data
-            self.data['modeled'] = self.data.apply(_select_modeled, axis=1)
+            self._result_df['modeled'] = self._result_df.apply(_select_modeled, axis=1).values
 
-        # create the debug attribute as a copy of the self.data attribute
-        self.debug = self.data.copy(deep=True)
-
-        # select out only the necessary columns for data
-        final_cols = ['modeled', self.result_name, self.censorship_name]
-        self.data = self.data[final_cols]
-        return self
 
     def plot(self, ax=None, show_raw=True, raw_kwds={}, model_kwds={},
              leg_kwds={}, ylog=True):
@@ -456,7 +458,7 @@ class RobustROSEstimator(object):
         }
         mod_symbols.update(model_kwds)
         osm_mod, osr_mod = stats.probplot(
-            self.data['modeled'], fit=False
+            self._result_df['modeled'], fit=False
         )
         ax.plot(osm_mod, osr_mod, **mod_symbols)
 
@@ -474,7 +476,7 @@ class RobustROSEstimator(object):
             }
             raw_symbols.update(raw_kwds)
             osm_raw, osr_raw = stats.probplot(
-                self.data[self.result_name], fit=False
+                self._result_df[self.result_name], fit=False
             )
             ax.plot(osm_raw, osr_raw, **raw_symbols)
             ax.legend(**leg_params)
