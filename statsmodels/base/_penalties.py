@@ -210,7 +210,7 @@ class SCADSmoothed(SCAD):
 
     """
 
-    def __init__(self, tau, c=3.7, c0=None, wts=None):
+    def __init__(self, tau, c=3.7, c0=None, wts=None, restriction=None):
         if wts is None:
             self.weights = 1.
         else:
@@ -228,11 +228,14 @@ class SCADSmoothed(SCAD):
         value_c0 = super(SCADSmoothed, self).func(c0)
         self.aq1 = value_c0 - 0.5 * deriv_c0 * c0
         self.aq2 = 0.5 * deriv_c0 / c0
+        self.restriction = restriction
 
 
     def func(self, params):
-
+        if self.restriction is not None:
+            params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
+        # Note: we have the same problem with `restriction`
         weights = self.weights
         self.weights = 1.
         value = super(SCADSmoothed, self).func(params[None, ...])
@@ -248,7 +251,8 @@ class SCADSmoothed(SCAD):
 
 
     def grad(self, params):
-
+        if self.restriction is not None:
+            params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         weights = self.weights
         self.weights = 1.
@@ -260,11 +264,12 @@ class SCADSmoothed(SCAD):
         mask = np.abs(p) < self.c0
         value[mask] = 2 * self.aq2 * p[mask]
 
-        return weights * value
+        return weights * value.dot(self.restriction)
 
 
     def deriv2(self, params):
-
+        if self.restriction is not None:
+            params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         weights = self.weights
         self.weights = 1.
@@ -278,7 +283,7 @@ class SCADSmoothed(SCAD):
         #p_abs_masked = p_abs[mask]
         value[mask] = 2 * self.aq2
 
-        return value
+        return self.restriction.T.dot(value.dot(self.restriction))
 
 class CovariancePenalty(object):
 
