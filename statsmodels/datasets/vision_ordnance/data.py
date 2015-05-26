@@ -31,7 +31,7 @@ NOTE        = """::
 
 import numpy as np
 import pandas as pd
-import utils
+from statsmodels.datasets import utils
 import os
 
 
