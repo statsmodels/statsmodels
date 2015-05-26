@@ -26,13 +26,20 @@ The underlying population for a contingency table is described by a
 is 1.  Methods for analyzing contingency tables use the data in `T` to
 learn about properties of `P`.
 
-*Symmetry* is the property that `P[i, j] = P[j, i]` for every `i` and
+Symmetry
+========
+
+Symmetry is the property that `P[i, j] = P[j, i]` for every `i` and
 `j`.  Note that for this to make sense `P` (and `T`) must be square,
 and the row and column categories must be equivalent and occur in the
 same order.
 
-*Homogeneity* is the property that the marginal distribution of the
- row factor and the column factor are identical:
+
+Homogeneity
+===========
+
+Homogeneity is the property that the marginal distribution of the row
+ factor and the column factor are identical:
 
 .. math::
 
@@ -41,22 +48,64 @@ same order.
 This property also only makes sense for square tables with equivalent
 row and column categories.
 
-*Independence* is the property that the row and column factors occur
- independently.  This means that the joint probability table is the
- outer product of the row and column marginal distributions:
+The following code example illustrates how to obtain the homogeneity
+and symmetry test results.
+
+.. ipython::
+
+    data = sm.datasets.vision_ordnance.load()
+    df = data.data
+    tab = df.set_index(['left', 'right'])
+    tab = tab.unstack()
+
+    st = sm.stats.TableSymmetry(tab)
+    print(st.summary())
+
+
+Note that the data in the above example have quite similar row and
+column margins, and the joint table appears quite symmetric.  Due to
+the large sample size, we have power to detect small deviations from
+perfect symmetry and homogeneity.
+
+
+Independence
+============
+
+Independence is the property that the row and column factors occur
+independently.  *Association* is the lack of independence.  If the
+joint distribution is independent, it can be written as the outer
+product of the row and column marginal distributions:
 
 .. math::
 
 P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
 
 This property can hold for either square or rectangular tables, and
-the categories do not need to be equivalent or related in any way.
-*Association* is the lack of independence.
+the categories do not need to be related in any way.
 
-*Stratification* refers to a collection of comparable tables that
- differ with respect to some other variable.  For example, if we are
- interested in the relationship between smoking and lung cancer, we
- may have a collection of tables that are stratified by region.
+Stratified tables
+=================
+
+Stratification refers to a collection of contingency tables, usually
+with the same row and column factors.  For example, if we are
+interested in the relationship between smoking and lung cancer, we may
+have a collection of 2x2 tables reflecting the joint distribution of
+smoking and lung cancer in each of several regions.  It is possible to
+test whether the tables have a common odds ratio, whether the common
+odds ratio differs from 1, and to estimate the common odds ratio and
+the common risk ratio.
+
+..
+
+    data = sm.datasets.china_smoking.load()
+
+    # Create a list of tables
+    mat = np.asarray(data.data)
+    tables = [np.reshape(x, (2, 2)) for x in mat]
+
+    st = sm.stats.StratifiedTables(tables)
+    print(st.summary())
+
 
 Module Reference
 ----------------
