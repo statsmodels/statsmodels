@@ -73,14 +73,11 @@ Created on Feb 6, 2010
 @author: "josef pktd"
 '''
 from __future__ import print_function
-from statsmodels.compat.python import lzip, zip
+from statsmodels.compat.python import zip
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-#from scipy.stats import t, norm
 from scipy import optimize, signal
-from scipy.misc import derivative
-from scipy.stats import ss as sumofsq
 
 import matplotlib.pyplot as plt
 
@@ -88,6 +85,12 @@ import numdifftools as ndt
 
 from statsmodels.base.model import Model, LikelihoodModelResults
 from statsmodels.sandbox import tsa
+
+
+def sumofsq(x, axis=0):
+    """Helper function to calculate sum of squares along first axis"""
+    return np.sum(x**2, axis=0)
+
 
 def normloglike(x, mu=0, sigma2=1, returnlls=False, axis=0):
 

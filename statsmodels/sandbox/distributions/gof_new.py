@@ -9,7 +9,7 @@ bootstrap : vectorized bootstrap p-values for gof test with fitted parameters
 Created : 2011-05-21
 Author : Josef Perktold
 
-parts based on ks_2samp and kstest from scipy.stats.stats
+parts based on ks_2samp and kstest from scipy.stats
 (license: Scipy BSD, but were completely rewritten by Josef Perktold)
 
 

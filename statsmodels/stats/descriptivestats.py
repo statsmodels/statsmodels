@@ -1,8 +1,6 @@
 from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
-import sys
 import numpy as np
 from scipy import stats
-#from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
 
@@ -104,7 +102,7 @@ class Describe(object):
             mode_bin = [self._mode_bin, None, None],
             median = [np.median, None, None],
             skew = [stats.skew, None, None],
-            uss = [stats.ss, None, None],
+            uss = [lambda x: np.sum(np.asarray(x)**2, axis=0), None, None],
             kurtosis = [stats.kurtosis, None, None],
             percentiles = [self._percentiles, None, None],
             #BUG: not single value

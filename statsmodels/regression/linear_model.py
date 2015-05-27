@@ -40,9 +40,7 @@ __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 import numpy as np
 from scipy.linalg import toeplitz
 from scipy import stats
-from scipy.stats.stats import ss
 from scipy import optimize
-from scipy.stats import chi2
 
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
@@ -521,7 +519,7 @@ class GLS(RegressionModel):
         """
         #TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
-        SSR = ss(self.wendog - np.dot(self.wexog,params))
+        SSR = np.sum((self.wendog - np.dot(self.wexog, params))**2, axis=0)
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma):
@@ -650,7 +648,7 @@ class WLS(RegressionModel):
         where :math:`W` is a diagonal matrix
         """
         nobs2 = self.nobs / 2.0
-        SSR = ss(self.wendog - np.dot(self.wexog,params))
+        SSR = np.sum((self.wendog - np.dot(self.wexog,params))**2, axis=0)
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         llf += 0.5 * np.sum(np.log(self.weights))
@@ -1494,7 +1492,6 @@ class RegressionResults(base.LikelihoodModelResults):
         elif cov_type == 'HAC':
             print("HAC")
             maxlags = self.cov_kwds['maxlags']
-            use_correction = self.cov_kwds['use_correction']
             Sinv = inv(sw.S_hac_simple(scores, maxlags) / n)
         elif cov_type == 'cluster':
             #cluster robust standard errors
@@ -1549,7 +1546,6 @@ class RegressionResults(base.LikelihoodModelResults):
                                                                    'nonrobust')
 
         if has_robust1 or has_robust2:
-            import warnings
             warnings.warn('F test for comparison is likely invalid with ' +
                           'robust covariance, proceeding anyway',
                           InvalidTestWarning)
@@ -2284,7 +2280,7 @@ class OLSResults(RegressionResults):
                                     params=params,
                                     b0_vals=b0_vals,
                                     stochastic_exog=stochastic_exog)
-            pval = 1 - chi2.cdf(llr, len(param_nums))
+            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
             if return_weights:
                 return llr, pval, opt_fun_inst.new_weights
             else:
@@ -2302,7 +2298,7 @@ class OLSResults(RegressionResults):
                                  full_output=1, disp=0,
                                  args=args)[1]
 
-        pval = 1 - chi2.cdf(llr, len(param_nums))
+        pval = 1 - stats.chi2.cdf(llr, len(param_nums))
         if ret_params:
             return llr, pval, opt_fun_inst.new_weights, opt_fun_inst.new_params
         elif return_weights:
@@ -2375,7 +2371,7 @@ class OLSResults(RegressionResults):
         (>50), the starting parameters of the interior minimization need
         to be changed.
         """
-        r0 = chi2.ppf(1 - sig, 1)
+        r0 = stats.chi2.ppf(1 - sig, 1)
         if upper_bound is None:
             upper_bound = self.conf_int(.01)[param_num][1]
         if lower_bound is None:
