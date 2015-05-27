@@ -63,17 +63,8 @@ def descstats(data, cols=None, axis=0):
     '('+str(x.min())+', '+str(x.max())+')', 'variance': \
     x.var(), 'stddev': x.std(), 'coeffvar': \
     stats.variation(x), 'skewness': stats.skew(x), \
-    'kurtosis': stats.kurtosis(x), 'uss': stats.ss(x),\
-    'ss': stats.ss(x-x.mean()), 'sobs': np.sum(x)}
-
-#    ''' % {'name': cols[0], 'sum': 'N/A', 'nobs': len(x[cols[0]]), 'mode': \
-#    stats.mode(x[cols[0]])[0][0], 'nmode': stats.mode(x[cols[0]])[1][0], \
-#    'mean': x[cols[0]].mean(), 'median': np.median(x[cols[0]]), 'range': \
-#    '('+str(x[cols[0]].min())+', '+str(x[cols[0]].max())+')', 'variance': \
-#    x[cols[0]].var(), 'stddev': x[cols[0]].std(), 'coeffvar': \
-#    stats.variation(x[cols[0]]), 'skewness': stats.skew(x[cols[0]]), \
-#    'kurtosis': stats.kurtosis(x[cols[0]]), 'uss': stats.ss(x[cols[0]]),\
-#    'ss': stats.ss(x[cols[0]]-x[cols[0]].mean()), 'sobs': np.sum(x[cols[0]])}
+    'kurtosis': stats.kurtosis(x), 'uss': np.sum(x**2, axis=0),\
+    'ss': np.sum((x-x.mean())**2, axis=0), 'sobs': np.sum(x)}
 
         desc+= '''
 

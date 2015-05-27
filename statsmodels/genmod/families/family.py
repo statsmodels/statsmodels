@@ -7,7 +7,6 @@ The one parameter exponential family distributions used by GLM.
 
 import numpy as np
 from scipy import special
-from scipy.stats import ss
 from . import links as L
 from . import varfuncs as V
 FLOAT_EPS = np.finfo(float).eps
@@ -520,7 +519,7 @@ class Gaussian(Family):
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
             nobs2 = endog.shape[0]/2.
-            SSR = ss(endog-self.fitted(mu))
+            SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
             llf = -np.log(SSR) * nobs2
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf

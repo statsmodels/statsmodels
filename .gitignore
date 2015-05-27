@@ -58,3 +58,4 @@ hash_dict.pickle
 rehab.table
 salary.table
 .ipynb_checkpoints
+statsmodels/tsa/statespace/_statespace.pyx
