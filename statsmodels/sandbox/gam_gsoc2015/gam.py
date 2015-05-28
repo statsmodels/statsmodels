@@ -3,14 +3,22 @@ from patsy import dmatrices, dmatrix, demo_data
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+from statsmodels.tools.numdiff import approx_fprime
 from scipy.interpolate import splev
+import scipy as sp
 
 n = 200
 data = pd.DataFrame()
 x = np.linspace(-1, 1, n)
+y = x*x - x
 d = {"x": x}
-dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
+#dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
+
+
+#plt.title('basis obtained with dmatrix')
+#plt.plot(dm[:, 1:])
+#plt.show()
+
 
 
 def _R_compat_quantile(x, probs):
@@ -60,21 +68,23 @@ def _eval_bspline_basis(x, knots, degree):
     # Note: there are (len(knots) - order) basis functions.
     n_bases = len(knots) - (degree + 1)
     basis = np.empty((x.shape[0], n_bases), dtype=float)
-    der_basis = np.empty((x.shape[0], n_bases), dtype=float)
+    der1_basis = np.empty((x.shape[0], n_bases), dtype=float)
+    der2_basis = np.empty((x.shape[0], n_bases), dtype=float)
+
     for i in range(n_bases):
         coefs = np.zeros((n_bases,))
         coefs[i] = 1
         basis[:, i] = splev(x, (knots, coefs, degree))
-        der_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
+        der1_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
+        der2_basis[:, i] = splev(x, (knots, coefs, degree), der=2)
+
+
+    return basis, der1_basis, der2_basis
 
 
 
-    return basis, der_basis
-
-
-
-df = 5
-degree = 2
+df = 10
+degree = 5
 order = degree + 1
 n_inner_knots = df - order
 lower_bound = np.min(x)
@@ -83,15 +93,56 @@ knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
 inner_knots = _R_compat_quantile(x, knot_quantiles)
 all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
 
-basis, der_basis = _eval_bspline_basis(x, all_knots, degree)
+basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
 
 
-plt.plot(dm[:, 1:])
-plt.show()
+
+def test_basis_of_derivatives(column = 1):
+    ''' plot a graph of the derivatives obtained with patsy and the
+        one obtained with numerical approximation '''
+
+    basis_func = sp.interpolate.interp1d(x, basis[:, column],
+                                         bounds_error=False,
+                                         fill_value=0)
+    approx_der1 = np.diag(approx_fprime(x, basis_func, centered=True))
+    basis_func2 = sp.interpolate.interp1d(x, approx_der1,
+                                          bounds_error=False,
+                                          fill_value=0,)
+    approx_der2 = np.diag(approx_fprime(x, basis_func2, centered=True))
+    err = np.linalg.norm(approx_der1 - der_basis[:, column])
+    print('approximation error=', err)
+    # the error tends to be quiet large because the derivatives
+    # seems to be slightly shifted
+
+    plt.subplot(2, 1, 1)
+    plt.title('First derivative')
+    plt.plot(x, approx_der1, 'o')
+    plt.plot(x, der_basis[:, column])
+    plt.subplot(2, 1, 2)
+    plt.title('Second Derivative')
+    plt.plot(x, approx_der2, 'o')
+    plt.plot(x, der2_basis[:, column])
+    plt.show()
+    return
 
 
-plt.plot(basis)
-plt.show()
 
-plt.plot(der_basis)
-plt.show()
+### GAM COST FUNCTION ###
+## THIS SECTION IS NOT WORKING!!! ##
+from numpy.linalg import lstsq, norm
+from scipy.integrate import quad
+
+n_samples, n_features = basis.shape
+a = np.zeros(shape=(n_features,))
+
+def integrand(x, a):
+    return np.dot(der2_basis, a)
+
+
+def cost(a, alpha):
+    approx_err = norm(y - np.dot(basis, a))
+    integral = quad(integrand, x.min(), x.max(), args=(a,))
+
+    return approx_err + alpha * integral
+
+
