@@ -103,7 +103,11 @@ class PenalizedMixin(object):
 
         hess = super(PenalizedMixin, self).hessian(params)
         if pen_weight != 0:
-            hess -= np.diag(pen_weight * self.penal.deriv2(params))
+            h = self.penal.deriv2(params)
+            if h.ndim == 1:
+                hess -= np.diag(pen_weight * h)
+            else:
+                hess -= pen_weight * h
 
         return hess
 
