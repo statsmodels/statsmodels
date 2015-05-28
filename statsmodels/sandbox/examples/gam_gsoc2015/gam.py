@@ -101,11 +101,13 @@ class GamPenalty(Penalty):
         self.wts = wts
         self.alpha = alpha
 
-    def func(self, params):
-        return
+    def func(self, params, der2):
 
-    def grad(self, params):
-        return
+        der2 = der2**2
+        return self.alpha * np.sum(np.dot(der2, params))
+
+    def grad(self, params, der2):
+        return self.alpha * np.sum(der2**2, axis=0)
 
 
 
@@ -224,5 +226,3 @@ def cost(a, alpha):
     integral = quad(integrand, x.min(), x.max(), args=(a,))
 
     return approx_err + alpha * integral
-
-
