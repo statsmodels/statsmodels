@@ -56,5 +56,5 @@ from statsmodels.sandbox.stats.runs import (Runs, runstest_1samp, runstest_2samp
 
 from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   TableSymmetry,
-                                                  ordinal_association,
+                                                  TableAssociation,
                                                   StratifiedTables)

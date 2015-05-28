@@ -220,89 +220,169 @@ class TableSymmetry(object):
         return tab
 
 
-def ordinal_association(table, row_scores=None, col_scores=None, method="lbl",
-                        return_object=True):
+class TableAssociation(object):
     """
-    Assess row/column association in a table with ordinal rows/columns.
+    Assess row/column association in a contingency table.
 
     Parameters
     ----------
     table : array-like
         A contingency table.
-    row_scores : array-like
-        Scores used to weight the rows, defaults to 0, 1, ...
-    col_scores : array-like
-        Scores used to weight the columns, defaults to 0, 1, ...
     method : string
-        Only 'lbl' (Agresti's 'linear by linear' method) is implemented.
-    return_object : bool
-        If True, return an object containing test results.
-
-    Returns
-    -------
-    If `return_object` is False, returns the z-score and the p-value
-    obtained from the normal distribution.  Otherwise returns a bunch
-    containing the test statistic, its null mean and standard
-    deviation, the corresponding Z-score, degrees of freedom, and
-    p-value.
+        Method for conducting the association test.  Must be either
+        `Pearson` for a Pearson chi^2 test or `lbl` for a
+        linear-by-linear association test.
+    row_scores : array-like
+        Optional row scores for ordinal rows.
+    col_scores : array-like
+        Optional column scores for ordinal columns.
 
     Notes
     -----
-    Using the default row and column scores gives the Cochran-Armitage
-    trend test.
+    Using the default row and column scores for the linear-by-linear
+    association test gives the Cochran-Armitage trend test.
 
-    To assess association in a table with nominal row and column
-    factors, a Pearson chi^2 test can be used.
+    See also
+    --------
+    scipy.stats.chi2_contingency
     """
 
-    table = np.asarray(table, dtype=np.float64)
+    def __init__(self, table, method='chi2', row_scores=None, col_scores=None):
 
-    method = method.lower()
-    if method != "lbl":
-        raise ValueError("method for asociation must be 'lbl'")
+        table = np.asarray(table, dtype=np.float64)
+        self._table = table
 
-    # Set defaults if needed.
-    if row_scores is None:
-        row_scores = np.arange(table.shape[0])
-    if col_scores is None:
-        col_scores = np.arange(table.shape[1])
+        method = method.lower()
+        if method == 'lbl':
 
-    if len(row_scores) != table.shape[0]:
-        raise ValueError("The length of `row_scores` must match the first dimension of `table`.")
+            if row_scores is None:
+                row_scores = np.arange(table.shape[0])
+            if col_scores is None:
+                col_scores = np.arange(table.shape[1])
 
-    if len(col_scores) != table.shape[1]:
-        raise ValueError("The length of `col_scores` must match the second dimension of `table`.")
+            if len(row_scores) != table.shape[0]:
+                raise ValueError("The length of `row_scores` must match the first dimension of `table`.")
 
-    # The test statistic
-    stat = np.dot(row_scores, np.dot(table, col_scores))
+            if len(col_scores) != table.shape[1]:
+                raise ValueError("The length of `col_scores` must match the second dimension of `table`.")
 
-    # Some needed quantities
-    n_obs = table.sum()
-    rtot = table.sum(1)
-    um = np.dot(row_scores, rtot)
-    u2m = np.dot(row_scores**2, rtot)
-    ctot = table.sum(0)
-    vn = np.dot(col_scores, ctot)
-    v2n = np.dot(col_scores**2, ctot)
+            if row_scores is not None:
+                self._row_scores = row_scores
+            if col_scores is not None:
+                self._col_scores = col_scores
 
-    # The null mean and variance of the test statistic
-    e_stat = um * vn / n_obs
-    v_stat = (u2m - um**2 / n_obs) * (v2n - vn**2 / n_obs) / (n_obs - 1)
-    sd_stat = np.sqrt(v_stat)
+            self._ordinal_association()
 
-    zscore = (stat - e_stat) / sd_stat
-    pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
+        elif method == 'chi2':
+            self._chi2_association()
 
-    if return_object:
-        b = _bunch()
-        b.stat = stat
-        b.stat_e0 = e_stat
-        b.stat_sd0 = sd_stat
-        b.zscore = zscore
-        b.pvalue = pvalue
-        return b
+        else:
+            raise ValueError('uknown method')
 
-    return zscore, pvalue
+
+    def _ordinal_association(self):
+
+        # The test statistic
+        stat = np.dot(self._row_scores, np.dot(self._table, self._col_scores))
+
+        # Some needed quantities
+        n_obs = self._table.sum()
+        rtot = self._table.sum(1)
+        um = np.dot(self._row_scores, rtot)
+        u2m = np.dot(self._row_scores**2, rtot)
+        ctot = self._table.sum(0)
+        vn = np.dot(self._col_scores, ctot)
+        v2n = np.dot(self._col_scores**2, ctot)
+
+        # The null mean and variance of the test statistic
+        e_stat = um * vn / n_obs
+        v_stat = (u2m - um**2 / n_obs) * (v2n - vn**2 / n_obs) / (n_obs - 1)
+        sd_stat = np.sqrt(v_stat)
+
+        zscore = (stat - e_stat) / sd_stat
+        pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
+
+        self._stat = stat
+        self._stat_e0 = e_stat
+        self._stat_sd0 = sd_stat
+        self._zscore = zscore
+        self._pvalue = pvalue
+
+
+    def _chi2_association(self):
+
+        contribs = self.chi2_contribs
+        self._stat = contribs.sum()
+        df = np.prod(np.asarray(self._table.shape) - 1)
+        self._pvalue = 1 - stats.chi2.cdf(self._stat, df)
+
+
+    @cache_readonly
+    def pearson_resids(self):
+        """
+        The Pearson residuals.
+        """
+        n = self._table.sum()
+        row = self._table.sum(1) / n
+        col = self._table.sum(0) / n
+        fit = n * np.outer(row, col)
+        resids = (self._table - fit) / np.sqrt(fit)
+        return resids
+
+
+    @cache_readonly
+    def chi2_contribs(self):
+        """
+        The contribution of each cell to the chi^2 statistic.
+        """
+        return self.pearson_resids**2
+
+
+    @cache_readonly
+    def pvalue(self):
+        """
+        The p-value of the association test.
+        """
+        return self._pvalue
+
+
+    @cache_readonly
+    def zscore(self):
+        """
+        The Z-score of the association test statistic.
+
+        Only defined if the LBL method is used.
+        """
+        return self._zscore
+
+
+    @cache_readonly
+    def stat(self):
+        """
+        The association test statistic.
+        """
+        return self._stat
+
+
+    @cache_readonly
+    def stat_e0(self):
+        """
+        Returns the null mean of the test statistic.
+
+        Only defined if the LBL test is used.
+        """
+        return self._stat_e0
+
+
+    @cache_readonly
+    def stat_sd0(self):
+        """
+        Returns the null standard deviation of the test statistic.
+
+        Only defined if the LBL test is used.
+        """
+        return self._stat_sd0
+
 
 
 class StratifiedTables(object):

@@ -70,8 +70,7 @@ def test_ordinal_association():
         col_scores = 1 + np.arange(table.shape[1])
 
         # First set of scores
-        rslt = ctab.ordinal_association(table, row_scores,
-                                        col_scores, return_object=True)
+        rslt = ctab.TableAssociation(table, 'lbl', row_scores, col_scores)
         assert_allclose(rslt.stat, r_results.loc[k, "lbl_stat"])
         assert_allclose(rslt.stat_e0, r_results.loc[k, "lbl_expval"])
         assert_allclose(rslt.stat_sd0**2, r_results.loc[k, "lbl_var"])
@@ -79,13 +78,27 @@ def test_ordinal_association():
         assert_allclose(rslt.pvalue, r_results.loc[k, "lbl_pvalue"], rtol=1e-5, atol=1e-5)
 
         # Second set of scores
-        rslt = ctab.ordinal_association(table, row_scores,
-                                        col_scores**2, return_object=True)
+        rslt = ctab.TableAssociation(table, 'lbl', row_scores, col_scores**2)
         assert_allclose(rslt.stat, r_results.loc[k, "lbl2_stat"])
         assert_allclose(rslt.stat_e0, r_results.loc[k, "lbl2_expval"])
         assert_allclose(rslt.stat_sd0**2, r_results.loc[k, "lbl2_var"])
         assert_allclose(rslt.zscore**2, r_results.loc[k, "lbl2_chi2"])
         assert_allclose(rslt.pvalue, r_results.loc[k, "lbl2_pvalue"], rtol=1e-5, atol=1e-5)
+
+
+def test_chi2_association():
+
+    np.random.seed(8743)
+
+    table = np.random.randint(10, 30, size=(4, 4))
+
+    from scipy.stats import chi2_contingency
+    rslt_scipy = chi2_contingency(table)
+
+    rslt = ctab.TableAssociation(table)
+
+    assert_allclose(rslt.stat, rslt_scipy[0])
+    assert_allclose(rslt.pvalue, rslt_scipy[1])
 
 
 def test_symmetry():
