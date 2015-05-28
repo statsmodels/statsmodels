@@ -179,9 +179,8 @@ Module Reference
 .. autosummary::
    :toctree: generated/
 
-   homogeneity
-   symmetry
-   ordinal_association
+   TableSymmetry
+   TableAssociation
    StratifiedTables
    mcnemar
    cochrans_q
