@@ -232,7 +232,8 @@ class SCADSmoothed(SCAD):
 
 
     def func(self, params):
-        if self.restriction is not None:
+        # TODO: `and np.size(params) > 1` is hack for llnull, need better solution
+        if self.restriction is not None and np.size(params) > 1:
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         # Note: we have the same problem with `restriction`
@@ -251,7 +252,7 @@ class SCADSmoothed(SCAD):
 
 
     def grad(self, params):
-        if self.restriction is not None:
+        if self.restriction is not None and np.size(params) > 1:
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         weights = self.weights
@@ -264,11 +265,14 @@ class SCADSmoothed(SCAD):
         mask = np.abs(p) < self.c0
         value[mask] = 2 * self.aq2 * p[mask]
 
-        return weights * value.dot(self.restriction)
+        if self.restriction is not None and np.size(params) > 1:
+            return weights * value.dot(self.restriction)
+        else:
+            return weights * value
 
 
     def deriv2(self, params):
-        if self.restriction is not None:
+        if self.restriction is not None and np.size(params) > 1:
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         weights = self.weights
@@ -283,7 +287,12 @@ class SCADSmoothed(SCAD):
         #p_abs_masked = p_abs[mask]
         value[mask] = 2 * self.aq2
 
-        return self.restriction.T.dot(value.dot(self.restriction))
+        if self.restriction is not None and np.size(params) > 1:
+            # note: super returns 1d array for diag, i.e. hessian_diag
+            return (self.restriction.T * value).dot(self.restriction)
+        else:
+            return value
+
 
 class CovariancePenalty(object):
 
