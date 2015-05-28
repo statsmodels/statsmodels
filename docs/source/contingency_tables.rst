@@ -120,14 +120,14 @@ the controls).
 
 .. ipython::
 
-    data = [[6, 2, 3, 1], [9, 4, 2, 1], [9, 2, 3, 1], [12, 1, 2, 1]]
-    data = np.asarray(data)
+    table = [[6, 2, 3, 1], [9, 4, 2, 1], [9, 2, 3, 1], [12, 1, 2, 1]]
+    table = np.asarray(table)
 
 If we want to conduct a formal test of independence treating the row
 and column categories as nominal, we can use the Pearson chi^2 test:
 
 .. ipython::
-    lbl = sm.stats.TableAssociation(data, method='chi2')
+    lbl = sm.stats.TableAssociation(table, method='chi2')
     print(lbl.pvalue)
 
 If instead we want to utilize the ordinal information in the row and
@@ -135,9 +135,14 @@ column factors (the estrogen levels), we can use the linear-by-linear
 association test.  By default, the scores are equally spaced.
 
 .. ipython::
-    lbl = sm.stats.TableAssociation(data, method='lbl')
+    lbl = sm.stats.TableAssociation(table, method='lbl')
     print(lbl.pvalue)
 
+A mosaic plot is a graphical approach to assessing dependence in
+two-way tables.
+
+    from statsmodels.graphics.mosaicplot import mosaic
+    mosaic(data)
 
 Stratified tables
 =================

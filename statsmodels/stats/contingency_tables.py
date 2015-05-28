@@ -244,6 +244,7 @@ class TableAssociation(object):
 
     See also
     --------
+    statsmodels.graphics.mosaicplot.mosaic
     scipy.stats.chi2_contingency
     """
 
@@ -277,7 +278,7 @@ class TableAssociation(object):
             self._chi2_association()
 
         else:
-            raise ValueError('uknown method')
+            raise ValueError('uknown association method')
 
 
     def _ordinal_association(self):
@@ -369,7 +370,8 @@ class TableAssociation(object):
         """
         Returns the null mean of the test statistic.
 
-        Only defined if the LBL test is used.
+        Only defined if the linear-by-linear (LBL) association test is
+        used.
         """
         return self._stat_e0
 
@@ -379,7 +381,8 @@ class TableAssociation(object):
         """
         Returns the null standard deviation of the test statistic.
 
-        Only defined if the LBL test is used.
+        Only defined if the linear-by-linear (LBL) association test is
+        used.
         """
         return self._stat_sd0
 
@@ -476,7 +479,7 @@ class StratifiedTables(object):
 
     def test_null_odds(self, correction=False):
         """
-        Test that all tables have odds ratio = 1.
+        Test that all tables have odds ratio equal to 1.
 
         This is the 'Mantel-Haenszel' test.
 
@@ -510,7 +513,7 @@ class StratifiedTables(object):
         """
         An estimate of the common odds ratio.
 
-        This is the Mantel-Haenszel estimate of a odds ratio that is
+        This is the Mantel-Haenszel estimate of an odds ratio that is
         common to all tables.
         """
 
@@ -524,7 +527,7 @@ class StratifiedTables(object):
         An estimate of the common log odds ratio.
 
         This is the Mantel-Haenszel estimate of a risk ratio that is
-        common to all tables.
+        common to all the tables.
         """
 
         return np.log(self.common_odds)
@@ -535,7 +538,7 @@ class StratifiedTables(object):
         """
         An estimate of the common risk ratio.
 
-        This is an estimate of a risk ratio that is common to all
+        This is an estimate of a risk ratio that is common to all the
         tables.
         """
 
@@ -549,7 +552,7 @@ class StratifiedTables(object):
     @cache_readonly
     def common_logodds_se(self):
         """
-        Returns the estimated standard error of the common log odds ratio.
+        The estimated standard error of the common log odds ratio.
 
         References
         ----------
@@ -632,7 +635,7 @@ class StratifiedTables(object):
         Parameters
         ----------
         adjust : boolean
-            Use the 'Tarone' adjustment to achieve the correct
+            Use the 'Tarone' adjustment to achieve the chi^2
             asymptotic distribution.
 
         Returns the test statistic and p-value.
@@ -666,6 +669,9 @@ class StratifiedTables(object):
 
 
     def summary(self, alpha=0.05):
+        """
+        A summary of all the main results.
+        """
 
         def fmt(x):
             if type(x) is str:
