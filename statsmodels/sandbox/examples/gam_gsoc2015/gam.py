@@ -103,11 +103,16 @@ class GamPenalty(Penalty):
     
     def func(self, params, der2):
         
-        der2 = der2**2
-        return self.alpha * np.sum(np.dot(der2, params))
+        # this is the second derivative of the function
+        f = np.dot(der2, params)
+
+        return self.alpha * np.sum(f**2)
         
     def grad(self, params, der2):
-        return self.alpha * np.sum(der2**2, axis=0) 
+        
+        # the second derivative of the function
+        f = np.dot(der2, params)
+        return self.alpha * np.dot(f, der2)
         
         
 
