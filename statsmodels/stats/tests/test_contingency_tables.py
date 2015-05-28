@@ -42,6 +42,26 @@ def test_homogeneity():
         assert_allclose(stat1, stat / (1 - stat / table.sum()))
 
 
+def test_TableSymmetry_from_data():
+
+    np.random.seed(434)
+    df = pd.DataFrame(index=range(100), columns=["v1", "v2"])
+    df["v1"] = np.random.randint(0, 5, 100)
+    df["v2"] = np.random.randint(0, 5, 100)
+    table = pd.crosstab(df["v1"], df["v2"])
+
+    rslt1 = ctab.TableSymmetry(table)
+    rslt2 = ctab.TableSymmetry.from_data(df)
+    rslt3 = ctab.TableSymmetry(np.asarray(table))
+
+    assert_equal(rslt1.summary().as_text(),
+                 rslt2.summary().as_text())
+
+    assert_equal(rslt2.summary().as_text(),
+                 rslt3.summary().as_text())
+
+
+
 def test_ordinal_association():
 
     for k,table in enumerate(tables):
@@ -166,6 +186,13 @@ def test_cochranq():
 
 class CheckStratifiedMixin(object):
 
+    def initialize(self, tables):
+        self.rslt = ctab.StratifiedTables(tables)
+        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
+        tables_pandas = [pd.DataFrame(x) for x in tables]
+        self.rslt_pandas = ctab.StratifiedTables(tables_pandas)
+
+
     def test_common_odds(self):
         assert_allclose(self.rslt.common_odds, self.common_odds,
                         rtol=1e-4, atol=1e-4)
@@ -206,6 +233,31 @@ class CheckStratifiedMixin(object):
         assert_allclose(pvalue, self.or_homog_p, rtol=1e-4, atol=1e-4)
 
 
+    def test_pandas(self):
+
+        assert_equal(self.rslt.summary().as_text(),
+                     self.rslt_pandas.summary().as_text())
+
+
+    def test_from_data(self):
+
+        np.random.seed(241)
+        df = pd.DataFrame(index=range(100), columns=("v1", "v2", "strat"))
+        df["v1"] = np.random.randint(0, 2, 100)
+        df["v2"] = np.random.randint(0, 2, 100)
+        df["strat"] = np.kron(np.arange(10), np.ones(10))
+
+        tables = []
+        for k in range(10):
+            ii = np.arange(10*k, 10*(k+1))
+            tables.append(pd.crosstab(df.loc[ii, "v1"], df.loc[ii, "v2"]))
+
+        rslt1 = ctab.StratifiedTables(tables)
+        rslt2 = ctab.StratifiedTables.from_data("v1", "v2", "strat", df)
+
+        assert_equal(rslt1.summary().as_text(), rslt2.summary().as_text())
+
+
 class TestStratified1(CheckStratifiedMixin):
     """
     data = array(c(0, 0, 6, 5,
@@ -226,8 +278,7 @@ class TestStratified1(CheckStratifiedMixin):
         tables[3] = np.array([[5, 6], [1, 0]])
         tables[4] = np.array([[2, 5], [0, 0]])
 
-        self.rslt = ctab.StratifiedTables(tables)
-        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
+        self.initialize(tables)
 
         self.common_odds = 7
         self.common_logodds = np.log(7)
@@ -256,8 +307,7 @@ class TestStratified2(CheckStratifiedMixin):
         tables[3] = np.array([[12, 3], [7, 5]])
         tables[4] = np.array([[1, 0], [3, 2]])
 
-        self.rslt = ctab.StratifiedTables(tables)
-        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
+        self.initialize(tables)
 
         self.common_odds = 3.5912
         self.common_logodds = np.log(3.5912)
@@ -291,8 +341,7 @@ class TestStratified3(CheckStratifiedMixin):
         tables[4] = np.array([[138, 53], [299, 94]])
         tables[5] = np.array([[351, 22], [317, 24]])
 
-        self.rslt = ctab.StratifiedTables(tables)
-        self.rslt_0 = ctab.StratifiedTables(tables, shift_zeros=True)
+        self.initialize(tables)
 
         self.common_odds = 1.101879
         self.common_logodds = np.log(1.101879)

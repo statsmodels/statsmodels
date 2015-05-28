@@ -34,11 +34,16 @@ class TableSymmetry(object):
     """
     Methods for analyzing a square contingency table.
 
+    Parameters
+    ----------
+    table : array-like
+        A contingency table.
+
     These methods should only be used when the rows and columns of the
     table have the same categories.  If `table` is provided as a
     Pandas array, the row and column indices will be extended to
     create a scquare table.  Otherwise the table should be provided in
-    a square form.
+    a square form, with the rows and columns in the same order.
     """
 
     def __init__(self, table):
@@ -48,6 +53,30 @@ class TableSymmetry(object):
         if k != k2:
             raise ValueError('table must be square')
         self._table = table
+
+
+    @classmethod
+    def from_data(cls, data):
+        """
+        Construct a TableSymmetry object from data.
+
+        Parameters
+        ----------
+        data : array-like
+            The raw data, from which a cross-table is constructed
+            using the first two columns.
+
+        Returns
+        -------
+        A TableSymmetry instance.
+        """
+
+        if isinstance(data, pd.DataFrame):
+            table = pd.crosstab(data.iloc[:, 0], data.iloc[:, 1])
+        else:
+            table = pd.crosstab(data[:, 0], data[:, 1])
+
+        return cls(table)
 
 
     def symmetry(self, method="bowker"):
@@ -75,7 +104,7 @@ class TableSymmetry(object):
         The implementation is based on the SAS documentation. R includes
         it in `mcnemar.test` if the table is not 2 by 2.  However a more
         direct generalization of the McNemar test to large tables is
-        provided by the homogeneity test.
+        provided by the homogeneity test (TableSymmetry.homogeneity).
 
         The p-value is based on the chi-square distribution which requires
         that the sample size is not very small to be a good approximation
@@ -117,9 +146,6 @@ class TableSymmetry(object):
 
         Returns
         -------
-        The following attributes, returned as a bunch if return_object is
-        True:
-
         stat : float
             The chi^2 test statistic
         pvalue : float
@@ -281,7 +307,7 @@ def ordinal_association(table, row_scores=None, col_scores=None, method="lbl",
 
 class StratifiedTables(object):
     """
-    Analyses for a collection of stratified contingency tables.
+    Analyses for a collection of 2x2 stratified contingency tables.
 
     This class implements the 'Cochran-Mantel-Haenszel' and
     'Breslow-Day' procedures for analyzing collections of 2x2
@@ -296,6 +322,7 @@ class StratifiedTables(object):
     def __init__(self, tables, shift_zeros=False):
 
         # Create a data cube
+        tables = [np.asarray(x) for x in tables]
         table = [x[:, :, None] for x in tables]
         table = np.concatenate(table, axis=2).astype(np.float64)
 
@@ -321,6 +348,50 @@ class StratifiedTables(object):
         self._apd = table[0, 0, :] + table[1, 1, :]
         self._dma = table[1, 1, :] - table[0, 0, :]
         self._n = table.sum(0).sum(0)
+
+
+    @classmethod
+    def from_data(cls, var1, var2, strata, data):
+        """
+        Construct a StratifiedTables object from data.
+
+        Parameters
+        ----------
+        var1 : int or string
+            The column index or name of `data` containing the variable
+            defining the rows of the contingency table.  The variable
+            must have only two distinct values.
+        var2 : int or string
+            The column index or name of `data` containing the variable
+            defining the columns of the contingency table.  The variable
+            must have only two distinct values.
+        strata : int or string
+            The column index of name of `data` containing the variable
+            defining the strata.
+        data : array-like
+            The raw data.  A cross-table for analysis is constructed
+            from the first two columns.
+
+        Returns
+        -------
+        A StratifiedTables instance.
+        """
+
+        if not isinstance(data, pd.DataFrame):
+            data1 = pd.DataFrame(index=data.index, column=[var1, var2, strata])
+            data1.loc[:, var1] = data[:, var1]
+            data1.loc[:, var2] = data[:, var2]
+            data1.loc[:, strata] = data[:, strata]
+        else:
+            data1 = data
+
+        gb = data1.groupby(strata).groups
+        tables = []
+        for g in gb:
+            ii = gb[g]
+            tab = pd.crosstab(data1.loc[ii, var1], data1.loc[ii, var2])
+            tables.append(tab)
+        return cls(tables)
 
 
     def test_null_odds(self, correction=False):
