@@ -21,6 +21,71 @@ d = {"x": x}
 
 
 
+
+class Penalty(object):
+    """
+    A class for representing a scalar-value penalty.
+    Parameters
+    wts : array-like
+        A vector of weights that determines the weight of the penalty
+        for each parameter.
+    Notes
+    -----
+    The class has a member called `alpha` that scales the weights.
+    """
+
+    def __init__(self, wts):
+        self.wts = wts
+        self.alpha = 1.
+
+    def func(self, params):
+        """
+        A penalty function on a vector of parameters.
+        Parameters
+        ----------
+        params : array-like
+            A vector of parameters.
+        Returns
+        -------
+        A scalar penaty value; greater values imply greater
+        penalization.
+        """
+        raise NotImplementedError
+
+    def grad(self, params):
+        """
+        The gradient of a penalty function.
+        Parameters
+        ----------
+        params : array-like
+            A vector of parameters
+        Returns
+        -------
+        The gradient of the penalty with respect to each element in
+        `params`.
+        """
+        raise NotImplementedError
+
+
+class L2(Penalty):
+    """
+    The L2 (ridge) penalty.
+    """
+
+    def __init__(self, wts=None):
+        if wts is None:
+            self.wts = 1.
+        else:
+            self.wts = wts
+        self.alpha = 1.
+
+    def func(self, params):
+        return np.sum(self.wts * self.alpha * params**2)
+
+    def grad(self, params):
+        return 2 * self.wts * self.alpha * params
+
+
 def _R_compat_quantile(x, probs):
     #return np.percentile(x, 100 * np.asarray(probs))
     probs = np.asarray(probs)
@@ -28,6 +93,21 @@ def _R_compat_quantile(x, probs):
                             for prob in probs.ravel(order="C")])
     return quantiles.reshape(probs.shape, order="C")
 
+
+class GamPenalty(Penalty):
+    
+    def __init__(self, wts=1, alpha=1):
+        
+        self.wts = wts
+        self.alpha = alpha
+    
+    def func(self, params):
+        return
+        
+    def grad(self, params):
+        return
+        
+        
 
 ## from patsy splines.py
 def _eval_bspline_basis(x, knots, degree):
@@ -110,7 +190,7 @@ def test_basis_of_derivatives(column = 1):
                                           fill_value=0,)
     approx_der2 = np.diag(approx_fprime(x, basis_func2, centered=True))
     err = np.linalg.norm(approx_der1 - der_basis[:, column])
-    print('approximation error=', err) 
+    print('approximation error=', err/len(x)) 
     # the error tends to be quiet large because the derivatives 
     # seems to be slightly shifted
 
