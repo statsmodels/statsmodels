@@ -144,8 +144,20 @@ two-way tables.
     from statsmodels.graphics.mosaicplot import mosaic
     mosaic(data)
 
-Stratified tables
-=================
+A single 2x2 table
+==================
+
+Several methods for working with indivdual 2x2 tables are provided in
+the ``Table2x2`` class.
+
+.. ipython::
+    table = np.asarray([[35, 21], [25, 58]])
+    t22 = sm.stats.Table2x2(table)
+    print(t22.summary())
+
+
+Stratified 2x2 tables
+=====================
 
 Stratification refers to a collection of contingency tables with the
 same row and column factors.  For example, if we are interested in the

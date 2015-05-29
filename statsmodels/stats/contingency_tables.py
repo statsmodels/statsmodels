@@ -42,8 +42,9 @@ class TableSymmetry(object):
     These methods should only be used when the rows and columns of the
     table have the same categories.  If `table` is provided as a
     Pandas array, the row and column indices will be extended to
-    create a scquare table.  Otherwise the table should be provided in
-    a square form, with the rows and columns in the same order.
+    create a square table.  Otherwise the table should be provided in
+    a square form, with the (implicit) row and column categories
+    appearing in the same order.
     """
 
     def __init__(self, table):
@@ -206,14 +207,16 @@ class TableSymmetry(object):
         return stat, pvalue, df
 
 
-    def summary(self, alpha=0.05):
+    def summary(self, alpha=0.05, float_format="%.3f"):
+
+        fmt = float_format
 
         headers = ["Statistic", "P-value", "DF"]
         stubs = ["Symmetry", "Homogeneity"]
         stat1, pvalue1, df1 = self.symmetry()
         stat2, pvalue2, df2 = self.homogeneity()
-        data = [['%.3f' % stat1, '%.3f' % pvalue1, '%d' % df1],
-                ['%.3f' % stat2, '%.3f' % pvalue2, '%d' % df2]]
+        data = [[fmt % stat1, fmt % pvalue1, '%d' % df1],
+                [fmt % stat2, fmt % pvalue2, '%d' % df2]]
         tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
                                  table_dec_above='')
 
@@ -319,16 +322,53 @@ class TableAssociation(object):
 
 
     @cache_readonly
-    def pearson_resids(self):
+    def marginal_probabilities(self):
         """
-        The Pearson residuals.
+        Return the estimated row and column marginal distributions.
         """
         n = self._table.sum()
         row = self._table.sum(1) / n
         col = self._table.sum(0) / n
-        fit = n * np.outer(row, col)
+        return row, col
+
+
+    @cache_readonly
+    def independence_probabilities(self):
+        """
+        Estimated cell probabilities under independence.
+        """
+        row, col = self.marginal_probabilities
+        return np.outer(row, col)
+
+
+    @cache_readonly
+    def fitted_values(self):
+        """
+        Fitted values under independence.
+        """
+        probs = self.independence_probabilities
+        fit = self._table.sum() * probs
+        return fit
+
+
+    @cache_readonly
+    def pearson_resids(self):
+        """
+        The Pearson residuals.
+        """
+        fit = self.fitted_values
         resids = (self._table - fit) / np.sqrt(fit)
         return resids
+
+
+    @cache_readonly
+    def standardized_resids(self):
+        """
+        Residuals with unit variance.
+        """
+        row, col = self.marginal_probabilities
+        sresids = self.resids / np.sqrt(np.outer(1 - row, 1 - col))
+        return sresids
 
 
     @cache_readonly
@@ -385,6 +425,259 @@ class TableAssociation(object):
         used.
         """
         return self._stat_sd0
+
+
+class Table2x2(object):
+    """
+    Analyses that can be performed on a single 2x2 table.
+
+    Note that for the risk ratio, the analysis is not symmetric with
+    respect to the rows and columns of the contingency table.  The two
+    rows define population subgroups, column 0 is the number of
+    'events', and column 1 is the number of 'non-events'.
+
+    Parameters
+    ----------
+    table : array-like
+        A 2x2 contingency table
+    shift_zeros : boolean
+        If true, 0.5 is added to all cells of the table if any cell is
+        equal to zero.
+    """
+
+    def __init__(self, table, shift_zeros=True):
+
+        table = np.asarray(table, dtype=np.float64)
+        if (table.ndim != 2) or (table.shape[0] != 2) or (table.shape[1] != 2):
+            raise ValueError("Table2x2 takes a 2x2 table as input.")
+
+        if shift_zeros and (table.min() == 0):
+            table = table + 0.5
+
+        self._table = table
+
+
+    @cache_readonly
+    def log_oddsratio(self):
+        """
+        The log odds ratio of the table.
+        """
+        f = self._table.flatten()
+        return np.dot(np.log(f), np.r_[1, -1, -1, 1])
+
+
+    @cache_readonly
+    def oddsratio(self):
+        """
+        The odds ratio of the table.
+        """
+        return self._table[0, 0] * self._table[1, 1] / (self._table[0, 1] * self._table[1, 0])
+
+
+    @cache_readonly
+    def log_oddsratio_se(self):
+        """
+        The asymptotic standard error of the estimated log odds ratio.
+        """
+        return np.sqrt(np.sum(1 / self._table))
+
+
+    @cache_readonly
+    def oddsratio_pvalue(self):
+        """
+        P-value for the null hypothesis that the odds ratio equals 1.
+        """
+        zscore = self.log_oddsratio / self.log_oddsratio_se
+        pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
+        return pvalue
+
+
+    @cache_readonly
+    def log_oddsratio_pvalue(self):
+        """
+        P-value for the null hypothesis that the log odds ratio equals zero.
+        """
+        return self.oddsratio_pvalue
+
+
+    def log_oddsratio_confint(self, alpha):
+        """
+        A confidence level for the log odds ratio.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            confidence interval.
+        """
+        f = -stats.norm.ppf(alpha / 2)
+        lor = self.log_oddsratio
+        se = self.log_oddsratio_se
+        lcb = lor - f * se
+        ucb = lor + f * se
+        return lcb, ucb
+
+
+    def oddsratio_confint(self, alpha):
+        """
+        A confidence interval for the odds ratio.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            confidence interval.
+        """
+        lcb, ucb = self.log_oddsratio_confint(alpha)
+        return np.exp(lcb), np.exp(ucb)
+
+
+    @cache_readonly
+    def riskratio(self):
+        """
+        The estimated risk ratio for the table.
+
+        Returns the ratio between the risk in the first row and the
+        risk in the second row.  Column 0 is interpreted as containing
+        the number of occurances of the event of interest.
+        """
+        p = self._table[:, 0] / self._table.sum(1)
+        return p[0] / p[1]
+
+
+    @cache_readonly
+    def log_riskratio(self):
+        """
+        The estimated log risk ratio for the table.
+        """
+        return np.log(self.riskratio)
+
+
+    @cache_readonly
+    def log_riskratio_se(self):
+        """
+        The standard error of the estimated log risk ratio for the table.
+        """
+        n = self._table.sum(1)
+        p = self._table[:, 0] / n
+        va = np.sum((1 - p) / (n*p))
+        return np.sqrt(va)
+
+
+    @cache_readonly
+    def riskratio_pvalue(self):
+        """
+        p-value for the null hypothesis that the risk ratio equals 1.
+        """
+        zscore = self.log_riskratio / self.log_riskratio_se
+        pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
+        return pvalue
+
+
+    @cache_readonly
+    def log_riskratio_pvalue(self):
+        """
+        p-value for the null hypothesis that the log risk ratio equals 0.
+        """
+        return self.riskratio_pvalue
+
+
+    def log_riskratio_confint(self, alpha):
+        """
+        A confidence interval for the log risk ratio.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            confidence interval.
+        """
+        f = -stats.norm.ppf(alpha / 2)
+        lrr = self.log_riskratio
+        se = self.log_riskratio_se
+        lcb = lrr - f * se
+        ucb = lrr + f * se
+        return lcb, ucb
+
+
+    def riskratio_confint(self, alpha):
+        """
+        A confidence interval for the risk ratio.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            confidence interval.
+        """
+        lcb, ucb = self.log_riskratio_confint(alpha)
+        return np.exp(lcb), np.exp(ucb)
+
+
+    @classmethod
+    def from_data(cls, var1, var2, data, shift_zeros=True):
+        """
+        Construct a Table2x2 object from data.
+
+        Parameters
+        ----------
+        var1 : string
+            Name or column index of the first variable, defining the
+            rows.
+        var2 : string
+            Name or column index of the first variable, defining the
+            columns.
+        data : array-like
+            The raw data.
+        shift_zeros : boolean
+            If True, and if there are any zeros in the contingency
+            table, add 0.5 to all four cells of the table.
+
+        Notes
+        -----
+        The columns used to produce the contingency table must each
+        have two distinct values.
+        """
+
+        if isinstance(data, pd.DataFrame):
+            table = pd.crosstab(data.loc[:, var1], data.loc[:, var2])
+        else:
+            table = pd.crosstab(data[:, var1], data[:, var2])
+        return cls(table, shift_zeros)
+
+
+    def summary(self, alpha=0.05, float_format="%.3f"):
+        """
+        Summarizes results for a 2x2 table analysis.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the confidence
+            intervals.
+        """
+
+        def fmt(x):
+            if type(x) is str:
+                return x
+            return float_format % x
+
+        headers = ["Estimate", "SE", "LCB", "UCB", "p-value"]
+        stubs = ["Odds ratio", "Log odds ratio", "Risk ratio", "Log risk ratio"]
+
+        lcb1, ucb1 = self.oddsratio_confint(alpha)
+        lcb2, ucb2 = self.log_oddsratio_confint(alpha)
+        lcb3, ucb3 = self.riskratio_confint(alpha)
+        lcb4, ucb4 = self.log_riskratio_confint(alpha)
+        data = [[fmt(x) for x in [self.oddsratio, "", lcb1, ucb1, self.oddsratio_pvalue]],
+                [fmt(x) for x in [self.log_oddsratio, self.log_oddsratio_se, lcb2, ucb2,
+                                  self.oddsratio_pvalue]],
+                [fmt(x) for x in [self.riskratio, "", lcb2, ucb2, self.riskratio_pvalue]],
+                [fmt(x) for x in [self.log_riskratio, self.log_riskratio_se, lcb4, ucb4,
+                                  self.riskratio_pvalue]]]
+        tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
+                                table_dec_above='')
+        return tab
 
 
 
@@ -545,8 +838,8 @@ class StratifiedTables(object):
         acd = self._table[0, 0, :] * self._cpd
         cab = self._table[1, 0, :] * self._apb
 
-        risk_ratio = np.sum(acd / self._n) / np.sum(cab / self._n)
-        return risk_ratio
+        rr = np.sum(acd / self._n) / np.sum(cab / self._n)
+        return rr
 
 
     @cache_readonly
@@ -668,7 +961,7 @@ class StratifiedTables(object):
         return stat, pvalue
 
 
-    def summary(self, alpha=0.05):
+    def summary(self, alpha=0.05, float_format="%.3f"):
         """
         A summary of all the main results.
         """
@@ -676,7 +969,7 @@ class StratifiedTables(object):
         def fmt(x):
             if type(x) is str:
                 return x
-            return "%.3f" % x
+            return float_format % x
 
         co_lcb, co_ucb = self.common_odds_confint(alpha=alpha)
         clo_lcb, clo_ucb = self.common_logodds_confint(alpha=alpha)

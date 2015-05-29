@@ -367,3 +367,95 @@ class TestStratified3(CheckStratifiedMixin):
 
         self.or_homog = 18.83297
         self.or_homog_p = 0.002064786
+
+
+class Check2x2Mixin(object):
+
+    def initialize(self):
+        self.tbl_obj = ctab.Table2x2(self.table)
+        self.tbl_data_obj = ctab.Table2x2.from_data(0, 1, self.data)
+
+    def test_oddsratio(self):
+        assert_allclose(self.tbl_obj.oddsratio, self.oddsratio)
+
+
+    def test_log_oddsratio(self):
+        assert_allclose(self.tbl_obj.log_oddsratio, self.log_oddsratio)
+
+
+    def test_log_oddsratio_se(self):
+        assert_allclose(self.tbl_obj.log_oddsratio_se, self.log_oddsratio_se)
+
+
+    def test_oddsratio_pvalue(self):
+        assert_allclose(self.tbl_obj.oddsratio_pvalue, self.oddsratio_pvalue)
+
+
+    def test_oddsratio_confint(self):
+        lcb1, ucb1 = self.tbl_obj.oddsratio_confint(0.05)
+        lcb2, ucb2 = self.oddsratio_confint
+        assert_allclose(lcb1, lcb2)
+        assert_allclose(ucb1, ucb2)
+
+
+    def test_riskratio(self):
+        assert_allclose(self.tbl_obj.riskratio, self.riskratio)
+
+
+    def test_log_riskratio(self):
+        assert_allclose(self.tbl_obj.log_riskratio, self.log_riskratio)
+
+
+    def test_log_riskratio_se(self):
+        assert_allclose(self.tbl_obj.log_riskratio_se, self.log_riskratio_se)
+
+
+    def test_riskratio_pvalue(self):
+        assert_allclose(self.tbl_obj.riskratio_pvalue, self.riskratio_pvalue)
+
+
+    def test_riskratio_confint(self):
+        lcb1, ucb1 = self.tbl_obj.riskratio_confint(0.05)
+        lcb2, ucb2 = self.riskratio_confint
+        assert_allclose(lcb1, lcb2)
+        assert_allclose(ucb1, ucb2)
+
+
+    def test_log_riskratio_confint(self):
+        lcb1, ucb1 = self.tbl_obj.log_riskratio_confint(0.05)
+        lcb2, ucb2 = self.log_riskratio_confint
+        assert_allclose(lcb1, lcb2)
+        assert_allclose(ucb1, ucb2)
+
+
+    def test_from_data(self):
+        assert_equal(self.tbl_obj.summary().as_text(),
+                     self.tbl_data_obj.summary().as_text())
+
+
+
+class Test2x2_1(Check2x2Mixin):
+
+    def __init__(self):
+
+        data = np.zeros((8, 2))
+        data[:, 0] = [0, 0, 1, 1, 0, 0, 1, 1]
+        data[:, 1] = [0, 1, 0, 1, 0, 1, 0, 1]
+        self.data = np.asarray(data)
+        self.table = np.asarray([[2, 2], [2, 2]])
+
+        self.initialize()
+
+        self.oddsratio = 1.
+        self.log_oddsratio = 0.
+        self.log_oddsratio_se = np.sqrt(2)
+        self.oddsratio_confint = [0.062548836166112329, 15.987507702689751]
+        self.oddsratio_pvalue = 1.
+        self.riskratio = 1.
+        self.log_riskratio = 0.
+        self.log_riskratio_se = 1 / np.sqrt(2)
+        self.riskratio_pvalue = 1.
+        self.riskratio_confint = [0.25009765325990629,
+                                  3.9984381579173824]
+        self.log_riskratio_confint = [-1.3859038243496782,
+                                      1.3859038243496782]
