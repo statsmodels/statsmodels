@@ -139,21 +139,28 @@ class GamPenalty(Penalty):
 
     def __init__(self, wts=1, alpha=1):
 
-        self.wts = wts
+        self.wts = wts #should we keep wts????
         self.alpha = alpha
 
     def func(self, params, der2):
+        '''
+        1) params are the coefficients in the regression model
+        2) der2  is the second derivative of the splines basis
+        '''
 
-        # this is the second derivative of the function
+        # The second derivative of the estimated regression function
         f = np.dot(der2, params)
 
         return self.alpha * np.sum(f**2)
 
-    def grad(self, params, der2):
+    def grad(self, params, der2, cov_der2):
+        '''
+        1) params are the coefficients in the regression model
+        2) der2  is the second derivative of the splines basis
+        3) cov_der2 is obtained as np.dot(der2.T, der2)
+        '''
 
-        # the second derivative of the function
-        f = np.dot(der2, params)
-        return 2 * self.alpha * der2.T.dot(f)
+        return 2 * self.alpha * np.dot(cov_der2, params)
 
 
 gp = GamPenalty()
@@ -182,7 +189,9 @@ def cost(params, alpha, basis, der2, y):
 
 def grad_cost(params, alpha, basis, der2, y):
     GB = GamPenalty(alpha=alpha)
-    grad_penalty = GB.grad(params, der2)
+    cov_der2 = np.dot(der2.T, der2)
+
+    grad_penalty = GB.grad(params, der2, cov_der2)
     mse = MSE()
     grad_mse = mse.grad(basis, y, params)
     return grad_penalty + grad_mse
@@ -209,13 +218,14 @@ inner_knots = _R_compat_quantile(x, knot_quantiles)
 all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
 
 basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
-params = np.array([0] * df)
+params = np.random.normal(0, 1, df)
 
 
-alpha = 0.01
+alpha = 0.0001
 
 opt = sp.optimize.minimize(cost, params, args=(alpha, basis, der2_basis, y))
 
+## opt1 is not working properly
 opt1 = sp.optimize.minimize(cost, params, args=(alpha, basis, der2_basis, y),
                             jac=grad_cost, method='Newton-CG')
 
@@ -231,5 +241,4 @@ plt.title('alpha = ' + str(alpha))
 plt.plot(x, np.dot(basis, opt1.x), label='GAM')
 plt.plot(x, y, label='True')
 plt.legend()
-
 plt.show()
