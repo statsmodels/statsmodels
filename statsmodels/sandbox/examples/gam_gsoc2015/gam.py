@@ -112,7 +112,7 @@ class GamPenalty(Penalty):
         
         # the second derivative of the function
         f = np.dot(der2, params)
-        return self.alpha * np.dot(f, der2)
+        return 2 * self.alpha * np.dot(f, der2)
         
         
 
