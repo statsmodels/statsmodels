@@ -6,19 +6,7 @@ import matplotlib.pyplot as plt
 from statsmodels.tools.numdiff import approx_fprime
 from scipy.interpolate import splev
 import scipy as sp
-
-n = 200
-data = pd.DataFrame()
-x = np.linspace(-1, 1, n)
-y = x*x - x 
-d = {"x": x}
-#dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
-
-
-#plt.title('basis obtained with dmatrix')
-#plt.plot(dm[:, 1:])
-#plt.show()
-
+from numpy.linalg import norm
 
 
 
@@ -147,53 +135,6 @@ def _eval_bspline_basis(x, knots, degree):
     return basis, der1_basis, der2_basis
 
 
-
-df = 10
-degree = 5
-order = degree + 1
-n_inner_knots = df - order
-lower_bound = np.min(x)
-upper_bound = np.max(x)
-knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
-inner_knots = _R_compat_quantile(x, knot_quantiles)
-all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
-
-basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
-
-
-
-def test_basis_of_derivatives(column = 1):
-    ''' plot a graph of the derivatives obtained with patsy and the 
-        one obtained with numerical approximation ''' 
-
-    basis_func = sp.interpolate.interp1d(x, basis[:, column],  
-                                         bounds_error=False, 
-                                         fill_value=0)
-    approx_der1 = np.diag(approx_fprime(x, basis_func, centered=True))
-    basis_func2 = sp.interpolate.interp1d(x, approx_der1,  
-                                          bounds_error=False, 
-                                          fill_value=0,)
-    approx_der2 = np.diag(approx_fprime(x, basis_func2, centered=True))
-    err = np.linalg.norm(approx_der1 - der_basis[:, column])
-    print('approximation error=', err/len(x)) 
-    # the error tends to be quiet large because the derivatives 
-    # seems to be slightly shifted
-
-    plt.subplot(2, 1, 1)   
-    plt.title('First derivative')
-    plt.plot(x, approx_der1, 'o')
-    plt.plot(x, der_basis[:, column])
-    plt.subplot(2, 1, 2)
-    plt.title('Second Derivative')
-    plt.plot(x, approx_der2, 'o')
-    plt.plot(x, der2_basis[:, column])
-    plt.show()
-    return
-
-
-
-
-
 class GamPenalty(Penalty):
     
     def __init__(self, wts=1, alpha=1):
@@ -212,25 +153,83 @@ class GamPenalty(Penalty):
         
         # the second derivative of the function
         f = np.dot(der2, params)
-        return 2 * self.alpha * np.sum(der2.T * f, axis=1)
+        return 2 * self.alpha * der2.T.dot(f)
         
 
+gp = GamPenalty()
 
 
-params = np.array([1] * df)
-GP = GamPenalty()
 
-func = GP.func(params, der2_basis)
-grad = GP.grad(params, der2_basis)
+class MSE():
+    
+    def __init__(self):
+        return
 
-'''
-The function has ten linear parameters (params) and its gradient should
-have 10 rows
->>> grad.shape
-(10,)
->>> func.shape
-()
->>> func
-5.1418850977516267e-27
->>> 
-'''
+    def func(self, X, y, params):
+        
+        return norm(y - np.dot(X, params))
+
+    def grad(self, X, y, params):
+        
+        return 2 * np.sum(X.T * (y - np.dot(X, params)), axis=1)
+        
+
+def cost(params, alpha, basis, der2, y):
+    GB = GamPenalty(alpha=alpha)
+    penalty = GB.func(params, der2)
+    mse = norm(y - np.dot(basis, params))
+    return mse + penalty
+
+def grad_cost(params, alpha, basis, der2, y):
+    GB = GamPenalty(alpha=alpha)
+    grad_penalty = GB.grad(params, der2)
+    mse = MSE()
+    grad_mse = mse.grad(basis, y, params)
+    return grad_penalty + grad_mse
+
+
+n = 200
+data = pd.DataFrame()
+x = np.linspace(-1, 1, n)
+y = x*x - x 
+d = {"x": x}
+dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
+
+
+   
+
+df = 10
+degree = 5
+order = degree + 1
+n_inner_knots = df - order
+lower_bound = np.min(x)
+upper_bound = np.max(x)
+knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
+inner_knots = _R_compat_quantile(x, knot_quantiles)
+all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
+
+basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
+params = np.array([0] * df)
+
+
+alpha = 0.01
+
+opt = sp.optimize.minimize(cost, params, args=(alpha, basis, der2_basis, y))
+
+opt1 = sp.optimize.minimize(cost, params, args=(alpha, basis, der2_basis, y), 
+                            jac=grad_cost, method='Newton-CG')
+     
+beta = opt.x
+
+plt.subplot(2, 1, 1)
+plt.title('alpha = ' + str(alpha))
+plt.plot(x, np.dot(basis, beta), label='GAM')
+plt.plot(x, y, label='True')
+plt.legend()
+plt.subplot(2, 1, 2)
+plt.title('alpha = ' + str(alpha))
+plt.plot(x, np.dot(basis, opt1.x), label='GAM')
+plt.plot(x, y, label='True')
+plt.legend()
+
+plt.show()
