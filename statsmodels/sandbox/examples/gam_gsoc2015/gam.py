@@ -92,28 +92,6 @@ def _R_compat_quantile(x, probs):
     quantiles = np.asarray([np.percentile(x, 100 * prob)
                             for prob in probs.ravel(order="C")])
     return quantiles.reshape(probs.shape, order="C")
-
-
-class GamPenalty(Penalty):
-    
-    def __init__(self, wts=1, alpha=1):
-        
-        self.wts = wts
-        self.alpha = alpha
-    
-    def func(self, params, der2):
-        
-        # this is the second derivative of the function
-        f = np.dot(der2, params)
-
-        return self.alpha * np.sum(f**2)
-        
-    def grad(self, params, der2):
-        
-        # the second derivative of the function
-        f = np.dot(der2, params)
-        return 2 * self.alpha * np.dot(f, der2)
-        
         
 
 ## from patsy splines.py
@@ -214,22 +192,45 @@ def test_basis_of_derivatives(column = 1):
 
 
 
-### GAM COST FUNCTION ### 
-## THIS SECTION IS NOT WORKING!!! ##
-from numpy.linalg import lstsq, norm
-from scipy.integrate import quad
 
-n_samples, n_features = basis.shape
-a = np.zeros(shape=(n_features,))
 
-def integrand(x, a):
-    return np.dot(der2_basis, a)
+class GamPenalty(Penalty):
     
-
-def cost(a, alpha): 
-    approx_err = norm(y - np.dot(basis, a))
-    integral = quad(integrand, x.min(), x.max(), args=(a,))
+    def __init__(self, wts=1, alpha=1):
+        
+        self.wts = wts
+        self.alpha = alpha
     
-    return approx_err + alpha * integral
-    
+    def func(self, params, der2):
+        
+        # this is the second derivative of the function
+        f = np.dot(der2, params)
 
+        return self.alpha * np.sum(f**2)
+        
+    def grad(self, params, der2):
+        
+        # the second derivative of the function
+        f = np.dot(der2, params)
+        return 2 * self.alpha * np.sum(der2.T * f, axis=1)
+        
+
+
+
+params = np.array([1] * df)
+GP = GamPenalty()
+
+func = GP.func(params, der2_basis)
+grad = GP.grad(params, der2_basis)
+
+'''
+The function has ten linear parameters (params) and its gradient should
+have 10 rows
+>>> grad.shape
+(10,)
+>>> func.shape
+()
+>>> func
+5.1418850977516267e-27
+>>> 
+'''
