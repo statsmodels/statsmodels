@@ -153,7 +153,7 @@ class GamPenalty(Penalty):
 
         return self.alpha * np.sum(f**2)
 
-    def grad(self, params, der2, cov_der2):
+    def grad(self, params, cov_der2):
         ''' 
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
@@ -166,35 +166,6 @@ class GamPenalty(Penalty):
 gp = GamPenalty()
 
 
-
-class MSE():
-    
-    def __init__(self):
-        return
-
-    def func(self, X, y, params):
-        
-        return norm(y - np.dot(X, params))
-
-    def grad(self, X, y, params):
-        
-        return 2 * np.sum(X.T * (y - np.dot(X, params)), axis=1)
-        
-
-def cost(params, alpha, basis, der2, y):
-    GB = GamPenalty(alpha=alpha)
-    penalty = GB.func(params, der2)
-    mse = norm(y - np.dot(basis, params))
-    return mse + penalty
-
-def grad_cost(params, alpha, basis, der2, y):
-    GB = GamPenalty(alpha=alpha)
-    cov_der2 = np.dot(der2.T, der2)
-    
-    grad_penalty = GB.grad(params, der2, cov_der2)
-    mse = MSE()
-    grad_mse = mse.grad(basis, y, params)
-    return grad_penalty + grad_mse
 
 
 n = 200
@@ -223,23 +194,16 @@ params = np.random.normal(0, 1, df)
 
 alpha = 0.0001
 
-opt = sp.optimize.minimize(cost, params, args=(alpha, basis, der2_basis, y))
 
-## opt1 is not working properly
-opt1 = sp.optimize.minimize(cost, params, args=(alpha, basis, der2_basis, y), 
-                            jac=grad_cost, method='Newton-CG')
-     
-beta = opt.x
+def f(a):
+    par = params.copy()
+    par[0] = a[0]
+    return gp.func(par, der2_basis)
 
-plt.subplot(2, 1, 1)
-plt.title('alpha = ' + str(alpha))
-plt.plot(x, np.dot(basis, beta), label='GAM')
-plt.plot(x, y, label='True')
-plt.legend()
-plt.subplot(2, 1, 2)
-plt.title('alpha = ' + str(alpha))
-plt.plot(x, np.dot(basis, opt1.x), label='GAM')
-plt.plot(x, y, label='True')
-plt.legend()
-plt.show()
 
+    
+df = approx_fprime([5], f, centered=True)
+
+cov_der2 = np.dot(der2_basis.T, der2_basis)
+params[0] = 5
+gp.grad(params, cov_der2) 
