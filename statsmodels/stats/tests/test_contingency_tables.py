@@ -62,6 +62,34 @@ def test_TableSymmetry_from_data():
 
 
 
+def test_cumulative_odds():
+
+    table = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    table = np.asarray(table)
+    tbl_obj = ctab.Table(table)
+
+    cum_odds = tbl_obj.cumulative_oddsratios
+    assert_allclose(cum_odds[0, 0], 28 / float(5 * 11))
+    assert_allclose(cum_odds[0, 1], (3 * 15) / float(3 * 24), atol=1e-5,
+                    rtol=1e-5)
+    assert_allclose(np.log(cum_odds), tbl_obj.cumulative_log_oddsratios,
+                    atol=1e-5, rtol=1e-5)
+
+
+def test_local_odds():
+
+    table = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    table = np.asarray(table)
+    tbl_obj = ctab.Table(table)
+
+    loc_odds = tbl_obj.local_oddsratios
+    assert_allclose(loc_odds[0, 0], 5 / 8.)
+    assert_allclose(loc_odds[0, 1], 12 / float(15), atol=1e-5,
+                    rtol=1e-5)
+    assert_allclose(np.log(loc_odds), tbl_obj.local_log_oddsratios,
+                    atol=1e-5, rtol=1e-5)
+
+
 def test_ordinal_association():
 
     for k,table in enumerate(tables):
@@ -70,7 +98,7 @@ def test_ordinal_association():
         col_scores = 1 + np.arange(table.shape[1])
 
         # First set of scores
-        rslt = ctab.TableAssociation(table, 'lbl', row_scores, col_scores)
+        rslt = ctab.Table(table, shift_zeros=False).ordinal_association(row_scores, col_scores)
         assert_allclose(rslt.stat, r_results.loc[k, "lbl_stat"])
         assert_allclose(rslt.stat_e0, r_results.loc[k, "lbl_expval"])
         assert_allclose(rslt.stat_sd0**2, r_results.loc[k, "lbl_var"])
@@ -78,7 +106,7 @@ def test_ordinal_association():
         assert_allclose(rslt.pvalue, r_results.loc[k, "lbl_pvalue"], rtol=1e-5, atol=1e-5)
 
         # Second set of scores
-        rslt = ctab.TableAssociation(table, 'lbl', row_scores, col_scores**2)
+        rslt = ctab.Table(table, shift_zeros=False).ordinal_association(row_scores, col_scores**2)
         assert_allclose(rslt.stat, r_results.loc[k, "lbl2_stat"])
         assert_allclose(rslt.stat_e0, r_results.loc[k, "lbl2_expval"])
         assert_allclose(rslt.stat_sd0**2, r_results.loc[k, "lbl2_var"])
@@ -95,10 +123,10 @@ def test_chi2_association():
     from scipy.stats import chi2_contingency
     rslt_scipy = chi2_contingency(table)
 
-    rslt = ctab.TableAssociation(table)
+    stat, df, pvalue = ctab.Table(table).nominal_association
 
-    assert_allclose(rslt.stat, rslt_scipy[0])
-    assert_allclose(rslt.pvalue, rslt_scipy[1])
+    assert_allclose(stat, rslt_scipy[0])
+    assert_allclose(pvalue, rslt_scipy[1])
 
 
 def test_symmetry():
@@ -187,7 +215,7 @@ def test_cochranq():
     assert_allclose(stat, 1.2174, rtol=1e-4)
     assert_allclose(df, 4)
 
-    # Cochrane q and Mcnemar are equivalent for 2x2 tables
+    # Cochran's q and Mcnemar are equivalent for 2x2 tables
     data = table[:, 0:2]
     xtab = np.asarray(pd.crosstab(data[:, 0], data[:, 1]))
     stat1, pvalue1, df1 = ctab.cochrans_q(data, return_object=False)

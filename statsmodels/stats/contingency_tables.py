@@ -223,27 +223,17 @@ class TableSymmetry(object):
         return tab
 
 
-class TableAssociation(object):
+class Table(object):
     """
-    Assess row/column association in a contingency table.
+    Analyses that can be performed on a two-way contingency table.
 
     Parameters
     ----------
     table : array-like
         A contingency table.
-    method : string
-        Method for conducting the association test.  Must be either
-        `Pearson` for a Pearson chi^2 test or `lbl` for a
-        linear-by-linear association test.
-    row_scores : array-like
-        Optional row scores for ordinal rows.
-    col_scores : array-like
-        Optional column scores for ordinal columns.
-
-    Notes
-    -----
-    Using the default row and column scores for the linear-by-linear
-    association test gives the Cochran-Armitage trend test.
+    shift_zeros : boolean
+        If True and any cell count is zero, add 0.5 to all values
+        in the table.
 
     See also
     --------
@@ -251,52 +241,119 @@ class TableAssociation(object):
     scipy.stats.chi2_contingency
     """
 
-    def __init__(self, table, method='chi2', row_scores=None, col_scores=None):
+    def __init__(self, table, shift_zeros=True):
 
-        table = np.asarray(table, dtype=np.float64)
-        self._table = table
+        self._table_orig = table
+        self._table = np.asarray(table, dtype=np.float64)
 
-        method = method.lower()
-        if method == 'lbl':
+        if shift_zeros and (self._table.min() == 0):
+            self._table = self._table + 0.5
 
-            if row_scores is None:
-                row_scores = np.arange(table.shape[0])
-            if col_scores is None:
-                col_scores = np.arange(table.shape[1])
 
-            if len(row_scores) != table.shape[0]:
-                raise ValueError("The length of `row_scores` must match the first dimension of `table`.")
+    @classmethod
+    def from_data(cls, var1, var2, data, shift_zeros=True):
+        """
+        Construct a Table2x2 object from data.
 
-            if len(col_scores) != table.shape[1]:
-                raise ValueError("The length of `col_scores` must match the second dimension of `table`.")
+        Parameters
+        ----------
+        var1 : string
+            Name or column index of the first variable, defining the
+            rows.
+        var2 : string
+            Name or column index of the first variable, defining the
+            columns.
+        data : array-like
+            The raw data.
+        shift_zeros : boolean
+            If True, and if there are any zeros in the contingency
+            table, add 0.5 to all four cells of the table.
+        """
 
-            if row_scores is not None:
-                self._row_scores = row_scores
-            if col_scores is not None:
-                self._col_scores = col_scores
-
-            self._ordinal_association()
-
-        elif method == 'chi2':
-            self._chi2_association()
-
+        if isinstance(data, pd.DataFrame):
+            table = pd.crosstab(data.loc[:, var1], data.loc[:, var2])
         else:
-            raise ValueError('uknown association method')
+            table = pd.crosstab(data[:, var1], data[:, var2])
+        return cls(table, shift_zeros)
 
 
-    def _ordinal_association(self):
+    @cache_readonly
+    def nominal_association(self):
+        """
+        Assess independence between rows and columns using chi^2 test.
+
+        Returns
+        -------
+        stat : float
+            The chi^2 test statistic.
+        df : integer
+            The degrees of freedom of the reference distribution
+        pvalue : float
+            The p-value for the test.
+        """
+        stat = self.chi2_contribs.sum()
+        df = np.prod(np.asarray(self._table.shape) - 1)
+        pvalue = 1 - stats.chi2.cdf(stat, df)
+        return stat, df, pvalue
+
+
+    def ordinal_association(self, row_scores=None, col_scores=None):
+        """
+        Assess independence between rows and columns for ordinal factors.
+
+        This is the 'linear by linear' association test.
+
+        Parameters
+        ----------
+        row_scores : array-like
+            An array of numeric row scores
+        col_scores : array-like
+            An array of numeric column scores
+
+        Returns a bunch with the following attributes:
+
+        stat : float
+            The test statistic.
+        stat_e0 : float
+            The expected value of the test statistic under the null
+            hypothesis.
+        stat_sd0 : float
+            The standard deviation of the test statistic under the
+            null hypothesis.
+        zscore : float
+            The Z-score for the test statistic.
+        pvalue : float
+            The p-value for the test.
+
+        Notes
+        -----
+        Using the default row and column scores for the linear-by-linear
+        association test gives the Cochran-Armitage trend test.
+        """
+
+        if row_scores is None:
+            row_scores = np.arange(self._table.shape[0])
+
+        if col_scores is None:
+            col_scores = np.arange(self._table.shape[1])
+
+        if len(row_scores) != self._table.shape[0]:
+            raise ValueError("The length of `row_scores` must match the first dimension of `table`.")
+
+        if len(col_scores) != self._table.shape[1]:
+            raise ValueError("The length of `col_scores` must match the second dimension of `table`.")
 
         # The test statistic
-        stat = np.dot(self._row_scores, np.dot(self._table, self._col_scores))
+        stat = np.dot(row_scores, np.dot(self._table, col_scores))
 
         # Some needed quantities
         n_obs = self._table.sum()
         rtot = self._table.sum(1)
-        um = np.dot(self._row_scores, rtot)
-        u2m = np.dot(self._row_scores**2, rtot)
+        um = np.dot(row_scores, rtot)
+        u2m = np.dot(row_scores**2, rtot)
         ctot = self._table.sum(0)
-        vn = np.dot(self._col_scores, ctot)
-        v2n = np.dot(self._col_scores**2, ctot)
+        vn = np.dot(col_scores, ctot)
+        v2n = np.dot(col_scores**2, ctot)
 
         # The null mean and variance of the test statistic
         e_stat = um * vn / n_obs
@@ -306,19 +363,13 @@ class TableAssociation(object):
         zscore = (stat - e_stat) / sd_stat
         pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
 
-        self._stat = stat
-        self._stat_e0 = e_stat
-        self._stat_sd0 = sd_stat
-        self._zscore = zscore
-        self._pvalue = pvalue
-
-
-    def _chi2_association(self):
-
-        contribs = self.chi2_contribs
-        self._stat = contribs.sum()
-        df = np.prod(np.asarray(self._table.shape) - 1)
-        self._pvalue = 1 - stats.chi2.cdf(self._stat, df)
+        b = _bunch()
+        b.stat = stat
+        b.stat_e0 = e_stat
+        b.stat_sd0 = sd_stat
+        b.zscore = zscore
+        b.pvalue = pvalue
+        return b
 
 
     @cache_readonly
@@ -380,56 +431,86 @@ class TableAssociation(object):
 
 
     @cache_readonly
-    def pvalue(self):
+    def local_log_oddsratios(self):
         """
-        The p-value of the association test.
+        Returns the local log odds ratios.
+
+        The local log odds ratios are calculated for each 2x2 subtable
+        formed from adjacent rows and columns.
         """
-        return self._pvalue
+
+        ta = self._table.copy()
+        a = ta[0:-1, 0:-1]
+        b = ta[0:-1, 1:]
+        c = ta[1:, 0:-1]
+        d = ta[1:, 1:]
+        tab = np.log(a) + np.log(d) - np.log(b) - np.log(c)
+        rslt = np.empty(self._table.shape, np.float64)
+        rslt *= np.nan
+        rslt[0:-1, 0:-1] = tab
+
+        if isinstance(self._table_orig, pd.DataFrame):
+            rslt = pd.DataFrame(rslt, index=self._table.index,
+                                columns=self._table.columns)
+
+        return rslt
 
 
     @cache_readonly
-    def zscore(self):
+    def local_oddsratios(self):
         """
-        The Z-score of the association test statistic.
+        Returns the local log odds ratios.
 
-        Only defined if the LBL method is used.
+        The local odds ratios are calculated from each 2x2 subtable
+        formed from adjacent rows and columns.
         """
-        return self._zscore
+        return np.exp(self.local_log_oddsratios)
 
 
     @cache_readonly
-    def stat(self):
+    def cumulative_log_oddsratios(self):
         """
-        The association test statistic.
+        Returns the cumulative log odds ratios.
+
+        The cumulative log odds ratios are calculated by reducing the
+        table to a 2x2 table based on cutting the rows and columns at
+        a given point.
         """
-        return self._stat
+
+        ta = self._table.cumsum(0).cumsum(1)
+
+        a = ta[0:-1, 0:-1]
+        b = ta[0:-1, -1:] - a
+        c = ta[-1:, 0:-1] - a
+        d = ta[-1, -1] - (a + b + c)
+
+        tab = np.log(a) + np.log(d) - np.log(b) - np.log(c)
+        rslt = np.empty(self._table.shape, np.float64)
+        rslt *= np.nan
+        rslt[0:-1, 0:-1] = tab
+
+        if isinstance(self._table_orig, pd.DataFrame):
+            rslt = pd.DataFrame(rslt, index=self._table.index,
+                                columns=self._table.columns)
+
+        return rslt
 
 
     @cache_readonly
-    def stat_e0(self):
+    def cumulative_oddsratios(self):
         """
-        Returns the null mean of the test statistic.
+        Returns the cumulative odds ratios.
 
-        Only defined if the linear-by-linear (LBL) association test is
-        used.
+        The cumulative odds ratios are calculated by reducing the
+        table to a 2x2 table based on cutting the rows and columns at
+        a given point.
         """
-        return self._stat_e0
+        return np.exp(self.cumulative_log_oddsratios)
 
 
-    @cache_readonly
-    def stat_sd0(self):
-        """
-        Returns the null standard deviation of the test statistic.
-
-        Only defined if the linear-by-linear (LBL) association test is
-        used.
-        """
-        return self._stat_sd0
-
-
-class Table2x2(object):
+class Table2x2(Table):
     """
-    Analyses that can be performed on a single 2x2 table.
+    Analyses that can be performed on a 2x2 contingency table.
 
     Note that for the risk ratio, the analysis is not symmetric with
     respect to the rows and columns of the contingency table.  The two
@@ -447,14 +528,10 @@ class Table2x2(object):
 
     def __init__(self, table, shift_zeros=True):
 
-        table = np.asarray(table, dtype=np.float64)
         if (table.ndim != 2) or (table.shape[0] != 2) or (table.shape[1] != 2):
             raise ValueError("Table2x2 takes a 2x2 table as input.")
 
-        if shift_zeros and (table.min() == 0):
-            table = table + 0.5
-
-        self._table = table
+        super(Table2x2, self).__init__(table, shift_zeros)
 
 
     @cache_readonly
@@ -612,38 +689,6 @@ class Table2x2(object):
         """
         lcb, ucb = self.log_riskratio_confint(alpha)
         return np.exp(lcb), np.exp(ucb)
-
-
-    @classmethod
-    def from_data(cls, var1, var2, data, shift_zeros=True):
-        """
-        Construct a Table2x2 object from data.
-
-        Parameters
-        ----------
-        var1 : string
-            Name or column index of the first variable, defining the
-            rows.
-        var2 : string
-            Name or column index of the first variable, defining the
-            columns.
-        data : array-like
-            The raw data.
-        shift_zeros : boolean
-            If True, and if there are any zeros in the contingency
-            table, add 0.5 to all four cells of the table.
-
-        Notes
-        -----
-        The columns used to produce the contingency table must each
-        have two distinct values.
-        """
-
-        if isinstance(data, pd.DataFrame):
-            table = pd.crosstab(data.loc[:, var1], data.loc[:, var2])
-        else:
-            table = pd.crosstab(data[:, var1], data[:, var2])
-        return cls(table, shift_zeros)
 
 
     def summary(self, alpha=0.05, float_format="%.3f"):
