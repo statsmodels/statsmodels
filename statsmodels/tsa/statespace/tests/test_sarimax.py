@@ -20,6 +20,9 @@ from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
+realgdp_path = 'results' + os.sep + 'results_realgdpar_stata.csv'
+realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
+
 coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
 
@@ -76,6 +79,44 @@ class TestSARIMAXStatsmodels(object):
         #self.result_b._cache['pvalues'] += 1  # use to trigger failure
         smt.check_ttest_tvalues(self.result_b)
         smt.check_ftest_pvalues(self.result_b)
+
+
+class TestRealGDPARStata(object):
+    """
+    Includes tests of filtered states and standardized forecast errors.
+
+    Notes
+    -----
+    Could also test the usual things like standard errors, etc. but those are
+    well-tested elsewhere.
+    """
+    def __init__(self):
+        dlgdp = np.log(realgdp_results['value']).diff()[1:].values
+        self.model = sarimax.SARIMAX(dlgdp, order=(12, 0, 0), trend='n',
+                                     hamilton_representation=True)
+        # Estimated by Stata
+        params = [
+            .40725515, .18782621, -.01514009, -.01027267, -.03642297,
+            .11576416, .02573029, -.00766572, .13506498, .08649569, .06942822,
+            -.10685783, .00007999607
+        ]
+        self.model.update(params)
+        self.results = self.model.filter()
+
+    def test_filtered_state(self):
+        for i in range(12):
+            assert_allclose(
+                realgdp_results.ix[1:, 'u%d' % (i+1)],
+                self.results.filtered_state[i],
+                atol=1e-6
+            )
+
+    def test_standardized_forecasts_error(self):
+        assert_allclose(
+            realgdp_results.ix[1:, 'rstd'],
+            self.results.standardized_forecasts_error[0],
+            atol=1e-3
+        )
 
 
 class SARIMAXStataTests(object):
