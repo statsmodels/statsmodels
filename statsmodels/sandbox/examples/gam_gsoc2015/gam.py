@@ -292,7 +292,7 @@ class GamPenalty(Penalty):
     
     def deriv2(self, cov_der2):
 
-        return cov_der2
+        return 2 * self.alpha * cov_der2
 
 class LogitGam(PenalizedMixin, Logit):
     pass 
@@ -330,4 +330,4 @@ params0 = np.random.normal(0, 1, df)
 alpha = 0.0001
     
 g = LogitGam(y, basis, penal=GamPenalty)
-g.fit(method='bfgs', skip_hessian=True, fargs=())
+g.fit(method='bfgs', skip_hessian=True, fargs=(cov_der2))
