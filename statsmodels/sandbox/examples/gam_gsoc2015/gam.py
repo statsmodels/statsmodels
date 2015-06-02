@@ -4,75 +4,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.api import GLM
 from scipy.interpolate import splev
 import scipy as sp
 from numpy.linalg import norm
-
-
-
-class Penalty(object):
-    """
-    A class for representing a scalar-value penalty.
-    Parameters
-    wts : array-like
-        A vector of weights that determines the weight of the penalty
-        for each parameter.
-    Notes
-    -----
-    The class has a member called `alpha` that scales the weights.
-    """
-
-    def __init__(self, wts):
-        self.wts = wts
-        self.alpha = 1.
-
-    def func(self, params):
-        """
-        A penalty function on a vector of parameters.
-        Parameters
-        ----------
-        params : array-like
-            A vector of parameters.
-        Returns
-        -------
-        A scalar penaty value; greater values imply greater
-        penalization.
-        """
-        raise NotImplementedError
-
-    def grad(self, params):
-        """
-        The gradient of a penalty function.
-        Parameters
-        ----------
-        params : array-like
-            A vector of parameters
-        Returns
-        -------
-        The gradient of the penalty with respect to each element in
-        `params`.
-        """
-        raise NotImplementedError
-
-
-class L2(Penalty):
-    """
-    The L2 (ridge) penalty.
-    """
-
-    def __init__(self, wts=None):
-        if wts is None:
-            self.wts = 1.
-        else:
-            self.wts = wts
-        self.alpha = 1.
-
-    def func(self, params):
-        return np.sum(self.wts * self.alpha * params**2)
-
-    def grad(self, params):
-        return 2 * self.wts * self.alpha * params
-
+from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
+from statsmodels.base.model import LikelihoodModel
+        
+### Obtain b splines from patsy ###
 
 def _R_compat_quantile(x, probs):
     #return np.percentile(x, 100 * np.asarray(probs))
@@ -80,7 +19,8 @@ def _R_compat_quantile(x, probs):
     quantiles = np.asarray([np.percentile(x, 100 * prob)
                             for prob in probs.ravel(order="C")])
     return quantiles.reshape(probs.shape, order="C")
-        
+
+
 
 ## from patsy splines.py
 def _eval_bspline_basis(x, knots, degree):
@@ -134,6 +74,194 @@ def _eval_bspline_basis(x, knots, degree):
 
     return basis, der1_basis, der2_basis
 
+class PenalizedMixin(object):
+    """Mixin class for Maximum Penalized Likelihood
+    TODO: missing **kwds or explicit keywords
+    TODO: do we really need `pen_weight` keyword in likelihood methods?
+    """
+
+    def __init__(self, *args, **kwds):
+        super(PenalizedMixin, self).__init__(*args, **kwds)
+
+        penal = kwds.pop('penal', None)
+        # I keep the following instead of adding default in pop for future changes
+        if penal is None:
+            # TODO: switch to unpenalized by default
+            self.penal = SCADSmoothed(0.1, c0=0.0001)
+        else:
+            self.penal = penal
+
+        # TODO: define pen_weight as average pen_weight? i.e. per observation
+        # I would have prefered len(self.endog) * kwds.get('pen_weight', 1)
+        # or use pen_weight_factor in signature
+        self.pen_weight =  kwds.get('pen_weight', len(self.endog))
+
+        self._init_keys.extend(['penal', 'pen_weight'])
+
+
+
+    def loglike(self, params, pen_weight=None):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+
+        llf = super(PenalizedMixin, self).loglike(params)
+        if pen_weight != 0:
+            llf -= pen_weight * self.penal.func(params)
+
+        return llf
+
+
+    def loglikeobs(self, params, pen_weight=None):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+
+        llf = super(PenalizedMixin, self).loglikeobs(params)
+        nobs_llf = float(llf.shape[0])
+
+        if pen_weight != 0:
+            llf -= pen_weight / nobs_llf * self.penal.func(params)
+
+        return llf
+
+
+    def score(self, params, pen_weight=None):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+
+        sc = super(PenalizedMixin, self).score(params)
+        if pen_weight != 0:
+            sc -= pen_weight * self.penal.grad(params)
+
+        return sc
+
+
+    def scoreobs(self, params, pen_weight=None):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+
+        sc = super(PenalizedMixin, self).scoreobs(params)
+        nobs_sc = float(sc.shape[0])
+        if pen_weight != 0:
+            sc -= pen_weight / nobs_sc  * self.penal.grad(params)
+
+        return sc
+
+
+    def hessian_(self, params, pen_weight=None):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+            loglike = self.loglike
+        else:
+            loglike = lambda p: self.loglike(p, pen_weight=pen_weight)
+
+        from statsmodels.tools.numdiff import approx_hess
+        return approx_hess(params, loglike)
+
+
+    def hessian(self, params, pen_weight=None):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+
+        hess = super(PenalizedMixin, self).hessian(params)
+        if pen_weight != 0:
+            h = self.penal.deriv2(params)
+            if h.ndim == 1:
+                hess -= np.diag(pen_weight * h)
+            else:
+                hess -= pen_weight * h
+
+        return hess
+
+
+    def fit(self, method=None, trim=None, **kwds):
+        # If method is None, then we choose a default method ourselves
+
+        # TODO: temporary hack, need extra fit kwds
+        # we need to rule out fit methods in a model that will not work with
+        # penalization
+        if hasattr(self, 'family'):  # assume this identifies GLM
+            kwds.update({'max_start_irls' : 0})
+
+        # currently we use `bfgs` by default
+        if method is None:
+            method = 'bfgs'
+
+        if trim is None:
+            trim = False  # see below infinite recursion in `fit_constrained
+
+        res = super(PenalizedMixin, self).fit(method=method, **kwds)
+
+        if trim is False:
+            # note boolean check for "is False" not evaluates to False
+            return res
+        else:
+            # TODO: make it penal function dependent
+            # temporary standin, only works for Poisson and GLM,
+            # and is computationally inefficient
+            drop_index = np.nonzero(np.abs(res.params) < 1e-4) [0]
+            keep_index = np.nonzero(np.abs(res.params) > 1e-4) [0]
+            rmat = np.eye(len(res.params))[drop_index]
+
+            # calling fit_constrained raise
+            # "RuntimeError: maximum recursion depth exceeded in __instancecheck__"
+            # fit_constrained is calling fit, recursive endless loop
+            if drop_index.any():
+                # todo : trim kwyword doesn't work, why not?
+                #res_aux = self.fit_constrained(rmat, trim=False)
+                res_aux = self._fit_zeros(keep_index, **kwds)
+                return res_aux
+            else:
+                return res
+
+
+
+class Penalty(object):
+    """
+    A class for representing a scalar-value penalty.
+    Parameters
+    wts : array-like
+        A vector of weights that determines the weight of the penalty
+        for each parameter.
+    Notes
+    -----
+    The class has a member called `alpha` that scales the weights.
+    """
+
+    def __init__(self, wts):
+        self.wts = wts
+        self.alpha = 1.
+
+    def func(self, params):
+        """
+        A penalty function on a vector of parameters.
+        Parameters
+        ----------
+        params : array-like
+            A vector of parameters.
+        Returns
+        -------
+        A scalar penaty value; greater values imply greater
+        penalization.
+        """
+        raise NotImplementedError
+
+    def grad(self, params):
+        """
+        The gradient of a penalty function.
+        Parameters
+        ----------
+        params : array-like
+            A vector of parameters
+        Returns
+        -------
+        The gradient of the penalty with respect to each element in
+        `params`.
+        """
+        raise NotImplementedError
+
+
+
+
 
 class GamPenalty(Penalty):
     
@@ -162,16 +290,23 @@ class GamPenalty(Penalty):
                 
         return 2 * self.alpha * np.dot(cov_der2, params) 
     
+    def deriv2(self, cov_der2):
 
-gp = GamPenalty()
+        return cov_der2
+
+class LogitGam(PenalizedMixin, Logit):
+    pass 
 
 
 
 
 n = 200
 data = pd.DataFrame()
-x = np.linspace(-1, 1, n)
-y = x*x - x 
+x = np.linspace(-10, 10, n)
+poly = x
+y = 1/(1 + np.exp(-poly)) 
+y[y>0.5] = 1
+y[y<=0.5] = 0
 d = {"x": x}
 dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
 
@@ -189,21 +324,10 @@ inner_knots = _R_compat_quantile(x, knot_quantiles)
 all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
 
 basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
-params = np.random.normal(0, 1, df)
-
-
-alpha = 0.0001
-
-
-def f(a):
-    par = params.copy()
-    par[0] = a[0]
-    return gp.func(par, der2_basis)
-
-
-    
-df = approx_fprime([5], f, centered=True)
-
 cov_der2 = np.dot(der2_basis.T, der2_basis)
-params[0] = 5
-gp.grad(params, cov_der2) 
+
+params0 = np.random.normal(0, 1, df)
+alpha = 0.0001
+    
+g = LogitGam(y, basis, penal=GamPenalty)
+g.fit(method='bfgs', skip_hessian=True, fargs=())
