@@ -4,12 +4,19 @@
 library('mgcv')
 
 
-x = seq(from = -1, to = 1, length.out = 200)
-y = x*x + 0.2 * x
+x = seq(from = -10, to = 10, length.out = 200)
+poly = x*x +  x
+
+y = 1/(1+ exp(-poly))
+
+y[y>0.5] = 1
+y[y<0.5] = 0
 df = data.frame(x,y)
-gam1 = gam(y~s(x) , family = gaussian(), data = df)
+gam1 = gam(y~s(x) , family = binomial(), data = df, sp = 0)
 
 gam1$coefficients
+
+plot(gam1)
 
 '>>>
 (Intercept)             x        s(x).1        s(x).2        s(x).3        s(x).4        s(x).5

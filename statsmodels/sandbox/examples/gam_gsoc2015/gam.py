@@ -10,6 +10,7 @@ import scipy as sp
 from numpy.linalg import norm
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
 from statsmodels.base.model import LikelihoodModel
+from statsmodels.robust.robust_linear_model import RLM
 
 ### Obtain b splines from patsy ###
 
@@ -73,6 +74,8 @@ def _eval_bspline_basis(x, knots, degree):
 
 
     return basis, der1_basis, der2_basis
+
+
 
 class PenalizedMixin(object):
     """Mixin class for Maximum Penalized Likelihood
@@ -214,7 +217,6 @@ class PenalizedMixin(object):
                 return res
 
 
-
 class Penalty(object):
     """
     A class for representing a scalar-value penalty.
@@ -260,50 +262,72 @@ class Penalty(object):
         raise NotImplementedError
 
 
-
-
-
 class GamPenalty(Penalty):
 
-    def __init__(self, wts=1, alpha=1):
+    def __init__(self, wts=1, alpha=1, cov_der2=None, der2=None):
 
         self.wts = wts #should we keep wts????
         self.alpha = alpha
+        self.cov_der2 = cov_der2
+        self.der2 = der2
 
-    def func(self, params, der2):
+    def func(self, params):
         '''
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         '''
 
         # The second derivative of the estimated regression function
-        f = np.dot(der2, params)
+        f = np.dot(self.der2, params)
 
         return self.alpha * np.sum(f**2)
 
-    def grad(self, params, cov_der2):
+    def grad(self, params):
         '''
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         3) cov_der2 is obtained as np.dot(der2.T, der2)
         '''
 
-        return 2 * self.alpha * np.dot(cov_der2, params)
+        return 2 * self.alpha * np.dot(self.cov_der2, params)
 
-    def deriv2(self, cov_der2):
+    def deriv2(self, params):
 
-        return 2 * self.alpha * cov_der2
+        return 2 * self.alpha * self.cov_der2
+
+
+class L2(Penalty):
+    """
+    The L2 (ridge) penalty.
+    """
+
+    def __init__(self, wts=None):
+        if wts is None:
+            self.wts = 1.
+        else:
+            self.wts = wts
+        self.alpha = 1.
+
+    def func(self, params):
+        return np.sum(self.wts * self.alpha * params**2)
+
+    def grad(self, params):
+        return 2 * self.wts * self.alpha * params
+
+
 
 class LogitGam(PenalizedMixin, Logit):
     pass
 
 
 
+class LinearGam(PenalizedMixin, RLM):
+    pass
 
 n = 200
 data = pd.DataFrame()
 x = np.linspace(-10, 10, n)
-poly = x
+poly = x*x
 y = 1/(1 + np.exp(-poly))
 y[y>0.5] = 1
 y[y<=0.5] = 0
@@ -327,7 +351,10 @@ basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
 cov_der2 = np.dot(der2_basis.T, der2_basis)
 
 params0 = np.random.normal(0, 1, df)
-alpha = 0.0001
 
-g = LogitGam(y, basis, penal=GamPenalty)
-g.fit(method='bfgs', skip_hessian=True, fargs=(cov_der2))
+gp = GamPenalty(wts=1, alpha=0, cov_der2=cov_der2, der2=der2_basis)
+g = LogitGam(y, basis, penal=gp)
+res_g = g.fit()
+
+plt.plot(np.dot(basis, res_g.params))
+plt.show()
