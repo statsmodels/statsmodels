@@ -53,7 +53,7 @@ class TableSymmetry(object):
         k, k2 = table.shape
         if k != k2:
             raise ValueError('table must be square')
-        self._table = table
+        self.table = table
 
 
     @classmethod
@@ -121,11 +121,11 @@ class TableSymmetry(object):
         if method.lower() != "bowker":
             raise ValueError("method for symmetry testing must be 'bowker'")
 
-        k = self._table.shape[0]
+        k = self.table.shape[0]
         upp_idx = np.triu_indices(k, 1)
 
-        tril = self._table.T[upp_idx]   # lower triangle in column order
-        triu = self._table[upp_idx]     # upper triangle in row order
+        tril = self.table.T[upp_idx]   # lower triangle in column order
+        triu = self.table[upp_idx]     # upper triangle in row order
 
         stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
         df = k * (k-1) / 2.
@@ -163,17 +163,17 @@ class TableSymmetry(object):
         two factors must have the same sample space.
         """
 
-        if self._table.shape[0] < 1:
+        if self.table.shape[0] < 1:
             raise ValueError('table is empty')
-        elif self._table.shape[0] == 1:
+        elif self.table.shape[0] == 1:
             return 0., 1., 0
 
         method = method.lower()
         if method not in ["bhapkar", "stuart_maxwell"]:
             raise ValueError("method '%s' for homogeneity not known" % method)
 
-        n_obs = self._table.sum()
-        pr = self._table.astype(np.float64) / n_obs
+        n_obs = self.table.sum()
+        pr = self.table.astype(np.float64) / n_obs
 
         # Compute margins, eliminate last row/column so there is no
         # degeneracy
@@ -243,11 +243,11 @@ class Table(object):
 
     def __init__(self, table, shift_zeros=True):
 
-        self._table_orig = table
-        self._table = np.asarray(table, dtype=np.float64)
+        self.table_orig = table
+        self.table = np.asarray(table, dtype=np.float64)
 
-        if shift_zeros and (self._table.min() == 0):
-            self._table = self._table + 0.5
+        if shift_zeros and (self.table.min() == 0):
+            self.table = self.table + 0.5
 
 
     @classmethod
@@ -291,10 +291,14 @@ class Table(object):
         pvalue : float
             The p-value for the test.
         """
-        stat = self.chi2_contribs.sum()
-        df = np.prod(np.asarray(self._table.shape) - 1)
+        stat = np.asarray(self.chi2_contribs).sum()
+        df = np.prod(np.asarray(self.table.shape) - 1)
         pvalue = 1 - stats.chi2.cdf(stat, df)
-        return stat, df, pvalue
+        b = _bunch()
+        b.stat = stat
+        b.df = df
+        b.pvalue = pvalue
+        return b
 
 
     def ordinal_association(self, row_scores=None, col_scores=None):
@@ -332,26 +336,26 @@ class Table(object):
         """
 
         if row_scores is None:
-            row_scores = np.arange(self._table.shape[0])
+            row_scores = np.arange(self.table.shape[0])
 
         if col_scores is None:
-            col_scores = np.arange(self._table.shape[1])
+            col_scores = np.arange(self.table.shape[1])
 
-        if len(row_scores) != self._table.shape[0]:
+        if len(row_scores) != self.table.shape[0]:
             raise ValueError("The length of `row_scores` must match the first dimension of `table`.")
 
-        if len(col_scores) != self._table.shape[1]:
+        if len(col_scores) != self.table.shape[1]:
             raise ValueError("The length of `col_scores` must match the second dimension of `table`.")
 
         # The test statistic
-        stat = np.dot(row_scores, np.dot(self._table, col_scores))
+        stat = np.dot(row_scores, np.dot(self.table, col_scores))
 
         # Some needed quantities
-        n_obs = self._table.sum()
-        rtot = self._table.sum(1)
+        n_obs = self.table.sum()
+        rtot = self.table.sum(1)
         um = np.dot(row_scores, rtot)
         u2m = np.dot(row_scores**2, rtot)
-        ctot = self._table.sum(0)
+        ctot = self.table.sum(0)
         vn = np.dot(col_scores, ctot)
         v2n = np.dot(col_scores**2, ctot)
 
@@ -377,9 +381,14 @@ class Table(object):
         """
         Return the estimated row and column marginal distributions.
         """
-        n = self._table.sum()
-        row = self._table.sum(1) / n
-        col = self._table.sum(0) / n
+        n = self.table.sum()
+        row = self.table.sum(1) / n
+        col = self.table.sum(0) / n
+
+        if isinstance(self.table_orig, pd.DataFrame):
+            row = pd.Series(row, self.table_orig.index)
+            col = pd.Series(col, self.table_orig.columns)
+
         return row, col
 
 
@@ -389,16 +398,22 @@ class Table(object):
         Estimated cell probabilities under independence.
         """
         row, col = self.marginal_probabilities
-        return np.outer(row, col)
+        itab = np.outer(row, col)
+
+        if isinstance(self.table_orig, pd.DataFrame):
+            itab = pd.DataFrame(itab, self.table_orig.index,
+                                self.table_orig.columns)
+
+        return itab
 
 
     @cache_readonly
-    def fitted_values(self):
+    def fittedvalues(self):
         """
         Fitted values under independence.
         """
         probs = self.independence_probabilities
-        fit = self._table.sum() * probs
+        fit = self.table.sum() * probs
         return fit
 
 
@@ -407,8 +422,8 @@ class Table(object):
         """
         The Pearson residuals.
         """
-        fit = self.fitted_values
-        resids = (self._table - fit) / np.sqrt(fit)
+        fit = self.fittedvalues
+        resids = (self.table - fit) / np.sqrt(fit)
         return resids
 
 
@@ -439,19 +454,19 @@ class Table(object):
         formed from adjacent rows and columns.
         """
 
-        ta = self._table.copy()
+        ta = self.table.copy()
         a = ta[0:-1, 0:-1]
         b = ta[0:-1, 1:]
         c = ta[1:, 0:-1]
         d = ta[1:, 1:]
         tab = np.log(a) + np.log(d) - np.log(b) - np.log(c)
-        rslt = np.empty(self._table.shape, np.float64)
+        rslt = np.empty(self.table.shape, np.float64)
         rslt *= np.nan
         rslt[0:-1, 0:-1] = tab
 
-        if isinstance(self._table_orig, pd.DataFrame):
-            rslt = pd.DataFrame(rslt, index=self._table.index,
-                                columns=self._table.columns)
+        if isinstance(self.table_orig, pd.DataFrame):
+            rslt = pd.DataFrame(rslt, index=self.table.index,
+                                columns=self.table.columns)
 
         return rslt
 
@@ -477,7 +492,7 @@ class Table(object):
         a given point.
         """
 
-        ta = self._table.cumsum(0).cumsum(1)
+        ta = self.table.cumsum(0).cumsum(1)
 
         a = ta[0:-1, 0:-1]
         b = ta[0:-1, -1:] - a
@@ -485,13 +500,13 @@ class Table(object):
         d = ta[-1, -1] - (a + b + c)
 
         tab = np.log(a) + np.log(d) - np.log(b) - np.log(c)
-        rslt = np.empty(self._table.shape, np.float64)
+        rslt = np.empty(self.table.shape, np.float64)
         rslt *= np.nan
         rslt[0:-1, 0:-1] = tab
 
-        if isinstance(self._table_orig, pd.DataFrame):
-            rslt = pd.DataFrame(rslt, index=self._table.index,
-                                columns=self._table.columns)
+        if isinstance(self.table_orig, pd.DataFrame):
+            rslt = pd.DataFrame(rslt, index=self.table.index,
+                                columns=self.table.columns)
 
         return rslt
 
@@ -539,7 +554,7 @@ class Table2x2(Table):
         """
         The log odds ratio of the table.
         """
-        f = self._table.flatten()
+        f = self.table.flatten()
         return np.dot(np.log(f), np.r_[1, -1, -1, 1])
 
 
@@ -548,7 +563,7 @@ class Table2x2(Table):
         """
         The odds ratio of the table.
         """
-        return self._table[0, 0] * self._table[1, 1] / (self._table[0, 1] * self._table[1, 0])
+        return self.table[0, 0] * self.table[1, 1] / (self.table[0, 1] * self.table[1, 0])
 
 
     @cache_readonly
@@ -556,7 +571,7 @@ class Table2x2(Table):
         """
         The asymptotic standard error of the estimated log odds ratio.
         """
-        return np.sqrt(np.sum(1 / self._table))
+        return np.sqrt(np.sum(1 / self.table))
 
 
     @cache_readonly
@@ -618,7 +633,7 @@ class Table2x2(Table):
         risk in the second row.  Column 0 is interpreted as containing
         the number of occurances of the event of interest.
         """
-        p = self._table[:, 0] / self._table.sum(1)
+        p = self.table[:, 0] / self.table.sum(1)
         return p[0] / p[1]
 
 
@@ -635,8 +650,8 @@ class Table2x2(Table):
         """
         The standard error of the estimated log risk ratio for the table.
         """
-        n = self._table.sum(1)
-        p = self._table[:, 0] / n
+        n = self.table.sum(1)
+        p = self.table[:, 0] / n
         va = np.sum((1 - p) / (n*p))
         return np.sqrt(va)
 
@@ -753,7 +768,7 @@ class StratifiedTables(object):
             if len(ix) > 0:
                 table[:, :, ix] += 0.5
 
-        self._table = table
+        self.table = table
 
         self._cache = resettable_cache()
 
@@ -830,7 +845,7 @@ class StratifiedTables(object):
         Returns the chi^2 test statistic and p-value.
         """
 
-        stat = np.sum(self._table[0, 0, :] - self._apb * self._apc / self._n)
+        stat = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
         stat = np.abs(stat)
         if correction:
             stat -= 0.5
@@ -880,8 +895,8 @@ class StratifiedTables(object):
         tables.
         """
 
-        acd = self._table[0, 0, :] * self._cpd
-        cab = self._table[1, 0, :] * self._apb
+        acd = self.table[0, 0, :] * self._cpd
+        cab = self.table[1, 0, :] * self._apb
 
         rr = np.sum(acd / self._n) / np.sum(cab / self._n)
         return rr
@@ -894,7 +909,7 @@ class StratifiedTables(object):
 
         References
         ----------
-        Robins, Breslow and Greenland (Biometrics, 42:311–323)
+        Robins, Breslow and Greenland (Biometrics 42:311-323)
         """
 
         adns = np.sum(self._ad / self._n)
@@ -979,7 +994,7 @@ class StratifiedTables(object):
         Returns the test statistic and p-value.
         """
 
-        table = self._table
+        table = self.table
 
         r = self.common_odds
         a = 1 - r
@@ -1040,8 +1055,8 @@ class StratifiedTables(object):
         stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
         stat1, pvalue1 = self.test_null_odds()
         stat2, pvalue2 = self.test_equal_odds()
-        ss = self._table.sum(0).sum(0)
-        data = [["%d" % self._table.shape[2], '', ''],
+        ss = self.table.sum(0).sum(0)
+        data = [["%d" % self.table.shape[2], '', ''],
                 ["%d" % min(ss), '', ''],
                 ["%d" % max(ss), '', ''],
                 ["%.0f" % np.mean(ss), '', ''],

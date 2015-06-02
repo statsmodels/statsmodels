@@ -123,10 +123,10 @@ def test_chi2_association():
     from scipy.stats import chi2_contingency
     rslt_scipy = chi2_contingency(table)
 
-    stat, df, pvalue = ctab.Table(table).nominal_association
+    b = ctab.Table(table).nominal_association
 
-    assert_allclose(stat, rslt_scipy[0])
-    assert_allclose(pvalue, rslt_scipy[1])
+    assert_allclose(b.stat, rslt_scipy[0])
+    assert_allclose(b.pvalue, rslt_scipy[1])
 
 
 def test_symmetry():
