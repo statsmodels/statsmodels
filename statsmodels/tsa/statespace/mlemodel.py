@@ -1339,11 +1339,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         Jarque-Bera test for normaility of standardized residuals.
 
+        Null hypothesis is normality.
+
         Notes
         -----
         If the first `d` loglikelihood values were burned (i.e. in the
         specified model, `loglikelihood_burn=d`), then this test is calculated
         ignoring the first `d` residuals.
+
+        See Also
+        --------
+        statsmodels.stats.stattools.jarque_bera
+
         """
         from statsmodels.stats.stattools import jarque_bera
         return np.array(jarque_bera(
@@ -1828,6 +1835,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram
 
+        See Also
+        --------
+        statsmodels.graphics.gofplots.qqplot
+        statsmodels.graphics.tsaplots.plot_acf
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _ = _import_mpl()
@@ -1875,7 +1886,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ax.set_ylim(-1,1)
 
         return fig
-
 
     def summary(self, alpha=.05, start=None, model_name=None):
         """
