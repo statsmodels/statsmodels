@@ -107,6 +107,8 @@ while the second array would be the true or observed values.
    eval_measures.medianabs
    eval_measures.medianbias
    eval_measures.mse
+   eval_measures.nash_sutcliff
+   eval_measures.kling_gupta
    eval_measures.rmse
    eval_measures.stde
    eval_measures.vare

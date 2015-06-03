@@ -149,6 +149,9 @@ effects.
 Other important new features
 ----------------------------
 
+* Added the Nash–Sutcliffe (`statsmodels.tools.eval_measures.nse`) and
+  Kling-Gupta (`statsmodels.tools.eval_measures.kling_gupta`) model efficiency
+  coefficient estimators .
 * Bullet
 * List
 * of
@@ -175,4 +178,3 @@ A blurb about the number of changes and the contributors list.
 .. note::
 
    Obtained by running ``git log v0.6.0..HEAD --format='* %aN <%aE>' | sed 's/@/\-at\-/' | sed 's/<>//' | sort -u``.
-
