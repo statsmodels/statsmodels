@@ -11,6 +11,8 @@ from numpy.linalg import norm
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
 from statsmodels.base.model import LikelihoodModel
 from statsmodels.robust.robust_linear_model import RLM
+import sklearn as sk
+from sklearn.linear_model import LogisticRegression
 
 ### Obtain b splines from patsy ###
 
@@ -321,16 +323,17 @@ class LogitGam(PenalizedMixin, Logit):
 
 
 
-class LinearGam(PenalizedMixin, RLM):
+class GLMGam(PenalizedMixin, GLM):
     pass
 
 n = 200
 data = pd.DataFrame()
 x = np.linspace(-10, 10, n)
 poly = x*x
-y = 1/(1 + np.exp(-poly))
-y[y>0.5] = 1
-y[y<=0.5] = 0
+yc = 1/(1 + np.exp(-poly)) + np.random.normal(0, 0.1, n)
+y = yc.copy()
+y[yc>yc.mean()] = 1
+y[yc<=yc.mean()] = 0
 d = {"x": x}
 dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
 
@@ -338,7 +341,7 @@ dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
 
 
 df = 10
-degree = 5
+degree = 7
 order = degree + 1
 n_inner_knots = df - order
 lower_bound = np.min(x)
@@ -348,13 +351,43 @@ inner_knots = _R_compat_quantile(x, knot_quantiles)
 all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
 
 basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
-cov_der2 = np.dot(der2_basis.T, der2_basis)
 
 params0 = np.random.normal(0, 1, df)
 
-gp = GamPenalty(wts=1, alpha=0, cov_der2=cov_der2, der2=der2_basis)
-g = LogitGam(y, basis, penal=gp)
-res_g = g.fit()
 
-plt.plot(np.dot(basis, res_g.params))
+# add a column of ones to simulate the intercept
+one = np.ones(shape=(n,1))
+basis = np.hstack([basis, one])
+der2_basis = np.hstack([der2_basis, one])
+
+
+cov_der2 = np.dot(der2_basis.T, der2_basis)
+g = LogitGam(y, basis,
+             penal=GamPenalty(wts=1, alpha=0.0001, cov_der2=cov_der2,
+                              der2=der2_basis))
+res_g = g.fit()
+plt.subplot(3, 1, 1)
+plt.plot(x, np.dot(basis, res_g.params))
+plt.plot(x, poly, 'o')
+plt.subplot(3, 1, 2)
+plt.plot(x, 1/(1+np.exp(-np.dot(basis, res_g.params))))
+plt.plot(x, yc, 'o')
+plt.subplot(3, 1, 3)
+lr = LogisticRegression().fit(basis, y)
+plt.plot(x, lr.predict_proba(basis)[:, 1])
+plt.plot(x, yc, 'o')
 plt.show()
+
+
+
+## observe that alpha is set to inf ##
+y2 = x*x + np.random.normal(0, 10, n)
+glm_gam = GLMGam(y2, basis,
+                 penal=GamPenalty(wts=1, alpha=np.inf, cov_der2=cov_der2,
+                                  der2=der2_basis))
+res_glm_gam = glm_gam.fit()
+plt.plot(x, np.dot(basis, res_glm_gam.params))
+plt.plot(x, y2, 'o')
+plt.show()
+
+
