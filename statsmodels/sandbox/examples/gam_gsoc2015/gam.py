@@ -78,6 +78,19 @@ def _eval_bspline_basis(x, knots, degree):
     return basis, der1_basis, der2_basis
 
 
+def make_basis(x, df, degree):
+    ''' make a spline basis for x '''
+    order = degree + 1
+    n_inner_knots = df - order
+    lower_bound = np.min(x)
+    upper_bound = np.max(x)
+    knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
+    inner_knots = _R_compat_quantile(x, knot_quantiles)
+    all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
+    basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
+    return basis, der_basis, der2_basis
+
+
 
 class PenalizedMixin(object):
     """Mixin class for Maximum Penalized Likelihood
@@ -329,7 +342,7 @@ class GLMGam(PenalizedMixin, GLM):
 n = 200
 data = pd.DataFrame()
 x = np.linspace(-10, 10, n)
-poly = x*x
+poly = x*x + x
 yc = 1/(1 + np.exp(-poly)) + np.random.normal(0, 0.1, n)
 y = yc.copy()
 y[yc>yc.mean()] = 1
@@ -339,18 +352,9 @@ dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
 
 
    
-
 df = 10
 degree = 7
-order = degree + 1
-n_inner_knots = df - order
-lower_bound = np.min(x)
-upper_bound = np.max(x)
-knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
-inner_knots = _R_compat_quantile(x, knot_quantiles)
-all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
-
-basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
+basis, der_basis, der2_basis = make_basis(x, df=df, degree=degree)
 
 params0 = np.random.normal(0, 1, df)
 
@@ -362,32 +366,31 @@ der2_basis = np.hstack([der2_basis, one])
 
 
 cov_der2 = np.dot(der2_basis.T, der2_basis)
-g = LogitGam(y, basis, 
-             penal=GamPenalty(wts=1, alpha=0.0001, cov_der2=cov_der2, 
-                              der2=der2_basis))
-res_g = g.fit()
-plt.subplot(3, 1, 1)
-plt.plot(x, np.dot(basis, res_g.params))
-plt.plot(x, poly, 'o')
-plt.subplot(3, 1, 2)
-plt.plot(x, 1/(1+np.exp(-np.dot(basis, res_g.params))))
-plt.plot(x, yc, 'o')
-plt.subplot(3, 1, 3)
-lr = LogisticRegression().fit(basis, y)
-plt.plot(x, lr.predict_proba(basis)[:, 1])
-plt.plot(x, yc, 'o')
+
+alphas = [0, 5, 10 , 100, 10000]
+n_plots = len(alphas)
+for i, alpha in enumerate(alphas):
+    g = LogitGam(y, basis, 
+                 penal=GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
+                                  der2=der2_basis))
+    res_g = g.fit()
+    y_est = res_g.predict(basis)
+    plt.subplot(n_plots, 1, i+1)
+    plt.plot(x, y_est)
 plt.show()
 
 
-
+'''
+### GLM ### 
 ## observe that alpha is set to inf ## 
 y2 = x*x + np.random.normal(0, 10, n)
 glm_gam = GLMGam(y2, basis, 
                  penal=GamPenalty(wts=1, alpha=np.inf, cov_der2=cov_der2, 
-                                  der2=der2_basis))
+                                  der2=der2_basis), method='bfgs')
 res_glm_gam = glm_gam.fit()
+
 plt.plot(x, np.dot(basis, res_glm_gam.params))
 plt.plot(x, y2, 'o')
 plt.show()
-
+'''
 
