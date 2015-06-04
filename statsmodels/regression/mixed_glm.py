@@ -1,136 +1,5 @@
 """
-Linear mixed effects models.
-
-The MixedLM class fits linear mixed effects models to data.  This is a
-group-based implementation that does not efficiently handle crossed
-random effects.
-
-The data are partitioned into disjoint groups.  The probability model
-for group i is:
-
-Y = X*beta + Z*gamma + epsilon
-
-where
-
-* n_i is the number of observations in group i
-
-* Y is a n_i dimensional response vector
-
-* X is a n_i x k_fe design matrix for the fixed effects
-
-* beta is a k_fe-dimensional vector of fixed effects parameters
-
-* Z is a design matrix for the random effects with n_i rows.  The
-  number of columns in Z can vary by group as discussed below.
-
-* gamma is a random vector with mean 0.  The covariance matrix for the
-  first `k_re` elements of `gamma` is common to all groups.  The
-  remaining elements of `gamma` are variance components as discussed
-  in more detail below. Each group gets its own independent
-  realization of gamma.
-
-* epsilon is a n_i dimensional vector of iid normal
-  errors with mean 0 and variance sigma^2; the epsilon
-  values are independent both within and between groups
-
-Y, X and Z must be entirely observed.  beta, Psi, and sigma^2 are
-estimated using ML or REML estimation, and gamma and epsilon are
-random so define the probability model.
-
-The mean structure is E[Y | X, Z] = X*beta.  If only the mean
-structure is of interest, GEE is a good alternative to mixed models.
-
-Two types of random effects are supported.  Standard random effects
-are correlated with each other in arbitary ways.  Every group has the
-same number (`k_re`) of standard random effects, with the same joint
-distribution (but with independent realizations across the groups).
-
-Variance components are uncorrelated with each other, and with the
-standard random effects.  Each variance component has mean zero, and
-is associated with a particular unknown variance parameter.  Multiple
-(independent) variance components within a group can be associated
-with the same variance parameter, and the number of variance
-components per variance parameter can differ across the groups.
-
-The primary reference for the implementation details is:
-
-MJ Lindstrom, DM Bates (1988).  "Newton Raphson and EM algorithms for
-linear mixed effects models for repeated measures data".  Journal of
-the American Statistical Association. Volume 83, Issue 404, pages
-1014-1022.
-
-See also this more recent document:
-
-http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
-
-All the likelihood, gradient, and Hessian calculations closely follow
-Lindstrom and Bates 1988.
-
-The following two documents are written more from the perspective of
-users:
-
-http://lme4.r-forge.r-project.org/lMMwR/lrgprt.pdf
-
-http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf
-
-Notation:
-
-* `cov_re` is the random effects covariance matrix (referred to above
-  as Psi) and `scale` is the (scalar) error variance.  For a single
-  group, the marginal covariance matrix of endog given exog is scale*I
-  + Z * cov_re * Z', where Z is the design matrix for the random
-  effects in one group.
-
-* `vcomp` is a vector of variance parameters.  The length of `vcomp`
-  is determined by the number of keys in either the `exog_vc` argument
-  to ``MixedLM``, or the `vc_formula` argument when using formulas to
-  fit a model.
-
-Notes:
-
-1. Three different parameterizations are used here in different
-places.  The regression slopes (usually called `fe_params`) are
-identical in all three parameterizations, but the variance parameters
-differ.  The parameterizations are:
-
-* The "natural parameterization" in which cov(endog) = scale*I + Z *
-  cov_re * Z', as described above.  This is the main parameterization
-  visible to the user.
-
-* The "profile parameterization" in which cov(endog) = I +
-  Z * cov_re1 * Z'.  This is the parameterization of the profile
-  likelihood that is maximized to produce parameter estimates.
-  (see Lindstrom and Bates for details).  The "natural" cov_re is
-  equal to the "profile" cov_re1 times the scale.
-
-* The "square root parameterization" in which we work with the Cholesky
-  factor of cov_re1 instead of cov_re1 directly.  This is hidden from the
-  user.
-
-All three parameterizations can be packed into a vector by
-(optionally) concatenating `fe_params` together with the lower
-triangle or Cholesky square root of the dependence structure.  The
-final component of the packed parameter vector are the variance
-component estimates.  Thes are stored as square roots if (and only if)
-the random effects covariance matrix is stored as its Choleky factor.
-Note that when unpacking, it is important to either square or reflect
-the dependence structure depending on which parameterization is being
-used.
-
-Two score methods are implemented.  One takes the score with respect
-to the elements of the random effects covariance matrix (used for
-inference once the MLE is reached), and the other takes the score with
-respect to the parameters of the Choleky square root of the random
-effects covariance matrix (used for optimization).
-
-The numerical optimization uses GLS to avoid explicitly optimizing
-over the fixed effects parameters.  The likelihood that is optimized
-is profiled over both the scale parameter (a scalar) and the fixed
-effects parameters (if any).  As a result of this profiling, it is
-difficult and unnecessary to calculate the Hessian of the profiled log
-likelihood function, so that calculation is not implemented here.
-Therefore, optimization methods requiring the Hessian matrix such as
-the Newon-Raphson algorihm cannot be used for model fitting.
+documentation comment
 """
 
 import numpy as np
@@ -167,7 +36,7 @@ def _get_exog_re_names(self, exog_re):
     return ["Z{0}".format(k + 1) for k in range(exog_re.shape[1])]
 
 
-class MixedLMParams(object):
+class MixedGLMParams(object):
     """
     This class represents a parameter state for a mixed linear model.
 
@@ -423,7 +292,7 @@ def _smw_logdet(s, A, AtA, B, BI, B_logdet):
     return B_logdet + ld + ld1
 
 
-class MixedLM(base.LikelihoodModel):
+class MixedGLM(base.LikelihoodModel):
     """
     An object specifying a linear mixed effects model.  Use the `fit`
     method to fit the model and obtain a results object.
@@ -1955,7 +1824,7 @@ class MixedLM(base.LikelihoodModel):
         return MixedLMResultsWrapper(results)
 
 
-class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
+class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
     Class to contain results of fitting a linear mixed effects model.
 
@@ -2402,7 +2271,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         return likev
 
 
-class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
+class MixedGLMResultsWrapper(base.LikelihoodResultsWrapper):
     _attrs = {'bse_re': ('generic_columns', 'exog_re_names_full'),
               'fe_params': ('generic_columns', 'xnames'),
               'bse_fe': ('generic_columns', 'xnames'),
