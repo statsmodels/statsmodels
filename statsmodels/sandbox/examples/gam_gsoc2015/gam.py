@@ -252,7 +252,7 @@ class Penalty(object):
         """
         A penalty function on a vector of parameters.
         Parameters
-        ----------
+x        ----------
         params : array-like
             A vector of parameters.
         Returns
@@ -369,6 +369,7 @@ def test_gam_penalty():
     grad = gp.grad(params)/n*20
     assert(int(grad[2]) == 320)
     assert(int(grad[3]) == 48000)
+
 
     print('All the tests are passed')
     return
