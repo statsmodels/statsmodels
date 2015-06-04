@@ -316,12 +316,12 @@ class L2(Penalty):
     The L2 (ridge) penalty.
     """
 
-    def __init__(self, wts=None):
+    def __init__(self, wts=None, alpha=1):
         if wts is None:
             self.wts = 1.
         else:
             self.wts = wts
-        self.alpha = 1.
+        self.alpha = alpha
 
     def func(self, params):
         return np.sum(self.wts * self.alpha * params**2)
@@ -335,62 +335,101 @@ class LogitGam(PenalizedMixin, Logit):
     pass
 
 
+def make_poly_basis(x, degree):
+    n_samples = len(x)
+    basis = np.zeros(shape=(n_samples, degree+1))
+    der_basis = np.zeros(shape=(n_samples, degree+1))
+    der2_basis = np.zeros(shape=(n_samples, degree+1))
+    for i in range(degree+1):
+        basis[:, i] = x**i
+        der_basis[:, i] = i * x**(i-1)
+        der2_basis[:, i] = i * (i-1) * x**(i-2) 
+        
+    return basis, der_basis, der2_basis
+   
 
-class GLMGam(PenalizedMixin, GLM):
-    pass
+def test_gam_penalty():
+    ''' test the gam penalty class '''
+    n = 100000
+    x = np.linspace(-10, 10, n)
+    degree = 3
+    basis, der_basis, der2_basis = make_poly_basis(x, degree)
+    cov_der2 = np.dot(der2_basis.T, der2_basis)
+    gp = GamPenalty(alpha=1, der2=der2_basis, cov_der2=cov_der2)
+    params = np.array([1, 1, 1, 1])
+    cost = gp.func(params) 
+    # the integral between -10 and 10 of |2*a+6*b*x|^2 is 80*a^2 + 24000*b^2
+    assert(int(cost/n*20) == 24080)
 
+    params = np.array([1, 1, 0, 1])
+    cost = gp.func(params) 
+    assert(int(cost/n*20) == 24000)
+
+    params = np.array([1, 1, 2, 1])
+    grad = gp.grad(params)/n*20
+    assert(int(grad[2]) == 320)
+    assert(int(grad[3]) == 48000)
+    
+    print('All the tests are passed')
+    return
+
+
+test_gam_penalty()
+    
 n = 200
 data = pd.DataFrame()
-x = np.linspace(-10, 10, n)
-poly = x*x + x
-yc = 1/(1 + np.exp(-poly)) + np.random.normal(0, 0.1, n)
-y = yc.copy()
-y[yc>yc.mean()] = 1
-y[yc<=yc.mean()] = 0 
-d = {"x": x}
-dm = dmatrix("bs(x, df=5, degree=2, include_intercept=True)", d)
+x1 = np.linspace(-10, 10, n)
+x2 = np.linspace(-10, 10, n)
+y = np.array([0 if i*i < 50 else 1 for i in x1])
 
 
-   
 df = 10
-degree = 7
-basis, der_basis, der2_basis = make_basis(x, df=df, degree=degree)
+degree = 4
+
+basis1, der_basis1, der2_basis1 = make_basis(x1, df=df, degree=degree)
+basis2, der_basis2, der2_basis2 = make_basis(x2, df=df, degree=degree)
+
+basis = np.hstack([basis1, basis2])
+der_basis = np.hstack([der_basis1, der_basis2])
+der2_basis = np.hstack([der2_basis1, der2_basis2])
 
 params0 = np.random.normal(0, 1, df)
 
 
-# add a column of ones to simulate the intercept
-one = np.ones(shape=(n,1))
-basis = np.hstack([basis, one])
-der2_basis = np.hstack([der2_basis, one])
-
 
 cov_der2 = np.dot(der2_basis.T, der2_basis)
 
-alphas = [0, 5, 10 , 100, 10000]
-n_plots = len(alphas)
-for i, alpha in enumerate(alphas):
-    g = LogitGam(y, basis, 
-                 penal=GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
-                                  der2=der2_basis))
-    res_g = g.fit()
-    y_est = res_g.predict(basis)
-    plt.subplot(n_plots, 1, i+1)
-    plt.plot(x, y_est)
+alpha = 10000000
+penal = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
+g = LogitGam(y, basis, penal=penal)
+res_g = g.fit()
+y_est = res_g.predict(basis)
+
+
+plt.plot(y_est)
 plt.show()
 
-
-'''
 ### GLM ### 
+## THIS DOES NOT WORK!!! ## 
 ## observe that alpha is set to inf ## 
-y2 = x*x + np.random.normal(0, 10, n)
-glm_gam = GLMGam(y2, basis, 
-                 penal=GamPenalty(wts=1, alpha=np.inf, cov_der2=cov_der2, 
-                                  der2=der2_basis), method='bfgs')
-res_glm_gam = glm_gam.fit()
+
+class GLMGam(PenalizedMixin, GLM):
+    pass
+
+
+ 
+alpha = 100000
+penal = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
+                   der2=der2_basis)
+penal = L2(alpha=alpha)
+
+x = np.linspace(-10, 10, n)
+y2 = x*x + np.random.normal(0, 1, n)
+glm_gam = GLMGam(y2, basis, penal=penal)
+res_glm_gam = glm_gam.fit(method='newton', maxiter=1000)
 
 plt.plot(x, np.dot(basis, res_glm_gam.params))
 plt.plot(x, y2, 'o')
 plt.show()
-'''
+
 
