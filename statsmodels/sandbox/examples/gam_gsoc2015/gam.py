@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jun  5 16:33:47 2015
-
-@author: Luca
-"""
+from smooth_basis import make_poly_basis
 import numpy as np
-     
+from statsmodels.api import GLM
+from statsmodels.discrete.discrete_model import Logit
+       
 
+## this class will be later removed and taken from another push
 class PenalizedMixin(object):
     """Mixin class for Maximum Penalized Likelihood
     TODO: missing **kwds or explicit keywords
@@ -146,7 +144,7 @@ class PenalizedMixin(object):
             else:
                 return res
 
-
+## this class will be later removed and taken from another push
 class Penalty(object):
     """
     A class for representing a scalar-value penalty.
@@ -167,7 +165,7 @@ class Penalty(object):
         """
         A penalty function on a vector of parameters.
         Parameters
-        ----------
+x        ----------
         params : array-like
             A vector of parameters.
         Returns
@@ -231,6 +229,39 @@ class LogitGam(PenalizedMixin, Logit):
     pass
 
 
-
-class LinearGam(PenalizedMixin, RLM):
+class GLMGam(PenalizedMixin, GLM):
     pass
+  
+
+
+def test_gam_penalty():
+    ''' test the gam penalty class '''
+    n = 100000
+    x = np.linspace(-10, 10, n)
+    degree = 3
+    basis, der_basis, der2_basis = make_poly_basis(x, degree)
+    cov_der2 = np.dot(der2_basis.T, der2_basis)
+    gp = GamPenalty(alpha=1, der2=der2_basis, cov_der2=cov_der2)
+    params = np.array([1, 1, 1, 1])
+    cost = gp.func(params) 
+    # the integral between -10 and 10 of |2*a+6*b*x|^2 is 80*a^2 + 24000*b^2
+    assert(int(cost/n*20) == 24080)
+
+    params = np.array([1, 1, 0, 1])
+    cost = gp.func(params) 
+    assert(int(cost/n*20) == 24000)
+
+    params = np.array([1, 1, 2, 1])
+    grad = gp.grad(params)/n*20
+    assert(int(grad[2]) == 320)
+    assert(int(grad[3]) == 48000)
+
+    
+    print('All the tests are passed')
+    return
+
+
+
+
+
+ 
