@@ -32,13 +32,17 @@ cov_der2 = np.dot(der2_basis.T, der2_basis)
 
 
 ## train the gam logit model ##
-alpha = 10
-params0 = np.random.normal(0, 1, df)
-gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
-g = LogitGam(y, basis, penal=gp)
-res_g = g.fit()
+alphas = [0, 5, 100, 1000000000000]
 
-plt.plot(x, np.dot(basis, res_g.params))
+for i, alpha in enumerate(alphas):
+    plt.subplot(2, 2, i+1)
+    params0 = np.random.normal(0, 1, df)
+    gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
+    g = LogitGam(y, basis, penal=gp)
+    res_g = g.fit()
+
+    plt.plot(x, np.dot(basis, res_g.params))
+    plt.title('alpha=' + str(alpha))
 plt.show()
 
 
@@ -47,13 +51,18 @@ plt.show()
 # y is continuous
 y = x * x + np.random.normal(0, 1, n)
 
-# despite the large alpha we don't see a penalization
-alpha = 1000000000000000000000
 
-# train the model
-gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
-glm_gam = GLMGam(y, basis, penal = gp)
-res_glm_gam = glm_gam.fit()
+alphas = [0, 5, 100, 1000000000000]
+for i, alpha in enumerate(alphas):
+    plt.subplot(2, 2, i+1)
 
-plt.plot(x, np.dot(basis, res_glm_gam.params))
+    # train the model
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
+    glm_gam = GLMGam(y, basis, penal = gp)
+    res_glm_gam = glm_gam.fit(method='bfgs')
+
+    plt.plot(x, np.dot(basis, res_glm_gam.params))
+
+    plt.title('alpha=' + str(alpha))
 plt.show()
+# despite the large alpha we don't see a penalization
