@@ -4,20 +4,7 @@ Created on Fri Jun  5 16:32:00 2015
 
 @author: Luca
 """
-
-import patsy
-from patsy import dmatrices, dmatrix, demo_data
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.api import GLM
-from scipy.interpolate import splev
-import scipy as sp
-from numpy.linalg import norm
-from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
-from statsmodels.base.model import LikelihoodModel
-from statsmodels.robust.robust_linear_model import RLM
 
 ### Obtain b splines from patsy ###
 
@@ -81,3 +68,34 @@ def _eval_bspline_basis(x, knots, degree):
 
 
     return basis, der1_basis, der2_basis
+
+
+
+def make_bsplines_basis(x, df, degree):
+    ''' make a spline basis for x '''
+    order = degree + 1
+    n_inner_knots = df - order
+    lower_bound = np.min(x)
+    upper_bound = np.max(x)
+    knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
+    inner_knots = _R_compat_quantile(x, knot_quantiles)
+    all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
+    basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
+    return basis, der_basis, der2_basis
+
+
+def make_poly_basis(x, degree):
+    '''
+    given a vector x returns poly=(1, x, x^2, ..., x^degree)
+    and its first and second derivative
+    '''
+    n_samples = len(x)
+    basis = np.zeros(shape=(n_samples, degree+1))
+    der_basis = np.zeros(shape=(n_samples, degree+1))
+    der2_basis = np.zeros(shape=(n_samples, degree+1))
+    for i in range(degree+1):
+        basis[:, i] = x**i
+        der_basis[:, i] = i * x**(i-1)
+        der2_basis[:, i] = i * (i-1) * x**(i-2)
+
+    return basis, der_basis, der2_basis
