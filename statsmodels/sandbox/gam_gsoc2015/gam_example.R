@@ -3,25 +3,18 @@
 
 library('mgcv')
 
-n = 200
-x = seq(from = -10, to = 10, length.out = n)
-poly = x*x
+data = read.csv('Documents/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/spector_data.csv')
+data$X = NULL
 
-y = 1/(1+ exp(-poly)) #+ rnorm(n = n, mean = 0, sd = 0.01)
-y01 = y
-mu = mean(y)
-y01[y>mu] = 1
-y01[y<=mu] = 0
-y01 = as.factor(y01)
-table(y01)
-df = data.frame(x,y01)
+g = gam(formula = GRADE~s(TUCE, df = 4, spar = 0.2 ), data = data, family = 'binomial', )
 
-gam1 = gam(y01~s(x, k = 100, bs="ps", fx = F) , family = binomial(), data = df, scale=0)
-plot(gam1, se=F)
-points(x, poly, col='red')
-gam1$coefficients
+y = predict(object = g, newdata = data, type = 'response')
+plot(data$TUCE, y)
 
 
-df_new = data.frame(x = seq(-10, 10, length.out = 10))
-y_est = predict(gam1, newdata = df_new )
-plot(y_est)
+
+library('mgcv')
+data = data.frame('x'=c(1,2,3,4,5), 'y'=c(1,0,0,0,1))
+
+g = gam(y~poly(x, k = 4),family = 'binomial', data = data, scale = 0)
+plot(g)

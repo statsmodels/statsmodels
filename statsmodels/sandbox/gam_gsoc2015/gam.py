@@ -1,4 +1,7 @@
 import numpy as np
+from statsmodels.discrete.discrete_model import Logit
+from statsmodels.api import GLM
+
 
 
 ## this class will be later removed and taken from another push
@@ -219,3 +222,13 @@ class GamPenalty(Penalty):
     def deriv2(self, params):
 
         return 2 * self.alpha * self.cov_der2
+
+
+
+
+class LogitGam(PenalizedMixin, Logit):
+    pass
+
+
+class GLMGam(PenalizedMixin, GLM):
+    pass

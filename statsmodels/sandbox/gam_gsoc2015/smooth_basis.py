@@ -4,7 +4,16 @@ Created on Fri Jun  5 16:32:00 2015
 
 @author: Luca
 """
+
+## import usefull only for development ##
+import matplotlib.pyplot as plt
+import pandas as pd
+########################################
 import numpy as np
+from patsy.state import stateful_transform
+from patsy.util import have_pandas
+if have_pandas:
+    import pandas
 
 ### Obtain b splines from patsy ###
 
@@ -99,3 +108,174 @@ def make_poly_basis(x, degree):
         der2_basis[:, i] = i * (i-1) * x**(i-2)
 
     return basis, der_basis, der2_basis
+
+
+
+class BS(object):
+    """bs(x, df=None, knots=None, degree=3, include_intercept=False, lower_bound=None, upper_bound=None)
+    Generates a B-spline basis for ``x``, allowing non-linear fits. The usual
+    usage is something like::
+      y ~ 1 + bs(x, 4)
+    to fit ``y`` as a smooth function of ``x``, with 4 degrees of freedom
+    given to the smooth.
+    :arg df: The number of degrees of freedom to use for this spline. The
+      return value will have this many columns. You must specify at least one
+      of ``df`` and ``knots``.
+    :arg knots: The interior knots to use for the spline. If unspecified, then
+      equally spaced quantiles of the input data are used. You must specify at
+      least one of ``df`` and ``knots``.
+    :arg degree: The degree of the spline to use.
+    :arg include_intercept: If ``True``, then the resulting
+      spline basis will span the intercept term (i.e., the constant
+      function). If ``False`` (the default) then this will not be the case,
+      which is useful for avoiding overspecification in models that include
+      multiple spline terms and/or an intercept term.
+    :arg lower_bound: The lower exterior knot location.
+    :arg upper_bound: The upper exterior knot location.
+    A spline with ``degree=0`` is piecewise constant with breakpoints at each
+    knot, and the default knot positions are quantiles of the input. So if you
+    find yourself in the situation of wanting to quantize a continuous
+    variable into ``num_bins`` equal-sized bins with a constant effect across
+    each bin, you can use ``bs(x, num_bins - 1, degree=0)``. (The ``- 1`` is
+    because one degree of freedom will be taken by the intercept;
+    alternatively, you could leave the intercept term out of your model and
+    use ``bs(x, num_bins, degree=0, include_intercept=True)``.
+    A spline with ``degree=1`` is piecewise linear with breakpoints at each
+    knot.
+    The default is ``degree=3``, which gives a cubic b-spline.
+    This is a stateful transform (for details see
+    :ref:`stateful-transforms`). If ``knots``, ``lower_bound``, or
+    ``upper_bound`` are not specified, they will be calculated from the data
+    and then the chosen values will be remembered and re-used for prediction
+    from the fitted model.
+    Using this function requires scipy be installed.
+    .. note:: This function is very similar to the R function of the same
+      name. In cases where both return output at all (e.g., R's ``bs`` will
+      raise an error if ``degree=0``, while patsy's will not), they should
+      produce identical output given identical input and parameter settings.
+    .. warning:: I'm not sure on what the proper handling of points outside
+      the lower/upper bounds is, so for now attempting to evaluate a spline
+      basis at such points produces an error. Patches gratefully accepted.
+    .. versionadded:: 0.2.0
+    """
+    def __init__(self):
+        self._tmp = {}
+        self._degree = None
+        self._all_knots = None
+
+    def memorize_chunk(self, x, df=None, knots=None, degree=3,
+                       include_intercept=False,
+                       lower_bound=None, upper_bound=None):
+        args = {"df": df,
+                "knots": knots,
+                "degree": degree,
+                "include_intercept": include_intercept,
+                "lower_bound": lower_bound,
+                "upper_bound": upper_bound,
+                }
+        self._tmp["args"] = args
+        # XX: check whether we need x values before saving them
+        x = np.atleast_1d(x)
+        if x.ndim == 2 and x.shape[1] == 1:
+            x = x[:, 0]
+        if x.ndim > 1:
+            raise ValueError("input to 'bs' must be 1-d, "
+                             "or a 2-d column vector")
+        # There's no better way to compute exact quantiles than memorizing
+        # all data.
+        self._tmp.setdefault("xs", []).append(x)
+
+    def memorize_finish(self):
+        tmp = self._tmp
+        args = tmp["args"]
+        del self._tmp
+
+        if args["degree"] < 0:
+            raise ValueError("degree must be greater than 0 (not %r)"
+                             % (args["degree"],))
+        if int(args["degree"]) != args["degree"]:
+            raise ValueError("degree must be an integer (not %r)"
+                             % (self._degree,))
+
+        # These are guaranteed to all be 1d vectors by the code above
+        x = np.concatenate(tmp["xs"])
+        if args["df"] is None and args["knots"] is None:
+            raise ValueError("must specify either df or knots")
+        order = args["degree"] + 1
+        if args["df"] is not None:
+            n_inner_knots = args["df"] - order
+            if not args["include_intercept"]:
+                n_inner_knots += 1
+            if n_inner_knots < 0:
+                raise ValueError("df=%r is too small for degree=%r and "
+                                 "include_intercept=%r; must be >= %s"
+                                 % (args["df"], args["degree"],
+                                    args["include_intercept"],
+                                    # We know that n_inner_knots is negative;
+                                    # if df were that much larger, it would
+                                    # have been zero, and things would work.
+                                    args["df"] - n_inner_knots))
+            if args["knots"] is not None:
+                if len(args["knots"]) != n_inner_knots:
+                    raise ValueError("df=%s with degree=%r implies %s knots, "
+                                     "but %s knots were provided"
+                                     % (args["df"], args["degree"],
+                                        n_inner_knots, len(args["knots"])))
+            else:
+                # Need to compute inner knots
+                knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
+                inner_knots = _R_compat_quantile(x, knot_quantiles)
+        if args["knots"] is not None:
+            inner_knots = args["knots"]
+        if args["lower_bound"] is not None:
+            lower_bound = args["lower_bound"]
+        else:
+            lower_bound = np.min(x)
+        if args["upper_bound"] is not None:
+            upper_bound = args["upper_bound"]
+        else:
+            upper_bound = np.max(x)
+        if lower_bound > upper_bound:
+            raise ValueError("lower_bound > upper_bound (%r > %r)"
+                             % (lower_bound, upper_bound))
+        inner_knots = np.asarray(inner_knots)
+        if inner_knots.ndim > 1:
+            raise ValueError("knots must be 1 dimensional")
+        if np.any(inner_knots < lower_bound):
+            raise ValueError("some knot values (%s) fall below lower bound "
+                             "(%r)"
+                             % (inner_knots[inner_knots < lower_bound],
+                                lower_bound))
+        if np.any(inner_knots > upper_bound):
+            raise ValueError("some knot values (%s) fall above upper bound "
+                             "(%r)"
+                             % (inner_knots[inner_knots > upper_bound],
+                                upper_bound))
+        all_knots = np.concatenate(([lower_bound, upper_bound] * order,
+                                    inner_knots))
+        all_knots.sort()
+
+        self._degree = args["degree"]
+        self._all_knots = all_knots
+
+    def transform(self, x, df=None, knots=None, degree=3,
+                  include_intercept=False,
+                  lower_bound=None, upper_bound=None):
+        basis = _eval_bspline_basis(x, self._all_knots, self._degree)
+        if not include_intercept:
+            basis = basis[:, 1:]
+        if have_pandas:
+            if isinstance(x, (pandas.Series, pandas.DataFrame)):
+                basis = pandas.DataFrame(basis)
+                basis.index = x.index
+        return basis
+
+
+
+bs = stateful_transform(BS)
+
+df = 10
+degree = 4
+x = np.logspace(-1, 1, 30)
+result = bs(x, df=df, degree=degree, include_intercept=True)
+basis, der1, der2 = result
