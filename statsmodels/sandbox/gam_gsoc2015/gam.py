@@ -1,6 +1,8 @@
 import numpy as np
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.api import GLM
+from smooth_basis import BS
+from patsy.state import stateful_transform
 
                     
 
@@ -144,6 +146,7 @@ class PenalizedMixin(object):
             else:
                 return res
 
+
 ## this class will be later removed and taken from another push
 class Penalty(object):
     """
@@ -165,7 +168,7 @@ class Penalty(object):
         """
         A penalty function on a vector of parameters.
         Parameters
-x        ----------
+        ----------
         params : array-like
             A vector of parameters.
         Returns
@@ -224,8 +227,11 @@ class GamPenalty(Penalty):
         return 2 * self.alpha * self.cov_der2
 
 
-
  
+
+
+
+
 class LogitGam(PenalizedMixin, Logit):
     pass
 
@@ -233,3 +239,6 @@ class LogitGam(PenalizedMixin, Logit):
 class GLMGam(PenalizedMixin, GLM):
     pass
   
+
+
+
