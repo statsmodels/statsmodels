@@ -5,8 +5,13 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir) 
 
 from smooth_basis import make_poly_basis
-from gam import GamPenalty
+from gam import GamPenalty, LogitGam, GLMGam
 import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+
+sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
 def test_gam_penalty():
     ''' test the gam penalty class '''
@@ -31,3 +36,6 @@ def test_gam_penalty():
     assert(int(grad[3]) == 48000)
 
     return
+
+
+

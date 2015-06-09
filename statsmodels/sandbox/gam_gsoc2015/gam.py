@@ -1,5 +1,8 @@
 import numpy as np
-       
+from statsmodels.discrete.discrete_model import Logit
+from statsmodels.api import GLM
+
+                    
 
 ## this class will be later removed and taken from another push
 class PenalizedMixin(object):
@@ -222,11 +225,11 @@ class GamPenalty(Penalty):
 
 
 
-
-
-
-
-
-
-
  
+class LogitGam(PenalizedMixin, Logit):
+    pass
+
+
+class GLMGam(PenalizedMixin, GLM):
+    pass
+  
