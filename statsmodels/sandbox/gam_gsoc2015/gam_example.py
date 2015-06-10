@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from smooth_basis import make_poly_basis, make_bsplines_basis
-from gam import PenalizedMixin, GamPenalty, LogitGam, GLMGam
+from gam import PenalizedMixin, GamPenalty, LogitGam, GLMGam, MultivariateGamPenalty
 import statsmodels.api as sm
 
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
@@ -98,27 +98,98 @@ plt.show()
 # despite the large alpha we don't see a penalization
 
 
+##################### Multivariate GAM #####################################
 
-########### Josef's version of the GLM example ############################## 
-# y is continuous 
-y = x * x + np.random.normal(0, 1, n)
-y -= y.mean()
-basis_dm = basis - basis.mean(0)
+n = 100
+x1 = np.sort(np.random.uniform(-5, 5, n))
+x2 = np.sort(np.random.uniform(0, 10, n))
+#x1 = x1 - x1.mean()
+#x2 = x2 - x2.mean()
+poly = x1*x1 + x2 +  np.random.normal(0, 0.01, n)
 
-plt.figure()
-alphas = [0, 0.001, 0.01, 1]
-for i, alpha in enumerate(alphas):
-    plt.subplot(2, 2, i+1)
+y = sigmoid(poly)
+mu = y.mean()
+yc = y.copy()
+y[y > mu] = 1
+y[y <= mu] = 0
 
-    # train the model
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
-    glm_gam = GLMGam(y, basis_dm, penal = gp)
-    #res_glm_gam = glm_gam.fit(method='bfgs', disp=1)
-    res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0, disp=1, maxiter=6000, maxfun=5000)
 
-    plt.plot(x, np.dot(basis, res_glm_gam.params))
-    plt.plot(x, y, 'o')
+degree1 = 3
+degree2 = 4
 
-    plt.title('GLM alpha=' + str(alpha))
+basis1, der_basis1, der2_basis1 = make_poly_basis(x1, degree1, intercept=False)
+basis2, der_basis2, der2_basis2 = make_poly_basis(x2, degree2, intercept=False)
+
+
+
+basis = np.hstack([basis1, basis2])
+der_basis = [der_basis1, der_basis2]
+der2_basis = [der2_basis1, der2_basis2]
+cov_der2 = [np.dot(der2_basis1.T, der2_basis1),
+            np.dot(der2_basis2.T, der2_basis2)]
+
+
+alpha = [0, 0]
+wts = [1, 1]
+
+mgp = MultivariateGamPenalty(wts=wts, alpha=alpha, cov_der2=cov_der2, 
+                             der2=der2_basis)    
+mLG= LogitGam(y, basis, penal=mgp)
+res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
+
+
+param1 = res_mLG.params[mgp.mask[0]]
+param2 = res_mLG.params[mgp.mask[1]]
+param = res_mLG.params
+
+gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
+                der2=der2_basis)    
+
+
+plt.subplot(3, 2, 1)
+plt.title('alpha=' + str(alpha))
+plt.plot(x1, np.dot(basis1, param1), label='x1')
+plt.legend()
+plt.subplot(3, 2, 3)
+plt.plot(x2, np.dot(basis2, param2), label='x2')
+plt.legend()
+plt.subplot(3, 2, 5)
+plt.plot(sigmoid(np.dot(basis, param)), '.', label=r'$\hat y$')
+plt.plot(yc, '.', label='yc')
+plt.plot(y, '*', label='y')
+plt.ylim(-1, 2)
+plt.legend()
+
+alpha = [.1, .2]
+wts = [1, 1]
+
+mgp = MultivariateGamPenalty(wts=wts, alpha=alpha, cov_der2=cov_der2, 
+                             der2=der2_basis)    
+mLG= LogitGam(y, basis, penal=mgp)
+res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
+
+
+param1 = res_mLG.params[mgp.mask[0]]
+param2 = res_mLG.params[mgp.mask[1]]
+param = res_mLG.params
+
+gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
+                der2=der2_basis)    
+
+### plot with different alpha 
+
+plt.subplot(3, 2, 2)
+plt.title('alpha=' + str(alpha))
+plt.plot(x1, np.dot(basis1, param1), label='x1')
+plt.legend()
+plt.subplot(3, 2, 4)
+plt.plot(x2, np.dot(basis2, param2), label='x2')
+plt.legend()
+plt.subplot(3, 2, 6)
+plt.plot(sigmoid(np.dot(basis, param)), '.', label=r'$\hat y$')
+plt.plot(yc, '.', label='yc')
+plt.plot(y, '*', label='y')
+plt.ylim(-1, 2)
+plt.legend()
+
 plt.show()
-# despite the large alpha we don't see a penalization 
