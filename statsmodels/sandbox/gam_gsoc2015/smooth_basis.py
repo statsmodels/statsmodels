@@ -93,16 +93,24 @@ def make_bsplines_basis(x, df, degree):
     return basis, der_basis, der2_basis
 
 
-def make_poly_basis(x, degree):
+def make_poly_basis(x, degree, intercept=True):
     '''
     given a vector x returns poly=(1, x, x^2, ..., x^degree)
     and its first and second derivative
     '''
+
+    if intercept:
+        start = 0
+    else:
+        start = 1
+
     n_samples = len(x)
-    basis = np.zeros(shape=(n_samples, degree+1))
-    der_basis = np.zeros(shape=(n_samples, degree+1))
-    der2_basis = np.zeros(shape=(n_samples, degree+1))
-    for i in range(degree+1):
+    basis = np.zeros(shape=(n_samples, degree+1 - start))
+    der_basis = np.zeros(shape=(n_samples, degree+1 - start))
+    der2_basis = np.zeros(shape=(n_samples, degree+1 - start))
+
+
+    for i in range(start, degree+1 - start):
         basis[:, i] = x**i
         der_basis[:, i] = i * x**(i-1)
         der2_basis[:, i] = i * (i-1) * x**(i-2)

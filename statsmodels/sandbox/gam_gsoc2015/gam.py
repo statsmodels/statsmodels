@@ -230,6 +230,77 @@ class GamPenalty(Penalty):
 
 
 
+class MultivariateGamPenalty(Penalty):
+
+    def __init__(self, wts=None, alpha=None, cov_der2=None, der2=None):
+        '''
+        GAM penalty for multivariate regression
+        - cov_der2 is a list of squared matrix of shape (size_base, size_base)
+        - der2 is a list of matrix of shape (n_samples, size_base)
+        - alpha is a list of doubles. Each one representing the penalty
+          for each function
+        - wts is a list of doubles of the same length of alpha
+        '''
+
+        assert(len(cov_der2) == len(der2))
+
+        # the total number of columns in der2 i.e. the len of the params vector
+        self.n_columns = np.sum(d2.shape[1] for d2 in der2)
+
+        # the number of variables in the GAM model
+        self.n_variables = len(cov_der2)
+
+        # if wts and alpha are not a list then each function has the same penalty
+        # TODO: Review this
+        self.alpha = alpha
+        self.wts = wts
+
+        n_samples = der2[0].shape[0]
+        self.mask = [np.array([False]*self.n_columns)
+                     for i in range(self.n_variables)]
+        param_count = 0
+        for i, d2 in enumerate(der2):
+            n, dim_base = d2.shape
+            #check that all the basis have the same number of samples
+            assert(n_samples == n)
+            self.mask[i][param_count: param_count + dim_base] = True
+            param_count += dim_base
+
+        self.gp = []
+        for i in range(self.n_variables):
+            gp = GamPenalty(wts=self.wts[i], alpha=self.alpha[i],
+                            cov_der2=cov_der2[i], der2=der2[i])
+            self.gp.append(gp)
+
+        return
+
+
+    def func(self, params):
+
+        cost = 0
+        for i in range(self.n_variables):
+            params_i = params[self.mask[i]]
+            cost += self.gp[i].func(params_i)
+
+        return  cost
+
+
+    def grad(self, params):
+        grad = []
+        for i in range(self.n_variables):
+            params_i = params[self.mask[i]]
+            grad.append(self.gp[i].grad(params_i))
+
+        return np.concatenate(grad)
+
+
+    def deriv2(self, params):
+        deriv2 = []
+        for i in range(self.n_variables):
+            params_i = params[self.mask[i]]
+            deriv2.append(self.gp[i].grad(params_i))
+        return np.concatenate(deriv2)
+
 
 
 class LogitGam(PenalizedMixin, Logit):
