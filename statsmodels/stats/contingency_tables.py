@@ -1,5 +1,22 @@
 """
 Methods for analyzing contingency tables.
+
+The main classes are:
+
+Table : implements methods that can be applied to any two-way
+contingency table.
+
+SquareTable : implements methods that can be applied to a square
+two-way contingency table.
+
+Table2x2 : implements methods that can be applied to a 2x2 contingency
+table.
+
+StratifiedTables : implements methods that can be applied to a
+collection of contingency tables.
+
+Also contains functions for conducting Mcnemar's test and Cochran's q
+test.
 """
 
 from __future__ import division
@@ -8,6 +25,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 from statsmodels import iolib
+
 
 def _handle_pandas_square(table):
     """
@@ -26,201 +44,9 @@ def _handle_pandas_square(table):
 
     return table
 
+
 class _bunch(object):
     pass
-
-
-class TableSymmetry(object):
-    """
-    Methods for analyzing a square contingency table.
-
-    Parameters
-    ----------
-    table : array-like
-        A contingency table.
-
-    These methods should only be used when the rows and columns of the
-    table have the same categories.  If `table` is provided as a
-    Pandas array, the row and column indices will be extended to
-    create a square table.  Otherwise the table should be provided in
-    a square form, with the (implicit) row and column categories
-    appearing in the same order.
-    """
-
-    def __init__(self, table):
-        table = _handle_pandas_square(table)
-        table = np.asarray(table, dtype=np.float64)
-        k, k2 = table.shape
-        if k != k2:
-            raise ValueError('table must be square')
-        self.table = table
-
-
-    @classmethod
-    def from_data(cls, data):
-        """
-        Construct a TableSymmetry object from data.
-
-        Parameters
-        ----------
-        data : array-like
-            The raw data, from which a cross-table is constructed
-            using the first two columns.
-
-        Returns
-        -------
-        A TableSymmetry instance.
-        """
-
-        if isinstance(data, pd.DataFrame):
-            table = pd.crosstab(data.iloc[:, 0], data.iloc[:, 1])
-        else:
-            table = pd.crosstab(data[:, 0], data[:, 1])
-
-        return cls(table)
-
-
-    def symmetry(self, method="bowker"):
-        """
-        Test for symmetry of a joint distribution.
-
-        This procedure tests the null hypothesis that the joint
-        distribution is symmetric around the main diagonal, that is
-
-        .. math::
-
-        p_{i, j} = p_{j, i}  for all i, j
-
-        Returns
-        -------
-        statistic : float
-            chisquare test statistic
-        p-value : float
-            p-value of the test statistic based on chisquare distribution
-        df : int
-            degrees of freedom of the chisquare distribution
-
-        Notes
-        -----
-        The implementation is based on the SAS documentation. R includes
-        it in `mcnemar.test` if the table is not 2 by 2.  However a more
-        direct generalization of the McNemar test to large tables is
-        provided by the homogeneity test (TableSymmetry.homogeneity).
-
-        The p-value is based on the chi-square distribution which requires
-        that the sample size is not very small to be a good approximation
-        of the true distribution. For 2x2 contingency tables the exact
-        distribution can be obtained with `mcnemar`
-
-        See Also
-        --------
-        mcnemar
-        homogeneity
-        """
-
-        if method.lower() != "bowker":
-            raise ValueError("method for symmetry testing must be 'bowker'")
-
-        k = self.table.shape[0]
-        upp_idx = np.triu_indices(k, 1)
-
-        tril = self.table.T[upp_idx]   # lower triangle in column order
-        triu = self.table[upp_idx]     # upper triangle in row order
-
-        stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
-        df = k * (k-1) / 2.
-        pval = stats.chi2.sf(stat, df)
-
-        return stat, pval, df
-
-
-    def homogeneity(self, method="stuart_maxwell"):
-        """
-        Compare row and column marginal distributions.
-
-        Parameters
-        ----------
-        method : string
-            Either 'stuart_maxwell' or 'bhapkar', leading to two different
-            estimates of the covariance matrix for the estimated
-            difference between the row margins and the column margins.
-
-        Returns
-        -------
-        stat : float
-            The chi^2 test statistic
-        pvalue : float
-            The p-value of the test statistic
-        df : integer
-            The degrees of freedom of the reference distribution
-
-        Notes
-        -----
-        For a 2x2 table this is equivalent to McNemar's test.  More
-        generally the procedure tests the null hypothesis that the
-        marginal distribution of the row factor is equal to the marginal
-        distribution of the column factor.  For this to be meaningful, the
-        two factors must have the same sample space.
-        """
-
-        if self.table.shape[0] < 1:
-            raise ValueError('table is empty')
-        elif self.table.shape[0] == 1:
-            return 0., 1., 0
-
-        method = method.lower()
-        if method not in ["bhapkar", "stuart_maxwell"]:
-            raise ValueError("method '%s' for homogeneity not known" % method)
-
-        n_obs = self.table.sum()
-        pr = self.table.astype(np.float64) / n_obs
-
-        # Compute margins, eliminate last row/column so there is no
-        # degeneracy
-        row = pr.sum(1)[0:-1]
-        col = pr.sum(0)[0:-1]
-        pr = pr[0:-1, 0:-1]
-
-        # The estimated difference between row and column margins.
-        d = col - row
-
-        # The degrees of freedom of the chi^2 reference distribution.
-        df = pr.shape[0]
-
-        if method == "bhapkar":
-            vmat = -(pr + pr.T) - np.outer(d, d)
-            dv = col + row - 2*np.diag(pr) - d**2
-            np.fill_diagonal(vmat, dv)
-        elif method == "stuart_maxwell":
-            vmat = -(pr + pr.T)
-            dv = row + col - 2*np.diag(pr)
-            np.fill_diagonal(vmat, dv)
-
-        try:
-            stat = n_obs * np.dot(d, np.linalg.solve(vmat, d))
-        except np.linalg.LinAlgError:
-            warnings.warn("Unable to invert covariance matrix")
-            return np.nan, np.nan, df
-
-        pvalue = 1 - stats.chi2.cdf(stat, df)
-
-        return stat, pvalue, df
-
-
-    def summary(self, alpha=0.05, float_format="%.3f"):
-
-        fmt = float_format
-
-        headers = ["Statistic", "P-value", "DF"]
-        stubs = ["Symmetry", "Homogeneity"]
-        stat1, pvalue1, df1 = self.symmetry()
-        stat2, pvalue2, df2 = self.homogeneity()
-        data = [[fmt % stat1, fmt % pvalue1, '%d' % df1],
-                [fmt % stat2, fmt % pvalue2, '%d' % df2]]
-        tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
-                                 table_dec_above='')
-
-        return tab
 
 
 class Table(object):
@@ -251,30 +77,27 @@ class Table(object):
 
 
     @classmethod
-    def from_data(cls, var1, var2, data, shift_zeros=True):
+    def from_data(cls, data):
         """
-        Construct a Table2x2 object from data.
+        Construct a Table object from data.
 
         Parameters
         ----------
-        var1 : string
-            Name or column index of the first variable, defining the
-            rows.
-        var2 : string
-            Name or column index of the first variable, defining the
-            columns.
         data : array-like
-            The raw data.
-        shift_zeros : boolean
-            If True, and if there are any zeros in the contingency
-            table, add 0.5 to all four cells of the table.
+            The raw data, from which a cross-table is constructed
+            using the first two columns.
+
+        Returns
+        -------
+        A Table instance.
         """
 
         if isinstance(data, pd.DataFrame):
-            table = pd.crosstab(data.loc[:, var1], data.loc[:, var2])
+            table = pd.crosstab(data.iloc[:, 0], data.iloc[:, 1])
         else:
-            table = pd.crosstab(data[:, var1], data[:, var2])
-        return cls(table, shift_zeros)
+            table = pd.crosstab(data[:, 0], data[:, 1])
+
+        return cls(table)
 
 
     @cache_readonly
@@ -523,7 +346,179 @@ class Table(object):
         return np.exp(self.cumulative_log_oddsratios)
 
 
-class Table2x2(Table):
+class SquareTable(Table):
+    """
+    Methods for analyzing a square contingency table.
+
+    Parameters
+    ----------
+    table : array-like
+        A square contingency table.
+    shift_zeros : boolean
+        If True and any cell count is zero, add 0.5 to all values
+        in the table.
+
+    These methods should only be used when the rows and columns of the
+    table have the same categories.  If `table` is provided as a
+    Pandas array, the row and column indices will be extended to
+    create a square table.  Otherwise the table should be provided in
+    a square form, with the (implicit) row and column categories
+    appearing in the same order.
+    """
+
+    def __init__(self, table, shift_zeros=True):
+        table = _handle_pandas_square(table)
+        k1, k2 = table.shape
+        if k1 != k2:
+            raise ValueError('table must be square')
+
+        super(SquareTable, self).__init__(table, shift_zeros)
+
+
+    def symmetry(self, method="bowker"):
+        """
+        Test for symmetry of a joint distribution.
+
+        This procedure tests the null hypothesis that the joint
+        distribution is symmetric around the main diagonal, that is
+
+        .. math::
+
+        p_{i, j} = p_{j, i}  for all i, j
+
+        Returns
+        -------
+        statistic : float
+            chisquare test statistic
+        p-value : float
+            p-value of the test statistic based on chisquare distribution
+        df : int
+            degrees of freedom of the chisquare distribution
+
+        Notes
+        -----
+        The implementation is based on the SAS documentation. R includes
+        it in `mcnemar.test` if the table is not 2 by 2.  However a more
+        direct generalization of the McNemar test to large tables is
+        provided by the homogeneity test (TableSymmetry.homogeneity).
+
+        The p-value is based on the chi-square distribution which requires
+        that the sample size is not very small to be a good approximation
+        of the true distribution. For 2x2 contingency tables the exact
+        distribution can be obtained with `mcnemar`
+
+        See Also
+        --------
+        mcnemar
+        homogeneity
+        """
+
+        if method.lower() != "bowker":
+            raise ValueError("method for symmetry testing must be 'bowker'")
+
+        k = self.table.shape[0]
+        upp_idx = np.triu_indices(k, 1)
+
+        tril = self.table.T[upp_idx]   # lower triangle in column order
+        triu = self.table[upp_idx]     # upper triangle in row order
+
+        stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
+        df = k * (k-1) / 2.
+        pval = stats.chi2.sf(stat, df)
+
+        return stat, pval, df
+
+
+    def homogeneity(self, method="stuart_maxwell"):
+        """
+        Compare row and column marginal distributions.
+
+        Parameters
+        ----------
+        method : string
+            Either 'stuart_maxwell' or 'bhapkar', leading to two different
+            estimates of the covariance matrix for the estimated
+            difference between the row margins and the column margins.
+
+        Returns
+        -------
+        stat : float
+            The chi^2 test statistic
+        pvalue : float
+            The p-value of the test statistic
+        df : integer
+            The degrees of freedom of the reference distribution
+
+        Notes
+        -----
+        For a 2x2 table this is equivalent to McNemar's test.  More
+        generally the procedure tests the null hypothesis that the
+        marginal distribution of the row factor is equal to the marginal
+        distribution of the column factor.  For this to be meaningful, the
+        two factors must have the same sample space.
+        """
+
+        if self.table.shape[0] < 1:
+            raise ValueError('table is empty')
+        elif self.table.shape[0] == 1:
+            return 0., 1., 0
+
+        method = method.lower()
+        if method not in ["bhapkar", "stuart_maxwell"]:
+            raise ValueError("method '%s' for homogeneity not known" % method)
+
+        n_obs = self.table.sum()
+        pr = self.table.astype(np.float64) / n_obs
+
+        # Compute margins, eliminate last row/column so there is no
+        # degeneracy
+        row = pr.sum(1)[0:-1]
+        col = pr.sum(0)[0:-1]
+        pr = pr[0:-1, 0:-1]
+
+        # The estimated difference between row and column margins.
+        d = col - row
+
+        # The degrees of freedom of the chi^2 reference distribution.
+        df = pr.shape[0]
+
+        if method == "bhapkar":
+            vmat = -(pr + pr.T) - np.outer(d, d)
+            dv = col + row - 2*np.diag(pr) - d**2
+            np.fill_diagonal(vmat, dv)
+        elif method == "stuart_maxwell":
+            vmat = -(pr + pr.T)
+            dv = row + col - 2*np.diag(pr)
+            np.fill_diagonal(vmat, dv)
+
+        try:
+            stat = n_obs * np.dot(d, np.linalg.solve(vmat, d))
+        except np.linalg.LinAlgError:
+            warnings.warn("Unable to invert covariance matrix")
+            return np.nan, np.nan, df
+
+        pvalue = 1 - stats.chi2.cdf(stat, df)
+
+        return stat, pvalue, df
+
+
+    def summary(self, alpha=0.05, float_format="%.3f"):
+
+        fmt = float_format
+
+        headers = ["Statistic", "P-value", "DF"]
+        stubs = ["Symmetry", "Homogeneity"]
+        stat1, pvalue1, df1 = self.symmetry()
+        stat2, pvalue2, df2 = self.homogeneity()
+        data = [[fmt % stat1, fmt % pvalue1, '%d' % df1],
+                [fmt % stat2, fmt % pvalue2, '%d' % df2]]
+        tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
+                                 table_dec_above='')
+
+        return tab
+
+
+class Table2x2(SquareTable):
     """
     Analyses that can be performed on a 2x2 contingency table.
 
@@ -547,6 +542,33 @@ class Table2x2(Table):
             raise ValueError("Table2x2 takes a 2x2 table as input.")
 
         super(Table2x2, self).__init__(table, shift_zeros)
+
+
+    @classmethod
+    def from_data(cls, var1, var2, data, shift_zeros=True):
+        """
+        Construct a Table object from data.
+
+        Parameters
+        ----------
+        var1 : string
+            Name or column index of the first variable, defining the
+            rows.
+        var2 : string
+            Name or column index of the first variable, defining the
+            columns.
+        data : array-like
+            The raw data.
+        shift_zeros : boolean
+            If True, and if there are any zeros in the contingency
+            table, add 0.5 to all four cells of the table.
+        """
+
+        if isinstance(data, pd.DataFrame):
+            table = pd.crosstab(data.loc[:, var1], data.loc[:, var2])
+        else:
+            table = pd.crosstab(data[:, var1], data[:, var2])
+        return cls(table, shift_zeros)
 
 
     @cache_readonly
@@ -1065,7 +1087,6 @@ class StratifiedTables(object):
         tab1.extend(tab3)
 
         return tab1
-
 
 
 def mcnemar(table, exact=True, correction=True):

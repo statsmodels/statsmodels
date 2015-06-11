@@ -32,7 +32,7 @@ tables[2] = np.asarray([[20, 10, 5],
 def test_homogeneity():
 
     for k,table in enumerate(tables):
-        st = sm.stats.TableSymmetry(table)
+        st = sm.stats.SquareTable(table, shift_zeros=False)
         stat, pvalue, df = st.homogeneity()
         assert_allclose(stat, r_results.loc[k, "homog_stat"])
         assert_allclose(df, r_results.loc[k, "homog_df"])
@@ -42,7 +42,7 @@ def test_homogeneity():
         assert_allclose(stat1, stat / (1 - stat / table.sum()))
 
 
-def test_TableSymmetry_from_data():
+def test_SquareTable_from_data():
 
     np.random.seed(434)
     df = pd.DataFrame(index=range(100), columns=["v1", "v2"])
@@ -50,9 +50,9 @@ def test_TableSymmetry_from_data():
     df["v2"] = np.random.randint(0, 5, 100)
     table = pd.crosstab(df["v1"], df["v2"])
 
-    rslt1 = ctab.TableSymmetry(table)
-    rslt2 = ctab.TableSymmetry.from_data(df)
-    rslt3 = ctab.TableSymmetry(np.asarray(table))
+    rslt1 = ctab.SquareTable(table)
+    rslt2 = ctab.SquareTable.from_data(df)
+    rslt3 = ctab.SquareTable(np.asarray(table))
 
     assert_equal(rslt1.summary().as_text(),
                  rslt2.summary().as_text())
@@ -132,7 +132,7 @@ def test_chi2_association():
 def test_symmetry():
 
     for k,table in enumerate(tables):
-        st = sm.stats.TableSymmetry(table)
+        st = sm.stats.SquareTable(table, shift_zeros=False)
         stat, pvalue, df = st.symmetry()
         assert_allclose(stat, r_results.loc[k, "bowker_stat"])
         assert_equal(df, r_results.loc[k, "bowker_df"])
@@ -145,7 +145,7 @@ def test_mcnemar():
     stat1, pvalue1 = ctab.mcnemar(tables[0], exact=False,
                                   correction=False)
 
-    st = sm.stats.TableSymmetry(tables[0])
+    st = sm.stats.SquareTable(tables[0])
     stat2, pvalue2, df = st.homogeneity()
     assert_allclose(stat1, stat2)
     assert_equal(df, 1)

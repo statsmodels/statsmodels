@@ -164,22 +164,22 @@ acuity in people's left and right eyes.
     print(col)
 
 One way to obtain the homogeneity and symmetry test results is to
-create a :class:`TableSymmetry` object from the contingency table.
+create a :class:`SquareTable` object from the contingency table.
 
 .. ipython:: python
 
-    st = sm.stats.TableSymmetry(tab)
+    st = sm.stats.SquareTable(tab)
     print(st.summary())
 
 If we have the individual case records in a DataFrame called `data`,
 then we can perform the same analysis by passing the raw data using
-the ``TableSymmetry.from_data`` classmethod.  In this case, we also
+the ``SquareTable.from_data`` classmethod.  In this case, we also
 need to pass the names of the columns of `data` that contain the row
 and column factors.
 
 ::
 
-    st = sm.stats.TableSymmetry.from_data('left', 'right', data)
+    st = sm.stats.SquareTable.from_data('left', 'right', data)
     print(st.summary())
 
 
@@ -236,7 +236,7 @@ Module Reference
 
    Table
    Table2x2
-   TableSymmetry
+   SquareTable
    StratifiedTables
    mcnemar
    cochrans_q
