@@ -1,9 +1,3 @@
-
-import os,sys,inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir) 
-
 from smooth_basis import make_poly_basis
 from gam import GamPenalty, LogitGam, GLMGam
 import numpy as np
@@ -14,7 +8,10 @@ import matplotlib.pyplot as plt
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
 def test_gam_penalty():
-    ''' test the gam penalty class '''
+    """
+    test the gam penalty class
+    """
+
     n = 100000
     x = np.linspace(-10, 10, n)
     degree = 3
