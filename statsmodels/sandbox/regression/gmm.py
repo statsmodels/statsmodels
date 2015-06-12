@@ -1107,6 +1107,9 @@ class GMMResults(LikelihoodModelResults):
         self.__dict__.update(kwds)
 
         self.nobs = self.model.nobs
+        self.df_resid = np.inf
+
+        self.cov_params_default = self.cov_params_()
 
 
     @cache_readonly
@@ -1120,7 +1123,9 @@ class GMMResults(LikelihoodModelResults):
         return self.q * self.model.nobs_moms
 
 
-    def cov_params(self, **kwds):
+    def cov_params_(self, **kwds):
+        if hasattr(self, '_cov_params'):
+            return self._cov_params
         #TODO add options ???)
         # this should use by default whatever options have been specified in
         # fit
