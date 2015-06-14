@@ -401,7 +401,7 @@ class Check2x2Mixin(object):
 
     def initialize(self):
         self.tbl_obj = ctab.Table2x2(self.table)
-        self.tbl_data_obj = ctab.Table2x2.from_data(0, 1, self.data)
+        self.tbl_data_obj = ctab.Table2x2.from_data(self.data)
 
     def test_oddsratio(self):
         assert_allclose(self.tbl_obj.oddsratio, self.oddsratio)

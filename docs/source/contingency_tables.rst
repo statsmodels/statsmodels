@@ -6,10 +6,10 @@
 Contingency tables
 ==================
 
-Statsmodels supports many standard approaches for analyzing
-contingency tables, including methods for assessing independence,
-symmetry, homogeneity, and methods for working with collections of
-tables from a stratified population.
+Statsmodels supports a variety of approaches for analyzing contingency
+tables, including methods for assessing independence, symmetry,
+homogeneity, and methods for working with collections of tables from a
+stratified population.
 
 .. note::
 
@@ -31,7 +31,7 @@ second variable.  Note that each variable must have a finite number of
 levels (or categories), which can be either ordered or unordered.  In
 different contexts, the variables defining the axes of a contingency
 table may be called **categorical variables** or **factor variables**.
-They also may be either **nominal** (if their levels are unordered) or
+They may be either **nominal** (if their levels are unordered) or
 **ordinal** (if their levels are ordered).
 
 The underlying population for a contingency table is described by a
@@ -51,7 +51,8 @@ contingency table cell counts:
     import pandas as pd
     import statsmodels.api as sm
 
-    df = pd.read_csv('http://vincentarelbundock.github.io/Rdatasets/csv/vcd/Arthritis.csv')
+    df = sm.datasets.get_rdataset("Arthritis", "vcd").data
+
     tab = pd.crosstab(df['Treatment'], df['Improved'])
     table = sm.stats.Table(tab)
 
@@ -60,8 +61,7 @@ construct the array of cell counts for us:
 
 .. ipython:: python
 
-    df = pd.read_csv('http://vincentarelbundock.github.io/Rdatasets/csv/vcd/Arthritis.csv')
-    table = sm.stats.Table.from_data('Treatment', 'Improved', df)
+    table = sm.stats.Table.from_data(df[["Treatment", "Improved"]])
 
 
 Independence
@@ -87,9 +87,11 @@ that most strongly violate independence:
     print(table.pearson_resids)
 
 In this example, compared to a sample from a population in which the
-rows and columns are independent, we have too few observations in
-cells (0, 0) and (1, 1), and too many observations in cells (0, 1) and
-(1, 0).
+rows and columns are independent, we have too many observations in the
+placebo/no improvement and treatment/marked improvement cells, and too
+few observations in the placebo/marked improvement and treated/no
+improvement cells.  This reflects the apparent benefits of the
+treatment.
 
 If the rows and columns of a table are unordered (i.e. are nominal
 factors), then the most common approach for formally assessing
@@ -149,37 +151,44 @@ To illustrate, we load a data set, create a contingency table, and
 calculate the row and column margins.  The :class:`Table` class
 contains methods for analyzing :math:`r \times c` contingency tables.
 The data set loaded in the next cell contains assessments of visual
-acuity in people's left and right eyes.
+acuity in people's left and right eyes.  We first load the data and
+create a contingency table.
 
 .. ipython:: python
 
-    data = sm.datasets.vision_ordnance.load()
-    df = data.data
+    df = sm.datasets.get_rdataset("VisualAcuity", "vcd").data
+    df = df.loc[df.gender == "female", :]
     tab = df.set_index(['left', 'right'])
+    del tab["gender"]
     tab = tab.unstack()
+    tab.columns = tab.columns.get_level_values(1)
     print(tab)
-    tab_obj = sm.stats.Table(tab)
-    row, col = tab_obj.marginal_probabilities
+
+Next we create a :class:`SquareTable` object from the contingency
+table.
+
+.. ipython:: python
+
+    stab = sm.stats.SquareTable(tab)
+    row, col = stab.marginal_probabilities
     print(row)
     print(col)
 
-One way to obtain the homogeneity and symmetry test results is to
-create a :class:`SquareTable` object from the contingency table.
+
+The ``summary`` method prints results for the symmetry and homogeneity
+testing procedures.
 
 .. ipython:: python
 
-    st = sm.stats.SquareTable(tab)
     print(st.summary())
 
-If we have the individual case records in a DataFrame called `data`,
-then we can perform the same analysis by passing the raw data using
-the ``SquareTable.from_data`` classmethod.  In this case, we also
-need to pass the names of the columns of `data` that contain the row
-and column factors.
+Since we have the individual case records, we can also perform the
+same analysis by passing the raw data using the
+``SquareTable.from_data`` class method.
 
-::
+.. ipython:: python
 
-    st = sm.stats.SquareTable.from_data('left', 'right', data)
+    st = sm.stats.SquareTable.from_data(df[['left', 'right']])
     print(st.summary())
 
 

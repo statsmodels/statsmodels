@@ -42,6 +42,9 @@ def _handle_pandas_square(table):
         table = table.reindex(ix, axis=0)
         table = table.reindex(ix, axis=1)
 
+    # Ensures that the roes and columns are in the same order.
+    table = table.reindex(table.columns)
+
     return table
 
 
@@ -545,29 +548,24 @@ class Table2x2(SquareTable):
 
 
     @classmethod
-    def from_data(cls, var1, var2, data, shift_zeros=True):
+    def from_data(cls, data, shift_zeros=True):
         """
         Construct a Table object from data.
 
         Parameters
         ----------
-        var1 : string
-            Name or column index of the first variable, defining the
-            rows.
-        var2 : string
-            Name or column index of the first variable, defining the
-            columns.
         data : array-like
-            The raw data.
+            The raw data, the first column defines the rows and the
+            second column defines the columns.
         shift_zeros : boolean
             If True, and if there are any zeros in the contingency
             table, add 0.5 to all four cells of the table.
         """
 
         if isinstance(data, pd.DataFrame):
-            table = pd.crosstab(data.loc[:, var1], data.loc[:, var2])
+            table = pd.crosstab(data.iloc[:, 0], data.iloc[:, 1])
         else:
-            table = pd.crosstab(data[:, var1], data[:, var2])
+            table = pd.crosstab(data[:, 0], data[:, 1])
         return cls(table, shift_zeros)
 
 
