@@ -186,7 +186,7 @@ def test_funhess():
 
 
 
-def get_map(params, cov_re, scale):
+def get_map(params, cov_re, scale, omethod):
     """
     Obtain the MAP predictor of the random effects.
 
@@ -210,10 +210,10 @@ def get_map(params, cov_re, scale):
 
     x0 = np.zeros(n)
 
-    result = scipy.optimize.minimize(fun, x0, jac=True, method='Newton-CG')
-    
-    print(result)
+    result = scipy.optimize.minimize(fun, x0, jac=True, method=omethod)
 
+    print(result)
+    
     if not result.success:
         print("OPTIMIZATION FAILED")
         1/0
@@ -222,7 +222,7 @@ def get_map(params, cov_re, scale):
     return mp
 
 
-def laplace(params, cov_re, scale):
+def laplace(params, cov_re, scale, omethod='L-BFGS-B'):
     """
     Evaluate the marginal log-likelihood.
 
@@ -241,7 +241,7 @@ def laplace(params, cov_re, scale):
 
     """
 
-    mp = get_map(params, cov_re, scale)
+    mp = get_map(params, cov_re, scale, omethod)
 
     f, h = funhess(mp, params, cov_re, scale)
 
@@ -253,8 +253,11 @@ def laplace(params, cov_re, scale):
 params = np.ones(k_fe)
 cov_re = np.random.normal(size=(2, 2))
 cov_re = np.dot(cov_re.T, cov_re)
-scale = 1.1
+scale = 1.
 mp = laplace(params, cov_re, scale)
+scale = 5.
+mp = laplace(params, cov_re, scale)
+
 
 
 
