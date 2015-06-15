@@ -123,6 +123,33 @@ these scores are set to the sequences 0, 1, ....  This gives the
     rslt = table.ordinal_association()
     print(rslt.pvalue)
 
+We can assess the association in a :math:`r\times x` table by
+constructing a series of :math:`2\times 2` tables and calculating
+their odds ratios.  There are two ways to do this.  The **local odds
+ratios** construct :math:`2\times 2` tables from adjacent row and
+column categories.
+
+.. ipython:: python
+
+    print(table.local_oddsratios)
+    taloc = sm.stats.Table2x2(np.asarray([[7, 29], [21, 13]]))
+    print(taloc.oddsratio)
+    taloc = sm.stats.Table2x2(np.asarray([[29, 7], [13, 7]]))
+    print(taloc.oddsratio)
+
+The **cumulative odds ratios** construct :math:`2\times 2` tables by
+dichotomizing the row and column factors at each possible point.
+
+.. ipython:: python
+
+    print(table.cumulative_oddsratios)
+    tab1 = np.asarray([[7, 29 + 7], [21, 13 + 7]])
+    tacum = sm.stats.Table2x2(tab1)
+    print(tacum.oddsratio)
+    tab1 = np.asarray([[7 + 29, 7], [21 + 13, 7]])
+    tacum = sm.stats.Table2x2(tab1)
+    print(tacum.oddsratio)
+
 A mosaic plot is a graphical approach to informally assessing
 dependence in two-way tables.
 
@@ -150,9 +177,9 @@ be identical and must occur in the same order.
 To illustrate, we load a data set, create a contingency table, and
 calculate the row and column margins.  The :class:`Table` class
 contains methods for analyzing :math:`r \times c` contingency tables.
-The data set loaded in the next cell contains assessments of visual
-acuity in people's left and right eyes.  We first load the data and
-create a contingency table.
+The data set loaded below contains assessments of visual acuity in
+people's left and right eyes.  We first load the data and create a
+contingency table.
 
 .. ipython:: python
 
@@ -169,8 +196,8 @@ table.
 
 .. ipython:: python
 
-    stab = sm.stats.SquareTable(tab)
-    row, col = stab.marginal_probabilities
+    sqtab = sm.stats.SquareTable(tab)
+    row, col = sqtab.marginal_probabilities
     print(row)
     print(col)
 
@@ -180,16 +207,16 @@ testing procedures.
 
 .. ipython:: python
 
-    print(st.summary())
+    print(sqtab.summary())
 
-Since we have the individual case records, we can also perform the
-same analysis by passing the raw data using the
-``SquareTable.from_data`` class method.
+If we had the individual case records in a dataframe called ``data``,
+we could also perform the same analysis by passing the raw data using
+the ``SquareTable.from_data`` class method.
 
-.. ipython:: python
+::
 
-    st = sm.stats.SquareTable.from_data(df[['left', 'right']])
-    print(st.summary())
+    sqtab = sm.stats.SquareTable.from_data(data[['left', 'right']])
+    print(sqtab.summary())
 
 
 A single 2x2 table
@@ -198,13 +225,21 @@ A single 2x2 table
 Several methods for working with individual 2x2 tables are provided in
 the :class:`sm.stats.Table2x2` class.  The ``summary`` method displays
 several measures of association between the rows and columns of the
-table.  Note that the risk ratio is not symmetric so different results
-will be obtained if the transposed table is analyzed.
+table.
 
 .. ipython:: python
 
     table = np.asarray([[35, 21], [25, 58]])
     t22 = sm.stats.Table2x2(table)
+    print(t22.summary())
+
+Note that the risk ratio is not symmetric so different results will be
+obtained if the transposed table is analyzed.
+
+.. ipython:: python
+
+    table = np.asarray([[35, 21], [25, 58]])
+    t22 = sm.stats.Table2x2(table.T)
     print(t22.summary())
 
 
@@ -218,11 +253,13 @@ smoking and lung cancer in each of several regions of China.  It is
 possible that the tables all have a common odds ratio, even while the
 marginal probabilities vary among the strata.  The 'Breslow-Day'
 procedure tests whether the data are consistent with a common odds
-ratio, and the Mantel-Haenszel procedure tests whether this common
-odds ratio is equal to zero.  It is also possible to estimate the
-common odds and risk ratios and obtain confidence intervals for them.
-The ``summary`` method displays all of these results.  Individual
-results can be obtained from the class methods and attributes.
+ratio.  It appears below as the `Test of constant OR`.  The
+Mantel-Haenszel procedure tests whether this common odds ratio is
+equal to one.  It appears below as the `Test of OR=1`.  It is also
+possible to estimate the common odds and risk ratios and obtain
+confidence intervals for them.  The ``summary`` method displays all of
+these results.  Individual results can be obtained from the class
+methods and attributes.
 
 .. ipython:: python
 

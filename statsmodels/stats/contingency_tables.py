@@ -291,8 +291,8 @@ class Table(object):
         rslt[0:-1, 0:-1] = tab
 
         if isinstance(self.table_orig, pd.DataFrame):
-            rslt = pd.DataFrame(rslt, index=self.table.index,
-                                columns=self.table.columns)
+            rslt = pd.DataFrame(rslt, index=self.table_orig.index,
+                                columns=self.table_orig.columns)
 
         return rslt
 
@@ -313,9 +313,9 @@ class Table(object):
         """
         Returns the cumulative log odds ratios.
 
-        The cumulative log odds ratios are calculated by reducing the
-        table to a 2x2 table based on cutting the rows and columns at
-        a given point.
+        The cumulative log odds ratio at a given pair of thresholds is
+        calculated by reducing the table to a 2x2 table based on
+        dichotomizing the rows and columns.
         """
 
         ta = self.table.cumsum(0).cumsum(1)
@@ -331,8 +331,8 @@ class Table(object):
         rslt[0:-1, 0:-1] = tab
 
         if isinstance(self.table_orig, pd.DataFrame):
-            rslt = pd.DataFrame(rslt, index=self.table.index,
-                                columns=self.table.columns)
+            rslt = pd.DataFrame(rslt, index=self.table_orig.index,
+                                columns=self.table_orig.columns)
 
         return rslt
 
@@ -402,7 +402,7 @@ class SquareTable(Table):
         -----
         The implementation is based on the SAS documentation. R includes
         it in `mcnemar.test` if the table is not 2 by 2.  However a more
-        direct generalization of the McNemar test to large tables is
+        direct generalization of the McNemar test to larger tables is
         provided by the homogeneity test (TableSymmetry.homogeneity).
 
         The p-value is based on the chi-square distribution which requires
