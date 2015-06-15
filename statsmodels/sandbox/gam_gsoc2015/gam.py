@@ -201,6 +201,7 @@ class GamPenalty(Penalty):
         self.alpha = alpha
         self.cov_der2 = cov_der2
         self.der2 = der2
+        self.n_samples = der2.shape[0]
     
     def func(self, params):
         ''' 
@@ -211,7 +212,7 @@ class GamPenalty(Penalty):
         # The second derivative of the estimated regression function
         f = np.dot(self.der2, params)
 
-        return self.alpha * np.sum(f**2)
+        return self.alpha * np.sum(f**2) / self.n_samples
 
     def grad(self, params):
         ''' 
@@ -220,11 +221,11 @@ class GamPenalty(Penalty):
         3) cov_der2 is obtained as np.dot(der2.T, der2)
         '''
                 
-        return 2 * self.alpha * np.dot(self.cov_der2, params) 
+        return 2 * self.alpha * np.dot(self.cov_der2, params) / self.n_samples
     
     def deriv2(self, params):
 
-        return 2 * self.alpha * self.cov_der2
+        return 2 * self.alpha * self.cov_der2 / self.n_samples
 
 
  
