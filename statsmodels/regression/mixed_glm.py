@@ -68,7 +68,7 @@ class MixedGLMParams(object):
 
     def from_packed(params, k_fe, k_re, use_sqrt, with_fe):
         """
-        Create a MixedLMParams object from packed parameter vector.
+        Create a MixedGLMParams object from packed parameter vector.
 
         Parameters
         ----------
@@ -89,7 +89,7 @@ class MixedGLMParams(object):
 
         Returns
         -------
-        A MixedLMParams object.
+        A MixedGLMParams object.
         """
         k_re2 = int(k_re * (k_re + 1) / 2)
 
@@ -99,7 +99,7 @@ class MixedGLMParams(object):
         else:
             k_vc = len(params) - k_re2
 
-        pa = MixedLMParams(k_fe, k_re, k_vc)
+        pa = MixedGLMParams(k_fe, k_re, k_vc)
 
         cov_re = np.zeros((k_re, k_re))
         ix = pa._ix
@@ -130,7 +130,7 @@ class MixedGLMParams(object):
 
     def from_components(fe_params=None, cov_re=None, cov_re_sqrt=None, vcomp=None):
         """
-        Create a MixedLMParams object from each parameter component.
+        Create a MixedGLMParams object from each parameter component.
 
         Parameters
         ----------
@@ -149,7 +149,7 @@ class MixedGLMParams(object):
 
         Returns
         -------
-        A MixedLMParams object.
+        A MixedGLMParams object.
         """
 
         if vcomp is None:
@@ -163,7 +163,7 @@ class MixedGLMParams(object):
         k_vc = len(vcomp)
         k_re = cov_re.shape[0] if cov_re is not None else cov_re_sqrt.shape[0]
 
-        pa = MixedLMParams(k_fe, k_re, k_vc)
+        pa = MixedGLMParams(k_fe, k_re, k_vc)
         pa.fe_params = fe_params
         if cov_re_sqrt is not None:
             pa.cov_re = np.dot(cov_re_sqrt, cov_re_sqrt.T)
@@ -180,7 +180,7 @@ class MixedGLMParams(object):
         """
         Returns a copy of the object.
         """
-        obj = MixedLMParams(self.k_fe, self.k_re, self.k_vc)
+        obj = MixedGLMParams(self.k_fe, self.k_re, self.k_vc)
         obj.fe_params = self.fe_params.copy()
         obj.cov_re = self.cov_re.copy()
         obj.vcomp = self.vcomp.copy()
@@ -347,21 +347,21 @@ class MixedGLM(base.LikelihoodModel):
     ``exog`` and a random intercept for each distinct value of
     ``group``:
 
-    >>> model = sm.MixedLM(endog, exog, groups)
+    >>> model = sm.MixedGLM(endog, exog, groups)
     >>> result = model.fit()
 
     A mixed model with fixed effects for the columns of ``exog`` and
     correlated random coefficients for the columns of ``exog_re``:
 
-    >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
+    >>> model = sm.MixedGLM(endog, exog, groups, exog_re=exog_re)
     >>> result = model.fit()
 
     A mixed model with fixed effects for the columns of ``exog`` and
     independent random coefficients for the columns of ``exog_re``:
 
-    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]),
+    >>> free = MixedGLMParams.from_components(fe_params=np.ones(exog.shape[1]),
                      cov_re=np.eye(exog_re.shape[1]))
-    >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
+    >>> model = sm.MixedGLM(endog, exog, groups, exog_re=exog_re)
     >>> result = model.fit(free=free)
 
     A different way to specify independent random coefficients for the
@@ -373,18 +373,18 @@ class MixedGLM(base.LikelihoodModel):
     >>> vc = {}
     >>> vc['1'] = {k : exog_re.loc[g[k], 0] for k in g}
     >>> vc['2'] = {k : exog_re.loc[g[k], 1] for k in g}
-    >>> model = sm.MixedLM(endog, exog, groups, vcomp=vc)
+    >>> model = sm.MixedGLM(endog, exog, groups, vcomp=vc)
     >>> result = model.fit()
     """
 
-    def __init__(self, endog, exog, groups, exog_re=None,
+    def __init__(self, endog, exog, groups, family=None, exog_re=None,
                  exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
         _allowed_kwargs = ["missing_idx", "design_info", "formula"]
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
-                raise ValueError("argument %s not permitted for MixedLM initialization" % x)
+                raise ValueError("argument %s not permitted for MixedGLM initialization" % x)
 
         self.use_sqrt = use_sqrt
 
@@ -411,7 +411,7 @@ class MixedGLM(base.LikelihoodModel):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        super(MixedLM, self).__init__(endog, exog, groups=groups,
+        super(MixedGLM, self).__init__(endog, exog, groups=groups,
                                       exog_re=exog_re, missing=missing,
                                       **kwargs)
 
@@ -613,7 +613,7 @@ class MixedGLM(base.LikelihoodModel):
         the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
+        >>> MixedGLM.from_formula('test_score ~ age', vc_formula=vc,
                                   re_formula='1', groups='school', data=data)
 
         Now suppose we also have a previous test score called
@@ -622,7 +622,7 @@ class MixedGLM(base.LikelihoodModel):
         specify a random slope for the pretest score
 
         >>> vc = {'classroom': '0 + C(classroom)', 'pretest': '0 + pretest'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        >>> MixedGLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
                                   re_formula='1', groups='school', data=data)
 
         The following model is almost equivalent to the previous one,
@@ -630,13 +630,13 @@ class MixedGLM(base.LikelihoodModel):
         be correlated.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        >>> MixedGLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
                                   re_formula='1 + pretest', groups='school',
                                   data=data)
         """
 
         if "groups" not in kwargs.keys():
-            raise AttributeError("'groups' is a required keyword argument in MixedLM.from_formula")
+            raise AttributeError("'groups' is a required keyword argument in MixedGLM.from_formula")
 
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
@@ -694,7 +694,7 @@ class MixedGLM(base.LikelihoodModel):
         else:
             exog_vc = None
 
-        mod = super(MixedLM, cls).from_formula(formula, data,
+        mod = super(MixedGLM, cls).from_formula(formula, data,
                                                subset=None,
                                                exog_re=exog_re,
                                                exog_vc=exog_vc,
@@ -721,7 +721,7 @@ class MixedGLM(base.LikelihoodModel):
         ----------
         params : array-like
             Parameters of a mixed linear model.  Can be either a
-            MixedLMParams instance, or a vector containing the packed
+            MixedGLMParams instance, or a vector containing the packed
             model parameters in which the fixed effects parameters are
             at the beginning of the vector, or a vector containing
             only the fixed effects parameters.
@@ -737,7 +737,7 @@ class MixedGLM(base.LikelihoodModel):
         if exog is None:
             exog = self.exog
 
-        if isinstance(params, MixedLMParams):
+        if isinstance(params, MixedGLMParams):
             params = params.fe_params
         else:
             params = params[0:self.k_fe]
@@ -793,7 +793,7 @@ class MixedGLM(base.LikelihoodModel):
 
         Returns
         -------
-        A MixedLMResults instance containing the results.
+        A MixedGLMResults instance containing the results.
 
         Notes
         -----
@@ -896,9 +896,9 @@ class MixedGLM(base.LikelihoodModel):
         hess1 = hess[ii, :][:, ii]
         pcov[np.ix_(ii,ii)] = np.linalg.inv(-hess1)
 
-        params_object = MixedLMParams.from_components(fe_params, cov_re=cov_re)
+        params_object = MixedGLMParams.from_components(fe_params, cov_re=cov_re)
 
-        results = MixedLMResults(self, params_prof, pcov / scale)
+        results = MixedGLMResults(self, params_prof, pcov / scale)
         results.params_object = params_object
         results.fe_params = fe_params
         results.cov_re = cov_re
@@ -912,7 +912,7 @@ class MixedGLM(base.LikelihoodModel):
         results.k_re2 = self.k_re2
         results.k_vc = self.k_vc
 
-        return MixedLMResultsWrapper(results)
+        return MixedGLMResultsWrapper(results)
 
 
     def get_fe_params(self, cov_re, vcomp):
@@ -1078,7 +1078,7 @@ class MixedGLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams, or array-like.
+        params : MixedGLMParams, or array-like.
             The parameter value.  If array-like, must be a packed
             parameter vector containing only the covariance
             parameters.
@@ -1095,10 +1095,10 @@ class MixedGLM(base.LikelihoodModel):
         The scale parameter `scale` is always profiled out of the
         log-likelihood.  In addition, if `profile_fe` is true the
         fixed effects parameters are also profiled out.
-        """
+        """        
 
-        if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe,
+        if type(params) is not MixedGLMParams:
+            params = MixedGLMParams.from_packed(params, self.k_fe,
                                                self.k_re, self.use_sqrt,
                                                with_fe=False)
 
@@ -1230,8 +1230,8 @@ class MixedGLM(base.LikelihoodModel):
         `use_sqrt` attribute.
         """
 
-        if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe,
+        if type(params) is not MixedGLMParams:
+            params = MixedGLMParams.from_packed(params, self.k_fe,
                                                self.k_re, self.use_sqrt,
                                                with_fe=False)
 
@@ -1265,7 +1265,7 @@ class MixedGLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array-like
+        params : MixedGLMParams or array-like
             The parameter at which the score function is evaluated.
             If array-like, must contain the packed random effects
             parameters (cov_re and vcomp) without fe_params.
@@ -1420,7 +1420,7 @@ class MixedGLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array-like
+        params : MixedGLMParams or array-like
             The model parameters.  If array-like must contain packed
             parameters that are compatible with this model instance.
         calc_fe : boolean
@@ -1467,7 +1467,7 @@ class MixedGLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array-like
+        params : MixedGLMParams or array-like
             The model parameters at which the Hessian is calculated.
             If array-like, must contain the packed parameters in a
             form that is compatible with this model instance.
@@ -1478,8 +1478,8 @@ class MixedGLM(base.LikelihoodModel):
             The Hessian matrix, evaluated at `params`.
         """
 
-        if type(params) is not MixedLMParams:
-            params = MixedLMParams.from_packed(params, self.k_fe, self.k_re,
+        if type(params) is not MixedGLMParams:
+            params = MixedGLMParams.from_packed(params, self.k_fe, self.k_re,
                                                use_sqrt=self.use_sqrt,
                                                with_fe=True)
 
@@ -1636,6 +1636,8 @@ class MixedGLM(base.LikelihoodModel):
             The estimated error variance.
         """
 
+        print(fe_params)
+
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
@@ -1672,49 +1674,15 @@ class MixedGLM(base.LikelihoodModel):
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
             full_output=False, method='bfgs', **kwargs):
         """
-        Fit a linear mixed model to the data.
-
-        Parameters
-        ----------
-        start_params: array-like or MixedLMParams
-            Starting values for the profile log-likeihood.  If not a
-            `MixedLMParams` instance, this should be an array
-            containing the packed parameters for the profile
-            log-likelihood, including the fixed effects
-            parameters.
-        reml : bool
-            If true, fit according to the REML likelihood, else
-            fit the standard likelihood using ML.
-        cov_pen : CovariancePenalty object
-            A penalty for the random effects covariance matrix
-        fe_pen : Penalty object
-            A penalty on the fixed effects
-        free : MixedLMParams object
-            If not `None`, this is a mask that allows parameters to be
-            held fixed at specified values.  A 1 indicates that the
-            correspondinig parameter is estimated, a 0 indicates that
-            it is fixed at its starting value.  Setting the `cov_re`
-            component to the identity matrix fits a model with
-            independent random effects.  Note that some optimization
-            methods do not respect this contraint (bfgs and lbfgs both
-            work).
-        full_output : bool
-            If true, attach iteration history to results
-        method : string
-            Optimization method.
-
-        Returns
-        -------
-        A MixedLMResults instance.
         """
 
         _allowed_kwargs = ['gtol', 'maxiter']
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
-                raise ValueError("Argument %s not allowed for MixedLM.fit" % x)
+                raise ValueError("Argument %s not allowed for MixedGLM.fit" % x)
 
         if method.lower() in ["newton", "ncg"]:
-            raise ValueError("method %s not available for MixedLM" % method)
+            raise ValueError("method %s not available for MixedGLM" % method)
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -1730,15 +1698,15 @@ class MixedGLM(base.LikelihoodModel):
         success = False
 
         if start_params is None:
-            params = MixedLMParams(self.k_fe, self.k_re, self.k_vc)
+            params = MixedGLMParams(self.k_fe, self.k_re, self.k_vc)
             params.fe_params = np.zeros(self.k_fe)
             params.cov_re = np.eye(self.k_re)
             params.vcomp = np.ones(self.k_vc)
         else:
-            if isinstance(start_params, MixedLMParams):
+            if isinstance(start_params, MixedGLMParams):
                 params = start_params
             else:
-                params = MixedLMParams.from_packed(start_params, self.k_fe,
+                params = MixedGLMParams.from_packed(start_params, self.k_fe,
                                                    self.k_re, self.use_sqrt,
                                                    with_fe=True)
 
@@ -1747,7 +1715,7 @@ class MixedGLM(base.LikelihoodModel):
             if "disp" not in kwargs:
                 kwargs["disp"] = False
             packed = params.get_packed(use_sqrt=self.use_sqrt, with_fe=False)
-            rslt = super(MixedLM, self).fit(start_params=packed,
+            rslt = super(MixedGLM, self).fit(start_params=packed,
                                             skip_hessian=True,
                                             method=method,
                                             **kwargs)
@@ -1765,7 +1733,7 @@ class MixedGLM(base.LikelihoodModel):
         # Convert to the final parameterization (i.e. undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
-        params = MixedLMParams.from_packed(params, self.k_fe, self.k_re,
+        params = MixedGLMParams.from_packed(params, self.k_fe, self.k_re,
                                            use_sqrt=self.use_sqrt, with_fe=False)
         cov_re_unscaled = params.cov_re
         vcomp_unscaled = params.vcomp
@@ -1802,7 +1770,7 @@ class MixedGLM(base.LikelihoodModel):
 
         # Prepare a results class instance
         params_packed = params.get_packed(use_sqrt=False, with_fe=True)
-        results = MixedLMResults(self, params_packed, pcov / scale)
+        results = MixedGLMResults(self, params_packed, pcov / scale)
         results.params_object = params
         results.fe_params = fe_params
         results.cov_re = cov_re
@@ -1821,14 +1789,14 @@ class MixedGLM(base.LikelihoodModel):
         results.use_sqrt = self.use_sqrt
         results.freepat = self._freepat
 
-        return MixedLMResultsWrapper(results)
+        return MixedGLMResultsWrapper(results)
 
 
 class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
     '''
     Class to contain results of fitting a linear mixed effects model.
 
-    MixedLMResults inherits from statsmodels.LikelihoodModelResults
+    MixedGLMResults inherits from statsmodels.LikelihoodModelResults
 
     Parameters
     ----------
@@ -1859,7 +1827,7 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     def __init__(self, model, params, cov_params):
 
-        super(MixedLMResults, self).__init__(model, params,
+        super(MixedGLMResults, self).__init__(model, params,
                                              normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
         self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
@@ -2007,7 +1975,7 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
         r_matrix = np.concatenate((r_matrix, z0), axis=1)
-        tst_rslt = super(MixedLMResults, self).t_test(r_matrix, scale=scale, use_t=use_t)
+        tst_rslt = super(MixedGLMResults, self).t_test(r_matrix, scale=scale, use_t=use_t)
         return tst_rslt
 
 
@@ -2046,7 +2014,7 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
         smry = summary2.Summary()
 
         info = OrderedDict()
-        info["Model:"] = "MixedLM"
+        info["Model:"] = "MixedGLM"
         if yname is None:
             yname = self.model.endog_names
         info["No. Observations:"] = str(self.model.n_totobs)
@@ -2224,7 +2192,7 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
         rvalues = np.concatenate((left, right))
 
         # Indicators of which parameters are free and fixed.
-        free = MixedLMParams(k_fe, k_re, k_vc)
+        free = MixedGLMParams(k_fe, k_re, k_vc)
         if self.freepat is None:
             free.fe_params = np.ones(k_fe)
             vcomp = np.ones(k_vc)

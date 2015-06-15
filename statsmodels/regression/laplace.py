@@ -71,14 +71,14 @@ def gen_fungrad(params, cov_re, scale):
         ref = np.reshape(ref, (n_groups, k_re))
 
         s = np.linalg.solve(cov_re, ref.T)
-        f = -(ref.T * s).sum() / 2
+        f = -(ref.T * s).sum() / 2 # r.e. log likelihood
 
         d = np.zeros((n_groups, k_re))
 
         for k, g in enumerate(ugroups):
-            lin_predr = lin_pred[k] + np.dot(exog_re_split[k], ref[k, :])
-            mean = family.fitted(lin_predr)
-            f += family.loglike(endog_split[k], mean)
+            lin_predr = lin_pred[k] + np.dot(exog_re_split[k], ref[k, :]) # eta_i
+            mean = family.fitted(lin_predr) # mu_i = h(eta_i)
+            f += family.loglike(endog_split[k], mean,scale=scale)
 
             d[k, :] = ((endog_split[k] - mean)[:, None] * exog_re_split[k] / scale).sum(0)
             d[k, :] -= s[:, k]
@@ -148,7 +148,7 @@ def funhess(ref, params, cov_re, scale):
     for k, g in enumerate(ugroups):
         lin_predr = lin_pred[k] + np.dot(exog_re_split[k], ref[k, :])
         mean = family.fitted(lin_predr)
-        f += family.loglike(endog_split[k], mean)
+        f += family.loglike(endog_split[k], mean,scale=scale)
         va = family.variance(mean)
         hmat = va[:, None] * exog_re_split[k]
         hmat = np.dot(exog_re_split[k].T, hmat)
@@ -210,9 +210,12 @@ def get_map(params, cov_re, scale):
 
     x0 = np.zeros(n)
 
-    result = scipy.optimize.minimize(fun, x0, jac=True)
+    result = scipy.optimize.minimize(fun, x0, jac=True, method='Newton-CG')
+    
+    print(result)
 
     if not result.success:
+        print("OPTIMIZATION FAILED")
         1/0
 
     mp = np.reshape(result.x, (n_groups, k_re))
@@ -244,13 +247,13 @@ def laplace(params, cov_re, scale):
 
     d = len(mp)
     ival = np.exp(-f) * (2 * np.pi)**(d / 2) / np.sqrt(np.exp(h))
-    1/0
+    return(ival)
 
 
 params = np.ones(k_fe)
 cov_re = np.random.normal(size=(2, 2))
 cov_re = np.dot(cov_re.T, cov_re)
-scale = 1
+scale = 1.1
 mp = laplace(params, cov_re, scale)
 
 
