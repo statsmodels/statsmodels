@@ -220,9 +220,12 @@ def logdet_symm(m, check_symm=False):
     return 2*np.sum(np.log(c.diagonal()))
 
 
-def toeplitz_solve(r, b):
+def stationary_solve(r, b):
     """
     Solve a linear system for a Toeplitz correlation matrix.
+
+    A Toeplitz correlation matrix represents the covariance of a
+    stationary series with unit variance.
 
     Parameters
     ----------

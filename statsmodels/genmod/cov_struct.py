@@ -616,10 +616,10 @@ class Stationary(CovStruct):
         if self.grid == False:
             return super(Stationary, self).covariance_matrix_solve(expval, index, stdev, rhs)
 
-        from statsmodels.tools.linalg import toeplitz_solve
+        from statsmodels.tools.linalg import stationary_solve
         r = np.zeros(len(expval))
         r[0:self.max_lag] = self.dep_params
-        return [toeplitz_solve(r, x) for x in rhs]
+        return [stationary_solve(r, x) for x in rhs]
 
 
     update.__doc__ = CovStruct.update.__doc__
