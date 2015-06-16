@@ -48,6 +48,8 @@ marks.bzr
 # Mac droppings
 .DS_Store
 help
+# idea pycharm
+.idea/
 
 # Project specific
 statsmodels/version.py
@@ -58,3 +60,4 @@ hash_dict.pickle
 rehab.table
 salary.table
 .ipynb_checkpoints
+
