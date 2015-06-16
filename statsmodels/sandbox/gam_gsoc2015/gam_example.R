@@ -1,21 +1,28 @@
 ## This files contains the R code to generate some test for the GAM function ##
 ## Documentation for MGCV is available at: http://cran.r-project.org/web/packages/mgcv/mgcv.pdf
 
-#library('mgcv')
-library('gam')
-n = 200
-x = seq(from = 0, to = 1, length.out = n)
-y = x * x * x - x + rnorm(n = n,mean = 0, sd = 0.01)
+library('mgcv')
+#library('gam')
+n = 10000
+x = seq(from = -1, to = 1, length.out = n)
+
+funz = function(x){
+  2 * x * x * x - x
+}
+
+y = funz(x)
 data = data.frame('y'=y, 'x'=x)
 
-degree = 100
-g = gam(y~poly(x = x, degree = degree), data = data)
-pr = glm(y~poly(x = x, degree = degree), data = data)
+s1 = s(x, k = 10, bs = "ps")
+g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
 
 y_gam = predict(g, newdata = data)
-y_glm = predict(pr, newdata = data)
-plot(y_glm, type = 'l', col='red')
-plot(y_gam, type='l', col='blue')
+plot(x, y_gam, type='l', col='blue')
+points(x, y)
 
-points(y)
-  
+new_data = data.frame('x'=seq(from = -1, to = 1, length.out = 100))
+new_data$y = funz(new_data$x)
+
+y_est = predict(g, newdata = new_data)
+plot(new_data$x, y_est)
+points(new_data$x, new_data$y, type='l')

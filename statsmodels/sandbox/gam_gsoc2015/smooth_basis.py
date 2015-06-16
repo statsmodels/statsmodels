@@ -280,12 +280,5 @@ class BS(object):
 
 
 
-bs = stateful_transform(BS)
-
-df = 10
-degree = 4
-x = np.logspace(-1, 1, 30)
-result = bs(x, df=df, degree=degree, include_intercept=True)
-basis, der1, der2 = result   
 
 
