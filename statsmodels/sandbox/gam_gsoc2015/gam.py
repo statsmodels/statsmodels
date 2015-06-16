@@ -31,8 +31,6 @@ class PenalizedMixin(object):
 
         self._init_keys.extend(['penal', 'pen_weight'])
 
-
-
     def loglike(self, params, pen_weight=None):
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -42,7 +40,6 @@ class PenalizedMixin(object):
             llf -= pen_weight * self.penal.func(params)
 
         return llf
-
 
     def loglikeobs(self, params, pen_weight=None):
         if pen_weight is None:
@@ -56,7 +53,6 @@ class PenalizedMixin(object):
 
         return llf
 
-
     def score(self, params, pen_weight=None):
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -66,7 +62,6 @@ class PenalizedMixin(object):
             sc -= pen_weight * self.penal.grad(params)
 
         return sc
-
 
     def scoreobs(self, params, pen_weight=None):
         if pen_weight is None:
@@ -79,7 +74,6 @@ class PenalizedMixin(object):
 
         return sc
 
-
     def hessian_(self, params, pen_weight=None):
         if pen_weight is None:
             pen_weight = self.pen_weight
@@ -89,7 +83,6 @@ class PenalizedMixin(object):
 
         from statsmodels.tools.numdiff import approx_hess
         return approx_hess(params, loglike)
-
 
     def hessian(self, params, pen_weight=None):
         if pen_weight is None:
@@ -104,7 +97,6 @@ class PenalizedMixin(object):
                 hess -= pen_weight * h
 
         return hess
-
 
     def fit(self, method=None, trim=None, **kwds):
         # If method is None, then we choose a default method ourselves
