@@ -13,8 +13,12 @@ funz = function(x){
 y = funz(x)
 data = data.frame('y'=y, 'x'=x)
 
-s1 = s(x, k = 10, bs = "ps")
+# for mgcv
 g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
+
+# for gam
+#g = gam(y~s(x, spar = 2), data = data)
+
 
 y_gam = predict(g, newdata = data)
 plot(x, y_gam, type='l', col='blue')
@@ -24,5 +28,5 @@ new_data = data.frame('x'=seq(from = -1, to = 1, length.out = 100))
 new_data$y = funz(new_data$x)
 
 y_est = predict(g, newdata = new_data)
-plot(new_data$x, y_est)
-points(new_data$x, new_data$y, type='l')
+plot(new_data$x, y_est, ylim=c(-1, 1), type='l')
+points(new_data$x, new_data$y)
