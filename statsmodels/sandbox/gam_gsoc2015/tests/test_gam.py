@@ -1,4 +1,4 @@
-from smooth_basis import make_poly_basis
+from smooth_basis import make_poly_basis, make_bsplines_basis
 from gam import GamPenalty, LogitGam, GLMGam
 import numpy as np
 import statsmodels.api as sm
@@ -55,7 +55,7 @@ def cost_function(params, basis, y, alpha):
     itg = integral(params)
 
     # return the cost function of the GAM for the given polynomial
-    return - loglike + alpha * itg, -loglike, itg
+    return loglike +  alpha * itg, loglike, itg
 
 def test_gam_penalty():
 
@@ -89,25 +89,57 @@ def test_gam_gradient():
 
     return
 
-def test_gam_optimization():
+
+def test_approximation():
     x, y, basis, cov_der2, der2 = sample_data()
-
-    alpha = 1
-    params = np.random.randint(-2, 2, 5)
-    cost, err, itg = cost_function(params, basis, y, alpha)
-
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-    gam_itg = gp.func(params)
-    glm_gam = GLMGam(y, basis, penal = gp)
-    res_glm_gam = glm_gam.fit()
-    gam_loglike = glm_gam.loglike(params)
-
-    print('the values obtained by cost func=', cost, err, itg)
-    print('the values from gam=', gam_loglike, gam_itg )
-
+    alpha = 0
+    for i in range(10):
+        params = np.random.randint(-2, 2, 5)
+        cost, err, itg = cost_function(params, basis, y, alpha)
+        gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+        gam_itg = gp.func(params)
+        glm_gam = GLMGam(y, basis, penal = gp)
+        res_glm_gam = glm_gam.fit(maxiter=1) # TODO: can this fit be removed? It is useless. We just need the log likelihood
+        gam_loglike = glm_gam.loglike(params)
+        assert norm(gam_loglike - err) < 1.e-10, 'erron in the MSE part of the cost function'
     return
 
 
+def test_gam_optimization():
+
+    x, y, _, _, _ = sample_data()
+    df = 10
+    degree = 5
+    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
+
+    print(basis.mean(axis=0), y.mean())
+
+    cov_der2 = np.dot(der2.T, der2)
+
+    alpha = 0.0819
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+
+    glm_gam = GLMGam(y, basis, penal=gp)
+    res_glm_gam = glm_gam.fit(maxiter=10000)
+
+    x_new = np.linspace(-1, 1, 100)
+    y_new = 2 * x_new**3 - x_new
+
+    new_basis, _, _ = make_bsplines_basis(x_new, df=df, degree=degree)
+
+    plt.subplot(2, 1, 1)
+    plt.plot(x, y, '.')
+    plt.plot(x, np.dot(basis, res_glm_gam.params))
+    plt.subplot(2, 1, 2)
+    plt.plot(x_new, y_new, '.')
+    plt.plot(x_new, np.dot(new_basis, res_glm_gam.params))
+
+    plt.show()
+    return
+
+'''
 test_gam_penalty()
 test_gam_gradient()
+test_approximation()
+'''
 test_gam_optimization()

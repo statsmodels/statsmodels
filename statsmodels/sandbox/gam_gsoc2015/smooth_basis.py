@@ -5,7 +5,7 @@ Created on Fri Jun  5 16:32:00 2015
 @author: Luca
 """
 
-## import usefull only for development ##
+## import usefull only for development ## 
 import matplotlib.pyplot as plt
 import pandas as pd
 ########################################
@@ -14,7 +14,7 @@ from patsy.state import stateful_transform
 from patsy.util import have_pandas
 if have_pandas:
     import pandas
-
+       
 ### Obtain b splines from patsy ###
 
 def _R_compat_quantile(x, probs):
@@ -65,16 +65,16 @@ def _eval_bspline_basis(x, knots, degree):
     # Note: there are (len(knots) - order) basis functions.
     n_bases = len(knots) - (degree + 1)
     basis = np.empty((x.shape[0], n_bases), dtype=float)
-    der1_basis = np.empty((x.shape[0], n_bases), dtype=float)
-    der2_basis = np.empty((x.shape[0], n_bases), dtype=float)
-
+    der1_basis = np.empty((x.shape[0], n_bases), dtype=float)    
+    der2_basis = np.empty((x.shape[0], n_bases), dtype=float)    
+    
     for i in range(n_bases):
         coefs = np.zeros((n_bases,))
         coefs[i] = 1
         basis[:, i] = splev(x, (knots, coefs, degree))
         der1_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
         der2_basis[:, i] = splev(x, (knots, coefs, degree), der=2)
-
+        
 
     return basis, der1_basis, der2_basis
 
@@ -108,13 +108,13 @@ def make_poly_basis(x, degree, intercept=True):
     basis = np.zeros(shape=(n_samples, degree+1 - start))
     der_basis = np.zeros(shape=(n_samples, degree+1 - start))
     der2_basis = np.zeros(shape=(n_samples, degree+1 - start))
-
-
+    
+    
     for i in range(start, degree+1 - start):
         basis[:, i] = x**i
         der_basis[:, i] = i * x**(i-1)
-        der2_basis[:, i] = i * (i-1) * x**(i-2)
-
+        der2_basis[:, i] = i * (i-1) * x**(i-2) 
+        
     return basis, der_basis, der2_basis
 
 
@@ -280,10 +280,5 @@ class BS(object):
 
 
 
-bs = stateful_transform(BS)
 
-df = 10
-degree = 4
-x = np.logspace(-1, 1, 30)
-result = bs(x, df=df, degree=degree, include_intercept=True)
-basis, der1, der2 = result
+
