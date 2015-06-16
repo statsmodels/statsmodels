@@ -53,9 +53,9 @@ def cost_function(params, basis, y, alpha):
 
     # this is the vale of the GAM penalty. For the example polynomial
     itg = integral(params)
-    
+
     # return the cost function of the GAM for the given polynomial
-    return - loglike + alpha * itg
+    return - loglike + alpha * itg, -loglike, itg
 
 def test_gam_penalty():
 
@@ -89,15 +89,21 @@ def test_gam_gradient():
 
     return
 
-
 def test_gam_optimization():
     x, y, basis, cov_der2, der2 = sample_data()
 
-    alpha = 0
+    alpha = 1
     params = np.random.randint(-2, 2, 5)
-    cost = cost_function(params, basis, y, alpha)
+    cost, err, itg = cost_function(params, basis, y, alpha)
 
-    print(cost)
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+    gam_itg = gp.func(params)
+    glm_gam = GLMGam(y, basis, penal = gp)
+    res_glm_gam = glm_gam.fit()
+    gam_loglike = glm_gam.loglike(params)
+
+    print('the values obtained by cost func=', cost, err, itg)
+    print('the values from gam=', gam_loglike, gam_itg )
 
     return
 
