@@ -43,6 +43,15 @@ def grad(params):
     grd = grd[::-1]
     return grd / 2
 
+def hessian(params):
+    hess = np.array([[576/5, 0, 32,  0, 0],
+                     [0, 48,  0,  0, 0],
+                     [32,  0,  0,  0, 0],
+                     [0,  0,  0,  0, 0],
+                     [0,  0,  0,  0, 0]])
+    return hess / 2
+
+
 def cost_function(params, basis, y, alpha):
 
     # this should be the MSE or log likelihood value
@@ -57,8 +66,12 @@ def cost_function(params, basis, y, alpha):
     # return the cost function of the GAM for the given polynomial
     return loglike +  alpha * itg, loglike, itg
 
-def test_gam_penalty():
 
+def test_gam_penalty():
+    """
+    test the func method of the gam penalty
+    :return:
+    """
     x, y, basis, cov_der2, der2 = sample_data()
 
     alpha = 1
@@ -69,6 +82,7 @@ def test_gam_penalty():
         gp_score = gp.func(params)
         itg = integral(params)
         assert norm(itg - gp_score) < 1, print(gp_score, itg, params)
+
 
 def test_gam_gradient():
     """
@@ -87,6 +101,26 @@ def test_gam_gradient():
         err = norm(gam_grad - grd) / 5
         assert err < 1, 'the gradients are not matching'
 
+    return
+
+
+def test_gam_hessian():
+    """
+    test the deriv2 method of the gam penalty
+    :return:
+    """
+    x, y, basis, cov_der2, der2 = sample_data()
+    alpha = 1
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+
+    for i in range(10):
+        params = np.random.randint(-2, 2, 5)
+        gam_der2 = gp.deriv2(params)
+        hess = hessian(params)
+        hess = np.flipud(hess)
+        hess = np.fliplr(hess)
+        #print(hess - gam_der2)
+        assert norm(hess - gam_der2)/25 < 1, 'error in the hessian of the GAM. Err=' + str(norm(hess - gam_der2)/25)
     return
 
 
@@ -137,9 +171,10 @@ def test_gam_optimization():
     plt.show()
     return
 
-'''
+# these tests are fine.
 test_gam_penalty()
 test_gam_gradient()
 test_approximation()
-'''
-test_gam_optimization()
+test_gam_hessian()
+
+#test_gam_optimization()
