@@ -43,12 +43,26 @@ def grad(params):
     grd = grd[::-1]
     return grd / 2
 
+def cost_function(params, basis, y, alpha):
+
+    # this should be the MSE or log likelihood value
+    lin_pred = np.dot(basis, params)
+    gaussian = Gaussian()
+    expval = gaussian.link.inverse(lin_pred)
+    loglike = gaussian.loglike(expval, y)
+
+    # this is the vale of the GAM penalty. For the example polynomial
+    itg = integral(params)
+
+    # return the cost function of the GAM for the given polynomial
+    return - loglike + alpha * itg
+
 def test_gam_penalty():
 
     x, y, basis, cov_der2, der2 = sample_data()
 
     alpha = 1
-    gp =GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
 
     for i in range(10):
         params = np.random.randint(-2, 2, 5)
@@ -57,6 +71,10 @@ def test_gam_penalty():
         assert norm(itg - gp_score) < 1, print(gp_score, itg, params)
 
 def test_gam_gradient():
+    """
+    test the gam gradient for the example polynomial
+    :return:
+    """
     x, y, basis, cov_der2, der2 = sample_data()
 
     alpha = 1
@@ -71,17 +89,19 @@ def test_gam_gradient():
 
     return
 
-'''
+
 def test_gam_optimization():
     x, y, basis, cov_der2, der2 = sample_data()
 
-    params = np.array([1]*5)
-    lin_pred = np.dot(basis, params)
-    gaussian = Gaussian()
-    expval = gaussian.link.inverse(lin_pred)
-    mse = gaussian.loglike(expval, y)
+    alpha = 0
+    params = np.random.randint(-2, 2, 5)
+    cost = cost_function(params, basis, y, alpha)
+
+    print(cost)
+
+    return
+
 
 test_gam_penalty()
 test_gam_gradient()
 test_gam_optimization()
-'''
