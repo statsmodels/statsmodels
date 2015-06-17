@@ -1,10 +1,11 @@
 from smooth_basis import make_poly_basis, make_bsplines_basis
-from gam import GamPenalty, GLMGam, MultivariateGamPenalty
+from gam import GamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
 import numpy as np
 import pandas as pd
 from statsmodels.genmod.families.family import Gaussian
 from numpy.linalg import norm
 from scipy.linalg import block_diag
+import matplotlib.pyplot as plt
 
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
@@ -135,30 +136,72 @@ def test_approximation():
     return
 
 
-def test_gam_optimization():
+def test_gam_glm():
 
-    x, y, _, _, _ = sample_data()
+    data_from_r = pd.read_csv('results/prediction_from_mgcv.csv')
+    # dataset used to train the R model
+    x = data_from_r.x
+    y = data_from_r.y
+
     df = 10
     degree = 5
     basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
     cov_der2 = np.dot(der2.T, der2)
 
-    data_from_r = pd.read_csv('prediction_from_mgcv.csv')
-    x_new = data_from_r.x
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
-    y_new = data_from_r.y
-    new_basis, _, _ = make_bsplines_basis(x_new, df=df, degree=degree)
 
-    alpha = 0.0817299999
+    alpha = 0.05
     gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
     glm_gam = GLMGam(y, basis, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)
-    y_gam = np.dot(new_basis, res_glm_gam.params)
+    y_gam = np.dot(basis, res_glm_gam.params)
+
+    # plt.plot(x, y_gam, label='gam')
+    # plt.plot(x, y_mgcv, label='mgcv')
+    # plt.plot(x, y, '.', label='y')
+    # plt.legend()
+    # plt.show()
 
     approx_error = norm(y_gam - y_mgcv)/len(y_mgcv)
     assert approx_error < 0.01, 'The mean error between y_gam and y_mgcv is:' + str(approx_error)
+    return
+
+def test_gam_discrete():
+
+    data_from_r = pd.read_csv('results/prediction_from_mgcv.csv')
+    # dataset used to train the R model
+    x = data_from_r.x
+    y = data_from_r.ybin
+
+    df = 10
+    degree = 5
+    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
+    cov_der2 = np.dot(der2.T, der2)
+
+    # y_mgcv is obtained from R with the following code
+    # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
+    y_mgcv = data_from_r.ybin_est
+
+    alpha = 0.00002
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+    lg_gam = LogitGam(y, basis, penal=gp)
+    res_lg_gam = lg_gam.fit(maxiter=10000)
+    y_gam = np.dot(basis, res_lg_gam.params)
+    y_gam = sigmoid(y_gam)
+    y_mgcv = sigmoid(y_mgcv)
+
+    # plt.plot(x, y_gam, label='gam')
+    # plt.plot(x, y_mgcv, label='mgcv')
+    # plt.plot(x, y, '.', label='y')
+    # plt.ylim(-0.4, 1.4)
+    # plt.legend()
+    # plt.show()
+
+    approx_error = norm(y_gam - y_mgcv)/len(y_mgcv)
+    assert approx_error < 0.01, 'The mean error between y_gam and y_mgcv is:' + str(approx_error)
+
     return
 
 def sample_multivariate_data():
