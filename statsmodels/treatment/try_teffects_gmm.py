@@ -416,3 +416,33 @@ res_all_values = np.array([[ -230.68859809,  3403.46265758,  3172.77405949],
 from numpy.testing import assert_allclose
 
 assert_allclose(res_all.T.values, res_all_values, rtol=1e-6)
+
+# first 2 values agree with stata docs at around 2 or 3 decimals
+assert_allclose(ttg.sd, np.array([ 25.81674561,   9.57141232,  24.00104938]))
+
+
+# compare IPWeighted regression (WLS) with IPW GMM
+tt_wls = res_out.t_test([[-1, 1],[1,0], [0,1]])
+# should be close at optimization precision
+assert_allclose(tt_wls.effect, ttg.effect, rtol=1e-6)
+# uses different cov_params, but they are close to each other in this case
+assert_allclose(tt_wls.sd, ttg.sd, rtol=0.005)
+
+
+# regression tests, keep results during refactoring
+# ATE or POM for IPW close at optimization precision to IPW res_gmm2, ttg
+res_gmm_params = np.array([ -2.30688638e+02,  -1.55825526e+00,  -6.48482138e-01,
+        -2.17596162e-01,   1.74432697e-01,  -3.25591262e-03,
+        -8.63630870e-02])
+
+assert_allclose(res_gmm.params, res_gmm_params)
+
+res_gmm_params = np.array([ -2.30688638e+02,  -1.55825526e+00,  -6.48482138e-01,
+        -2.17596162e-01,   1.74432697e-01,  -3.25591262e-03,
+        -8.63630870e-02])
+
+assert_allclose(res_gmm.params, res_gmm_params)
+
+assert_allclose(res_gmms.params, np.array([-230.6886378]))
+assert_allclose(res_gmmm.params, np.array([ 3403.46270016,  3172.77407107]))
+assert_allclose(res_gmmo.params, np.array([ 3403.46272906,  3172.77402981]))
