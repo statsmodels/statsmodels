@@ -28,7 +28,7 @@ could be loaded with webuse
 
 import numpy as np
 import pandas as pd
-import statsmodels.iolib.foreign as smio
+#import statsmodels.iolib.foreign as smio
 import statsmodels.api as sm
 
 # not used here
@@ -75,18 +75,18 @@ def mom_ate(te, endog, tind, prob, weighted=True):
 
 def mom_atm(tm, endog, tind, prob, weighted=True):
     w1 = (tind / prob)
-    w2 = (1. - tind) / (1. - prob)
+    w0 = (1. - tind) / (1. - prob)
     if weighted:
-        w1 = w1 / w1.mean()
-        w2 = w2 / w2.mean()
+        w1 /= w1.mean()
+        w0 /= w0.mean()
 
-    return np.column_stack((endog * w1 - tm[0], endog * w2 - tm[1]))
+    return np.column_stack((endog * w0 - tm[0], endog * w1 - tm[1]))
 
 
 def mom_ols(tm, endog, tind, prob, weighted=True):
     w = tind / prob + (1-tind) / (1 - prob)
 
-    treat_ind = np.column_stack((tind, 1 - tind))
+    treat_ind = np.column_stack((1 - tind, tind))
     mom = (w * (endog - treat_ind.dot(tm)))[:,None] * treat_ind
 
     return mom
@@ -122,11 +122,13 @@ def mom(params):
 from statsmodels.sandbox.regression.gmm import GMM
 
 # The next classes use hardcoded functions and models from module globals
-class TEGMM(GMM):
+class _TEGMM(GMM):
+    # uses ate and treatment/selection model for moment conditions, no POM
+    # standard errors for ATE don't agree with TEGMM
     def momcond(self, params):
         return mom(params)
 
-class TEGMMs(GMM):
+class _TEGMMs(GMM):
     def momcond(self, params):
         # moment condition for ATE only, not even one POM
         # standard errors are very large
@@ -134,7 +136,7 @@ class TEGMMs(GMM):
         prob = res_logit.predict()
         return mom_ate(te, endog, tind, prob, weighted=True)[:,None]
 
-class TEGMMm(GMM):
+class _TEGMMm(GMM):
     def momcond(self, params):
         # moment condition for POM without "instrument" conditioning variable
         # standard errors are very large
@@ -142,7 +144,7 @@ class TEGMMm(GMM):
         prob = res_logit.predict()
         return mom_atm(tm, endog, tind, prob, weighted=True)
 
-class TEGMMo(GMM):
+class _TEGMMo(GMM):
     def momcond(self, params):
         # this does not take the affect of the parameter estimation in the
         # treatment effect into account for the standard errors of the
@@ -153,7 +155,7 @@ class TEGMMo(GMM):
         return mom_ols(tm, endog, tind, prob, weighted=True)
 
 
-class TEGMM2(GMM):
+class TEGMM(GMM):
     """GMM class to get cov_params for treatment effects
 
     This combines moment conditions for the selection/treatment model and the
@@ -165,7 +167,7 @@ class TEGMM2(GMM):
     """
 
     def __init__(self, endog, res_select, mom_outcome):
-        super(TEGMM2, self).__init__(endog, None, None)
+        super(TEGMM, self).__init__(endog, None, None)
         self.res_select = res_select
         self.mom_outcome = mom_outcome
 
@@ -186,33 +188,34 @@ class TEGMM2(GMM):
         return moms
 
 
-gmm = TEGMM(endog, res_logit.model.exog, res_logit.model.exog)
+gmm = _TEGMM(endog, res_logit.model.exog, res_logit.model.exog)
 te = ate_ipw(endog, tind, prob, weighted=True)
 start_params=np.concatenate(([te], res_logit.params))
 #res_gmm = gmm.fit(start_params=start_params)
 res_gmm = gmm.fit(start_params=start_params, optim_method='nm', inv_weights=np.eye(7), maxiter=2)
 
-gmms = TEGMMs(endog, res_logit.model.exog, res_logit.model.exog)
+gmms = _TEGMMs(endog, res_logit.model.exog, res_logit.model.exog)
 res_gmms = gmms.fit(start_params=start_params[0], optim_method='nm', inv_weights=np.eye(1), maxiter=2)
 
-gmmm = TEGMMm(endog, res_logit.model.exog, res_logit.model.exog)
+gmmm = _TEGMMm(endog, res_logit.model.exog, res_logit.model.exog)
 res_gmmm = gmmm.fit(start_params=[3000, 3000], optim_method='nm', inv_weights=np.eye(2), maxiter=2)
 
-gmmo = TEGMMo(endog, res_logit.model.exog, res_logit.model.exog)
+gmmo = _TEGMMo(endog, res_logit.model.exog, res_logit.model.exog)
 res_gmmo = gmmo.fit(start_params=[3000, 3000], optim_method='nm', inv_weights=np.eye(2), maxiter=2)
 
 
-gmm2 = TEGMM2(endog, res_logit, mom_ols)
+gmm2 = TEGMM(endog, res_logit, mom_ols)
 #te = ate_ipw(endog, tind, prob, weighted=True)
 start_params=np.concatenate(([3000, 3000], res_logit.params))
 #res_gmm = gmm.fit(start_params=start_params)
 res_gmm2 = gmm2.fit(start_params=start_params, optim_method='nm', inv_weights=np.eye(8), maxiter=2)
 res_gmm2.model.data.param_names = ['par%d' % i for i in range(8)]
 constraint = np.zeros((3, 8))
-constraint[0,0] = 1
-constraint[1,1] = 1
+constraint[0,1] = 1
+constraint[0,0] = -1
+constraint[1,0] = 1
 constraint[2,1] = 1
-constraint[2,0] = -1
+
 res_gmm2.bse
 print(res_gmm2.t_test(constraint))
 
@@ -390,7 +393,7 @@ mean1_ipwra = result1.predict(mod_ra01.exog).mean()
 print(mean0_ipwra, mean1_ipwra, mean1_ipwra - mean0_ipwra)
 
 res_ipwra = np.array((mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra))
-ttg = res_gmm2.t_test(constraint[[2, 0, 1]]) # reorder so ATE is first
+ttg = res_gmm2.t_test(constraint)
 res_ipw = ttg.effect
 res_ra = np.array((ra.ate, ra.tt0.effect, ra.tt1.effect))
 
@@ -404,7 +407,7 @@ res_all = pd.DataFrame(np.column_stack((res_ipw, res_aipw, res_aipw_wls, res_ra,
 print(res_all.T)
 
 # regression values matching Stata documentation
-res_all_values = np.array([[  230.68859809,  3172.77405949,  3403.46265758],
+res_all_values = np.array([[ -230.68859809,  3403.46265758,  3172.77405949],
                            [ -230.98920111,  3403.35525317,  3172.36605206],
                            [ -227.19561819,  3403.25065098,  3176.05503279],
                            [ -239.63921146,  3403.24227194,  3163.60306047],
