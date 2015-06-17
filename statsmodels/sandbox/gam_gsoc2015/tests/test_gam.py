@@ -145,36 +145,55 @@ def test_gam_optimization():
     df = 10
     degree = 5
     basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-
-    print(basis.mean(axis=0), y.mean())
-
     cov_der2 = np.dot(der2.T, der2)
 
-    alpha = 0.0819
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-
-    glm_gam = GLMGam(y, basis, penal=gp)
-    res_glm_gam = glm_gam.fit(maxiter=10000)
-
-    x_new = np.linspace(-1, 1, 100)
-    y_new = 2 * x_new**3 - x_new
-
+    data_from_r = pd.read_csv('prediction_from_mgcv.csv')
+    x_new = data_from_r.x
+    # y_mgcv is obtained from R with the following code
+    # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
+    y_mgcv = data_from_r.y_est
+    y_new = data_from_r.y
     new_basis, _, _ = make_bsplines_basis(x_new, df=df, degree=degree)
 
-    plt.subplot(2, 1, 1)
-    plt.plot(x, y, '.')
-    plt.plot(x, np.dot(basis, res_glm_gam.params))
-    plt.subplot(2, 1, 2)
+    def prediction_difference(alpha):
+        gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+        glm_gam = GLMGam(y, basis, penal=gp)
+        res_glm_gam = glm_gam.fit(maxiter=10000)
+        y_gam = np.dot(new_basis, res_glm_gam.params)
+        return norm(y_gam - y_mgcv)
+
+    alpha = 0.0817299999
+    # uncomments this line to find the alpha that minimizes the distance between the
+    # prediction obtained with MGCV and our GAM implementation
+
+    # opt_options = {'disp': True,
+    #                'maxiter':10000}
+    # opt_alpha = minimize(prediction_difference, alpha, options=opt_options)
+    # print(opt_alpha['x'])
+    # alpha = opt_alpha['x']
+    # print("alpha=", alpha)
+
+    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+    glm_gam = GLMGam(y, basis, penal=gp)
+    res_glm_gam = glm_gam.fit(maxiter=10000)
+    y_gam = np.dot(new_basis, res_glm_gam.params)
+
+
     plt.plot(x_new, y_new, '.')
-    plt.plot(x_new, np.dot(new_basis, res_glm_gam.params))
+    plt.plot(x_new, y_gam, label='gam y')
+    plt.plot(x_new, y_mgcv, label='mgcv')
+    plt.legend()
 
     plt.show()
+    print(norm(y_gam - y_mgcv))
     return
 
 # these tests are fine.
+'''
 test_gam_penalty()
 test_gam_gradient()
 test_approximation()
 test_gam_hessian()
+'''
 
-#test_gam_optimization()
+test_gam_optimization()

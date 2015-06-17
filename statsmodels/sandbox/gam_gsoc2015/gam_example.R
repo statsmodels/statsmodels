@@ -30,3 +30,6 @@ new_data$y = funz(new_data$x)
 y_est = predict(g, newdata = new_data)
 plot(new_data$x, y_est, ylim=c(-1, 1), type='l')
 points(new_data$x, new_data$y)
+
+new_data$y_est = y_est
+write.csv(new_data, '/home/donbeo/Documents/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/prediction_from_mgcv.csv')
