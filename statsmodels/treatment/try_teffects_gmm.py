@@ -50,7 +50,8 @@ res_logit = sm.Probit.from_formula('mbsmoke_ ~ mmarried_ + mage + mage2 + fbaby_
 
 prob = res_logit.predict()
 
-
+# the following is IPW weighted outcome regression (treatment dummies only)
+# robust standard errors are the same as gmmo, i.e. ignores that prob is estimated
 treat_ind = (dta_cat['mbsmoke_'].values[:, None] == [False, True]).astype(int)
 probt = treat_ind[:, 1] * prob + (1-treat_ind[:, 1]) * (1 - prob)
 w = treat_ind[:, 1] / prob + (1-treat_ind[:, 1]) / (1 - prob)
@@ -120,36 +121,68 @@ def mom(params):
 
 from statsmodels.sandbox.regression.gmm import GMM
 
+# The next classes use hardcoded functions and models from module globals
 class TEGMM(GMM):
     def momcond(self, params):
         return mom(params)
 
 class TEGMMs(GMM):
     def momcond(self, params):
+        # moment condition for ATE only, not even one POM
+        # standard errors are very large
         te = params
         prob = res_logit.predict()
         return mom_ate(te, endog, tind, prob, weighted=True)[:,None]
 
 class TEGMMm(GMM):
     def momcond(self, params):
+        # moment condition for POM without "instrument" conditioning variable
+        # standard errors are very large
         tm = params
         prob = res_logit.predict()
         return mom_atm(tm, endog, tind, prob, weighted=True)
 
 class TEGMMo(GMM):
     def momcond(self, params):
+        # this does not take the affect of the parameter estimation in the
+        # treatment effect into account for the standard errors of the
+        # outcome model.
+        # It's still first order correct with robust standard errors.
         tm = params
         prob = res_logit.predict()
         return mom_ols(tm, endog, tind, prob, weighted=True)
 
+
 class TEGMM2(GMM):
+    """GMM class to get cov_params for treatment effects
+
+    This combines moment conditions for the selection/treatment model and the
+    outcome model to get the standard errors for the treatment effect that
+    takes the first step estimation of the treatment model into account.
+
+    this also matches standard errors of ATE and POM in Stata
+
+    """
+
+    def __init__(self, endog, res_select, mom_outcome):
+        super(TEGMM2, self).__init__(endog, None, None)
+        self.res_select = res_select
+        self.mom_outcome = mom_outcome
+
+        # add xnames so it's not None
+        # we don't have exog in init in this version
+        self.data.xnames = []
+
+
     def momcond(self, params):
         tm = params[:2]
         p_tm = params[2:]
-        prob = res_logit.model.predict(p_tm)
-        momt = mom_ols(tm, endog, tind, prob, weighted=True)
+
+        tind = self.res_select.model.endog
+        prob = self.res_select.model.predict(p_tm)
+        momt = self.mom_outcome(tm, self.endog, tind, prob, weighted=True)
         moms = np.column_stack((momt,
-                                res_logit.model.score_obs(p_tm)))
+                                self.res_select.model.score_obs(p_tm)))
         return moms
 
 
@@ -169,7 +202,7 @@ gmmo = TEGMMo(endog, res_logit.model.exog, res_logit.model.exog)
 res_gmmo = gmmo.fit(start_params=[3000, 3000], optim_method='nm', inv_weights=np.eye(2), maxiter=2)
 
 
-gmm2 = TEGMM2(endog, res_logit.model.exog, res_logit.model.exog)
+gmm2 = TEGMM2(endog, res_logit, mom_ols)
 #te = ate_ipw(endog, tind, prob, weighted=True)
 start_params=np.concatenate(([3000, 3000], res_logit.params))
 #res_gmm = gmm.fit(start_params=start_params)
@@ -357,7 +390,7 @@ mean1_ipwra = result1.predict(mod_ra01.exog).mean()
 print(mean0_ipwra, mean1_ipwra, mean1_ipwra - mean0_ipwra)
 
 res_ipwra = np.array((mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra))
-ttg = res_gmm2.t_test(constraint[[2, 0, 1]])
+ttg = res_gmm2.t_test(constraint[[2, 0, 1]]) # reorder so ATE is first
 res_ipw = ttg.effect
 res_ra = np.array((ra.ate, ra.tt0.effect, ra.tt1.effect))
 
