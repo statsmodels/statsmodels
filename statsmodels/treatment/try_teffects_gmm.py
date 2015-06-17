@@ -121,6 +121,79 @@ def mom(params):
 
 from statsmodels.sandbox.regression.gmm import GMM
 
+
+class TEGMMGeneric1(GMM):
+    """GMM class to get cov_params for treatment effects
+
+    This combines moment conditions for the selection/treatment model and the
+    outcome model to get the standard errors for the treatment effect that
+    takes the first step estimation of the treatment model into account.
+
+    this also matches standard errors of ATE and POM in Stata
+
+    """
+
+    def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False):
+        super(TEGMMGeneric1, self).__init__(endog, None, None)
+        self.res_select = res_select
+        self.mom_outcome = mom_outcome
+        self.exclude_tmoms = exclude_tmoms
+
+        # add xnames so it's not None
+        # we don't have exog in init in this version
+        if self.data.xnames is None:
+            self.data.xnames = []
+
+        # need information about decomposition of parameters
+        if exclude_tmoms:
+            self.k_select = 0
+        else:
+            self.k_select = len(res_select.model.data.param_names)
+
+        if exclude_tmoms:
+            self.prob = self.res_select.predict() # fittedvalues is still linpred
+        else:
+            self.prob = None
+
+    def momcond(self, params):
+        k_outcome = len(params) - self.k_select
+        tm = params[:k_outcome]
+        p_tm = params[k_outcome:]
+
+        tind = self.res_select.model.endog
+
+
+        if self.exclude_tmoms:
+            prob = self.prob
+        else:
+            prob = self.res_select.model.predict(p_tm)
+
+        moms_list = []
+        mom_o = self.mom_outcome(tm, self.endog, tind, prob, weighted=True)
+        moms_list.append(mom_o)
+
+        if not self.exclude_tmoms:
+            mom_t = self.res_select.model.score_obs(p_tm)
+            moms_list.append(mom_t)
+
+        moms = np.column_stack(moms_list)
+        return moms
+
+
+    def momcond_aipw(self, params):
+        k_outcome = len(params) - self.k_select
+        tm = params[:k_outcome]
+        p_tm = params[k_outcome:]
+
+        tind = self.res_select.model.endog
+        prob = self.res_select.model.predict(p_tm)
+
+        momt = self.mom_outcome(tm, self.endog, tind, prob, weighted=True)
+        moms = np.column_stack((momt,
+                                self.res_select.model.score_obs(p_tm)))
+        return moms
+
+
 # The next classes use hardcoded functions and models from module globals
 class _TEGMM(GMM):
     # uses ate and treatment/selection model for moment conditions, no POM
@@ -173,7 +246,8 @@ class TEGMM(GMM):
 
         # add xnames so it's not None
         # we don't have exog in init in this version
-        self.data.xnames = []
+        if self.data.xnames is None:
+            self.data.xnames = []
 
 
     def momcond(self, params):
@@ -224,8 +298,9 @@ print(res_gmm2.t_test(constraint))
 class RegAdjustment(object):
     """estimate average treatment effect using regression adjustment
 
-    This includes now methods to calculate POM and ATE for other estimators
-    (no standard errors for those yet)
+    The class is written for regressio adjustment estimator but now also
+    includes methods to calculate POM and ATE for other estimators
+    (no standard errors for those yet, summary is only for RA).
 
 
     Parameters
@@ -246,6 +321,9 @@ class RegAdjustment(object):
     Other models will need new methods for the calculations, e.g. nonlinear
     prediction standard errors, or we need to use a more generic method to
     calculate ATE.
+
+    This currently only looks at the outcome model and takes the probabilities
+    of the selection model (propensity score) as argument in methods.
 
     Other limitations
     Does not use any `model.__init__` keywords.
@@ -446,3 +524,46 @@ assert_allclose(res_gmm.params, res_gmm_params)
 assert_allclose(res_gmms.params, np.array([-230.6886378]))
 assert_allclose(res_gmmm.params, np.array([ 3403.46270016,  3172.77407107]))
 assert_allclose(res_gmmo.params, np.array([ 3403.46272906,  3172.77402981]))
+
+# Using generic GMM version to replicate original version
+
+gmm2b = TEGMMGeneric1(endog, res_logit, mom_ols)
+res_gmm2b = gmm2b.fit(start_params=start_params, optim_method='nm',
+                      inv_weights=np.eye(8), maxiter=2)
+
+# generic versus original model
+assert_allclose(res_gmm2b.params, res_gmm2.params, rtol=1e-10)
+assert_allclose(res_gmm2b.bse, res_gmm2.bse, rtol=1e-10)
+
+gmmo2 = TEGMMGeneric1(endog, res_logit, mom_ols, exclude_tmoms=True)
+res_gmmo2 = gmmo2.fit(start_params=[3000, 3000], optim_method='nm',
+                          inv_weights=np.eye(2), maxiter=2)
+
+# equivalence to IPWLS ?
+assert_allclose(res_gmmo2.params, res_out.params, rtol=1e-7)
+assert_allclose(res_gmmo2.bse, res_out.bse, rtol=1e-7)
+# refactored versus original model
+assert_allclose(res_gmmo2.params, res_gmmo.params, rtol=1e-10)
+assert_allclose(res_gmmo2.bse, res_gmmo.bse, rtol=1e-10)
+
+gmms2 = TEGMMGeneric1(endog, res_logit, mom_ate, exclude_tmoms=True)
+res_gmms2 = gmms2.fit(start_params=start_params[0]*0.9, optim_method='nm', inv_weights=np.eye(1), maxiter=2)
+# refactored versus original model
+assert_allclose(res_gmms2.params, res_gmms.params, rtol=1e-7)
+assert_allclose(res_gmms2.bse, res_gmms.bse, rtol=1e-7)
+
+gmmm2 = TEGMMGeneric1(endog, res_logit, mom_atm, exclude_tmoms=True)
+res_gmmm2 = gmmm2.fit(start_params=[3000, 3000], optim_method='nm', inv_weights=np.eye(2), maxiter=2)
+
+# refactored versus original model
+assert_allclose(res_gmmm2.params, res_gmmm.params, rtol=1e-7)
+assert_allclose(res_gmmm2.bse, res_gmmm.bse, rtol=1e-7)
+
+gmm_ = TEGMMGeneric1(endog, res_logit, mom_ate, exclude_tmoms=False)
+te = ate_ipw(endog, tind, prob, weighted=True)
+start_params_ = np.concatenate(([te], res_logit.params))
+res_gmm_ = gmm_.fit(start_params=start_params_, optim_method='nm', inv_weights=np.eye(7), maxiter=2)
+
+# refactored versus original model
+assert_allclose(res_gmm_.params, res_gmm.params, rtol=1e-7)
+assert_allclose(res_gmm_.bse, res_gmm.bse, rtol=1e-7)
