@@ -1,13 +1,10 @@
 from smooth_basis import make_poly_basis, make_bsplines_basis
-from gam import GamPenalty, LogitGam, GLMGam
+from gam import GamPenalty, GLMGam, MultivariateGamPenalty
 import numpy as np
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-import scipy as sp
-from scipy.optimize import minimize
 import pandas as pd
 from statsmodels.genmod.families.family import Gaussian
 from numpy.linalg import norm
+from scipy.linalg import block_diag
 
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
@@ -64,7 +61,7 @@ def cost_function(params, basis, y, alpha):
     itg = integral(params)
 
     # return the cost function of the GAM for the given polynomial
-    return loglike +  alpha * itg, loglike, itg
+    return loglike + alpha * itg, loglike, itg
 
 
 def test_gam_penalty():
@@ -119,7 +116,6 @@ def test_gam_hessian():
         hess = hessian(params)
         hess = np.flipud(hess)
         hess = np.fliplr(hess)
-        #print(hess - gam_der2)
         assert norm(hess - gam_der2)/25 < 1, 'error in the hessian of the GAM. Err=' + str(norm(hess - gam_der2)/25)
     return
 
@@ -155,45 +151,74 @@ def test_gam_optimization():
     y_new = data_from_r.y
     new_basis, _, _ = make_bsplines_basis(x_new, df=df, degree=degree)
 
-    def prediction_difference(alpha):
-        gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-        glm_gam = GLMGam(y, basis, penal=gp)
-        res_glm_gam = glm_gam.fit(maxiter=10000)
-        y_gam = np.dot(new_basis, res_glm_gam.params)
-        return norm(y_gam - y_mgcv)
-
     alpha = 0.0817299999
-    # uncomments this line to find the alpha that minimizes the distance between the
-    # prediction obtained with MGCV and our GAM implementation
-
-    # opt_options = {'disp': True,
-    #                'maxiter':10000}
-    # opt_alpha = minimize(prediction_difference, alpha, options=opt_options)
-    # print(opt_alpha['x'])
-    # alpha = opt_alpha['x']
-    # print("alpha=", alpha)
-
     gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
     glm_gam = GLMGam(y, basis, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)
     y_gam = np.dot(new_basis, res_glm_gam.params)
 
-
-    plt.plot(x_new, y_new, '.')
-    plt.plot(x_new, y_gam, label='gam y')
-    plt.plot(x_new, y_mgcv, label='mgcv')
-    plt.legend()
-
-    plt.show()
-    print(norm(y_gam - y_mgcv))
+    approx_error = norm(y_gam - y_mgcv)/len(y_mgcv)
+    assert approx_error < 0.01, 'The mean error between y_gam and y_mgcv is:' + str(approx_error)
     return
 
-# these tests are fine.
-'''
-test_gam_penalty()
-test_gam_gradient()
-test_approximation()
-test_gam_hessian()
-'''
+def sample_multivariate_data():
+    n = 1000
+    x1 = np.linspace(-1, 1, n)
+    x2 = np.linspace(-10, 10, n)
+    y = x1*x1*x1 + x2 + np.random.normal(0, 0.01, n)
+    degree1 = 4
+    degree2 = 3
+    basis1, der_basis1, der2_basis1 = make_poly_basis(x1, degree1, intercept=False)
+    basis2, der_basis2, der2_basis2 = make_poly_basis(x2, degree2, intercept=False)
+    cov_der2_1 = np.dot(der2_basis1.T, der2_basis1)
+    cov_der2_2 = np.dot(der2_basis2.T, der2_basis2)
 
-test_gam_optimization()
+    basis = np.hstack([basis1, basis2])
+    # der_basis = [der_basis1, der_basis2]
+    der2_basis = [der2_basis1, der2_basis2]
+    cov_der2 = [cov_der2_1,
+                cov_der2_2]
+
+    return x1, x2, y, basis, cov_der2, der2_basis, basis1, cov_der2_1, der2_basis1, basis2, cov_der2_2, der2_basis2
+
+def test_multivariate_penalty():
+
+    alphas = [1, 2]
+    wts = [1, 1]
+    x1, x2, y, basis, cov_der2, der2, basis1, cov_der2_1, der2_1, basis2, cov_der2_2, der2_2 = sample_multivariate_data()
+
+    p = basis.shape[1]
+    p1 = basis1.shape[1]
+    p2 = basis2.shape[1]
+
+    gp1 = GamPenalty(alpha=alphas[0], cov_der2=cov_der2_1, der2=der2_1)
+    gp2 = GamPenalty(alpha=alphas[1], cov_der2=cov_der2_2, der2=der2_2)
+    mgp = MultivariateGamPenalty(wts=wts, alpha=alphas, cov_der2=cov_der2,
+                                 der2=der2)
+
+    for i in range(10):
+        params1 = np.random.randint(-3, 3, p1)
+        params2 = np.random.randint(-3, 3, p2)
+        params = np.concatenate([params1, params2])
+        c1 = gp1.func(params1)
+        c2 = gp2.func(params2)
+        c = mgp.func(params)
+        err = c2 + c1 - c
+        assert np.abs(err) < 1.e-10, 'Error in the MultivariateGam cost function'
+
+        d1 = gp1.grad(params1)
+        d2 = gp2.grad(params2)
+        d12 = np.concatenate([d1, d2])
+        d = mgp.grad(params)
+
+        err = norm(d12 - d)
+        assert err < 1.e-10, 'Error in the MultivariateGam gradient'
+
+        h1 = gp1.deriv2(params1)
+        h2 = gp2.deriv2(params2)
+        h12 = block_diag(h1, h2)
+        h = mgp.deriv2(params)
+        err = norm(h - h12)/((len(params1) + len(params2))**2)
+        assert err < 1.e-10
+
+    return

@@ -1,9 +1,10 @@
 import numpy as np
+import scipy as sp
+from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.api import GLM
 from smooth_basis import BS
 from patsy.state import stateful_transform
-
 
 
 ## this class will be later removed and taken from another push
@@ -186,96 +187,93 @@ class Penalty(object):
 
 
 class GamPenalty(Penalty):
-
+    
     def __init__(self, wts=1, alpha=1, cov_der2=None, der2=None):
-
+        
         self.wts = wts #should we keep wts????
         self.alpha = alpha
         self.cov_der2 = cov_der2
         self.der2 = der2
-
+        self.n_samples = der2.shape[0]
+    
     def func(self, params):
-        '''
+        ''' 
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         '''
-
+        
         # The second derivative of the estimated regression function
         f = np.dot(self.der2, params)
 
-        return self.alpha * np.sum(f**2)
+        return self.alpha * np.sum(f**2) / self.n_samples
 
     def grad(self, params):
-        '''
+        ''' 
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         3) cov_der2 is obtained as np.dot(der2.T, der2)
         '''
-
-        return 2 * self.alpha * np.dot(self.cov_der2, params)
-
+                
+        return 2 * self.alpha * np.dot(self.cov_der2, params) / self.n_samples
+    
     def deriv2(self, params):
 
-        return 2 * self.alpha * self.cov_der2
-
+        return 2 * self.alpha * self.cov_der2 / self.n_samples
 
 
 
 
 class MultivariateGamPenalty(Penalty):
-
+    
     def __init__(self, wts=None, alpha=None, cov_der2=None, der2=None):
         '''
         GAM penalty for multivariate regression
         - cov_der2 is a list of squared matrix of shape (size_base, size_base)
-        - der2 is a list of matrix of shape (n_samples, size_base)
+        - der2 is a list of matrix of shape (n_samples, size_base) 
         - alpha is a list of doubles. Each one representing the penalty
           for each function
         - wts is a list of doubles of the same length of alpha
         '''
-
+        
         assert(len(cov_der2) == len(der2))
-
+        
         # the total number of columns in der2 i.e. the len of the params vector
         self.n_columns = np.sum(d2.shape[1] for d2 in der2)
 
         # the number of variables in the GAM model
-        self.n_variables = len(cov_der2)
+        self.n_variables = len(cov_der2) 
 
         # if wts and alpha are not a list then each function has the same penalty
         # TODO: Review this
         self.alpha = alpha
         self.wts = wts
-
-        n_samples = der2[0].shape[0]
-        self.mask = [np.array([False]*self.n_columns)
+        
+        n_samples = der2[0].shape[0] 
+        self.mask = [np.array([False]*self.n_columns) 
                      for i in range(self.n_variables)]
         param_count = 0
         for i, d2 in enumerate(der2):
             n, dim_base = d2.shape
-            #check that all the basis have the same number of samples
-            assert(n_samples == n)
+            # check that all the basis have the same number of samples
+            assert(n_samples == n) 
             self.mask[i][param_count: param_count + dim_base] = True
             param_count += dim_base
-
+            
         self.gp = []
         for i in range(self.n_variables):
-            gp = GamPenalty(wts=self.wts[i], alpha=self.alpha[i],
+            gp = GamPenalty(wts=self.wts[i], alpha=self.alpha[i], 
                             cov_der2=cov_der2[i], der2=der2[i])
             self.gp.append(gp)
 
         return
 
-
     def func(self, params):
-
         cost = 0
         for i in range(self.n_variables):
             params_i = params[self.mask[i]]
             cost += self.gp[i].func(params_i)
 
-        return  cost
-
+        return cost
 
     def grad(self, params):
         grad = []
@@ -285,13 +283,17 @@ class MultivariateGamPenalty(Penalty):
 
         return np.concatenate(grad)
 
-
     def deriv2(self, params):
-        deriv2 = []
+        #deriv2 = []
+        #for i in range(self.n_variables):
+        #    params_i = params[self.mask[i]]
+        #    deriv2.append(self.gp[i].deriv2(params_i))
+        deriv2 = np.empty(shape=(0,0))
         for i in range(self.n_variables):
             params_i = params[self.mask[i]]
-            deriv2.append(self.gp[i].grad(params_i))
-        return np.concatenate(deriv2)
+            deriv2 = block_diag(deriv2, self.gp[i].deriv2(params_i))
+
+        return deriv2
 
 
 
@@ -301,4 +303,7 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGam(PenalizedMixin, GLM):
     pass
+  
+
+
 
