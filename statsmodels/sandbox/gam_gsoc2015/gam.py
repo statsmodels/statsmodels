@@ -1,10 +1,11 @@
 import numpy as np
+import scipy as sp
+from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.api import GLM
 from smooth_basis import BS
 from patsy.state import stateful_transform
 
-                    
 
 ## this class will be later removed and taken from another push
 class PenalizedMixin(object):
@@ -253,7 +254,7 @@ class MultivariateGamPenalty(Penalty):
         param_count = 0
         for i, d2 in enumerate(der2):
             n, dim_base = d2.shape
-            #check that all the basis have the same number of samples 
+            # check that all the basis have the same number of samples
             assert(n_samples == n) 
             self.mask[i][param_count: param_count + dim_base] = True
             param_count += dim_base
@@ -266,16 +267,13 @@ class MultivariateGamPenalty(Penalty):
 
         return
 
-
     def func(self, params):
-        
         cost = 0
         for i in range(self.n_variables):
             params_i = params[self.mask[i]]
             cost += self.gp[i].func(params_i)
-        
-        return  cost
 
+        return cost
 
     def grad(self, params):
         grad = []
@@ -285,13 +283,17 @@ class MultivariateGamPenalty(Penalty):
 
         return np.concatenate(grad)
 
-    
     def deriv2(self, params):
-        deriv2 = []
+        #deriv2 = []
+        #for i in range(self.n_variables):
+        #    params_i = params[self.mask[i]]
+        #    deriv2.append(self.gp[i].deriv2(params_i))
+        deriv2 = np.empty(shape=(0,0))
         for i in range(self.n_variables):
             params_i = params[self.mask[i]]
-            deriv2.append(self.gp[i].grad(params_i))
-        return np.concatenate(deriv2)
+            deriv2 = block_diag(deriv2, self.gp[i].deriv2(params_i))
+
+        return deriv2
 
 
 

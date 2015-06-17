@@ -123,15 +123,13 @@ alpha = [0, 0]
 wts = [1, 1]
 mgp = MultivariateGamPenalty(wts=wts, alpha=alpha, cov_der2=cov_der2,
                              der2=der2_basis)    
-mLG= LogitGam(y, basis, penal=mgp)
+mLG = LogitGam(y, basis, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
 
 param1 = res_mLG.params[mgp.mask[0]]
 param2 = res_mLG.params[mgp.mask[1]]
 param = res_mLG.params
 
-gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
-                der2=der2_basis)    
 
 plt.subplot(3, 2, 1)
 plt.title('alpha=' + str(alpha))
@@ -158,9 +156,6 @@ param1 = res_mLG.params[mgp.mask[0]]
 param2 = res_mLG.params[mgp.mask[1]]
 param = res_mLG.params
 
-gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, 
-                der2=der2_basis)    
-
 # plot with different alpha
 plt.subplot(3, 2, 2)
 plt.title('alpha=' + str(alpha))
@@ -175,3 +170,4 @@ plt.plot(y, '*', label='y')
 plt.ylim(-1, 2)
 plt.legend()
 plt.show()
+
