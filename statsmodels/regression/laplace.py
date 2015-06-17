@@ -79,8 +79,9 @@ def gen_fungrad(params, cov_re, scale):
             lin_predr = lin_pred[k] + np.dot(exog_re_split[k], ref[k, :]) # eta_i
             mean = family.fitted(lin_predr) # mu_i = h(eta_i)
             f += family.loglike(endog_split[k], mean,scale=scale)
+            
 
-            d[k, :] = ((endog_split[k] - mean)[:, None] * exog_re_split[k] / scale).sum(0)
+            d[k, :] = ((endog_split[k] - mean)[:, None] * exog_re_split[k] * scale).sum(0)
             d[k, :] -= s[:, k]
 
         return -f, -d.ravel()
@@ -90,6 +91,8 @@ def gen_fungrad(params, cov_re, scale):
 
 def test_gen_fungrad():
 
+    print("scale start:"+str(scale))
+
     np.random.seed(4234)
 
     for k in range(10):
@@ -97,20 +100,25 @@ def test_gen_fungrad():
         params = np.random.normal(size=k_fe)
         cov_re = np.random.normal(size=(k_re, k_re))
         cov_re = np.dot(cov_re, cov_re.T)
-        fungrad = gen_fungrad(params, cov_re, 1)
+        fungrad = gen_fungrad(params, cov_re, scale)
         fun = lambda x : fungrad(x)[0]
         grad = lambda x : fungrad(x)[1]
 
         ref = np.random.normal(size=(n_groups, k_re)).ravel()
-
+        
         # Check that the numerical gradient matches the analytic
         # gradient
         fp1 = approx_fprime(ref, fun)
         fp2 = grad(ref)
-
+        
+        ##print(scipy.optimize.check_grad(fun,grad,ref))
+        ##
+        ##print("=====")
+        ##print(fp2)
+        ##print(fp2)
+        ##print("=====")
+        
         assert_allclose(fp1, fp2, rtol=1e-1, atol=1e-5)
-
-
 
 
 def funhess(ref, params, cov_re, scale):
@@ -170,7 +178,8 @@ def test_funhess():
         fun = lambda x : funhess(x, params, cov_re, 1)[0]
         hess = lambda x : funhess(x, params, cov_re, 1)[1]
 
-        fungrad = gen_fungrad(params, cov_re, 1)
+
+        fungrad = gen_fungrad(params, cov_re, scale)
         fun1 = lambda x : fungrad(x)[0]
         grad = lambda x : fungrad(x)[1]
 
@@ -183,7 +192,6 @@ def test_funhess():
         he2 = hess(ref)
 
         assert_allclose(dhe1, he2, rtol=1e-3, atol=1e-5)
-
 
 
 def get_map(params, cov_re, scale, omethod):
@@ -207,12 +215,9 @@ def get_map(params, cov_re, scale, omethod):
     """
 
     fun = gen_fungrad(params, cov_re, scale)
-
     x0 = np.zeros(n)
 
     result = scipy.optimize.minimize(fun, x0, jac=True, method=omethod)
-
-    print(result)
     
     if not result.success:
         print("OPTIMIZATION FAILED")
@@ -222,7 +227,7 @@ def get_map(params, cov_re, scale, omethod):
     return mp
 
 
-def laplace(params, cov_re, scale, omethod='L-BFGS-B'):
+def laplace(params, cov_re, scale, omethod='BFGS'):
     """
     Evaluate the marginal log-likelihood.
 
@@ -251,12 +256,24 @@ def laplace(params, cov_re, scale, omethod='L-BFGS-B'):
 
 
 params = np.ones(k_fe)
-cov_re = np.random.normal(size=(2, 2))
-cov_re = np.dot(cov_re.T, cov_re)
-scale = 1.
-mp = laplace(params, cov_re, scale)
-scale = 5.
-mp = laplace(params, cov_re, scale)
+#cov_re = np.identity(2)
+cov_re = np.random.normal(size=(2,2))
+cov_re = 3*np.dot(cov_re.T, cov_re)
+scale = 5
+
+print("Running Laplace Code")
+mp = laplace(params, cov_re, scale, omethod="BFGS")
+print(mp)
+
+print("Running Loglike Code")
+import statsmodels.api as sm
+pms = sm.regression.mixed_glm.MixedGLMParams.from_components(params, cov_re, use_sqrt=False)
+fam = sm.families.Binomial()
+model = sm.MixedGLM(endog, exog, groups, exog_re=exog_re, family=fam, scale=scale)
+mpp = model.loglike(pms)
+print(mpp)
+
+
 
 
 
