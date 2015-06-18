@@ -27,8 +27,6 @@ could be loaded with webuse
 """
 
 import numpy as np
-import pandas as pd
-#import statsmodels.iolib.foreign as smio
 import statsmodels.api as sm
 
 
@@ -268,6 +266,7 @@ class RegAdjustment(object):
         if prob is None:
             raise NotImplementedError
             #prob = ???   # need selection model or probability
+        tind = self.treatment
         correct0 = (self.result0.resid / (1 - prob[tind == 0])).sum() / nobs
         correct1 = (self.result1.resid / (prob[tind == 1])).sum() / nobs
         tmean0 = self.tt0.effect + correct0
@@ -290,6 +289,8 @@ class RegAdjustment(object):
 
         endog = self.model_pool.endog
         exog = self.model_pool.exog
+        tind = self.treatment
+        treat_mask = self.treat_mask
 
         ww1 = tind / prob * (tind / prob - 1)
         mod1 = sm.WLS(endog[treat_mask], exog[treat_mask], weights=ww1[treat_mask])
@@ -313,13 +314,13 @@ class RegAdjustment(object):
         endog = self.model_pool.endog
         exog = self.model_pool.exog
 
-        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask], weights=w[~treat_mask])
+        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask], weights=1/prob[~treat_mask])
         result0 = mod0.fit(cov_type='HC1')
 
-        mean0_ipwra = result0.predict(mod_ra01.exog).mean()
+        mean0_ipwra = result0.predict(self.exog).mean()
         mod1 = sm.WLS(endog[treat_mask], exog[treat_mask], weights=1/prob[treat_mask])
         result1 = mod1.fit(cov_type='HC1')
-        mean1_ipwra = result1.predict(mod_ra01.exog).mean()
+        mean1_ipwra = result1.predict(self.exog).mean()
 
         #res_ipwra = np.array((mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra))
         return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra

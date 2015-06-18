@@ -6,7 +6,14 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-
+import numpy as np
+import pandas as pd
+#import statsmodels.iolib.foreign as smio
+import statsmodels.api as sm
+from statsmodels.sandbox.regression.gmm import GMM
+from statsmodels.treatment.treatment_effects import (TEGMM, TEGMMGeneric1,
+                              RegAdjustment,
+                              mom_ate, mom_atm, mom_ols, ate_ipw)
 
 # not used here
 #dta_spm = smio.genfromdta(r"M:\josef_new\work_oth_pdf\data\stata\spmdata.dta", pandas=True)
