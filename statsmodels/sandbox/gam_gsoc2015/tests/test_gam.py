@@ -6,6 +6,7 @@ from statsmodels.genmod.families.family import Gaussian
 from numpy.linalg import norm
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
+from numpy.testing import assert_allclose
 
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
@@ -44,7 +45,7 @@ def grad(params):
 def hessian(params):
     hess = np.array([[576/5, 0, 32,  0, 0],
                      [0, 48,  0,  0, 0],
-                     [32,  0,  0,  0, 0],
+                     [32,  0,  16,  0, 0],
                      [0,  0,  0,  0, 0],
                      [0,  0,  0,  0, 0]])
     return hess / 2
@@ -79,8 +80,7 @@ def test_gam_penalty():
         params = np.random.randint(-2, 2, 5)
         gp_score = gp.func(params)
         itg = integral(params)
-        assert norm(itg - gp_score) < 1, print(gp_score, itg, params)
-
+        assert_allclose(gp_score, itg, atol=1.e-1)
 
 def test_gam_gradient():
     """
@@ -96,8 +96,7 @@ def test_gam_gradient():
         params = np.random.randint(-2, 2, 5)
         gam_grad = gp.grad(params)
         grd = grad(params)
-        err = norm(gam_grad - grd) / 5
-        assert err < 1, 'the gradients are not matching'
+        assert_allclose(gam_grad, grd, rtol=1.e-2, atol=1.e-10)
 
     return
 
@@ -117,7 +116,7 @@ def test_gam_hessian():
         hess = hessian(params)
         hess = np.flipud(hess)
         hess = np.fliplr(hess)
-        assert norm(hess - gam_der2)/25 < 1, 'error in the hessian of the GAM. Err=' + str(norm(hess - gam_der2)/25)
+        assert_allclose(gam_der2, hess, atol=1.e-13, rtol=1.e-3)
     return
 
 
@@ -132,7 +131,7 @@ def test_approximation():
         glm_gam = GLMGam(y, basis, penal = gp)
         res_glm_gam = glm_gam.fit(maxiter=1) # TODO: can this fit be removed? It is useless. We just need the log likelihood
         gam_loglike = glm_gam.loglike(params)
-        assert norm(gam_loglike - err) < 1.e-10, 'erron in the MSE part of the cost function'
+        assert_allclose(gam_loglike, err)
     return
 
 
@@ -164,8 +163,7 @@ def test_gam_glm():
     # plt.legend()
     # plt.show()
 
-    approx_error = norm(y_gam - y_mgcv)/len(y_mgcv)
-    assert approx_error < 0.01, 'The mean error between y_gam and y_mgcv is:' + str(approx_error)
+    assert_allclose(y_gam, y_mgcv, atol=1.e-1)
     return
 
 def test_gam_discrete():
@@ -199,8 +197,7 @@ def test_gam_discrete():
     # plt.legend()
     # plt.show()
 
-    approx_error = norm(y_gam - y_mgcv)/len(y_mgcv)
-    assert approx_error < 0.01, 'The mean error between y_gam and y_mgcv is:' + str(approx_error)
+    assert_allclose(y_gam, y_mgcv, rtol=1.e-10, atol=1.e-1)
 
     return
 
@@ -246,24 +243,29 @@ def test_multivariate_penalty():
         c1 = gp1.func(params1)
         c2 = gp2.func(params2)
         c = mgp.func(params)
-        err = c2 + c1 - c
-        assert np.abs(err) < 1.e-10, 'Error in the MultivariateGam cost function'
+        assert_allclose(c, c1 + c2, atol=1.e-10, rtol=1.e-10)
 
         d1 = gp1.grad(params1)
         d2 = gp2.grad(params2)
         d12 = np.concatenate([d1, d2])
         d = mgp.grad(params)
-
-        err = norm(d12 - d)
-        assert err < 1.e-10, 'Error in the MultivariateGam gradient'
+        assert_allclose(d, d12)
 
         h1 = gp1.deriv2(params1)
         h2 = gp2.deriv2(params2)
         h12 = block_diag(h1, h2)
         h = mgp.deriv2(params)
-        err = norm(h - h12)/((len(params1) + len(params2))**2)
-        assert err < 1.e-10
+        assert_allclose(h, h12)
 
     return
 
 
+'''
+test_gam_gradient()
+test_gam_hessian()
+test_gam_discrete()
+test_multivariate_penalty()
+test_approximation()
+test_gam_glm()
+test_gam_penalty()
+'''
