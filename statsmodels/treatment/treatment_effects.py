@@ -33,6 +33,11 @@ import statsmodels.api as sm
 
 
 def mom_ate(te, endog, tind, prob, weighted=True):
+    """moment condition for average treatment effect
+
+    This does not include a moment condition for potential outcome mean (POM).
+
+    """
     if weighted:
         w1 = (tind / prob)
         w2 = (1. - tind) / (1. - prob)
@@ -44,6 +49,9 @@ def mom_ate(te, endog, tind, prob, weighted=True):
     return endog * wdiff - te
 
 def mom_atm(tm, endog, tind, prob, weighted=True):
+    """moment conditions for average treatment means (POM)
+
+    """
     w1 = (tind / prob)
     w0 = (1. - tind) / (1. - prob)
     if weighted:
@@ -54,6 +62,10 @@ def mom_atm(tm, endog, tind, prob, weighted=True):
 
 
 def mom_ols(tm, endog, tind, prob, weighted=True):
+    """
+    moment condition for average treatment mean based on OLS dummy regression
+
+    """
     w = tind / prob + (1-tind) / (1 - prob)
 
     treat_ind = np.column_stack((1 - tind, tind))
@@ -63,6 +75,9 @@ def mom_ols(tm, endog, tind, prob, weighted=True):
 
 
 def ate_ipw(endog, tind, prob, weighted=True):
+    """average treatment effect based on basic inverse propensity weighting.
+
+    """
     if weighted:
         w1 = (tind / prob)
         w2 = (1. - tind) / (1. - prob)
@@ -249,13 +264,21 @@ class RegAdjustment(object):
 
     @classmethod
     def from_data(cls, endog, exog, treatment, model='ols', **kwds):
+        """create models from data
+
+        not yet implemented
+
+        """
         raise NotImplementedError
 
     def ra(self):
+        """
+        ATE and POM from regression adjustment
+        """
         return self.ate, self.tt0.effect, self.tt1.effect
 
     def aipw(self, prob=None):
-        """double robust augmented inverse probability weighting
+        """ATE and POM from double robust augmented inverse probability weighting
 
         replicates Stata's `teffects aipw`
 
@@ -310,6 +333,9 @@ class RegAdjustment(object):
         return ate, tmean0, tmean1
 
     def ipw_ra(self, prob=None):
+        """ATE and POM for ipweighted regression adjustment
+
+        """
         treat_mask = self.treat_mask
         endog = self.model_pool.endog
         exog = self.model_pool.exog
@@ -327,6 +353,9 @@ class RegAdjustment(object):
 
 
     def summary(self):
+        """summary table for regression adjustment ATE and POM, based on t_test
+
+        """
         txt = [str(self.tt0.summary(title='POM Treatment 0'))]
         txt.append(str(self.tt1.summary(title='POM Treatment 1')))
         txt.append('ATE = %f10.4   std.dev. = %f10.4' % (self.ate, self.se_ate))
