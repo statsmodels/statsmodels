@@ -763,7 +763,8 @@ class GLM(base.LikelihoodModel):
         self.mu = self.predict(rslt.params)
         self.scale = self.estimate_scale(self.mu)
 
-        glm_results = GLMResults(self, rslt.params,
+        results_class = getattr(self, '_results_class', GLMResults)
+        glm_results = results_class(self, rslt.params,
                                  rslt.normalized_cov_params / self.scale,
                                  self.scale,
                                  cov_type=cov_type, cov_kwds=cov_kwds,
