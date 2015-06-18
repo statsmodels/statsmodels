@@ -187,6 +187,36 @@ class Penalty(object):
 
 
 class GamPenalty(Penalty):
+    __doc__ = """
+    Penalty for Generalized Additive Models class
+
+    Parameters
+    -----------
+    alpha : float
+        the penalty term
+
+    wts: TODO: I do not know!
+
+    cov_der2: the covariance matrix of the second derivative of the basis matrix
+
+    der2: The second derivative of the basis function
+
+    Attributes
+    -----------
+    alpha : float
+        the penalty term
+
+    wts: TODO: I do not know!
+
+    cov_der2: the covariance matrix of the second derivative of the basis matrix
+
+    der2: The second derivative of the basis function
+
+    n_samples: The number of samples used during the estimation
+
+
+
+    """
     
     def __init__(self, wts=1, alpha=1, cov_der2=None, der2=None):
         
@@ -224,21 +254,33 @@ class GamPenalty(Penalty):
 
 
 class MultivariateGamPenalty(Penalty):
-    
-    def __init__(self, wts=None, alpha=None, cov_der2=None, der2=None):
-        '''
-        GAM penalty for multivariate regression
-        - cov_der2 is a list of squared matrix of shape (size_base, size_base)
-        - der2 is a list of matrix of shape (n_samples, size_base) 
-        - alpha is a list of doubles. Each one representing the penalty
+    __doc__ = """
+    GAM penalty for multivariate regression
+
+    Parameters
+    -----------
+    cov_der2: list of matrices
+     is a list of squared matrix of shape (size_base, size_base)
+
+    der2: list of matrices
+     is a list of matrix of shape (n_samples, size_base)
+
+    alpha: array-like
+     list of doubles. Each one representing the penalty
           for each function
-        - wts is a list of doubles of the same length of alpha
-        '''
-        
-        assert(len(cov_der2) == len(der2))
+
+    wts: array-like
+     is a list of doubles of the same length of alpha
+
+    """
+
+    def __init__(self, wts=None, alpha=None, cov_der2=None, der2=None):
+
+        if len(cov_der2) != len(der2) or len(alpha) != len(der2):
+            raise ValueError('all the input values should be list of the same length')
         
         # the total number of columns in der2 i.e. the len of the params vector
-        self.n_columns = np.sum(d2.shape[1] for d2 in der2)
+        self.k_columns = np.sum(d2.shape[1] for d2 in der2)
 
         # the number of variables in the GAM model
         self.n_variables = len(cov_der2) 
@@ -249,8 +291,8 @@ class MultivariateGamPenalty(Penalty):
         self.wts = wts
         
         n_samples = der2[0].shape[0] 
-        self.mask = [np.array([False]*self.n_columns) 
-                     for i in range(self.n_variables)]
+        self.mask = [np.array([False]*self.k_columns)
+                     for _ in range(self.n_variables)]
         param_count = 0
         for i, d2 in enumerate(der2):
             n, dim_base = d2.shape
@@ -294,7 +336,6 @@ class MultivariateGamPenalty(Penalty):
             deriv2 = block_diag(deriv2, self.gp[i].deriv2(params_i))
 
         return deriv2
-
 
 
 class LogitGam(PenalizedMixin, Logit):
