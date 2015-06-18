@@ -274,9 +274,9 @@ class MultivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, wts=None, alpha=None, cov_der2=None, der2=None):
+    def __init__(self, wts=None, alphas=None, cov_der2=None, der2=None):
 
-        if len(cov_der2) != len(der2) or len(alpha) != len(der2):
+        if len(cov_der2) != len(der2) or len(alphas) != len(der2):
             raise ValueError('all the input values should be list of the same length')
         
         # the total number of columns in der2 i.e. the len of the params vector
@@ -287,7 +287,7 @@ class MultivariateGamPenalty(Penalty):
 
         # if wts and alpha are not a list then each function has the same penalty
         # TODO: Review this
-        self.alpha = alpha
+        self.alphas = alphas
         self.wts = wts
         
         n_samples = der2[0].shape[0] 
@@ -303,7 +303,7 @@ class MultivariateGamPenalty(Penalty):
             
         self.gp = []
         for i in range(self.n_variables):
-            gp = GamPenalty(wts=self.wts[i], alpha=self.alpha[i], 
+            gp = GamPenalty(wts=self.wts[i], alpha=self.alphas[i],
                             cov_der2=cov_der2[i], der2=der2[i])
             self.gp.append(gp)
 

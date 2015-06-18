@@ -233,7 +233,7 @@ def test_multivariate_penalty():
 
     gp1 = GamPenalty(alpha=alphas[0], cov_der2=cov_der2_1, der2=der2_1)
     gp2 = GamPenalty(alpha=alphas[1], cov_der2=cov_der2_2, der2=der2_2)
-    mgp = MultivariateGamPenalty(wts=wts, alpha=alphas, cov_der2=cov_der2,
+    mgp = MultivariateGamPenalty(wts=wts, alphas=alphas, cov_der2=cov_der2,
                                  der2=der2)
 
     for i in range(10):
@@ -258,7 +258,6 @@ def test_multivariate_penalty():
         assert_allclose(h, h12)
 
     return
-
 
 '''
 test_gam_gradient()
