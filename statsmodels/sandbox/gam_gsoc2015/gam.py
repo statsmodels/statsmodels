@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
-from statsmodels.api import GLM
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from smooth_basis import BS
 from patsy.state import stateful_transform
 
@@ -217,35 +217,35 @@ class GamPenalty(Penalty):
 
 
     """
-    
+
     def __init__(self, wts=1, alpha=1, cov_der2=None, der2=None):
-        
+
         self.wts = wts #should we keep wts????
         self.alpha = alpha
         self.cov_der2 = cov_der2
         self.der2 = der2
         self.n_samples = der2.shape[0]
-    
+
     def func(self, params):
-        ''' 
+        '''
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         '''
-        
+
         # The second derivative of the estimated regression function
         f = np.dot(self.der2, params)
 
         return self.alpha * np.sum(f**2) / self.n_samples
 
     def grad(self, params):
-        ''' 
+        '''
         1) params are the coefficients in the regression model
         2) der2  is the second derivative of the splines basis
         3) cov_der2 is obtained as np.dot(der2.T, der2)
         '''
-                
+
         return 2 * self.alpha * np.dot(self.cov_der2, params) / self.n_samples
-    
+
     def deriv2(self, params):
 
         return 2 * self.alpha * self.cov_der2 / self.n_samples
@@ -278,29 +278,29 @@ class MultivariateGamPenalty(Penalty):
 
         if len(cov_der2) != len(der2) or len(alphas) != len(der2):
             raise ValueError('all the input values should be list of the same length')
-        
+
         # the total number of columns in der2 i.e. the len of the params vector
         self.k_columns = np.sum(d2.shape[1] for d2 in der2)
 
         # the number of variables in the GAM model
-        self.n_variables = len(cov_der2) 
+        self.n_variables = len(cov_der2)
 
         # if wts and alpha are not a list then each function has the same penalty
         # TODO: Review this
         self.alphas = alphas
         self.wts = wts
-        
-        n_samples = der2[0].shape[0] 
+
+        n_samples = der2[0].shape[0]
         self.mask = [np.array([False]*self.k_columns)
                      for _ in range(self.n_variables)]
         param_count = 0
         for i, d2 in enumerate(der2):
             n, dim_base = d2.shape
             # check that all the basis have the same number of samples
-            assert(n_samples == n) 
+            assert(n_samples == n)
             self.mask[i][param_count: param_count + dim_base] = True
             param_count += dim_base
-            
+
         self.gp = []
         for i in range(self.n_variables):
             gp = GamPenalty(wts=self.wts[i], alpha=self.alphas[i],
@@ -342,9 +342,21 @@ class LogitGam(PenalizedMixin, Logit):
     pass
 
 
+class GLMGAMResults(GLMResults):
+
+    def plot_predict(self, x_values=None):
+        """just to try a method in overridden Results class
+        """
+        import matplotlib.pyplot as plt
+
+        if x_values is None:
+            plt.plot(self.model.endog, '.')
+            plt.plot(self.predict())
+        else:
+            plt.plot(x_values, self.model.endog, '.')
+            plt.plot(x_values, self.predict())
+
+
 class GLMGam(PenalizedMixin, GLM):
-    pass
 
-
-
-
+    _results_class = GLMGAMResults

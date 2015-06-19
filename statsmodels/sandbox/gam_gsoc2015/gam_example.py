@@ -121,7 +121,7 @@ cov_der2 = [np.dot(der2_basis1.T, der2_basis1),
 
 alpha = [0, 0]
 wts = [1, 1]
-mgp = MultivariateGamPenalty(wts=wts, alpha=alpha, cov_der2=cov_der2,
+mgp = MultivariateGamPenalty(wts=wts, alphas=alpha, cov_der2=cov_der2,
                              der2=der2_basis)    
 mLG = LogitGam(y, basis, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
@@ -147,7 +147,7 @@ plt.legend()
 alpha = [.1, .2]
 wts = [1, 1]
 
-mgp = MultivariateGamPenalty(wts=wts, alpha=alpha, cov_der2=cov_der2, 
+mgp = MultivariateGamPenalty(wts=wts, alphas=alpha, cov_der2=cov_der2,
                              der2=der2_basis)    
 mLG = LogitGam(y, basis, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)

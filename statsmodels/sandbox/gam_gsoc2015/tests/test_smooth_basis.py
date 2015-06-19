@@ -1,6 +1,6 @@
 from patsy.state import stateful_transform
-from smooth_basis import make_poly_basis, make_bsplines_basis, BS
 import numpy as np
+from smooth_basis import make_poly_basis, make_bsplines_basis
 
 
 def test_make_basis():
