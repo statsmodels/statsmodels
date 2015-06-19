@@ -344,17 +344,16 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGAMResults(GLMResults):
 
-    def plot_predict(self, x_values=None):
+    def plot_predict(self, x_values=None, smooth_basis=None):
         """just to try a method in overridden Results class
         """
         import matplotlib.pyplot as plt
-
-        if x_values is None:
-            plt.plot(self.model.endog, '.')
-            plt.plot(self.predict())
-        else:
-            plt.plot(x_values, self.model.endog, '.')
-            plt.plot(x_values, self.predict())
+        # TODO: This function will be available when we will have the self.model.x variable
+        # if x_values is None:
+        #     plt.plot(self.model.x, self.model.endog, '.')
+        #     plt.plot(self.model.x, self.predict())
+        # else:
+        plt.plot(x_values, self.predict(smooth_basis))
 
 
 class GLMGam(PenalizedMixin, GLM):

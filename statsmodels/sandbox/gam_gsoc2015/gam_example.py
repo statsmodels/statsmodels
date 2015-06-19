@@ -92,7 +92,6 @@ for i, alpha in enumerate(alphas):
     plt.plot(x, y, '.')
     plt.title('GLM alpha=' + str(alpha))
 plt.show()
-# despite the large alpha we don't see a penalization
 
 
 # %%%%%%%%%%%%%%%%%% Multivariate GAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%
