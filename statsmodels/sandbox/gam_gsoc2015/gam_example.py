@@ -156,6 +156,7 @@ param1 = res_mLG.params[mgp.mask[0]]
 param2 = res_mLG.params[mgp.mask[1]]
 param = res_mLG.params
 
+
 # plot with different alpha
 plt.subplot(3, 2, 2)
 plt.title('alpha=' + str(alpha))
