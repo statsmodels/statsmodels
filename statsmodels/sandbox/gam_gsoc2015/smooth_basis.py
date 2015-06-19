@@ -109,11 +109,10 @@ def make_poly_basis(x, degree, intercept=True):
     der_basis = np.zeros(shape=(n_samples, degree+1 - start))
     der2_basis = np.zeros(shape=(n_samples, degree+1 - start))
     
-    
-    for i in range(start, degree+1 - start):
-        basis[:, i] = x**i
-        der_basis[:, i] = i * x**(i-1)
-        der2_basis[:, i] = i * (i-1) * x**(i-2) 
+    for i in range(start, degree+1):
+        basis[:, i-start] = x**i
+        der_basis[:, i-start] = i * x**(i-1)
+        der2_basis[:, i-start] = i * (i-1) * x**(i-2)
         
     return basis, der_basis, der2_basis
 

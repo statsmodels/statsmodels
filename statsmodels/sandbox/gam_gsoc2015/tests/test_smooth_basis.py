@@ -1,7 +1,7 @@
 from patsy.state import stateful_transform
 import numpy as np
 from smooth_basis import make_poly_basis, make_bsplines_basis
-
+from smooth_basis import BS
 
 def test_make_basis():
     bs = stateful_transform(BS)
@@ -15,3 +15,5 @@ def test_make_basis():
     assert((der1 == der1_old).all())
     assert((der2 == der2_old).all())
     return 
+
+# test_make_basis()
