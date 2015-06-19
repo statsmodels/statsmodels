@@ -344,7 +344,7 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGam(PenalizedMixin, GLM):
     pass
-  
+
 
 
 
