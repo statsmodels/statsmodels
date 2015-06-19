@@ -1494,8 +1494,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
-            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
-                              exog))
+            if self.k_ar > 0:
+                exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                                  exog))
 
         forecast = _arma_predict_out_of_sample(self.params,
                                                steps, self.resid, self.k_ar,
