@@ -355,9 +355,13 @@ class MixedLMParams(object):
         return pa
 
 
-def _smw_solver(s, A, AtA, BI):
+def _smw_solver(s, A, AtA, BI, di):
     """
     Solves the system (s*I + A*B*A') * x = rhs for an arbitrary rhs.
+
+    The inverse matrix of B is block diagonal.  The upper left block
+    is BI and the lower right block is a diagonal matrix containing
+    di.
 
     Parameters
     ----------
@@ -369,6 +373,7 @@ def _smw_solver(s, A, AtA, BI):
         A.T * A
     BI : square symmetric ndarray
         The inverse of `B`.
+    di : array-like
 
     Returns
     -------
@@ -377,7 +382,11 @@ def _smw_solver(s, A, AtA, BI):
     """
 
     # Use SMW identity
-    qmat = BI + AtA / s
+    qmat = AtA / s
+    m = BI.shape[0]
+    qmat[0:m, 0:m] += BI
+    ix = np.arange(m, A.shape[1])
+    qmat[ix, ix] += di
     qmati = np.linalg.solve(qmat, A.T)
 
     def solver(rhs):
@@ -389,10 +398,11 @@ def _smw_solver(s, A, AtA, BI):
     return solver
 
 
-def _smw_logdet(s, A, AtA, BI, B_logdet):
+def _smw_logdet(s, A, AtA, BI, di, B_logdet):
     """
-    Use the matrix determinant lemma to accelerate the calculation of
-    the log determinant of s*I + A*B*A'.
+    Returns the log determinant of s*I + A*B*A'.
+
+    Uses the matrix determinant lemma to accelerate the calculation.
 
     Parameters
     ----------
@@ -403,7 +413,9 @@ def _smw_logdet(s, A, AtA, BI, B_logdet):
     AtA : square matrix
         A.T * A
     BI : square symmetric ndarray
-        The inverse of `B`; can be None if B is singular.
+        The upper left block of B^-1.
+    di : array-like
+        The diagonal elements of the lower right block of B^-1.
     B_logdet : real
         The log determinant of B
 
@@ -414,7 +426,11 @@ def _smw_logdet(s, A, AtA, BI, B_logdet):
 
     p = A.shape[0]
     ld = p * np.log(s)
-    qmat = BI + AtA / s
+    qmat = AtA / s
+    m = BI.shape[0]
+    qmat[0:m, 0:m] += BI
+    ix = np.arange(m, A.shape[1])
+    qmat[ix, ix] += di
     _, ld1 = np.linalg.slogdet(qmat)
     return B_logdet + ld + ld1
 
@@ -961,6 +977,7 @@ class MixedLM(base.LikelihoodModel):
         mdf = self.fit(**fit_kwargs)
         fe_params = mdf.fe_params
         cov_re = mdf.cov_re
+        vcomp = mdf.vcomp
         scale = mdf.scale
         try:
             cov_re_inv = np.linalg.inv(cov_re)
@@ -983,13 +1000,15 @@ class MixedLM(base.LikelihoodModel):
                 # The loss function has the form
                 # a*x^2 + b*x + pwt*|x|
                 a, b = 0., 0.
-                for k, lab in enumerate(self.group_labels):
+                for group_ix, group in enumerate(self.group_labels):
 
-                    exog = self.exog_li[k]
-                    ex_r = self.exog_re_li[k]
-                    ex2_r = self.exog_re2_li[k]
-                    resid = resid_all[self.row_indices[lab]]
-                    solver = _smw_solver(scale, ex_r, ex2_r, cov_re_inv)
+                    vc_var = self._expand_vcomp(vcomp, group)
+
+                    exog = self.exog_li[group_ix]
+                    ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
+
+                    resid = resid_all[self.row_indices[group]]
+                    solver = _smw_solver(scale, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
                     x = exog[:, j]
                     u = solver(x)
@@ -1073,10 +1092,10 @@ class MixedLM(base.LikelihoodModel):
 
         xtxy = 0.
         for group_ix, group in enumerate(self.group_labels):
-            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group)
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
             u = solver(self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
@@ -1146,28 +1165,16 @@ class MixedLM(base.LikelihoodModel):
         return lin, quad
 
 
-    def _augment_cov_re(self, cov_re, cov_re_inv, vcomp, group):
-        """
-        Returns the inverse covariance matrix for all random effects.
-        Also returns the adjustment to the determinant for this group.
-        """
-        if self.k_vc == 0:
-            return cov_re_inv, 0.
-
+    def _expand_vcomp(self, vcomp, group):
+        if len(vcomp) == 0:
+            return np.empty(0)
         vc_var = []
         for j,k in enumerate(self._vc_names):
             if group not in self.exog_vc[k]:
                 continue
-            vc_var.append([vcomp[j]] * self.exog_vc[k][group].shape[1])
+            vc_var.append(vcomp[j] * np.ones(self.exog_vc[k][group].shape[1]))
         vc_var = np.concatenate(vc_var)
-
-        m = cov_re.shape[0] + len(vc_var)
-        ix = np.arange(self.k_re, m)
-        cov_aug_inv = np.zeros((m, m))
-        cov_aug_inv[0:self.k_re, 0:self.k_re] = cov_re_inv
-        cov_aug_inv[ix, ix] = 1 / vc_var
-
-        return cov_aug_inv, np.sum(np.log(vc_var))
+        return vc_var
 
 
     def _augment_exog(self, group_ix):
@@ -1260,17 +1267,17 @@ class MixedLM(base.LikelihoodModel):
         xvx, qf = 0., 0.
         for k, group in enumerate(self.group_labels):
 
-            cov_aug_inv, adj_logdet = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
-            cov_aug_logdet = cov_re_logdet + adj_logdet
+            vc_var = self._expand_vcomp(vcomp, group)
+            cov_aug_logdet = cov_re_logdet + np.sum(np.log(vc_var))
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
             resid = resid_all[self.row_indices[group]]
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = _smw_logdet(1., ex_r, ex2_r, cov_aug_inv, cov_aug_logdet)
+            ld = _smw_logdet(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var, cov_aug_logdet)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
@@ -1459,11 +1466,11 @@ class MixedLM(base.LikelihoodModel):
 
         for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -1630,11 +1637,11 @@ class MixedLM(base.LikelihoodModel):
         F = [[0.] * m for k in range(m)]
         for k, group in enumerate(self.group_labels):
 
-            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group)
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
             # The residuals
             resid = self.endog_li[k]
@@ -1765,12 +1772,12 @@ class MixedLM(base.LikelihoodModel):
         qf = 0.
         for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            vc_var = self._expand_vcomp(vcomp, group)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
 
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -2026,14 +2033,17 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         except np.linalg.LinAlgError:
             raise ValueError("Cannot predict random effects from singular covariance structure.")
 
+        vcomp = self.vcomp
+        k_re = self.k_re
+
         ranef_dict = {}
         for k in range(self.model.n_groups):
 
             endog = self.model.endog_li[k]
             exog = self.model.exog_li[k]
-            ex_r = self.model.exog_re_li[k]
-            ex2_r = self.model.exog_re2_li[k]
+            ex_r, ex2_r = self.model._aex_r[k], self.model._aex_r2[k]
             label = self.model.group_labels[k]
+            vc_var = self.model._expand_vcomp(vcomp, k)
 
             # Get the residuals
             resid = endog
@@ -2041,10 +2051,13 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
                 expval = np.dot(exog, self.fe_params)
                 resid = resid - expval
 
-            solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv)
-            vresid = solver(resid)
+            solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
+            vir = solver(resid)
 
-            ranef_dict[label] = np.dot(self.cov_re, np.dot(ex_r.T, vresid))
+            xtvir = np.dot(ex_r.T, vir)
+            xtvir[0:k_re] = np.dot(self.cov_re, xtvir[0:k_re])
+            xtvir[k_re:] *= vc_var
+            ranef_dict[label] = xtvir
 
         column_names = dict(zip(range(self.k_re),
                                       self.model.data.exog_re_names))
@@ -2071,21 +2084,31 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         except np.linalg.LinAlgError:
             cov_re_inv = None
 
+        vcomp = self.vcomp
+
         ranef_dict = {}
         #columns = self.model.data.exog_re_names
         for k in range(self.model.n_groups):
 
-            ex_r = self.model.exog_re_li[k]
-            ex2_r = self.model.exog_re2_li[k]
+            ex_r, ex2_r = self.model._aex_r[k], self.model._aex_r2[k]
             label = self.model.group_labels[k]
+            vc_var = self.model._expand_vcomp(vcomp, k)
 
-            solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv)
+            solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
-            mat1 = np.dot(ex_r, self.cov_re)
+            n = ex_r.shape[0]
+            m = self.cov_re.shape[0]
+            mat1 = np.empty((n, m))
+            mat1[:, 0:m] = np.dot(ex_r[:, 0:m], self.cov_re)
+            mat1[:, m:] = np.dot(ex_r[:, m:], np.diag(vc_var))
             mat2 = solver(mat1)
             mat2 = np.dot(mat1.T, mat2)
 
-            ranef_dict[label] = self.cov_re - mat2
+            v = -mat2
+            v[0:m, 0:m] += self.cov_re
+            ix = np.arange(m, v.shape[0])
+            v[ix, ix] += vc_var
+            ranef_dict[label] = v
             #ranef_dict[label] = DataFrame(self.cov_re - mat2,
             #                              index=columns, columns=columns)
 

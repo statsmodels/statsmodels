@@ -537,7 +537,7 @@ class TestMixedLM(object):
 
         assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
 
-        # Not supported in R
+        # Not supported in R except for independent random effects
         if not irf:
             assert_almost_equal(mdf.random_effects.ix[0], rslt.ranef_postmean,
                                 decimal=3)
