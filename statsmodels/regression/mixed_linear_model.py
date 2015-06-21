@@ -355,7 +355,7 @@ class MixedLMParams(object):
         return pa
 
 
-def _smw_solver(s, A, AtA, B, BI):
+def _smw_solver(s, A, AtA, BI):
     """
     Solves the system (s*I + A*B*A') * x = rhs for an arbitrary rhs.
 
@@ -363,12 +363,10 @@ def _smw_solver(s, A, AtA, B, BI):
     ----------
     s : scalar
         See above for usage
-    A : square symmetric ndarray
+    A : ndarray
         See above for usage
     AtA : square ndarray
         A.T * A
-    B : square symmetric ndarray
-        See above for usage
     BI : square symmetric ndarray
         The inverse of `B`.
 
@@ -391,7 +389,7 @@ def _smw_solver(s, A, AtA, B, BI):
     return solver
 
 
-def _smw_logdet(s, A, AtA, B, BI, B_logdet):
+def _smw_logdet(s, A, AtA, BI, B_logdet):
     """
     Use the matrix determinant lemma to accelerate the calculation of
     the log determinant of s*I + A*B*A'.
@@ -404,8 +402,6 @@ def _smw_logdet(s, A, AtA, B, BI, B_logdet):
         See above for usage
     AtA : square matrix
         A.T * A
-    B : square symmetric ndarray
-        See above for usage
     BI : square symmetric ndarray
         The inverse of `B`; can be None if B is singular.
     B_logdet : real
@@ -993,7 +989,7 @@ class MixedLM(base.LikelihoodModel):
                     ex_r = self.exog_re_li[k]
                     ex2_r = self.exog_re2_li[k]
                     resid = resid_all[self.row_indices[lab]]
-                    solver = _smw_solver(scale, ex_r, ex2_r, cov_re, cov_re_inv)
+                    solver = _smw_solver(scale, ex_r, ex2_r, cov_re_inv)
 
                     x = exog[:, j]
                     u = solver(x)
@@ -1077,10 +1073,10 @@ class MixedLM(base.LikelihoodModel):
 
         xtxy = 0.
         for group_ix, group in enumerate(self.group_labels):
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
             u = solver(self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
@@ -1152,12 +1148,11 @@ class MixedLM(base.LikelihoodModel):
 
     def _augment_cov_re(self, cov_re, cov_re_inv, vcomp, group):
         """
-        Returns the covariance matrix and its inverse for all random
-        effects.  Also returns the adjustment to the determinant for
-        this group.
+        Returns the inverse covariance matrix for all random effects.
+        Also returns the adjustment to the determinant for this group.
         """
         if self.k_vc == 0:
-            return cov_re, cov_re_inv, 0.
+            return cov_re_inv, 0.
 
         vc_var = []
         for j,k in enumerate(self._vc_names):
@@ -1167,16 +1162,12 @@ class MixedLM(base.LikelihoodModel):
         vc_var = np.concatenate(vc_var)
 
         m = cov_re.shape[0] + len(vc_var)
-        cov_aug = np.zeros((m, m))
-        cov_aug[0:self.k_re, 0:self.k_re] = cov_re
         ix = np.arange(self.k_re, m)
-        cov_aug[ix, ix] = vc_var
-
         cov_aug_inv = np.zeros((m, m))
         cov_aug_inv[0:self.k_re, 0:self.k_re] = cov_re_inv
         cov_aug_inv[ix, ix] = 1 / vc_var
 
-        return cov_aug, cov_aug_inv, np.sum(np.log(vc_var))
+        return cov_aug_inv, np.sum(np.log(vc_var))
 
 
     def _augment_exog(self, group_ix):
@@ -1269,17 +1260,17 @@ class MixedLM(base.LikelihoodModel):
         xvx, qf = 0., 0.
         for k, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, adj_logdet = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug_inv, adj_logdet = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
             cov_aug_logdet = cov_re_logdet + adj_logdet
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
 
             resid = resid_all[self.row_indices[group]]
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = _smw_logdet(1., ex_r, ex2_r, cov_aug, cov_aug_inv, cov_aug_logdet)
+            ld = _smw_logdet(1., ex_r, ex2_r, cov_aug_inv, cov_aug_logdet)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
@@ -1468,11 +1459,11 @@ class MixedLM(base.LikelihoodModel):
 
         for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -1485,19 +1476,18 @@ class MixedLM(base.LikelihoodModel):
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
-            vex = solver(ex_r)
             vir = solver(resid)
             for jj, matl, matr, vsl, vsr, sym in self._gen_dV_dPar(ex_r, solver, group):
-                dlv[jj] = np.sum(matr * vsl) # trace dot
+                dlv[jj] = np.dot(matr.ravel(), vsl.ravel()) # trace dot
                 if not sym:
-                    dlv[jj] += np.sum(matl * vsr) # trace dot
+                    dlv[jj] += np.dot(matl.ravel(), vsr.ravel()) # trace dot
 
                 ul = np.dot(vir, matl)
                 ur = ul.T if sym else np.dot(matr.T, vir)
                 ulr = np.dot(ul, ur)
                 rvavr[jj] += ulr
                 if not sym:
-                    rvavr[jj] += ulr.T
+                    rvavr[jj] += ulr.T # is this always scalar?
 
                 if self.reml:
                     ul = np.dot(viexog.T, matl)
@@ -1534,9 +1524,9 @@ class MixedLM(base.LikelihoodModel):
         if self.reml:
             xtvixi = np.linalg.inv(xtvix)
             for j in range(self.k_re2):
-                score_re[j] += 0.5 * np.sum(xtvixi.T * xtax[j]) # trace dot
+                score_re[j] += 0.5 * np.dot(xtvixi.T.ravel(), xtax[j].ravel()) # trace dot
             for j in range(self.k_vc):
-                score_vc[j] += 0.5 * np.sum(xtvixi.T * xtax[self.k_re2 + j]) # trace dot
+                score_vc[j] += 0.5 * np.dot(xtvixi.T.ravel(), xtax[self.k_re2 + j].ravel()) # trace dot
 
         return score_fe, score_re, score_vc
 
@@ -1640,11 +1630,11 @@ class MixedLM(base.LikelihoodModel):
         F = [[0.] * m for k in range(m)]
         for k, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
 
             # The residuals
             resid = self.endog_li[k]
@@ -1701,9 +1691,9 @@ class MixedLM(base.LikelihoodModel):
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
 
-                    rt = np.sum(vsl2 * re.T) / 2 # trace dot
+                    rt = np.dot(vsl2.ravel(), re.T.ravel()) / 2 # trace dot
                     if not sym2:
-                        rt += np.sum(vsr2 * le.T) / 2 # trace dot
+                        rt += np.dot(vsr2.ravel(), le.T.ravel()) / 2 # trace dot
 
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -1729,7 +1719,7 @@ class MixedLM(base.LikelihoodModel):
             QL = [np.linalg.solve(xtvix, x) for x in xtax]
             for j1 in range(self.k_re2 + self.k_vc):
                 for j2 in range(j1 + 1):
-                    a = np.sum(QL[j1].T * QL[j2]) # trace dot
+                    a = np.dot(QL[j1].T.ravel(), QL[j2].ravel()) # trace dot
                     a -= np.trace(np.linalg.solve(xtvix, F[j1][j2]))
                     a *= 0.5
                     hess_re[j1, j2] += a
@@ -1775,12 +1765,12 @@ class MixedLM(base.LikelihoodModel):
         qf = 0.
         for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
 
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_aug_inv)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -2051,7 +2041,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
                 expval = np.dot(exog, self.fe_params)
                 resid = resid - expval
 
-            solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re, cov_re_inv)
+            solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv)
             vresid = solver(resid)
 
             ranef_dict[label] = np.dot(self.cov_re, np.dot(ex_r.T, vresid))
@@ -2089,7 +2079,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             ex2_r = self.model.exog_re2_li[k]
             label = self.model.group_labels[k]
 
-            solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re,  cov_re_inv)
+            solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv)
 
             mat1 = np.dot(ex_r, self.cov_re)
             mat2 = solver(mat1)
