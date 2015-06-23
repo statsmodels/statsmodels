@@ -20,6 +20,9 @@ import statsmodels.genmod.families as fams
 
 from pandas import DataFrame
 
+from statsmodels.tools.numdiff import (approx_fprime,
+                                       approx_hess_cs)
+
 
 def _get_exog_re_names(self, exog_re):
     """
@@ -562,7 +565,7 @@ class MixedGLM(base.LikelihoodModel):
 
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, vc_formula=None,
-                     subset=None, family=fams.Gaussian(), *args, **kwargs):
+                     subset=None, family=fams.Gaussian(), scale=1, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -743,6 +746,9 @@ class MixedGLM(base.LikelihoodModel):
         mod.data.exog_re_names = exog_re_names
         mod.data.exog_re_names_full = exog_re_names_full
         mod.data.vcomp_names = mod._vc_names
+
+        mod.family = family
+        mod._scale = scale
 
         return mod
 
@@ -1137,7 +1143,14 @@ class MixedGLM(base.LikelihoodModel):
 
         _, cov_re_logdet = np.linalg.slogdet(cov_re)
 
-        likeval = self._ll_laplace(fe_params, cov_re, self._scale)
+        # Integral over rand. effects includes everything but mvn const
+        ival = self._ll_laplace(fe_params, cov_re, self._scale)
+
+        # RE multi. normal constant
+        nconst = - self.n_groups*self.k_re * np.log(2*np.pi) / 2.0
+        nconst -= self.n_groups * cov_re_logdet / 2.0
+
+        likeval = nconst + ival
 
         return likeval
 
@@ -1165,7 +1178,8 @@ class MixedGLM(base.LikelihoodModel):
         f, h = self._ll_funhess(mp, fe_params, cov_re, scale)
 
         d = len(mp)
-        ival = np.exp(-f) * (2 * np.pi)**(d / 2) / np.sqrt(np.exp(h))
+        #ival = np.exp(-f) * (2 * np.pi)**(d / 2) / np.sqrt(np.exp(h))
+        ival = -f +(d/2.0)*np.log(2*np.pi)-(1/2.0)*h
         return(ival)
 
     def _ll_gen_fungrad(self, fe_params, cov_re, scale):
@@ -1204,7 +1218,8 @@ class MixedGLM(base.LikelihoodModel):
             for k, g in enumerate(self.group_labels):
                 lin_predr = lin_pred[k] + np.dot(self.exog_re_li[k], ref[k, :]) # eta_i
                 mean = self.family.fitted(lin_predr) # mu_i = h(eta_i)
-                f += self.family.loglike(self.endog_li[k], mean,scale=scale)
+                log_likes = self.family.loglike(self.endog_li[k], mean,scale=scale)
+                f += log_likes
 
 
                 d[k, :] = ((self.endog_li[k] - mean)[:, None] * self.exog_re_li[k] * scale).sum(0)
@@ -1213,6 +1228,57 @@ class MixedGLM(base.LikelihoodModel):
             return -f, -d.ravel()
 
         return fun
+
+    def test_gen_fungrad(self):
+
+        np.random.seed(4234)
+
+        for k in range(10):
+
+            params = np.random.normal(size=self.k_fe)
+            cov_re = np.random.normal(size=(self.k_re, self.k_re))
+            cov_re = np.dot(cov_re, cov_re.T)
+            fungrad = self._ll_gen_fungrad(params, cov_re, self._scale)
+            fun = lambda x : fungrad(x)[0]
+            grad = lambda x : fungrad(x)[1]
+
+            ref = np.random.normal(size=(self.n_groups, self.k_re)).ravel()
+
+            # Check that the numerical gradient matches the analytic
+            # gradient
+            fp1 = approx_fprime(ref, fun)
+            fp2 = grad(ref)
+
+            np.testing.assert_allclose(fp1, fp2, rtol=1e-1, atol=1e-5)
+            print("Gradient test "+str(k+1)+" passed.")
+
+    def test_funhess(self):
+
+        np.random.seed(4234)
+
+        for k in range(10):
+
+            params = np.random.normal(size=self.k_fe)
+            cov_re = np.random.normal(size=(self.k_re, self.k_re))
+            cov_re = np.dot(cov_re, cov_re.T)
+            fun = lambda x : self._ll_funhess(x, params, cov_re, 1)[0]
+            hess = lambda x : self._ll_funhess(x, params, cov_re, 1)[1]
+
+
+            fungrad = self._ll_gen_fungrad(params, cov_re, self._scale)
+            fun1 = lambda x : fungrad(x)[0]
+            grad = lambda x : fungrad(x)[1]
+
+            ref = np.random.normal(size=(self.n_groups, self.k_re)).ravel()
+
+            # Check that the numerical gradient matches the analytic
+            # gradient
+            he1 = approx_fprime(ref, grad)
+            _, dhe1 = np.linalg.slogdet(he1)
+            he2 = hess(ref)
+
+            np.testing.assert_allclose(dhe1, he2, rtol=1e-3, atol=1e-5)
+            print("Hessian test "+str(k+1)+" passed.")
 
     def _ll_funhess(self, ref, fe_params, cov_re, scale):
         """
@@ -1279,9 +1345,11 @@ class MixedGLM(base.LikelihoodModel):
         """
 
         fun = self._ll_gen_fungrad(fe_params, cov_re, scale)
-        x0 = np.zeros(self.n_totobs)
+        x0 = np.random.normal(size=self.n_groups*self.k_re)
 
-        result = minimize(fun, x0, jac=True, method=omethod)
+        func = lambda x: fun(x)[0]
+
+        result = minimize(fun, x0, jac=True)
 
         if not result.success:
             print("OPTIMIZATION FAILED")
