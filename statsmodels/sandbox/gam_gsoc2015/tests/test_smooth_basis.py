@@ -1,7 +1,9 @@
-from patsy.state import stateful_transform
+
 import numpy as np
-from smooth_basis import make_poly_basis, make_bsplines_basis
-from smooth_basis import BS
+from patsy.state import stateful_transform
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis,
+                                                           make_bsplines_basis, BS)
+
 
 def test_make_basis():
     bs = stateful_transform(BS)
