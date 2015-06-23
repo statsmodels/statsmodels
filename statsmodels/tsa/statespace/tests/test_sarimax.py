@@ -39,7 +39,7 @@ class TestSARIMAXStatsmodels(object):
                                        simple_differencing=True,
                                        hamilton_representation=True)
         self.result_b = self.model_b.fit(disp=-1,
-                                         information_matrix_type='oim')
+                                         cov_type='oim')
 
     def test_loglike(self):
         assert_allclose(self.result_b.llf, self.result_a.llf)
@@ -62,7 +62,7 @@ class TestSARIMAXStatsmodels(object):
 
     def test_bse(self):
         # Make sure the default type is OIM for this example
-        assert(self.result_b.information_matrix_type == 'oim')
+        assert(self.result_b.cov_type == 'oim')
         # Test the OIM BSE values
         assert_allclose(
             self.result_b.bse[1:-1],
@@ -185,6 +185,22 @@ class TestARIMAStationary(ARIMA):
             atol=1e-2,
         )
 
+    def test_bse_robust(self):
+        robust_oim_bse = self.result.cov_params_robust_oim.diagonal()**0.5
+        robust_cs_bse = self.result.cov_params_robust_cs.diagonal()**0.5
+        true_robust_bse = np.r_[
+            self.true['se_ar_robust'], self.true['se_ma_robust']
+        ]
+
+        assert_allclose(
+            robust_oim_bse[1:3], true_robust_bse,
+            atol=1e-2,
+        )
+        assert_allclose(
+            robust_cs_bse[1:3], true_robust_bse,
+            atol=1e-1,
+        )
+
 
 class TestARIMADiffuse(ARIMA):
     def __init__(self, **kwargs):
@@ -198,7 +214,7 @@ class TestARIMADiffuse(ARIMA):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[1], self.true['se_ar_opg'],
@@ -276,7 +292,7 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[1], self.true['se_ar_opg'],
@@ -352,7 +368,7 @@ class TestAirlineHamilton(Airline):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ma_opg'],
@@ -397,7 +413,7 @@ class TestAirlineHarvey(Airline):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ma_opg'],
@@ -459,7 +475,7 @@ class TestAirlineStateDifferencing(Airline):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ma_opg'],
@@ -536,7 +552,7 @@ class TestFriedmanMLERegression(Friedman):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_exog_opg'][0],
@@ -649,7 +665,7 @@ class TestFriedmanStateRegression(Friedman):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.information_matrix_type == 'opg')
+        assert(self.result.cov_type == 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ar_opg'],
