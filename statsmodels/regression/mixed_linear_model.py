@@ -1166,6 +1166,20 @@ class MixedLM(base.LikelihoodModel):
 
 
     def _expand_vcomp(self, vcomp, group):
+        """
+        Replicate variance parameters to match a group's design.
+
+        Parameters
+        ----------
+        vcomp : array-like
+            The variance parameters for the variance components.
+        group : int
+            The group index
+
+        Returns an expaded version of vcomp, in which each variance
+        parameter is copied as many times as there are independent
+        realizations of the variance component in the given group.
+        """
         if len(vcomp) == 0:
             return np.empty(0)
         vc_var = []
