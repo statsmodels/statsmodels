@@ -1173,8 +1173,8 @@ class MixedLM(base.LikelihoodModel):
         ----------
         vcomp : array-like
             The variance parameters for the variance components.
-        group : int
-            The group index
+        group : string
+            The group label
 
         Returns an expaded version of vcomp, in which each variance
         parameter is copied as many times as there are independent
@@ -1183,12 +1183,14 @@ class MixedLM(base.LikelihoodModel):
         if len(vcomp) == 0:
             return np.empty(0)
         vc_var = []
-        for j,k in enumerate(self._vc_names):
-            if group not in self.exog_vc[k]:
-                continue
-            vc_var.append(vcomp[j] * np.ones(self.exog_vc[k][group].shape[1]))
-        vc_var = np.concatenate(vc_var)
-        return vc_var
+        for j, k in enumerate(self._vc_names):
+            if group in self.exog_vc[k]:
+                vc_var.append(vcomp[j] * np.ones(self.exog_vc[k][group].shape[1]))
+        if len(vc_var) > 0:
+            return np.concatenate(vc_var)
+        else:
+            1/0
+            return np.empty(0)
 
 
     def _augment_exog(self, group_ix):
@@ -1226,7 +1228,7 @@ class MixedLM(base.LikelihoodModel):
             parameter vector containing only the covariance
             parameters.
         profile_fe : boolean
-            If True, replace the provided value of `params_fe` with
+            If True, replace the provided value of `fe_params` with
             the GLS estimates.
 
         Returns
@@ -2008,6 +2010,41 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
 
     @cache_readonly
+    def fittedvalues(self):
+        """
+        Returns the fitted values for the model.
+
+        The fitted values reflect the mean structure specified by the
+        fixed effects and the predicted random effects.
+        """
+        fit = np.dot(self.model.exog, self.fe_params)
+        re = self.random_effects
+        for group_ix, group in enumerate(self.model.group_labels):
+            ix = self.model.row_indices[group]
+
+            mat = [self.model.exog_re_li[group_ix]]
+            for c in self.model._vc_names:
+                if group in self.model.exog_vc[c]:
+                    mat.append(self.model.exog_vc[c][group])
+            mat = np.concatenate(mat, axis=1)
+
+            fit[ix] += np.dot(mat, re[group])
+
+        return fit
+
+
+    @cache_readonly
+    def resid(self):
+        """
+        Returns the residuals for the model.
+
+        The residuals reflect the mean structure specified by the
+        fixed effects and the predicted random effects.
+        """
+        return self.model.endog - self.fittedvalues
+
+
+    @cache_readonly
     def bse_fe(self):
         """
         Returns the standard errors of the fixed effect regression
@@ -2029,18 +2066,28 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         p = self.model.exog.shape[1]
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
 
+
+    def _expand_re_names(self, group):
+        names = list(self.model.data.exog_re_names)
+
+        for v in self.model._vc_names:
+            if group in self.model.exog_vc[v]:
+                ix = range(self.model.exog_vc[v][group].shape[1])
+                na = ["%s[%d]" % (v, j + 1) for j in ix]
+                names.extend(na)
+        return names
+
+
     @cache_readonly
     def random_effects(self):
         """
-        Returns the conditional means of all random effects given the
-        data.
+        The conditional means of random effects given the data.
 
         Returns
         -------
-        random_effects : DataFrame
-            A DataFrame with the distinct `group` values as the index
-            and the conditional means of the random effects
-            in the columns.
+        random_effects : dict
+            A dictionary mapping the distinct `group` values to the
+            means of the random effects for the group.
         """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
@@ -2051,15 +2098,14 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         k_re = self.k_re
 
         ranef_dict = {}
-        for k in range(self.model.n_groups):
+        for group_ix, group in enumerate(self.model.group_labels):
 
-            endog = self.model.endog_li[k]
-            exog = self.model.exog_li[k]
-            ex_r, ex2_r = self.model._aex_r[k], self.model._aex_r2[k]
-            label = self.model.group_labels[k]
-            vc_var = self.model._expand_vcomp(vcomp, k)
+            endog = self.model.endog_li[group_ix]
+            exog = self.model.exog_li[group_ix]
+            ex_r, ex2_r = self.model._aex_r[group_ix], self.model._aex_r2[group_ix]
+            vc_var = self.model._expand_vcomp(vcomp, group)
 
-            # Get the residuals
+            # Get the residuals relative to fixed effects
             resid = endog
             if self.k_fe > 0:
                 expval = np.dot(exog, self.fe_params)
@@ -2071,12 +2117,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             xtvir = np.dot(ex_r.T, vir)
             xtvir[0:k_re] = np.dot(self.cov_re, xtvir[0:k_re])
             xtvir[k_re:] *= vc_var
-            ranef_dict[label] = xtvir
+            ranef_dict[group] = pd.Series(xtvir, index=self._expand_re_names(group))
 
-        column_names = dict(zip(range(self.k_re),
-                                      self.model.data.exog_re_names))
-        df = DataFrame.from_dict(ranef_dict, orient='index')
-        return df.rename(columns=column_names).ix[self.model.group_labels]
+        return ranef_dict
 
 
     @cache_readonly
@@ -2101,12 +2144,11 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         vcomp = self.vcomp
 
         ranef_dict = {}
-        #columns = self.model.data.exog_re_names
-        for k in range(self.model.n_groups):
+        for group_ix in range(self.model.n_groups):
 
-            ex_r, ex2_r = self.model._aex_r[k], self.model._aex_r2[k]
-            label = self.model.group_labels[k]
-            vc_var = self.model._expand_vcomp(vcomp, k)
+            ex_r, ex2_r = self.model._aex_r[group_ix], self.model._aex_r2[group_ix]
+            label = self.model.group_labels[group_ix]
+            vc_var = self.model._expand_vcomp(vcomp, group_ix)
 
             solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
 
@@ -2122,10 +2164,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             v[0:m, 0:m] += self.cov_re
             ix = np.arange(m, v.shape[0])
             v[ix, ix] += vc_var
+            na = self._expand_re_names(group_ix)
+            v = pd.DataFrame(v, index=na, columns=na)
             ranef_dict[label] = v
-            #ranef_dict[label] = DataFrame(self.cov_re - mat2,
-            #                              index=columns, columns=columns)
-
 
         return ranef_dict
 

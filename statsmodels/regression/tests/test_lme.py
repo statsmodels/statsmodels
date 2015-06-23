@@ -338,8 +338,14 @@ class TestMixedLM(object):
         assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)
         assert_allclose(result.scale, 0.678, rtol=1e-3)
         assert_allclose(result.llf, -123.49, rtol=1e-1)
-        assert_equal(result.aic, np.nan)
+        assert_equal(result.aic, np.nan) # don't provide aic/bic with REML
         assert_equal(result.bic, np.nan)
+
+        resid = np.r_[0.17133538, -0.02866462, -1.08662875, 1.11337125, -0.12093607]
+        assert_allclose(result.resid[0:5], resid, rtol=1e-3)
+
+        fit = np.r_[62.62866, 62.62866, 61.18663, 61.18663, 62.82094]
+        assert_allclose(result.fittedvalues[0:5], fit, rtol=1e-4)
 
         # ML
         data = pd.read_csv(fname)
@@ -539,7 +545,7 @@ class TestMixedLM(object):
 
         # Not supported in R except for independent random effects
         if not irf:
-            assert_almost_equal(mdf.random_effects.ix[0], rslt.ranef_postmean,
+            assert_almost_equal(mdf.random_effects[0], rslt.ranef_postmean,
                                 decimal=3)
             assert_almost_equal(mdf.random_effects_cov[0],
                                 rslt.ranef_condvar,
