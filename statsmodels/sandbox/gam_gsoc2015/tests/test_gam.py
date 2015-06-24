@@ -1,11 +1,15 @@
-from smooth_basis import make_poly_basis, make_bsplines_basis
-from gam import GamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
+
+
+import os
+
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis
+from statsmodels.sandbox.gam_gsoc2015.gam import GamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
 import numpy as np
 import pandas as pd
 from statsmodels.genmod.families.family import Gaussian
 from numpy.linalg import norm
 from scipy.linalg import block_diag
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
 
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
@@ -136,8 +140,9 @@ def test_approximation():
 
 
 def test_gam_glm():
-
-    data_from_r = pd.read_csv('results/prediction_from_mgcv.csv')
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results","prediction_from_mgcv.csv")
+    data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
     x = data_from_r.x
     y = data_from_r.y
@@ -167,8 +172,9 @@ def test_gam_glm():
     return
 
 def test_gam_discrete():
-
-    data_from_r = pd.read_csv('results/prediction_from_mgcv.csv')
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results","prediction_from_mgcv.csv")
+    data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
     x = data_from_r.x
     y = data_from_r.ybin

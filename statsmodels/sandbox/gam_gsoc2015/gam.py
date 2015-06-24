@@ -3,7 +3,7 @@ import scipy as sp
 from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
-from smooth_basis import BS
+from .smooth_basis import BS
 from patsy.state import stateful_transform
 
 
