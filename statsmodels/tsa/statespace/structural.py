@@ -162,9 +162,9 @@ class UnobservedComponents(MLEModel):
     """
 
     def __init__(self, endog, level=False, trend=False, seasonal=None,
-                 cycle=False, ar=None, exog=None, irregular=True,
-                 stochastic_level=True, stochastic_trend=True,
-                 stochastic_seasonal=True, stochastic_cycle=True,
+                 cycle=False, ar=None, exog=None, irregular=False,
+                 stochastic_level=False, stochastic_trend=False,
+                 stochastic_seasonal=True, stochastic_cycle=False,
                  damped_cycle=False, cycle_period_bounds=None,
                  mle_regression=True,
                  **kwargs):
