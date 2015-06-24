@@ -398,8 +398,8 @@ class MixedGLM(base.LikelihoodModel):
     >>> result = model.fit()
     """
 
-    def __init__(self, endog, exog, groups, scale=1, family=fams.Gaussian(), exog_re=None,
-                 exog_vc=None, use_sqrt=True, missing='none',
+    def __init__(self, endog, exog, groups, scale=1, family=fams.Gaussian(),
+                 exog_re=None, exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
         _allowed_kwargs = ["missing_idx", "design_info", "formula"]
@@ -408,10 +408,13 @@ class MixedGLM(base.LikelihoodModel):
                 raise ValueError("argument %s not permitted for "
                                  "MixedGLM initialization" % x)
 
-        if (family is not None) and not isinstance(family.link, tuple(family.safe_links)):
+        if (family is not None) and not \
+                isinstance(family.link, tuple(family.safe_links)):
             import warnings
-            warnings.warn("The %s link function does not respect the domain of the %s family." %
-                          (family.link.__class__.__name__, family.__class__.__name__))
+            warnings.warn("The %s link function does not respect "
+                          "the domain of the %s family." %
+                          (family.link.__class__.__name__,
+                           family.__class__.__name__))
 
         self.family = family
 
@@ -565,7 +568,8 @@ class MixedGLM(base.LikelihoodModel):
 
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, vc_formula=None,
-                     subset=None, family=fams.Gaussian(), scale=1, *args, **kwargs):
+                     subset=None, family=fams.Gaussian(), scale=1,
+                     *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -667,10 +671,13 @@ class MixedGLM(base.LikelihoodModel):
             raise AttributeError("'groups' is a required keyword "
                                  "argument in MixedGLM.from_formula")
 
-        if (family is not None) and not isinstance(family.link, tuple(family.safe_links)):
+        if (family is not None) and not \
+                isinstance(family.link, tuple(family.safe_links)):
             import warnings
-            warnings.warn("The %s link function does not respect the domain of the %s family." %
-                          (family.link.__class__.__name__, family.__class__.__name__))
+            warnings.warn("The %s link function does not "
+                          "respect the domain of the %s family." %
+                          (family.link.__class__.__name__,
+                           family.__class__.__name__))
 
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
@@ -799,205 +806,6 @@ class MixedGLM(base.LikelihoodModel):
             return [np.array(array[self.row_indices[k], :])
                     for k in self.group_labels]
 
-    def fit_regularized(self, start_params=None, method='l1', alpha=0,
-                        ceps=1e-4, ptol=1e-6, maxit=200, **fit_kwargs):
-        """
-        Fit a model in which the fixed effects parameters are
-        penalized.  The dependence parameters are held fixed at their
-        estimated values in the unpenalized model.
-
-        Parameters
-        ----------
-        method : string of Penalty object
-            Method for regularization.  If a string, must be 'l1'.
-        alpha : array-like
-            Scalar or vector of penalty weights.  If a scalar, the
-            same weight is applied to all coefficients; if a vector,
-            it contains a weight for each coefficient.  If method is a
-            Penalty object, the weights are scaled by alpha.  For L1
-            regularization, the weights are used directly.
-        ceps : positive real scalar
-            Fixed effects parameters smaller than this value
-            in magnitude are treaded as being zero.
-        ptol : positive real scalar
-            Convergence occurs when the sup norm difference
-            between successive values of `fe_params` is less than
-            `ptol`.
-        maxit : integer
-            The maximum number of iterations.
-        fit_kwargs : keywords
-            Additional keyword arguments passed to fit.
-
-        Returns
-        -------
-        A MixedGLMResults instance containing the results.
-
-        Notes
-        -----
-        The covariance structure is not updated as the fixed effects
-        parameters are varied.
-
-        The algorithm used here for L1 regularization is a"shooting"
-        or cyclic coordinate descent algorithm.
-
-        If method is 'l1', then `fe_pen` and `cov_pen` are used to
-        obtain the covariance structure, but are ignored during the
-        L1-penalized fitting.
-
-        References
-        ----------
-        Friedman, J. H., Hastie, T. and Tibshirani, R. Regularized
-        Paths for Generalized Linear Models via Coordinate
-        Descent. Journal of Statistical Software, 33(1) (2008)
-        http://www.jstatsoft.org/v33/i01/paper
-
-        http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
-        """
-
-        if type(method) == str and (method.lower() != 'l1'):
-            raise ValueError("Invalid regularization method")
-
-        # If method is a smooth penalty just optimize directly.
-        if isinstance(method, Penalty):
-            # Scale the penalty weights by alpha
-            method.alpha = alpha
-            fit_kwargs.update({"fe_pen": method})
-            return self.fit(**fit_kwargs)
-
-        if np.isscalar(alpha):
-            alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
-
-        # Fit the unpenalized model to get the dependence structure.
-        mdf = self.fit(**fit_kwargs)
-        fe_params = mdf.fe_params
-        cov_re = mdf.cov_re
-        scale = mdf.scale
-        try:
-            cov_re_inv = np.linalg.inv(cov_re)
-        except np.linalg.LinAlgError:
-            cov_re_inv = None
-
-        for itr in range(maxit):
-
-            fe_params_s = fe_params.copy()
-            for j in range(self.k_fe):
-
-                if abs(fe_params[j]) < ceps:
-                    continue
-
-                # The residuals
-                fe_params[j] = 0.
-                expval = np.dot(self.exog, fe_params)
-                resid_all = self.endog - expval
-
-                # The loss function has the form
-                # a*x^2 + b*x + pwt*|x|
-                a, b = 0., 0.
-                for k, lab in enumerate(self.group_labels):
-                    exog = self.exog_li[k]
-                    ex_r = self.exog_re_li[k]
-                    ex2_r = self.exog_re2_li[k]
-                    resid = resid_all[self.row_indices[lab]]
-                    solver = _smw_solver(scale, ex_r, ex2_r,
-                                         cov_re, cov_re_inv)
-
-                    x = exog[:, j]
-                    u = solver(x)
-                    a += np.dot(u, x)
-                    b -= 2 * np.dot(u, resid)
-
-                pwt1 = alpha[j]
-                if b > pwt1:
-                    fe_params[j] = -(b - pwt1) / (2 * a)
-                elif b < -pwt1:
-                    fe_params[j] = -(b + pwt1) / (2 * a)
-
-            if np.abs(fe_params_s - fe_params).max() < ptol:
-                break
-
-        # Replace the fixed effects estimates with their penalized
-        # values, leave the dependence parameters in their unpenalized
-        # state.
-        params_prof = mdf.params.copy()
-        params_prof[0:self.k_fe] = fe_params
-
-        scale = self.get_scale(fe_params, mdf.cov_re_unscaled, mdf.vcomp)
-
-        # Get the Hessian including only the nonzero fixed effects,
-        # then blow back up to the full size after inverting.
-        hess = self.hessian(params_prof)
-        pcov = np.nan * np.ones_like(hess)
-        ii = np.abs(params_prof) > ceps
-        ii[self.k_fe:] = True
-        ii = np.flatnonzero(ii)
-        hess1 = hess[ii, :][:, ii]
-        pcov[np.ix_(ii, ii)] = np.linalg.inv(-hess1)
-
-        params_object = MixedGLMParams.from_components(fe_params,
-                                                       cov_re=cov_re)
-
-        results = MixedGLMResults(self, params_prof, pcov / scale)
-        results.params_object = params_object
-        results.fe_params = fe_params
-        results.cov_re = cov_re
-        results.scale = scale
-        results.cov_re_unscaled = mdf.cov_re_unscaled
-        results.method = mdf.method
-        results.converged = True
-        results.cov_pen = self.cov_pen
-        results.k_fe = self.k_fe
-        results.k_re = self.k_re
-        results.k_re2 = self.k_re2
-        results.k_vc = self.k_vc
-
-        return MixedGLMResultsWrapper(results)
-
-    def get_fe_params(self, cov_re, vcomp):
-        """
-        Use GLS to update the fixed effects parameter estimates.
-
-        Parameters
-        ----------
-        cov_re : array-like
-            The covariance matrix of the random effects.
-
-        Returns
-        -------
-        The GLS estimates of the fixed effects parameters.
-        """
-
-        if self.k_fe == 0:
-            return np.array([])
-
-        if self.k_re == 0:
-            cov_re_inv = np.empty((0, 0))
-        else:
-            cov_re_inv = np.linalg.inv(cov_re)
-
-        # Cache these quantities that don't change.
-        if not hasattr(self, "_endex_li"):
-            self._endex_li = []
-            for group_ix, _ in enumerate(self.group_labels):
-                mat = np.concatenate((self.exog_li[group_ix],
-                                      self.endog_li[group_ix][:, None]),
-                                     axis=1)
-                self._endex_li.append(mat)
-
-        xtxy = 0.
-        for group_ix, group in enumerate(self.group_labels):
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re,
-                                                           cov_re_inv,
-                                                           vcomp, group)
-            exog = self.exog_li[group_ix]
-            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_aug, cov_aug_inv)
-            u = solver(self._endex_li[group_ix])
-            xtxy += np.dot(exog.T, u)
-
-        fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
-
-        return fe_params
-
     def _reparam(self):
         """
         Returns parameters of the map converting parameters from the
@@ -1110,28 +918,18 @@ class MixedGLM(base.LikelihoodModel):
 
     def loglike(self, params):
         """
-        Evaluate the log-likelihood of the linear mixed
-        effects model.
+        Evaluate the log-likelihood of the generalized linear mixed
+        model.
 
         Parameters
         ----------
         params : MixedGLMParams, or array-like.
-            The parameter value.  If array-like, must be a packed
-            parameter vector containing only the covariance
-            parameters.
-        profile_fe : boolean
-            If True, replace the provided value of `params_fe` with
-            the GLS estimates.
+            The parameter values.
 
         Returns
         -------
-        The log-likelihood value at `params`.
-
-        Notes
-        -----
-        The scale parameter `scale` is always profiled out of the
-        log-likelihood.  In addition, if `profile_fe` is true the
-        fixed effects parameters are also profiled out.
+        float
+            The log-likelihood value at `params`.
         """
 
         if type(params) is not MixedGLMParams:
@@ -1143,46 +941,62 @@ class MixedGLM(base.LikelihoodModel):
 
         _, cov_re_logdet = np.linalg.slogdet(cov_re)
 
-        # Integral over rand. effects includes everything but mvn const
-        ival = self._ll_laplace(fe_params, cov_re, self._scale)
+        # Log of the integral over random effects
+        # includes everything but the multi. normal consts
+        ival = self._laplace(fe_params, cov_re, self._scale)
 
-        # RE multi. normal constant
-        nconst = - self.n_groups*self.k_re * np.log(2*np.pi) / 2.0
+        # Multi. normal consts from the random effects
+        nconst = - self.n_groups * self.k_re * np.log(2 * np.pi) / 2.0
         nconst -= self.n_groups * cov_re_logdet / 2.0
 
         likeval = nconst + ival
 
         return likeval
 
-    def _ll_laplace(self, fe_params, cov_re, scale, omethod='BFGS'):
+    def _laplace(self, fe_params, cov_re, scale, omethod='BFGS'):
         """
-        Evaluate the marginal log-likelihood.
+        Log of Laplace's approximation of integral over random effects of joint
+        likelihood.
 
-        The Laplace method is used to approximate the integral over the
-        random effects distribution.
+        The Laplace approximation is used to approximate exponential integrals.
+        Here we use it to approximate the marginal log-likelihood by
+        approximating the integral of the joint likelihood over the integral
+        over the random effects.
 
         Parameters
         ----------
-        params : array-like, 1d
-            The fixed effects parameters
+        fe_params : array-like, 1d
+            The fixed effects parameters.
         cov_re : array-like, 2d
-            The covariance matrix of the random effects
+            The covariance matrix of the random effects.
         scale : float
-            The scale parameter
+            The overdispersion scale parameter for the exponential family.
+        omethod : string
+            The optimization method for scipy.optimize.minimize.
 
-
+        Returns
+        -------
+        float
+            The kernel of the marginal log-likelihood. We marginalize out the
+            random effects. This is the kernel as it ignores the normalizing
+            constants of the random effects' distribution.
         """
 
-        mp = self._ll_get_map(fe_params, cov_re, scale, omethod)
+        # The max of the function in the exponent of our integral
+        mp = self._get_map(fe_params, cov_re, scale, omethod)
 
-        f, h = self._ll_funhess(mp, fe_params, cov_re, scale)
+        f, h = self._joint_like_hess(mp, fe_params, cov_re, scale)
 
         d = len(mp)
-        #ival = np.exp(-f) * (2 * np.pi)**(d / 2) / np.sqrt(np.exp(h))
-        ival = -f +(d/2.0)*np.log(2*np.pi)-(1/2.0)*h
+
+        # This is the log of the Laplace approximation.
+        # Algebraically we take the log of integral's approximation to avoid
+        # problems with numpy overflow with expressions like np.log(np.exp(.))
+        ival = - f + (d / 2.0) * np.log(2 * np.pi) - (1 / 2.0) * h
+
         return(ival)
 
-    def _ll_gen_fungrad(self, fe_params, cov_re, scale):
+    def _gen_joint_like_score(self, fe_params, cov_re, scale):
         """
         Function and gradient of the joint log likelihood.
 
@@ -1192,15 +1006,19 @@ class MixedGLM(base.LikelihoodModel):
         Parameters
         ----------
         params : array-like, 1d
-            The fixed effects parameters
+            The fixed effects parameters.
         cov_re : array-like, 2d
-            The covariance matrix of the random effects
+            The covariance matrix of the random effects.
         scale : float
-            The scale parameter
+            The overdispersion scale parameter for the exponential family.
 
-        Returns a function that takes a state for the random effects
-        (vectorized) and returns the value of the negative joint log
-        likelihood and its gradient evaluated at the given state.
+        Returns
+        -------
+        function
+            A function that takes a state for the random effects
+            (vectorized) and returns the value of the (kernel of the) negative
+            joint log likelihood and its gradient evaluated at the given state
+            respectively in a tuple.
         """
 
         lin_pred = np.dot(self.exog, fe_params)
@@ -1208,81 +1026,36 @@ class MixedGLM(base.LikelihoodModel):
 
         def fun(ref):
 
+            # Matrix of current state of random effects
             ref = np.reshape(ref, (self.n_groups, self.k_re))
 
             s = np.linalg.solve(cov_re, ref.T)
-            f = -(ref.T * s).sum() / 2 # r.e. log likelihood
+            f = -(ref.T * s).sum() / 2  # -1/2 * x'cov^(-1)x
 
             d = np.zeros((self.n_groups, self.k_re))
 
+            # Build up log-likelihood group by group
             for k, g in enumerate(self.group_labels):
-                lin_predr = lin_pred[k] + np.dot(self.exog_re_li[k], ref[k, :]) # eta_i
-                mean = self.family.fitted(lin_predr) # mu_i = h(eta_i)
-                log_likes = self.family.loglike(self.endog_li[k], mean,scale=scale)
+                lin_predr = lin_pred[k] + np.dot(self.exog_re_li[k], ref[k, :])
+                mean = self.family.fitted(lin_predr)  # mu_i = h(eta_i)
+                log_likes = self.family.loglike(self.endog_li[k], mean,
+                                                scale=scale)
                 f += log_likes
 
-
-                d[k, :] = ((self.endog_li[k] - mean)[:, None] * self.exog_re_li[k] * scale).sum(0)
+                d[k, :] = ((self.endog_li[k] - mean)[:, None] *
+                           self.exog_re_li[k] * scale).sum(0)
                 d[k, :] -= s[:, k]
 
+            # We need negatives because scipy.optimize can only
+            # find minima not maxima
             return -f, -d.ravel()
 
         return fun
 
-    def test_gen_fungrad(self):
-
-        np.random.seed(4234)
-
-        for k in range(10):
-
-            params = np.random.normal(size=self.k_fe)
-            cov_re = np.random.normal(size=(self.k_re, self.k_re))
-            cov_re = np.dot(cov_re, cov_re.T)
-            fungrad = self._ll_gen_fungrad(params, cov_re, self._scale)
-            fun = lambda x : fungrad(x)[0]
-            grad = lambda x : fungrad(x)[1]
-
-            ref = np.random.normal(size=(self.n_groups, self.k_re)).ravel()
-
-            # Check that the numerical gradient matches the analytic
-            # gradient
-            fp1 = approx_fprime(ref, fun)
-            fp2 = grad(ref)
-
-            np.testing.assert_allclose(fp1, fp2, rtol=1e-1, atol=1e-5)
-            print("Gradient test "+str(k+1)+" passed.")
-
-    def test_funhess(self):
-
-        np.random.seed(4234)
-
-        for k in range(10):
-
-            params = np.random.normal(size=self.k_fe)
-            cov_re = np.random.normal(size=(self.k_re, self.k_re))
-            cov_re = np.dot(cov_re, cov_re.T)
-            fun = lambda x : self._ll_funhess(x, params, cov_re, 1)[0]
-            hess = lambda x : self._ll_funhess(x, params, cov_re, 1)[1]
-
-
-            fungrad = self._ll_gen_fungrad(params, cov_re, self._scale)
-            fun1 = lambda x : fungrad(x)[0]
-            grad = lambda x : fungrad(x)[1]
-
-            ref = np.random.normal(size=(self.n_groups, self.k_re)).ravel()
-
-            # Check that the numerical gradient matches the analytic
-            # gradient
-            he1 = approx_fprime(ref, grad)
-            _, dhe1 = np.linalg.slogdet(he1)
-            he2 = hess(ref)
-
-            np.testing.assert_allclose(dhe1, he2, rtol=1e-3, atol=1e-5)
-            print("Hessian test "+str(k+1)+" passed.")
-
-    def _ll_funhess(self, ref, fe_params, cov_re, scale):
+    def _joint_like_hess(self, ref, fe_params, cov_re, scale):
         """
-        Function and Hessian of the joint log likelihood evaluated at MAP.
+        Function and Hessian of the joint log likelihood evaluated at
+        the given state.
 
         The log-likelihood is for the data and random effects, viewed as a
         function of the random effects.
@@ -1290,16 +1063,21 @@ class MixedGLM(base.LikelihoodModel):
         Parameters
         ----------
         ref : array-like
-            The random effects
-        params : array-like, 1d
-            The fixed effects parameters
+            The random effects.
+        fe_params : array-like, 1d
+            The fixed effects parameters.
         cov_re : array-like, 2d
-            The covariance matrix of the random effects
+            The covariance matrix of the random effects.
         scale : float
-            The scale parameter
+            The overdispersion scale parameter for the exponential family.
 
-        Returns the negative joint log likelihood and the determinant of
-        its Hessian evaluated at the given state.
+        Returns
+        -------
+        tuple
+            A tuple containing two elements.
+            First, the (kernel of the) negative joint log likelihood and second
+            the log of the determinant of its Hessian evaluated at the given
+            state.
         """
 
         lin_pred = np.dot(self.exog, fe_params)
@@ -1324,7 +1102,7 @@ class MixedGLM(base.LikelihoodModel):
 
         return -f, d2.sum()
 
-    def _ll_get_map(self, fe_params, cov_re, scale, omethod):
+    def _get_map(self, fe_params, cov_re, scale, omethod):
         """
         Obtain the MAP predictor of the random effects.
 
@@ -1339,21 +1117,23 @@ class MixedGLM(base.LikelihoodModel):
         cov_re : array-like, 2d
             The covariance matrix of the random effects
         scale : float
-            The scale parameter
+            The overdispersion scale parameter for the exponential family.
+        omethod : string
+            The optimization method for scipy.optimize.minimize.
 
-        Returns the MAP predictor of the random effects.
+        Returns
+        -------
+        array-like, 1d
+            The MAP predictor of the random effects.
         """
 
-        fun = self._ll_gen_fungrad(fe_params, cov_re, scale)
-        x0 = np.random.normal(size=self.n_groups*self.k_re)
+        fun = self._gen_joint_like_score(fe_params, cov_re, scale)
+        x0 = np.random.normal(size=self.n_groups * self.k_re)
 
-        func = lambda x: fun(x)[0]
-
-        result = minimize(fun, x0, jac=True)
+        result = minimize(fun, x0, jac=True, method=omethod)
 
         if not result.success:
-            print("OPTIMIZATION FAILED")
-            1/0
+            raise Warning(result.message)
 
         mp = np.reshape(result.x, (self.n_groups, self.k_re))
         return mp
@@ -1384,7 +1164,8 @@ class MixedGLM(base.LikelihoodModel):
             for j2 in range(j1 + 1):
                 if max_ix is not None and jj > max_ix:
                     return
-                mat_l, mat_r = ex_r[:, j1:j1 + 1], ex_r[:, j2:j2 + 1]  # Need 2d
+                # Need 2d
+                mat_l, mat_r = ex_r[:, j1:j1 + 1], ex_r[:, j2:j2 + 1]
                 vsl, vsr = axr[:, j1:j1 + 1], axr[:, j2:j2 + 1]
                 yield jj, mat_l, mat_r, vsl, vsr, j1 == j2
                 jj += 1
@@ -1418,9 +1199,11 @@ class MixedGLM(base.LikelihoodModel):
             params.fe_params = self.get_fe_params(params.cov_re, params.vcomp)
 
         if self.use_sqrt:
-            score_fe, score_re, score_vc = self.score_sqrt(params, calc_fe=not profile_fe)
+            score_fe, score_re, score_vc = \
+                self.score_sqrt(params, calc_fe=not profile_fe)
         else:
-            score_fe, score_re, score_vc = self.score_full(params, calc_fe=not profile_fe)
+            score_fe, score_re, score_vc = \
+                self.score_full(params, calc_fe=not profile_fe)
 
         if self._freepat is not None:
             score_fe *= self._freepat.fe_params
@@ -1515,7 +1298,8 @@ class MixedGLM(base.LikelihoodModel):
 
         for group_ix, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug, cov_aug_inv, _ = \
+                self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
@@ -1534,7 +1318,8 @@ class MixedGLM(base.LikelihoodModel):
             # Contributions to the covariance parameter gradient
             vex = solver(ex_r)
             vir = solver(resid)
-            for jj, matl, matr, vsl, vsr, sym in self._gen_dV_dPar(ex_r, solver, group):
+            for jj, matl, matr, vsl, vsr, sym in \
+                    self._gen_dV_dPar(ex_r, solver, group):
                 dlv[jj] = np.sum(matr * vsl)  # trace dot
                 if not sym:
                     dlv[jj] += np.sum(matl * vsr)  # trace dot
@@ -1583,7 +1368,7 @@ class MixedGLM(base.LikelihoodModel):
             for j in range(self.k_re2):
                 score_re[j] += 0.5 * np.sum(xtvixi.T * xtax[j])  # trace dot
             for j in range(self.k_vc):
-                score_vc[j] += 0.5 * np.sum(xtvixi.T * xtax[self.k_re2 + j])  # trace dot
+                score_vc[j] += 0.5 * np.sum(xtvixi.T * xtax[self.k_re2 + j])
 
         return score_fe, score_re, score_vc
 
@@ -1684,7 +1469,8 @@ class MixedGLM(base.LikelihoodModel):
         F = [[0.] * m for k in range(m)]
         for k, group in enumerate(self.group_labels):
 
-            cov_aug, cov_aug_inv, _ = self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
+            cov_aug, cov_aug_inv, _ = \
+                self._augment_cov_re(cov_re, cov_re_inv, vcomp, group)
 
             exog = self.exog_li[k]
             ex_r, ex2_r = self._aex_r[k], self._aex_r2[k]
@@ -1701,7 +1487,8 @@ class MixedGLM(base.LikelihoodModel):
             vir = solver(resid)
             rvir += np.dot(resid, vir)
 
-            for jj1, matl1, matr1, vsl1, vsr1, sym1 in self._gen_dV_dPar(ex_r, solver, group):
+            for jj1, matl1, matr1, vsl1, vsr1, sym1 in \
+                    self._gen_dV_dPar(ex_r, solver, group):
 
                 ul = np.dot(viexog.T, matl1)
                 ur = np.dot(matr1.T, vir)
@@ -1728,7 +1515,8 @@ class MixedGLM(base.LikelihoodModel):
                 if not sym1:
                     E += np.dot(vsr1, matl1.T)
 
-                for jj2, matl2, matr2, vsl2, vsr2, sym2 in self._gen_dV_dPar(ex_r, solver, group, jj1):
+                for jj2, matl2, matr2, vsl2, vsr2, sym2 in \
+                        self._gen_dV_dPar(ex_r, solver, group, jj1):
 
                     re = np.dot(matr2.T, E)
                     rev = np.dot(re, vir[:, None])
@@ -1820,7 +1608,6 @@ class MixedGLM(base.LikelihoodModel):
 
         self._scale = scale
 
-
     def fit(self, start_params=None, reml=True, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
             full_output=False, method='bfgs', **kwargs):
@@ -1830,7 +1617,8 @@ class MixedGLM(base.LikelihoodModel):
         _allowed_kwargs = ['gtol', 'maxiter']
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
-                raise ValueError("Argument %s not allowed for MixedGLM.fit" % x)
+                raise ValueError("Argument %s not "
+                                 "allowed for MixedGLM.fit" % x)
 
         if method.lower() in ["newton", "ncg"]:
             raise ValueError("method %s not available for MixedGLM" % method)
@@ -1915,7 +1703,8 @@ class MixedGLM(base.LikelihoodModel):
         else:
             pcov = np.linalg.inv(-hess)
         if np.any(hess_diag >= 0):
-            msg = "The Hessian matrix at the estimated parameter values is not positive definite."
+            msg = "The Hessian matrix at the estimated " \
+                  "parameter values is not positive definite."
             warnings.warn(msg, ConvergenceWarning)
 
         # Prepare a results class instance
@@ -2019,7 +1808,8 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
         except np.linalg.LinAlgError:
-            raise ValueError("Cannot predict random effects from singular covariance structure.")
+            raise ValueError("Cannot predict random effects from "
+                             "singular covariance structure.")
 
         ranef_dict = {}
         for k in range(self.model.n_groups):
@@ -2036,7 +1826,8 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
                 expval = np.dot(exog, self.fe_params)
                 resid = resid - expval
 
-            solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re, cov_re_inv)
+            solver = _smw_solver(self.scale, ex_r, ex2_r,
+                                 self.cov_re, cov_re_inv)
             vresid = solver(resid)
 
             ranef_dict[label] = np.dot(self.cov_re, np.dot(ex_r.T, vresid))
@@ -2072,7 +1863,8 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
             ex2_r = self.model.exog_re2_li[k]
             label = self.model.group_labels[k]
 
-            solver = _smw_solver(self.scale, ex_r, ex2_r, self.cov_re, cov_re_inv)
+            solver = _smw_solver(self.scale, ex_r, ex2_r,
+                                 self.cov_re, cov_re_inv)
 
             mat1 = np.dot(ex_r, self.cov_re)
             mat2 = solver(mat1)
@@ -2084,7 +1876,7 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         return ranef_dict
 
-    # Need to override since t-tests are only used for fixed effects parameters.
+    # Need to override -- t-tests are only used for fixed effects parameters.
     def t_test(self, r_matrix, scale=None, use_t=None):
         """
         Compute a t-test for a each linear hypothesis of the form Rb = q
@@ -2114,12 +1906,15 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
 
         if r_matrix.shape[1] != self.k_fe:
-            raise ValueError("r_matrix for t-test should have %d columns" % self.k_fe)
+            raise ValueError("r_matrix for t-test should have %d columns"
+                             % self.k_fe)
 
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
         r_matrix = np.concatenate((r_matrix, z0), axis=1)
-        tst_rslt = super(MixedGLMResults, self).t_test(r_matrix, scale=scale, use_t=use_t)
+        tst_rslt = super(MixedGLMResults, self).t_test(r_matrix,
+                                                       scale=scale,
+                                                       use_t=use_t)
         return tst_rslt
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
