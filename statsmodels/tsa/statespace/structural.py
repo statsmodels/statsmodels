@@ -464,7 +464,7 @@ class UnobservedComponents(MLEModel):
             elif self.stochastic_level:
                 _start_params['level_var'] = np.std(trend1)**2
         else:
-            resid = self.endog
+            resid = self.endog[0]
 
         # Seasonal
         if self.stochastic_seasonal:
