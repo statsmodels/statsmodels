@@ -188,6 +188,67 @@ class UnobservedComponents(MLEModel):
         self.damped_cycle = bool(damped_cycle and cycle)
         self.mle_regression = mle_regression
 
+        # Check for string trend/level specification
+        if isinstance(self.level, str):
+            trend_spec = level
+            self.level = False
+
+            # Check if any of the trend/level components have been set, and
+            # reset everything to False
+            trend_attributes = ['irregular', 'level', 'trend',
+                                'stochastic_level', 'stochastic_trend']
+            for attribute in trend_attributes:
+                if not getattr(self, attribute) == False:
+                    warn("Value of `%s` may be overridden when the trend"
+                         " component is specified using a model string."
+                         % attribute)
+                    setattr(self, attribute, False)
+
+            # Now set the correct specification
+            if trend_spec == 'ntrend':
+                self.irregular = True
+            elif trend_spec == 'dconstant':
+                self.irregular = True
+                self.level = True
+            elif trend_spec == 'llevel':
+                self.irregular = True
+                self.level = True
+                self.stochastic_level = True
+            elif trend_spec == 'rwalk':
+                self.level = True
+                self.stochastic_level = True
+            elif trend_spec == 'dtrend':
+                self.irregular = True
+                self.level = True
+                self.trend = True
+            elif trend_spec == 'lldtrend':
+                self.irregular = True
+                self.level = True
+                self.stochastic_level = True
+                self.trend = True
+            elif trend_spec == 'rwdrift':
+                self.level = True
+                self.stochastic_level = True
+                self.trend = True
+            elif trend_spec == 'lltrend':
+                self.irregular = True
+                self.level = True
+                self.stochastic_level = True
+                self.trend = True
+                self.stochastic_trend = True
+            elif trend_spec == 'strend':
+                self.irregular = True
+                self.level = True
+                self.trend = True
+                self.stochastic_trend = True
+            elif trend_spec == 'rtrend':
+                self.level = True
+                self.trend = True
+                self.stochastic_trend = True
+            else:
+                raise ValueError("Invalid level/trend specification: '%s'"
+                                 % trend_spec)
+
         # Check for a model that makes sense
         if trend and not level:
             warn("Trend component specified without level component;"
@@ -240,7 +301,7 @@ class UnobservedComponents(MLEModel):
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         k_states - self.ar_order)
         if k_states == 0:
-            if not irregular:
+            if not self.irregular:
                 raise ValueError('Model has no components specified.')
             k_states = 1
         if k_posdef == 0:
