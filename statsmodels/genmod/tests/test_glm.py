@@ -147,6 +147,11 @@ class CheckModelResultsMixin(object):
         assert_almost_equal(self.res1.pvalues, pvalues)
         assert_almost_equal(self.res1.conf_int(), conf_int)
 
+    def test_summary(self):
+        #SMOKE test
+        self.res1.summary()
+        self.res1.summary2()
+
 
 class CheckComparisonMixin(object):
 
