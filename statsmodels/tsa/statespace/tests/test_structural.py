@@ -20,7 +20,7 @@ from nose.exc import SkipTest
 
 
 dta = macrodata.load_pandas().data
-dta.index = pd.date_range(start='1959-01', end='2009-7', freq='QS')
+dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
 
 def test_ntrend(model='model'):
