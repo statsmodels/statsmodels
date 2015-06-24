@@ -195,7 +195,8 @@ class UnobservedComponents(MLEModel):
             self.stochastic_level = False
 
         if (self.irregular + self.stochastic_level + self.stochastic_trend +
-                self.stochastic_seasonal + self.stochastic_cycle) == 0:
+                self.stochastic_seasonal + self.stochastic_cycle +
+                self.ar) == 0:
             warn("Specified model does not contain a stochastic element;"
                  " irregular component added.")
             self.irregular = True
