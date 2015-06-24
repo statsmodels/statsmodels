@@ -190,8 +190,9 @@ class UnobservedComponents(MLEModel):
         # Check for a model that makes sense
         if trend and not level:
             warn("Trend component specified without level component;"
-                 " level component added.")
+                 " deterministic level component added.")
             self.level = True
+            self.stochastic_level = False
 
         if (self.irregular + self.stochastic_level + self.stochastic_trend +
                 self.stochastic_seasonal + self.stochastic_cycle) == 0:
