@@ -174,7 +174,7 @@ class UnobservedComponents(MLEModel):
         self.level = level
         self.trend = trend
         self.seasonal_period = seasonal if seasonal is not None else 0
-        self.seasonal = seasonal > 0
+        self.seasonal = self.seasonal_period > 0
         self.cycle = cycle
         self.ar_order = autoregressive if autoregressive is not None else 0
         self.autoregressive = self.ar_order > 0
