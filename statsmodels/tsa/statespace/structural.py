@@ -11,6 +11,7 @@ from collections import OrderedDict
 
 import numpy as np
 from statsmodels.tsa.filters.hp_filter import hpfilter
+from statsmodels.tools.data import _is_using_pandas
 from .mlemodel import MLEModel
 from scipy.linalg import solve_discrete_lyapunov
 from .tools import (
@@ -204,7 +205,17 @@ class UnobservedComponents(MLEModel):
         # Exogenous component
         self.k_exog = 0
         if exog is not None:
-            exog = np.array(exog)
+            exog_is_using_pandas = _is_using_pandas(exog, None)
+            if not exog_is_using_pandas:
+                exog = np.asarray(exog)
+
+            # Make sure we have 2-dimensional array
+            if exog.ndim == 1:
+                if not exog_is_using_pandas:
+                    exog = exog[:, None]
+                else:
+                    exog = exog.to_frame()
+
             self.k_exog = exog.shape[1]
         self.regression = self.k_exog > 0
 
