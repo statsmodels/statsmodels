@@ -10,6 +10,7 @@ from warnings import warn
 from statsmodels.compat.collections import OrderedDict
 
 import numpy as np
+import pandas as pd
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tools.data import _is_using_pandas
 from .mlemodel import MLEModel
@@ -275,7 +276,7 @@ class UnobservedComponents(MLEModel):
                 if not exog_is_using_pandas:
                     exog = exog[:, None]
                 else:
-                    exog = exog.to_frame()
+                    exog = pd.DataFrame(exog)
 
             self.k_exog = exog.shape[1]
         self.regression = self.k_exog > 0
