@@ -346,7 +346,7 @@ class UnobservedComponents(MLEModel):
             if self.stochastic_cycle:
                 self['selection', i:i+2, j:j+2] = np.eye(2)
                 self.parameters_state_cov['cycle_var'] = 1
-                j += 1
+                j += 2
             self._idx_cycle_transition = np.s_['transition', i:i+2, i:i+2]
             i += 2
         if self.ar:
