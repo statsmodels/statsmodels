@@ -237,7 +237,8 @@ class UnobservedComponents(MLEModel):
 
         # We can still estimate the model with just the irregular component,
         # just need to have one state that does nothing.
-        loglikelihood_burn = k_states - self.ar_order
+        loglikelihood_burn = kwargs.get('loglikelihood_burn',
+                                        k_states - self.ar_order)
         if k_states == 0:
             if not irregular:
                 raise ValueError('Model has no components specified.')
