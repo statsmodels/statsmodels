@@ -91,11 +91,25 @@ class ModelData(object):
     def __setstate__(self, d):
         if "restore_design_info" in d:
             # NOTE: there may be a more performant way to do this
-            from patsy import dmatrices
-            depth = 1  # hmm, have to have same eval env in calling ns
-            data = d['orig_endog'].join(d['orig_exog'])
-            _, design = dmatrices(d['formula'], data, eval_env=depth,
-                                  return_type='dataframe')
+            from patsy import dmatrices, PatsyError
+            exc = []
+            try:
+                data = d['frame']
+            except KeyError:
+                data = d['orig_endog'].join(d['orig_exog'])
+
+            for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
+                try:
+                    _, design = dmatrices(d['formula'], data, eval_env=depth,
+                                          return_type='dataframe')
+                    break
+                except (NameError, PatsyError) as e:
+                    print('not in depth %d' % depth)
+                    exc.append(e)   # why do I need a reference from outside except block
+                    pass
+            else:
+                raise exc[-1]
+
             self.design_info = design.design_info
             del d["restore_design_info"]
         self.__dict__.update(d)
