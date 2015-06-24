@@ -163,7 +163,7 @@ class UnobservedComponents(MLEModel):
     """
 
     def __init__(self, endog, level=False, trend=False, seasonal=None,
-                 cycle=False, ar=None, exog=None, irregular=False,
+                 cycle=False, autoregressive=None, exog=None, irregular=False,
                  stochastic_level=False, stochastic_trend=False,
                  stochastic_seasonal=True, stochastic_cycle=False,
                  damped_cycle=False, cycle_period_bounds=None,
@@ -176,8 +176,8 @@ class UnobservedComponents(MLEModel):
         self.seasonal_period = seasonal if seasonal is not None else 0
         self.seasonal = seasonal > 0
         self.cycle = cycle
-        self.ar_order = ar if ar is not None else 0
-        self.ar = self.ar_order > 0
+        self.ar_order = autoregressive if autoregressive is not None else 0
+        self.autoregressive = self.ar_order > 0
         self.irregular = irregular
 
         self.stochastic_level = bool(stochastic_level and level)
@@ -197,7 +197,7 @@ class UnobservedComponents(MLEModel):
 
         if (self.irregular + self.stochastic_level + self.stochastic_trend +
                 self.stochastic_seasonal + self.stochastic_cycle +
-                self.ar) == 0:
+                self.autoregressive) == 0:
             warn("Specified model does not contain a stochastic element;"
                  " irregular component added.")
             self.irregular = True
@@ -232,7 +232,7 @@ class UnobservedComponents(MLEModel):
             self.stochastic_trend * self.trend +
             self.stochastic_seasonal * self.seasonal +
             self.stochastic_cycle * (self.cycle * 2) +
-            self.ar
+            self.autoregressive
         )
 
         # We can still estimate the model with just the irregular component,
@@ -360,7 +360,7 @@ class UnobservedComponents(MLEModel):
                 j += 2
             self._idx_cycle_transition = np.s_['transition', i:i+2, i:i+2]
             i += 2
-        if self.ar:
+        if self.autoregressive:
             self['design', 0, i] = 1.
             self.parameters_transition['ar_coeff'] = self.ar_order
             self.parameters_state_cov['ar_var'] = 1
@@ -425,7 +425,7 @@ class UnobservedComponents(MLEModel):
             self.initial_variance
         )
 
-        if self.ar:
+        if self.autoregressive:
 
             start = (
                 self.level + self.trend +
@@ -551,7 +551,7 @@ class UnobservedComponents(MLEModel):
                 offset += 1
 
         # Autoregressive coefficients must be stationary
-        if self.ar:
+        if self.autoregressive:
             constrained[offset:offset + self.ar_order] = (
                 constrain_stationary_univariate(
                     unconstrained[offset:offset + self.ar_order]
@@ -594,7 +594,7 @@ class UnobservedComponents(MLEModel):
                 offset += 1
 
         # Autoregressive coefficients must be stationary
-        if self.ar:
+        if self.autoregressive:
             unconstrained[offset:offset + self.ar_order] = (
                 unconstrain_stationary_univariate(
                     constrained[offset:offset + self.ar_order]
@@ -623,7 +623,7 @@ class UnobservedComponents(MLEModel):
         if self.k_state_cov > 0:
             variances = params[offset:offset+self.k_state_cov]
             if self.stochastic_cycle and self.cycle:
-                if self.ar:
+                if self.autoregressive:
                     variances = np.r_[variances[:-1], variances[-2:]]
                 else:
                     variances = np.r_[variances, variances[-1]]
@@ -645,7 +645,7 @@ class UnobservedComponents(MLEModel):
             offset += 1
 
         # AR transition
-        if self.ar:
+        if self.autoregressive:
             self[self._idx_ar_transition] = params[offset:offset+self.ar_order]
             offset += self.ar_order
 
