@@ -187,7 +187,7 @@ def _convert_out_to_series(x, dates, name):
     Convert x to a DataFrame where x is a string in the format given by
     x-13arima-seats output.
     """
-    from StringIO import StringIO
+    from statsmodels.compat import StringIO
     from pandas import read_table
     out = read_table(StringIO(x), skiprows=2, header=None)
     return out.set_index(dates).rename(columns={1 : name})[name]
@@ -215,7 +215,7 @@ class Spec(object):
 
     def set_options(self, **kwargs):
         options = ""
-        for key, value in kwargs.iteritems():
+        for key, value in iteritems(kwargs):
             options += "{0}={1}\n".format(key, value)
             self.__dict__.update({key : value})
         self.options = options
@@ -431,7 +431,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     ftempin = tempfile.NamedTemporaryFile(delete=False, suffix='.spc')
     ftempout = tempfile.NamedTemporaryFile(delete=False)
     try:
-        ftempin.write(spec)
+        ftempin.write(spec.encode('utf8'))
         ftempin.close()
         ftempout.close()
         # call x12 arima
