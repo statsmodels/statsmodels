@@ -41,7 +41,7 @@ def _normalize_split(proportion):
         raise ValueError("proportions should be positive,"
                           "given value: {}".format(proportion))
     if np.allclose(proportion, 0):
-        raise ValueError("at least one proportion should be"
+        raise ValueError("at least one proportion should be "
                           "greater than zero".format(proportion))
     # ok, data are meaningful, so go on
     if len(proportion) < 2:
@@ -376,6 +376,12 @@ def _statistical_coloring(data):
     return props
 
 
+def _get_position(x, w, h, W):
+    if W == 0:
+        return x
+    return (x + w / 2.0) * w * h / W
+
+
 def _create_labels(rects, horizontal, ax, rotation):
     """find the position of the label for each value of each category
 
@@ -444,8 +450,8 @@ def _create_labels(rects, horizontal, ax, rotation):
 
             vals = list(itervalues(subset))
             W = sum(w * h for (x, y, w, h) in vals)
-            x_lab = sum((x + w / 2.0) * w * h / W for (x, y, w, h) in vals)
-            y_lab = sum((y + h / 2.0) * w * h / W for (x, y, w, h) in vals)
+            x_lab = sum(_get_position(x, w, h, W) for (x, y, w, h) in vals)
+            y_lab = sum(_get_position(y, h, w, W) for (x, y, w, h) in vals)
             #now base on the ordering, select which position to keep
             #needs to be written in a more general form of 4 level are enough?
             #should give also the horizontal and vertical alignment
