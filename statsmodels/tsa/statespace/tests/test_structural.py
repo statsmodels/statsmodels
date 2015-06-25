@@ -22,8 +22,6 @@ from nose.exc import SkipTest
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
-warnings.simplefilter("always")
-
 def run_ucm(name):
     true = getattr(results_structural, name)
 
@@ -41,6 +39,7 @@ def test_irregular():
     run_ucm('irregular')
 
 def test_fixed_intercept():
+    warnings.simplefilter("always")
     with warnings.catch_warnings(True) as w:
         run_ucm('fixed_intercept')
         message = ("Specified model does not contain a stochastic element;"
@@ -60,6 +59,7 @@ def test_fixed_slope():
     run_ucm('fixed_slope')
 
 def test_fixed_slope():
+    warnings.simplefilter("always")
     with warnings.catch_warnings(True) as w:
         run_ucm('fixed_slope')
         message = ("Specified model does not contain a stochastic element;"
