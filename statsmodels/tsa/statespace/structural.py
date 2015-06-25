@@ -20,6 +20,21 @@ from .tools import (
     unconstrain_stationary_univariate
 )
 
+_mask_map = {
+    1: 'irregular',
+    2: 'fixed intercept',
+    3: 'deterministic constant',
+    6: 'random walk',
+    7: 'local level',
+    8: 'fixed slope',
+    11: 'deterministic trend',
+    14: 'random walk with drift',
+    15: 'local linear deterministic trend',
+    31: 'local linear trend',
+    27: 'smooth trend',
+    26: 'random trend'
+}
+
 
 class UnobservedComponents(MLEModel):
     r"""
@@ -190,8 +205,9 @@ class UnobservedComponents(MLEModel):
         self.mle_regression = mle_regression
 
         # Check for string trend/level specification
+        self.trend_specification = None
         if isinstance(self.level, str):
-            trend_spec = level
+            self.trend_specification = level
             self.level = False
 
             # Check if any of the trend/level components have been set, and
@@ -199,56 +215,78 @@ class UnobservedComponents(MLEModel):
             trend_attributes = ['irregular', 'level', 'trend',
                                 'stochastic_level', 'stochastic_trend']
             for attribute in trend_attributes:
-                if not getattr(self, attribute) == False:
+                if not getattr(self, attribute) is False:
                     warn("Value of `%s` may be overridden when the trend"
                          " component is specified using a model string."
                          % attribute)
                     setattr(self, attribute, False)
 
             # Now set the correct specification
-            if trend_spec == 'ntrend':
+            spec = self.trend_specification
+            if spec == 'irregular' or spec == 'ntrend':
                 self.irregular = True
-            elif trend_spec == 'dconstant':
+            elif spec == 'fixed intercept':
+                self.level = True
+            elif spec == 'deterministic constant' or spec == 'dconstant':
                 self.irregular = True
                 self.level = True
-            elif trend_spec == 'llevel':
+            elif spec == 'local level' or spec == 'llevel':
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
-            elif trend_spec == 'rwalk':
+            elif spec == 'random walk' or spec == 'rwalk':
                 self.level = True
                 self.stochastic_level = True
-            elif trend_spec == 'dtrend':
+            elif spec == 'fixed slope':
+                self.level = True
+                self.trend = True
+            elif spec == 'deterministic trend' or spec == 'dtrend':
                 self.irregular = True
                 self.level = True
                 self.trend = True
-            elif trend_spec == 'lldtrend':
+            elif (spec == 'local linear deterministic trend' or
+                    spec == 'lldtrend'):
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
-            elif trend_spec == 'rwdrift':
+            elif spec == 'random walk with drift' or spec == 'rwdrift':
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
-            elif trend_spec == 'lltrend':
+            elif spec == 'local linear trend' or spec == 'lltrend':
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
                 self.stochastic_trend = True
-            elif trend_spec == 'strend':
+            elif spec == 'smooth trend' or spec == 'strend':
                 self.irregular = True
                 self.level = True
                 self.trend = True
                 self.stochastic_trend = True
-            elif trend_spec == 'rtrend':
+            elif spec == 'random trend' or spec == 'rtrend':
                 self.level = True
                 self.trend = True
                 self.stochastic_trend = True
             else:
                 raise ValueError("Invalid level/trend specification: '%s'"
-                                 % trend_spec)
+                                 % spec)
+
+        # Create a bitmask holding the level/trend specification
+        self.trend_mask = (
+            self.irregular * 0x01 |
+            self.level * 0x02 |
+            self.level * self.stochastic_level * 0x04 |
+            self.trend * 0x08 |
+            self.trend * self.stochastic_trend * 0x10
+        )
+
+        # Create the trend specification, if it wasn't given
+        if self.trend_specification is None:
+            # trend specification may be none, e.g. if the model is only
+            # a stochastic cycle, etc.
+            self.trend_specification = _mask_map.get(self.trend_mask, None)
 
         # Check for a model that makes sense
         if trend and not level:

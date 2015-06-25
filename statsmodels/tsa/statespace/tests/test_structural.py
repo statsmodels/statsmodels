@@ -22,244 +22,64 @@ from nose.exc import SkipTest
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
+warnings.simplefilter("always")
 
-def test_ntrend(model='model'):
-    true = getattr(results_structural, 'ntrend')
+def run_ucm(name):
+    true = getattr(results_structural, name)
 
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
+    for model in true['models']:
+        kwargs = model.copy()
+        kwargs.update(true['kwargs'])
 
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
+        mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
+        mod.update(true['params'])
+        res = mod.filter()
 
-    assert_allclose(res.llf, true['llf'])
+        assert_allclose(res.llf, true['llf'])
 
+def test_irregular():
+    run_ucm('irregular')
 
-def test_ntrend_alt():
-    test_ntrend('alt_model')
+def test_fixed_intercept():
+    with warnings.catch_warnings(True) as w:
+        run_ucm('fixed_intercept')
+        message = ("Specified model does not contain a stochastic element;"
+                   " irregular component added.")
+        assert(str(w[0].message) == message)
 
+def test_deterministic_constant():
+    run_ucm('deterministic_constant')
 
-def test_dconstant(model='model'):
-    true = getattr(results_structural, 'dconstant')
+def test_random_walk():
+    run_ucm('random_walk')
 
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
+def test_local_level():
+    run_ucm('local_level')
 
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
+def test_fixed_slope():
+    run_ucm('fixed_slope')
 
-    assert_allclose(res.llf, true['llf'])
+def test_fixed_slope():
+    with warnings.catch_warnings(True) as w:
+        run_ucm('fixed_slope')
+        message = ("Specified model does not contain a stochastic element;"
+                   " irregular component added.")
+        assert(str(w[0].message) == message)
 
+def test_deterministic_trend():
+    run_ucm('deterministic_trend')
 
-def test_dconstant_alt():
-    test_dconstant('alt_model')
+def test_random_walk_with_drift():
+    run_ucm('random_walk_with_drift')
 
+def test_local_linear_deterministic_trend():
+    run_ucm('local_linear_deterministic_trend')
 
-def test_llevel(model='model'):
-    true = getattr(results_structural, 'llevel')
+def test_local_linear_trend():
+    run_ucm('local_linear_trend')
 
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
+def test_smooth_trend():
+    run_ucm('smooth_trend')
 
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_llevel_alt():
-    test_llevel('alt_model')
-
-
-def test_rwalk(model='model'):
-    true = getattr(results_structural, 'rwalk')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_rwalk_alt():
-    test_rwalk('alt_model')
-
-
-def test_dtrend(model='model'):
-    true = getattr(results_structural, 'dtrend')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_dtrend_alt():
-    test_dtrend('alt_model')
-
-
-def test_lldtrend(model='model'):
-    true = getattr(results_structural, 'lldtrend')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_lldtrend_alt():
-    test_lldtrend('alt_model')
-
-
-def test_rwdrift(model='model'):
-    true = getattr(results_structural, 'rwdrift')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_rwdrift_alt():
-    test_rwdrift('alt_model')
-
-
-def test_lltrend(model='model'):
-    true = getattr(results_structural, 'lltrend')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_lltrend_alt():
-    test_lltrend('alt_model')
-
-
-def test_strend(model='model'):
-    true = getattr(results_structural, 'strend')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_strend_alt():
-    test_strend('alt_model')
-
-
-def test_rtrend(model='model'):
-    true = getattr(results_structural, 'rtrend')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_rtrend_alt():
-    test_rtrend('alt_model')
-
-
-def test_cycle():
-    true = getattr(results_structural, 'cycle')
-
-    kwargs = true['model'].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_seasonal():
-    true = getattr(results_structural, 'seasonal')
-
-    kwargs = true['model'].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'], atol=1e-3)
-
-
-def test_reg():
-    true = getattr(results_structural, 'reg')
-
-    kwargs = true['model'].copy()
-    kwargs.update(true['kwargs'])
-
-    kwargs['exog'] = np.log(dta['realgdp'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_rtrend_ar1(model='model'):
-    true = getattr(results_structural, 'rtrend_ar1')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-
-def test_lltrend_cycle_seasonal_reg_ar1(model='model'):
-    true = getattr(results_structural, 'lltrend_cycle_seasonal_reg_ar1')
-
-    kwargs = true[model].copy()
-    kwargs.update(true['kwargs'])
-
-    kwargs['exog'] = np.log(dta['realgdp'])
-
-    mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-    mod.update(true['params'])
-    res = mod.filter()
-
-    assert_allclose(res.llf, true['llf'])
-
-def test_lltrend_cycle_seasonal_reg_ar1_alt():
-    test_lltrend_cycle_seasonal_reg_ar1('alt_model')
+def test_random_trend():
+    run_ucm('random_trend')
