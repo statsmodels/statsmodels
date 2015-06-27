@@ -9,7 +9,9 @@ from __future__ import division, absolute_import, print_function
 from warnings import warn
 
 import numpy as np
-from .mlemodel import MLEModel, MLEResults
+import pandas as pd
+from .kalman_filter import KalmanFilter, FilterResults
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
     unconstrain_stationary_univariate
@@ -19,6 +21,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.decorators import cache_readonly
+import statsmodels.base.wrapper as wrap
 
 
 class SARIMAX(MLEModel):
@@ -419,7 +422,7 @@ class SARIMAX(MLEModel):
                 if not exog_is_using_pandas:
                     exog = exog[:, None]
                 else:
-                    exog = exog.to_frame()
+                    exog = pd.DataFrame(exog)
 
             self.k_exog = exog.shape[1]
         # Redefine mle_regression to be true only if it was previously set to
@@ -478,18 +481,11 @@ class SARIMAX(MLEModel):
         if not _is_using_pandas(endog, None):
             endog = np.asanyarray(endog)
 
-        # Perform simple differencing if requested
-        if (simple_differencing and
+        # Update the differencing dimensions if simple differencing is applied
+        self.orig_k_diff = self._k_diff
+        self.orig_k_seasonal_diff = self._k_seasonal_diff
+        if (self.simple_differencing and
            (self._k_diff > 0 or self._k_seasonal_diff > 0)):
-            # Save the originals
-            self.orig_endog = endog
-            self.orig_exog = exog
-            # Perform simple differencing
-            endog = diff(endog.copy(), self._k_diff, self._k_seasonal_diff,
-                         self.k_seasons)
-            if exog is not None:
-                exog = diff(exog.copy(), self._k_diff, self._k_seasonal_diff,
-                            self.k_seasons)
             self._k_diff = 0
             self._k_seasonal_diff = 0
 
@@ -508,23 +504,27 @@ class SARIMAX(MLEModel):
         # diffuse initial conditions.
         kwargs.setdefault('loglikelihood_burn', k_diffuse_states)
 
-        # Set the default results class to be SARIMAXResults
-        kwargs.setdefault('results_class', SARIMAXResults)
-        self._init_kwargs = kwargs  # store to recreate model
         # Initialize the statespace
         super(SARIMAX, self).__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Handle kwargs specified initialization
+        if self.ssm.initialization is not None:
+            self._manual_initialization = True
+
+        # Other dimensions, now that `ssm` is available
+        self.k_endog = self.ssm.k_endog
+
         # Initialize the fixed components of the statespace model
-        self.design = self.initial_design
-        self.state_intercept = self.initial_state_intercept
-        self.transition = self.initial_transition
-        self.selection = self.initial_selection
+        self.ssm.design = self.initial_design
+        self.ssm.state_intercept = self.initial_state_intercept
+        self.ssm.transition = self.initial_transition
+        self.ssm.selection = self.initial_selection
 
         # If we are estimating a simple ARMA model, then we can use a faster
         # initialization method (unless initialization was already specified).
-        if k_diffuse_states == 0 and self.initialization is None:
+        if k_diffuse_states == 0 and not self._manual_initialization:
             self.initialize_stationary()
 
         # update _init_keys attached by super
@@ -536,12 +536,43 @@ class SARIMAX(MLEModel):
         # TODO: I think the kwargs or not attached, need to recover from ???
 
     def _get_init_kwds(self):
-        # this is a temporary fixup because exposure has been transformed
-        # see #1609
         kwds = super(SARIMAX, self)._get_init_kwds()
-        kwds['endog'] = self.orig_endog
-        kwds['exog'] = self.orig_exog
+
+        for key, value in kwds.items():
+            if value is None and hasattr(self.ssm, key):
+                kwds[key] = getattr(self.ssm, key)
+
         return kwds
+
+    def prepare_data(self):
+        endog, exog = super(SARIMAX, self).prepare_data()
+
+        # Perform simple differencing if requested
+        if (self.simple_differencing and
+           (self.orig_k_diff > 0 or self.orig_k_seasonal_diff > 0)):
+            # Perform simple differencing
+            endog = diff(endog.copy(), self.orig_k_diff,
+                         self.orig_k_seasonal_diff, self.k_seasons)
+            if exog is not None:
+                exog = diff(exog.copy(), self.orig_k_diff,
+                            self.orig_k_seasonal_diff, self.k_seasons)
+
+        # Reset the nobs
+        self.nobs = endog.shape[0]
+
+        # Cache the arrays for calculating the intercept from the trend
+        # components
+        time_trend = np.arange(1, self.nobs + 1)
+        self._trend_data = np.zeros((self.nobs, self.k_trend))
+        i = 0
+        for k in self.polynomial_trend.nonzero()[0]:
+            if k == 0:
+                self._trend_data[:, i] = np.ones(self.nobs,)
+            else:
+                self._trend_data[:, i] = time_trend**k
+            i += 1
+
+        return endog, exog
 
     def initialize(self):
         """
@@ -552,6 +583,8 @@ class SARIMAX(MLEModel):
         These initialization steps must occur following the parent class
         __init__ function calls.
         """
+        super(SARIMAX, self).initialize()
+
         # Internal flag for whether the default mixed approximate diffuse /
         # stationary initialization has been overridden with a user-supplied
         # initialization
@@ -596,18 +629,6 @@ class SARIMAX(MLEModel):
                 np.s_['design', col, start_row:end_row]
             )
 
-        # Cache the arrays for calculating the intercept from the trend
-        # components
-        time_trend = np.arange(1, self.nobs + 1)
-        self._trend_data = np.zeros((self.nobs, self.k_trend))
-        i = 0
-        for k in self.polynomial_trend.nonzero()[0]:
-            if k == 0:
-                self._trend_data[:, i] = np.ones(self.nobs,)
-            else:
-                self._trend_data[:, i] = time_trend**k
-            i += 1
-
         # Cache indices for exog variances in the state covariance matrix
         if self.state_regression and self.time_varying_regression:
             idx = np.diag_indices(self.k_posdef)
@@ -616,20 +637,22 @@ class SARIMAX(MLEModel):
 
     def initialize_known(self, initial_state, initial_state_cov):
         self._manual_initialization = True
-        super(SARIMAX, self).initialize_known(initial_state, initial_state_cov)
-    initialize_known.__doc__ = MLEModel.initialize_known.__doc__
+        self.ssm.initialize_known(initial_state, initial_state_cov)
+    initialize_known.__doc__ = KalmanFilter.initialize_known.__doc__
 
     def initialize_approximate_diffuse(self, variance=None):
         self._manual_initialization = True
-        super(SARIMAX, self).initialize_approximate_diffuse(variance)
+        self.ssm.initialize_approximate_diffuse(variance)
     initialize_approximate_diffuse.__doc__ = (
-        MLEModel.initialize_approximate_diffuse.__doc__
+        KalmanFilter.initialize_approximate_diffuse.__doc__
     )
 
     def initialize_stationary(self):
         self._manual_initialization = True
-        super(SARIMAX, self).initialize_stationary()
-    initialize_stationary.__doc__ = MLEModel.initialize_stationary.__doc__
+        self.ssm.initialize_stationary()
+    initialize_stationary.__doc__ = (
+        KalmanFilter.initialize_stationary.__doc__
+    )
 
     def initialize_state(self, variance=None):
         """
@@ -665,12 +688,11 @@ class SARIMAX(MLEModel):
 
         # Create initialized non-stationary components
         if variance is None:
-            variance = self.initial_variance
+            variance = self.ssm.initial_variance
 
-        initial_state = np.zeros(self.k_states, dtype=self.transition.dtype)
-        initial_state_cov = (
-            np.eye(self.k_states, dtype=self.transition.dtype) * variance
-        )
+        dtype = self.ssm.transition.dtype
+        initial_state = np.zeros(self.k_states, dtype=dtype)
+        initial_state_cov = np.eye(self.k_states, dtype=dtype) * variance
 
         # Get the offsets (from the bottom or bottom right of the vector /
         # matrix) for the stationary component.
@@ -683,13 +705,13 @@ class SARIMAX(MLEModel):
 
         # Add in the initialized stationary components
         if self._k_order > 0:
-            selection_stationary = self.selection[start:end, :, 0]
+            selection_stationary = self.ssm.selection[start:end, :, 0]
             selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.state_cov[:, :, 0]),
+                np.dot(selection_stationary, self.ssm.state_cov[:, :, 0]),
                 selection_stationary.T
             )
             initial_state_cov_stationary = solve_discrete_lyapunov(
-                self.transition[start:end, start:end, 0],
+                self.ssm.transition[start:end, start:end, 0],
                 selected_state_cov_stationary
             )
 
@@ -697,7 +719,7 @@ class SARIMAX(MLEModel):
                 initial_state_cov_stationary
             )
 
-        super(SARIMAX, self).initialize_known(initial_state, initial_state_cov)
+        self.ssm.initialize_known(initial_state, initial_state_cov)
 
     @property
     def initial_design(self):
@@ -821,6 +843,29 @@ class SARIMAX(MLEModel):
                 selection[-i, -i] = 1
         return selection
 
+    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(SARIMAX, self).filter(params, transformed, cov_type,
+                       return_ssm=True, **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = SARIMAXResultsWrapper(
+                SARIMAXResults(self, params, result, **result_kwargs)
+            )
+
+        return result
+
+
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
                                  polynomial_ma, k_trend=0, trend_data=None):
@@ -895,7 +940,7 @@ class SARIMAX(MLEModel):
         trend_data = self._trend_data
         if not self.simple_differencing and (
            self._k_diff > 0 or self._k_seasonal_diff > 0):
-            endog = diff(self.endog[0, :], self._k_diff,
+            endog = diff(self.endog, self._k_diff,
                          self._k_seasonal_diff, self.k_seasons)
             if self.exog is not None:
                 exog = diff(self.exog, self._k_diff,
@@ -904,8 +949,9 @@ class SARIMAX(MLEModel):
                 exog = None
             trend_data = trend_data[:endog.shape[0], :]
         else:
-            endog = self.endog.copy()[0, :]
+            endog = self.endog.copy()
             exog = self.exog.copy() if self.exog is not None else None
+        endog = endog.squeeze()
 
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
@@ -1425,7 +1471,7 @@ class SARIMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, transformed=True, set_params=True):
+    def update(self, params, transformed=True):
         """
         Update the parameters of the model
 
@@ -1438,17 +1484,14 @@ class SARIMAX(MLEModel):
             Array of new parameters.
         transformed : boolean, optional
             Whether or not `params` is already transformed. If set to False,
-            `transform_params` is called. Default is True.
-        set_params : boolean
-            Whether or not to copy `params` to the model object's params
-            attribute. Usually set to True.
+            `transform_params` is called. Default is True..
 
         Returns
         -------
         params : array_like
             Array of parameters.
         """
-        params = super(SARIMAX, self).update(params, transformed, set_params)
+        params = super(SARIMAX, self).update(params, transformed)
 
         params_trend = None
         params_exog = None
@@ -1556,7 +1599,7 @@ class SARIMAX(MLEModel):
         # time-varying observation intercept (is equivalent to simply
         # subtracting it out of the endogenous variable first)
         if self.mle_regression:
-            self['obs_intercept'] = np.dot(self.exog, params_exog)[None, :]
+            self.ssm['obs_intercept'] = np.dot(self.exog, params_exog)[None, :]
 
         # State intercept (Harvey) or additional observation intercept
         # (Hamilton)
@@ -1567,7 +1610,7 @@ class SARIMAX(MLEModel):
         if self.k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
             if not self.hamilton_representation:
-                self['state_intercept', self._k_states_diff, :] = data
+                self.ssm['state_intercept', self._k_states_diff, :] = data
             else:
                 # The way the trend enters in the Hamilton representation means
                 # that the parameter is not an ``intercept'' but instead the
@@ -1580,36 +1623,38 @@ class SARIMAX(MLEModel):
                 # If we already set the observation intercept for MLE
                 # regression, just add to it
                 if self.mle_regression:
-                    self.obs_intercept += data[None, :]
+                    self.ssm.obs_intercept += data[None, :]
                 # Otherwise set it directly
                 else:
-                    self.obs_intercept = data[None, :]
+                    self.ssm.obs_intercept = data[None, :]
 
         # Observation covariance matrix
         if self.measurement_error:
-            self['obs_cov', 0, 0] = params_measurement_variance
+            self.ssm['obs_cov', 0, 0] = params_measurement_variance
 
         # Transition matrix
         if self.k_ar > 0 or self.k_seasonal_ar > 0:
-            self[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
-        elif not self.transition.dtype == params.dtype:
+            self.ssm[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
+        elif not self.ssm.transition.dtype == params.dtype:
             # This is required if the transition matrix is not really in use
             # (e.g. for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
-            self.transition = self.transition.real.astype(params.dtype)
+            self.ssm.transition = self.ssm.transition.real.astype(params.dtype)
 
         # Selection matrix (Harvey) or Design matrix (Hamilton)
         if self.k_ma > 0 or self.k_seasonal_ma > 0:
             if not self.hamilton_representation:
-                self[self.selection_ma_params_idx] = reduced_polynomial_ma[1:]
+                self.ssm[self.selection_ma_params_idx] = (
+                    reduced_polynomial_ma[1:]
+                )
             else:
-                self[self.design_ma_params_idx] = reduced_polynomial_ma[1:]
+                self.ssm[self.design_ma_params_idx] = reduced_polynomial_ma[1:]
 
         # State covariance matrix
         if self.k_posdef > 0:
-            self['state_cov', 0, 0] = params_variance
+            self.ssm['state_cov', 0, 0] = params_variance
             if self.state_regression and self.time_varying_regression:
-                self[self._exog_variance_idx] = params_exog_variance
+                self.ssm[self._exog_variance_idx] = params_exog_variance
 
         # Initialize
         if not self._manual_initialization:
@@ -1661,8 +1706,9 @@ class SARIMAXResults(MLEResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
     """
-    def __init__(self, model, cov_type='opg', cov_kwds=None):
-        super(SARIMAXResults, self).__init__(model, cov_type, cov_kwds)
+    def __init__(self, model, params, ssm_result, cov_type='opg', **kwargs):
+        super(SARIMAXResults, self).__init__(model, params, ssm_result,
+                                             cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
 
@@ -1846,6 +1892,7 @@ class SARIMAXResults(MLEResults):
                                         str(exog.shape)))
                 exog = np.c_[self.model.orig_exog.T, exog.T].T
 
+            # TODO replace with init_kwds or specification or similar
             model = SARIMAX(
                 endog,
                 exog=exog,
@@ -1864,10 +1911,10 @@ class SARIMAXResults(MLEResults):
 
             # Set the kwargs with the update time-varying state space
             # representation matrices
-            for name in self.shapes.keys():
+            for name in self.ssm_result.shapes.keys():
                 if name == 'obs':
                     continue
-                mat = getattr(model, name)
+                mat = getattr(model.ssm, name)
                 if mat.shape[-1] > 1:
                     if len(mat.shape) == 2:
                         kwargs[name] = mat[:, -_out_of_sample:]
@@ -1878,8 +1925,7 @@ class SARIMAXResults(MLEResults):
                  ' required. `exog` argument ignored.')
 
         return super(SARIMAXResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic,
-            **kwargs
+            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
         )
 
     def forecast(self, steps=1, exog=None, **kwargs):
@@ -1904,9 +1950,7 @@ class SARIMAXResults(MLEResults):
         forecast : array
             Array of out of sample forecasts.
         """
-        return super(SARIMAXResults, self).forecast(
-            steps, exog=exog, **kwargs
-        )
+        return super(SARIMAXResults, self).forecast(steps, exog=exog, **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
@@ -1967,3 +2011,13 @@ class SARIMAXResults(MLEResults):
             alpha=alpha, start=start, model_name=model_name
         )
     summary.__doc__ = MLEResults.summary.__doc__
+
+
+class SARIMAXResultsWrapper(MLEResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(SARIMAXResultsWrapper, SARIMAXResults)

@@ -697,13 +697,14 @@ def test_standardized_forecasts_error():
 
     # Fit an ARIMA(1,1,0) to log GDP
     mod = SARIMAX(data['lgdp'], order=(1,1,0))
-    res = mod.fit()
+    res = mod.fit(disp=-1)
 
     standardized_forecasts_error = (
-        res.forecasts_error[0] / np.sqrt(res.forecasts_error_cov[0,0])
+        res.ssm_result.forecasts_error[0] /
+        np.sqrt(res.ssm_result.forecasts_error_cov[0,0])
     )
 
     assert_allclose(
-        res.standardized_forecasts_error[0],
+        res.ssm_result.standardized_forecasts_error[0],
         standardized_forecasts_error,
     )

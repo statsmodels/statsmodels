@@ -30,18 +30,20 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_NO_LIKELIHOOD,
     MEMORY_CONSERVE
 )
-from statsmodels.tsa.statespace.model import Model
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from numpy.testing import assert_equal
 
 
-class Options(Model):
+class Options(object):
     def __init__(self, *args, **kwargs):
 
         # Dummy data
         endog = np.arange(10)
         k_states = 1
 
-        self.model = Model(endog, k_states, *args, **kwargs)
+        self.model = KalmanFilter(k_endog=1, k_states=k_states, *args,
+                                  **kwargs)
+        self.model.bind(endog)
 
 class TestOptions(Options):
     def test_filter_methods(self):

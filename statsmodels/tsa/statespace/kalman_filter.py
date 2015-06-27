@@ -583,7 +583,7 @@ class KalmanFilter(Representation):
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, tolerance=None,
-               loglikelihood_burn=None, results=None, results_kwargs=None):
+               loglikelihood_burn=None, results=None):
         """
         Apply the Kalman filter to the statespace model.
 
@@ -634,9 +634,7 @@ class KalmanFilter(Representation):
         if isinstance(results, type):
             if not issubclass(results, FilterResults):
                 raise ValueError
-            if results_kwargs is None:
-                results_kwargs = {}
-            results = results(self, **results_kwargs)
+            results = results(self)
 
         # Initialize the state
         self._initialize_state(prefix=prefix)
@@ -839,7 +837,7 @@ class FilterResults(FrozenRepresentation):
 
     _attributes = FrozenRepresentation._model_attributes + _filter_attributes
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model):
         super(FilterResults, self).__init__(model)
 
         # Setup caches for uninitialized objects
