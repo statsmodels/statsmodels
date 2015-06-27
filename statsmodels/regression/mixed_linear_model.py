@@ -1,9 +1,17 @@
 """
-Linear mixed effects models.
+Linear mixed effects models are regression models for dependent data.
+They can be used to estimate regression relationships involving both
+means and variances.
 
-The MixedLM class fits linear mixed effects models to data.  This is a
-group-based implementation that does not efficiently handle crossed
-random effects.
+These models are also known as multilevel linear models, and
+hierachical linear models.
+
+The MixedLM class fits linear mixed effects models to data, and
+provides support for some common post-estimation tasks.  This is a
+group-based implementation that is most efficient for models in which
+the data can be partitioned into independent groups.  Some models with
+crossed effects can be handled by specifying a model with a single
+group.
 
 The data are partitioned into disjoint groups.  The probability model
 for group i is:
@@ -14,20 +22,23 @@ where
 
 * n_i is the number of observations in group i
 
-* Y is a n_i dimensional response vector
+* Y is a n_i dimensional response vector (called endog in MixedLM)
 
-* X is a n_i x k_fe design matrix for the fixed effects
+* X is a n_i x k_fe dimensional design matrix for the fixed effects
+  (called exog in MixedLM)
 
 * beta is a k_fe-dimensional vector of fixed effects parameters
+  (called fe_params in MixedLM)
 
-* Z is a design matrix for the random effects with n_i rows.  The
-  number of columns in Z can vary by group as discussed below.
+* Z is a design matrix for the random effects with n_i rows (called
+  exog_re in MixedLM).  The number of columns in Z can vary by group
+  as discussed below.
 
 * gamma is a random vector with mean 0.  The covariance matrix for the
-  first `k_re` elements of `gamma` is common to all groups.  The
-  remaining elements of `gamma` are variance components as discussed
-  in more detail below. Each group gets its own independent
-  realization of gamma.
+  first `k_re` elements of `gamma` (called cov_re in MixedLM) is
+  common to all groups.  The remaining elements of `gamma` are
+  variance components as discussed in more detail below. Each group
+  receives its own independent realization of gamma.
 
 * epsilon is a n_i dimensional vector of iid normal
   errors with mean 0 and variance sigma^2; the epsilon
@@ -37,8 +48,9 @@ Y, X and Z must be entirely observed.  beta, Psi, and sigma^2 are
 estimated using ML or REML estimation, and gamma and epsilon are
 random so define the probability model.
 
-The mean structure is E[Y | X, Z] = X*beta.  If only the mean
-structure is of interest, GEE is a good alternative to mixed models.
+The marginal mean structure is E[Y | X, Z] = X*beta.  If only the mean
+structure is of interest, GEE is an alternative to using linear mixed
+models.
 
 Two types of random effects are supported.  Standard random effects
 are correlated with each other in arbitary ways.  Every group has the
@@ -47,10 +59,9 @@ distribution (but with independent realizations across the groups).
 
 Variance components are uncorrelated with each other, and with the
 standard random effects.  Each variance component has mean zero, and
-is associated with a particular unknown variance parameter.  Multiple
-(independent) variance components within a group can be associated
-with the same variance parameter, and the number of variance
-components per variance parameter can differ across the groups.
+all realizations of a given variance component have the same variance
+parameter.  The number of realized variance components per variance
+parameter can differ across the groups.
 
 The primary reference for the implementation details is:
 
@@ -64,7 +75,7 @@ See also this more recent document:
 http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
 
 All the likelihood, gradient, and Hessian calculations closely follow
-Lindstrom and Bates 1988.
+Lindstrom and Bates 1988, adapted to support variance components.
 
 The following two documents are written more from the perspective of
 users:
@@ -88,34 +99,33 @@ Notation:
 
 Notes:
 
-1. Three different parameterizations are used here in different
-places.  The regression slopes (usually called `fe_params`) are
-identical in all three parameterizations, but the variance parameters
-differ.  The parameterizations are:
+1. Three different parameterizations are used in different places.
+The regression slopes (usually called `fe_params`) are identical in
+all three parameterizations, but the variance parameters differ.  The
+parameterizations are:
 
-* The "natural parameterization" in which cov(endog) = scale*I + Z *
+* The "user parameterization" in which cov(endog) = scale*I + Z *
   cov_re * Z', as described above.  This is the main parameterization
   visible to the user.
 
 * The "profile parameterization" in which cov(endog) = I +
   Z * cov_re1 * Z'.  This is the parameterization of the profile
   likelihood that is maximized to produce parameter estimates.
-  (see Lindstrom and Bates for details).  The "natural" cov_re is
+  (see Lindstrom and Bates for details).  The "user" cov_re is
   equal to the "profile" cov_re1 times the scale.
 
 * The "square root parameterization" in which we work with the Cholesky
-  factor of cov_re1 instead of cov_re1 directly.  This is hidden from the
+  factor of cov_re1 instead of cov_re directly.  This is hidden from the
   user.
 
 All three parameterizations can be packed into a vector by
 (optionally) concatenating `fe_params` together with the lower
-triangle or Cholesky square root of the dependence structure.  The
-final component of the packed parameter vector are the variance
-component estimates.  Thes are stored as square roots if (and only if)
-the random effects covariance matrix is stored as its Choleky factor.
-Note that when unpacking, it is important to either square or reflect
-the dependence structure depending on which parameterization is being
-used.
+triangle or Cholesky square root of the dependence structure, followed
+by the variance parameters for the variance components.  The are
+stored as square roots if (and only if) the random effects covariance
+matrix is stored as its Choleky factor.  Note that when unpacking, it
+is important to either square or reflect the dependence structure
+depending on which parameterization is being used.
 
 Two score methods are implemented.  One takes the score with respect
 to the elements of the random effects covariance matrix (used for
@@ -636,9 +646,9 @@ class MixedLM(base.LikelihoodModel):
         self._aex_r = []
         self._aex_r2 = []
         for i in range(self.n_groups):
-            a, b = self._augment_exog(i)
+            a = self._augment_exog(i)
             self._aex_r.append(a)
-            self._aex_r2.append(b)
+            self._aex_r2.append(np.dot(a.T, a))
 
         # Precompute this
         self._lin, self._quad = self._reparam()
@@ -1197,12 +1207,11 @@ class MixedLM(base.LikelihoodModel):
         """
         Concatenate the columns for variance components to the columns
         for other random effects to obtain a single random effects
-        exog matrix.  Returns the matrix and its cross product matrix.
+        exog matrix for a given group.
         """
         ex_r = self.exog_re_li[group_ix] if self.k_re > 0 else None
-        ex2_r = self.exog_re2_li[group_ix] if self.k_re > 0 else None
         if self.k_vc == 0:
-            return ex_r, ex2_r
+            return ex_r
 
         group = self.group_labels[group_ix]
         ex = [ex_r] if self.k_re > 0 else []
@@ -1212,8 +1221,7 @@ class MixedLM(base.LikelihoodModel):
             ex.append(self.exog_vc[k][group])
         ex = np.concatenate(ex, axis=1)
 
-        ex2 = np.dot(ex.T, ex)
-        return ex, ex2
+        return ex
 
 
     def loglike(self, params, profile_fe=True):
