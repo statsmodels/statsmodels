@@ -67,25 +67,25 @@ class R_Results(object):
 
 
 
-def loglike_function(model, profile_fe, with_fe):
+def loglike_function(model, profile_fe, has_fe):
     """
     Returns a function that evaluates the negative log-likelihood for
     the given model.
     """
     def f(x):
-        params = MixedLMParams.from_packed(x, model.k_fe, model.k_re, model.use_sqrt, with_fe=with_fe)
+        params = MixedLMParams.from_packed(x, model.k_fe, model.k_re, model.use_sqrt, has_fe=has_fe)
         return -model.loglike(params, profile_fe=profile_fe)
 
     return f
 
 
-def score_function(model, profile_fe, with_fe):
+def score_function(model, profile_fe, has_fe):
     """
     Returns a function that evaluates the negative score function for
     the given model.
     """
     def f(x):
-        params = MixedLMParams.from_packed(x, model.k_fe, model.use_sqrt, with_fe=not profile_fe)
+        params = MixedLMParams.from_packed(x, model.k_fe, model.use_sqrt, has_fe=not profile_fe)
         return -model.score(params, profile_fe=profile_fe)
 
     return f
@@ -132,8 +132,8 @@ class TestMixedLM(object):
                     model = MixedLM(endog, exog_fe, groups, exog_re, exog_vc=vc, use_sqrt=use_sqrt)
                     rslt = model.fit(reml=reml)
 
-                    loglike = loglike_function(model, profile_fe=profile_fe, with_fe=not profile_fe)
-                    score = score_function(model, profile_fe=profile_fe, with_fe=not profile_fe)
+                    loglike = loglike_function(model, profile_fe=profile_fe, has_fe=not profile_fe)
+                    score = score_function(model, profile_fe=profile_fe, has_fe=not profile_fe)
 
                     # Test the score at several points.
                     for kr in range(5):
@@ -142,7 +142,7 @@ class TestMixedLM(object):
                         cov_re = np.dot(cov_re.T, cov_re)
                         vcomp = np.random.normal(size=2)**2
                         params = MixedLMParams.from_components(fe_params, cov_re=cov_re, vcomp=vcomp)
-                        params_vec = params.get_packed(with_fe=not profile_fe, use_sqrt=use_sqrt)
+                        params_vec = params.get_packed(has_fe=not profile_fe, use_sqrt=use_sqrt)
 
                         # Check scores
                         gr = -model.score(params, profile_fe=profile_fe)
@@ -155,8 +155,8 @@ class TestMixedLM(object):
                     # transformed parameter).
                     if (profile_fe == False) and (use_sqrt == False):
                         hess = -model.hessian(rslt.params_object)
-                        params_vec = rslt.params_object.get_packed(use_sqrt=False, with_fe=True)
-                        loglike_h = loglike_function(model, profile_fe=False, with_fe=True)
+                        params_vec = rslt.params_object.get_packed(use_sqrt=False, has_fe=True)
+                        loglike_h = loglike_function(model, profile_fe=False, has_fe=True)
                         nhess = nd.approx_hess(params_vec, loglike_h)
                         assert_allclose(hess, nhess, rtol=1e-3)
 
@@ -313,6 +313,31 @@ class TestMixedLM(object):
         assert_allclose(result1.bse.iloc[0:3], [0.12610, 0.03938, 0.03848], rtol=1e-3)
 
 
+    def test_sparse(self):
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'pastes.csv')
+
+        # Dense
+        data = pd.read_csv(fname)
+        vcf = {"cask" : "0 + cask"}
+        model = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                     re_formula="1", vc_formula=vcf,
+                                     data=data)
+        result = model.fit()
+
+        # Sparse
+        from scipy import sparse
+        model2 = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                      re_formula="1", vc_formula=vcf,
+                                      use_sparse=True, data=data)
+        result2 = model.fit()
+
+        assert_allclose(result.params, result2.params)
+        assert_allclose(result.bse, result2.bse)
+
+
     def test_pastes_vcomp(self):
         """
         pastes data from lme4
@@ -333,6 +358,7 @@ class TestMixedLM(object):
                                      re_formula="1", vc_formula=vcf,
                                      data=data)
         result = model.fit()
+
         assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
         assert_allclose(result.bse.iloc[0], 0.6769, rtol=1e-3)
         assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)

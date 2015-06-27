@@ -140,7 +140,7 @@ effects parameters (if any).  As a result of this profiling, it is
 difficult and unnecessary to calculate the Hessian of the profiled log
 likelihood function, so that calculation is not implemented here.
 Therefore, optimization methods requiring the Hessian matrix such as
-the Newon-Raphson algorihm cannot be used for model fitting.
+the Newton-Raphson algorihm cannot be used for model fitting.
 """
 
 import numpy as np
@@ -149,6 +149,7 @@ from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools import data as data_tools
 from scipy.stats.distributions import norm
+from scipy import sparse
 import pandas as pd
 import patsy
 from statsmodels.compat.collections import OrderedDict
@@ -157,8 +158,54 @@ import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
 from statsmodels.compat.numpy import np_matrix_rank
-
 from pandas import DataFrame
+
+
+def _dot(x, y):
+    """
+    Returns the dot product of the arrays, works for sparse and dense.
+    """
+
+    if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
+        return np.dot(x, y)
+    elif sparse.issparse(x):
+        return x.dot(y)
+    elif sparse.issparse(y):
+        return y.T.dot(x.T).T
+
+
+# From numpy, adapted to work with sparse and dense arrays.
+def _multi_dot_three(A, B, C):
+    """
+    Find best ordering for three arrays and do the multiplication.
+
+    Doing in manually instead of using dynamic programing is
+    approximately 15 times faster.
+    """
+    # cost1 = cost((AB)C)
+    cost1 = (A.shape[0] * A.shape[1] * B.shape[1] +  # (AB)
+             A.shape[0] * B.shape[1] * C.shape[1])   # (--)C
+    # cost2 = cost((AB)C)
+    cost2 = (B.shape[0] * B.shape[1] * C.shape[1] +  #  (BC)
+             A.shape[0] * A.shape[1] * C.shape[1])   # A(--)
+
+    if cost1 < cost2:
+        return _dot(_dot(A, B), C)
+    else:
+        return _dot(A, _dot(B, C))
+
+
+def _dotsum(x, y):
+    """
+    Returns sum(x * y), where '*' is the pointwise product, computed
+    efficiently for dense and sparse matrices.
+    """
+
+    if sparse.issparse(x):
+        return x.multiply(y).sum()
+    else:
+        # This way usually avoids allocating a temporary.
+        return np.dot(x.ravel(), y.ravel())
 
 
 def _get_exog_re_names(self, exog_re):
@@ -207,7 +254,7 @@ class MixedLMParams(object):
         self._ix = np.tril_indices(self.k_re)
 
 
-    def from_packed(params, k_fe, k_re, use_sqrt, with_fe):
+    def from_packed(params, k_fe, k_re, use_sqrt, has_fe):
         """
         Create a MixedLMParams object from packed parameter vector.
 
@@ -224,7 +271,7 @@ class MixedLMParams(object):
             If True, the random effects covariance matrix is provided
             as its Cholesky factor, otherwise the lower triangle of
             the covariance matrix is stored.
-        with_fe : boolean
+        has_fe : boolean
             If True, `params` contains fixed effects parameters.
             Otherwise, the fixed effects parameters are set to zero.
 
@@ -235,7 +282,7 @@ class MixedLMParams(object):
         k_re2 = int(k_re * (k_re + 1) / 2)
 
         # The number of covariance parameters.
-        if with_fe:
+        if has_fe:
             k_vc = len(params) - k_fe - k_re2
         else:
             k_vc = len(params) - k_re2
@@ -244,7 +291,7 @@ class MixedLMParams(object):
 
         cov_re = np.zeros((k_re, k_re))
         ix = pa._ix
-        if with_fe:
+        if has_fe:
             pa.fe_params = params[0:k_fe]
             cov_re[ix] = params[k_fe:k_fe+k_re2]
         else:
@@ -328,7 +375,7 @@ class MixedLMParams(object):
         return obj
 
 
-    def get_packed(self, use_sqrt, with_fe=False):
+    def get_packed(self, use_sqrt, has_fe=False):
         """
         Return the model parameters packed into a single vector.
 
@@ -338,7 +385,7 @@ class MixedLMParams(object):
             If True, the Cholesky square root of `cov_re` is
             included in the packed result.  Otherwise the
             lower triangle of `cov_re` is included.
-        with_fe : bool
+        has_fe : bool
             If True, the fixed effects parameters are included
             in the packed result, otherwise they are omitted.
         """
@@ -357,7 +404,7 @@ class MixedLMParams(object):
         else:
             vcomp = self.vcomp
 
-        if with_fe:
+        if has_fe:
             pa = np.concatenate((self.fe_params, cpa, vcomp))
         else:
             pa = np.concatenate((cpa, vcomp))
@@ -397,12 +444,22 @@ def _smw_solver(s, A, AtA, BI, di):
     qmat[0:m, 0:m] += BI
     ix = np.arange(m, A.shape[1])
     qmat[ix, ix] += di
-    qmati = np.linalg.solve(qmat, A.T)
+    if sparse.issparse(A):
+        qi = sparse.linalg.inv(qmat)
+        qmati = A.dot(qi.T).T
+    else:
+        qmati = np.linalg.solve(qmat, A.T)
 
     def solver(rhs):
-        ql = np.dot(qmati, rhs)
-        ql = np.dot(A, ql)
+        if sparse.issparse(A):
+            ql = qmati.dot(rhs)
+            ql = A.dot(ql)
+        else:
+            ql = np.dot(qmati, rhs)
+            ql = np.dot(A, ql)
         rslt = rhs / s - ql / s**2
+        if sparse.issparse(rslt):
+            rslt = np.asarray(rslt.todense())
         return rslt
 
     return solver
@@ -441,6 +498,8 @@ def _smw_logdet(s, A, AtA, BI, di, B_logdet):
     qmat[0:m, 0:m] += BI
     ix = np.arange(m, A.shape[1])
     qmat[ix, ix] += di
+    if sparse.issparse(qmat):
+        qmat = qmat.todense()
     _, ld1 = np.linalg.slogdet(qmat)
     return B_logdet + ld + ld1
 
@@ -633,9 +692,8 @@ class MixedLM(base.LikelihoodModel):
             self.exog_re2_li = [np.dot(x.T, x) for x in self.exog_re_li]
 
         # The total number of observations, summed over all groups
-        self.n_totobs = sum([len(y) for y in self.endog_li])
-        # why do it like the above?
         self.nobs = len(self.endog)
+        self.n_totobs = self.nobs
 
         # Set the fixed effects parameter names
         if self.exog_names is None:
@@ -648,7 +706,7 @@ class MixedLM(base.LikelihoodModel):
         for i in range(self.n_groups):
             a = self._augment_exog(i)
             self._aex_r.append(a)
-            self._aex_r2.append(np.dot(a.T, a))
+            self._aex_r2.append(_dot(a.T, a))
 
         # Precompute this
         self._lin, self._quad = self._reparam()
@@ -690,7 +748,7 @@ class MixedLM(base.LikelihoodModel):
 
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, vc_formula=None,
-                     subset=None, *args, **kwargs):
+                     subset=None, use_sparse=False, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -842,7 +900,10 @@ class MixedLM(base.LikelihoodModel):
                     vcg = vc_formula[vc_name]
                     mat = patsy.dmatrix(vcg, data.loc[ii, :], eval_env=eval_env,
                                         return_type='dataframe')
-                    exog_vc[vc_name][group] = np.asarray(mat)
+                    if use_sparse:
+                        exog_vc[vc_name][group] = sparse.csr_matrix(mat)
+                    else:
+                        exog_vc[vc_name][group] = np.asarray(mat)
             exog_vc = exog_vc
         else:
             exog_vc = None
@@ -1215,11 +1276,20 @@ class MixedLM(base.LikelihoodModel):
 
         group = self.group_labels[group_ix]
         ex = [ex_r] if self.k_re > 0 else []
+        any_sparse = False
         for j,k in enumerate(self._vc_names):
             if group not in self.exog_vc[k]:
                 continue
             ex.append(self.exog_vc[k][group])
-        ex = np.concatenate(ex, axis=1)
+            any_sparse |= sparse.issparse(ex[-1])
+        if any_sparse:
+            for j, x in enumerate(ex):
+                if not sparse.issparse(x):
+                    ex[j] = sparse.csr_matrix(x)
+            ex = sparse.hstack(ex)
+            ex = sparse.csr_matrix(ex)
+        else:
+            ex = np.concatenate(ex, axis=1)
 
         return ex
 
@@ -1253,7 +1323,7 @@ class MixedLM(base.LikelihoodModel):
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(params, self.k_fe,
                                                self.k_re, self.use_sqrt,
-                                               with_fe=False)
+                                               has_fe=False)
 
         cov_re = params.cov_re
         vcomp = params.vcomp
@@ -1386,7 +1456,7 @@ class MixedLM(base.LikelihoodModel):
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(params, self.k_fe,
                                                self.k_re, self.use_sqrt,
-                                               with_fe=False)
+                                               has_fe=False)
 
         if profile_fe:
             params.fe_params = self.get_fe_params(params.cov_re, params.vcomp)
@@ -1509,20 +1579,20 @@ class MixedLM(base.LikelihoodModel):
             # Contributions to the covariance parameter gradient
             vir = solver(resid)
             for jj, matl, matr, vsl, vsr, sym in self._gen_dV_dPar(ex_r, solver, group):
-                dlv[jj] = np.dot(matr.ravel(), vsl.ravel()) # trace dot
+                dlv[jj] = _dotsum(matr, vsl)
                 if not sym:
-                    dlv[jj] += np.dot(matl.ravel(), vsr.ravel()) # trace dot
+                    dlv[jj] += _dotsum(matl, vsr)
 
-                ul = np.dot(vir, matl)
-                ur = ul.T if sym else np.dot(matr.T, vir)
+                ul = _dot(vir, matl)
+                ur = ul.T if sym else _dot(matr.T, vir)
                 ulr = np.dot(ul, ur)
                 rvavr[jj] += ulr
                 if not sym:
-                    rvavr[jj] += ulr.T # is this always scalar?
+                    rvavr[jj] += ulr.T
 
                 if self.reml:
-                    ul = np.dot(viexog.T, matl)
-                    ur = ul.T if sym else np.dot(matr.T, viexog)
+                    ul = _dot(viexog.T, matl)
+                    ur = ul.T if sym else _dot(matr.T, viexog)
                     ulr = np.dot(ul, ur)
                     xtax[jj] += ulr
                     if not sym:
@@ -1555,9 +1625,9 @@ class MixedLM(base.LikelihoodModel):
         if self.reml:
             xtvixi = np.linalg.inv(xtvix)
             for j in range(self.k_re2):
-                score_re[j] += 0.5 * np.dot(xtvixi.T.ravel(), xtax[j].ravel()) # trace dot
+                score_re[j] += 0.5 * _dotsum(xtvixi.T, xtax[j])
             for j in range(self.k_vc):
-                score_vc[j] += 0.5 * np.dot(xtvixi.T.ravel(), xtax[self.k_re2 + j].ravel()) # trace dot
+                score_vc[j] += 0.5 * _dotsum(xtvixi.T, xtax[self.k_re2 + j])
 
         return score_fe, score_re, score_vc
 
@@ -1594,7 +1664,7 @@ class MixedLM(base.LikelihoodModel):
         """
 
         score_fe, score_re, score_vc = self.score_full(params, calc_fe=calc_fe)
-        params_vec = params.get_packed(use_sqrt=True, with_fe=True)
+        params_vec = params.get_packed(use_sqrt=True, has_fe=True)
 
         score_full = np.concatenate((score_fe, score_re, score_vc))
         scr = 0.
@@ -1633,7 +1703,7 @@ class MixedLM(base.LikelihoodModel):
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(params, self.k_fe, self.k_re,
                                                use_sqrt=self.use_sqrt,
-                                               with_fe=True)
+                                               has_fe=True)
 
         fe_params = params.fe_params
         vcomp = params.vcomp
@@ -1680,60 +1750,56 @@ class MixedLM(base.LikelihoodModel):
 
             for jj1, matl1, matr1, vsl1, vsr1, sym1 in self._gen_dV_dPar(ex_r, solver, group):
 
-                ul = np.dot(viexog.T, matl1)
-                ur = np.dot(matr1.T, vir)
+                ul = _dot(viexog.T, matl1)
+                ur = _dot(matr1.T, vir)
                 hess_fere[jj1, :] += np.dot(ul, ur)
                 if not sym1:
-                    ul = np.dot(viexog.T, matr1)
-                    ur = np.dot(matl1.T, vir)
+                    ul = _dot(viexog.T, matr1)
+                    ur = _dot(matl1.T, vir)
                     hess_fere[jj1, :] += np.dot(ul, ur)
 
                 if self.reml:
-                    ul = np.dot(viexog.T, matl1)
+                    ul = _dot(viexog.T, matl1)
                     ur = ul if sym1 else np.dot(viexog.T, matr1)
-                    ulr = np.dot(ul, ur.T)
+                    ulr = _dot(ul, ur.T)
                     xtax[jj1] += ulr
                     if not sym1:
                         xtax[jj1] += ulr.T
 
-                ul = np.dot(vir, matl1)
-                ur = ul if sym1 else np.dot(vir, matr1)
+                ul = _dot(vir, matl1)
+                ur = ul if sym1 else _dot(vir, matr1)
                 B[jj1] += np.dot(ul, ur) * (1 if sym1 else 2)
 
                 # V^{-1} * dV/d_theta
-                E = np.dot(vsl1, matr1.T)
+                E = [(vsl1, matr1)]
                 if not sym1:
-                    E += np.dot(vsr1, matl1.T)
+                    E.append((vsr1, matl1))
 
                 for jj2, matl2, matr2, vsl2, vsr2, sym2 in self._gen_dV_dPar(ex_r, solver, group, jj1):
 
-                    re = np.dot(matr2.T, E)
-                    rev = np.dot(re, vir[:, None])
-                    vl = np.dot(vir[None, :], matl2)
-                    vt = 2*np.dot(vl, rev)
+                    re = sum([_multi_dot_three(matr2.T, x[0], x[1].T) for x in E])
+                    vt = 2 * _dot(_multi_dot_three(vir[None, :], matl2, re), vir[:, None])
 
                     if not sym2:
-                        le = np.dot(matl2.T, E)
-                        lev = np.dot(le, vir[:, None])
-                        vr = np.dot(vir[None, :], matr2)
-                        vt += 2*np.dot(vr, lev)
+                        le = sum([_multi_dot_three(matl2.T, x[0], x[1].T) for x in E])
+                        vt += 2 * _dot(_multi_dot_three(vir[None, :], matr2, le), vir[:, None])
 
                     D[jj1, jj2] += vt
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
 
-                    rt = np.dot(vsl2.ravel(), re.T.ravel()) / 2 # trace dot
+                    rt = _dotsum(vsl2, re.T) / 2
                     if not sym2:
-                        rt += np.dot(vsr2.ravel(), le.T.ravel()) / 2 # trace dot
+                        rt += _dotsum(vsr2, le.T) / 2
 
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
                         hess_re[jj2, jj1] += rt
 
                     if self.reml:
-                        ev = np.dot(E, viexog)
-                        u1 = np.dot(viexog.T, matl2)
-                        u2 = np.dot(matr2.T, ev)
+                        ev = sum([_dot(x[0], _dot(x[1].T, viexog)) for x in E])
+                        u1 = _dot(viexog.T, matl2)
+                        u2 = _dot(matr2.T, ev)
                         um = np.dot(u1, u2)
                         F[jj1][jj2] += um + um.T
                         if not sym2:
@@ -1750,7 +1816,7 @@ class MixedLM(base.LikelihoodModel):
             QL = [np.linalg.solve(xtvix, x) for x in xtax]
             for j1 in range(self.k_re2 + self.k_vc):
                 for j2 in range(j1 + 1):
-                    a = np.dot(QL[j1].T.ravel(), QL[j2].ravel()) # trace dot
+                    a = _dotsum(QL[j1].T, QL[j2])
                     a -= np.trace(np.linalg.solve(xtvix, F[j1][j2]))
                     a *= 0.5
                     hess_re[j1, j2] += a
@@ -1890,19 +1956,35 @@ class MixedLM(base.LikelihoodModel):
             if isinstance(start_params, MixedLMParams):
                 params = start_params
             else:
-                params = MixedLMParams.from_packed(start_params, self.k_fe,
-                                                   self.k_re, self.use_sqrt,
-                                                   with_fe=True)
+                # It's a packed array
+                if len(start_params) == self.k_fe + self.k_re2 + self.k_vc:
+                    params = MixedLMParams.from_packed(start_params, self.k_fe,
+                                                       self.k_re, self.use_sqrt,
+                                                       has_fe=True)
+                elif len(start_params) == self.k_re2 + self.k_vc:
+                    params = MixedLMParams.from_packed(start_params, self.k_fe,
+                                                       self.k_re, self.use_sqrt,
+                                                       has_fe=False)
+                else:
+                    raise ValueError("invalid start_params")
+
 
         if do_cg:
             kwargs["retall"] = hist is not None
             if "disp" not in kwargs:
                 kwargs["disp"] = False
-            packed = params.get_packed(use_sqrt=self.use_sqrt, with_fe=False)
-            rslt = super(MixedLM, self).fit(start_params=packed,
-                                            skip_hessian=True,
-                                            method=method,
-                                            **kwargs)
+            packed = params.get_packed(use_sqrt=self.use_sqrt, has_fe=False)
+
+            # It seems that the optimizers sometimes stop too soon, so
+            # we run a few times.
+            for rep in range(5):
+                rslt = super(MixedLM, self).fit(start_params=packed,
+                                                skip_hessian=True,
+                                                method=method,
+                                                **kwargs)
+                if rslt.mle_retvals['converged']:
+                    break
+                packed = rslt.params
 
             # The optimization succeeded
             params = np.atleast_1d(rslt.params)
@@ -1918,7 +2000,7 @@ class MixedLM(base.LikelihoodModel):
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
         params = MixedLMParams.from_packed(params, self.k_fe, self.k_re,
-                                           use_sqrt=self.use_sqrt, with_fe=False)
+                                           use_sqrt=self.use_sqrt, has_fe=False)
         cov_re_unscaled = params.cov_re
         vcomp_unscaled = params.vcomp
         fe_params = self.get_fe_params(cov_re_unscaled, vcomp_unscaled)
@@ -1940,7 +2022,7 @@ class MixedLM(base.LikelihoodModel):
         hess_diag = np.diag(hess)
         if free is not None:
             pcov = np.zeros_like(hess)
-            pat = self._freepat.get_packed(use_sqrt=False, with_fe=True)
+            pat = self._freepat.get_packed(use_sqrt=False, has_fe=True)
             ii = np.flatnonzero(pat)
             hess_diag = hess_diag[ii]
             if len(ii) > 0:
@@ -1953,7 +2035,7 @@ class MixedLM(base.LikelihoodModel):
             warnings.warn(msg, ConvergenceWarning)
 
         # Prepare a results class instance
-        params_packed = params.get_packed(use_sqrt=False, with_fe=True)
+        params_packed = params.get_packed(use_sqrt=False, has_fe=True)
         results = MixedLMResults(self, params_packed, pcov / scale)
         results.params_object = params
         results.fe_params = fe_params
@@ -2122,7 +2204,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
             vir = solver(resid)
 
-            xtvir = np.dot(ex_r.T, vir)
+            xtvir = _dot(ex_r.T, vir)
+
             xtvir[0:k_re] = np.dot(self.cov_re, xtvir[0:k_re])
             xtvir[k_re:] *= vc_var
             ranef_dict[group] = pd.Series(xtvir, index=self._expand_re_names(group))
@@ -2329,7 +2412,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         if self.reml:
             return np.nan
         if self.freepat is not None:
-            df = self.freepat.get_packed(use_sqrt=False, with_fe=True).sum() + 1
+            df = self.freepat.get_packed(use_sqrt=False, has_fe=True).sum() + 1
         else:
             df = self.params.size + 1
         return -2 * (self.llf - df)
@@ -2340,7 +2423,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         if self.reml:
             return np.nan
         if self.freepat is not None:
-            df = self.freepat.get_packed(use_sqrt=False, with_fe=True).sum() + 1
+            df = self.freepat.get_packed(use_sqrt=False, has_fe=True).sum() + 1
         else:
             df = self.params.size + 1
         return -2 * self.llf + np.log(self.nobs) * df
