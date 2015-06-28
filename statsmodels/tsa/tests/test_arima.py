@@ -2099,6 +2099,84 @@ def test_arima111_predict_exog_2127():
     assert_allclose(predicts, predicts_res, atol=1e-6)
 
 
+def test_ARIMA_exog_predict():
+    # test forecasting and dynamic prediction with exog against Stata
+
+    dta = load_macrodata_pandas().data
+    dates = dates_from_range("1959Q1", length=len(dta))
+    cpi_dates = dates_from_range('1959Q1', '2009Q3')
+    dta.index = cpi_dates
+
+    data = dta
+    data['loginv'] = np.log(data['realinv'])
+    data['loggdp'] = np.log(data['realgdp'])
+    data['logcons'] = np.log(data['realcons'])
+
+    forecast_period = dates_from_range('2008Q2', '2009Q3')
+    end = forecast_period[0]
+    data_sample = data.ix[dta.index < end]
+
+    exog_full = data[['loggdp', 'logcons']]
+
+    # pandas
+
+    mod = ARIMA(data_sample['loginv'], (1,0,1), exog=data_sample[['loggdp', 'logcons']])
+    res = mod.fit(iprint=0, disp=1, solver='bfgs', maxiter=5000)
+
+    predicted_arma_fp = res.predict(start=197, end=202, exog=exog_full.values[197:]).values
+    predicted_arma_dp = res.predict(start=193, end=202, exog=exog_full[197:], dynamic=True)
+
+
+    # numpy
+    mod2 = ARIMA(np.asarray(data_sample['loginv']), (1,0,1),
+                   exog=np.asarray(data_sample[['loggdp', 'logcons']]))
+    res2 = mod2.fit(iprint=0, disp=1, solver='bfgs', maxiter=5000)
+
+    exog_full = data[['loggdp', 'logcons']]
+    predicted_arma_f = res2.predict(start=197, end=202, exog=exog_full.values[197:])
+    predicted_arma_d = res2.predict(start=193, end=202, exog=exog_full[197:], dynamic=True)
+
+    #ARIMA(1, 1, 1)
+    ex = np.asarray(data_sample[['loggdp', 'logcons']].diff())
+    # The first obsevation is not (supposed to be) used, but I get a Lapack problem
+    # Intel MKL ERROR: Parameter 5 was incorrect on entry to DLASCL.
+    ex[0] = 0
+    mod111 = ARIMA(np.asarray(data_sample['loginv']), (1,1,1),
+                       # Stata differences also the exog
+                       exog=ex)
+
+    res111 = mod111.fit(iprint=0, disp=1, solver='bfgs', maxiter=5000)
+    exog_full_d = data[['loggdp', 'logcons']].diff()
+    res111.predict(start=197, end=202, exog=exog_full_d.values[197:])
+
+    predicted_arima_f = res111.predict(start=196, end=202, exog=exog_full_d.values[197:], typ='levels')
+    predicted_arima_d = res111.predict(start=193, end=202, exog=exog_full_d.values[197:], typ='levels', dynamic=True)
+
+    res_f101 = np.array([ 7.73975859954,  7.71660108543,  7.69808978329,  7.70872117504,
+             7.6518392758 ,  7.69784279784,  7.70290907856,  7.69237782644,
+             7.65017785174,  7.66061689028,  7.65980022857,  7.61505314129,
+             7.51697158428,  7.5165760663 ,  7.5271053284 ])
+    res_f111 = np.array([ 7.74460013693,  7.71958207517,  7.69629561172,  7.71208186737,
+             7.65758850178,  7.69223472572,  7.70411775588,  7.68896109499,
+             7.64016249001,  7.64871881901,  7.62550283402,  7.55814609462,
+             7.44431310053,  7.42963968062,  7.43554675427])
+    res_d111 = np.array([ 7.74460013693,  7.71958207517,  7.69629561172,  7.71208186737,
+             7.65758850178,  7.69223472572,  7.71870821151,  7.7299430215 ,
+             7.71439447355,  7.72544001101,  7.70521902623,  7.64020040524,
+             7.5281927191 ,  7.5149442694 ,  7.52196378005])
+    res_d101 = np.array([ 7.73975859954,  7.71660108543,  7.69808978329,  7.70872117504,
+             7.6518392758 ,  7.69784279784,  7.72522142662,  7.73962377858,
+             7.73245950636,  7.74935432862,  7.74449584691,  7.69589103679,
+             7.5941274688 ,  7.59021764836,  7.59739267775])
+
+    assert_allclose(predicted_arma_dp, res_d101[-len(predicted_arma_d):], atol=1e-7)
+    assert_allclose(predicted_arma_fp, res_f101[-len(predicted_arma_f):], atol=1e-5)
+    assert_allclose(predicted_arma_d, res_d101[-len(predicted_arma_d):], atol=1e-7)
+    assert_allclose(predicted_arma_f, res_f101[-len(predicted_arma_f):], atol=1e-5)
+    assert_allclose(predicted_arima_d, res_d111[-len(predicted_arima_d):], atol=1e-5)
+    assert_allclose(predicted_arima_f, res_f111[-len(predicted_arima_f):], atol=1e-5)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
