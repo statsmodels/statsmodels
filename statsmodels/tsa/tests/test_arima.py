@@ -2080,7 +2080,7 @@ def test_arima111_predict_exog_2127():
     model = ARIMA(ef, (1,1,1), exog=ue)
     res = model.fit(transparams=False, iprint=0, disp=0)
 
-    predicts = res.predict(start=len(ef), end = len(ef)+11,
+    predicts = res.predict(start=len(ef), end = len(ef)+10,
                            exog=ue[-11:], typ = 'levels')
 
     # regression test, not verified numbers
@@ -2094,7 +2094,7 @@ def test_arima111_predict_exog_2127():
     predicts_res = np.array(
           [ 0.02591112,  0.02321336,  0.02436593,  0.02368773,  0.02389767,
             0.02372018,  0.02374833,  0.02367407,  0.0236443 ,  0.02362868,
-            0.02362312,  0.02361277])
+            0.02362312])
 
     assert_allclose(predicts, predicts_res, atol=1e-6)
 

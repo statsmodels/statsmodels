@@ -351,7 +351,7 @@ def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
         endog[i+p] = fcast
 
     #need to do one more without updating endog
-    forecast[-1] = mu[-1] + np.dot(arparams, endog[steps - 1:])
+    forecast[steps - 1] = mu[steps - 1] + np.dot(arparams, endog[steps - 1:])
     return forecast
 
 
