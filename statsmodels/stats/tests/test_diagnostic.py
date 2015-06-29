@@ -540,29 +540,29 @@ class TestDiagnosticG(object):
 
         #> library(nortest) #Lilliefors (Kolmogorov-Smirnov) normality test
         #> lt = lillie.test(residuals(fm))
-        #> mkhtest(lt, "lillifors", "-")
-        lillifors1 = dict(statistic=0.0723390908786589,
+        #> mkhtest(lt, "lilliefors", "-")
+        lilliefors1 = dict(statistic=0.0723390908786589,
                           pvalue=0.01204113540102896, parameters=(), distr='-')
 
         #> lt = lillie.test(residuals(fm)**2)
-        #> mkhtest(lt, "lillifors", "-")
-        lillifors2 = dict(statistic=0.301311621898024,
+        #> mkhtest(lt, "lilliefors", "-")
+        lilliefors2 = dict(statistic=0.301311621898024,
                           pvalue=1.004305736618051e-51,
                           parameters=(), distr='-')
 
         #> lt = lillie.test(residuals(fm)[1:20])
-        #> mkhtest(lt, "lillifors", "-")
-        lillifors3 = dict(statistic=0.1333956004203103,
+        #> mkhtest(lt, "lilliefors", "-")
+        lilliefors3 = dict(statistic=0.1333956004203103,
                           pvalue=0.4618672180799566, parameters=(), distr='-')
 
-        lf1 = smsdia.lillifors(res.resid)
-        lf2 = smsdia.lillifors(res.resid**2)
-        lf3 = smsdia.lillifors(res.resid[:20])
+        lf1 = smsdia.lilliefors(res.resid)
+        lf2 = smsdia.lilliefors(res.resid**2)
+        lf3 = smsdia.lilliefors(res.resid[:20])
 
-        compare_t_est(lf1, lillifors1, decimal=(14, 14))
-        compare_t_est(lf2, lillifors2, decimal=(14, 14)) #pvalue very small
-        assert_approx_equal(lf2[1], lillifors2['pvalue'], significant=10)
-        compare_t_est(lf3, lillifors3, decimal=(14, 1))
+        compare_t_est(lf1, lilliefors1, decimal=(14, 14))
+        compare_t_est(lf2, lilliefors2, decimal=(14, 14)) #pvalue very small
+        assert_approx_equal(lf2[1], lilliefors2['pvalue'], significant=10)
+        compare_t_est(lf3, lilliefors3, decimal=(14, 1))
         #R uses different approximation for pvalue in last case
 
         #> ad = ad.test(residuals(fm))

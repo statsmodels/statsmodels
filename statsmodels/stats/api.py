@@ -8,8 +8,9 @@ from .diagnostic import (
             linear_harvey_collier, linear_rainbow, linear_lm,
             breaks_cusumolsresid, breaks_hansen, recursive_olsresiduals,
             unitroot_adf,
-            normal_ad, lillifors,
-            het_breushpagan, acorr_breush_godfrey  # deprecated because of misspelling
+            normal_ad, lilliefors,
+             # deprecated because of misspelling:
+            lillifors, het_breushpagan, acorr_breush_godfrey
             )
 
 from . import multicomp
