@@ -11,7 +11,8 @@ currently all tests are against R
 """
 import warnings
 warnings.simplefilter("default")
-warnings.simplefilter("ignore", ResourceWarning)
+# ResourceWarning doesn't exist in python 2
+#warnings.simplefilter("ignore", ResourceWarning)
 import os
 
 import numpy as np
