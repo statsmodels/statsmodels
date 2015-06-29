@@ -105,6 +105,17 @@ class Representation(object):
     initial_variance : float, optional
         Initial variance used when approximate diffuse initialization is
         specified. Default is 1e6.
+    initialization : {'approximate_diffuse','stationary','known'}, optional
+        Initialization method for the initial state.
+    initial_variance : float, optional
+        If approximate diffuse initialization is used, the initial variance of
+        states.
+    initial_state : array_like, optional
+        If known initialization is used, the mean of the initial state's
+        distribution.
+    initial_state_cov : array_like, optional
+        If known initialization is used, the covariance matrix of the initial
+        state's distribution.
     nobs : integer, optional
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the number of observations can optionally be specified. If not
@@ -306,20 +317,37 @@ class Representation(object):
             if scope[name] is not None:
                 setattr(self, name, scope[name])
 
+        # Options
+        self.initial_variance = initial_variance
+
         # State-space initialization data
-        self.initialization = None
+        self.initialization = kwargs.get('initialization', None)
         self._initial_state = None
         self._initial_state_cov = None
         self._initial_variance = None
+
+        if self.initialization == 'approximate_diffuse':
+            self.initialize_approximate_diffuse()
+        elif self.initialization == 'stationary':
+            self.initialize_stationary()
+        elif self.initialization == 'known':
+            if not 'initial_state' in kwargs:
+                raise ValueError('Initial state must be provided when "known"'
+                                 ' is the specified initialization method.')
+            if not 'initial_state_cov' in kwargs:
+                raise ValueError('Initial state covariance matrix must be'
+                                 ' provided when "known" is the specified'
+                                 ' initialization method.')
+            self.initialize_known(kwargs['initial_state'],
+                                  kwargs['initial_state_cov'])
+        elif self.initialization is not None:
+            raise ValueError("Invalid state space initialization method.")
 
         # Matrix representations storage
         self._representations = {}
 
         # Setup the underlying statespace object storage
         self._statespaces = {}
-
-        # Options
-        self.initial_variance = initial_variance
 
     def __getitem__(self, key):
         _type = type(key)
