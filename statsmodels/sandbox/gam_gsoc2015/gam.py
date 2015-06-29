@@ -3,9 +3,8 @@ import scipy as sp
 from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
-from .smooth_basis import BS
-from patsy.state import stateful_transform
-
+from scipy.linalg import pinv
+from scipy.stats import chi2
 
 ## this class will be later removed and taken from another push
 class PenalizedMixin(object):
@@ -298,6 +297,8 @@ class MultivariateGamPenalty(Penalty):
             n, dim_base = d2.shape
             # check that all the basis have the same number of samples
             assert(n_samples == n)
+            # the mask[i] contains a vector of length k_columns. The index
+            # corresponding to the i-th input variable are set to True.
             self.mask[i][param_count: param_count + dim_base] = True
             param_count += dim_base
 
@@ -326,10 +327,6 @@ class MultivariateGamPenalty(Penalty):
         return np.concatenate(grad)
 
     def deriv2(self, params):
-        #deriv2 = []
-        #for i in range(self.n_variables):
-        #    params_i = params[self.mask[i]]
-        #    deriv2.append(self.gp[i].deriv2(params_i))
         deriv2 = np.empty(shape=(0,0))
         for i in range(self.n_variables):
             params_i = params[self.mask[i]]
@@ -354,6 +351,21 @@ class GLMGAMResults(GLMResults):
         #     plt.plot(self.model.x, self.predict())
         # else:
         plt.plot(x_values, self.predict(smooth_basis))
+
+    def significance_test(self, basis=None):
+
+        basis_size = basis.shape[1]
+        # TODO: Maybe we need to use cov_params instead of the normalized ones???
+        v = basis.dot(self.normalized_cov_params).dot(basis.T)
+        p_inv_v, rank = pinv(v, return_rank=True) # TODO: According to the paper the partial inverse should be done with rank r accurately chosen
+        f = self.predict(basis)
+        tr = f.T.dot(p_inv_v).dot(f)
+        # TODO: the value tr should be used to perform a wald test. This can be probably done by the ConstrastResult class but it is not clear how.
+
+        print('rank=', rank) # TODO: Rank is often not the expected value. Run for example the draft code
+        p_val = 1 - chi2.cdf(tr, df=basis_size)# TODO: basis_size should probably be replaced by rank
+
+        return tr, p_val
 
 
 class GLMGam(PenalizedMixin, GLM):
