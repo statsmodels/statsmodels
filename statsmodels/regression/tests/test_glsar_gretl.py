@@ -7,9 +7,6 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-import warnings
-warnings.simplefilter("always")
-warnings.simplefilter("ignore", ResourceWarning)
 
 import os
 
