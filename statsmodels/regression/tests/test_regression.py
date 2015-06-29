@@ -6,7 +6,7 @@ from statsmodels.compat.python import long, lrange
 import warnings
 import pandas
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_approx_equal,
+from numpy.testing import (assert_almost_equal, assert_approx_equal, assert_,
                             assert_raises, assert_equal, assert_allclose)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
@@ -1066,6 +1066,29 @@ def test_missing_formula_predict():
     model = OLS.from_formula('y ~ x', data=data)
     fit = model.fit()
     pred = fit.predict(exog=data[:-1])
+
+
+def test_fvalue_implicit_constant():
+    nobs = 100
+    np.random.seed(2)
+    x = np.random.randn(nobs, 1)
+    x = ((x > 0) == [True, False]).astype(int)
+    y = x.sum(1) + np.random.randn(nobs)
+    w = 1 + 0.25 * np.random.rand(nobs)
+
+    from statsmodels.regression.linear_model import OLS, WLS
+
+    res = OLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+    res = WLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+
 
 if __name__=="__main__":
 

@@ -1224,7 +1224,10 @@ class RegressionResults(base.LikelihoodModelResults):
             # TODO: What if model includes implcit constant, e.g. all dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing to constant?
             if self.model.data.k_constant == 1:
-                # assume const_idx exists
+                # if constant is implicit, return nan see #2444
+                if const_idx is None:
+                    return np.nan
+
                 idx = lrange(k_params)
                 idx.pop(const_idx)
                 mat = mat[idx]  # remove constant
