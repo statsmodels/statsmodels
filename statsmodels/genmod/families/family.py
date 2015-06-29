@@ -1145,7 +1145,7 @@ class NegativeBinomial(Family):
     safe_links = [L.Log,]
 
     def __init__(self, link=L.log, alpha=1.):
-        self.alpha = alpha
+        self.alpha = 1. * alpha # make it at least float
         self.variance = V.NegativeBinomial(alpha=self.alpha)
         if isinstance(link, L.NegativeBinomial):
             self.link = link(alpha=self.alpha)
