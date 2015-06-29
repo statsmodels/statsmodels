@@ -351,7 +351,7 @@ def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
         endog[i+p] = fcast
 
     #need to do one more without updating endog
-    forecast[-1] = mu[-1] + np.dot(arparams, endog[steps - 1:])
+    forecast[steps - 1] = mu[steps - 1] + np.dot(arparams, endog[steps - 1:])
     return forecast
 
 
@@ -718,14 +718,18 @@ class ARMA(tsbase.TimeSeriesModel):
         k_ar = self.k_ar
 
         if out_of_sample != 0 and self.k_exog > 0:
+            exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
                 # we need the last k_ar exog for the lag-polynomial
-            if self.k_exog > 0 and k_ar > 0:
+            if self.k_exog > 0 and k_ar > 0 and not dynamic:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[-k_ar:, self.k_trend:], exog))
 
         if dynamic:
+            if self.k_exog > 0:
+                # need the last k_ar exog for the lag-polynomial
+                exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
@@ -1131,7 +1135,7 @@ class ARIMA(ARMA):
         elif typ == 'levels':
             endog = self.data.endog
             if not dynamic:
-                predict = super(ARIMA, self).predict(params, start, end,
+                predict = super(ARIMA, self).predict(params, start, end, exog,
                                                      dynamic)
 
                 start = self._get_predict_start(start, dynamic)
