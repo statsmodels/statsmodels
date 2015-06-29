@@ -353,9 +353,6 @@ class GLMGAMResults(GLMResults):
         plt.plot(x_values, self.predict(smooth_basis))
 
     def significance_test(self, basis=None):
-
-        basis_size = basis.shape[1]
-        # TODO: Maybe we need to use cov_params instead of the normalized ones???
         v = basis.dot(self.normalized_cov_params).dot(basis.T)
         p_inv_v, rank = pinv(v, return_rank=True) # TODO: According to the paper the partial inverse should be done with rank r accurately chosen
         f = self.predict(basis)
@@ -363,9 +360,9 @@ class GLMGAMResults(GLMResults):
         # TODO: the value tr should be used to perform a wald test. This can be probably done by the ConstrastResult class but it is not clear how.
 
         print('rank=', rank) # TODO: Rank is often not the expected value. Run for example the draft code
-        p_val = 1 - chi2.cdf(tr, df=basis_size)# TODO: basis_size should probably be replaced by rank
+        p_val = 1 - chi2.cdf(tr, df=rank)# TODO: basis_size should probably be replaced by rank
 
-        return tr, p_val
+        return tr, p_val, rank
 
 
 class GLMGam(PenalizedMixin, GLM):

@@ -30,6 +30,10 @@ points(data$x, data$y)
 
 data$y_est = y_est
 
+### Anova test for GLM ###
+anova.gam(object = g, freq = T, p.type = -1)
+
+
 ### GAM BINOMIAL ###
 
 mu = mean(y)
@@ -44,4 +48,4 @@ data$ybin_est = predict(gb, newdata = data)
 plot(data$x, sigmoid(data$ybin_est), 'l', ylim=c(-1,2))
 points(data$x, data$ybin)
 
-write.csv(data, '/home/donbeo/Documents/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/prediction_from_mgcv.csv')
+#write.csv(data, '/home/donbeo/Documents/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/prediction_from_mgcv.csv')
