@@ -172,7 +172,7 @@ class QuantReg(RegressionModel):
             resid = endog - np.dot(exog, beta)
 
             mask = np.abs(resid) < .000001
-            resid[mask] = np.sign(resid[mask]) * .000001
+            resid[mask] = ((resid[mask] >= 0) * 2 - 1) * .000001
             resid = np.where(resid < 0, q * resid, (1-q) * resid)
             resid = np.abs(resid)
             xstar = exog / resid[:, np.newaxis]
