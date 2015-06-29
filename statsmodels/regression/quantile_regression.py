@@ -366,18 +366,18 @@ class QuantRegResults(RegressionResults):
 
         """
 
-        #TODO: import where we need it (for now), add as cached attributes
-        from statsmodels.stats.stattools import (jarque_bera,
-                omni_normtest, durbin_watson)
-        jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
-        omni, omnipv = omni_normtest(self.wresid)
-
+        # #TODO: import where we need it (for now), add as cached attributes
+        # from statsmodels.stats.stattools import (jarque_bera,
+        #         omni_normtest, durbin_watson)
+        # jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
+        # omni, omnipv = omni_normtest(self.wresid)
+        #
         eigvals = self.eigenvals
         condno = self.condition_number
-
-        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
-                          omni=omni, omnipv=omnipv, condno=condno,
-                          mineigval=eigvals[0])
+        #
+        # self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
+        #                   omni=omni, omnipv=omnipv, condno=condno,
+        #                   mineigval=eigvals[0])
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -394,17 +394,17 @@ class QuantRegResults(RegressionResults):
                      ('Df Model:', None) #[self.df_model])
                     ]
 
-        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-                      ('Skew:', ["%#6.3f" % skew]),
-                      ('Kurtosis:', ["%#6.3f" % kurtosis])
-                      ]
-
-        diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
-                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-                       ('Prob(JB):', ["%#8.3g" % jbpv]),
-                       ('Cond. No.', ["%#8.3g" % condno])
-                       ]
+        # diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
+        #               ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
+        #               ('Skew:', ["%#6.3f" % skew]),
+        #               ('Kurtosis:', ["%#6.3f" % kurtosis])
+        #               ]
+        #
+        # diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
+        #                ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
+        #                ('Prob(JB):', ["%#8.3g" % jbpv]),
+        #                ('Cond. No.', ["%#8.3g" % condno])
+        #                ]
 
 
         if title is None:
