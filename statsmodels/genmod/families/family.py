@@ -1145,7 +1145,7 @@ class NegativeBinomial(Family):
     safe_links = [L.Log,]
 
     def __init__(self, link=L.log, alpha=1.):
-        self.alpha = alpha
+        self.alpha = 1. * alpha # make it at least float
         self.variance = V.NegativeBinomial(alpha=self.alpha)
         if isinstance(link, L.NegativeBinomial):
             self.link = link(alpha=self.alpha)
@@ -1202,7 +1202,6 @@ class NegativeBinomial(Family):
         """
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero
-        tmp = np.zeros(len(endog))
         endog_mu = self._clean(endog/mu)
         tmp = iszero * 2 * np.log(1 + self.alpha * mu)/self.alpha
         tmp += notzero * (2 * endog * np.log(endog_mu) - 2/self.alpha *
@@ -1249,9 +1248,9 @@ class NegativeBinomial(Family):
         '''
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero
-        tmp = np.zeros(len(endog))
+        endog_mu = self._clean(endog/mu)
         tmp = iszero * 2 * np.log(1 + self.alpha * mu)/self.alpha
-        tmp += notzero * (2 * endog * np.log(endog/mu) - 2/self.alpha *
+        tmp += notzero * (2 * endog * np.log(endog_mu) - 2/self.alpha *
                           (1 + self.alpha * endog) *
                           np.log((1 + self.alpha * endog) /
                                  (1 + self.alpha * mu)))
