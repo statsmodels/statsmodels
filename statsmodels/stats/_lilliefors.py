@@ -132,7 +132,7 @@ def get_lilliefors_table():
 
     return lf
 
-lillifors_table = get_lilliefors_table()
+lilliefors_table = get_lilliefors_table()
 
 def pval_lf(Dmax, n):
     '''approximate pvalues for Lilliefors test of normality
@@ -179,7 +179,7 @@ def pval_lf(Dmax, n):
 
 
 def kstest_normal(x, pvalmethod='approx'):
-    '''Lillifors test for normality,
+    '''lilliefors test for normality,
 
     Kolmogorov Smirnov test with estimated mean and variance
 
@@ -225,12 +225,16 @@ def kstest_normal(x, pvalmethod='approx'):
         pval = pval_lf(d_ks, nobs)
     elif pvalmethod == 'table':
         #pval = pval_lftable(d_ks, nobs)
-        pval = lillifors_table.prob(d_ks, nobs)
+        pval = lilliefors_table.prob(d_ks, nobs)
 
     return d_ks, pval
 
 
-lillifors = kstest_normal
+lilliefors = kstest_normal
+
+lillifors = np.deprecate(lilliefors, 'lillifors', 'lilliefors',
+                               "Use lilliefors, lillifors will be "
+                               "removed in 0.9 \n(Note: misspelling missing 'e')")
 
 
 #old version:

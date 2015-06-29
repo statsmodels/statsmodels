@@ -325,8 +325,8 @@ class TestGLSARGretl(object):
         normality = [23.962, 0.00001, 2, "chi2"]
 
         het_white = [33.503723, 0.000003, 5, "chi2"]
-        het_breush_pagan = [1.302014, 0.521520, 2, "chi2"]  #TODO: not available
-        het_breush_pagan_konker = [0.709924, 0.701200, 2, "chi2"]
+        het_breusch_pagan = [1.302014, 0.521520, 2, "chi2"]  #TODO: not available
+        het_breusch_pagan_konker = [0.709924, 0.701200, 2, "chi2"]
 
 
         reset_2_3 = [5.219019, 0.00619, 2, 197, "f"]
@@ -381,9 +381,9 @@ class TestGLSARGretl(object):
         assert_almost_equal(linear_sq[0], linear_squares[0], decimal=6)
         assert_almost_equal(linear_sq[1], linear_squares[1], decimal=7)
 
-        hbpk = smsdia.het_breushpagan(res.resid, res.model.exog)
-        assert_almost_equal(hbpk[0], het_breush_pagan_konker[0], decimal=6)
-        assert_almost_equal(hbpk[1], het_breush_pagan_konker[1], decimal=6)
+        hbpk = smsdia.het_breuschpagan(res.resid, res.model.exog)
+        assert_almost_equal(hbpk[0], het_breusch_pagan_konker[0], decimal=6)
+        assert_almost_equal(hbpk[1], het_breusch_pagan_konker[1], decimal=6)
 
         hw = smsdia.het_white(res.resid, res.model.exog)
         assert_almost_equal(hw[:2], het_white[:2], 6)

@@ -6,7 +6,7 @@ from numpy.testing import (assert_almost_equal, assert_raises, TestCase)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
-from statsmodels.stats.adnorm import normal_ad
+from statsmodels.stats._adnorm import normal_ad
 
 #a random array, rounded to 4 decimals
 x = np.array([-0.1184, -1.3403, 0.0063, -0.612, -0.3869, -0.2313, -2.8485,
