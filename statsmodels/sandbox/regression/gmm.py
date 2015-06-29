@@ -296,7 +296,7 @@ class IVRegressionResults(RegressionResults):
         condno = np.sqrt(eigvals[-1]/eigvals[0])
 
         # TODO: check what is valid.
-        # box-pierce, breush-pagan, durbin's h are not with endogenous on rhs
+        # box-pierce, breusch-pagan, durbin's h are not with endogenous on rhs
         # use Cumby Huizinga 1992 instead
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,

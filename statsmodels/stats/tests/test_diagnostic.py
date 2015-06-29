@@ -9,6 +9,9 @@ License: BSD-3
 currently all tests are against R
 
 """
+import warnings
+warnings.simplefilter("always")
+warnings.simplefilter("ignore", ResourceWarning)
 import os
 
 import numpy as np
@@ -219,13 +222,13 @@ class TestDiagnosticG(object):
         assert_equal(gq[-1], 'two-sided')
         #TODO other options ???
 
-    def test_het_breush_pagan(self):
+    def test_het_breusch_pagan(self):
         res = self.res
 
         bptest = dict(statistic=0.709924388395087, pvalue=0.701199952134347,
                       parameters=(2,), distr='f')
 
-        bp = smsdia.het_breushpagan(res.resid, res.model.exog)
+        bp = smsdia.het_breuschpagan(res.resid, res.model.exog)
         compare_t_est(bp, bptest, decimal=(12, 12))
 
 
@@ -277,28 +280,28 @@ class TestDiagnosticG(object):
         res3 = smsdia.het_arch(resid, maxlag=1, autolag='aic')
         assert_almost_equal(res3[:4], res1[:4], decimal=13)
 
-    def test_acorr_breush_godfrey(self):
+    def test_acorr_breusch_godfrey(self):
         res = self.res
 
         #bgf = bgtest(fm, order = 4, type="F")
-        breushgodfrey_f = dict(statistic=1.179280833676792,
+        breuschgodfrey_f = dict(statistic=1.179280833676792,
                                pvalue=0.321197487261203,
                                parameters=(4,195,), distr='f')
 
         #> bgc = bgtest(fm, order = 4, type="Chisq")
-        #> mkhtest(bgc, "breushpagan_c", "chi2")
-        breushgodfrey_c = dict(statistic=4.771042651230007,
+        #> mkhtest(bgc, "breuschpagan_c", "chi2")
+        breuschgodfrey_c = dict(statistic=4.771042651230007,
                                pvalue=0.3116067133066697,
                                parameters=(4,), distr='chi2')
 
-        bg = smsdia.acorr_breush_godfrey(res, nlags=4)
-        bg_r = [breushgodfrey_c['statistic'], breushgodfrey_c['pvalue'],
-                breushgodfrey_f['statistic'], breushgodfrey_f['pvalue']]
+        bg = smsdia.acorr_breusch_godfrey(res, nlags=4)
+        bg_r = [breuschgodfrey_c['statistic'], breuschgodfrey_c['pvalue'],
+                breuschgodfrey_f['statistic'], breuschgodfrey_f['pvalue']]
         assert_almost_equal(bg, bg_r, decimal=13)
 
         # check that lag choice works
-        bg2 = smsdia.acorr_breush_godfrey(res, nlags=None)
-        bg3 = smsdia.acorr_breush_godfrey(res, nlags=14)
+        bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
+        bg3 = smsdia.acorr_breusch_godfrey(res, nlags=14)
         assert_almost_equal(bg2, bg3, decimal=13)
 
     def test_acorr_ljung_box(self):
@@ -874,10 +877,10 @@ if __name__ == '__main__':
     #t = TestDiagnosticG()
     #t.test_basic()
     #t.test_hac()
-    #t.test_acorr_breush_godfrey()
+    #t.test_acorr_breusch_godfrey()
     #t.test_acorr_ljung_box()
     #t.test_het_goldfeldquandt()
-    #t.test_het_breush_pagan()
+    #t.test_het_breusch_pagan()
     #t.test_het_white()
     #t.test_compare_lr()
     #t.test_compare_nonnested()

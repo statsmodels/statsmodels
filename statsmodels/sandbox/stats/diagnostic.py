@@ -309,7 +309,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     This is a generic Lagrange Multiplier test for autocorrelation. I don't
     have a reference for it, but it returns Engle's ARCH test if x is the
     squared residual array. A variation on it with additional exogenous
-    variables is the Breush-Godfrey autocorrelation test.
+    variables is the Breusch-Godfrey autocorrelation test.
 
     Parameters
     ----------
@@ -340,7 +340,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     See Also
     --------
     het_arch
-    acorr_breush_godfrey
+    acorr_breusch_godfrey
     acorr_ljung_box
 
     '''
@@ -450,8 +450,8 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
                     regresults=regresults)
 
 
-def acorr_breush_godfrey(results, nlags=None, store=False):
-    '''Breush Godfrey Lagrange Multiplier tests for residual autocorrelation
+def acorr_breusch_godfrey(results, nlags=None, store=False):
+    '''Breusch Godfrey Lagrange Multiplier tests for residual autocorrelation
 
     Parameters
     ----------
@@ -498,6 +498,7 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
     if nlags is None:
         #for adf from Greene referencing Schwert 1989
         nlags = np.trunc(12. * np.power(nobs/100., 1/4.))#nobs//4  #TODO: check default, or do AIC/BIC
+        nlags = int(nlags)
 
     x = np.concatenate((np.zeros(nlags), x))
 
@@ -530,8 +531,14 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
     else:
         return lm, lmpval, fval, fpval
 
-def het_breushpagan(resid, exog_het):
-    '''Breush-Pagan Lagrange Multiplier test for heteroscedasticity
+acorr_breush_godfrey = np.deprecate(acorr_breusch_godfrey, 'acorr_breush_godfrey',
+                               'acorr_breusch_godfrey',
+                               "Use acorr_breusch_godfrey, acorr_breush_godfrey will be "
+                               "removed in 0.9 \n(Note: misspelling missing 'c')")
+
+
+def het_breuschpagan(resid, exog_het):
+    '''Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
@@ -544,7 +551,7 @@ def het_breushpagan(resid, exog_het):
     Parameters
     ----------
     resid : arraylike, (nobs,)
-        For the Breush-Pagan test, this should be the residual of a regression.
+        For the Breusch-Pagan test, this should be the residual of a regression.
         If an array is given in exog, then the residuals are calculated by
         the an OLS regression or resid on exog. In this case resid should
         contain the dependent variable. Exog can be the same as x.
@@ -587,7 +594,7 @@ def het_breushpagan(resid, exog_het):
     ----------
     http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
     Greene 5th edition
-    Breush, Pagan article
+    Breusch, Pagan article
 
     '''
 
@@ -600,6 +607,10 @@ def het_breushpagan(resid, exog_het):
     lm = nobs * resols.rsquared
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
+
+het_breushpagan = np.deprecate(het_breuschpagan, 'het_breushpagan', 'het_breuschpagan',
+                               "Use het_breuschpagan, het_breushpagan will be "
+                               "removed in 0.9 \n(Note: misspelling missing 'c')")
 
 def het_white(resid, exog, retres=False):
     '''White's Lagrange Multiplier Test for Heteroscedasticity
@@ -1591,7 +1602,7 @@ if __name__ == '__main__':
     y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
     print(het_goldfeldquandt(y,x, 1))
 
-    print(het_breushpagan(y,x))
+    print(het_breuschpagan(y,x))
     print(het_white(y,x))
 
     f, fp, fo = het_goldfeldquandt(y,x, 1)
