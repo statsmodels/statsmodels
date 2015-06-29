@@ -15,6 +15,7 @@ from .tools import (
     unconstrain_stationary_univariate
 )
 from scipy.linalg import solve_discrete_lyapunov
+from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tools.decorators import cache_readonly
@@ -1670,7 +1671,7 @@ class SARIMAXResults(MLEResults):
 
         self.df_resid = np.inf  # attribute required for wald tests
 
-        self.specification = {
+        self.specification = Bunch(**{
             # Set additional model parameters
             'k_seasons': self.model.k_seasons,
             'measurement_error': self.model.measurement_error,
@@ -1703,7 +1704,7 @@ class SARIMAXResults(MLEResults):
 
             'mle_regression': self.model.mle_regression,
             'state_regression': self.model.state_regression,
-        }
+        })
 
         # Polynomials
         self.polynomial_trend = self.model.polynomial_trend
