@@ -9,8 +9,8 @@ License: BSD-3
 currently all tests are against R
 
 """
-import warnings
-warnings.simplefilter("default")
+#import warnings
+#warnings.simplefilter("default")
 # ResourceWarning doesn't exist in python 2
 #warnings.simplefilter("ignore", ResourceWarning)
 import os
