@@ -61,7 +61,7 @@ class CheckGradLoglikeMixin(object):
             assert_almost_equal(he, hefd, decimal=7)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
                                          centered=True)
-            assert_allclose(he, hefd, rtol=5e-10)
+            assert_allclose(he, hefd, rtol=1e-9)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
                                          centered=False)
             assert_almost_equal(he, hefd, decimal=4)
