@@ -72,7 +72,7 @@ class TestPHReg(object):
         ties1 = ties[0:3]
 
         # Needs to match the kronecker statement in survival.R
-        strata = np.kron(range(5), np.ones(n/5))
+        strata = np.kron(range(5), np.ones(n // 5))
 
         # No stratification or entry times
         mod = PHReg(time, exog, status, ties=ties)

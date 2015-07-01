@@ -281,7 +281,7 @@ def test_ar_start_params():
     # fix 236
     # smoke test
     data = sm.datasets.sunspots.load()
-    res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10.),
+    res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10),
                              method="mle", disp=-1, maxiter=100)
 
 def test_ar_series():

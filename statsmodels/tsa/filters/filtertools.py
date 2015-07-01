@@ -272,8 +272,8 @@ def convolution_filter(x, filt, nsides=2):
         trim_head = len(filt) - 1
         trim_tail = None
     elif nsides == 2:
-        trim_head = np.ceil(len(filt)/2.) - 1 or None
-        trim_tail = (np.ceil(len(filt)/2.) - len(filt) % 2) or None
+        trim_head = int(np.ceil(len(filt)/2.) - 1) or None
+        trim_tail = int(np.ceil(len(filt)/2.) - len(filt) % 2) or None
     else:  # pragma : no cover
         raise ValueError("nsides must be 1 or 2")
 

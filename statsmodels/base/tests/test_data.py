@@ -747,9 +747,9 @@ class CheckHasConstant(object):
         x2 = np.column_stack((np.arange(20) < 10.5,
                               np.arange(20) > 10.5)).astype(float)
         result2 = (1, None)
-        x3 = np.column_stack((np.arange(20), np.zeros(20.)))
+        x3 = np.column_stack((np.arange(20), np.zeros(20)))
         result3 = (0, None)
-        x4 = np.column_stack((np.arange(20), np.zeros((20., 2))))
+        x4 = np.column_stack((np.arange(20), np.zeros((20, 2))))
         result4 = (0, None)
         x5 = np.column_stack((np.zeros(20), 0.5 * np.ones(20)))
         result5 = (1, 1)
@@ -760,11 +760,11 @@ class CheckHasConstant(object):
         # implicit and zero column
         x6 = np.column_stack((np.arange(20) < 10.5,
                               np.arange(20) > 10.5,
-                              np.zeros(20.))).astype(float)
+                              np.zeros(20))).astype(float)
         result6 = (1, None)
         x7 = np.column_stack((np.arange(20) < 10.5,
                               np.arange(20) > 10.5,
-                              np.zeros((20., 2)))).astype(float)
+                              np.zeros((20, 2)))).astype(float)
         result7 = (1, None)
 
         cls.exogs = (x1, x2, x3, x4, x5, x5b, x5c, x6, x7)

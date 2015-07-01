@@ -73,7 +73,7 @@ class _ELRegOpts(_OptFuncts):
             est_vect = np.concatenate((est_vect, regressor_est_vect),
                                            axis=1)
 
-        wts = np.ones(nobs) * (1. / nobs)
+        wts = np.ones(int(nobs)) * (1. / nobs)
         x0 = np.zeros(est_vect.shape[1]).reshape(-1, 1)
         try:
             eta_star = self._modif_newton(x0, est_vect, wts)

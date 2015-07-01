@@ -397,7 +397,7 @@ class SVAR(tsbase.TimeSeriesModel):
             i=j
             while j <= i < neqs:
                 u=np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
-                u[(j)*neqs+(i+1)-(1.0/2)*(j+1)*j-1]=1
+                u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
                 Tij=np.zeros([neqs,neqs])
                 Tij[i,j]=1
                 Tij[j,i]=1

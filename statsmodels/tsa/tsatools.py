@@ -441,7 +441,7 @@ def duplication_matrix(n):
     -------
     D_n : ndarray
     """
-    tmp = np.eye(n * (n + 1) / 2)
+    tmp = np.eye(n * (n + 1) // 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
 
 def elimination_matrix(n):

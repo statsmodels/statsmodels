@@ -2435,7 +2435,7 @@ class _MultinomialLogit(Link):
 
         expval = np.exp(lpr)
 
-        denom = 1 + np.reshape(expval, (len(expval) / self.ncut,
+        denom = 1 + np.reshape(expval, (len(expval) // self.ncut,
                                         self.ncut)).sum(1)
         denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
 
