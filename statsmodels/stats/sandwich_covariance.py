@@ -345,7 +345,7 @@ def weights_uniform(nlags):
     '''
 
     #with lag zero
-    return np.ones(nlags+1.)
+    return np.ones(nlags+1)
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     '''inner covariance matrix for HAC (Newey, West) sandwich

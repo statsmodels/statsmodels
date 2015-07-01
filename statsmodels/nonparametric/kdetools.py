@@ -1,4 +1,5 @@
 #### Convenience Functions to be moved to kerneltools ####
+from __future__ import division
 from statsmodels.compat.python import range
 import numpy as np
 

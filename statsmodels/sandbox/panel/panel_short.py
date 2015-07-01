@@ -144,7 +144,7 @@ class ShortPanelGLS(GLS):
 
         #
         if sigma_i is None:
-            sigma_i = np.eye(nobs_i)
+            sigma_i = np.eye(int(nobs_i))
         self.cholsigmainv_i = np.linalg.cholesky(np.linalg.pinv(sigma_i)).T
 
         #super is taking care of endog, exog and sigma

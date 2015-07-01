@@ -28,6 +28,7 @@ References
 
 """
 
+from __future__ import division
 # TODO: make default behavior efficient=True above a certain n_obs
 
 from statsmodels.compat.python import range, string_types, next
