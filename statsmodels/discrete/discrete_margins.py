@@ -217,7 +217,7 @@ def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         if dfdb.ndim >= 2: # for overall
             dfdb = dfdb.mean(0)
         if J > 1:
-            K = dfdb.shape[1] / (J-1)
+            K = dfdb.shape[1] // (J-1)
             cov_margins[i::K, :] = dfdb
         else:
             cov_margins[i, :] = dfdb # how each F changes with change in B

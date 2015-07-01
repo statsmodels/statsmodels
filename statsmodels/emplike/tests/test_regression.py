@@ -1,3 +1,5 @@
+from __future__ import division
+
 from numpy.testing import assert_almost_equal
 from numpy.testing.decorators import slow
 from statsmodels.regression.linear_model import OLS

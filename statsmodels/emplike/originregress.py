@@ -16,6 +16,7 @@ General References
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
+from __future__ import division
 
 import numpy as np
 from scipy.stats import chi2
@@ -56,7 +57,7 @@ class ELOriginRegress(object):
     def __init__(self, endog, exog):
         self.endog = endog
         self.exog = exog
-        self.nobs = float(self.exog.shape[0])
+        self.nobs = self.exog.shape[0]
         try:
             self.nvar = float(exog.shape[1])
         except IndexError:

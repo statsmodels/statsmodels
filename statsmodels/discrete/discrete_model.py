@@ -15,6 +15,7 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
+from __future__ import division
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
@@ -536,8 +537,8 @@ class MultinomialModel(BinaryModel):
         super(MultinomialModel, self).initialize()
         # This is also a "whiten" method in other models (eg regression)
         self.endog = self.endog.argmax(1)  # turn it into an array of col idx
-        self.J = float(self.wendog.shape[1])
-        self.K = float(self.exog.shape[1])
+        self.J = self.wendog.shape[1]
+        self.K = self.exog.shape[1]
         self.df_model *= (self.J-1)  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
 

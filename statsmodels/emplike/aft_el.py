@@ -27,6 +27,7 @@ Statistics. 14:3, 643-656.
 
 
 """
+from __future__ import division
 
 import numpy as np
 from statsmodels.regression.linear_model import OLS, WLS
@@ -234,7 +235,7 @@ class emplikeAFT(object):
     estimation and inference possible.
     """
     def __init__(self, endog, exog, censors):
-        self.nobs = float(np.shape(exog)[0])
+        self.nobs = np.shape(exog)[0]
         self.endog = endog.reshape(self.nobs, 1)
         self.exog = exog.reshape(self.nobs, -1)
         self.censors = censors.reshape(self.nobs, 1)
@@ -244,7 +245,7 @@ class emplikeAFT(object):
         self.exog = self.exog[idx]
         self.censors = self.censors[idx]
         self.censors[-1] = 1  # Sort in init, not in function
-        self.uncens_nobs = np.sum(self.censors)
+        self.uncens_nobs = int(np.sum(self.censors))
         mask = self.censors.ravel().astype(bool)
         self.uncens_endog = self.endog[mask, :].reshape(-1, 1)
         self.uncens_exog = self.exog[mask, :]
