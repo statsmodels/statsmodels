@@ -12,6 +12,8 @@ General References
 Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 
 """
+from __future__ import division
+
 import numpy as np
 from statsmodels.emplike.descriptive import _OptFuncts
 
@@ -59,7 +61,7 @@ class _ELRegOpts(_OptFuncts):
         new_params = params.reshape(nvar, 1)
         self.new_params = new_params
         est_vect = exog * \
-          (endog - np.squeeze(np.dot(exog, new_params))).reshape(nobs, 1)
+          (endog - np.squeeze(np.dot(exog, new_params))).reshape(int(nobs), 1)
         if not stochastic_exog:
             exog_means = np.mean(exog, axis=0)[1:]
             exog_mom2 = (np.sum(exog * exog, axis=0))[1:]\
@@ -71,7 +73,7 @@ class _ELRegOpts(_OptFuncts):
             est_vect = np.concatenate((est_vect, regressor_est_vect),
                                            axis=1)
 
-        wts = np.ones(nobs) * (1. / nobs)
+        wts = np.ones(int(nobs)) * (1. / nobs)
         x0 = np.zeros(est_vect.shape[1]).reshape(-1, 1)
         try:
             eta_star = self._modif_newton(x0, est_vect, wts)

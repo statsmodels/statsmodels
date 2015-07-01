@@ -391,13 +391,13 @@ class SVAR(tsbase.TimeSeriesModel):
 
         #first generate duplication matrix, see MN (1980) for notation
 
-        D_nT=np.zeros([(1.0/2)*(neqs)*(neqs+1),neqs**2])
+        D_nT = np.zeros([int((1.0 / 2) * (neqs) * (neqs + 1)), neqs**2])
 
         for j in range(neqs):
             i=j
             while j <= i < neqs:
-                u=np.zeros([(1.0/2)*neqs*(neqs+1),1])
-                u[(j)*neqs+(i+1)-(1.0/2)*(j+1)*j-1]=1
+                u=np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
+                u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
                 Tij=np.zeros([neqs,neqs])
                 Tij[i,j]=1
                 Tij[j,i]=1

@@ -60,7 +60,7 @@ def test_yule_walker_inter():
 
 def test_duplication_matrix():
     for k in range(2, 10):
-        m = tools.unvech(np.random.randn(k * (k + 1) / 2))
+        m = tools.unvech(np.random.randn(k * (k + 1) // 2))
         Dk = tools.duplication_matrix(k)
         assert(np.array_equal(vec(m), np.dot(Dk, vech(m))))
 

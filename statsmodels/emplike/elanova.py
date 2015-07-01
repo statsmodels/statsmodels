@@ -9,6 +9,7 @@ General References
 
 Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
+from __future__ import division
 
 from statsmodels.compat.python import range
 import numpy as np

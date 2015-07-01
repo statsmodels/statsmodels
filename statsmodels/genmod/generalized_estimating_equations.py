@@ -2197,7 +2197,7 @@ class NominalGEE(GEE):
 
         # Reshape so that each row contains all the indicators
         # corresponding to one multinomial observation.
-        expval_m = np.reshape(expval, (len(expval) / self.ncut,
+        expval_m = np.reshape(expval, (len(expval) // self.ncut,
                                        self.ncut))
 
         # The normalizing constant for the multinomial probabilities.
@@ -2248,7 +2248,7 @@ class NominalGEE(GEE):
         lpr = np.dot(exog, params)
         expval = np.exp(lpr)
 
-        expval_m = np.reshape(expval, (len(expval) / self.ncut,
+        expval_m = np.reshape(expval, (len(expval) // self.ncut,
                                        self.ncut))
 
         denom = 1 + expval_m.sum(1)
@@ -2261,9 +2261,9 @@ class NominalGEE(GEE):
         for j in range(self.ncut):
             ee = np.zeros(self.ncut, dtype=np.float64)
             ee[j] = 1
-            qmat.append(np.kron(ee, np.ones(len(params) / self.ncut)))
+            qmat.append(np.kron(ee, np.ones(len(params) // self.ncut)))
         qmat = np.array(qmat)
-        qmat = np.kron(np.ones((exog.shape[0]/self.ncut, 1)), qmat)
+        qmat = np.kron(np.ones((exog.shape[0] // self.ncut, 1)), qmat)
         bmat = bmat0 * qmat
 
         dmat = expval[:, None] * bmat / denom[:, None]
@@ -2435,7 +2435,7 @@ class _MultinomialLogit(Link):
 
         expval = np.exp(lpr)
 
-        denom = 1 + np.reshape(expval, (len(expval) / self.ncut,
+        denom = 1 + np.reshape(expval, (len(expval) // self.ncut,
                                         self.ncut)).sum(1)
         denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
 

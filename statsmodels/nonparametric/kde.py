@@ -11,7 +11,7 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 from statsmodels.compat.python import range
 # for 2to3 with extensions
 import warnings
@@ -324,7 +324,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     clip_x = np.logical_and(X>clip[0], X<clip[1])
     X = X[clip_x]
 
-    nobs = float(len(X)) # after trim
+    nobs = len(X) # after trim
 
     if gridsize == None:
         gridsize = max(nobs,50) # don't need to resize if no FFT
@@ -463,7 +463,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
     bw *= adjust
 
-    nobs = float(len(X)) # after trim
+    nobs = len(X) # after trim
 
     # 1 Make grid and discretize the data
     if gridsize == None:

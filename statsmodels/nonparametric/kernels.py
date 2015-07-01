@@ -11,6 +11,7 @@ kernel density estimation much easier.
 NOTE: As it is, this module does not interact with the existing API
 """
 
+from __future__ import division
 
 import numpy as np
 from scipy.special import erf

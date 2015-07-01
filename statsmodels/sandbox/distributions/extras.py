@@ -1036,7 +1036,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     upper = np.array(upper)
     corrcoef = np.array(corrcoef)
 
-    correl = np.zeros(n*(n-1)/2.0)  #dtype necessary?
+    correl = np.zeros(int(n*(n-1)/2.0))  #dtype necessary?
 
     if (lower.ndim != 1) or (upper.ndim != 1):
         raise ValueError('can handle only 1D bounds')

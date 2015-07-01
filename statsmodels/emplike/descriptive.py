@@ -15,6 +15,8 @@ General References:
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 """
+from __future__ import division
+
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2, skew, kurtosis
@@ -485,7 +487,7 @@ class DescStatUV(_OptFuncts):
 
     def __init__(self, endog):
         self.endog = np.squeeze(endog)
-        self.nobs = float(endog.shape[0])
+        self.nobs = endog.shape[0]
 
     def test_mean(self, mu0, return_weights=False):
         """
@@ -952,7 +954,7 @@ class DescStatMV(_OptFuncts):
 
     def __init__(self, endog):
         self.endog = endog
-        self.nobs = float(endog.shape[0])
+        self.nobs = endog.shape[0]
 
     def mv_test_mean(self, mu_array, return_weights=False):
         """
@@ -983,7 +985,7 @@ class DescStatMV(_OptFuncts):
         means = np.ones((endog.shape[0], endog.shape[1]))
         means = mu_array * means
         est_vect = endog - means
-        start_vals = 1 / nobs * np.ones(endog.shape[1])
+        start_vals = 1. / nobs * np.ones(endog.shape[1])
         eta_star = self._modif_newton(start_vals, est_vect,
                                       np.ones(nobs) * (1. / nobs))
         denom = 1 + np.dot(eta_star, est_vect.T)

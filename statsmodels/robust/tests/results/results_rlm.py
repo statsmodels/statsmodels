@@ -8,7 +8,7 @@ def _shift_intercept(arr):
     compatible with statsmodels.rlm covariance
     """
     arr = np.asarray(arr)
-    side = np.sqrt(len(arr))
+    side = int(np.sqrt(len(arr)))
     return np.roll(np.roll(arr.reshape(side,side),-1, axis =1), -1, axis=0)
 
 class Huber(object):

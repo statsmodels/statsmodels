@@ -1013,8 +1013,8 @@ class TestRegularizedFit(object):
             lam = float(vec[3])
             params = vec[4:].astype(np.float64)
 
-            endog = data[0:n, 0]
-            exog = data[0:n, 1:(p+1)]
+            endog = data[0:int(n), 0]
+            exog = data[0:int(n), 1:(int(p)+1)]
 
             endog = endog - endog.mean()
             endog /= endog.std(ddof=1)

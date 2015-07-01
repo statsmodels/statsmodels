@@ -26,7 +26,7 @@ def test_predict_se():
     beta = [0.5, -0.01, 5.]
     y_true2 = np.dot(x, beta)
     w = np.ones(nsample)
-    w[nsample * 6. / 10:] = 3
+    w[int(nsample * 6. / 10):] = 3
     sig = 0.5
     y2 = y_true2 + sig * w * np.random.normal(size=nsample)
     x2 = x[:,[0,2]]
@@ -121,7 +121,7 @@ class TestWLSPrediction(object):
         beta = [5., 0.5, -0.01]
         sig = 0.5
         w = np.ones(nsample)
-        w[nsample * 6/10:] = 3
+        w[int(nsample * 6. / 10):] = 3
         y_true = np.dot(X, beta)
         e = np.random.normal(size=nsample)
         y = y_true + sig * w * e
