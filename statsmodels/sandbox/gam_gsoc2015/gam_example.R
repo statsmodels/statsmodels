@@ -4,6 +4,8 @@
 library('pracma')
 library('mgcv')
 #library('gam')
+
+set.seed(0)
 n = 100
 x = seq(from = -1, to = 1, length.out = n)
 
@@ -25,10 +27,12 @@ points(x, y)
 
 
 y_est = predict(g, newdata = data)
-plot(data$x, y_est, ylim=c(min(y), max(y)), type='l')
+plot(data$x, y_est, ylim=c(min(y), max(y)), type='l', ylim = c(-1,1))
 points(data$x, data$y)
 
 data$y_est = y_est
+
+summary(g)
 
 ### Anova test for GLM ###
 anova.gam(object = g, freq = T, p.type = -1)
