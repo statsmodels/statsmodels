@@ -165,11 +165,11 @@ def test_gam_glm():
     res_glm_gam = glm_gam.fit(maxiter=10000)
     y_gam = np.dot(basis, res_glm_gam.params)
 
-    plt.plot(x, y_gam, label='gam')
-    plt.plot(x, y_mgcv, label='mgcv')
-    plt.plot(x, y, '.', label='y')
-    plt.legend()
-    plt.show()
+    # plt.plot(x, y_gam, label='gam')
+    # plt.plot(x, y_mgcv, label='mgcv')
+    # plt.plot(x, y, '.', label='y')
+    # plt.legend()
+    # plt.show()
 
     assert_allclose(y_gam, y_mgcv, atol=1.e-1)
     return
@@ -271,7 +271,7 @@ def test_multivariate_penalty():
     return
 
 
-def test_gam_significance():
+def test_gam_glm_significance():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
@@ -287,22 +287,24 @@ def test_gam_significance():
     alpha = 0.045
     gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
     glm_gam = GLMGam(y, basis, penal=gp)
-    res_glm_gam = glm_gam.fit(maxiter=10000)
+    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
     t, pvalues, rank = res_glm_gam.significance_test(basis)
-    t_from_mgcv = 8.21  # these are the Chi.sq value and p values obtained from MGCV in R with the function summary(g)
-    pvalues_from_mgcv = 0.0861
+    t_from_mgcv = 8.141  # these are the Chi.sq value and p values obtained from MGCV in R with the function summary(g)
+    pvalues_from_mgcv = 0.0864
+    rank_from_mgcv = 3.997
 
     assert_allclose(t, t_from_mgcv, atol=1.e-16, rtol=1.e-01)
 
     # TODO: it should be possible to extract the rank from MGCV but I do not know how. Maybe it is the value Ref.df=4.038
-    # assert_allclose(rank, ???)
+    assert_allclose(rank, rank_from_mgcv)
 
     # TODO: this test is not passed. The error is probably due to the way in which the rank is computed. If rank is replaced by 4 then the test is passed
-    # assert_allclose(pvalues, pvalues_from_mgcv, atol=1.e-16, rtol=1.e-01)
+    assert_allclose(pvalues, pvalues_from_mgcv, atol=1.e-16, rtol=1.e-01)
 
     return
 
+test_gam_glm_significance()
 
 '''
 test_gam_gradient()
@@ -312,5 +314,4 @@ test_multivariate_penalty()
 test_approximation()
 test_gam_glm()
 test_gam_penalty()
-test_gam_significance()
 '''
