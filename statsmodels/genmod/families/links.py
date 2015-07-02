@@ -512,7 +512,8 @@ class Log(Link):
 
         Returns
         -------
-        The value of the derivative of the inverse of the log function, the exponential function
+        The value of the derivative of the inverse of the log function,
+        the exponential function
         """
         return np.exp(z)
 
