@@ -100,7 +100,7 @@ class MLEModel(Model):
     statsmodels.tsa.statespace.representation.Representation
     """
 
-    hessian_method = 'cs'
+    optim_hessian = 'cs'
 
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
@@ -122,7 +122,7 @@ class MLEModel(Model):
     def fit(self, start_params=None, transformed=True,
             method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
-            hessian_method=None,
+            optim_hessian=None,
             bfgs_tune=False, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
@@ -164,11 +164,12 @@ class MLEModel(Model):
         return_params : boolean, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
-        hessian_method : {'opg','oim','cs'}, optional
+        optim_hessian : {'opg','oim','cs'}, optional
             The method by which the Hessian is numerically approximated. 'opg'
             uses outer product of gradients, 'oim' uses the information
             matrix formula from Harvey (1989), and 'cs' uses second-order
-            complex step differentiation.
+            complex step differentiation. This keyword is only relevant if the
+            optimization method uses the Hessian matrix.
         bfgs_tune : boolean, optional
             BFGS methods by default use internal methods for approximating the
             score and hessian by finite differences. If `bfgs_tune=True` the
@@ -193,8 +194,8 @@ class MLEModel(Model):
             transformed = True
 
         # Update the hessian method
-        if hessian_method is not None:
-            self.hessian_method = hessian_method
+        if optim_hessian is not None:
+            self.optim_hessian = optim_hessian
 
         # Unconstrain the starting parameters
         if transformed:
@@ -532,11 +533,11 @@ class MLEModel(Model):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
-        if self.hessian_method == 'cs':
+        if self.optim_hessian == 'cs':
             hessian = self._hessian_cs(params, *args, **kwargs)
-        elif self.hessian_method == 'oim':
+        elif self.optim_hessian == 'oim':
             hessian = self._hessian_oim(params)
-        elif self.hessian_method == 'opg':
+        elif self.optim_hessian == 'opg':
             hessian = self._hessian_opg(params)
         else:
             raise NotImplementedError('Invalid Hessian calculation method.')
