@@ -2177,6 +2177,40 @@ def test_ARIMA_exog_predict():
     assert_allclose(predicted_arima_f, res_f111[-len(predicted_arima_f):], rtol=1e-4, atol=1e-4)
 
 
+    # test for forecast with 0 ar fix in #2457 numbers again from Stata
+
+    res_f002 = np.array([ 7.70178181209,  7.67445481224,  7.6715373765 ,  7.6772915319 ,
+         7.61173201163,  7.67913499878,  7.6727609212 ,  7.66275451925,
+         7.65199799315,  7.65149983741,  7.65554131408,  7.62213286298,
+         7.53795983357,  7.53626130154,  7.54539963934])
+    res_d002 = np.array([ 7.70178181209,  7.67445481224,  7.6715373765 ,  7.6772915319 ,
+         7.61173201163,  7.67913499878,  7.67306697759,  7.65287924998,
+         7.64904451605,  7.66580449603,  7.66252081172,  7.62213286298,
+         7.53795983357,  7.53626130154,  7.54539963934])
+
+
+    mod_002 = ARIMA(np.asarray(data_sample['loginv']), (0,0,2),
+                   exog=np.asarray(data_sample[['loggdp', 'logcons']]))
+
+    # doesn't converge with default starting values
+    res_002 = mod_002.fit(start_params=np.concatenate((res.params[[0, 1, 2, 4]], [0])),
+                          disp=0, solver='bfgs', maxiter=5000)
+
+    # forecast
+    fpredict_002 = res_002.predict(start=197, end=202, exog=exog_full.values[197:])
+    forecast_002 = res_002.forecast(steps=len(exog_full.values[197:]),
+                                    exog=exog_full.values[197:])
+    forecast_002 = forecast_002[0]  # TODO we are not checking the other results
+    assert_allclose(fpredict_002, res_f002[-len(fpredict_002):], rtol=1e-4, atol=1e-6)
+    assert_allclose(forecast_002, res_f002[-len(forecast_002):], rtol=1e-4, atol=1e-6)
+
+    # dynamic predict
+    dpredict_002 = res_002.predict(start=193, end=202, exog=exog_full.values[197:],
+                                   dynamic=True)
+    assert_allclose(dpredict_002, res_d002[-len(dpredict_002):], rtol=1e-4, atol=1e-6)
+
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
