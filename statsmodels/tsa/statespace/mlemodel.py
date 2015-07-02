@@ -119,8 +119,8 @@ class MLEModel(Model):
         self.transformer = None
         self.untransformer = None
 
-    def fit(self, start_params=None, transformed=True,
-            method='lbfgs', maxiter=50, full_output=1,
+    def fit(self, start_params=None, transformed=True, cov_type='opg',
+            cov_kwds=None, method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
             optim_hessian=None,
             bfgs_tune=False, **kwargs):
@@ -132,6 +132,9 @@ class MLEModel(Model):
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             If None, the default is given by Model.start_params.
+        transformed : boolean, optional
+            Whether or not `start_params` is already transformed. Default is
+            True.
         method : str, optional
             The `method` determines which solver from `scipy.optimize`
             is used, and it can be chosen from among the following strings:
@@ -150,6 +153,25 @@ class MLEModel(Model):
             solvers. See the notes section below (or scipy.optimize) for the
             available arguments and for the list of explicit arguments that the
             basin-hopping solver supports.
+        cov_type : str, optional
+            The `cov_type` keyword governs the method for calculating the
+            covariance matrix of parameter estimates. Can be one of:
+
+            - 'opg' for the outer product of gradient estimator
+            - 'oim' for the observed information matrix estimator, calculated
+              using the method of Harvey (1989)
+            - 'cs' for the observed information matrix estimator, calculated
+              using a numerical (complex step) approximation of the Hessian
+              matrix.
+            - 'robust' for an approximate (quasi-maximum likelihood) covariance
+              matrix that may be valid even in the presense of some
+              misspecifications. Intermediate calculations use the 'oim'
+              method.
+            - 'robust_cs' is the same as 'robust' except that the intermediate
+              calculations use the 'cs' method.
+        cov_kwds : dict or None, optional
+            See `MLEResults.get_robustcov_results` for a description required
+            keywords for alternative covariance estimators
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : boolean, optional
@@ -205,10 +227,6 @@ class MLEModel(Model):
             kwargs.setdefault('approx_grad', True)
             kwargs.setdefault('epsilon', 1e-5)
 
-        # Extract the covaraince matrix settings (can't be included in
-        # kwargs or the base LikelihoodModel class will complain)
-        cov_type = kwargs.pop('cov_type', None)
-
         # Maximum likelihood estimation
         # Set the optional arguments for the loglikelihood function to
         # maximize the average loglikelihood, by default.
@@ -245,13 +263,11 @@ class MLEModel(Model):
             return self.params
         # Otherwise construct the results class if desired
         else:
-            res = self.filter()
+            res = self.filter(results_kwargs={'cov_type': cov_type,
+                                              'cov_kwds': cov_kwds})
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
-
-            if cov_type is not None:
-                res.cov_type = cov_type
 
             return res
 
@@ -371,6 +387,8 @@ class MLEModel(Model):
         epsilon = _get_epsilon(params, 1, None, n)
         increments = np.identity(n) * 1j * epsilon
 
+        kwargs['results'] = FilterResults
+
         # Get values at the params themselves
         self.update(params)
         res = self.filter(**kwargs)
@@ -468,7 +486,8 @@ class MLEModel(Model):
 
         Notes
         -----
-        This is a numerical approximation.
+        This is a numerical approximation, calculated using first-order complex
+        step differentiation on the `loglike` method.
 
         Both \*args and \*\*kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
@@ -502,7 +521,8 @@ class MLEModel(Model):
 
         Notes
         -----
-        This is a numerical approximation.
+        This is a numerical approximation, calculated using first-order complex
+        step differentiation on the `loglikeobs` method.
 
         """
         self.update(params)
@@ -558,7 +578,8 @@ class MLEModel(Model):
 
     def _hessian_cs(self, params, *args, **kwargs):
         """
-        Hessian matrix computed by complex step differentiation.
+        Hessian matrix computed by second-order complex-step differentiation
+        on the `loglike` function.
         """
         nargs = len(args)
         if nargs < 1:
@@ -778,13 +799,13 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model, cov_type='opg', cov_kwds=None):
         self.data = model.data
 
         # Save the model output
         self._endog_names = model.endog_names
         self._exog_names = model.endog_names
-        self._params = model.params
+        self._params = model.params.copy()
         self._param_names = model.data.param_names
         self._model_names = model.model_names
         self._model_latex_names = model.model_latex_names
@@ -793,6 +814,8 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         params = pd.Series(self._params, index=self._param_names)
 
         # Initialize the Statsmodels model base
+        # TODO does not pass cov_type to parent right now, instead sets it
+        # separately, see below.
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
                                                scale=1.)
@@ -803,11 +826,106 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # Setup the cache
         self._cache = resettable_cache()
 
-        # Setup covariance matrix notes dictionary
-        if not hasattr(self, 'cov_kwds'):
-            self.cov_kwds = {}
-        self.cov_type = 'opg'
+        # Handle covariance matrix calculation
+        if cov_kwds is None:
+                cov_kwds = {}
+        self.get_robustcov_results(cov_type=cov_type, use_self=True,
+                                   **cov_kwds)
 
+    def get_robustcov_results(self, cov_type='opg', **kwargs):
+        """
+        Create new results instance with specified covariance estimator as
+        default
+
+        Note: creating new results instance currently not supported.
+
+        Parameters
+        ----------
+        cov_type : string
+            the type of covariance matrix estimator to use. See Notes below
+        kwargs : depends on cov_type
+            Required or optional arguments for covariance calculation.
+            See Notes below.
+
+        Returns
+        -------
+        results : results instance
+            This method creates a new results instance with the requested
+            covariance as the default covariance of the parameters.
+            Inferential statistics like p-values and hypothesis tests will be
+            based on this covariance matrix.
+
+        Notes
+        -----
+        The following covariance types and required or optional arguments are
+        currently available:
+
+        - 'opg' for the outer product of gradient estimator
+        - 'oim' for the observed information matrix estimator, calculated
+          using the method of Harvey (1989)
+        - 'cs' for the observed information matrix estimator, calculated
+          using a numerical (complex step) approximation of the Hessian
+          matrix.
+        - 'robust' for an approximate (quasi-maximum likelihood) covariance
+          matrix that may be valid even in the presense of some
+          misspecifications. Intermediate calculations use the 'oim'
+          method.
+        - 'robust_cs' is the same as 'robust' except that the intermediate
+          calculations use the 'cs' method.
+        """
+
+        import statsmodels.stats.sandwich_covariance as sw
+
+        use_self = kwargs.pop('use_self', False)
+        if use_self:
+            res = self
+        else:
+            raise NotImplementedError
+            res = self.__class__(self.model, self.params,
+                       normalized_cov_params=self.normalized_cov_params,
+                       scale=self.scale)
+
+        # Set the new covariance type
+        res.cov_type = cov_type
+        res.cov_kwds = {}
+
+        # Calculate the new covariance matrix
+        if self.cov_type == 'cs':
+            res.cov_params_default = res.cov_params_cs
+            res.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using numerical differentiation')
+        elif self.cov_type == 'delta':
+            res.cov_params_default = res.cov_params_delta
+            res.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using numerical differentiation'
+                ' and the delta method (method of propagation of errors)')
+        elif self.cov_type == 'oim':
+            res.cov_params_default = res.cov_params_oim
+            res.cov_kwds['description'] = (
+                'Covariance matrix calculated using the observed information'
+                ' matrix described in Harvey (1989)')
+        elif self.cov_type == 'opg':
+            res.cov_params_default = res.cov_params_opg
+            res.cov_kwds['description'] = (
+                'Covariance matrix calculated using the outer product of'
+                ' gradients'
+            )
+        elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
+            res.cov_params_default = res.cov_params_robust_oim
+            res.cov_kwds['description'] = (
+                'QMLE covariance matrix used for robustness to some'
+                ' misspecifications; calculated using the observed information'
+                ' matrix described in Harvey (1989)')
+        elif self.cov_type == 'robust_cs':
+            res.cov_params_default = res.cov_params_robust_cs
+            res.cov_kwds['description'] = (
+                'QMLE covariance matrix used for robustness to some'
+                ' misspecifications; calculated using numerical'
+                ' differentiation')
+        else:
+            raise NotImplementedError('Invalid covariance matrix type.')
+
+        return res
 
     @cache_readonly
     def aic(self):
@@ -827,7 +945,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
 
     @cache_readonly
-    def cov_params_default(self):
+    def _cov_params_default(self):
         """
         (array) The variance / covariance matrix.
         """
@@ -856,6 +974,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         evaluated_hessian = self.model._hessian_cs(
             self._params, set_params=False, transformed=True
         )
+        self.model.update(self._params)
 
         return -np.linalg.inv(nobs * evaluated_hessian)
 
@@ -873,6 +992,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         cov_cs = -np.linalg.inv(
             nobs * self.model._hessian_cs(unconstrained, set_params=False)
         )
+        self.model.update(self._params)
 
         return np.dot(np.dot(jacobian, cov_cs), jacobian.transpose())
 
@@ -883,9 +1003,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         from Harvey (1989).
         """
         nobs = (self.model.nobs - self.model.loglikelihood_burn)
-        return np.linalg.inv(
+        cov_params_oim = np.linalg.inv(
             nobs * self.model.observed_information_matrix(self._params)
         )
+        self.model.update(self._params)
+        return cov_params_oim
 
     @cache_readonly
     def cov_params_opg(self):
@@ -894,9 +1016,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         product of gradients method.
         """
         nobs = (self.model.nobs - self.model.loglikelihood_burn)
-        return np.linalg.inv(
+        cov_params_opg = np.linalg.inv(
             nobs * self.model.opg_information_matrix(self._params)
         )
+        self.model.update(self._params)
+        return cov_params_opg
 
     @cache_readonly
     def cov_params_robust(self):
@@ -917,6 +1041,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         evaluated_hessian = (
             nobs * self.model.observed_information_matrix(self._params)
         )
+        self.model.update(self._params)
         return np.linalg.inv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
@@ -935,6 +1060,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
                 self._params, set_params=False, transformed=True
             )
         )
+        self.model.update(self._params)
         return np.linalg.inv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
@@ -952,48 +1078,6 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         """
         # return -2*self.llf + 2*np.log(np.log(self.nobs))*self.params.shape[0]
         return hqic(self.llf, self.nobs, self.params.shape[0])
-
-    @property
-    def cov_type(self):
-        return self._cov_type
-    @cov_type.setter
-    def cov_type(self, value):
-        if value == 'cs':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using numerical differentiation'
-            )
-        elif value == 'delta':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using numerical differentiation'
-                ' and the delta method (method of propagation of errors)'
-            )
-        elif value == 'oim':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using the observed information'
-                ' matrix described in Harvey (1989)'
-            )
-        elif value == 'opg':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using the outer product of'
-                ' gradients'
-            )
-        elif value == 'robust' or value == 'robust_oim':
-            self.cov_kwds['cov_type'] = (
-                'QMLE covariance matrix used for robustness to some'
-                ' misspecifications; calculated using the observed information'
-                ' matrix described in Harvey (1989)'
-            )
-        elif value == 'robust_cs':
-            self.cov_kwds['cov_type'] = (
-                'QMLE covariance matrix used for robustness to some'
-                ' misspecifications; calculated using numerical'
-                ' differentiation'
-            )
-        else:
-            raise NotImplementedError('Invalid covariance matrix type.')
-
-        self._cov_type = value
-    
 
     @cache_readonly
     def llf(self):

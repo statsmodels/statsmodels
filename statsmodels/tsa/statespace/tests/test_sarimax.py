@@ -1722,7 +1722,7 @@ def test_results():
 
     mod = sarimax.SARIMAX(endog, order=(1,0,1))
     mod.update([0.5,-0.5,1])
-    res = mod.filter()
+    res = mod.filter(results_kwargs={'cov_type': 'oim'})
 
     assert_almost_equal(res.arroots, 2.)
     assert_almost_equal(res.maroots, 2.)

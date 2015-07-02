@@ -1663,8 +1663,8 @@ class SARIMAXResults(MLEResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
     """
-    def __init__(self, model):
-        super(SARIMAXResults, self).__init__(model)
+    def __init__(self, model, cov_type='opg', cov_kwds=None):
+        super(SARIMAXResults, self).__init__(model, cov_type, cov_kwds)
 
         self.df_resid = np.inf  # attribute required for wald tests
 
