@@ -308,7 +308,7 @@ class TestGMMStOnestep(CheckGMM):
         res1, res2 = self.res1, self.res2
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=False))))
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
                                             #weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
@@ -370,11 +370,11 @@ class TestGMMStOneiter(CheckGMM):
         w = res1.model.calc_weightmatrix(moms)
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=False,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
                                             weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=False,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
                                                #use_weights=True #weights=w
                                                          ))))
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
@@ -566,11 +566,11 @@ class TestGMMSt2(object):
 
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=True,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=True,
                                             weights=res1.weights))))
         assert_allclose(res1.bse, res2.bse, rtol=5e-01, atol=0)
 
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=True,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=True,
                                                weights=res1.weights,
                                                use_weights=True))))
         assert_allclose(res1.bse, res2.bse, rtol=5e-02, atol=0)
