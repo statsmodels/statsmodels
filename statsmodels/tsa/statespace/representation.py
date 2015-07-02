@@ -107,9 +107,6 @@ class Representation(object):
         specified. Default is 1e6.
     initialization : {'approximate_diffuse','stationary','known'}, optional
         Initialization method for the initial state.
-    initial_variance : float, optional
-        If approximate diffuse initialization is used, the initial variance of
-        states.
     initial_state : array_like, optional
         If known initialization is used, the mean of the initial state's
         distribution.

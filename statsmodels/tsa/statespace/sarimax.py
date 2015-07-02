@@ -541,9 +541,6 @@ class SARIMAX(MLEModel):
         kwds = super(SARIMAX, self)._get_init_kwds()
         kwds['endog'] = self.orig_endog
         kwds['exog'] = self.orig_exog
-        # if self.initialization == 'approximate_diffuse':
-        #     import warnings
-        #     warnings.warn('not all init keys or initialization is available yet')
         return kwds
 
 
