@@ -18,8 +18,10 @@ debug_warnings = False
 if debug_warnings:
     import sys, warnings
     warnings.simplefilter("default")
+
     # use the following to raise an exception for debugging specific warnings
     #warnings.filterwarnings("error", message=".*integer.*")
+    #warnings.simplefilter("error", UserWarning)
     if (sys.version_info[0] >= 3):
         # ResourceWarning doesn't exist in python 2
         # we have currently many ResourceWarnings in the datasets on python 3.4

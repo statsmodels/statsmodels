@@ -257,7 +257,10 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         # we do tukey_hsd with reduced set of observations
         data = np.arange(15)
         groups = np.repeat([1, 2, 3], 5)
-        mod1 = MultiComparison(np.array(data), groups, group_order=[1, 2])
+        # group_order doesn't select all observations, one group is excluded
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            mod1 = MultiComparison(np.array(data), groups, group_order=[1, 2])
         res1 = mod1.tukeyhsd(alpha=0.01)
         mod2 = MultiComparison(np.array(data[:10]), groups[:10])
         res2 = mod2.tukeyhsd(alpha=0.01)
