@@ -1338,7 +1338,7 @@ def test_simple_time_varying():
 def test_invalid_time_varying():
     assert_raises(ValueError, sarimax.SARIMAX, endog=[1,2,3], mle_regression=True, time_varying_regression=True)
 
-def test_manual_initialization():
+def test_manual_stationary_initialization():
     endog = results_sarimax.wpi1_data
 
     # Create the first model to compare against
@@ -1353,9 +1353,70 @@ def test_manual_initialization():
     mod2.initialize_state()  # a noop in this case (include for coverage)
     res2 = mod2.filter()
 
+    # Create a third model with "known" initialization, but specified in kwargs
+    mod3 = sarimax.SARIMAX(endog, order=(3,0,0),
+                           initialization='known',
+                           initial_state=res1.initial_state,
+                           initial_state_cov=res1.initial_state_cov)
+    mod3.update([0.5,0.2,0.1,1])
+    res3 = mod3.filter()
+
+    # Create the forth model with stationary initialization specified in kwargs
+    mod4 = sarimax.SARIMAX(endog, order=(3,0,0), initialization='stationary')
+    mod4.update([0.5,0.2,0.1,1])
+    res4 = mod4.filter()
+
     # Just test a couple of things to make sure the results are the same
     assert_almost_equal(res1.llf, res2.llf)
     assert_almost_equal(res1.filtered_state, res2.filtered_state)
+
+    assert_almost_equal(res1.llf, res3.llf)
+    assert_almost_equal(res1.filtered_state, res3.filtered_state)
+
+    assert_almost_equal(res1.llf, res4.llf)
+    assert_almost_equal(res1.filtered_state, res4.filtered_state)
+
+def test_manual_approximate_diffuse_initialization():
+    endog = results_sarimax.wpi1_data
+
+    # Create the first model to compare against
+    mod1 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod1.update([0.5,0.2,0.1,1])
+    mod1.initialize_approximate_diffuse(1e9)
+    res1 = mod1.filter()
+
+    # Create a second model with "known" initialization
+    mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod2.update([0.5,0.2,0.1,1])
+    mod2.initialize_known(res1.initial_state, res1.initial_state_cov)
+    mod2.initialize_state()  # a noop in this case (include for coverage)
+    res2 = mod2.filter()
+
+    # Create a third model with "known" initialization, but specified in kwargs
+    mod3 = sarimax.SARIMAX(endog, order=(3,0,0),
+                           initialization='known',
+                           initial_state=res1.initial_state,
+                           initial_state_cov=res1.initial_state_cov)
+    mod3.update([0.5,0.2,0.1,1])
+    res3 = mod3.filter()
+
+    # Create the forth model with approximate diffuse initialization specified
+    # in kwargs
+    mod4 = sarimax.SARIMAX(endog, order=(3,0,0),
+                           initialization='approximate_diffuse',
+                           initial_variance=1e9)
+    mod4.update([0.5,0.2,0.1,1])
+    res4 = mod4.filter()
+
+    # Just test a couple of things to make sure the results are the same
+    assert_almost_equal(res1.llf, res2.llf)
+    assert_almost_equal(res1.filtered_state, res2.filtered_state)
+
+    assert_almost_equal(res1.llf, res3.llf)
+    assert_almost_equal(res1.filtered_state, res3.filtered_state)
+
+    assert_almost_equal(res1.llf, res4.llf)
+    assert_almost_equal(res1.filtered_state, res4.filtered_state)
 
 def test_results():
     endog = results_sarimax.wpi1_data
