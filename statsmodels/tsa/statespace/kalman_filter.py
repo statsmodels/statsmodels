@@ -982,11 +982,9 @@ class FilterResults(FrozenRepresentation):
                 self.forecasts_error.shape, dtype=self.dtype)
 
             for t in range(self.forecasts_error_cov.shape[2]):
-                upper, _ = linalg.cho_factor(self.forecasts_error_cov[:, :, t],
-                                             check_finite=False)
+                upper, _ = linalg.cho_factor(self.forecasts_error_cov[:, :, t])
                 self._standardized_forecasts_error[:, t] = (
-                    linalg.solve_triangular(upper, self.forecasts_error[:, t],
-                                            check_finite=False))
+                    linalg.solve_triangular(upper, self.forecasts_error[:, t]))
 
         return self._standardized_forecasts_error
 
