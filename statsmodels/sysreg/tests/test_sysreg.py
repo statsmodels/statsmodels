@@ -40,6 +40,11 @@ class CheckSysregResults(object):
 grun_data = sm.datasets.grunfeld.load()
 firms = ['Chrysler', 'General Electric', 'General Motors',
          'US Steel', 'Westinghouse']
+
+#for Python 3 compatibility
+from statsmodels.compat.python import lmap, asbytes
+firms = lmap(asbytes, firms)
+
 grun_exog = grun_data.exog
 grun_endog = grun_data.endog
 grun_sys = []
@@ -55,7 +60,7 @@ for f in firms:
 class TestSUR(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import RSUR
+        from .results.results_sysreg import RSUR
         res2 = RSUR
         res1 = SysSUR(grun_sys).fit()
         cls.res1 = res1
@@ -64,7 +69,7 @@ class TestSUR(CheckSysregResults):
 class TestSURI(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import RSURI
+        from .results.results_sysreg import RSURI
         res2 = RSURI
         res1 = SysSUR(grun_sys).fit(iterative=True)
         cls.res1 = res1
@@ -73,7 +78,7 @@ class TestSURI(CheckSysregResults):
 class TestSURR(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import RSURR
+        from .results.results_sysreg import RSURR
         res2 = RSURR
 
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
@@ -87,7 +92,7 @@ class TestSURR(CheckSysregResults):
 class TestSURIR(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import RSURIR
+        from .results.results_sysreg import RSURIR
         res2 = RSURIR
 
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
@@ -117,7 +122,7 @@ kmenta_sys = [kmenta_eq1, kmenta_eq2]
 class Test2SLS(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import R2SLS
+        from .results.results_sysreg import R2SLS
         res2 = R2SLS
         res1 = Sys2SLS(kmenta_sys).fit()
         cls.res1 = res1
@@ -126,7 +131,7 @@ class Test2SLS(CheckSysregResults):
 class Test3SLS(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import R3SLS
+        from .results.results_sysreg import R3SLS
         res2 = R3SLS
         res1 = Sys3SLS(kmenta_sys).fit()
         cls.res1 = res1
@@ -135,7 +140,7 @@ class Test3SLS(CheckSysregResults):
 class TestI3SLS(CheckSysregResults):
     @classmethod
     def setupClass(cls):
-        from results.results_sysreg import RI3SLS
+        from .results.results_sysreg import RI3SLS
         res2 = RI3SLS
         res1 = Sys3SLS(kmenta_sys).fit(iterative=True)
         cls.res1 = res1

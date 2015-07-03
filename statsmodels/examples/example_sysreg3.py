@@ -21,9 +21,9 @@ xname =['const', 'price', 'income', 'const', 'price',
 
 mod2sls = Sys2SLS(sys)
 res2sls = mod2sls.fit()
-print res2sls.summary(yname=yname, xname=xname)
+print(res2sls.summary(yname=yname, xname=xname))
 
 mod3sls = Sys3SLS(sys)
 res3sls = mod3sls.fit(iterative=True)
-print res3sls.summary(yname=yname, xname=xname)
+print(res3sls.summary(yname=yname, xname=xname))
 

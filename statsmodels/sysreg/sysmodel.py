@@ -4,9 +4,12 @@ import scipy.sparse as sparse
 from scipy.linalg import block_diag
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
-from statsmodels.compatnp.sparse import block_diag as sp_block_diag
-from cStringIO import StringIO
+from statsmodels.compat.sparse import block_diag as sp_block_diag
+#from cStringIO import StringIO
+from statsmodels.compat import StringIO
 from statsmodels.iolib import SimpleTable
+
+#StringIO = StringIO.StringIO
 
 class SysModel(LikelihoodModel):
     '''
@@ -510,11 +513,10 @@ class SysSummary(object):
         Summary of system model
         """
         buf = StringIO()
-
-        print >> buf, self._header_table()
-        print >> buf, self._stats_table()
-        print >> buf, self._coef_table()
-        print >> buf, self._resid_info()
+##        print >> buf, self._header_table()
+##        print >> buf, self._stats_table()
+##        print >> buf, self._coef_table()
+##        print >> buf, self._resid_info()
 
         return buf.getvalue()
 
@@ -536,7 +538,7 @@ class SysSummary(object):
         part1 = SimpleTable(part1data, part1header, part1stubs,
                             title=part1title, txt_fmt=self.part1_fmt)
         buf = StringIO()
-        print >> buf, str(part1)
+        #print >> buf, str(part1)
         buf.write('\n')
 
         return buf.getvalue()
@@ -574,7 +576,7 @@ class SysSummary(object):
             table = SimpleTable(data[start_index:start_index+offset,:], header,
                                 title=title, txt_fmt=self.default_fmt,
                                 stubs=self.xname[start_index:start_index+offset])
-            print >> buf, str(table)
+            #print >> buf, str(table)
             buf.write('\n')
             start_index += offset
 
@@ -584,9 +586,9 @@ class SysSummary(object):
         buf = StringIO()
         names = self.yname
 
-        print >> buf, "Covariance matrix of residuals"
+        #print >> buf, "Covariance matrix of residuals"
         from statsmodels.tsa.vector_ar.output import pprint_matrix
-        print >> buf, pprint_matrix(self.result.cov_resids, names, names)
+        #print >> buf, pprint_matrix(self.result.cov_resids, names, names)
 
         return buf.getvalue()
 

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 from statsmodels.sysreg.sysmodel import SysModel, SysResults
-from statsmodels.compatnp.sparse import block_diag as sp_block_diag
+from statsmodels.compat.sparse import block_diag as sp_block_diag
 import statsmodels.tools.tools as tools
 import scipy.sparse as sparse
 
