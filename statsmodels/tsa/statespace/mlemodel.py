@@ -832,10 +832,10 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # Handle covariance matrix calculation
         if cov_kwds is None:
                 cov_kwds = {}
-        self.get_robustcov_results(cov_type=cov_type, use_self=True,
-                                   **cov_kwds)
+        self._get_robustcov_results(cov_type=cov_type, use_self=True,
+                                    **cov_kwds)
 
-    def get_robustcov_results(self, cov_type='opg', **kwargs):
+    def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
         Create new results instance with specified covariance estimator as
         default
