@@ -954,27 +954,6 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # return -2*self.llf + self.params.shape[0]*np.log(self.nobs)
         return bic(self.llf, self.nobs, self.params.shape[0])
 
-
-    @cache_readonly
-    def _cov_params_default(self):
-        """
-        (array) The variance / covariance matrix.
-        """
-        if self.cov_type == 'cs':
-            return self.cov_params_cs
-        elif self.cov_type == 'delta':
-            return self.cov_params_delta
-        elif self.cov_type == 'oim':
-            return self.cov_params_oim
-        elif self.cov_type == 'opg':
-            return self.cov_params_opg
-        elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
-            return self.cov_params_robust_oim
-        elif self.cov_type == 'robust_cs':
-            return self.cov_params_robust_cs
-        else:
-            raise NotImplementedError('Invalid covariance matrix type.')
-
     @cache_readonly
     def cov_params_cs(self):
         """
