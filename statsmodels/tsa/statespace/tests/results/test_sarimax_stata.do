@@ -2,6 +2,7 @@
 use http://www.stata-press.com/data/r12/wpi1, clear
 arima wpi, arima(1,1,1) vce(opg)
 arima wpi, arima(1,1,1) vce(oim)
+arima wpi, arima(1,1,1) vce(robust)
 arima wpi, arima(1,1,1) diffuse vce(opg)
 arima wpi, arima(1,1,1) diffuse vce(oim)
 

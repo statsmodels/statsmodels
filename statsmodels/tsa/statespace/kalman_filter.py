@@ -323,7 +323,6 @@ class KalmanFilter(Representation):
 
         FILTER_CONVENTIONAL = 0x01
             Conventional Kalman filter.
-        
 
         If the bitmask is set directly via the `filter_method` argument, then
         the full method must be provided.
@@ -584,7 +583,7 @@ class KalmanFilter(Representation):
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, tolerance=None,
-               loglikelihood_burn=None, results=None):
+               loglikelihood_burn=None, results=None, results_kwargs=None):
         """
         Apply the Kalman filter to the statespace model.
 
@@ -635,7 +634,9 @@ class KalmanFilter(Representation):
         if isinstance(results, type):
             if not issubclass(results, FilterResults):
                 raise ValueError
-            results = results(self)
+            if results_kwargs is None:
+                results_kwargs = {}
+            results = results(self, **results_kwargs)
 
         # Initialize the state
         self._initialize_state(prefix=prefix)
@@ -684,6 +685,43 @@ class KalmanFilter(Representation):
             loglikelihood_burn = self.loglikelihood_burn
         kwargs['results'] = 'loglikelihood'
         return np.sum(self.filter(**kwargs)[loglikelihood_burn:])
+
+    def loglikeobs(self, loglikelihood_burn=None, **kwargs):
+        """
+        Calculate the loglikelihood for each observation associated with the
+        statespace model.
+
+        Parameters
+        ----------
+        loglikelihood_burn : int, optional
+            The number of initial periods during which the loglikelihood is not
+            recorded. Default is 0.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        If `loglikelihood_burn` is positive, then the entries in the returned
+        loglikelihood vector are set to be zero for those initial time periods.
+
+        Returns
+        -------
+        loglike : array of float
+            Array of loglikelihood values for each observation.
+        """
+        if self.filter_method & MEMORY_NO_LIKELIHOOD:
+            raise RuntimeError('Cannot compute loglikelihood if'
+                               ' MEMORY_NO_LIKELIHOOD option is selected.')
+        if loglikelihood_burn is None:
+            loglikelihood_burn = self.loglikelihood_burn
+        kwargs['results'] = 'loglikelihood'
+        llf_obs = self.filter(**kwargs)
+
+        # Set any burned observations to have zero likelihood
+        llf_obs[:loglikelihood_burn] = 0
+
+        return llf_obs
 
 
 class FilterResults(FrozenRepresentation):
@@ -801,7 +839,7 @@ class FilterResults(FrozenRepresentation):
 
     _attributes = FrozenRepresentation._model_attributes + _filter_attributes
 
-    def __init__(self, model):
+    def __init__(self, model, **kwargs):
         super(FilterResults, self).__init__(model)
 
         # Setup caches for uninitialized objects

@@ -13,7 +13,9 @@ from .kalman_filter import FilterResults
 
 import statsmodels.tsa.base.tsa_model as tsbase
 from .model import Model
-from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
+from statsmodels.tools.numdiff import (
+    _get_epsilon, approx_hess_cs, approx_fprime_cs
+)
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 
@@ -98,6 +100,8 @@ class MLEModel(Model):
     statsmodels.tsa.statespace.representation.Representation
     """
 
+    optim_hessian = 'cs'
+
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
         # Set the default results class to be MLEResults
@@ -115,9 +119,10 @@ class MLEModel(Model):
         self.transformer = None
         self.untransformer = None
 
-    def fit(self, start_params=None, transformed=True,
-            method='lbfgs', maxiter=50, full_output=1,
+    def fit(self, start_params=None, transformed=True, cov_type='opg',
+            cov_kwds=None, method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
+            optim_hessian=None,
             bfgs_tune=False, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
@@ -127,6 +132,9 @@ class MLEModel(Model):
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
             If None, the default is given by Model.start_params.
+        transformed : boolean, optional
+            Whether or not `start_params` is already transformed. Default is
+            True.
         method : str, optional
             The `method` determines which solver from `scipy.optimize`
             is used, and it can be chosen from among the following strings:
@@ -145,6 +153,30 @@ class MLEModel(Model):
             solvers. See the notes section below (or scipy.optimize) for the
             available arguments and for the list of explicit arguments that the
             basin-hopping solver supports.
+        cov_type : str, optional
+            The `cov_type` keyword governs the method for calculating the
+            covariance matrix of parameter estimates. Can be one of:
+
+            - 'opg' for the outer product of gradient estimator
+            - 'oim' for the observed information matrix estimator, calculated
+              using the method of Harvey (1989)
+            - 'cs' for the observed information matrix estimator, calculated
+              using a numerical (complex step) approximation of the Hessian
+              matrix.
+            - 'delta' for the observed information matrix estimator, calculated
+              using a numerical (complex step) approximation of the Hessian
+              along with the delta method (method of propagation of errors)
+              applied to the parameter transformation function
+              `transform_params`.
+            - 'robust' for an approximate (quasi-maximum likelihood) covariance
+              matrix that may be valid even in the presense of some
+              misspecifications. Intermediate calculations use the 'oim'
+              method.
+            - 'robust_cs' is the same as 'robust' except that the intermediate
+              calculations use the 'cs' method.
+        cov_kwds : dict or None, optional
+            See `MLEResults.get_robustcov_results` for a description required
+            keywords for alternative covariance estimators
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : boolean, optional
@@ -159,6 +191,12 @@ class MLEModel(Model):
         return_params : boolean, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
+        optim_hessian : {'opg','oim','cs'}, optional
+            The method by which the Hessian is numerically approximated. 'opg'
+            uses outer product of gradients, 'oim' uses the information
+            matrix formula from Harvey (1989), and 'cs' uses second-order
+            complex step differentiation. This keyword is only relevant if the
+            optimization method uses the Hessian matrix.
         bfgs_tune : boolean, optional
             BFGS methods by default use internal methods for approximating the
             score and hessian by finite differences. If `bfgs_tune=True` the
@@ -181,6 +219,10 @@ class MLEModel(Model):
         if start_params is None:
             start_params = self.start_params
             transformed = True
+
+        # Update the hessian method
+        if optim_hessian is not None:
+            self.optim_hessian = optim_hessian
 
         # Unconstrain the starting parameters
         if transformed:
@@ -226,10 +268,12 @@ class MLEModel(Model):
             return self.params
         # Otherwise construct the results class if desired
         else:
-            res = self.filter()
+            res = self.filter(results_kwargs={'cov_type': cov_type,
+                                              'cov_kwds': cov_kwds})
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
+
             return res
 
     def loglike(self, params=None, average_loglike=False, transformed=True,
@@ -282,6 +326,151 @@ class MLEModel(Model):
         else:
             return loglike
 
+    def loglikeobs(self, params=None, transformed=True, set_params=True,
+                   **kwargs):
+        """
+        Loglikelihood per observation evaluation
+
+        This differs from `loglike` in that `loglikeobs` returns a vector of
+        loglikelihood observations.
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        transformed : boolean, optional
+            Whether or not `params` is already transformed. Default is True.
+        set_params : boolean
+            Whether or not to copy `params` to the model object's params
+            attribute. Default is True.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        If `loglikelihood_burn` is positive, then the entries in the returned
+        loglikelihood vector are set to be zero for those initial time periods.
+
+        """
+        if params is not None:
+            self.update(params, transformed=transformed, set_params=set_params)
+
+        return super(MLEModel, self).loglikeobs(**kwargs)
+
+    def observed_information_matrix(self, params, **kwargs):
+        """
+        Observed information matrix
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        This method is from Harvey (1989), which shows that the information
+        matrix only depends on terms from the gradient. This implementation is
+        partially analytic and partially numeric approximation, therefore,
+        because it uses the analytic formula for the information matrix, with
+        numerically computed elements of the gradient.
+
+        References
+        ----------
+        Harvey, Andrew C. 1990.
+        Forecasting, Structural Time Series Models and the Kalman Filter.
+        Cambridge University Press.
+
+        """
+        # Setup
+        n = len(params)
+        epsilon = _get_epsilon(params, 1, None, n)
+        increments = np.identity(n) * 1j * epsilon
+
+        kwargs['results'] = FilterResults
+
+        # Get values at the params themselves
+        self.update(params)
+        res = self.filter(**kwargs)
+        dtype = self.dtype
+        # Save this for inversion later
+        inv_forecasts_error_cov = res.forecasts_error_cov.copy()
+
+        # Compute partial derivatives
+        partials_forecasts_error = (
+            np.zeros((self.k_endog, self.nobs, n))
+        )
+        partials_forecasts_error_cov = (
+            np.zeros((self.k_endog, self.k_endog, self.nobs, n))
+        )
+        for i, ih in enumerate(increments):
+            self.update(params + ih)
+            res = self.filter(**kwargs)
+
+            partials_forecasts_error[:, :, i] = (
+                res.forecasts_error.imag / epsilon[i]
+            )
+
+            partials_forecasts_error_cov[:, :, :, i] = (
+                res.forecasts_error_cov.imag / epsilon[i]
+            )
+
+        # Compute the information matrix
+        tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
+
+        information_matrix = np.zeros((n, n), dtype=dtype)
+        for t in range(self.loglikelihood_burn, self.nobs):
+            inv_forecasts_error_cov[:, :, t] = (
+                np.linalg.inv(inv_forecasts_error_cov[:, :, t])
+            )
+            for i in range(n):
+                tmp[:, :, t, i] = np.dot(
+                    inv_forecasts_error_cov[:, :, t],
+                    partials_forecasts_error_cov[:, :, t, i]
+                )
+            for i in range(n):
+                for j in range(n):
+                    information_matrix[i, j] += (
+                        0.5 * np.trace(np.dot(tmp[:, :, t, i],
+                                              tmp[:, :, t, j]))
+                    )
+                    information_matrix[i, j] += np.inner(
+                        partials_forecasts_error[:, t, i],
+                        np.dot(inv_forecasts_error_cov[:, :, t],
+                               partials_forecasts_error[:, t, j])
+                    )
+        return information_matrix / (self.nobs - self.loglikelihood_burn)
+
+    def opg_information_matrix(self, params, **kwargs):
+        """
+        Outer product of gradients information matrix
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        **kwargs
+            Additional arguments to the `loglikeobs` method.
+
+        References
+        ----------
+        Berndt, Ernst R., Bronwyn Hall, Robert Hall, and Jerry Hausman. 1974.
+        Estimation and Inference in Nonlinear Structural Models.
+        NBER Chapters. National Bureau of Economic Research, Inc.
+
+        """
+        score_obs = self.score_obs(params, **kwargs).transpose()
+        return (
+            np.inner(score_obs, score_obs) /
+            (self.nobs - self.loglikelihood_burn)
+        )
+
     def score(self, params, *args, **kwargs):
         """
         Compute the score function at params.
@@ -300,7 +489,8 @@ class MLEModel(Model):
 
         Notes
         -----
-        This is a numerical approximation.
+        This is a numerical approximation, calculated using first-order complex
+        step differentiation on the `loglike` method.
 
         Both \*args and \*\*kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
@@ -314,34 +504,37 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        initial_state = kwargs.pop('initial_state', None)
-        initial_state_cov = kwargs.pop('initial_state_cov', None)
-        if initial_state is not None and initial_state_cov is not None:
-            # If initialization is stationary, we don't want to recalculate the
-            # initial_state_cov for each new set of parameters here
-            initialization = self.initialization
-            _initial_state = self._initial_state
-            _initial_state_cov = self._initial_state_cov
-            _initial_variance = self._initial_variance
+        return approx_fprime_cs(params, self.loglike, args=args, kwargs=kwargs)
 
-            self.initialize_known(initial_state, initial_state_cov)
+    def score_obs(self, params, **kwargs):
+        """
+        Compute the score per observation, evaluated at params
 
-        score = approx_fprime_cs(params, self.loglike, epsilon=1e-9, args=args,
-                                 kwargs=kwargs)
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the score.
+        *args, **kwargs
+            Additional arguments to the `loglike` method.
 
-        if initial_state is not None and initial_state_cov is not None:
-            # Reset the initialization
-            self.initialization = initialization
-            self._initial_state = _initial_state
-            self._initial_state_cov = _initial_state_cov
-            self._initial_variance = _initial_variance
+        Returns
+        ----------
+        score : array (nobs, k_vars)
+            Score per observation, evaluated at `params`.
 
-        return score
+        Notes
+        -----
+        This is a numerical approximation, calculated using first-order complex
+        step differentiation on the `loglikeobs` method.
+
+        """
+        self.update(params)
+        return approx_fprime_cs(params, self.loglikeobs, kwargs=kwargs)
 
     def hessian(self, params, *args, **kwargs):
         """
         Hessian matrix of the likelihood function, evaluated at the given
-        parameters.
+        parameters
 
         Parameters
         ----------
@@ -363,6 +556,34 @@ class MLEModel(Model):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
+        if self.optim_hessian == 'cs':
+            hessian = self._hessian_cs(params, *args, **kwargs)
+        elif self.optim_hessian == 'oim':
+            hessian = self._hessian_oim(params)
+        elif self.optim_hessian == 'opg':
+            hessian = self._hessian_opg(params)
+        else:
+            raise NotImplementedError('Invalid Hessian calculation method.')
+        return hessian
+
+    def _hessian_oim(self, params):
+        """
+        Hessian matrix computed using the Harvey (1989) information matrix
+        """
+        return -self.observed_information_matrix(params)
+
+    def _hessian_opg(self, params):
+        """
+        Hessian matrix computed using the outer product of gradients
+        information matrix
+        """
+        return -self.opg_information_matrix(params)
+
+    def _hessian_cs(self, params, *args, **kwargs):
+        """
+        Hessian matrix computed by second-order complex-step differentiation
+        on the `loglike` function.
+        """
         nargs = len(args)
         if nargs < 1:
             kwargs.setdefault('average_loglike', True)
@@ -371,29 +592,8 @@ class MLEModel(Model):
         if nargs < 3:
             kwargs.setdefault('set_params', False)
 
-        initial_state = kwargs.pop('initial_state', None)
-        initial_state_cov = kwargs.pop('initial_state_cov', None)
-        if initial_state is not None and initial_state_cov is not None:
-            # If initialization is stationary, we don't want to recalculate the
-            # initial_state_cov for each new set of parameters here
-            initialization = self.initialization
-            _initial_state = self._initial_state
-            _initial_state_cov = self._initial_state_cov
-            _initial_variance = self._initial_variance
-
-            self.initialize_known(initial_state, initial_state_cov)
-
-        hessian = approx_hess_cs(params, self.loglike, epsilon=1e-9, args=args,
-                                 kwargs=kwargs)
-
-        if initial_state is not None and initial_state_cov is not None:
-            # Reset the initialization
-            self.initialization = initialization
-            self._initial_state = _initial_state
-            self._initial_state_cov = _initial_state_cov
-            self._initial_variance = _initial_variance
-
-        return hessian
+        self.update(params)
+        return approx_hess_cs(params, self.loglike, args=args, kwargs=kwargs)
 
     @property
     def start_params(self):
@@ -601,13 +801,14 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
-    def __init__(self, model):
+
+    def __init__(self, model, cov_type='opg', cov_kwds=None):
         self.data = model.data
 
         # Save the model output
         self._endog_names = model.endog_names
         self._exog_names = model.endog_names
-        self._params = model.params
+        self._params = model.params.copy()
         self._param_names = model.data.param_names
         self._model_names = model.model_names
         self._model_latex_names = model.model_latex_names
@@ -616,6 +817,8 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         params = pd.Series(self._params, index=self._param_names)
 
         # Initialize the Statsmodels model base
+        # TODO does not pass cov_type to parent right now, instead sets it
+        # separately, see below.
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
                                                scale=1.)
@@ -625,6 +828,114 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
 
         # Setup the cache
         self._cache = resettable_cache()
+
+        # Handle covariance matrix calculation
+        if cov_kwds is None:
+                cov_kwds = {}
+        self._get_robustcov_results(cov_type=cov_type, use_self=True,
+                                    **cov_kwds)
+
+    def _get_robustcov_results(self, cov_type='opg', **kwargs):
+        """
+        Create new results instance with specified covariance estimator as
+        default
+
+        Note: creating new results instance currently not supported.
+
+        Parameters
+        ----------
+        cov_type : string
+            the type of covariance matrix estimator to use. See Notes below
+        kwargs : depends on cov_type
+            Required or optional arguments for covariance calculation.
+            See Notes below.
+
+        Returns
+        -------
+        results : results instance
+            This method creates a new results instance with the requested
+            covariance as the default covariance of the parameters.
+            Inferential statistics like p-values and hypothesis tests will be
+            based on this covariance matrix.
+
+        Notes
+        -----
+        The following covariance types and required or optional arguments are
+        currently available:
+
+        - 'opg' for the outer product of gradient estimator
+        - 'oim' for the observed information matrix estimator, calculated
+          using the method of Harvey (1989)
+        - 'cs' for the observed information matrix estimator, calculated
+          using a numerical (complex step) approximation of the Hessian
+          matrix.
+        - 'delta' for the observed information matrix estimator, calculated
+          using a numerical (complex step) approximation of the Hessian along
+          with the delta method (method of propagation of errors)
+          applied to the parameter transformation function `transform_params`.
+        - 'robust' for an approximate (quasi-maximum likelihood) covariance
+          matrix that may be valid even in the presense of some
+          misspecifications. Intermediate calculations use the 'oim'
+          method.
+        - 'robust_cs' is the same as 'robust' except that the intermediate
+          calculations use the 'cs' method.
+        """
+
+        import statsmodels.stats.sandwich_covariance as sw
+
+        use_self = kwargs.pop('use_self', False)
+        if use_self:
+            res = self
+        else:
+            raise NotImplementedError
+            res = self.__class__(
+                self.model, self.params,
+                normalized_cov_params=self.normalized_cov_params,
+                scale=self.scale)
+
+        # Set the new covariance type
+        res.cov_type = cov_type
+        res.cov_kwds = {}
+
+        # Calculate the new covariance matrix
+        if self.cov_type == 'cs':
+            res.cov_params_default = res.cov_params_cs
+            res.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using numerical (complex-step)'
+                ' differentiation.')
+        elif self.cov_type == 'delta':
+            res.cov_params_default = res.cov_params_delta
+            res.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using numerical differentiation'
+                ' and the delta method (method of propagation of errors)'
+                ' applied to the parameter transformation function.')
+        elif self.cov_type == 'oim':
+            res.cov_params_default = res.cov_params_oim
+            res.cov_kwds['description'] = (
+                'Covariance matrix calculated using the observed information'
+                ' matrix described in Harvey (1989).')
+        elif self.cov_type == 'opg':
+            res.cov_params_default = res.cov_params_opg
+            res.cov_kwds['description'] = (
+                'Covariance matrix calculated using the outer product of'
+                ' gradients.'
+            )
+        elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
+            res.cov_params_default = res.cov_params_robust_oim
+            res.cov_kwds['description'] = (
+                'Quasi-maximum likelihood covariance matrix used for'
+                ' robustness to some misspecifications; calculated using the'
+                ' observed information matrix described in Harvey (1989).')
+        elif self.cov_type == 'robust_cs':
+            res.cov_params_default = res.cov_params_robust_cs
+            res.cov_kwds['description'] = (
+                'Quasi-maximum likelihood covariance matrix used for'
+                ' robustness to some misspecifications; calculated using'
+                ' numerical (complex-step) differentiation.')
+        else:
+            raise NotImplementedError('Invalid covariance matrix type.')
+
+        return res
 
     @cache_readonly
     def aic(self):
@@ -642,24 +953,19 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # return -2*self.llf + self.params.shape[0]*np.log(self.nobs)
         return bic(self.llf, self.nobs, self.params.shape[0])
 
-
     @cache_readonly
-    def cov_params_default(self):
+    def cov_params_cs(self):
         """
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian computed without using parameter transformations.
         """
-        hessian = self.model.hessian(
-            self._params, set_params=False, transformed=True,
-            initial_state=self.initial_state,
-            initial_state_cov=self.initial_state_cov
+        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        evaluated_hessian = self.model._hessian_cs(
+            self._params, set_params=False, transformed=True
         )
+        self.model.update(self._params)
 
-        # Reset the matrices to the saved parameters (since they were
-        # overwritten in the hessian call)
-        self.model.update(self.model.params)
-
-        return -np.linalg.inv(hessian*self.nobs)
+        return -np.linalg.inv(nobs * evaluated_hessian)
 
     @cache_readonly
     def cov_params_delta(self):
@@ -668,20 +974,85 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         Hessian computed using parameter transformations and the Delta method
         (method of propagation of errors).
         """
+        nobs = (self.model.nobs - self.model.loglikelihood_burn)
 
         unconstrained = self.model.untransform_params(self._params)
         jacobian = self.model.transform_jacobian(unconstrained)
-        hessian = self.model.hessian(
-            unconstrained, set_params=False,
-            initial_state=self.initial_state,
-            initial_state_cov=self.initial_state_cov
+        cov_cs = -np.linalg.inv(
+            nobs * self.model._hessian_cs(unconstrained, set_params=False)
+        )
+        self.model.update(self._params)
+
+        return np.dot(np.dot(jacobian, cov_cs), jacobian.transpose())
+
+    @cache_readonly
+    def cov_params_oim(self):
+        """
+        (array) The variance / covariance matrix. Computed using the method
+        from Harvey (1989).
+        """
+        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        cov_params_oim = np.linalg.inv(
+            nobs * self.model.observed_information_matrix(self._params)
+        )
+        self.model.update(self._params)
+        return cov_params_oim
+
+    @cache_readonly
+    def cov_params_opg(self):
+        """
+        (array) The variance / covariance matrix. Computed using the outer
+        product of gradients method.
+        """
+        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        cov_params_opg = np.linalg.inv(
+            nobs * self.model.opg_information_matrix(self._params)
+        )
+        self.model.update(self._params)
+        return cov_params_opg
+
+    @cache_readonly
+    def cov_params_robust(self):
+        """
+        (array) The QMLE variance / covariance matrix. Alias for
+        `cov_params_robust_oim`
+        """
+        return self.cov_params_robust_oim
+
+    @cache_readonly
+    def cov_params_robust_oim(self):
+        """
+        (array) The QMLE variance / covariance matrix. Computed using the
+        method from Harvey (1989) as the evaluated hessian.
+        """
+        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        cov_opg = self.cov_params_opg
+        evaluated_hessian = (
+            nobs * self.model.observed_information_matrix(self._params)
+        )
+        self.model.update(self._params)
+        return np.linalg.inv(
+            np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
-        # Reset the matrices to the saved parameters (since they were
-        # overwritten in the hessian call)
-        self.model.update(self.model.params)
-
-        return jacobian.dot(-np.linalg.inv(hessian*self.nobs)).dot(jacobian.T)
+    @cache_readonly
+    def cov_params_robust_cs(self):
+        """
+        (array) The QMLE variance / covariance matrix. Computed using the
+        numerical Hessian computed without using parameter transformations as
+        the evaluated hessian.
+        """
+        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        cov_opg = self.cov_params_opg
+        evaluated_hessian = (
+            nobs * self.model._hessian_cs(
+                self._params, set_params=False, transformed=True
+            )
+        )
+        self.model.update(self._params)
+        return np.linalg.inv(
+            np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
+        )
 
     def fittedvalues(self):
         """
@@ -896,10 +1267,24 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             ('HQIC', ["%#5.3f" % self.hqic])
         ]
 
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
         summary.add_table_params(self, alpha=alpha, xname=self._param_names,
                                  use_t=False)
+
+        # Add warnings/notes, added to text format only
+        etext = []
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
+
+        if etext:
+            etext = ["[{0}] {1}".format(i + 1, text)
+                     for i, text in enumerate(etext)]
+            etext.insert(0, "Warnings:")
+            summary.add_extra_txt(etext)
 
         return summary
