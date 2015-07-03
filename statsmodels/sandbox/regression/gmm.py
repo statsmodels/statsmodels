@@ -1103,10 +1103,15 @@ class GMM(Model):
 class GMMResults(LikelihoodModelResults):
     '''just a storage class right now'''
 
+    use_t = False
+
     def __init__(self, *args, **kwds):
         self.__dict__.update(kwds)
 
         self.nobs = self.model.nobs
+        self.df_resid = np.inf
+
+        self.cov_params_default = self._cov_params()
 
 
     @cache_readonly
@@ -1120,7 +1125,8 @@ class GMMResults(LikelihoodModelResults):
         return self.q * self.model.nobs_moms
 
 
-    def cov_params(self, **kwds):
+    def _cov_params(self, **kwds):
+
         #TODO add options ???)
         # this should use by default whatever options have been specified in
         # fit
@@ -1143,8 +1149,7 @@ class GMMResults(LikelihoodModelResults):
         moms = self.model.momcond(self.params)
         covparams = self.calc_cov_params(moms, gradmoms, **kwds)
 
-        self._cov_params = covparams
-        return self._cov_params
+        return covparams
 
 
     def calc_cov_params(self, moms, gradmoms, weights=None, use_weights=False,
@@ -1200,7 +1205,7 @@ class GMMResults(LikelihoodModelResults):
         return cov/nobs
 
     @property
-    def bse(self):
+    def bse_(self):
         '''standard error of the parameter estimates
         '''
         return self.get_bse()

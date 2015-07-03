@@ -212,6 +212,26 @@ class CheckGMM(object):
         assert_allclose(res1.jval, res2.J, rtol=5e-5, atol=0)
 
 
+    def test_hypothesis(self):
+        res1, res2 = self.res1, self.res2
+        restriction = np.eye(len(res1.params))
+        res_t = res1.t_test(restriction)
+        assert_allclose(res_t.tvalue, res1.tvalues, rtol=1e-12, atol=0)
+        assert_allclose(res_t.pvalue, res1.pvalues, rtol=1e-12, atol=0)
+        rtol,  atol = self.bse_tol
+        assert_allclose(res_t.tvalue, res2.tvalues, rtol=rtol*10, atol=atol)
+        assert_allclose(res_t.pvalue, res2.pvalues, rtol=rtol*10, atol=atol)
+
+        res_f = res1.f_test(restriction[:-1]) # without constant
+        # comparison with fvalue is not possible, those are not defined
+        # assert_allclose(res_f.fvalue, res1.fvalue, rtol=1e-12, atol=0)
+        # assert_allclose(res_f.pvalue, res1.f_pvalue, rtol=1e-12, atol=0)
+        # assert_allclose(res_f.fvalue, res2.F, rtol=1e-10, atol=0)
+        # assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
+
+        # Smoke test for Wald
+        res_wald = res1.wald_test(restriction[:-1])
+
 
 class TestGMMSt1(CheckGMM):
 
@@ -308,7 +328,7 @@ class TestGMMStOnestep(CheckGMM):
         res1, res2 = self.res1, self.res2
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=False))))
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
                                             #weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
@@ -370,11 +390,11 @@ class TestGMMStOneiter(CheckGMM):
         w = res1.model.calc_weightmatrix(moms)
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=False,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
                                             weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=False,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
                                                #use_weights=True #weights=w
                                                          ))))
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
@@ -496,7 +516,7 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
     def setup_class(self):
         # replicating OLS by GMM - high agreement
         self.params_tol = [1e-11, 1e-12]
-        self.bse_tol = [1e-13, 1e-13]
+        self.bse_tol = [1e-12, 1e-12]
         exog = exog_st  # with const at end
         res_ols = OLS(endog, exog).fit()
         #Note: start is irrelevant but required
@@ -512,6 +532,10 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
                         weights_method='iid',
                         wargs={'centered':False, 'ddof':'k_params'},
                         has_optimal_weights=True)
+
+        # fix use of t distribution see #2495 comment
+        res.use_t = True
+        res.df_resid = res.nobs - len(res.params)
         self.res1 = res
 
         #from .results_gmm_griliches import results_onestep as results
@@ -566,11 +590,11 @@ class TestGMMSt2(object):
 
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=True,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=True,
                                             weights=res1.weights))))
         assert_allclose(res1.bse, res2.bse, rtol=5e-01, atol=0)
 
-        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=True,
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=True,
                                                weights=res1.weights,
                                                use_weights=True))))
         assert_allclose(res1.bse, res2.bse, rtol=5e-02, atol=0)
