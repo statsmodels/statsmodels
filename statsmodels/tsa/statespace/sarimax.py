@@ -522,8 +522,8 @@ class SARIMAX(MLEModel):
         self.selection = self.initial_selection
 
         # If we are estimating a simple ARMA model, then we can use a faster
-        # initialization method.
-        if k_diffuse_states == 0:
+        # initialization method (unless initialization was already specified).
+        if k_diffuse_states == 0 and self.initialization is None:
             self.initialize_stationary()
 
         # update _init_keys attached by super
@@ -541,9 +541,6 @@ class SARIMAX(MLEModel):
         kwds = super(SARIMAX, self)._get_init_kwds()
         kwds['endog'] = self.orig_endog
         kwds['exog'] = self.orig_exog
-        if self.initialization == 'approximate_diffuse':
-            import warnings
-            warnings.warn('not all init keys or initialization is available yet')
         return kwds
 
 

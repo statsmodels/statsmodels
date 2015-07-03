@@ -158,9 +158,13 @@ class TestARIMAStationary(ARIMA):
 
 
 class TestARIMADiffuse(ARIMA):
-    def __init__(self):
-        super(TestARIMADiffuse, self).__init__(results_sarimax.wpi1_diffuse)
-        self.model.initialize_approximate_diffuse(self.true['initial_variance'])
+    def __init__(self, **kwargs):
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = (
+            results_sarimax.wpi1_diffuse['initial_variance']
+        )
+        super(TestARIMADiffuse, self).__init__(results_sarimax.wpi1_diffuse,
+                                               **kwargs)
         self.result = self.model.filter()
 
     def test_bse(self):
@@ -633,8 +637,8 @@ class SARIMAXCoverageTest(object):
         mod1 = self.model
         mod1.update(self.true_params)  # test with side effect ?
 
-        if mod1.initialization == 'approximate_diffuse':
-            raise SkipTest('known failure: init_keys incomplete')
+        # if mod1.initialization == 'approximate_diffuse':
+        #     raise SkipTest('known failure: init_keys incomplete')
         kwargs = self.model._get_init_kwds()
         # TODO: current limitations #2259 comments
         #endog = mod1.endog.squeeze() # test failures, endog may be transformed
@@ -727,8 +731,9 @@ class Test_ar_diffuse(SARIMAXCoverageTest):
     # save_results 7
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (3,0,0)
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = 1e9
         super(Test_ar_diffuse, self).__init__(6, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_ar_no_enforce(SARIMAXCoverageTest):
     # // AR: (p,0,0) x (0,0,0,0)
@@ -739,6 +744,7 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         kwargs['enforce_stationarity'] = False
         kwargs['enforce_invertibility'] = False
         kwargs['initial_variance'] = 1e9
+        # kwargs['loglikelihood_burn'] = 0
         super(Test_ar_no_enforce, self).__init__(6, *args, **kwargs)
         # Reset loglikelihood burn, which gets automatically set to the number
         # of states if enforce_stationarity = False
@@ -870,8 +876,9 @@ class Test_ma_diffuse(SARIMAXCoverageTest):
     # save_results 15
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (0,0,3)
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = 1e9
         super(Test_ma_diffuse, self).__init__(14, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_ma_exogenous(SARIMAXCoverageTest):
     # // MAX
@@ -956,10 +963,9 @@ class Test_arma_diffuse(SARIMAXCoverageTest):
     # save_results 24
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (3,0,2)
-        # TODO: diffuse initialization not supported through keywords #2259
+        kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_arma_diffuse, self).__init__(23, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_arma_exogenous(SARIMAXCoverageTest):
     # // ARMAX
@@ -1050,8 +1056,9 @@ class Test_seasonal_ar_diffuse(SARIMAXCoverageTest):
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = 1e9
         super(Test_seasonal_ar_diffuse, self).__init__(31, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_seasonal_ar_exogenous(SARIMAXCoverageTest):
     # // SARX
@@ -1139,8 +1146,9 @@ class Test_seasonal_ma_diffuse(SARIMAXCoverageTest):
     def __init__(self, *args, **kwargs):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = 1e9
         super(Test_seasonal_ma_diffuse, self).__init__(39, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_seasonal_ma_exogenous(SARIMAXCoverageTest):
     # // SMAX
@@ -1234,8 +1242,9 @@ class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (3,0,2,4)
         kwargs['decimal'] = 3
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = 1e9
         super(Test_seasonal_arma_diffuse, self).__init__(48, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_seasonal_arma_exogenous(SARIMAXCoverageTest):
     # // SARMAX
@@ -1282,8 +1291,9 @@ class Test_sarimax_exogenous_diffuse(SARIMAXCoverageTest):
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         kwargs['decimal'] = 2
+        kwargs['initialization'] = 'approximate_diffuse'
+        kwargs['initial_variance'] = 1e9
         super(Test_sarimax_exogenous_diffuse, self).__init__(51, *args, **kwargs)
-        self.model.initialize_approximate_diffuse(1e9)
 
 class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
     # // ARMA and exogenous and trend polynomial and missing
@@ -1328,7 +1338,7 @@ def test_simple_time_varying():
 def test_invalid_time_varying():
     assert_raises(ValueError, sarimax.SARIMAX, endog=[1,2,3], mle_regression=True, time_varying_regression=True)
 
-def test_manual_initialization():
+def test_manual_stationary_initialization():
     endog = results_sarimax.wpi1_data
 
     # Create the first model to compare against
@@ -1343,9 +1353,70 @@ def test_manual_initialization():
     mod2.initialize_state()  # a noop in this case (include for coverage)
     res2 = mod2.filter()
 
+    # Create a third model with "known" initialization, but specified in kwargs
+    mod3 = sarimax.SARIMAX(endog, order=(3,0,0),
+                           initialization='known',
+                           initial_state=res1.initial_state,
+                           initial_state_cov=res1.initial_state_cov)
+    mod3.update([0.5,0.2,0.1,1])
+    res3 = mod3.filter()
+
+    # Create the forth model with stationary initialization specified in kwargs
+    mod4 = sarimax.SARIMAX(endog, order=(3,0,0), initialization='stationary')
+    mod4.update([0.5,0.2,0.1,1])
+    res4 = mod4.filter()
+
     # Just test a couple of things to make sure the results are the same
     assert_almost_equal(res1.llf, res2.llf)
     assert_almost_equal(res1.filtered_state, res2.filtered_state)
+
+    assert_almost_equal(res1.llf, res3.llf)
+    assert_almost_equal(res1.filtered_state, res3.filtered_state)
+
+    assert_almost_equal(res1.llf, res4.llf)
+    assert_almost_equal(res1.filtered_state, res4.filtered_state)
+
+def test_manual_approximate_diffuse_initialization():
+    endog = results_sarimax.wpi1_data
+
+    # Create the first model to compare against
+    mod1 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod1.update([0.5,0.2,0.1,1])
+    mod1.initialize_approximate_diffuse(1e9)
+    res1 = mod1.filter()
+
+    # Create a second model with "known" initialization
+    mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod2.update([0.5,0.2,0.1,1])
+    mod2.initialize_known(res1.initial_state, res1.initial_state_cov)
+    mod2.initialize_state()  # a noop in this case (include for coverage)
+    res2 = mod2.filter()
+
+    # Create a third model with "known" initialization, but specified in kwargs
+    mod3 = sarimax.SARIMAX(endog, order=(3,0,0),
+                           initialization='known',
+                           initial_state=res1.initial_state,
+                           initial_state_cov=res1.initial_state_cov)
+    mod3.update([0.5,0.2,0.1,1])
+    res3 = mod3.filter()
+
+    # Create the forth model with approximate diffuse initialization specified
+    # in kwargs
+    mod4 = sarimax.SARIMAX(endog, order=(3,0,0),
+                           initialization='approximate_diffuse',
+                           initial_variance=1e9)
+    mod4.update([0.5,0.2,0.1,1])
+    res4 = mod4.filter()
+
+    # Just test a couple of things to make sure the results are the same
+    assert_almost_equal(res1.llf, res2.llf)
+    assert_almost_equal(res1.filtered_state, res2.filtered_state)
+
+    assert_almost_equal(res1.llf, res3.llf)
+    assert_almost_equal(res1.filtered_state, res3.filtered_state)
+
+    assert_almost_equal(res1.llf, res4.llf)
+    assert_almost_equal(res1.filtered_state, res4.filtered_state)
 
 def test_results():
     endog = results_sarimax.wpi1_data
