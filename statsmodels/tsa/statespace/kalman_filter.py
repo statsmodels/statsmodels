@@ -323,7 +323,6 @@ class KalmanFilter(Representation):
 
         FILTER_CONVENTIONAL = 0x01
             Conventional Kalman filter.
-        
 
         If the bitmask is set directly via the `filter_method` argument, then
         the full method must be provided.

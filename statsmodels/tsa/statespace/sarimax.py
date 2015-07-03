@@ -529,12 +529,11 @@ class SARIMAX(MLEModel):
 
         # update _init_keys attached by super
         self._init_keys += ['order',  'seasonal_order', 'trend',
-                 'measurement_error', 'time_varying_regression',
-                 'mle_regression', 'simple_differencing',
-                 'enforce_stationarity', 'enforce_invertibility',
-                 'hamilton_representation'] + list(kwargs.keys())
+                            'measurement_error', 'time_varying_regression',
+                            'mle_regression', 'simple_differencing',
+                            'enforce_stationarity', 'enforce_invertibility',
+                            'hamilton_representation'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
-
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
@@ -543,7 +542,6 @@ class SARIMAX(MLEModel):
         kwds['endog'] = self.orig_endog
         kwds['exog'] = self.orig_exog
         return kwds
-
 
     def initialize(self):
         """
@@ -1962,8 +1960,9 @@ class SARIMAXResults(MLEResults):
                                str(order_seasonal_ma), self.model.k_seasons))
             if not order == '':
                 order += 'x'
-        model_name = ('%s%s%s' %
-                 (self.model.__class__.__name__, order, seasonal_order))
+        model_name = (
+            '%s%s%s' % (self.model.__class__.__name__, order, seasonal_order)
+            )
         return super(SARIMAXResults, self).summary(
             alpha=alpha, start=start, model_name=model_name
         )

@@ -327,7 +327,7 @@ class MLEModel(Model):
             return loglike
 
     def loglikeobs(self, params=None, transformed=True, set_params=True,
-                **kwargs):
+                   **kwargs):
         """
         Loglikelihood per observation evaluation
 
@@ -441,11 +441,10 @@ class MLEModel(Model):
                     )
                     information_matrix[i, j] += np.inner(
                         partials_forecasts_error[:, t, i],
-                        np.dot(inv_forecasts_error_cov[:,:,t],
+                        np.dot(inv_forecasts_error_cov[:, :, t],
                                partials_forecasts_error[:, t, j])
                     )
         return information_matrix / (self.nobs - self.loglikelihood_burn)
-
 
     def opg_information_matrix(self, params, **kwargs):
         """
@@ -471,7 +470,6 @@ class MLEModel(Model):
             np.inner(score_obs, score_obs) /
             (self.nobs - self.loglikelihood_burn)
         )
-
 
     def score(self, params, *args, **kwargs):
         """
@@ -890,9 +888,10 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             res = self
         else:
             raise NotImplementedError
-            res = self.__class__(self.model, self.params,
-                       normalized_cov_params=self.normalized_cov_params,
-                       scale=self.scale)
+            res = self.__class__(
+                self.model, self.params,
+                normalized_cov_params=self.normalized_cov_params,
+                scale=self.scale)
 
         # Set the new covariance type
         res.cov_type = cov_type
@@ -1278,14 +1277,14 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
                                  use_t=False)
 
         # Add warnings/notes, added to text format only
-        etext =[]
+        etext = []
         if hasattr(self, 'cov_type'):
             etext.append(self.cov_kwds['description'])
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text) for i, text in enumerate(etext)]
+            etext = ["[{0}] {1}".format(i + 1, text)
+                     for i, text in enumerate(etext)]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)
-
 
         return summary
