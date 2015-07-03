@@ -1,3 +1,5 @@
+
+import scipy.sparse
 from scipy.sparse import coo_matrix, issparse, bmat
 
 #imported from scipy-dev

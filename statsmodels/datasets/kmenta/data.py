@@ -28,7 +28,8 @@ Variable name definitions:
 
 import numpy as np
 #from statsmodels.tools import categorical
-from statsmodels.tools import datautils as du
+#from statsmodels.tools import datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 def load():
