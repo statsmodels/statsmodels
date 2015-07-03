@@ -28,8 +28,7 @@ Variable name definitions:
 
 import numpy as np
 #from statsmodels.tools import categorical
-#from statsmodels.tools import datautils as du
-from statsmodels.datasets import utils as du
+from statsmodels.tools import datautils as du
 from os.path import dirname, abspath
 
 def load():
@@ -60,6 +59,6 @@ def load_pandas():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = np.recfromtxt(open(filepath + '/src/kmenta.csv','rb'),delimiter=',',names=True)
+    data = np.recfromtxt(open(filepath + '/kmenta.csv','rb'),delimiter=',',names=True)
     return data
 
