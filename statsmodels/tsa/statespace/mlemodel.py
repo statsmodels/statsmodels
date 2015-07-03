@@ -1298,4 +1298,15 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         summary.add_table_params(self, alpha=alpha, xname=self._param_names,
                                  use_t=False)
 
+        # Add warnings/notes, added to text format only
+        etext =[]
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
+
+        if etext:
+            etext = ["[{0}] {1}".format(i + 1, text) for i, text in enumerate(etext)]
+            etext.insert(0, "Warnings:")
+            summary.add_extra_txt(etext)
+
+
         return summary
