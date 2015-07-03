@@ -163,6 +163,11 @@ class MLEModel(Model):
             - 'cs' for the observed information matrix estimator, calculated
               using a numerical (complex step) approximation of the Hessian
               matrix.
+            - 'delta' for the observed information matrix estimator, calculated
+              using a numerical (complex step) approximation of the Hessian
+              along with the delta method (method of propagation of errors)
+              applied to the parameter transformation function
+              `transform_params`.
             - 'robust' for an approximate (quasi-maximum likelihood) covariance
               matrix that may be valid even in the presense of some
               misspecifications. Intermediate calculations use the 'oim'
@@ -866,6 +871,10 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         - 'cs' for the observed information matrix estimator, calculated
           using a numerical (complex step) approximation of the Hessian
           matrix.
+        - 'delta' for the observed information matrix estimator, calculated
+          using a numerical (complex step) approximation of the Hessian along
+          with the delta method (method of propagation of errors)
+          applied to the parameter transformation function `transform_params`.
         - 'robust' for an approximate (quasi-maximum likelihood) covariance
           matrix that may be valid even in the presense of some
           misspecifications. Intermediate calculations use the 'oim'
@@ -893,35 +902,37 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         if self.cov_type == 'cs':
             res.cov_params_default = res.cov_params_cs
             res.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using numerical differentiation')
+                'Covariance matrix calculated using numerical (complex-step)'
+                ' differentiation.')
         elif self.cov_type == 'delta':
             res.cov_params_default = res.cov_params_delta
             res.cov_kwds['cov_type'] = (
                 'Covariance matrix calculated using numerical differentiation'
-                ' and the delta method (method of propagation of errors)')
+                ' and the delta method (method of propagation of errors)'
+                ' applied to the parameter transformation function.')
         elif self.cov_type == 'oim':
             res.cov_params_default = res.cov_params_oim
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the observed information'
-                ' matrix described in Harvey (1989)')
+                ' matrix described in Harvey (1989).')
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the outer product of'
-                ' gradients'
+                ' gradients.'
             )
         elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
             res.cov_params_default = res.cov_params_robust_oim
             res.cov_kwds['description'] = (
-                'QMLE covariance matrix used for robustness to some'
-                ' misspecifications; calculated using the observed information'
-                ' matrix described in Harvey (1989)')
+                'Quasi-maximum likelihood covariance matrix used for'
+                ' robustness to some misspecifications; calculated using the'
+                ' observed information matrix described in Harvey (1989).')
         elif self.cov_type == 'robust_cs':
             res.cov_params_default = res.cov_params_robust_cs
             res.cov_kwds['description'] = (
-                'QMLE covariance matrix used for robustness to some'
-                ' misspecifications; calculated using numerical'
-                ' differentiation')
+                'Quasi-maximum likelihood covariance matrix used for'
+                ' robustness to some misspecifications; calculated using'
+                ' numerical (complex-step) differentiation.')
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
