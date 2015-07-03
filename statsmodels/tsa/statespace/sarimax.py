@@ -513,9 +513,6 @@ class SARIMAX(MLEModel):
         if self.ssm.initialization is not None:
             self._manual_initialization = True
 
-        # Other dimensions, now that `ssm` is available
-        self.k_endog = self.ssm.k_endog
-
         # Initialize the fixed components of the statespace model
         self.ssm.design = self.initial_design
         self.ssm.state_intercept = self.initial_state_intercept

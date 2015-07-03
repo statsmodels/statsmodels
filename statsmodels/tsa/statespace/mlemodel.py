@@ -136,6 +136,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Bind the data to the model
         self.ssm.bind(endog)
 
+        # Other dimensions, now that `ssm` is available
+        self.k_endog = self.ssm.k_endog
+
     def fit(self, start_params=None, transformed=True, cov_type='opg',
             cov_kwds=None, method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
