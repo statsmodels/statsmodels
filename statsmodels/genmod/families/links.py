@@ -686,7 +686,7 @@ class cauchy(CDFLink):
 
         Returns
         -------
-        g'(p) : array
+        g''(p) : array
             Value of the second derivative of Cauchy link function at `p`
         """
         a = np.pi * (p - 0.5)
