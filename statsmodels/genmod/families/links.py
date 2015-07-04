@@ -25,7 +25,8 @@ class Link(object):
 
         Returns
         -------
-        The value of the link function g(p) = z
+        g(p) : array-like
+            The value of the link function g(p) = z
         """
         return NotImplementedError
 
@@ -41,7 +42,8 @@ class Link(object):
 
         Returns
         -------
-        The value of the inverse of the link function g^(-1)(z) = p
+        g^(-1)(z) : array
+            The value of the inverse of the link function g^(-1)(z) = p
 
 
         """
@@ -57,7 +59,8 @@ class Link(object):
 
         Returns
         -------
-        The value of the derivative of the link function g'(p)
+        g'(p) : array
+            The value of the derivative of the link function g'(p)
         """
         return NotImplementedError
 
@@ -86,7 +89,8 @@ class Link(object):
 
         Returns
         -------
-        The value of the derivative of the inverse of the link function
+        g'^(-1)(z) : array
+            The value of the derivative of the inverse of the link function
 
         """
         return 1 / self.deriv(self.inverse(z))
@@ -177,7 +181,7 @@ class Logit(Link):
         Returns
         -------
         g'(p) : array
-           Value of the derivative of logit transform at `p`
+            Value of the derivative of logit transform at `p`
 
         Notes
         -----
@@ -200,7 +204,8 @@ class Logit(Link):
 
         Returns
         -------
-        The value of the derivative of the inverse of the logit function
+        g'^(-1)(z) : array
+            The value of the derivative of the inverse of the logit function
 
         """
         t = np.exp(z)
@@ -218,7 +223,8 @@ class Logit(Link):
 
         Returns
         -------
-        The value of the second derivative of the logit function
+        g''(z) : array
+            The value of the second derivative of the logit function
         """
         v = p * (1 - p)
         return (2*p - 1) / v**2
@@ -343,7 +349,8 @@ class Power(Link):
 
         Returns
         -------
-        The value of the derivative of the inverse of the power transform
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the power transform
         function
         """
         return np.power(z, (1 - self.power)/self.power) / self.power
@@ -512,7 +519,9 @@ class Log(Link):
 
         Returns
         -------
-        The value of the derivative of the inverse of the logit function
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the log function,
+            the exponential function
         """
         return np.exp(z)
 
@@ -561,7 +570,7 @@ class CDFLink(Logit):
         Returns
         -------
         z : array
-           (ppf) inverse of CDF transform of p
+            (ppf) inverse of CDF transform of p
 
         Notes
         -----
@@ -602,7 +611,7 @@ class CDFLink(Logit):
         Returns
         -------
         g'(p) : array
-         The derivative of CDF transform at `p`
+            The derivative of CDF transform at `p`
 
         Notes
         -----
@@ -633,7 +642,8 @@ class CDFLink(Logit):
 
         Returns
         -------
-        The value of the derivative of the inverse of the logit function
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the logit function
         """
         return 1/self.deriv(self.inverse(z))
 
@@ -676,8 +686,8 @@ class cauchy(CDFLink):
 
         Returns
         -------
-        g'(p) : array
-           Value of the derivative of Cauchy link function at `p`
+        g''(p) : array
+            Value of the second derivative of Cauchy link function at `p`
         """
         a = np.pi * (p - 0.5)
         d2 = 2 * np.pi**2 * np.sin(a) / np.cos(a)**3
@@ -728,7 +738,7 @@ class CLogLog(Logit):
         Returns
         -------
         p : array
-           Mean parameters
+            Mean parameters
 
         Notes
         -----
@@ -748,7 +758,7 @@ class CLogLog(Logit):
         Returns
         -------
         g'(p) : array
-           The derivative of the CLogLog transform link function
+            The derivative of the CLogLog transform link function
 
         Notes
         -----
@@ -769,7 +779,7 @@ class CLogLog(Logit):
         Returns
         -------
         g''(p) : array
-           The second derivative of the CLogLog link function
+            The second derivative of the CLogLog link function
         """
         p = self._clean(p)
         fl = np.log(1 - p)
@@ -788,7 +798,8 @@ class CLogLog(Logit):
 
         Returns
         -------
-        The derivative of the inverse of the CLogLog link function
+        g^(-1)'(z) : array
+            The derivative of the inverse of the CLogLog link function
         """
         return np.exp(z - np.exp(z))
 
@@ -854,6 +865,7 @@ class NegativeBinomial(object):
         -----------
         z : array-like
             The value of the inverse of the negative binomial link at `p`.
+
         Returns
         -------
         p : array
@@ -896,12 +908,13 @@ class NegativeBinomial(object):
 
         Returns
         -------
-        g'(p) : array
-            The derivative of the negative binomial transform link function
+        g''(p) : array
+            The second derivative of the negative binomial transform link
+            function
 
         Notes
         -----
-        g'(x) = 1/(x+alpha*x^2)
+        g''(x) = -(1+2*alpha*x)/(x+alpha*x^2)^2
         '''
         numer = -(1 + 2 * self.alpha * p)
         denom = (p + self.alpha * p**2)**2
@@ -918,8 +931,9 @@ class NegativeBinomial(object):
 
         Returns
         -------
-        The value of the inverse of the derivative of the negative binomial
-        link
+        g^(-1)'(z) : array
+            The value of the derivative of the inverse of the negative
+            binomial link
         '''
         t = np.exp(z)
         return t / (self.alpha * (1-t)**2)
