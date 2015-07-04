@@ -60,7 +60,7 @@ _arma_params = """\
         The (p,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
     exog : array-like, optional
-        An optional arry of exogenous variables. This should *not* include a
+        An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
 _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
@@ -74,7 +74,7 @@ _arima_params = """\
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
     exog : array-like, optional
-        An optional arry of exogenous variables. This should *not* include a
+        An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
 _predict_notes = """
