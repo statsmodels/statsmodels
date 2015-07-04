@@ -700,11 +700,11 @@ def test_standardized_forecasts_error():
     res = mod.fit(disp=-1)
 
     standardized_forecasts_error = (
-        res.ssm_result.forecasts_error[0] /
-        np.sqrt(res.ssm_result.forecasts_error_cov[0,0])
+        res.filter_results.forecasts_error[0] /
+        np.sqrt(res.filter_results.forecasts_error_cov[0,0])
     )
 
     assert_allclose(
-        res.ssm_result.standardized_forecasts_error[0],
+        res.filter_results.standardized_forecasts_error[0],
         standardized_forecasts_error,
     )

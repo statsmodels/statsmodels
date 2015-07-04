@@ -769,14 +769,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         The fitted model instance
     params : array
         Fitted parameters
-    ssm_result : KalmanFilter instance
+    filter_results : KalmanFilter instance
         The underlying state space model and Kalman filter output
 
     Attributes
     ----------
     model : Model instance
         A reference to the model that was fit.
-    ssm_result : KalmanFilter instance
+    filter_results : KalmanFilter instance
         The underlying state space model and Kalman filter output
     nobs : float
         The number of observations used to fit the model.
@@ -791,7 +791,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
-    def __init__(self, model, params, ssm_result, cov_type='opg',
+    def __init__(self, model, params, filter_results, cov_type='opg',
                  cov_kwds=None, **kwargs):
         self.data = model.data
 
@@ -800,7 +800,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                scale=1.)
 
         # Save the state space representation output
-        self.ssm_result = ssm_result
+        self.filter_results = filter_results
 
         # Dimensions
         self.nobs = model.nobs
@@ -943,7 +943,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian computed without using parameter transformations.
         """
-        nobs = (self.model.nobs - self.ssm_result.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         evaluated_hessian = self.model._hessian_cs(
             self.params, transformed=True
         )
@@ -958,7 +958,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Hessian computed using parameter transformations and the Delta method
         (method of propagation of errors).
         """
-        nobs = (self.model.nobs - self.ssm_result.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
 
         unconstrained = self.model.untransform_params(self.params)
         jacobian = self.model.transform_jacobian(unconstrained)
@@ -974,7 +974,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the method
         from Harvey (1989).
         """
-        nobs = (self.model.nobs - self.ssm_result.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         return np.linalg.inv(
             nobs * self.model.observed_information_matrix(self.params)
         )
@@ -985,7 +985,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the outer
         product of gradients method.
         """
-        nobs = (self.model.nobs - self.ssm_result.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         return np.linalg.inv(
             nobs * self.model.opg_information_matrix(self.params)
         )
@@ -1004,7 +1004,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (array) The QMLE variance / covariance matrix. Computed using the
         method from Harvey (1989) as the evaluated hessian.
         """
-        nobs = (self.model.nobs - self.ssm_result.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self.cov_params_opg
         evaluated_hessian = (
             nobs * self.model.observed_information_matrix(self.params)
@@ -1020,7 +1020,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         numerical Hessian computed without using parameter transformations as
         the evaluated hessian.
         """
-        nobs = (self.model.nobs - self.ssm_result.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self.cov_params_opg
         evaluated_hessian = (
             nobs * self.model._hessian_cs(self.params, transformed=True)
@@ -1033,7 +1033,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The predicted values of the model.
         """
-        return self.ssm_result.forecasts
+        return self.filter_results.forecasts
 
     @cache_readonly
     def hqic(self):
@@ -1097,7 +1097,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.llf_obs[self.ssm_result.loglikelihood_burn:].sum()
+        return self.llf_obs[self.filter_results.loglikelihood_burn:].sum()
 
     @cache_readonly
     def loglikelihood_burn(self):
@@ -1105,7 +1105,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (float) The number of observations during which the likelihood is not
         evaluated.
         """
-        return self.ssm_result.loglikelihood_burn
+        return self.filter_results.loglikelihood_burn
 
     @cache_readonly
     def pvalues(self):
@@ -1120,7 +1120,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The model residuals.
         """
-        return self.ssm_result.forecasts_error
+        return self.filter_results.forecasts_error
 
     @cache_readonly
     def zvalues(self):
@@ -1190,7 +1190,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                  (str(dynamic), str(dtdynamic)))
 
         # Perform the prediction
-        results = self.ssm_result.predict(
+        results = self.filter_results.predict(
             start, end+out_of_sample+1, dynamic, full_results, **kwargs
         )
 

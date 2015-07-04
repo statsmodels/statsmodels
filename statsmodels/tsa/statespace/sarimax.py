@@ -1703,8 +1703,8 @@ class SARIMAXResults(MLEResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
     """
-    def __init__(self, model, params, ssm_result, cov_type='opg', **kwargs):
-        super(SARIMAXResults, self).__init__(model, params, ssm_result,
+    def __init__(self, model, params, filter_results, cov_type='opg', **kwargs):
+        super(SARIMAXResults, self).__init__(model, params, filter_results,
                                              cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
@@ -1908,7 +1908,7 @@ class SARIMAXResults(MLEResults):
 
             # Set the kwargs with the update time-varying state space
             # representation matrices
-            for name in self.ssm_result.shapes.keys():
+            for name in self.filter_results.shapes.keys():
                 if name == 'obs':
                     continue
                 mat = getattr(model.ssm, name)
