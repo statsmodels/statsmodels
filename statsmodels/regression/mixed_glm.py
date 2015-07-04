@@ -951,6 +951,12 @@ class MixedGLM(base.LikelihoodModel):
 
         likeval = nconst + ival
 
+
+        import sys
+        self._num_iter += 1
+        sys.stdout.write("Fitting. Evaluating loglike: %3d\r" % self._num_iter)
+        sys.stdout.flush()
+
         return likeval
 
     def _laplace(self, fe_params, cov_re, scale, omethod='BFGS'):
@@ -1608,127 +1614,47 @@ class MixedGLM(base.LikelihoodModel):
 
         self._scale = scale
 
-    def fit(self, start_params=None, reml=True, niter_sa=0,
+    def fit(self, start_params=None, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, method='bfgs', **kwargs):
+            full_output=False, method='Nelder-Mead', **kwargs):
         """
         """
 
-        _allowed_kwargs = ['gtol', 'maxiter']
-        for x in kwargs.keys():
-            if x not in _allowed_kwargs:
-                raise ValueError("Argument %s not "
-                                 "allowed for MixedGLM.fit" % x)
-
-        if method.lower() in ["newton", "ncg"]:
-            raise ValueError("method %s not available for MixedGLM" % method)
-
-        self.reml = reml
-        self.cov_pen = cov_pen
-        self.fe_pen = fe_pen
-
-        self._freepat = free
-
-        if full_output:
-            hist = []
-        else:
-            hist = None
-
-        success = False
-
-        if start_params is None:
-            params = MixedGLMParams(self.k_fe, self.k_re, self.k_vc)
-            params.fe_params = np.zeros(self.k_fe)
-            params.cov_re = np.eye(self.k_re)
-            params.vcomp = np.ones(self.k_vc)
-        else:
-            if isinstance(start_params, MixedGLMParams):
-                params = start_params
-            else:
-                params = MixedGLMParams.from_packed(start_params, self.k_fe,
-                                                    self.k_re, self.use_sqrt)
-
-        if do_cg:
-            kwargs["retall"] = hist is not None
-            if "disp" not in kwargs:
-                kwargs["disp"] = False
-            packed = params.get_packed(use_sqrt=self.use_sqrt)
-            rslt = super(MixedGLM, self).fit(start_params=packed,
-                                             skip_hessian=True,
-                                             method=method,
-                                             **kwargs)
-
-            # The optimization succeeded
-            params = np.atleast_1d(rslt.params)
-            if hist is not None:
-                hist.append(rslt.mle_retvals)
-
-        converged = rslt.mle_retvals['converged']
-        if not converged:
-            msg = "Gradient optimization failed."
-            warnings.warn(msg, ConvergenceWarning)
+        self._num_iter = 0
+        opts = {'maxiter':1000}
+        result = minimize(lambda x: -self.loglike(x), start_params, method = method, options = opts)
+        mle = result.x
 
         # Convert to the final parameterization (i.e. undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
-        params = MixedGLMParams.from_packed(params, self.k_fe, self.k_re,
+        params = MixedGLMParams.from_packed(mle, self.k_fe,
                                             use_sqrt=self.use_sqrt)
-        cov_re_unscaled = params.cov_re
-        vcomp_unscaled = params.vcomp
-        fe_params = self.get_fe_params(cov_re_unscaled, vcomp_unscaled)
-        params.fe_params = fe_params
-        scale = self.get_scale(fe_params, cov_re_unscaled, vcomp_unscaled)
-        cov_re = scale * cov_re_unscaled
-        vcomp = scale * vcomp_unscaled
 
-        if (((self.k_re > 0) and (np.min(np.abs(np.diag(cov_re))) < 0.01)) or
-                ((self.k_vc > 0) and (np.min(np.abs(vcomp)) < 0.01))):
-            msg = "The MLE may be on the boundary of the parameter space."
-            warnings.warn(msg, ConvergenceWarning)
-
-        # Compute the Hessian at the MLE.  Note that this is the
-        # Hessian with respect to the random effects covariance matrix
-        # (not its square root).  It is used for obtaining standard
-        # errors, not for optimization.
-        hess = self.hessian(params)
-        hess_diag = np.diag(hess)
-        if free is not None:
-            pcov = np.zeros_like(hess)
-            pat = self._freepat.get_packed(use_sqrt=False)
-            ii = np.flatnonzero(pat)
-            hess_diag = hess_diag[ii]
-            if len(ii) > 0:
-                hess1 = hess[np.ix_(ii, ii)]
-                pcov[np.ix_(ii, ii)] = np.linalg.inv(-hess1)
-        else:
-            pcov = np.linalg.inv(-hess)
-        if np.any(hess_diag >= 0):
-            msg = "The Hessian matrix at the estimated " \
-                  "parameter values is not positive definite."
-            warnings.warn(msg, ConvergenceWarning)
-
-        # Prepare a results class instance
-        params_packed = params.get_packed(use_sqrt=False)
-        results = MixedGLMResults(self, params_packed, pcov / scale)
-        results.params_object = params
-        results.fe_params = fe_params
-        results.cov_re = cov_re
-        results.vcomp = vcomp
-        results.scale = scale
-        results.cov_re_unscaled = cov_re_unscaled
-        results.method = "REML" if self.reml else "ML"
-        results.converged = converged
-        results.hist = hist
-        results.reml = self.reml
-        results.cov_pen = self.cov_pen
-        results.k_fe = self.k_fe
-        results.k_re = self.k_re
-        results.k_re2 = self.k_re2
-        results.k_vc = self.k_vc
-        results.use_sqrt = self.use_sqrt
-        results.freepat = self._freepat
-
-        return MixedGLMResultsWrapper(results)
+        print("")
+        print(params.get_fe_params())
+        print(params.get_cov_re())
+        return(params)
+        # cov_re = params.get_cov_re()
+        # fe_params = params.get_fe_params()
+        # params.fe_params = fe_params
+        # scale = self._scale
+        #
+        #
+        # # Prepare a results class instance
+        # params_packed = params.get_packed(use_sqrt=False)
+        # results = MixedGLMResults(self, params_packed, None)
+        # results.params_object = params
+        # results.fe_params = fe_params
+        # results.cov_re = cov_re
+        # results.scale = scale
+        # results.k_fe = self.k_fe
+        # results.k_re = self.k_re
+        # results.k_re2 = self.k_re2
+        # results.k_vc = self.k_vc
+        # results.use_sqrt = self.use_sqrt
+        #
+        # return MixedGLMResultsWrapper(results)
 
 
 class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
@@ -1965,10 +1891,10 @@ class MixedGLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Mean group size:"] = "%.1f" % np.mean(gs)
 
         info["Dependent Variable:"] = yname
-        info["Method:"] = self.method
+        #info["Method:"] = self.method
         info["Scale:"] = self.scale
-        info["Likelihood:"] = self.llf
-        info["Converged:"] = "Yes" if self.converged else "No"
+        #info["Likelihood:"] = self.llf
+        #info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
         smry.add_title("Mixed Linear Model Regression Results")
 
