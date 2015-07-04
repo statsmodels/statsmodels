@@ -60,7 +60,6 @@ class TestSARIMAXStatsmodels(object):
         assert_allclose(self.result_b.params[:-1], params_a, atol=5e-5)
 
     def test_bse(self):
-        print(self.result_b.cov_type)
         # Make sure the default type is OIM for this example
         assert(self.result_b.cov_type == 'oim')
         # Test the OIM BSE values
@@ -1673,7 +1672,6 @@ def test_manual_approximate_diffuse_initialization():
                            initial_state=res1.ssm_result.initial_state,
                            initial_state_cov=res1.ssm_result.initial_state_cov)
     res3 = mod3.filter([0.5,0.2,0.1,1])
-    print(res3.ssm_result.initial_state_cov)
 
     # Create the forth model with approximate diffuse initialization specified
     # in kwargs
