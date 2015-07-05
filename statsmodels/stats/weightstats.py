@@ -742,8 +742,8 @@ class CompareMeans(object):
 
         usevar : string, 'pooled' or 'unequal'
             If ``pooled``, then the standard deviation of the samples is assumed to be
-            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
-            of freedom is used
+            the same. If ``unequal``, then the standard deviations of the samples may
+            be different.
         value : float
             difference between the means under the Null hypothesis.
 
@@ -752,9 +752,7 @@ class CompareMeans(object):
         tstat : float
             test statisic
         pvalue : float
-            pvalue of the t-test
-        df : int or float
-            degrees of freedom used in the t-test
+            pvalue of the z-test
 
         '''
         d1 = self.d1
