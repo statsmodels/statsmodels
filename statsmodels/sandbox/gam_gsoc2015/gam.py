@@ -375,6 +375,13 @@ class GLMGAMResults(GLMResults):
         return tr, p_val, rank
 
 
+    def partial_predict(self, basis):
+
+        y = self.predict(basis)
+        var = np.diag(basis.dot(self.normalized_cov_params).dot(basis.T))
+        se = np.sqrt(var)
+        return y, se
+
 
 class GLMGam(PenalizedMixin, GLM):
 
