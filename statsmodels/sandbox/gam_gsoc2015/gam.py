@@ -341,7 +341,7 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGAMResults(GLMResults):
 
-    def plot_predict(self, x_values=None, smooth_basis=None):
+    def plot_partial_predict(self, x=None, basis=None, var_name='x'):
         """just to try a method in overridden Results class
         """
         import matplotlib.pyplot as plt
@@ -350,25 +350,45 @@ class GLMGAMResults(GLMResults):
         #     plt.plot(self.model.x, self.model.endog, '.')
         #     plt.plot(self.model.x, self.predict())
         # else:
-        plt.plot(x_values, self.predict(smooth_basis))
 
-    def significance_test(self, basis=None):
-        v = basis.dot(self.normalized_cov_params).dot(basis.T)
-        p_inv_v = pinv(v)
-        hat_y = self.predict(basis)
-        tr = hat_y.T.dot(p_inv_v).dot(hat_y)
+        y_est, se = self.partial_predict(basis)
 
-        lin_pred = np.dot(basis, self.params)
-        mu = self.family.fitted(lin_pred)
-        weights = self._data_weights*self.family.weights(mu)
-        weights /= len(weights) # A normalization is probably required
-        weights = np.diag(weights)
+        plt.figure()
+        plt.plot(x, y_est)
+        plt.plot(x, y_est + se)
+        plt.plot(x, y_est - se)
+        plt.xlabel(var_name)
 
-        f = self.normalized_cov_params.dot(basis.T).dot(weights).dot(basis) / self.scale
-        rank = np.trace(2 * f - np.dot(f, f))
+        return
 
+    def significance_test(self, basis=None, y=None, alpha=None):
+        # v = basis.dot(self.normalized_cov_params).dot(basis.T)
+        # p_inv_v = pinv(v)
+        # hat_y = self.predict(basis)
+        # tr = hat_y.T.dot(p_inv_v).dot(hat_y)
+        #
+        # # TODO: FIRST WAY TO COMPUTE DF
+        # lin_pred = self.predict(basis)
+        # mu = self.family.fitted(lin_pred)
+        # mu = self.family.link(mu)
+        #
+        # weights = self._data_weights*self.family.weights(mu)
+        # weights /= len(weights) # A normalization is probably required
+        #
+        #
+        # f = self.normalized_cov_params.dot(basis.T * weights).dot(basis) / self.scale
+        # rank = np.trace(2 * f - np.dot(f, f))
+
+        # TODO: Second way to estimate the significance
+        n_samples, k_var = basis.shape
+        r = np.linalg.qr(basis, 'r')
+
+        vf = r.dot(self.normalized_cov_params).dot(r.T)
+        vf_inv = np.linalg.pinv(vf)
+        tr = self.params.T.dot(r.T).dot(vf_inv).dot(r).dot(self.params)
+
+        rank = 1
         p_val = 1 - chi2.cdf(tr, df=rank)
-
         print('tr=', tr, 'pval=', p_val, 'rank=', rank, "scale=", self.scale)
         print('expected values: tr=', 8.141, 'pval=', 0.0861, 'rank=', 3.997)
 
