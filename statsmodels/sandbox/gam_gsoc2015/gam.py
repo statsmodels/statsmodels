@@ -341,7 +341,15 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGAMResults(GLMResults):
 
-    def plot_partial_predict(self, x=None, basis=None, var_name='x'):
+
+    def partial_values(self, basis):
+
+        y = np.dot(basis, self.params)
+        var = np.diag(basis.dot(self.normalized_cov_params).dot(basis.T))
+        se = np.sqrt(var)
+        return y, se
+
+    def plot_partial(self, x=None, basis=None, var_name='x'):
         """just to try a method in overridden Results class
         """
         import matplotlib.pyplot as plt
@@ -351,7 +359,7 @@ class GLMGAMResults(GLMResults):
         #     plt.plot(self.model.x, self.predict())
         # else:
 
-        y_est, se = self.partial_predict(basis)
+        y_est, se = self.partial_values(basis)
 
         plt.figure()
         plt.plot(x, y_est)
@@ -394,13 +402,6 @@ class GLMGAMResults(GLMResults):
 
         return tr, p_val, rank
 
-
-    def partial_predict(self, basis):
-
-        y = self.predict(basis)
-        var = np.diag(basis.dot(self.normalized_cov_params).dot(basis.T))
-        se = np.sqrt(var)
-        return y, se
 
 
 class GLMGam(PenalizedMixin, GLM):
