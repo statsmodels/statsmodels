@@ -305,7 +305,7 @@ def test_gam_glm_significance():
     return
 
 
-def test_partial_predict():
+def test_partial_values():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
 
@@ -325,7 +325,7 @@ def test_partial_predict():
     glm_gam = GLMGam(y, basis, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
-    hat_y, se = res_glm_gam.partial_predict(basis)
+    hat_y, se = res_glm_gam.partial_values(basis)
 
     assert_allclose(se, se_from_mgcv, rtol=1.e-1)
 
@@ -355,16 +355,15 @@ def test_partial_plot():
     glm_gam = GLMGam(y, basis, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
-
     ## Uncomment to visualize the plot
-    # res_glm_gam.plot_partial_predict(x, basis)
-    # plt.plot(x, y, '.')
-    # plt.show()
+    res_glm_gam.plot_partial(x, basis)
+    plt.plot(x, y, '.')
+    plt.show()
 
     return
 
-test_gam_glm_significance()
 
+# test_gam_glm_significance()
 # test_gam_gradient()
 # test_gam_hessian()
 # test_gam_discrete()
@@ -372,5 +371,6 @@ test_gam_glm_significance()
 # test_approximation()
 # test_gam_glm()
 # test_gam_penalty()
+
 # test_partial_plot()
-# test_partial_predict()
+# test_partial_values()
