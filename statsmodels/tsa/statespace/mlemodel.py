@@ -9,10 +9,10 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from .kalman_filter import FilterResults
 
+from .kalman_filter import KalmanFilter, FilterResults
 import statsmodels.tsa.base.tsa_model as tsbase
-from .model import Model
+import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import (
     _get_epsilon, approx_hess_cs, approx_fprime_cs
 )
@@ -20,7 +20,7 @@ from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 
 
-class MLEModel(Model):
+class MLEModel(tsbase.TimeSeriesModel):
     r"""
     State space model for maximum likelihood estimation
 
@@ -46,22 +46,12 @@ class MLEModel(Model):
 
     Attributes
     ----------
-    updater : callable or None
-        Can be set with a callable accepting arguments
-        (`model`, `params`) that can be used to update
-        the state space representation for ad-hoc MLE.
-    transformer : callable or None
-        Can be set with a callable accepting arguments
-        (`model`, `params`) that can be used to transform
-        parameters to constrained parameters for ad-hoc MLE.
-    untransformer : callable or None
-        Can be set with a callable accepting arguments
-        (`model`, `params`) that can be used to perform
-        a reverse transformation of parameters for ad-hoc MLE.
+    ssm : KalmanFilter
+        Underlying state space representation.
 
     Notes
     -----
-    This class extends the state space model with Kalman filtering to add in
+    This class wraps the state space model with Kalman filtering to add in
     functionality for maximum likelihood estimation. In particular, it adds
     the concept of updating the state space representation based on a defined
     set of parameters, through the `update` method or `updater` attribute (see
@@ -69,29 +59,8 @@ class MLEModel(Model):
     which uses a numerical optimizer to select the parameters that maximize
     the likelihood of the model.
 
-    It is used in one of two ways:
-
-    1. A base class
-    2. Ad-hoc MLE
-
-    **As a base class**
-
-    The most typical usage of the MLEModel class is as a base class so that a
-    specific state space model can be built as a subclass without having to
-    deal with optimization-related functionality.
-
-    In this case, the `start_params` `update` method must be overridden in the
+    The `start_params` `update` method must be overridden in the
     child class (and the `transform` and `untransform` methods, if needed).
-
-    **Ad-hoc MLE**
-
-    This class can also be instantiated directly for ad-hoc MLE, particularly
-    if the model is very simple.
-
-    In this case, the `start_params` attribute can be set directly and in place
-    of the `update`, `transform`, and `untransform` methods, the attributes
-    `updater`, `transformer`, and `untransformer` can be set with callback
-    functions to perform that functionality.
 
     See Also
     --------
@@ -104,26 +73,76 @@ class MLEModel(Model):
 
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
-        # Set the default results class to be MLEResults
-        kwargs.setdefault('results_class', MLEResults)
+        # Initialize the model base
+        super(MLEModel, self).__init__(endog=endog, exog=exog,
+                                              dates=dates, freq=freq,
+                                              missing='none')
 
-        super(MLEModel, self).__init__(endog, k_states, exog, dates, freq,
-                                       **kwargs)
+        # Store kwargs to recreate model
+        self._init_kwargs = kwargs
 
-        # Initialize the parameters
-        self.params = None
-        self.data.param_names = self.param_names
+        # Prepared the endog array: C-ordered, shape=(nobs x k_endog)
+        self.endog, self.exog = self.prepare_data()
 
-        # Initialize placeholders
-        self.updater = None
-        self.transformer = None
-        self.untransformer = None
+        # Dimensions
+        self.nobs = self.endog.shape[0]
+        self.k_states = k_states
+
+        # Initialize the state-space representation
+        self.initialize_statespace(**kwargs)
+
+    def prepare_data(self):
+        """
+        Prepare data for use in the state space representation
+        """
+        endog = np.array(self.data.orig_endog)
+        exog = self.data.orig_exog
+        if exog is not None:
+            exog = np.array(exog)
+
+        # Base class may allow 1-dim data, whereas we need 2-dim
+        if endog.ndim == 1:
+            endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
+
+        # Base classes data may be either C-ordered or F-ordered - we want it
+        # to be C-ordered since it will also be in shape (nobs, k_endog), and
+        # then we can just transpose it.
+        if not endog.flags['C_CONTIGUOUS']:
+            # TODO this breaks the reference link between the model endog
+            # variable and the original object - do we need a warn('')?
+            # This will happen often with Pandas DataFrames, which are often
+            # Fortran-ordered and in the long format
+            endog = np.ascontiguousarray(endog)
+
+        return endog, exog
+
+    def initialize_statespace(self, **kwargs):
+        """
+        Initialize the state space representation
+
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments to pass to the state space class
+            constructor.
+
+        """
+        # (Now self.endog is C-ordered and in long format (nobs x k_endog). To
+        # get F-ordered and in wide format just need to transpose)
+        endog = self.endog.T
+
+        # Instantiate the state space object
+        self.ssm = KalmanFilter(endog.shape[0], self.k_states, **kwargs)
+        # Bind the data to the model
+        self.ssm.bind(endog)
+
+        # Other dimensions, now that `ssm` is available
+        self.k_endog = self.ssm.k_endog
 
     def fit(self, start_params=None, transformed=True, cov_type='opg',
             cov_kwds=None, method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
-            optim_hessian=None,
-            bfgs_tune=False, **kwargs):
+            optim_hessian=None, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -197,12 +216,6 @@ class MLEModel(Model):
             matrix formula from Harvey (1989), and 'cs' uses second-order
             complex step differentiation. This keyword is only relevant if the
             optimization method uses the Hessian matrix.
-        bfgs_tune : boolean, optional
-            BFGS methods by default use internal methods for approximating the
-            score and hessian by finite differences. If `bfgs_tune=True` the
-            maximizing parameters from the BFGS method are used as starting
-            parameters for a second round of maximization using complex-step
-            differentiation. Has no effect for other methods. Default is False.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
@@ -229,72 +242,91 @@ class MLEModel(Model):
             start_params = self.untransform_params(np.array(start_params))
 
         if method == 'lbfgs' or method == 'bfgs':
+            # kwargs.setdefault('pgtol', 1e-8)
+            # kwargs.setdefault('factr', 1e2)
+            # kwargs.setdefault('m', 12)
             kwargs.setdefault('approx_grad', True)
             kwargs.setdefault('epsilon', 1e-5)
 
         # Maximum likelihood estimation
-        # Set the optional arguments for the loglikelihood function to
-        # maximize the average loglikelihood, by default.
-        fargs = (kwargs.get('average_loglike', True), False, False)
+        fargs = (False,)  # (sets transformed=False)
         mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                           fargs=fargs,
-                                           maxiter=maxiter,
-                                           full_output=full_output, disp=disp,
-                                           callback=callback,
-                                           skip_hessian=True, **kwargs)
-
-        # Optionally tune the maximum likelihood estimates using complex step
-        # gradient
-        if bfgs_tune and method == 'lbfgs' or method == 'bfgs':
-            kwargs['approx_grad'] = False
-            del kwargs['epsilon']
-            fargs = (kwargs.get('average_loglike', True), False, False)
-            mlefit = super(MLEModel, self).fit(mlefit.params, method=method,
-                                               fargs=fargs,
-                                               maxiter=maxiter,
-                                               full_output=full_output,
-                                               disp=disp, callback=callback,
-                                               skip_hessian=True,
-                                               **kwargs)
-
-        # Constrain the final parameters and update the model to be sure we're
-        # using them (in case, for example, the last time update was called
-        # via the optimizer it was a gradient calculation, etc.)
-        self.update(mlefit.params, transformed=False)
+                                                  fargs=fargs,
+                                                  maxiter=maxiter,
+                                                  full_output=full_output,
+                                                  disp=disp, callback=callback,
+                                                  skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
-            self.filter(results='loglikelihood')
-            return self.params
+            return self.transform_params(mlefit.params)
         # Otherwise construct the results class if desired
         else:
-            res = self.filter(results_kwargs={'cov_type': cov_type,
-                                              'cov_kwds': cov_kwds})
+            res = self.filter(mlefit.params, transformed=False,
+                              cov_type=cov_type, cov_kwds=cov_kwds)
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
 
             return res
 
-    def loglike(self, params=None, average_loglike=False, transformed=True,
-                set_params=True, **kwargs):
+    def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
+               return_ssm=False, **kwargs):
+        """
+        Kalman filtering
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        transformed : boolean, optional
+            Whether or not `params` is already transformed. Default is True.
+        return_ssm : boolean,optional
+            Whether or not to return only the state space output or a full
+            results object. Default is to return a full results object.
+        cov_type : str, optional
+            See `MLEResults.fit` for a description of covariance matrix types
+            for results object.
+        cov_kwds : dict or None, optional
+            See `MLEResults.get_robustcov_results` for a description required
+            keywords for alternative covariance estimators
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+        """
+        if not transformed:
+            params = self.transform_params(params)
+        self.update(params, transformed=True)
+
+        # Save the parameter names
+        self.data.param_names = self.param_names
+
+        # Get the state space output
+        result = self.ssm.filter(**kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = MLEResultsWrapper(
+                MLEResults(self, params, result, **result_kwargs)
+            )
+
+        return result
+
+    def loglike(self, params, transformed=True, **kwargs):
         """
         Loglikelihood evaluation
 
         Parameters
         ----------
-        params : array_like, optional
+        params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
-        average_loglike : boolean, optional
-            Whether or not to return the average loglikelihood (rather than
-            the sum of loglikelihoods across all observations). Default is
-            False.
         transformed : boolean, optional
             Whether or not `params` is already transformed. Default is True.
-        set_params : boolean
-            Whether or not to copy `params` to the model object's params
-            attribute. Default is True.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -302,7 +334,49 @@ class MLEModel(Model):
         Notes
         -----
         [1]_ recommend maximizing the average likelihood to avoid scale issues;
-        this can be achieved by setting `average_loglike=True`.
+        this is done automatically by the base Model fit method.
+
+        References
+        ----------
+        .. [1] Koopman, Siem Jan, Neil Shephard, and Jurgen A. Doornik. 1999.
+           Statistical Algorithms for Models in State Space Using SsfPack 2.2.
+           Econometrics Journal 2 (1): 107-60. doi:10.1111/1368-423X.00023.
+
+        See Also
+        --------
+        update : modifies the internal state of the state space model to
+                 reflect new params
+        """
+        if not transformed:
+            params = self.transform_params(params)
+        self.update(params, transformed=True)
+
+        loglike = self.ssm.loglike(**kwargs)
+
+        # Koopman, Shephard, and Doornik recommend maximizing the average
+        # likelihood to avoid scale issues, but the averaging is done
+        # automatically in the base model `fit` method
+        return loglike
+
+    def loglikeobs(self, params, transformed=True, **kwargs):
+        """
+        Loglikelihood evaluation
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        transformed : boolean, optional
+            Whether or not `params` is already transformed. Default is True.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        [1]_ recommend maximizing the average likelihood to avoid scale issues;
+        this is done automatically by the base Model fit method.
 
         References
         ----------
@@ -314,50 +388,11 @@ class MLEModel(Model):
         --------
         update : modifies the internal state of the Model to reflect new params
         """
-        if params is not None:
-            self.update(params, transformed=transformed, set_params=set_params)
+        if not transformed:
+            params = self.transform_params(params)
+        self.update(params, transformed=True)
 
-        loglike = super(MLEModel, self).loglike(**kwargs)
-
-        # Koopman, Shephard, and Doornik recommend maximizing the average
-        # likelihood to avoid scale issues.
-        if average_loglike:
-            return loglike / self.nobs
-        else:
-            return loglike
-
-    def loglikeobs(self, params=None, transformed=True, set_params=True,
-                   **kwargs):
-        """
-        Loglikelihood per observation evaluation
-
-        This differs from `loglike` in that `loglikeobs` returns a vector of
-        loglikelihood observations.
-
-        Parameters
-        ----------
-        params : array_like, optional
-            Array of parameters at which to evaluate the loglikelihood
-            function.
-        transformed : boolean, optional
-            Whether or not `params` is already transformed. Default is True.
-        set_params : boolean
-            Whether or not to copy `params` to the model object's params
-            attribute. Default is True.
-        **kwargs
-            Additional keyword arguments to pass to the Kalman filter. See
-            `KalmanFilter.filter` for more details.
-
-        Notes
-        -----
-        If `loglikelihood_burn` is positive, then the entries in the returned
-        loglikelihood vector are set to be zero for those initial time periods.
-
-        """
-        if params is not None:
-            self.update(params, transformed=transformed, set_params=set_params)
-
-        return super(MLEModel, self).loglikeobs(**kwargs)
+        return self.ssm.loglikeobs(**kwargs)
 
     def observed_information_matrix(self, params, **kwargs):
         """
@@ -392,12 +427,10 @@ class MLEModel(Model):
         epsilon = _get_epsilon(params, 1, None, n)
         increments = np.identity(n) * 1j * epsilon
 
-        kwargs['results'] = FilterResults
-
         # Get values at the params themselves
         self.update(params)
-        res = self.filter(**kwargs)
-        dtype = self.dtype
+        res = self.ssm.filter(**kwargs)
+        dtype = self.ssm.dtype
         # Save this for inversion later
         inv_forecasts_error_cov = res.forecasts_error_cov.copy()
 
@@ -410,7 +443,7 @@ class MLEModel(Model):
         )
         for i, ih in enumerate(increments):
             self.update(params + ih)
-            res = self.filter(**kwargs)
+            res = self.ssm.filter(**kwargs)
 
             partials_forecasts_error[:, :, i] = (
                 res.forecasts_error.imag / epsilon[i]
@@ -424,7 +457,7 @@ class MLEModel(Model):
         tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
 
         information_matrix = np.zeros((n, n), dtype=dtype)
-        for t in range(self.loglikelihood_burn, self.nobs):
+        for t in range(self.ssm.loglikelihood_burn, self.nobs):
             inv_forecasts_error_cov[:, :, t] = (
                 np.linalg.inv(inv_forecasts_error_cov[:, :, t])
             )
@@ -441,10 +474,10 @@ class MLEModel(Model):
                     )
                     information_matrix[i, j] += np.inner(
                         partials_forecasts_error[:, t, i],
-                        np.dot(inv_forecasts_error_cov[:, :, t],
+                        np.dot(inv_forecasts_error_cov[:,:,t],
                                partials_forecasts_error[:, t, j])
                     )
-        return information_matrix / (self.nobs - self.loglikelihood_burn)
+        return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
     def opg_information_matrix(self, params, **kwargs):
         """
@@ -468,7 +501,7 @@ class MLEModel(Model):
         score_obs = self.score_obs(params, **kwargs).transpose()
         return (
             np.inner(score_obs, score_obs) /
-            (self.nobs - self.loglikelihood_burn)
+            (self.nobs - self.ssm.loglikelihood_burn)
         )
 
     def score(self, params, *args, **kwargs):
@@ -496,20 +529,20 @@ class MLEModel(Model):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
-        nargs = len(args)
-        if nargs < 1:
-            kwargs.setdefault('average_loglike', True)
-        if nargs < 2:
-            kwargs.setdefault('transformed', False)
-        if nargs < 3:
-            kwargs.setdefault('set_params', False)
+        transformed = (
+            args[0] if len(args) > 0 else kwargs.get('transformed', False)
+        )
 
-        return approx_fprime_cs(params, self.loglike, args=args, kwargs=kwargs)
+        score = approx_fprime_cs(params, self.loglike, kwargs={
+            'transformed': transformed
+        })
+
+        return score
 
     def score_obs(self, params, **kwargs):
         """
         Compute the score per observation, evaluated at params
-
+ 
         Parameters
         ----------
         params : array_like
@@ -526,7 +559,6 @@ class MLEModel(Model):
         -----
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglikeobs` method.
-
         """
         self.update(params)
         return approx_fprime_cs(params, self.loglikeobs, kwargs=kwargs)
@@ -584,16 +616,16 @@ class MLEModel(Model):
         Hessian matrix computed by second-order complex-step differentiation
         on the `loglike` function.
         """
-        nargs = len(args)
-        if nargs < 1:
-            kwargs.setdefault('average_loglike', True)
-        if nargs < 2:
-            kwargs.setdefault('transformed', False)
-        if nargs < 3:
-            kwargs.setdefault('set_params', False)
+        transformed = (
+            args[0] if len(args) > 0 else kwargs.get('transformed', False)
+        )
 
-        self.update(params)
-        return approx_hess_cs(params, self.loglike, args=args, kwargs=kwargs)
+        f = lambda params, **kwargs: self.loglike(params, **kwargs) / self.nobs
+        hessian = approx_hess_cs(params, f, kwargs={
+            'transformed': transformed
+        })
+
+        return hessian
 
     @property
     def start_params(self):
@@ -605,10 +637,6 @@ class MLEModel(Model):
         else:
             raise NotImplementedError
 
-    @start_params.setter
-    def start_params(self, values):
-        self._start_params = np.asarray(values)
-
     @property
     def param_names(self):
         """
@@ -618,36 +646,10 @@ class MLEModel(Model):
         if hasattr(self, '_param_names'):
             return self._param_names
         else:
-            return self.model_names
-
-    @param_names.setter
-    def param_names(self, values):
-        self._param_names = values
-        self.data.param_names = self._param_names
-
-    @property
-    def model_names(self):
-        """
-        (list of str) The plain text names of all possible model parameters.
-        """
-        return self._get_model_names(latex=False)
-
-    @property
-    def model_latex_names(self):
-        """
-        (list of str) The latex names of all possible model parameters.
-        """
-        return self._get_model_names(latex=True)
-
-    def _get_model_names(self, latex=False):
-        try:
-            if latex:
-                names = ['param_%d' % i for i in range(len(self.start_params))]
-            else:
+            try:
                 names = ['param.%d' % i for i in range(len(self.start_params))]
-        except NotImplementedError:
-            names = []
-        return names
+            except NotImplementedError:
+                names = []
 
     def transform_jacobian(self, unconstrained):
         """
@@ -695,11 +697,7 @@ class MLEModel(Model):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        if self.transformer is not None:
-            constrained = self.transformer(self, unconstrained)
-        else:
-            constrained = unconstrained
-        return constrained
+        return unconstrained
 
     def untransform_params(self, constrained):
         """
@@ -722,13 +720,9 @@ class MLEModel(Model):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        if self.untransformer is not None:
-            unconstrained = self.untransformer(self, constrained)
-        else:
-            unconstrained = constrained
-        return unconstrained
+        return constrained
 
-    def update(self, params, transformed=True, set_params=True):
+    def update(self, params, transformed=True):
         """
         Update the parameters of the model
 
@@ -739,11 +733,6 @@ class MLEModel(Model):
         transformed : boolean, optional
             Whether or not `params` is already transformed. If set to False,
             `transform_params` is called. Default is True.
-        set_params : boolean
-            Whether or not to copy `params` to the model object's params
-            attribute. Usually is set to True unless a subclass has additional
-            defined behavior in the case it is False (otherwise this is a noop
-            except for possibly transforming the parameters). Default is True.
 
         Returns
         -------
@@ -759,35 +748,36 @@ class MLEModel(Model):
 
         if not transformed:
             params = self.transform_params(params)
-        if set_params:
-            self.params = params
-
-        if self.updater is not None:
-            self.updater(self, params)
 
         return params
 
     @classmethod
     def from_formula(cls, formula, data, subset=None):
         """
-        Not implemented for State space models
+        Not implemented for state space models
         """
         raise NotImplementedError
 
 
-class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
+class MLEResults(tsbase.TimeSeriesModelResults):
     r"""
     Class to hold results from fitting a state space model.
 
     Parameters
     ----------
-    model : Model instance
+    model : MLEModel instance
         The fitted model instance
+    params : array
+        Fitted parameters
+    filter_results : KalmanFilter instance
+        The underlying state space model and Kalman filter output
 
     Attributes
     ----------
     model : Model instance
         A reference to the model that was fit.
+    filter_results : KalmanFilter instance
+        The underlying state space model and Kalman filter output
     nobs : float
         The number of observations used to fit the model.
     params : array
@@ -801,30 +791,24 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
-
-    def __init__(self, model, cov_type='opg', cov_kwds=None):
+    def __init__(self, model, params, filter_results, cov_type='opg',
+                 cov_kwds=None, **kwargs):
         self.data = model.data
 
-        # Save the model output
-        self._endog_names = model.endog_names
-        self._exog_names = model.endog_names
-        self._params = model.params.copy()
-        self._param_names = model.data.param_names
-        self._model_names = model.model_names
-        self._model_latex_names = model.model_latex_names
-
-        # Associate the names with the true parameters
-        params = pd.Series(self._params, index=self._param_names)
-
-        # Initialize the Statsmodels model base
-        # TODO does not pass cov_type to parent right now, instead sets it
-        # separately, see below.
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
                                                scale=1.)
 
-        # Initialize the statespace representation
-        super(MLEResults, self).__init__(model)
+        # Save the state space representation output
+        self.filter_results = filter_results
+
+        # Dimensions
+        self.nobs = model.nobs
+
+        # Setup covariance matrix notes dictionary
+        if not hasattr(self, 'cov_kwds'):
+            self.cov_kwds = {}
+        self.cov_type = cov_type
 
         # Setup the cache
         self._cache = resettable_cache()
@@ -959,11 +943,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian computed without using parameter transformations.
         """
-        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         evaluated_hessian = self.model._hessian_cs(
-            self._params, set_params=False, transformed=True
+            self.params, transformed=True
         )
-        self.model.update(self._params)
+        self.model.update(self.params)
 
         return -np.linalg.inv(nobs * evaluated_hessian)
 
@@ -974,14 +958,13 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         Hessian computed using parameter transformations and the Delta method
         (method of propagation of errors).
         """
-        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
 
-        unconstrained = self.model.untransform_params(self._params)
+        unconstrained = self.model.untransform_params(self.params)
         jacobian = self.model.transform_jacobian(unconstrained)
         cov_cs = -np.linalg.inv(
-            nobs * self.model._hessian_cs(unconstrained, set_params=False)
+            nobs * self.model._hessian_cs(unconstrained, transformed=False)
         )
-        self.model.update(self._params)
 
         return np.dot(np.dot(jacobian, cov_cs), jacobian.transpose())
 
@@ -991,12 +974,10 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the method
         from Harvey (1989).
         """
-        nobs = (self.model.nobs - self.model.loglikelihood_burn)
-        cov_params_oim = np.linalg.inv(
-            nobs * self.model.observed_information_matrix(self._params)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        return np.linalg.inv(
+            nobs * self.model.observed_information_matrix(self.params)
         )
-        self.model.update(self._params)
-        return cov_params_oim
 
     @cache_readonly
     def cov_params_opg(self):
@@ -1004,12 +985,10 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the outer
         product of gradients method.
         """
-        nobs = (self.model.nobs - self.model.loglikelihood_burn)
-        cov_params_opg = np.linalg.inv(
-            nobs * self.model.opg_information_matrix(self._params)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        return np.linalg.inv(
+            nobs * self.model.opg_information_matrix(self.params)
         )
-        self.model.update(self._params)
-        return cov_params_opg
 
     @cache_readonly
     def cov_params_robust(self):
@@ -1025,12 +1004,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         (array) The QMLE variance / covariance matrix. Computed using the
         method from Harvey (1989) as the evaluated hessian.
         """
-        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self.cov_params_opg
         evaluated_hessian = (
-            nobs * self.model.observed_information_matrix(self._params)
+            nobs * self.model.observed_information_matrix(self.params)
         )
-        self.model.update(self._params)
         return np.linalg.inv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
@@ -1042,14 +1020,11 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         numerical Hessian computed without using parameter transformations as
         the evaluated hessian.
         """
-        nobs = (self.model.nobs - self.model.loglikelihood_burn)
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self.cov_params_opg
         evaluated_hessian = (
-            nobs * self.model._hessian_cs(
-                self._params, set_params=False, transformed=True
-            )
+            nobs * self.model._hessian_cs(self.params, transformed=True)
         )
-        self.model.update(self._params)
         return np.linalg.inv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
@@ -1058,7 +1033,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         """
         (array) The predicted values of the model.
         """
-        return self.forecasts
+        return self.filter_results.forecasts
 
     @cache_readonly
     def hqic(self):
@@ -1068,12 +1043,69 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         # return -2*self.llf + 2*np.log(np.log(self.nobs))*self.params.shape[0]
         return hqic(self.llf, self.nobs, self.params.shape[0])
 
+    @property
+    def cov_type(self):
+        return self._cov_type
+    @cov_type.setter
+    def cov_type(self, value):
+        if value == 'cs':
+            self.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using numerical differentiation'
+            )
+        elif value == 'delta':
+            self.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using numerical differentiation'
+                ' and the delta method (method of propagation of errors)'
+            )
+        elif value == 'oim':
+            self.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using the observed information'
+                ' matrix described in Harvey (1989)'
+            )
+        elif value == 'opg':
+            self.cov_kwds['cov_type'] = (
+                'Covariance matrix calculated using the outer product of'
+                ' gradients'
+            )
+        elif value == 'robust' or value == 'robust_oim':
+            self.cov_kwds['cov_type'] = (
+                'QMLE covariance matrix used for robustness to some'
+                ' misspecifications; calculated using the observed information'
+                ' matrix described in Harvey (1989)'
+            )
+        elif value == 'robust_cs':
+            self.cov_kwds['cov_type'] = (
+                'QMLE covariance matrix used for robustness to some'
+                ' misspecifications; calculated using numerical'
+                ' differentiation'
+            )
+        else:
+            raise NotImplementedError('Invalid covariance matrix type.')
+
+        self._cov_type = value
+
+
+    @cache_readonly
+    def llf_obs(self):
+        """
+        (float) The value of the log-likelihood function evaluated at `params`.
+        """
+        return self.model.loglikeobs(self.params)
+
     @cache_readonly
     def llf(self):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.llf_obs[self.loglikelihood_burn:].sum()
+        return self.llf_obs[self.filter_results.loglikelihood_burn:].sum()
+
+    @cache_readonly
+    def loglikelihood_burn(self):
+        """
+        (float) The number of observations during which the likelihood is not
+        evaluated.
+        """
+        return self.filter_results.loglikelihood_burn
 
     @cache_readonly
     def pvalues(self):
@@ -1088,7 +1120,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         """
         (array) The model residuals.
         """
-        return self.forecasts_error
+        return self.filter_results.forecasts_error
 
     @cache_readonly
     def zvalues(self):
@@ -1158,7 +1190,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
                                  (str(dynamic), str(dtdynamic)))
 
         # Perform the prediction
-        results = super(MLEResults, self).predict(
+        results = self.filter_results.predict(
             start, end+out_of_sample+1, dynamic, full_results, **kwargs
         )
 
@@ -1169,23 +1201,7 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         if full_results:
             return results
         else:
-            # (forecasts, forecasts_error, forecasts_error_cov) = results
             forecasts = results
-
-        # Calculate the confidence intervals
-        # critical_value = norm.ppf(1 - alpha / 2.)
-        # std_errors = np.sqrt(forecasts_error_cov.diagonal().T)
-        # confidence_intervals = np.c_[
-        #     (forecasts - critical_value*std_errors)[:, :, None],
-        #     (forecasts + critical_value*std_errors)[:, :, None],
-        # ]
-
-        # Return the dates if we have them
-        # index = np.arange(start, end+out_of_sample+1)
-        # if hasattr(self.data, 'predict_dates'):
-        #     index = self.data.predict_dates
-        #     if(isinstance(index, pd.DatetimeIndex)):
-        #         index = index._mpl_repr()
 
         return forecasts
 
@@ -1273,8 +1289,8 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
-        summary.add_table_params(self, alpha=alpha, xname=self._param_names,
-                                 use_t=False)
+        summary.add_table_params(self, alpha=alpha,
+                                 xname=self.data.param_names, use_t=False)
 
         # Add warnings/notes, added to text format only
         etext = []
@@ -1288,3 +1304,20 @@ class MLEResults(FilterResults, tsbase.TimeSeriesModelResults):
             summary.add_extra_txt(etext)
 
         return summary
+
+
+class MLEResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                   _attrs)
+    # TODO right now, predict with full_results=True can return something other
+    # than a time series, so the `attach_dates` call will fail if we have
+    # 'predict': 'dates' here. In the future, remove `full_results` and replace
+    # it with new methods, e.g. get_prediction, get_forecast, and likely will
+    # want those to be a subclass of FilterResults with e.g. confidence
+    # intervals calculated and dates attached.
+    # Also, need to modify `attach_dates` to account for DataFrames.
+    _methods = {'predict': None}
+    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(MLEResultsWrapper, MLEResults)

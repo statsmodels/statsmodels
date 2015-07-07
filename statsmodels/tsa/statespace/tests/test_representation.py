@@ -19,7 +19,7 @@ import pandas as pd
 import os
 
 from statsmodels.tsa.statespace.representation import Representation
-from statsmodels.tsa.statespace.model import Model
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
@@ -51,7 +51,8 @@ class Clark1987(object):
 
         # Construct the statespace representation
         k_states = 4
-        self.model = Model(data['lgdp'], k_states=k_states, **kwargs)
+        self.model = KalmanFilter(k_endog=1, k_states=k_states, **kwargs)
+        self.model.bind(data['lgdp'].values)
 
         self.model.design[:, :, 0] = [1, 1, 0, 0]
         self.model.transition[([0, 0, 1, 1, 2, 3],
@@ -284,7 +285,8 @@ class Clark1989(object):
         data['UNEMP'] = (data['UNEMP']/100)
 
         k_states = 6
-        self.model = Model(data, k_states=k_states, **kwargs)
+        self.model = KalmanFilter(k_endog=2, k_states=k_states, **kwargs)
+        self.model.bind(np.ascontiguousarray(data.values))
 
         # Statespace representation
         self.model.design[:, :, 0] = [[1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1]]
@@ -488,7 +490,8 @@ class TestClark1989ConserveAll(Clark1989):
 # Miscellaneous coverage-related tests
 def test_slice_notation():
     endog = np.arange(10)*1.0
-    mod = Model(endog, k_states=2)
+    mod = KalmanFilter(k_endog=1, k_states=2)
+    mod.bind(endog)
 
     # Test invalid __setitem__
     def set_designs():

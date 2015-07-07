@@ -51,20 +51,11 @@ def test_fit_misc():
 
     assert_almost_equal(res_params, [0,0], 7)
 
-def test_loglike_misc():
-    mod, res = get_dummy_mod()
-
-    # Test average_loglike=False
-    loglike = mod.loglike()
-    average_loglike = mod.loglike(average_loglike=True)
-
-    assert_equal(loglike/mod.nobs, average_loglike)
-
 def test_score_misc():
     mod, res = get_dummy_mod()
 
     # Test that the score function works
-    mod.score(mod.params)
+    mod.score(res.params)
 
 def test_from_formula():
     assert_raises(NotImplementedError, lambda: MLEModel.from_formula(1,2,3))
@@ -78,7 +69,7 @@ def test_results():
     mod, res = get_dummy_mod()
 
     # Test fitted values
-    assert_almost_equal(res.fittedvalues()[2:], mod.endog[2:])
+    assert_almost_equal(res.fittedvalues()[2:], mod.ssm.endog[2:])
 
     # Test residuals
     assert_almost_equal(res.resid()[0,2:], np.zeros(mod.nobs-2))
