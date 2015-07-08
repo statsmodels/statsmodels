@@ -947,8 +947,7 @@ class MixedGLM(base.LikelihoodModel):
         result = minimize(fun, x0, jac=True, method=omethod)
 
         if not result.success:
-            #raise Warning(result.message)
-            print(result.message)
+            raise Warning(result.message)
 
         mp = np.reshape(result.x, (self.n_groups, self.k_re))
         return mp

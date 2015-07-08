@@ -176,13 +176,10 @@ def test_laplace_loglike_gamma():
     loglink=sm.families.links.log
     model = MixedGLM(endog, exog, groups=groups, family=sm.families.Gamma(loglink))
     par = MixedGLMParams.from_components(fe_params=np.asarray([0.9921, 0.9012]),
-                                         cov_re=np.asarray([[0.5992]]))
+                                         cov_re=np.asarray([[0.3590]]))
     logLik = model.loglike(par)
-    print(logLik)
-    pass
     np.testing.assert_allclose(logLik, -61.3776, rtol=1e-1)
 
-test_laplace_loglike_gamma()
 
 # Can't check Gaussian since it uses the concentrated log-likelihood
 
@@ -192,3 +189,7 @@ class TestBinomial(CheckFamily):
 
 class TestPoisson(CheckFamily):
     family = sm.families.Poisson
+
+#class TestGamma(CheckFamily):
+#    loglink=sm.families.links.log
+#    family = sm.families.Gamma
