@@ -1,4 +1,5 @@
 
+from __future__ import absolute_import
 import scipy.sparse
 from scipy.sparse import coo_matrix, issparse, bmat
 
