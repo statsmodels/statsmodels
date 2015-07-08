@@ -463,7 +463,7 @@ class SysResults(LikelihoodModelResults):
 
 class SysSummary(object):
     default_fmt = dict(
-        data_fmts = ["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
+        data_fmts = ["%#10.6F","%#10.6F","%#10.3F","%#10.3F"],
         empty_cell = '',
         colsep='  ',
         row_pre = '',
@@ -482,13 +482,13 @@ class SysSummary(object):
 
     part1_fmt = dict(default_fmt,
         data_fmts = ["%s"],
-        colwidths = 15,
+        colwidths = 10,
         colsep=' ',
         table_dec_below='',
         header_dec_below=None,
     )
     part2_fmt = dict(default_fmt,
-        data_fmts = ["%d","%#12.6g","%#12.6g","%#16.6g","%#12.6g", "%#12.6g"],
+        data_fmts = ["%d","%#10.6g","%#8.6g","%#8.6g","%#8.6g", "%#8.6g"],
     )
 
     def __init__(self, result, yname=None, xname=None, title=None):
@@ -512,13 +512,14 @@ class SysSummary(object):
         """
         Summary of system model
         """
-        buf = StringIO()
+
+        #buf = StringIO()
 ##        print >> buf, self._header_table()
 ##        print >> buf, self._stats_table()
 ##        print >> buf, self._coef_table()
 ##        print >> buf, self._resid_info()
 
-        return buf.getvalue()
+        return self._coef_table()
 
     def _header_table(self):
         import time
@@ -568,7 +569,8 @@ class SysSummary(object):
         header = ('coefficient','std. error','t-stat','p-value', 'conf int inf',
                   'conf int sup')
 
-        buf = StringIO()
+        #buf = StringIO()
+        tables = []
         start_index = 0
         for eq in range(neqs):
             offset = result.model.df_model[eq] + 1
@@ -577,10 +579,11 @@ class SysSummary(object):
                                 title=title, txt_fmt=self.default_fmt,
                                 stubs=self.xname[start_index:start_index+offset])
             #print >> buf, str(table)
-            buf.write('\n')
+            #buf.write('\n')
+            tables.append(table)
             start_index += offset
 
-        return buf.getvalue()
+        return '\n'.join((str(table) for table in tables))
 
     def _resid_info(self):
         buf = StringIO()
