@@ -52,11 +52,11 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     --------
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> import statsmodels.api as sm
+    >>> import statsmodels.graphics.api as smg
 
     >>> hie_data = sm.datasets.randhie.load_pandas()
     >>> corr_matrix = np.corrcoef(hie_data.data.T)
-    >>> sm.graphics.plot_corr(corr_matrix, xnames=hie_data.names)
+    >>> smg.plot_corr(corr_matrix, xnames=hie_data.names)
     >>> plt.show()
 
     """
