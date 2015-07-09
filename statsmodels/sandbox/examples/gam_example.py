@@ -1,3 +1,7 @@
+__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+__date__ = '08/07/15'
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis
