@@ -11,7 +11,7 @@ y_mgcv = ris_mgcv$y_est
 
 data = data.frame('y'=y, 'x'=x)
 
-g = gam(formula = y~s(x = x,  spar = .9), data = data)
+g = gam(formula = y~s(x = x), data = data)
 
 # Tr value
 # > g$nl.chisq

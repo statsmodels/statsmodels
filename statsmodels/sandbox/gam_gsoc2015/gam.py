@@ -1,3 +1,6 @@
+__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+__date__ = '08/07/15'
+
 import numpy as np
 import scipy as sp
 from scipy.linalg import block_diag

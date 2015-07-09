@@ -1,3 +1,6 @@
+__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+__date__ = '08/07/15'
+
 
 import os
 
@@ -10,6 +13,7 @@ from numpy.linalg import norm
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
+from statsmodels.sandbox.gam_gsoc2015.cross_validation import GamKFoldsCV
 
 sigmoid = np.vectorize(lambda x: 1.0/ (1.0 + np.exp(-x)))
 
@@ -363,6 +367,67 @@ def test_partial_plot():
     return
 
 
+def test_gam_GamKFoldsCV():
+
+    def sample_metric(y1, y2):
+
+        return np.linalg.norm(y1 - y2)/len(y1)
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+
+    data_from_r = pd.read_csv(file_path)
+
+    # dataset used to train the R model
+    x = data_from_r.x
+    y = data_from_r.y
+    se_from_mgcv = data_from_r.y_est_se
+    df = 10
+    degree = 6
+    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
+    cov_der2 = np.dot(der2.T, der2)
+
+    gam = GLMGam
+    alphas = np.linspace(0, .02, 25)
+    k = 10
+    gam_cv = GamKFoldsCV(gam, 0, sample_metric, basis, der_basis, der2, cov_der2, y, k)
+
+    cv_path_m, cv_path_std = gam_cv.fit_alphas_path(alphas, method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
+    best_alpha = alphas[np.argmin(cv_path_m)]
+    gp = GamPenalty(alpha=best_alpha, cov_der2=cov_der2, der2=der2)
+    model = GLMGam(y, basis, penal=gp)
+    res = model.fit(method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
+    y_est = res.predict()
+
+    err = y_est - data_from_r.y_mgcv_gcv
+
+    # plt.subplot(3, 1, 1)
+    # plt.plot(x, data_from_r.y, '.', label='y')
+    # plt.plot(x, y_est, '.', label='sm')
+    # plt.plot(x, data_from_r.y_mgcv_gcv, '.', label='mgcv')
+    # plt.legend(loc='best')
+    #
+    # plt.subplot(3, 1, 2)
+    # plt.plot(alphas, cv_path_m)
+    # plt.plot(alphas, cv_path_m, 'o')
+    # plt.plot(alphas, cv_path_m + cv_path_std)
+    # plt.plot(alphas, cv_path_m - cv_path_std)
+    #
+    # plt.subplot(3, 1, 3)
+    # plt.plot(x, y_est, '.', label='sm')
+    # plt.plot(x, data_from_r.y_mgcv_gcv, '.', label='mgcv')
+    # plt.legend()
+    #
+    # plt.show()
+
+    # The test is done with the result obtained with GCV and not KFOLDS CV.
+    # This is because MGCV does not support KFOLD CV
+    assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.e-1, rtol=1.e-1)
+
+    return
+
+test_gam_GamKFoldsCV()
+
 # test_gam_glm_significance()
 # test_gam_gradient()
 # test_gam_hessian()
@@ -371,6 +436,5 @@ def test_partial_plot():
 # test_approximation()
 # test_gam_glm()
 # test_gam_penalty()
-
 # test_partial_plot()
 # test_partial_values()

@@ -1,12 +1,14 @@
 ## This files contains the R code to generate some test for the GAM function ##
 ## Documentation for MGCV is available at: http://cran.r-project.org/web/packages/mgcv/mgcv.pdf
 
+library("pracma")
 library('mgcv')
 #library('gam')
 
 set.seed(0)
-n = 100
-x = seq(from = -1, to = 1, length.out = n)
+n = 1000
+#x = seq(from = -1, to = 1, length.out = n)
+x = runif(n, -1, 1)
 
 funz = function(x){
   2 * x * x * x - x + rnorm(n = n, mean = 0, sd = .1)
@@ -62,8 +64,9 @@ norm(lin_pred - as.numeric(y_est))
 
 
 
-
-
+### K folds CV ###
+g = gam(y~s(x, k = 10, bs = "cr"), data = data, method = "GCV.Cp")
+data$y_mgcv_gcv = predict(g, data=data)
 
 ### GAM BINOMIAL ###
 
@@ -79,4 +82,4 @@ data$ybin_est = predict(gb, newdata = data)
 plot(data$x, sigmoid(data$ybin_est), 'l', ylim=c(-1,2))
 points(data$x, data$ybin)
 
-#write.csv(data, '/home/donbeo/Documents/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/results/prediction_from_mgcv.csv')
+write.csv(data, '/home/donbeo/Documents/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/results/prediction_from_mgcv.csv')
