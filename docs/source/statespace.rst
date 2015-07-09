@@ -117,16 +117,25 @@ A very brief example of how to use this model::
    # Load your dataset
    endog = pd.read_csv('your/dataset/here.csv')
 
-   # Create the model, here an SARIMA(1,1,1) x (0,1,1,4) model
-   mod = sm.tsa.statespace.SARIMAX(endog, order=(1,1,1), seasonal_order=(0,1,1,4))
-   # Note that mod is an instance of the SARIMAX class
+   # We could fit an AR(2) model, described above
+   mod_ar2 = sm.tsa.statespace.SARIMAX(endog, order=(2,0,0))
+   # Note that mod_ar2 is an instance of the SARIMAX class
 
    # Fit the model via maximum likelihood
-   res = mod.fit()
-   # Note that res is an instance of the SARIMAXResults class
+   res_ar2 = mod_ar2.fit()
+   # Note that res_ar2 is an instance of the SARIMAXResults class
 
    # Show the summary of results
-   print res.summary()
+   print(res_ar2.summary())
+
+   # We could also fit a more complicated model with seasonal components.
+   # As an example, here is an SARIMA(1,1,1) x (0,1,1,4):
+   mod_sarimax = sm.tsa.statespace.SARIMAX(endog, order=(1,1,1),
+                                           seasonal_order=(0,1,1,4))
+   res_sarimax = mod_sarimax.fit()
+
+   # Show the summary of results
+   print(res_sarimax.summary())
 
 The results object has many of the attributes and methods you would expect from
 other Statsmodels results objects, including standard errors, z-statistics,
@@ -175,48 +184,56 @@ estimated using only the following code::
    endog = lfilter([1], np.r_[1, -true_phi], disturbances)
 
    # Construct the model
-   mod = sm.tsa.statespace.MLEModel(endog, k_states=2, k_posdef=1)
+   class AR2(sm.tsa.statespace.MLEModel):
+       def __init__(self, endog):
+           # Initialize the state space model
+           super(AR2, self).__init__(endog, k_states=2, k_posdef=1,
+                                     initialization='stationary')
 
-   # Setup the fixed components of the state space representation
-   mod['design'] = [1, 0]
-   mod['transition'] = [[0, 0],
-                        [1, 0]]
-   mod['selection', 0, 0] = 1
+           # Setup the fixed components of the state space representation
+           self.ssm['design'] = [1, 0]
+           self.ssm['transition'] = [[0, 0],
+                                     [1, 0]]
+           self.ssm['selection', 0, 0] = 1
 
-   # Tell the model how to update the state space representation
-   # given parameters specified by the optimizer
-   def updater(mod, params):
-       mod['transition', 0, :] = params[:2]
-       mod['state_cov', 0, 0] = params[2]
-   mod.updater = updater
+       # Describe how parameters enter the model
+       def update(self, params, transformed=True):
+           params = super(AR2, self).update(params, transformed)
+           
+           self.ssm['transition', 0, :] = params[:2]
+           self.ssm['state_cov', 0, 0] = params[2]
 
-   # State space models must be initialized; we use this
-   # method because AR(p) models are assumed to be stationary
-   mod.initialize_stationary()
+       # Specify start parameters and parameter names
+       @property
+       def start_params(self):
+           return [0,0,1]  # these are very simple
 
-   # Fit the model via maximum likelihood
-   # Note: must specify start parameters
-   mod.start_params = [0,0,1]
+   # Create and fit the model
+   mod = AR2(endog)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 This results in the following summary table::
 
                               Statespace Model Results                           
    ==============================================================================
    Dep. Variable:                      y   No. Observations:                 1000
-   Model:                       MLEModel   Log Likelihood               -1389.437
-   Date:                Mon,  1 Jan 2000   AIC                           2784.874
-   Time:                        11:11:00   BIC                           2799.598
+   Model:                            AR2   Log Likelihood               -1389.437
+   Date:                Thu, 09 Jul 2015   AIC                           2784.874
+   Time:                        01:24:46   BIC                           2799.598
    Sample:                             0   HQIC                          2790.470
                                   - 1000                                         
+   Covariance Type:                  opg                                         
    ==============================================================================
                     coef    std err          z      P>|z|      [95.0% Conf. Int.]
    ------------------------------------------------------------------------------
-   param.0        0.4395      0.031     14.195      0.000         0.379     0.500
-   param.1       -0.2055      0.031     -6.635      0.000        -0.266    -0.145
-   param.2        0.9425      0.042     22.366      0.000         0.860     1.025
+   var_0          0.4395      0.030     14.729      0.000         0.381     0.498
+   var_1         -0.2055      0.032     -6.523      0.000        -0.267    -0.144
+   var_2          0.9425      0.042     22.413      0.000         0.860     1.025
    ==============================================================================
+   
+   Warnings:
+   [1] Covariance matrix calculated using the outer product of gradients.
 
 The results object has many of the attributes and methods you would expect from
 other Statsmodels results objects, including standard errors, z-statistics,
@@ -224,8 +241,7 @@ and prediction / forecasting.
 
 More advanced usage is possible, including specifying parameter
 transformations, and specifing names for parameters for a more informative
-output summary. Note that in most cases, it will be more convenient to specify
-models as a subclass of MLEModel, as is done in the local linear trend example.
+output summary.
 
 State space representation and Kalman filtering
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -238,7 +254,7 @@ Maximum likelihood estimation requires evaluating the likelihood function of
 the model, and for models in state space form the likelihood function is
 evaluted as a byproduct of running the Kalman filter.
 
-There are two superclasses of `MLEModel` that facilitate specification of the
+There are two classes used by `MLEModel` that facilitate specification of the
 state space model and Kalman filtering: `Representation` and `KalmanFilter`.
 
 The `Representation` class is the piece where the state space model
