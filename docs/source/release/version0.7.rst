@@ -65,6 +65,7 @@ local level model can be specified and estimated:
 
 .. code-block:: python
 
+   import numpy as np
    import statsmodels.api as sm
    import pandas as pd
 
@@ -72,29 +73,44 @@ local level model can be specified and estimated:
    data.index = pd.DatetimeIndex(data.year.astype(int).astype(str), freq='AS')
 
    # Setup the state space representation
-   mod = sm.tsa.statespace.MLEModel(data['volume'], k_states=1)
-   mod['design', :] = mod['transition', :] = mod['selection', :] = 1.
-   mod.initialize_approximate_diffuse()
+   class LocalLevel(sm.tsa.statespace.MLEModel):
+       def __init__(self, endog):
+           # Initialize the state space model
+           super(LocalLevel, self).__init__(
+               endog, k_states=1, initialization='approximate_diffuse')
 
-   # Describe how parameters enter the model
-   def updater(mod, params):
-       mod['obs_cov',0,0] = params[0]
-       mod['state_cov',0,0] = params[1]
-   mod.updater = updater
-   mod.transformer = lambda mod, params: params**2
+           # Setup known components of state space representation matrices
+           self.ssm['design', :] = 1.
+           self.ssm['transition', :] = 1.
+           self.ssm['selection', :] = 1.
 
-   # Specify start parameters and parameter names
-   mod.start_params = [1e2,1e2]
-   mod.param_names = ['sigma2.measurement', 'sigma2.level']
+       # Describe how parameters enter the model
+       def update(self, params, transformed=True):
+           params = super(LocalLevel, self).update(params, transformed)
+           self.ssm['obs_cov', 0, 0] = params[0]
+           self.ssm['state_cov', 0, 0] = params[1]
+
+       def transform_params(self, params):
+           return params**2  # force variance parameters to be positive
+
+       # Specify start parameters and parameter names
+       @property
+       def start_params(self):
+           return [np.std(self.endog)]*2
+
+       @property
+       def param_names(self):
+           return ['sigma2.measurement', 'sigma2.level']
 
    # Fit the model with maximum likelihood estimation
+   mod = LocalLevel(data['volume'])
    res = mod.fit()
    print res.summary()
 
 The documentation and example notebooks provide further examples of how to
-create ad-hoc models (as above) as well as more complex models. Included in
-this release is a full-fledged model making use of the state space
-infrastructure to estimate SARIMAX models. See below for more details.
+formulating state space models. Included in this release is a full-fledged
+model making use of the state space infrastructure to estimate SARIMAX
+models. See below for more details.
 
 Time Series Models (ARIMA) with Seasonal Effects
 ------------------------------------------------
@@ -120,7 +136,8 @@ effects.
    import pandas as pd
 
    data = sm.datasets.macrodata.load_pandas().data
-   data.index = pd.DatetimeIndex(start='1959-01-01', end='2009-09-01', freq='QS')
+   data.index = pd.DatetimeIndex(start='1959-01-01', end='2009-09-01',
+                                 freq='QS')
    endog = data['realcons']
    exog = data['m1']
 
