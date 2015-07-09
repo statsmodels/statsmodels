@@ -39,7 +39,7 @@ def test_irregular():
 
 def test_fixed_intercept():
     warnings.simplefilter("always")
-    with warnings.catch_warnings(True) as w:
+    with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_intercept')
         message = ("Specified model does not contain a stochastic element;"
                    " irregular component added.")
@@ -59,7 +59,7 @@ def test_fixed_slope():
 
 def test_fixed_slope():
     warnings.simplefilter("always")
-    with warnings.catch_warnings(True) as w:
+    with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_slope')
         message = ("Specified model does not contain a stochastic element;"
                    " irregular component added.")
