@@ -8,92 +8,122 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from statsmodels.sandbox.gam_gsoc2015.gam import GamPenalty, GLMGam, MultivariateGamPenalty, LogitGam, Penalty
+from statsmodels.sandbox.tools.cross_val import KFold
+
+
+
+class GamCV:
+
+    def __init__(self, gam, alpha, cost, basis, der_basis, der2, cov_der2, y):
+        # the gam class has already an instance
+        self.cost = cost
+        self.gam = gam
+        self.basis = basis
+        self.der_basis = der_basis
+        self.der2 = der2
+        self.alpha = alpha
+        self.cov_der2 = cov_der2 #TODO: Maybe cov_der2 has to be recomputed every time?
+        self.y = y
+        return
+
+    def _error(self, train_index, test_index):
+
+        der2_train = self.der2[train_index]
+        basis_train = self.basis[train_index]
+        basis_test = self.basis[test_index]
+        y_train = self.y[train_index]
+        y_test = self.y[test_index]
+
+        gp = GamPenalty(1, self.alpha, self.cov_der2, der2_train)
+        gam = self.gam(y_train, basis_train, penal=gp).fit()
+        y_est = gam.predict(basis_test)
+
+        return self.cost(y_test, y_est)
+
+    def fit(self):
+
+        cv_err = []
+        for train_index, test_index in self.cv_index:
+            cv_err.append(self._error(train_index, test_index))
+
+        return np.array(cv_err)
+
+    def fit_alphas_path(self, alphas):
+
+        err_m = []
+        err_std = []
+        for alpha in alphas:
+            self.alpha = alpha
+            err = self.fit()
+            err_m.append(err.mean())
+            err_std.append(err.std())
+
+        return np.array(err_m), np.array(err_std)
+
+
+class GamKfoldsCV(GamCV):
+
+    def __init__(self, gam, alpha, cost, basis, der_basis, der2, cov_der2, y, k):
+
+        self.n_obs = basis.shape[0]
+        GamCV.__init__(self, gam, alpha, cost, basis, der_basis, der2, cov_der2, y)
+        self.cv_index = KFold(self.n_obs, k)
+        return
 
 
 
 
-def error(y1, y2, metric):
 
-    return metric(y1 - y2)/len(y1)
+def sample_metric(y1, y2):
 
-
-def kfolds_cv(x, y, k_folds, metric, alpha, model=None, shuffle=True):
-    # TODO: We pass the data (X,y) and the number of folds k. We may want to pass a generic model
-
-    n = len(y)
-    index = np.array(range(n))
-
-    if shuffle:
-        np.random.shuffle(index)
-
-    fold_index = np.array_split(index, k_folds)
-    cv = []
-    for k in range(k_folds):
-        # the data is divided into train and test
-        train_index = np.concatenate([fold_index[i] for i in range(k_folds) if i != k])
-        test_index = fold_index[k]
-        x_train = X[train_index]
-        y_train = y[train_index]
-        x_test = X[test_index]
-        y_test = y[test_index]
-
-        # TODO: The following lines are GAM specific. They are required but the code is not generalizable
-        # TODO: for gam it is required to transform the data. We should decide how to do this
-        basis_train, der_basis_train, der2_train = make_poly_basis(x_train, degree=degree)
-        cov_der2_train = np.dot(der2_train.T, der2_train)
-        basis_test, _, _ = make_poly_basis(x_test, degree=degree)
-
-        # # TODO: The penalty must be redefined everytime. We should decide how to do this.
-        gp = GamPenalty(alpha=alpha, cov_der2=cov_der2_train, der2=der2_train)
-        model = GLMGam(y_train, basis_train, penal=gp)
-
-        # the model is trained on k-1 folds
-        res = model.fit(maxiter=10000)
-        y_est = res.predict(basis_test)
-
-        # the prediction error is computed on the remaining fold
-        err = error(y_est, y_test, metric)
-
-        cv.append(err)
-    return np.array(cv)
+    return np.linalg.norm(y1 - y2)/len(y1)
 
 
 
-def best_alpha(metric, alphas = (0, 1, 2), kfolds=3):
-    # find the alpha that returns the smaller error after the grid search
-    cv_err = []
-    for alpha in alphas:
-        cv = kfolds_cv(X, Y, kfolds, sample_metric, alpha=alpha).mean()
-        cv_err.append(cv.mean())
+n = 1000
+np.random.seed(1)
+index = np.array(range(n))
+np.random.shuffle(index)
 
-    alpha_best = alphas[np.argmin(cv_err)]
-
-    print('CV error=', cv_err)
-    return alpha_best
-
-
-
-n = 2000
 X = np.linspace(-10, 10, n)
 Y = X**2 - X + np.random.normal(0, 10, n)
 
-sample_metric = np.linalg.norm
-alphas = [0, 1.e-5, 1.e-4, 1.e-3, 1.e-2, .1, 1]
-degree = 6 # required for the basis generation
-kfolds = 3
+X = X[index]
+Y = Y[index]
 
-alpha_best = best_alpha(sample_metric, alphas, kfolds=kfolds)
+alphas = np.linspace(0, .1, 20)
+degree = 8 # required for the basis generation
+k_folds = 5
 
 basis, der_basis, der2 = make_poly_basis(X, degree=degree)
 cov_der2 = np.dot(der2.T, der2)
-gp = GamPenalty(alpha=alpha_best, cov_der2=cov_der2, der2=der2)
+
+gam_cv = GamKfoldsCV(GLMGam, 0, sample_metric, basis, der_basis, der2, cov_der2, Y, k_folds)
+cv_err = gam_cv.fit()
+
+cv_path_m, cv_path_std = gam_cv.fit_alphas_path(alphas)
+print('mean cv err =', cv_path_m, ' std=', cv_path_std)
+
+best_alpha = alphas[np.argmin(cv_path_m)]
+
+gp = GamPenalty(alpha=best_alpha, cov_der2=cov_der2, der2=der2)
 model = GLMGam(Y, basis, penal=gp)
 res = model.fit(maxiter=10000)
-
 y_est = res.predict()
 
+plt.subplot(3, 1, 1)
 plt.plot(X, Y, '.')
-plt.plot(X, y_est)
+plt.plot(X, y_est, '.')
+
+plt.subplot(3, 1, 2)
+plt.plot(alphas, cv_path_m)
+plt.plot(alphas, cv_path_m, 'o')
+plt.plot(alphas, cv_path_m + cv_path_std)
+plt.plot(alphas, cv_path_m - cv_path_std)
+
+plt.subplot(3, 1, 3)
+plt.plot(alphas, cv_path_m, 'o')
+plt.plot(alphas, cv_path_m)
+
 plt.show()
 
-print('best alpha=', alpha_best, 'params=', res.params)
