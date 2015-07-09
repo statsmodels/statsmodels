@@ -29,6 +29,7 @@ _SmootherOutput = namedtuple('_SmootherOutput', (
     ' smoothed_measurement_disturbance smoothed_measurement_disturbance_cov'
 ))
 
+
 def _kalman_smooth(model, kfilter, smoother_output):
     # Create storage
     scaled_smoothed_estimator = None
@@ -164,7 +165,7 @@ def _kalman_smooth(model, kfilter, smoother_output):
                     scaled_smoothed_estimator_cov[:, :, t]
                 ).dot(QR.transpose())
             )
-        
+
             smoothed_measurement_disturbance_cov[:, :, t] = (
                 obs_cov - obs_cov.dot(
                     F_inv + kalman_gain.transpose().dot(
@@ -224,8 +225,12 @@ class KalmanSmoother(KalmanFilter):
 
     smoother_state = OptionWrapper('smoother_output', SMOOTHER_STATE)
     smoother_state_cov = OptionWrapper('smoother_output', SMOOTHER_STATE_COV)
-    smoother_disturbance = OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE)
-    smoother_disturbance_cov = OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE_COV)
+    smoother_disturbance = (
+        OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE)
+    )
+    smoother_disturbance_cov = (
+        OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE_COV)
+    )
     smoother_all = OptionWrapper('smoother_output', SMOOTHER_ALL)
 
     # Default smoother options
@@ -611,9 +616,13 @@ class SmootherResults(FilterResults):
         # so exclude the zeroth element so that the time index is consistent
         # with the other returned output
         if 'scaled_smoothed_estimator' in attributes:
-            self.scaled_smoothed_estimator = self.scaled_smoothed_estimator[:,1:]
+            self.scaled_smoothed_estimator = (
+                self.scaled_smoothed_estimator[:, 1:]
+            )
         if 'scaled_smoothed_estimator_cov' in attributes:
-            self.scaled_smoothed_estimator_cov = self.scaled_smoothed_estimator_cov[:,1:]
+            self.scaled_smoothed_estimator_cov = (
+                self.scaled_smoothed_estimator_cov[:, 1:]
+            )
 
         # Clear the smoothed forecasts
         self._smoothed_forecasts = None
@@ -623,7 +632,8 @@ class SmootherResults(FilterResults):
     def _get_smoothed_forecasts(self):
         if self._smoothed_forecasts is None:
             # Initialize empty arrays
-            self._smoothed_forecasts = np.zeros(self.forecasts.shape, dtype=self.dtype)
+            self._smoothed_forecasts = np.zeros(self.forecasts.shape,
+                                                dtype=self.dtype)
             self._smoothed_forecasts_error = (
                 np.zeros(self.forecasts_error.shape, dtype=self.dtype)
             )
