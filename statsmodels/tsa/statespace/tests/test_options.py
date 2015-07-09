@@ -29,7 +29,14 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_NO_LIKELIHOOD,
     MEMORY_CONSERVE
 )
-from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
+from statsmodels.tsa.statespace.kalman_smoother import (
+    KalmanSmoother,
+    SMOOTHER_STATE,
+    SMOOTHER_STATE_COV,
+    SMOOTHER_DISTURBANCE,
+    SMOOTHER_DISTURBANCE_COV,
+    SMOOTHER_ALL
+)
 from numpy.testing import assert_equal
 
 
@@ -40,7 +47,7 @@ class Options(object):
         endog = np.arange(10)
         k_states = 1
 
-        self.model = KalmanFilter(k_endog=1, k_states=k_states, *args,
+        self.model = KalmanSmoother(k_endog=1, k_states=k_states, *args,
                                   **kwargs)
         self.model.bind(endog)
 
@@ -168,3 +175,45 @@ class TestOptions(Options):
                 continue
             setattr(model, name, False)
         assert_equal(model.conserve_memory, 0)
+
+    def test_smoother_outputs(self):
+        model = self.model
+
+        # TODO test SmootherResults for accurante boolean versions of options
+
+        # Clear the smoother output
+        model.smoother_output = 0
+
+        # Try setting via boolean
+        model.smoother_state = True
+        assert_equal(model.smoother_output, SMOOTHER_STATE)
+        model.smoother_disturbance = True
+        assert_equal(model.smoother_output, SMOOTHER_STATE | SMOOTHER_DISTURBANCE)
+        model.smoother_state = False
+        assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE)
+
+        # Try setting directly via method
+        model.set_smoother_output(SMOOTHER_DISTURBANCE_COV)
+        assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE_COV)
+
+        # Try setting via boolean via method
+        model.set_smoother_output(smoother_disturbance=True, smoother_disturbance_cov=False)
+        assert_equal(model.smoother_output, SMOOTHER_DISTURBANCE)
+
+        # Try setting and unsetting all
+        model.smoother_output = 0
+        for name in model.smoother_outputs:
+            if name == 'smoother_all':
+                continue
+            setattr(model, name, True)
+        assert_equal(
+            model.smoother_output,
+            SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
+            SMOOTHER_DISTURBANCE_COV
+        )
+        assert_equal(model.smoother_output, SMOOTHER_ALL)
+        for name in model.smoother_outputs:
+            if name == 'smoother_all':
+                continue
+            setattr(model, name, False)
+        assert_equal(model.smoother_output, 0)
