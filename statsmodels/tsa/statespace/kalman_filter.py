@@ -22,7 +22,6 @@ SOLVE_LU = 0x02
 INVERT_LU = 0x04
 SOLVE_CHOLESKY = 0x08
 INVERT_CHOLESKY = 0x10
-INVERT_NUMPY = 0x20
 
 STABILITY_FORCE_SYMMETRY = 0x01
 
@@ -123,7 +122,7 @@ class KalmanFilter(Representation):
 
     inversion_methods = [
         'invert_univariate', 'solve_lu', 'invert_lu', 'solve_cholesky',
-        'invert_cholesky', 'invert_numpy',
+        'invert_cholesky'
     ]
 
     invert_univariate = OptionWrapper('inversion_method', INVERT_UNIVARIATE)
@@ -145,10 +144,6 @@ class KalmanFilter(Representation):
     invert_cholesky = OptionWrapper('inversion_method', INVERT_CHOLESKY)
     """
     (bool) Flag for Cholesky inversion method.
-    """
-    invert_numpy = OptionWrapper('inversion_method', INVERT_NUMPY)
-    """
-    (bool) Flag for inversion using numpy (not recommended).
     """
 
     stability_methods = ['stability_force_symmetry']
@@ -396,10 +391,6 @@ class KalmanFilter(Representation):
             Use a Cholesky decomposition along with a linear solver.
         INVERT_CHOLESKY = 0x10
             Use an Cholesky decomposition along with typical matrix inversion.
-        INVERT_NUMPY = 0x20
-            Use the numpy inversion function. This is not recommended except
-            for testing as it will be substantially slower than the other
-            methods.
 
         If the bitmask is set directly via the `inversion_method` argument,
         then the full method must be provided.
