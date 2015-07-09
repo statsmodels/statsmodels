@@ -30,8 +30,7 @@ def run_ucm(name):
         kwargs.update(true['kwargs'])
 
         mod = structural.UnobservedComponents(dta['unemp'], **kwargs)
-        mod.update(true['params'])
-        res = mod.filter()
+        res = mod.filter(true['params'])
 
         assert_allclose(res.llf, true['llf'])
 
