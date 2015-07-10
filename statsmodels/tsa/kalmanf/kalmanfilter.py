@@ -408,7 +408,7 @@ class StateSpaceModel(object):
             The first guess on all parameters to be estimated.  This can
             be in any order as long as the F,A,H,Q, and R functions handle
             the parameters appropriately.
-        xi10 : arry-like
+        xi10 : array-like
             The (r x 1) vector of initial states.  See notes.
         F,A,H,Q,R : functions or array-like, optional
             If functions, they should take start_params (or the current
