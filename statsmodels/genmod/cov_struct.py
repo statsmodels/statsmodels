@@ -693,7 +693,41 @@ class Autoregressive(CovStruct):
                 self.dep_params)
 
 
-class GlobalOddsRatio(CovStruct):
+class CategoricalCovStruct(CovStruct):
+    """
+    Parent class for covariance structure for categorical data models.
+
+    Attributes
+    ----------
+    nlevel : int
+        The number of distinct levels for the outcome variable.
+    ibd : list
+        A list whose i^th element ibd[i] is an array whose rows
+        contain integer pairs (a,b), where endog_li[i][a:b] is the
+        subvector of binary indicators derived from the same ordinal
+        value.
+    """
+
+    def initialize(self, model):
+
+        super(CategoricalCovStruct, self).initialize(model)
+
+        self.nlevel = len(model.endog_values)
+        self._ncut = self.nlevel - 1
+
+        from numpy.lib.stride_tricks import as_strided
+        b = np.dtype(np.int64).itemsize
+
+        ibd = []
+        for v in model.endog_li:
+            jj = np.arange(0, len(v) + 1, self._ncut, dtype=np.int64)
+            jj = as_strided(jj, shape=(len(jj) - 1, 2), strides=(b, b))
+            ibd.append(jj)
+
+        self.ibd = ibd
+
+
+class GlobalOddsRatio(CategoricalCovStruct):
     """
     Estimate the global odds ratio for a GEE with ordinal or nominal
     data.
@@ -727,6 +761,7 @@ class GlobalOddsRatio(CovStruct):
         self.endog_type = endog_type
         self.dep_params = 0.
 
+
     def initialize(self, model):
 
         super(GlobalOddsRatio, self).initialize(model)
@@ -734,46 +769,30 @@ class GlobalOddsRatio(CovStruct):
         if self.model.weights is not None:
             warnings.warn("weights not implemented for GlobalOddsRatio cov_struct, using unweighted covariance estimate")
 
-        self.nlevel = len(model.endog_values)
-        self.ncut = self.nlevel - 1
-
-        ibd = []
-        for v in model.endog_li:
-            jj = np.arange(0, len(v) + 1, self.ncut)
-            ibd1 = np.hstack((jj[0:-1][:, None], jj[1:][:, None]))
-            ibd1 = [(jj[k], jj[k + 1]) for k in range(len(jj) - 1)]
-            ibd.append(ibd1)
-        self.ibd = ibd
-
         # Need to restrict to between-subject pairs
         cpp = []
         for v in model.endog_li:
 
             # Number of subjects in this group
-            m = int(len(v) / self.ncut)
+            m = int(len(v) / self._ncut)
+            i1, i2 = np.tril_indices(m, -1)
 
             cpp1 = {}
-            # Loop over distinct subject pairs
-            for i1 in range(m):
-                for i2 in range(i1):
-                    # Loop over cut point pairs
-                    for k1 in range(self.ncut):
-                        for k2 in range(k1+1):
-                            if (k2, k1) not in cpp1:
-                                cpp1[(k2, k1)] = []
-                            j1 = i1*self.ncut + k1
-                            j2 = i2*self.ncut + k2
-                            cpp1[(k2, k1)].append([j2, j1])
+            for k1 in range(self._ncut):
+                for k2 in range(k1+1):
+                    jj = np.zeros((len(i1), 2), dtype=np.int64)
+                    jj[:, 0] = i1*self._ncut + k1
+                    jj[:, 1] = i2*self._ncut + k2
+                    cpp1[(k2, k1)] = jj
 
-            for k in cpp1.keys():
-                cpp1[k] = np.asarray(cpp1[k])
             cpp.append(cpp1)
 
         self.cpp = cpp
 
         # Initialize the dependence parameters
         self.crude_or = self.observed_crude_oddsratio()
-        self.dep_params = self.crude_or
+        if self.model.update_dep:
+            self.dep_params = self.crude_or
 
 
     def pooled_odds_ratio(self, tables):
@@ -803,11 +822,13 @@ class GlobalOddsRatio(CovStruct):
 
         return np.exp(log_pooled_or)
 
+
     def covariance_matrix(self, expected_value, index):
 
         vmat = self.get_eyy(expected_value, index)
         vmat -= np.outer(expected_value, expected_value)
         return vmat, False
+
 
     def observed_crude_oddsratio(self):
         """
@@ -847,6 +868,7 @@ class GlobalOddsRatio(CovStruct):
 
         return self.pooled_odds_ratio(list(itervalues(tables)))
 
+
     def get_eyy(self, endog_expval, index):
         """
         Returns a matrix V such that V[i,j] is the joint probability
@@ -872,14 +894,13 @@ class GlobalOddsRatio(CovStruct):
         for bdl in ibd:
             evy = endog_expval[bdl[0]:bdl[1]]
             if self.endog_type == "ordinal":
-                eyr = np.outer(evy, np.ones(len(evy)))
-                eyc = np.outer(np.ones(len(evy)), evy)
-                vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] = \
-                    np.where(eyr < eyc, eyr, eyc)
+                vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] =\
+                    np.minimum.outer(evy, evy)
             else:
                 vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] = np.diag(evy)
 
         return vmat
+
 
     def update(self, params):
         """
@@ -932,6 +953,69 @@ class GlobalOddsRatio(CovStruct):
     def summary(self):
 
         return "Global odds ratio: %.3f\n" % self.dep_params
+
+
+
+class OrdinalIndependence(CategoricalCovStruct):
+    """
+    An independence covariance structure for ordinal models.
+
+    The working covariance between indicators derived from different
+    observations is zero.  The working covariance between indicators
+    derived form a common observation is determined from their current
+    mean values.
+
+    There are no parameters to estimate in this covariance structure.
+    """
+
+    def covariance_matrix(self, expected_value, index):
+
+        ibd = self.ibd[index]
+        n = len(expected_value)
+        vmat = np.zeros((n, n))
+
+        for bdl in ibd:
+            ev = expected_value[bdl[0]:bdl[1]]
+            vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] =\
+                      np.minimum.outer(ev, ev) - np.outer(ev, ev)
+
+        return vmat, False
+
+
+    # Nothing to update
+    def update(self, params):
+        pass
+
+
+class NominalIndependence(CategoricalCovStruct):
+    """
+    An independence covariance structure for nominal models.
+
+    The working covariance between indicators derived from different
+    observations is zero.  The working covariance between indicators
+    derived form a common observation is determined from their current
+    mean values.
+
+    There are no parameters to estimate in this covariance structure.
+    """
+
+    def covariance_matrix(self, expected_value, index):
+
+        ibd = self.ibd[index]
+        n = len(expected_value)
+        vmat = np.zeros((n, n))
+
+        for bdl in ibd:
+            ev = expected_value[bdl[0]:bdl[1]]
+            vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] =\
+                      np.diag(ev) - np.outer(ev, ev)
+
+        return vmat, False
+
+
+    # Nothing to update
+    def update(self, params):
+        pass
 
 
 class Equivalence(CovStruct):

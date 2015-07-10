@@ -27,6 +27,7 @@ import statsmodels.formula.api as smf
 import statsmodels.api as sm
 from scipy.stats.distributions import norm
 from patsy import dmatrices
+import warnings
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -167,6 +168,7 @@ class TestGEE(object):
 
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
+
 
     def test_margins_poisson(self):
         """
@@ -732,6 +734,59 @@ class TestGEE(object):
         assert_equal(type(rslt), OrdinalGEEResultsWrapper)
         assert_equal(type(rslt._results), OrdinalGEEResults)
 
+
+    def test_ordinal_formula(self):
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.arange(n)
+        x1 = np.random.normal(size=n)
+        x2 = np.random.normal(size=n)
+
+        df = pd.DataFrame({"y": y, "groups": groups, "x1": x1, "x2": x2})
+
+        # smoke test
+        model = OrdinalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
+        result = model.fit()
+
+        # smoke test
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model = NominalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
+            result = model.fit()
+
+
+    def test_ordinal_independence(self):
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.kron(np.arange(n/2), np.r_[1, 1])
+        x = np.random.normal(size=(n,1))
+
+        # smoke test
+        odi = sm.cov_struct.OrdinalIndependence()
+        model1 = OrdinalGEE(y, x, groups, cov_struct=odi)
+        result1 = model1.fit()
+
+
+    def test_nominal_independence(self):
+
+        np.random.seed(434)
+        n = 40
+        y = np.random.randint(0, 3, n)
+        groups = np.kron(np.arange(n/2), np.r_[1, 1])
+        x = np.random.normal(size=(n,1))
+
+        # smoke test
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            nmi = sm.cov_struct.NominalIndependence()
+            model1 = NominalGEE(y, x, groups, cov_struct=nmi)
+            result1 = model1.fit()
+
+
     def test_nominal(self):
 
         endog, exog, groups = load_data("gee_nominal_1.csv",
@@ -835,6 +890,47 @@ class TestGEE(object):
              assert_almost_equal(mdf.standard_errors(), se[j],
                                  decimal=6)
              # print(mdf.params)
+
+    def test_groups(self):
+        # Test various group structures (nonconsecutive, different
+        # group sizes, not ordered, string labels)
+
+        n = 40
+        x = np.random.normal(size=(n, 2))
+        y = np.random.normal(size=n)
+
+        # groups with unequal group sizes
+        groups = np.kron(np.arange(n/4), np.ones(4))
+        groups[8:12] = 3
+        groups[34:36] = 9
+
+        model1 = GEE(y, x, groups=groups)
+        result1 = model1.fit()
+
+        # Unordered groups
+        ix = np.random.permutation(n)
+        y1 = y[ix]
+        x1 = x[ix, :]
+        groups1 = groups[ix]
+
+        model2 = GEE(y1, x1, groups=groups1)
+        result2 = model2.fit()
+
+        assert_allclose(result1.params, result2.params)
+        assert_allclose(result1.tvalues, result2.tvalues)
+
+        # group labels are strings
+        mp = {}
+        import string
+        for j,g in enumerate(set(groups)):
+            mp[g] = string.ascii_letters[j:j+4]
+        groups2 = [mp[g] for g in groups]
+
+        model3 = GEE(y, x, groups=groups2)
+        result3 = model3.fit()
+
+        assert_allclose(result1.params, result3.params)
+        assert_allclose(result1.tvalues, result3.tvalues)
 
 
     def test_compare_OLS(self):
@@ -1208,7 +1304,10 @@ class TestGEE(object):
         # Smoke test
         eq = sm.cov_struct.Equivalence(labels=labels, return_cov=True)
         model1 = sm.GEE(endog, exog, groups, cov_struct=eq)
-        result1 = model1.fit(maxiter=2)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            result1 = model1.fit(maxiter=2)
+
 
 class CheckConsistency(object):
 

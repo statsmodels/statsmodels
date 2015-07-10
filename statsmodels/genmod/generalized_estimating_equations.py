@@ -35,9 +35,8 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod import families
-from statsmodels.genmod.cov_struct import (Independence,
-                                           GlobalOddsRatio,
-                                           CovStruct)
+from statsmodels.genmod import cov_struct as cov_structs
+
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 
@@ -494,9 +493,9 @@ class GEE(base.Model):
 
         # Handle the cov_struct argument
         if cov_struct is None:
-            cov_struct = Independence()
+            cov_struct = cov_structs.Independence()
         else:
-            if not issubclass(cov_struct.__class__, CovStruct):
+            if not issubclass(cov_struct.__class__, cov_structs.CovStruct):
                 raise ValueError("GEE: `cov_struct` must be a genmod "
                                  "cov_struct instance")
 
@@ -535,17 +534,16 @@ class GEE(base.Model):
                 self._offset_exposure = self.constraint.offset_increment().copy()
             self.exog = self.constraint.reduced_exog()
 
-        # Convert the data to the internal representation, which is a
-        # list of arrays, corresponding to the groups.
-        group_labels = sorted(set(self.groups))
-        group_indices = dict((s, []) for s in group_labels)
-        for i in range(len(self.endog)):
-            group_indices[self.groups[i]].append(i)
-        for k in iterkeys(group_indices):
-            group_indices[k] = np.asarray(group_indices[k])
-        self.group_indices = group_indices
+        # Create list of row indices for each group
+        group_labels, ix = np.unique(self.groups, return_inverse=True)
+        se = pd.Series(index=np.arange(len(ix)))
+        gb = se.groupby(ix).groups
+        dk = [(lb, np.asarray(gb[k])) for k,lb in enumerate(group_labels)]
+        self.group_indices = dict(dk)
         self.group_labels = group_labels
 
+        # Convert the data to the internal representation, which is a
+        # list of arrays, corresponding to the groups.
         self.endog_li = self.cluster_list(self.endog)
         self.exog_li = self.cluster_list(self.exog)
 
@@ -958,6 +956,7 @@ class GEE(base.Model):
 
         return (cov_robust, cov_naive, cov_robust_bc, cmat)
 
+
     def predict(self, params, exog=None, offset=None,
                 exposure=None, linear=False):
         """
@@ -1043,28 +1042,12 @@ class GEE(base.Model):
 
         return lin_pred
 
+
     def _starting_params(self):
-        """
-        Returns a starting value for the mean parameters and a list of
-        variable names.
-        """
-
-        dm = self.exog.shape[1]
-
-        # For categorical models, use independence cov_struct to get
-        # starting values.
-        if isinstance(self.cov_struct, GlobalOddsRatio):
-
-            ind = Independence()
-            md = GEE(self.endog, self.exog, self.groups,
-                     time=self.time, family=self.family,
-                     offset=self.offset, exposure=self.exposure)
-            mdf = md.fit()
-            return mdf.params
 
         # TODO: use GLM to get Poisson starting values
-        else:
-            return np.zeros(dm, dtype=np.float64)
+        return np.zeros(self.exog.shape[1])
+
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
@@ -1864,13 +1847,16 @@ class OrdinalGEE(GEE):
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
-                       dep_data=None, constraint=None):
+                       dep_data=None, constraint=None, **kwargs):
 
         if family is None:
             family = families.Binomial()
         else:
             if not isinstance(family, families.Binomial):
                 raise ValueError("ordinal GEE must use a Binomial family")
+
+        if cov_struct is None:
+            cov_struct = cov_structs.OrdinalIndependence()
 
         endog, exog, groups, time, offset = self.setup_ordinal(endog,
                                        exog, groups, time, offset)
@@ -1951,6 +1937,15 @@ class OrdinalGEE(GEE):
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
+
+
+    def _starting_params(self):
+        model = GEE(self.endog, self.exog, self.groups,
+                    time=self.time, family=families.Binomial(),
+                    offset=self.offset, exposure=self.exposure)
+        result = model.fit()
+        return result.params
+
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
@@ -2084,9 +2079,10 @@ class NominalGEE(GEE):
                          'family_doc': _gee_nominal_family_doc,
                          'example': _gee_nominal_example})
 
+
     def __init__(self, endog, exog, groups, time=None, family=None,
                        cov_struct=None, missing='none', offset=None,
-                       dep_data=None, constraint=None):
+                       dep_data=None, constraint=None, **kwargs):
 
         endog, exog, groups, time, offset = self.setup_nominal(endog,
                                        exog, groups, time, offset)
@@ -2094,9 +2090,21 @@ class NominalGEE(GEE):
         if family is None:
             family = _Multinomial(self.ncut+1)
 
+        if cov_struct is None:
+            cov_struct = cov_structs.NominalIndependence()
+
         super(NominalGEE, self).__init__(endog, exog, groups,
                  time, family, cov_struct, missing, offset, dep_data,
                  constraint)
+
+
+    def _starting_params(self):
+        model = GEE(self.endog, self.exog, self.groups,
+                    time=self.time, family=families.Binomial(),
+                    offset=self.offset, exposure=self.exposure)
+        result = model.fit()
+        return result.params
+
 
     def setup_nominal(self, endog, exog, groups, time, offset):
         """
