@@ -534,9 +534,9 @@ class UnobservedComponents(MLEModel):
                 self.cycle * 2
             )
             end = start + self.ar_order
-            selection_stationary = self.selection[start:end, :, 0]
+            selection_stationary = self.ssm.selection[start:end, :, 0]
             selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.state_cov[:, :, 0]),
+                np.dot(selection_stationary, self.ssm.state_cov[:, :, 0]),
                 selection_stationary.T
             )
             try:
