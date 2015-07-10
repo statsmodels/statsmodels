@@ -6,6 +6,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            dec, assert_)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
+import statsmodels.tools.numdiff as nd
 import os
 import csv
 
@@ -65,81 +66,100 @@ class R_Results(object):
         self.exog_re = data[:,ii]
 
 
+
+def loglike_function(model, profile_fe, has_fe):
+    """
+    Returns a function that evaluates the negative log-likelihood for
+    the given model.
+    """
+    def f(x):
+        params = MixedLMParams.from_packed(x, model.k_fe, model.k_re, model.use_sqrt, has_fe=has_fe)
+        return -model.loglike(params, profile_fe=profile_fe)
+
+    return f
+
+
+def score_function(model, profile_fe, has_fe):
+    """
+    Returns a function that evaluates the negative score function for
+    the given model.
+    """
+    def f(x):
+        params = MixedLMParams.from_packed(x, model.k_fe, model.use_sqrt, has_fe=not profile_fe)
+        return -model.score(params, profile_fe=profile_fe)
+
+    return f
+
+
 class TestMixedLM(object):
 
-    # Test analytic scores using numeric differentiation
-    # TODO: better checks on Hessian
+    # Test analytic scores and Hessian using numeric differentiation
     @dec.slow
     def test_compare_numdiff(self):
-
-        import statsmodels.tools.numdiff as nd
 
         n_grp = 200
         grpsize = 5
         k_fe = 3
         k_re = 2
 
-        for jl in 0,1:
+        for use_sqrt in False,True:
             for reml in False,True:
-                for cov_pen_wt in 0,10:
-
-                    cov_pen = penalties.PSD(cov_pen_wt)
+                for profile_fe in False,True:
 
                     np.random.seed(3558)
                     exog_fe = np.random.normal(size=(n_grp*grpsize, k_fe))
                     exog_re = np.random.normal(size=(n_grp*grpsize, k_re))
                     exog_re[:, 0] = 1
+                    exog_vc = np.random.normal(size=(n_grp*grpsize, 3))
                     slopes = np.random.normal(size=(n_grp, k_re))
+                    slopes[:, -1] *= 2
                     slopes = np.kron(slopes, np.ones((grpsize,1)))
+                    slopes_vc = np.random.normal(size=(n_grp, 3))
+                    slopes_vc = np.kron(slopes_vc, np.ones((grpsize,1)))
+                    slopes_vc[:, -1] *= 2
                     re_values = (slopes * exog_re).sum(1)
+                    vc_values = (slopes_vc * exog_vc).sum(1)
                     err = np.random.normal(size=n_grp*grpsize)
-                    endog = exog_fe.sum(1) + re_values + err
+                    endog = exog_fe.sum(1) + re_values + vc_values + err
                     groups = np.kron(range(n_grp), np.ones(grpsize))
 
-                    if jl == 0:
-                        md = MixedLM(endog, exog_fe, groups, exog_re)
-                        score = lambda x: -md.score_sqrt(x)
-                        hessian = lambda x : -md.hessian_sqrt(x)
-                    else:
-                        md = MixedLM(endog, exog_fe, groups, exog_re,
-                                     use_sqrt=False)
-                        score = lambda x: -md.score_full(x)
-                        hessian = lambda x: -md.hessian_full(x)
-                    md.reml = reml
-                    md.cov_pen = cov_pen
-                    loglike = lambda x: -md.loglike(x)
-                    rslt = md.fit()
+                    vc = {"a": {}, "b": {}}
+                    for i in range(n_grp):
+                        ix = np.flatnonzero(groups == i)
+                        vc["a"][i] = exog_vc[ix, 0:2]
+                        vc["b"][i] = exog_vc[ix, 2:3]
+
+                    model = MixedLM(endog, exog_fe, groups, exog_re, exog_vc=vc, use_sqrt=use_sqrt)
+                    rslt = model.fit(reml=reml)
+
+                    loglike = loglike_function(model, profile_fe=profile_fe, has_fe=not profile_fe)
+                    score = score_function(model, profile_fe=profile_fe, has_fe=not profile_fe)
 
                     # Test the score at several points.
                     for kr in range(5):
                         fe_params = np.random.normal(size=k_fe)
                         cov_re = np.random.normal(size=(k_re, k_re))
                         cov_re = np.dot(cov_re.T, cov_re)
-                        params = MixedLMParams.from_components(fe_params,
-                                                               cov_re)
-                        if jl == 0:
-                            params_vec = params.get_packed()
-                        else:
-                            params_vec = params.get_packed(use_sqrt=False)
+                        vcomp = np.random.normal(size=2)**2
+                        params = MixedLMParams.from_components(fe_params, cov_re=cov_re, vcomp=vcomp)
+                        params_vec = params.get_packed(has_fe=not profile_fe, use_sqrt=use_sqrt)
 
                         # Check scores
-                        gr = score(params)
+                        gr = -model.score(params, profile_fe=profile_fe)
                         ngr = nd.approx_fprime(params_vec, loglike)
-                        assert_allclose(gr, ngr, rtol=1e-2)
+                        assert_allclose(gr, ngr, rtol=1e-3)
 
-                        # Hessian matrices don't agree well away from
-                        # the MLE.
-                        #if cov_pen_wt == 0:
-                        #    hess = hessian(params)
-                        #    nhess = nd.approx_hess(params_vec, loglike)
-                        #    assert_allclose(hess, nhess, rtol=1e-2)
+                    # Check Hessian matrices at the MLE (we don't have
+                    # the profile Hessian matrix and we don't care
+                    # about the Hessian for the square root
+                    # transformed parameter).
+                    if (profile_fe == False) and (use_sqrt == False):
+                        hess = -model.hessian(rslt.params_object)
+                        params_vec = rslt.params_object.get_packed(use_sqrt=False, has_fe=True)
+                        loglike_h = loglike_function(model, profile_fe=False, has_fe=True)
+                        nhess = nd.approx_hess(params_vec, loglike_h)
+                        assert_allclose(hess, nhess, rtol=1e-3)
 
-                    # Check Hessian matrices at the MLE.
-                    if cov_pen_wt == 0:
-                        hess = hessian(rslt.params_object)
-                        params_vec = rslt.params_object.get_packed()
-                        nhess = nd.approx_hess(params_vec, loglike)
-                        assert_allclose(hess, nhess, rtol=1e-2)
 
     def test_default_re(self):
 
@@ -163,28 +183,260 @@ class TestMixedLM(object):
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
 
-    def test_EM(self):
-
-        np.random.seed(3298)
-        exog = np.random.normal(size=(300,4))
-        groups = np.kron(np.arange(100), [1,1,1])
-        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
-        mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
-
-    def test_profile(self):
+    def test_profile_inference(self):
         # Smoke test
         np.random.seed(9814)
-        k_fe = 4
+        k_fe = 2
         gsize = 3
         n_grp = 100
         exog = np.random.normal(size=(n_grp * gsize, k_fe))
+        exog_re = np.ones((n_grp * gsize, 1))
         groups = np.kron(np.arange(n_grp), np.ones(gsize))
+        vca = np.random.normal(size=n_grp * gsize)
+        vcb = np.random.normal(size=n_grp * gsize)
+        errors = 0
         g_errors = np.kron(np.random.normal(size=100), np.ones(gsize))
-        endog = exog.sum(1) + g_errors + np.random.normal(size=n_grp * gsize)
-        rslt = MixedLM(endog, exog, groups).fit(niter_em=10)
-        prof = rslt.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
-                               num_high=1)
+        errors += g_errors + exog_re[:, 0]
+        rc = np.random.normal(size=n_grp)
+        errors += np.kron(rc, np.ones(gsize)) * vca
+        rc = np.random.normal(size=n_grp)
+        errors += np.kron(rc, np.ones(gsize)) * vcb
+        errors += np.random.normal(size=n_grp * gsize)
+
+        endog = exog.sum(1) + errors
+        vc = {"a" : {}, "b" : {}}
+        for k in range(n_grp):
+            ii = np.flatnonzero(groups == k)
+            vc["a"][k] = vca[ii][:, None]
+            vc["b"][k] = vcb[ii][:, None]
+        rslt = MixedLM(endog, exog, groups=groups, exog_re=exog_re, exog_vc=vc).fit()
+        prof_re = rslt.profile_re(0, vtype='re', dist_low=1, num_low=3, dist_high=1,
+                                  num_high=3)
+        prof_vc = rslt.profile_re('b', vtype='vc', dist_low=0.5, num_low=3, dist_high=0.5,
+                                  num_high=3)
+
+
+    # Fails on old versions of scipy/numpy
+    def txest_vcomp_1(self):
+        """
+        Fit the same model using constrained random effects and variance components.
+        """
+
+        np.random.seed(4279)
+        exog = np.random.normal(size=(400, 1))
+        exog_re = np.random.normal(size=(400, 2))
+        groups = np.kron(np.arange(100), np.ones(4))
+        slopes = np.random.normal(size=(100, 2))
+        slopes[:, 1] *= 2
+        slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
+        errors = slopes.sum(1) + np.random.normal(size=400)
+        endog = exog.sum(1) + errors
+
+        free = MixedLMParams(1, 2, 0)
+        free.fe_params = np.ones(1)
+        free.cov_re = np.eye(2)
+        free.vcomp = np.zeros(0)
+
+        model1 = MixedLM(endog, exog, groups, exog_re=exog_re)
+        result1 = model1.fit(free=free)
+
+        exog_vc = {"a": {}, "b": {}}
+        for k,group in enumerate(model1.group_labels):
+            ix = model1.row_indices[group]
+            exog_vc["a"][group] = exog_re[ix, 0:1]
+            exog_vc["b"][group] = exog_re[ix, 1:2]
+        model2 = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+        result2 = model2.fit()
+        result2.summary()
+
+        assert_allclose(result1.fe_params, result2.fe_params, atol=1e-4)
+        assert_allclose(np.diag(result1.cov_re), result2.vcomp, atol=1e-2, rtol=1e-4)
+        assert_allclose(result1.bse[[0, 1, 3]], result2.bse, atol=1e-2, rtol=1e-2)
+
+
+    def test_vcomp_2(self):
+        """
+        Simulated data comparison to R
+        """
+
+        np.random.seed(6241)
+        n = 1600
+        exog = np.random.normal(size=(n, 2))
+        ex_vc = []
+        groups = np.kron(np.arange(n / 16), np.ones(16))
+
+        # Build up the random error vector
+        errors = 0
+
+        # The random effects
+        exog_re = np.random.normal(size=(n, 2))
+        slopes = np.random.normal(size=(n / 16, 2))
+        slopes = np.kron(slopes, np.ones((16, 1))) * exog_re
+        errors += slopes.sum(1)
+
+        # First variance component
+        subgroups1 = np.kron(np.arange(n / 4), np.ones(4))
+        errors += np.kron(2*np.random.normal(size=n/4), np.ones(4))
+
+        # Second variance component
+        subgroups2 = np.kron(np.arange(n / 2), np.ones(2))
+        errors += np.kron(2*np.random.normal(size=n/2), np.ones(2))
+
+        # iid errors
+        errors += np.random.normal(size=n)
+
+        endog = exog.sum(1) + errors
+
+        df = pd.DataFrame(index=range(n))
+        df["y"] = endog
+        df["groups"] = groups
+        df["x1"] = exog[:, 0]
+        df["x2"] = exog[:, 1]
+        df["z1"] = exog_re[:, 0]
+        df["z2"] = exog_re[:, 1]
+        df["v1"] = subgroups1
+        df["v2"] = subgroups2
+
+        # Equivalent model in R:
+        # df.to_csv("tst.csv")
+        # model = lmer(y ~ x1 + x2 + (0 + z1 + z2 | groups) + (1 | v1) + (1 | v2), df)
+
+        vcf = {"a": "0 + C(v1)", "b": "0 + C(v2)"}
+        model1 = MixedLM.from_formula("y ~ x1 + x2", groups=groups, re_formula="0+z1+z2",
+                                      vc_formula=vcf, data=df)
+        result1 = model1.fit()
+
+        # Compare to R
+        assert_allclose(result1.fe_params, [0.16527, 0.99911, 0.96217], rtol=1e-4)
+        assert_allclose(result1.cov_re, [[1.244,  0.146], [0.146  , 1.371]], rtol=1e-3)
+        assert_allclose(result1.vcomp, [4.024, 3.997], rtol=1e-3)
+        assert_allclose(result1.bse.iloc[0:3], [0.12610, 0.03938, 0.03848], rtol=1e-3)
+
+
+    def test_sparse(self):
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'pastes.csv')
+
+        # Dense
+        data = pd.read_csv(fname)
+        vcf = {"cask" : "0 + cask"}
+        model = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                     re_formula="1", vc_formula=vcf,
+                                     data=data)
+        result = model.fit()
+
+        # Sparse
+        from scipy import sparse
+        model2 = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                      re_formula="1", vc_formula=vcf,
+                                      use_sparse=True, data=data)
+        result2 = model.fit()
+
+        assert_allclose(result.params, result2.params)
+        assert_allclose(result.bse, result2.bse)
+
+
+    def test_pastes_vcomp(self):
+        """
+        pastes data from lme4
+
+        Fit in R using formula:
+
+        strength ~ (1|batch) + (1|batch:cask)
+        """
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'pastes.csv')
+
+        # REML
+        data = pd.read_csv(fname)
+        vcf = {"cask" : "0 + cask"}
+        model = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                     re_formula="1", vc_formula=vcf,
+                                     data=data)
+        result = model.fit()
+
+        assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+        assert_allclose(result.bse.iloc[0], 0.6769, rtol=1e-3)
+        assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)
+        assert_allclose(result.scale, 0.678, rtol=1e-3)
+        assert_allclose(result.llf, -123.49, rtol=1e-1)
+        assert_equal(result.aic, np.nan) # don't provide aic/bic with REML
+        assert_equal(result.bic, np.nan)
+
+        resid = np.r_[0.17133538, -0.02866462, -1.08662875, 1.11337125, -0.12093607]
+        assert_allclose(result.resid[0:5], resid, rtol=1e-3)
+
+        fit = np.r_[62.62866, 62.62866, 61.18663, 61.18663, 62.82094]
+        assert_allclose(result.fittedvalues[0:5], fit, rtol=1e-4)
+
+        # ML
+        data = pd.read_csv(fname)
+        vcf = {"cask" : "0 + cask"}
+        model = MixedLM.from_formula("strength ~ 1", groups="batch",
+                                     re_formula="1", vc_formula=vcf,
+                                     data=data)
+        result = model.fit(reml=False)
+        assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+        assert_allclose(result.bse.iloc[0], 0.642, rtol=1e-3)
+        assert_allclose(result.cov_re.iloc[0, 0], 1.199, rtol=1e-3)
+        assert_allclose(result.scale, 0.67799, rtol=1e-3)
+        assert_allclose(result.llf, -123.997, rtol=1e-1)
+        assert_allclose(result.aic, 255.9944, rtol=1e-3)
+        assert_allclose(result.bic, 264.3718, rtol=1e-3)
+
+
+    def test_vcomp_formula(self):
+
+        np.random.seed(6241)
+        n = 800
+        exog = np.random.normal(size=(n, 2))
+        exog[:, 0] = 1
+        ex_vc = []
+        groups = np.kron(np.arange(n/4), np.ones(4))
+        errors = 0
+        exog_re = np.random.normal(size=(n, 2))
+        slopes = np.random.normal(size=(n/4, 2))
+        slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
+        errors += slopes.sum(1)
+        ex_vc = np.random.normal(size=(n, 4))
+        slopes = np.random.normal(size=(n/4, 4))
+        slopes[:, 2:] *= 2
+        slopes = np.kron(slopes, np.ones((4, 1))) * ex_vc
+        errors += slopes.sum(1)
+        errors += np.random.normal(size=n)
+        endog = exog.sum(1) + errors
+
+        exog_vc = {"a": {}, "b": {}}
+        for k,group in enumerate(range(int(n/4))):
+            ix = np.flatnonzero(groups == group)
+            exog_vc["a"][group] = ex_vc[ix, 0:2]
+            exog_vc["b"][group] = ex_vc[ix, 2:]
+        model1 = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
+        result1 = model1.fit()
+
+        df = pd.DataFrame(exog[:, 1:], columns=["x1",])
+        df["y"] = endog
+        df["re1"] = exog_re[:, 0]
+        df["re2"] = exog_re[:, 1]
+        df["vc1"] = ex_vc[:, 0]
+        df["vc2"] = ex_vc[:, 1]
+        df["vc3"] = ex_vc[:, 2]
+        df["vc4"] = ex_vc[:, 3]
+        vc_formula = {"a": "0 + vc1 + vc2", "b": "0 + vc3 + vc4"}
+        model2 = MixedLM.from_formula("y ~ x1", groups=groups, re_formula="0 + re1 + re2",
+                                      vc_formula=vc_formula, data=df)
+        result2 = model2.fit()
+
+        assert_allclose(result1.fe_params, result2.fe_params, rtol=1e-8)
+        assert_allclose(result1.cov_re, result2.cov_re, rtol=1e-8)
+        assert_allclose(result1.vcomp, result2.vcomp, rtol=1e-8)
+        assert_allclose(result1.params, result2.params, rtol=1e-8)
+        assert_allclose(result1.bse, result2.bse, rtol=1e-8)
+
 
     def test_formulas(self):
         np.random.seed(2410)
@@ -240,8 +492,8 @@ class TestMixedLM(object):
             rslt4 = mod4.fit(start_params=rslt2.params)
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
-        assert_(mod5.data.exog_re_names == ["Intercept"])
-        assert_(mod5.data.exog_re_names_full == ["Intercept RE"])
+        assert_(mod5.data.exog_re_names == ["groups"])
+        assert_(mod5.data.exog_re_names_full == ["groups RE"])
         rslt5 = mod5.fit(start_params=rslt2.params)
         assert_almost_equal(rslt4.params, rslt5.params)
 
@@ -301,24 +553,25 @@ class TestMixedLM(object):
         else: # Independent random effects
             k_fe = rslt.exog_fe.shape[1]
             k_re = rslt.exog_re.shape[1]
-            free = MixedLMParams(k_fe, k_re)
-            free.set_fe_params(np.ones(k_fe))
-            free.set_cov_re(np.eye(k_re))
+            free = MixedLMParams(k_fe, k_re, 0)
+            free.fe_params = np.ones(k_fe)
+            free.cov_re = np.eye(k_re)
+            free.vcomp = np.array([])
             mdf = md.fit(reml=reml, gtol=1e-7, free=free)
 
         assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
         assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
         assert_almost_equal(mdf.scale, rslt.scale_r, decimal=4)
 
-        pf = rslt.exog_fe.shape[1]
-        assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:pf,0:pf],
+        k_fe = md.k_fe
+        assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:k_fe,0:k_fe],
                             decimal=3)
 
         assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
 
-        # Not supported in R
+        # Not supported in R except for independent random effects
         if not irf:
-            assert_almost_equal(mdf.random_effects.ix[0], rslt.ranef_postmean,
+            assert_almost_equal(mdf.random_effects[0], rslt.ranef_postmean,
                                 decimal=3)
             assert_almost_equal(mdf.random_effects_cov[0],
                                 rslt.ranef_condvar,
