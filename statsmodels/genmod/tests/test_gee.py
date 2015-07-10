@@ -21,7 +21,7 @@ from statsmodels.genmod.generalized_estimating_equations import (GEE,
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
 from statsmodels.genmod.cov_struct import (Exchangeable, Independence,
                                            GlobalOddsRatio, Autoregressive,
-                                           Nested)
+                                           Nested, Stationary)
 import pandas as pd
 import statsmodels.formula.api as smf
 import statsmodels.api as sm
@@ -1095,6 +1095,51 @@ class TestGEE(object):
         pred6_correct = params[0] + params[1]*x1_new + params[2]*x2_new
         assert_allclose(pred6, pred6_correct)
 
+
+    def test_stationary_grid(self):
+
+        endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.]
+        exog = np.r_[2, 3, 1, 4, 3, 2, 5, 4, 5, 6, 3, 2]
+        group = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+
+        exog = sm.add_constant(exog)
+
+        model = sm.GEE(endog, exog, group, cov_struct=Stationary(max_lag=2, grid=True))
+        result = model.fit()
+        se = result.bse * np.sqrt(12 / 9.) # Stata adjustment
+
+        # Obtained from Stata using:
+        # xtgee y x, i(g) vce(robust) corr(Stationary2)
+        assert_allclose(result.params, np.r_[4.463968, -0.0386674], rtol=1e-5, atol=1e-5)
+        assert_allclose(se, np.r_[0.5217202, 0.2800333], rtol=1e-5, atol=1e-5)
+
+
+    def test_stationary_nogrid(self):
+
+        # First test special case where the data follow a grid but we
+        # fit using nogrid
+        endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.]
+        exog = np.r_[2, 3, 1, 4, 3, 2, 5, 4, 5, 6, 3, 2]
+        time = np.r_[0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+        group = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+
+        exog = sm.add_constant(exog)
+
+        model = sm.GEE(endog, exog, group, cov_struct=Stationary(max_lag=2, grid=False))
+        result = model.fit()
+        se = result.bse * np.sqrt(12 / 9.) # Stata adjustment
+
+        # Obtained from Stata using:
+        # xtgee y x, i(g) vce(robust) corr(Stationary2)
+        assert_allclose(result.params, np.r_[4.463968, -0.0386674], rtol=1e-5, atol=1e-5)
+        assert_allclose(se, np.r_[0.5217202, 0.2800333], rtol=1e-5, atol=1e-5)
+
+        # Smoke test for no grid
+        time = np.r_[0, 1, 3, 0, 2, 3, 0, 2, 3, 0, 1, 2][:, None]
+        model = sm.GEE(endog, exog, group, time=time, cov_struct=Stationary(max_lag=4, grid=False))
+        result = model.fit()
+
+
     def test_predict_exposure(self):
 
         n = 50
@@ -1556,7 +1601,6 @@ def test_missing():
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
-
 
 
 
