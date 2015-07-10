@@ -1252,7 +1252,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Add warnings/notes, added to text format only
         etext = []
-        if hasattr(self, 'cov_type'):
+        if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
             etext.append(self.cov_kwds['description'])
 
         if etext:
