@@ -369,11 +369,11 @@ def _col_params(result, float_format='%.4f', stars=True):
     # Significance stars
     if stars:
         idx = res.ix[:, 3] < .1
-        res.ix[:, 0][idx] = res.ix[:, 0][idx] + '*'
+        res.ix[idx, 0] = res.ix[idx, 0] + '*'
         idx = res.ix[:, 3] < .05
-        res.ix[:, 0][idx] = res.ix[:, 0][idx] + '*'
+        res.ix[idx, 0] = res.ix[idx, 0] + '*'
         idx = res.ix[:, 3] < .01
-        res.ix[:, 0][idx] = res.ix[:, 0][idx] + '*'
+        res.ix[idx, 0] = res.ix[idx, 0] + '*'
     # Stack Coefs and Std.Errors
     res = res.ix[:, :2]
     res = res.stack()
