@@ -1938,7 +1938,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return fig
 
-    def summary(self, alpha=.05, start=None, model_name=None):
+    def summary(self, alpha=.05, start=None, title=None, model_name=None):
         """
         Summarize the Model
 
@@ -1965,7 +1965,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Model specification results
         model = self.model
-        title = 'Statespace Model Results'
+        if title is None:
+            title = 'Statespace Model Results'
 
         if start is None:
             start = 0
@@ -1978,6 +1979,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         else:
             sample = [str(start), ' - ' + str(self.model.nobs)]
 
+        # Standardize the model name as a list of str
         if model_name is None:
             model_name = model.__class__.__name__
 
@@ -1987,10 +1989,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         jb = self.test_normality(method='jarquebera')
 
         # Create the tables
+        if not isinstance(model_name, list):
+            model_name = [model_name]
 
-        top_left = [
-            ('Dep. Variable:', None),
-            ('Model:', [model_name]),
+        top_left = [('Dep. Variable:', None)]
+        top_left.append(('Model:', [model_name[0]]))
+        for i in range(1, len(model_name)):
+            top_left.append(('', ['+ ' + model_name[i]]))
+        top_left += [
             ('Date:', None),
             ('Time:', None),
             ('Sample:', [sample[0]]),
