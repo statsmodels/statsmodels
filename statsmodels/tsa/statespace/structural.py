@@ -13,12 +13,14 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tools.data import _is_using_pandas
-from .mlemodel import MLEModel
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
+from statsmodels.tools.tools import Bunch
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
     unconstrain_stationary_univariate
 )
+import statsmodels.base.wrapper as wrap
 
 _mask_map = {
     1: 'irregular',
@@ -557,6 +559,29 @@ class UnobservedComponents(MLEModel):
 
         self.ssm.initialize_known(initial_state, initial_state_cov)
 
+    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(UnobservedComponents, self).filter(
+            params, transformed, cov_type, return_ssm=True, **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = UnobservedComponentsResultsWrapper(
+                UnobservedComponentsResults(self, params, result,
+                                            **result_kwargs)
+            )
+
+        return result
+
     @property
     def start_params(self):
         if not hasattr(self, 'parameters'):
@@ -763,3 +788,97 @@ class UnobservedComponents(MLEModel):
 
         # Initialize the state
         self.initialize_state()
+
+
+class UnobservedComponentsResults(MLEResults):
+    """
+    Class to hold results from fitting an unobserved components model.
+
+    Parameters
+    ----------
+    model : UnobservedComponents instance
+        The fitted model instance
+
+    Attributes
+    ----------
+    specification : dictionary
+        Dictionary including all attributes from the unobserved components
+        model instance.
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
+    """
+
+    def __init__(self, model, params, filter_results, cov_type='opg',
+                 **kwargs):
+        super(UnobservedComponentsResults, self).__init__(
+            model, params, filter_results, cov_type, **kwargs)
+
+        self.df_resid = np.inf  # attribute required for wald tests
+
+        # Save the model specification
+        self.specification = Bunch(**{
+            # Model options
+            'level': self.model.level,
+            'trend': self.model.trend,
+            'seasonal_period': self.model.seasonal_period,
+            'seasonal': self.model.seasonal,
+            'cycle': self.model.cycle,
+            'ar_order': self.model.ar_order,
+            'autoregressive': self.model.autoregressive,
+            'irregular': self.model.irregular,
+            'stochastic_level': self.model.stochastic_level,
+            'stochastic_trend': self.model.stochastic_trend,
+            'stochastic_seasonal': self.model.stochastic_seasonal,
+            'stochastic_cycle': self.model.stochastic_cycle,
+
+            'damped_cycle': self.model.damped_cycle,
+            'mle_regression': self.model.mle_regression,
+
+            # Check for string trend/level specification
+            'trend_specification': self.model.trend_specification
+        })
+
+        # Save
+
+    def summary(self, alpha=.05, start=None):
+        # Create the model name
+
+        model_name = [self.specification.trend_specification]
+
+        if self.specification.seasonal:
+            seasonal_name = 'seasonal(%d)' % self.specification.seasonal_period
+            if self.specification.stochastic_seasonal:
+                seasonal_name = 'stochastic ' + seasonal_name
+            model_name.append(seasonal_name)
+
+        if self.specification.cycle:
+            cycle_name = 'cycle'
+            if self.specification.stochastic_cycle:
+                cycle_name = 'stochastic ' + cycle_name
+            if self.specification.damped_cycle:
+                cycle_name = 'damped ' + cycle_name
+            model_name.append(cycle_name)
+
+        if self.specification.autoregressive:
+            autoregressive_name = 'AR(%d)' % self.specification.ar_order
+            model_name.append(autoregressive_name)
+
+        return super(UnobservedComponentsResults, self).summary(
+            alpha=alpha, start=start, title='Unobserved Components Results',
+            model_name=model_name
+        )
+    summary.__doc__ = MLEResults.summary.__doc__
+
+
+class UnobservedComponentsResultsWrapper(MLEResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(UnobservedComponentsResultsWrapper,
+                      UnobservedComponentsResults)
