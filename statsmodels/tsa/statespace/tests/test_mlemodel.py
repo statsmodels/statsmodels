@@ -73,5 +73,3 @@ def test_results():
 
     # Test residuals
     assert_almost_equal(res.resid()[0,2:], np.zeros(mod.nobs-2))
-
-    

@@ -677,34 +677,3 @@ class TestClark1989ConserveAll(Clark1989):
             self.result['state'][5][-1],
             self.true_states.iloc[end-1, 3], 4
         )
-
-
-def test_standardized_forecasts_error():
-    """
-    Simple test that standardized forecasts errors are calculated correctly.
-
-    Just uses a different calculation method on a univariate series.
-    """
-
-    # Get the dataset
-    true = results_kalman_filter.uc_uni
-    data = pd.DataFrame(
-        true['data'],
-        index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
-        columns=['GDP']
-    )
-    data['lgdp'] = np.log(data['GDP'])
-
-    # Fit an ARIMA(1,1,0) to log GDP
-    mod = SARIMAX(data['lgdp'], order=(1,1,0))
-    res = mod.fit(disp=-1)
-
-    standardized_forecasts_error = (
-        res.filter_results.forecasts_error[0] /
-        np.sqrt(res.filter_results.forecasts_error_cov[0,0])
-    )
-
-    assert_allclose(
-        res.filter_results.standardized_forecasts_error[0],
-        standardized_forecasts_error,
-    )

@@ -1,5 +1,5 @@
 """
-Tests for representation module
+Tests for python wrapper of state space representation and filtering
 
 Author: Chad Fulton
 License: Simplified-BSD
@@ -14,17 +14,22 @@ MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
 
+import warnings
 import numpy as np
 import pandas as pd
 import os
 
 from statsmodels.tsa.statespace.representation import Representation
-from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults
+from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
+
+clark1989_path = 'results' + os.sep + 'results_clark1989_R.csv'
+clark1989_results = pd.read_csv(current_path + os.sep + clark1989_path)
 
 
 class Clark1987(object):
@@ -362,6 +367,10 @@ class TestClark1989(Clark1989):
         super(TestClark1989, self).__init__(dtype=float, conserve_memory=0)
         self.run_filter()
 
+    def test_kalman_gain(self):
+        assert_allclose(self.results.kalman_gain.sum(axis=(0,1)),
+                        clark1989_results['V1'], atol=1e-5)
+
 
 class TestClark1989Conserve(Clark1989):
     """
@@ -487,8 +496,73 @@ class TestClark1989ConserveAll(Clark1989):
             self.true_states.iloc[end-1, 3], 4
         )
 
+class TestClark1989ConserveAll(Clark1989):
+    """
+    Memory conservation forecasting test for the loglikelihood and filtered
+    states.
+    """
+    def __init__(self):
+        super(TestClark1989ConserveAll, self).__init__(
+            dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
+        )
+        # self.model.loglikelihood_burn = self.true['start']
+        self.model.loglikelihood_burn = 0
+        self.run_filter()
+
+    def test_loglike(self):
+        assert_almost_equal(
+            self.results.llf_obs[0], self.true['loglike'], 2
+        )
+
+    def test_filtered_state(self):
+        end = self.true_states.shape[0]
+        assert_almost_equal(
+            self.results.filtered_state[0][-1],
+            self.true_states.iloc[end-1, 0], 4
+        )
+        assert_almost_equal(
+            self.results.filtered_state[1][-1],
+            self.true_states.iloc[end-1, 1], 4
+        )
+        assert_almost_equal(
+            self.results.filtered_state[4][-1],
+            self.true_states.iloc[end-1, 2], 4
+        )
+        assert_almost_equal(
+            self.results.filtered_state[5][-1],
+            self.true_states.iloc[end-1, 3], 4
+        )
+
+
+class TestClark1989PartialMissing(Clark1989):
+    def __init__(self):
+        super(TestClark1989PartialMissing, self).__init__()
+        endog = self.model.endog
+        endog[1,-51:] = np.NaN
+        self.model.bind(endog)
+
+        self.run_filter()
+
+    def test_loglike(self):
+        assert_allclose(self.results.llf_obs[0:].sum(), 1232.113456)
+
+    def test_filtered_state(self):
+        # Could do this, but no need really.
+        pass
+
+    def test_predicted_state(self):
+        assert_allclose(
+            self.results.predicted_state.T[1:], clark1989_results.iloc[:,1:],
+            atol=1e-8
+        )
+
+
 # Miscellaneous coverage-related tests
 def test_slice_notation():
+    """
+    Test setting and getting state space representation matrices using the
+    slice notation.
+    """
     endog = np.arange(10)*1.0
     mod = KalmanFilter(k_endog=1, k_states=2)
     mod.bind(endog)
@@ -523,7 +597,11 @@ def test_slice_notation():
     assert_equal(mod.design[0,0], 1)
     assert_equal(mod['design',0,0], 1)
 
+
 def test_representation():
+    """
+    Test Representation construction
+    """
     # Test an invalid number of states
     def zero_kstates():
         mod = Representation(1, 0)
@@ -558,7 +636,11 @@ def test_representation():
     mod._initialize_representation()
     assert(mod._statespace is not None)
 
+
 def test_bind():
+    """
+    Test binding endogenous data to Kalman filter
+    """
     mod = Representation(1, k_states=2)
 
     # Test invalid endogenous array (it must be ndarray)
@@ -588,7 +670,11 @@ def test_bind():
     # Test invalid C-contiguous
     assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
 
+
 def test_initialization():
+    """
+    Test Kalman filter initialization
+    """
     mod = Representation(1, k_states=2)
 
     # Test invalid state initialization
@@ -611,3 +697,246 @@ def test_initialization():
     initial_state = np.zeros(2,) + 1.5
     initial_state_cov = np.eye(3)
     assert_raises(ValueError, lambda: mod.initialize_known(initial_state, initial_state_cov))
+
+
+def test_no_endog():
+    """
+    Test for RuntimeError when no endog is provided by the time filtering
+    is initialized.
+    """
+    mod = KalmanFilter(k_endog=1, k_states=1)
+
+    # directly call the _initialize_filter function
+    assert_raises(RuntimeError, mod._initialize_filter)
+    # indirectly call it through filtering
+    mod.initialize_approximate_diffuse()
+    assert_raises(RuntimeError, mod.filter)
+
+
+def test_cython():
+    """
+    Test the cython _kalman_filter creation, re-creation, calling, etc. 
+    """
+
+    # Check that datatypes are correct:
+    for prefix, dtype in tools.prefix_dtype_map.items():
+        endog = np.array(1., ndmin=2, dtype=dtype)
+        mod = KalmanFilter(k_endog=1, k_states=1, dtype=dtype)
+
+        # Bind data and initialize the ?KalmanFilter object
+        mod.bind(endog)
+        mod._initialize_filter()
+
+        # Check that the dtype and prefix are correct
+        assert(mod.prefix == prefix)
+        assert(mod.dtype == dtype)
+
+        # Test that a dKalmanFilter instance was created
+        assert(prefix in mod._kalman_filters)
+        kf = mod._kalman_filters[prefix]
+        assert(isinstance(kf, tools.prefix_kalman_filter_map[prefix]))
+
+        # Test that the default returned _kalman_filter is the above instance
+        assert_equal(mod._kalman_filter, kf)
+
+    # Check that upcasting datatypes / ?KalmanFilter works (e.g. d -> z)
+    mod = KalmanFilter(k_endog=1, k_states=1)
+
+    # Default dtype is float
+    assert(mod.prefix == 'd')
+    assert(mod.dtype == np.float64)
+
+    # Prior to initialization, no ?KalmanFilter exists
+    assert_equal(mod._kalman_filter, None)
+    
+    # Bind data and initialize the ?KalmanFilter object
+    endog = np.ascontiguousarray(np.array([1., 2.], dtype=np.float64))
+    mod.bind(endog)
+    mod._initialize_filter()
+    kf = mod._kalman_filters['d']
+
+    # Rebind data, still float, check that we haven't changed
+    mod.bind(endog)
+    mod._initialize_filter()
+    assert(mod._kalman_filter == kf)
+
+    # Force creating new ?Statespace and ?KalmanFilter, by changing the
+    # time-varying character of an array
+    mod.design = np.zeros((1,1,2))
+    mod._initialize_filter()
+    assert(not mod._kalman_filter == kf)
+    kf = mod._kalman_filters['d']
+
+    # Rebind data, now complex, check that the ?KalmanFilter instance has
+    # changed
+    endog = np.ascontiguousarray(np.array([1., 2.], dtype=np.complex128))
+    mod.bind(endog)
+    assert(not mod._kalman_filter == kf)
+
+
+def test_filter():
+    """
+    Tests of invalid calls to the filter function
+    """
+    endog = np.ones((10,1))
+    mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
+    mod['design', :] = 1
+    mod['selection', :] = 1
+    mod['state_cov', :] = 1
+
+    # Test default filter results
+    res = mod.filter()
+    assert(isinstance(res, FilterResults))
+
+    # Test specified invalid results class
+    assert_raises(ValueError, mod.filter, results=object)
+
+    # Test specified valid results class
+    res = mod.filter(results=FilterResults)
+    assert(isinstance(res, FilterResults))
+
+
+def test_loglike():
+    """
+    Tests of invalid calls to the loglike function
+    """
+    endog = np.ones((10,1))
+    mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
+    mod['design', :] = 1
+    mod['selection', :] = 1
+    mod['state_cov', :] = 1
+
+    # Test that self.memory_no_likelihood = True raises an error
+    mod.memory_no_likelihood = True
+    assert_raises(RuntimeError, mod.loglike)
+    assert_raises(RuntimeError, mod.loglikeobs)
+
+
+def test_predict():
+    """
+    Tests of invalid calls to the predict function
+    """
+    warnings.simplefilter("always")
+
+    endog = np.ones((10,1))
+    mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
+    mod['design', :] = 1
+    mod['obs_intercept'] = np.zeros((1,10))
+    mod['selection', :] = 1
+    mod['state_cov', :] = 1
+
+    # Check that we need both forecasts and predicted output for prediction
+    mod.memory_no_forecast = True
+    res = mod.filter()
+    assert_raises(ValueError, res.predict)
+    mod.memory_no_forecast = False
+
+    mod.memory_no_predicted = True
+    res = mod.filter()
+    assert_raises(ValueError, res.predict)
+    mod.memory_no_predicted = False
+
+    # Now get a clean filter object
+    res = mod.filter()
+
+    # Check that start < 0 is an error
+    assert_raises(ValueError, res.predict, start=-1)
+
+    # Check that end < start is an error
+    assert_raises(ValueError, res.predict, start=2, end=1)
+
+    # Check that dynamic < 0 is an error
+    assert_raises(ValueError, res.predict, dynamic=-1)
+
+    # Check that dynamic > end is an warning
+    with warnings.catch_warnings(record=True) as w:
+        res.predict(end=1, dynamic=2)
+        message = ('Dynamic prediction specified to begin after the end of'
+                   ' prediction, and so has no effect.')
+        assert(str(w[0].message) == message)
+
+    # Check that dynamic > nobs is an warning
+    with warnings.catch_warnings(record=True) as w:
+        res.predict(end=11, dynamic=11, obs_intercept=np.zeros((1,1)))
+        message = ('Dynamic prediction specified to begin during'
+                   ' out-of-sample forecasting period, and so has no'
+                   ' effect.')
+        assert(str(w[0].message) == message)
+
+    # Check for a warning when providing a non-used statespace matrix
+    with warnings.catch_warnings(record=True) as w:
+        res.predict(end=res.nobs+1, design=True, obs_intercept=np.zeros((1,1)))
+        message = ('Model has time-invariant design matrix, so the design'
+                   ' argument to `predict` has been ignored.')
+        assert(str(w[0].message) == message)
+
+    # Check that an error is raised when a new time-varying matrix is not
+    # provided
+    assert_raises(ValueError, res.predict, end=res.nobs+1)
+
+    # Check that an error is raised when a non-two-dimensional obs_intercept
+    # is given
+    assert_raises(ValueError, res.predict, end=res.nobs+1,
+                  obs_intercept=np.zeros(1))
+
+    # Check that an error is raised when an obs_intercept with incorrect length
+    # is given
+    assert_raises(ValueError, res.predict, end=res.nobs+1,
+                  obs_intercept=np.zeros(2))
+
+    # Check that start=None gives start=0 and end=None gives end=nobs
+    assert(res.predict().shape == (1,res.nobs))
+
+    # Check that dynamic=True begins dynamic prediction immediately
+    # TODO just a smoke test
+    res.predict(dynamic=True)
+
+    # Check that full_results=True yields a FilterResults object
+    assert(isinstance(res.predict(full_results=True), FilterResults))
+
+    # Check that an error is raised when a non-two-dimensional obs_intercept
+    # is given
+    # ...and...
+    # Check that an error is raised when an obs_intercept with incorrect length
+    # is given
+    mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
+    mod['design', :] = 1
+    mod['obs_cov'] = np.zeros((1,1,10))
+    mod['selection', :] = 1
+    mod['state_cov', :] = 1
+
+    assert_raises(ValueError, res.predict, end=res.nobs+1,
+                  obs_cov=np.zeros((1,1)))
+    assert_raises(ValueError, res.predict, end=res.nobs+1,
+                  obs_cov=np.zeros((1,1,2)))
+
+
+def test_standardized_forecasts_error():
+    """
+    Simple test that standardized forecasts errors are calculated correctly.
+
+    Just uses a different calculation method on a univariate series.
+    """
+
+    # Get the dataset
+    true = results_kalman_filter.uc_uni
+    data = pd.DataFrame(
+        true['data'],
+        index=pd.date_range('1947-01-01', '1995-07-01', freq='QS'),
+        columns=['GDP']
+    )
+    data['lgdp'] = np.log(data['GDP'])
+
+    # Fit an ARIMA(1,1,0) to log GDP
+    mod = sarimax.SARIMAX(data['lgdp'], order=(1,1,0))
+    res = mod.fit(disp=-1)
+
+    standardized_forecasts_error = (
+        res.filter_results.forecasts_error[0] /
+        np.sqrt(res.filter_results.forecasts_error_cov[0,0])
+    )
+
+    assert_allclose(
+        res.filter_results.standardized_forecasts_error[0],
+        standardized_forecasts_error,
+    )
