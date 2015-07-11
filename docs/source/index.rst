@@ -16,7 +16,7 @@ Minimal Examples
 
 Since version ``0.5.0`` of ``statsmodels``, you can use R-style formulas
 together with ``pandas`` data frames to fit your models. Here is a simple
-example using ordinary least squares:   
+example using ordinary least squares:
 
 .. code-block:: python
 
@@ -42,11 +42,11 @@ You can also use ``numpy`` arrays instead of formulas:
 
     # Generate artificial data (2 regressors + constant)
     nobs = 100
-    X = np.random.random((nobs, 2)) 
+    X = np.random.random((nobs, 2))
     X = sm.add_constant(X)
     beta = [1, .1, .5]
     e = np.random.random(nobs)
-    y = np.dot(X, beta) + e 
+    y = np.dot(X, beta) + e
 
     # Fit regression model
     results = sm.OLS(y, X).fit()
@@ -56,6 +56,23 @@ You can also use ``numpy`` arrays instead of formulas:
 
 Have a look at `dir(results)` to see available results. Attributes are
 described in `results.__doc__` and results methods have their own docstrings.
+
+Citation
+--------
+
+When using statsmodels in scientific publication, please consider using the
+following citation:
+
+ Seabold, Skipper, and Josef Perktold. "`Statsmodels: Econometric and statistical modeling with python. <http://conference.scipy.org/proceedings/scipy2010/pdfs/seabold.pdf>`_" *Proceedings of the 9th Python in Science Conference.* 2010.
+
+Bibtex entry::
+
+  @inproceedings{seabold2010statsmodels,
+    title={Statsmodels: Econometric and statistical modeling with python},
+    author={Seabold, Skipper and Perktold, Josef},
+    booktitle={9th Python in Science Conference},
+    year={2010},
+  }
 
 Basic Documentation
 -------------------
