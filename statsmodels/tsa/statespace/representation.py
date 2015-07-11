@@ -627,14 +627,16 @@ class Representation(object):
         # If they do exist, update them
         else:
             for matrix in self.shapes.keys():
+                existing = self._representations[prefix][matrix]
                 if matrix == 'obs':
-                    self._representations[prefix][matrix] = (
-                        self.obs.astype(dtype)[:]
-                    )
+                    existing = self.obs.astype(dtype)[:]
                 else:
-                    self._representations[prefix][matrix][:] = (
-                        getattr(self, '_' + matrix).astype(dtype)[:]
-                    )
+                    new = getattr(self, '_' + matrix).astype(dtype)
+                    if existing.shape == new.shape:
+                        existing[:] = new[:]
+                    else:
+                        existing = new
+
 
         # Determine if we need to (re-)create the _statespace models
         # (if time-varying matrices changed)
