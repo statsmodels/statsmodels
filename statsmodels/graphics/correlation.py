@@ -52,11 +52,11 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     --------
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> import statsmodels.api as sm
+    >>> import statsmodels.graphics.api as smg
 
     >>> hie_data = sm.datasets.randhie.load_pandas()
     >>> corr_matrix = np.corrcoef(hie_data.data.T)
-    >>> sm.graphics.plot_corr(corr_matrix, xnames=hie_data.names)
+    >>> smg.plot_corr(corr_matrix, xnames=hie_data.names)
     >>> plt.show()
 
     """
@@ -88,7 +88,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     # create list of label positions
     labelPos = np.arange(0, nvars) + 0.5
 
-    if ynames:
+    if not ynames is None:
         ax.set_yticks(labelPos)
         ax.set_yticks(labelPos[:-1]+0.5, minor=True)
         ax.set_yticklabels(ynames[::-1], fontsize='small',
@@ -96,7 +96,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     elif ynames == []:
         ax.set_yticks([])
 
-    if xnames:
+    if not xnames is None:
         ax.set_xticks(labelPos)
         ax.set_xticks(labelPos[:-1]+0.5, minor=True)
         ax.set_xticklabels(xnames, fontsize='small', rotation=45,
