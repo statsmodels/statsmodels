@@ -124,26 +124,26 @@ maparams = np.array([1, .65])
 arma_t = ArmaProcess(arparams, maparams)
 
 
-arma_t.isinvertible()
+arma_t.isinvertible
 
 
-arma_t.isstationary()
+arma_t.isstationary
 
 
 # * What does this mean?
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-ax.plot(arma_t.generate_sample(size=50));
+ax.plot(arma_t.generate_sample(nsample=50));
 
 
 arparams = np.array([1, .35, -.15, .55, .1])
 maparams = np.array([1, .65])
 arma_t = ArmaProcess(arparams, maparams)
-arma_t.isstationary()
+arma_t.isstationary
 
 
-arma_rvs = arma_t.generate_sample(size=500, burnin=250, scale=2.5)
+arma_rvs = arma_t.generate_sample(nsample=500, burnin=250, scale=2.5)
 
 
 fig = plt.figure(figsize=(12,8))
