@@ -1,11 +1,7 @@
-'''Tests for regressionplots, entire module is skipped
-
-'''
-
 import numpy as np
-import nose
 
 import statsmodels.api as sm
+from numpy.testing import dec
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
@@ -27,15 +23,12 @@ if pdf_output:
 else:
     pdf = None
 
-def setup():
-    if not have_matplotlib:
-        raise nose.SkipTest('No tests here')
-
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
     plt.close(fig)
 
+@dec.skipif(not have_matplotlib)
 def teardown_module():
     plt.close('all')
     if pdf_output:
@@ -60,6 +53,7 @@ class TestPlot(object):
 
         self.res = res
 
+    @dec.skipif(not have_matplotlib)
     def test_plot_fit(self):
         res = self.res
 
@@ -79,11 +73,10 @@ class TestPlot(object):
 
         close_or_save(pdf, fig)
 
+    @dec.skipif(not have_matplotlib)
     def test_plot_oth(self):
         #just test that they run
         res = self.res
-        endog = res.model.endog
-        exog = res.model.exog
 
         plot_fit(res, 0, y_true=None)
         plot_partregress_grid(res, exog_idx=[0,1])
@@ -111,6 +104,19 @@ class TestPlotPandas(TestPlot):
         y = Series(y, name="outcome")
         res = sm.OLS(y, exog0).fit()
         self.res = res
+        data = DataFrame(exog0, columns=["const", "var1", "var2"])
+        data['y'] = y
+        self.data = data
+
+class TestPlotFormula(TestPlotPandas):
+    @dec.skipif(not have_matplotlib)
+    def test_one_column_exog(self):
+        from statsmodels.formula.api import ols
+        res = ols("y~var1-1", data=self.data).fit()
+        plot_regress_exog(res, "var1")
+        res = ols("y~var1", data=self.data).fit()
+        plot_regress_exog(res, "var1")
+
 
 class TestABLine(object):
 
@@ -124,12 +130,14 @@ class TestABLine(object):
         cls.y = y
         cls.mod = mod
 
+    @dec.skipif(not have_matplotlib)
     def test_abline_model(self):
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:,1], self.y)
         close_or_save(pdf, fig)
 
+    @dec.skipif(not have_matplotlib)
     def test_abline_model_ax(self):
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -137,12 +145,14 @@ class TestABLine(object):
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
+    @dec.skipif(not have_matplotlib)
     def test_abline_ab(self):
         mod = self.mod
         intercept, slope = mod.params
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
+    @dec.skipif(not have_matplotlib)
     def test_abline_ab_ax(self):
         mod = self.mod
         intercept, slope = mod.params
@@ -167,6 +177,7 @@ class TestABLinePandas(TestABLine):
 
 class TestAddedVariablePlot(object):
 
+    @dec.skipif(not have_matplotlib)
     def test_added_variable_poisson(self):
 
         np.random.seed(3446)
@@ -215,6 +226,7 @@ class TestAddedVariablePlot(object):
 
 class TestPartialResidualPlot(object):
 
+    @dec.skipif(not have_matplotlib)
     def test_partial_residual_poisson(self):
 
         np.random.seed(3446)
@@ -250,6 +262,7 @@ class TestPartialResidualPlot(object):
 
 class TestCERESPlot(object):
 
+    @dec.skipif(not have_matplotlib)
     def test_ceres_poisson(self):
 
         np.random.seed(3446)
@@ -282,3 +295,7 @@ class TestCERESPlot(object):
                 ax.set_title(ti + "\nPoisson regression\n" +
                              effect_str)
                 close_or_save(pdf, fig)
+
+if __name__ == "__main__":
+    import nose
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)

@@ -12,6 +12,7 @@ update
 '''
 from statsmodels.compat.python import lrange, string_types, lzip, range
 import numpy as np
+import pandas as pd
 from patsy import dmatrix
 
 from statsmodels.regression.linear_model import OLS, GLS, WLS
@@ -339,22 +340,37 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         RHS = dmatrix(RHS, data)
     else:
         RHS = exog_others
-
+    RHS_isemtpy = False
+    if isinstance(RHS, np.ndarray) and RHS.size==0:
+        RHS_isemtpy = True
+    elif isinstance(RHS, pd.DataFrame) and RHS.empty:
+        RHS_isemtpy = True
     if isinstance(exog_i, string_types):
         exog_i = dmatrix(exog_i + "-1", data)
 
     # all arrays or pandas-like
-    res_yaxis = OLS(endog, RHS).fit()
-    res_xaxis = OLS(exog_i, RHS).fit()
 
-    ax.plot(res_xaxis.resid, res_yaxis.resid, 'o', **kwargs)
-    fitted_line = OLS(res_yaxis.resid, res_xaxis.resid).fit()
+    if RHS_isemtpy:
+        ax.plot(endog, exog_i, 'o', **kwargs)
+        fitted_line = OLS(endog, exog_i).fit()
+        x_axis_endog_name = 'x' if isinstance(exog_i, np.ndarray) else exog_i.name
+        y_axis_endog_name = 'y' if isinstance(endog, np.ndarray) else endog.design_info.column_names[0]
+    else:
+        res_yaxis = OLS(endog, RHS).fit()
+        res_xaxis = OLS(exog_i, RHS).fit()
+        xaxis_resid = res_xaxis.resid
+        yaxis_resid = res_yaxis.resid
+        x_axis_endog_name = res_xaxis.model.endog_names
+        y_axis_endog_name = res_yaxis.model.endog_names
+        ax.plot(xaxis_resid, yaxis_resid, 'o', **kwargs)
+        fitted_line = OLS(yaxis_resid, xaxis_resid).fit()
+
     fig = abline_plot(0, fitted_line.params[0], color='k', ax=ax)
-    x_axis_endog_name = res_xaxis.model.endog_names
+
     if x_axis_endog_name == 'y':  # for no names regression will just get a y
         x_axis_endog_name = 'x'  # this is misleading, so use x
     ax.set_xlabel("e(%s | X)" % x_axis_endog_name)
-    ax.set_ylabel("e(%s | X)" % res_yaxis.model.endog_names)
+    ax.set_ylabel("e(%s | X)" % y_axis_endog_name)
     ax.set_title('Partial Regression Plot', **title_kwargs)
 
     #NOTE: if we want to get super fancy, we could annotate if a point is
