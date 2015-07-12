@@ -19,7 +19,6 @@ from statsmodels.tsa.statespace.kalman_filter import (
     INVERT_LU,
     SOLVE_CHOLESKY,
     INVERT_CHOLESKY,
-    INVERT_NUMPY,
 
     STABILITY_FORCE_SYMMETRY,
 
@@ -97,7 +96,7 @@ class TestOptions(Options):
         assert_equal(
             model.inversion_method,
             INVERT_UNIVARIATE | SOLVE_LU | INVERT_LU | SOLVE_CHOLESKY |
-            INVERT_CHOLESKY | INVERT_NUMPY
+            INVERT_CHOLESKY
         )
         for name in model.inversion_methods:
             setattr(model, name, False)

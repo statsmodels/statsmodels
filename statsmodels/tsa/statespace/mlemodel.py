@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from .kalman_filter import KalmanFilter, FilterResults
+from .kalman_filter import (
+    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
+)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import (
@@ -944,8 +946,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Hessian computed without using parameter transformations.
         """
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        # When using complex-step methods, cannot rely on Cholesky inversion
+        # because variance parameters will then have a complex component which
+        # which implies non-positive-definiteness.
+        inversion_method = INVERT_UNIVARIATE | SOLVE_LU
         evaluated_hessian = self.model._hessian_cs(
-            self.params, transformed=True
+            self.params, transformed=True, inversion_method=inversion_method
         )
         self.model.update(self.params)
 
@@ -986,8 +992,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         product of gradients method.
         """
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        # When using complex-step methods, cannot rely on Cholesky inversion
+        # because variance parameters will then have a complex component which
+        # which implies non-positive-definiteness.
+        inversion_method = INVERT_UNIVARIATE | SOLVE_LU
         return np.linalg.inv(
-            nobs * self.model.opg_information_matrix(self.params)
+            nobs *
+            self.model.opg_information_matrix(
+                self.params, inversion_method=inversion_method
+            )
         )
 
     @cache_readonly
@@ -1022,8 +1035,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self.cov_params_opg
+        # When using complex-step methods, cannot rely on Cholesky inversion
+        # because variance parameters will then have a complex component which
+        # which implies non-positive-definiteness.
+        inversion_method = INVERT_UNIVARIATE | SOLVE_LU
         evaluated_hessian = (
-            nobs * self.model._hessian_cs(self.params, transformed=True)
+            nobs *
+            self.model._hessian_cs(self.params, transformed=True,
+                                   inversion_method=inversion_method)
         )
         return np.linalg.inv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
