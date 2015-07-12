@@ -214,12 +214,12 @@ interaction_plot(E, M, U, colors=['red','blue'], markers=['^','D'],
 # ## Minority Employment Data
 
 try:
-    minority_table = pd.read_table('minority.table')
+    jobtest_table = pd.read_table('jobtest.table')
 except:  # don't have data already
-    url = 'http://stats191.stanford.edu/data/minority.table'
-    minority_table = pd.read_table(url)
+    url = 'http://stats191.stanford.edu/data/jobtest.table'
+    jobtest_table = pd.read_table(url)
 
-factor_group = minority_table.groupby(['ETHN'])
+factor_group = jobtest_table.groupby(['ETHN'])
 
 plt.figure(figsize=(6,6))
 colors = ['purple', 'green']
@@ -230,7 +230,7 @@ for factor, group in factor_group:
 plt.xlabel('TEST');
 plt.ylabel('JPERF');
 
-min_lm = ols('JPERF ~ TEST', data=minority_table).fit()
+min_lm = ols('JPERF ~ TEST', data=jobtest_table).fit()
 print(min_lm.summary())
 
 plt.figure(figsize=(6,6));
@@ -243,7 +243,7 @@ plt.ylabel('JPERF')
 abline_plot(model_results = min_lm, ax=plt.gca());
 
 min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
-        data=minority_table).fit()
+        data=jobtest_table).fit()
 
 print(min_lm2.summary())
 
@@ -259,7 +259,7 @@ abline_plot(intercept = min_lm2.params['Intercept'],
         ax=plt.gca(), color='green');
 
 
-min_lm3 = ols('JPERF ~ TEST + ETHN', data = minority_table).fit()
+min_lm3 = ols('JPERF ~ TEST + ETHN', data = jobtest_table).fit()
 print(min_lm3.summary())
 
 plt.figure(figsize=(6,6));
@@ -273,7 +273,7 @@ abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
         slope = min_lm3.params['TEST'], ax=plt.gca(), color='green');
 
 
-min_lm4 = ols('JPERF ~ TEST * ETHN', data = minority_table).fit()
+min_lm4 = ols('JPERF ~ TEST * ETHN', data = jobtest_table).fit()
 print(min_lm4.summary())
 
 plt.figure(figsize=(6,6));
