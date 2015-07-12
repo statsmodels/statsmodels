@@ -945,7 +945,6 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit = ARMAResults(self, params, normalized_cov_params)
         armafit.mle_retvals = mlefit.mle_retvals
         armafit.mle_settings = mlefit.mle_settings
-        armafit.mlefit = mlefit
         return ARMAResultsWrapper(armafit)
 
 
@@ -1113,7 +1112,6 @@ class ARIMA(ARMA):
 
         arima_fit.mle_retvals = mlefit.mle_retvals
         arima_fit.mle_settings = mlefit.mle_settings
-        arima_fit.mlefit = mlefit
 
         return ARIMAResultsWrapper(arima_fit)
 
