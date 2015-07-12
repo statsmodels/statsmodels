@@ -884,12 +884,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Calculate the new covariance matrix
         if self.cov_type == 'cs':
             res.cov_params_default = res.cov_params_cs
-            res.cov_kwds['cov_type'] = (
+            res.cov_kwds['description'] = (
                 'Covariance matrix calculated using numerical (complex-step)'
                 ' differentiation.')
         elif self.cov_type == 'delta':
             res.cov_params_default = res.cov_params_delta
-            res.cov_kwds['cov_type'] = (
+            res.cov_kwds['description'] = (
                 'Covariance matrix calculated using numerical differentiation'
                 ' and the delta method (method of propagation of errors)'
                 ' applied to the parameter transformation function.')
@@ -1042,48 +1042,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         # return -2*self.llf + 2*np.log(np.log(self.nobs))*self.params.shape[0]
         return hqic(self.llf, self.nobs, self.params.shape[0])
-
-    @property
-    def cov_type(self):
-        return self._cov_type
-    @cov_type.setter
-    def cov_type(self, value):
-        if value == 'cs':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using numerical differentiation'
-            )
-        elif value == 'delta':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using numerical differentiation'
-                ' and the delta method (method of propagation of errors)'
-            )
-        elif value == 'oim':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using the observed information'
-                ' matrix described in Harvey (1989)'
-            )
-        elif value == 'opg':
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix calculated using the outer product of'
-                ' gradients'
-            )
-        elif value == 'robust' or value == 'robust_oim':
-            self.cov_kwds['cov_type'] = (
-                'QMLE covariance matrix used for robustness to some'
-                ' misspecifications; calculated using the observed information'
-                ' matrix described in Harvey (1989)'
-            )
-        elif value == 'robust_cs':
-            self.cov_kwds['cov_type'] = (
-                'QMLE covariance matrix used for robustness to some'
-                ' misspecifications; calculated using numerical'
-                ' differentiation'
-            )
-        else:
-            raise NotImplementedError('Invalid covariance matrix type.')
-
-        self._cov_type = value
-
 
     @cache_readonly
     def llf_obs(self):
@@ -1294,7 +1252,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Add warnings/notes, added to text format only
         etext = []
-        if hasattr(self, 'cov_type'):
+        if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
             etext.append(self.cov_kwds['description'])
 
         if etext:
