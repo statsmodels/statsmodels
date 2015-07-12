@@ -2215,6 +2215,7 @@ def test_arima_fit_mutliple_calls():
     mod = ARIMA(y, (1, 0, 2))
     # Make multiple calls to fit
     mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y']) 
     mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y']) 
 
