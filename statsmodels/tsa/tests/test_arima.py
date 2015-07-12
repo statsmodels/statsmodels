@@ -1,3 +1,5 @@
+import warnings
+
 from statsmodels.compat.python import lrange, BytesIO
 import numpy as np
 from nose.tools import nottest
@@ -532,7 +534,9 @@ def test_start_params_bug():
     383, 332, 276, 224, 144, 101, 232, 429, 597, 750, 908, 960, 1076, 951,
     1062, 1183, 1404, 1391, 1419, 1497, 1267, 963, 682, 777, 906, 1149, 1439,
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
-    res = ARMA(data, order=(4,1)).fit(disp=-1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = ARMA(data, order=(4,1)).fit(disp=-1)
 
 
 class Test_ARIMA101(CheckArmaResultsMixin):
@@ -1578,7 +1582,9 @@ def test_1dexog():
     dta = load_macrodata_pandas().data
     endog = dta['realcons'].values
     exog = dta['m1'].values.squeeze()
-    mod = ARMA(endog, (1,1), exog).fit(disp=-1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        mod = ARMA(endog, (1,1), exog).fit(disp=-1)
 
 
 def test_arima_predict_bug():
@@ -2121,7 +2127,9 @@ def test_ARIMA_exog_predict():
     # pandas
 
     mod = ARIMA(data_sample['loginv'], (1,0,1), exog=data_sample[['loggdp', 'logcons']])
-    res = mod.fit(disp=0, solver='bfgs', maxiter=5000)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = mod.fit(disp=0, solver='bfgs', maxiter=5000)
 
     predicted_arma_fp = res.predict(start=197, end=202, exog=exog_full.values[197:]).values
     predicted_arma_dp = res.predict(start=193, end=202, exog=exog_full[197:], dynamic=True)
