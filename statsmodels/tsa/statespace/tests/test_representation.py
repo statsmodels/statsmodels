@@ -559,10 +559,9 @@ class TestClark1989PartialMissing(Clark1989):
 
 # Miscellaneous coverage-related tests
 def test_slice_notation():
-    """
-    Test setting and getting state space representation matrices using the
-    slice notation.
-    """
+    # Test setting and getting state space representation matrices using the
+    # slice notation.
+
     endog = np.arange(10)*1.0
     mod = KalmanFilter(k_endog=1, k_states=2)
     mod.bind(endog)
@@ -599,9 +598,8 @@ def test_slice_notation():
 
 
 def test_representation():
-    """
-    Test Representation construction
-    """
+    # Test Representation construction
+
     # Test an invalid number of states
     def zero_kstates():
         mod = Representation(1, 0)
@@ -638,9 +636,8 @@ def test_representation():
 
 
 def test_bind():
-    """
-    Test binding endogenous data to Kalman filter
-    """
+    # Test binding endogenous data to Kalman filter
+
     mod = Representation(1, k_states=2)
 
     # Test invalid endogenous array (it must be ndarray)
@@ -672,9 +669,8 @@ def test_bind():
 
 
 def test_initialization():
-    """
-    Test Kalman filter initialization
-    """
+    # Test Kalman filter initialization
+
     mod = Representation(1, k_states=2)
 
     # Test invalid state initialization
@@ -700,10 +696,9 @@ def test_initialization():
 
 
 def test_no_endog():
-    """
-    Test for RuntimeError when no endog is provided by the time filtering
-    is initialized.
-    """
+    # Test for RuntimeError when no endog is provided by the time filtering
+    # is initialized.
+
     mod = KalmanFilter(k_endog=1, k_states=1)
 
     # directly call the _initialize_filter function
@@ -714,9 +709,7 @@ def test_no_endog():
 
 
 def test_cython():
-    """
-    Test the cython _kalman_filter creation, re-creation, calling, etc. 
-    """
+    # Test the cython _kalman_filter creation, re-creation, calling, etc. 
 
     # Check that datatypes are correct:
     for prefix, dtype in tools.prefix_dtype_map.items():
@@ -775,9 +768,8 @@ def test_cython():
 
 
 def test_filter():
-    """
-    Tests of invalid calls to the filter function
-    """
+    # Tests of invalid calls to the filter function
+
     endog = np.ones((10,1))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
@@ -797,9 +789,8 @@ def test_filter():
 
 
 def test_loglike():
-    """
-    Tests of invalid calls to the loglike function
-    """
+    # Tests of invalid calls to the loglike function
+
     endog = np.ones((10,1))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
@@ -813,9 +804,8 @@ def test_loglike():
 
 
 def test_predict():
-    """
-    Tests of invalid calls to the predict function
-    """
+    # Tests of invalid calls to the predict function
+
     warnings.simplefilter("always")
 
     endog = np.ones((10,1))
@@ -912,11 +902,9 @@ def test_predict():
 
 
 def test_standardized_forecasts_error():
-    """
-    Simple test that standardized forecasts errors are calculated correctly.
+    # Simple test that standardized forecasts errors are calculated correctly.
 
-    Just uses a different calculation method on a univariate series.
-    """
+    # Just uses a different calculation method on a univariate series.
 
     # Get the dataset
     true = results_kalman_filter.uc_uni
