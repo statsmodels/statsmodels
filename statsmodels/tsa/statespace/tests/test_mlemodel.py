@@ -299,6 +299,3 @@ def test_pandas_endog():
     endog = pd.DataFrame({'a': [1., 2.], 'b': [3., 4.]}, index=dates)
     mod = check_endog(endog, k_endog=2, **kwargs)
     mod.filter([])
-
-
-    assert(False)
