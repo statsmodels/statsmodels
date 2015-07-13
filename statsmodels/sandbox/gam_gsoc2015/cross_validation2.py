@@ -25,13 +25,8 @@ class BaseCrossValidator(metaclass=ABCMeta):
 
         return
 
-    def fit(self, X, y=None, label=None):
-        # This is a common fit method of most of the CrossValidators. It may be overwritten by some others
-        self.n_samples = X.shape[0]
-        return self
-
     @abstractmethod
-    def __iter__(self):
+    def split(self):
 
         return
 
@@ -65,15 +60,17 @@ class KFold(BaseCrossValidator):
         self.shuffle = shuffle
         return
 
-    def __iter__(self):
-        index = np.array(range(self.n_samples))
+    def split(self, X, y=None, label=None):
+
+        n_samples = X.shape[0]
+        index = np.array(range(n_samples))
 
         if self.shuffle:
             np.random.shuffle(index)
 
         folds = np.array_split(index, self.k_folds)
         for fold in folds:
-            test_index = np.array([False]*self.n_samples)
+            test_index = np.array([False]*n_samples)
             test_index[fold] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index
@@ -86,16 +83,16 @@ class BaseCV(metaclass=ABCMeta):
     BaseCV class. It computes the cross validation error of a given model.
     All the cross validation classes can be derived by this one (e.g. GamCV, LassoCV,...)
     """
-    def __init__(self, cv):
+    def __init__(self):
 
-        self.cv = cv
+        self.train_test_cv_indices = None
         return
 
     def fit(self, **kwargs):
         # kwargs are the input values for the fit method of the cross-validated object
 
         cv_err = []
-        for train_index, test_index in self.cv:
+        for train_index, test_index in self.train_test_cv_indices:
             cv_err.append(self._error(train_index, test_index, **kwargs))
 
         return np.array(cv_err)
@@ -118,7 +115,8 @@ class GamCV(BaseCV):
         self.alpha = alpha
         self.cov_der2 = cov_der2 #TODO: Maybe cov_der2 has to be recomputed every time?
         self.y = y
-        self.cv = cv.fit(basis)
+        self.cv = cv
+        self.train_test_cv_indices = self.cv.split(self.basis)
         return
 
     def _error(self, train_index, test_index, **kwargs):
@@ -175,7 +173,7 @@ class GamCVPath(BasePenaltiesPathCV):
         self.alphas = alphas
         self.cov_der2 = cov_der2 #TODO: Maybe cov_der2 has to be recomputed every time?
         self.y = y
-        self.cv = cv.fit(basis)
+        self.cv = cv
 
         return
 
@@ -195,6 +193,7 @@ class GamCVPath(BasePenaltiesPathCV):
 
 
 ##################################################################################################################
+## EXAMPLE ##
 
 def sample_metric(y1, y2):
     return np.linalg.norm(y1 - y2)/len(y1)
