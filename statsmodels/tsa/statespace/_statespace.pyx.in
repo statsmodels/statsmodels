@@ -366,7 +366,7 @@ cdef class {{prefix}}Statespace(object):
         cdef np.npy_intp dim[1]
         dim[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
-        self.initial_state_cov = np.eye(self.k_states, dtype={{dtype}}).T * variance
+        self.initial_state_cov = np.asfortranarray(np.eye(self.k_states, dtype={{dtype}})) * variance
 
         self.initialized = True
 
