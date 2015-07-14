@@ -909,7 +909,8 @@ class UnobservedComponentsResults(MLEResults):
         out = None
         spec = self.specification
         if spec.cycle:
-            offset = int(spec.trend + spec.level + (spec.seasonal_period - 1))
+            offset = int(spec.trend + spec.level +
+                         spec.seasonal * (spec.seasonal_period - 1))
             out = Bunch(filtered=self.filter_results.filtered_state[offset],
                         offset=offset)
         return out
@@ -922,8 +923,9 @@ class UnobservedComponentsResults(MLEResults):
         out = None
         spec = self.specification
         if spec.autoregressive:
-            offset = int((spec.trend + spec.level + spec.seasonal_period - 1 +
-                          spec.cycle * 2))
+            offset = int(spec.trend + spec.level +
+                         spec.seasonal * (spec.seasonal_period - 1) +
+                         2 * spec.cycle)
             out = Bunch(filtered=self.filter_results.filtered_state[offset],
                         offset=offset)
         return out
@@ -943,9 +945,10 @@ class UnobservedComponentsResults(MLEResults):
                               ' available in the parameters list, not as part'
                               ' of the state vector.')
             else:
-                offset = int((spec.trend + spec.level +
-                              spec.seasonal_period - 1 + spec.cycle * 2 +
-                              spec.ar_order))
+                offset = int(spec.trend + spec.level +
+                             spec.seasonal * (spec.seasonal_period - 1) +
+                             spec.cycle * (1 + spec.stochastic_cycle) +
+                             spec.ar_order)
                 filtered_state = self.filter_results.filtered_state[offset]
                 out = Bunch(filtered=filtered_state,
                             offset=offset)
