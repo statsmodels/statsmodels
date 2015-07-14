@@ -654,6 +654,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 names = ['param.%d' % i for i in range(len(self.start_params))]
             except NotImplementedError:
                 names = []
+            return names
 
     def transform_jacobian(self, unconstrained):
         """
