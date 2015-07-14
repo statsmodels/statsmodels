@@ -954,6 +954,154 @@ class UnobservedComponentsResults(MLEResults):
                             offset=offset)
         return out
 
+    def plot_components(self, which='filtered', alpha=0.05,
+                        observed=True, level=True, trend=True,
+                        seasonal=True, cycle=True, autoregressive=True,
+                        fig=None, figsize=None):
+        """
+        Plot the estimated components of the model.
+
+        Parameters
+        ----------
+        which : {'filtered'}, optional
+            Type of state estimate to plot. Default is 'filtered'.
+        alpha : float, optional
+            The confidence intervals for the components are (1 - alpha) %
+        level : boolean, optional
+            Whether or not to plot the level component, if applicable.
+            Default is True.
+        trend : boolean, optional
+            Whether or not to plot the trend component, if applicable.
+            Default is True.
+        seasonal : boolean, optional
+            Whether or not to plot the seasonal component, if applicable.
+            Default is True.
+        cycle : boolean, optional
+            Whether or not to plot the cyclical component, if applicable.
+            Default is True.
+        autoregressive : boolean, optional
+            Whether or not to plot the autoregressive state, if applicable.
+            Default is True.
+        fig : Matplotlib Figure instance, optional
+            If given, subplots are created in this figure instead of in a new
+            figure. Note that the 2x2 grid will be created in the provided
+            figure using `fig.add_subplot()`.
+        figsize : tuple, optional
+            If a figure is created, this argument allows specifying a size.
+            The tuple is (width, height).
+
+        Notes
+        -----
+        If all options are included in the model and selected, this produces
+        a 6x1 plot grid with the following plots (ordered top-to-bottom):
+
+        0. Observed series against predicted series
+        1. Level
+        2. Trend
+        3. Seasonal
+        4. Cycle
+        5. Autoregressive
+
+        Specific subplots will be removed if the component is not present in
+        the estimated model or if the corresponding keywork argument is set to
+        False.
+
+        All plots contain (1 - `alpha`) %  confidence intervals.
+        """
+        from scipy.stats import norm
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+        plt = _import_mpl()
+        fig = create_mpl_fig(fig, figsize)
+
+        # Check for a valid estimation type
+        if which not in ['filtered']:
+            raise ValueError('Invalid type of state estimate.')
+
+        # Determine which plots we have
+        spec = self.specification
+        components = OrderedDict([
+            ('level', level and spec.level),
+            ('trend', trend and spec.trend),
+            ('seasonal', seasonal and spec.seasonal),
+            ('cycle', cycle and spec.cycle),
+            ('autoregressive', autoregressive and spec.autoregressive),
+        ])
+
+        # Number of plots
+        k_plots = observed + np.sum(components.values())
+
+        # Get dates, if applicable
+        if hasattr(self.data, 'dates') and self.data.dates is not None:
+            dates = self.data.dates._mpl_repr()
+        else:
+            dates = np.arange(len(resid))
+
+        # Get the critical value for confidence intervals
+        critical_value = norm.ppf(1 - alpha / 2.)
+
+        plot_idx = 1
+
+        # Observed, predicted, confidence intervals
+        if observed:
+            ax = fig.add_subplot(k_plots, 1, plot_idx)
+            plot_idx += 1
+
+            # Plot the observed dataset
+            ax.plot(dates, self.model.endog, color='k', label='Observed')
+
+            # Get the predicted values and confidence intervals
+            predict = self.filter_results.forecasts[0]
+            std_errors = np.sqrt(self.filter_results.forecasts_error_cov[0,0])
+            ci_lower = predict - critical_value * std_errors
+            ci_upper = predict + critical_value * std_errors
+
+            # Plot
+            ax.plot(dates, predict, label='One-step-ahead predictions')
+            ci_poly = ax.fill_between(dates, ci_lower, ci_upper, alpha=0.2)
+            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
+
+            # Proxy artist for fill_between legend entry
+            # See e.g. http://matplotlib.org/1.3.1/users/legend_guide.html
+            p = plt.Rectangle((0, 0), 1, 1, fc=ci_poly.get_facecolor()[0])
+
+            # Legend
+            handles, labels = ax.get_legend_handles_labels()
+            handles.append(p)
+            labels.append(ci_label)
+            ax.legend(handles, labels)
+
+            ax.set_title('Predicted vs observed')
+
+        # Plot each component
+        for component, is_plotted in components.items():
+            if not is_plotted:
+                continue
+
+            ax = fig.add_subplot(k_plots, 1, plot_idx)
+            plot_idx += 1
+
+            # Get the predicted values and confidence intervals
+            value = getattr(self, component)[which]
+            offset = getattr(self, component)['offset']
+            std_errors = np.sqrt(
+                self.filter_results.filtered_state_cov[offset, offset]
+            )
+            ci_lower = value - critical_value * std_errors
+            ci_upper = value + critical_value * std_errors
+
+            # Plot
+            state_label = '%s (%s)' % (component.title(), which)
+            ax.plot(dates, value, label=state_label)
+            ci_poly = ax.fill_between(dates, ci_lower, ci_upper, alpha=0.2)
+            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
+
+            # Legend
+            ax.legend()
+
+            ax.set_title('%s component' % component.title())
+
+        return fig
+
     def summary(self, alpha=.05, start=None):
         # Create the model name
 
