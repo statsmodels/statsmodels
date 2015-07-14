@@ -821,7 +821,9 @@ class ARMA(tsbase.TimeSeriesModel):
         Parameters
         ----------
         start_params : array-like, optional
-            Starting parameters for ARMA(p,q). If None, the default is given
+            Starting parameters for ARMA(p,q). May be a function with an ARMA
+            object as input and an numpy array with shape=(p+q+k,) as output.
+            If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
         transparams : bool, optional
             Whehter or not to transform the parameters to ensure stationarity.
@@ -925,7 +927,10 @@ class ARMA(tsbase.TimeSeriesModel):
             self.nobs = len(self.endog) - k_ar
 
         if start_params is not None:
-            start_params = np.asarray(start_params)
+            if hasattr(start_params, '__call__'):
+                start_params = start_params(self)
+            else:
+                start_params = np.asarray(start_params)
 
         else:  # estimate starting parameters
             start_params = self._fit_start_params((k_ar, k_ma, k), method)
