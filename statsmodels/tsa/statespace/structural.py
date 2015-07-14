@@ -849,6 +849,7 @@ class UnobservedComponentsResults(MLEResults):
             'stochastic_cycle': self.model.stochastic_cycle,
 
             'damped_cycle': self.model.damped_cycle,
+            'regression': self.model.regression,
             'mle_regression': self.model.mle_regression,
 
             # Check for string trend/level specification
