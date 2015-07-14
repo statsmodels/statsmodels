@@ -314,6 +314,10 @@ class UnobservedComponents(MLEModel):
                  " irregular component added.")
             self.irregular = True
 
+        if self.seasonal and self.seasonal_period < 2:
+            raise ValueError('Seasonal component must have a seasonal period'
+                             ' of at least 2.')
+
         # Exogenous component
         self.k_exog = 0
         if exog is not None:
