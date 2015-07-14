@@ -1273,8 +1273,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
-        summary.add_table_params(self, alpha=alpha,
-                                 xname=self.data.param_names, use_t=False)
+        if len(self.params) > 0:
+            summary.add_table_params(self, alpha=alpha,
+                                     xname=self.data.param_names, use_t=False)
 
         # Add warnings/notes, added to text format only
         etext = []
