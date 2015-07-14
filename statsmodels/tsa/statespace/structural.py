@@ -851,7 +851,100 @@ class UnobservedComponentsResults(MLEResults):
             'trend_specification': self.model.trend_specification
         })
 
-        # Save
+    @property
+    def level(self):
+        """
+        Filtered value of unobserved level component
+        """
+        # If present, level is always the first component of the state vector
+        out = None
+        spec = self.specification
+        if spec.level:
+            offset = 0
+            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+                        offset=offset)
+        return out
+
+    @property
+    def trend(self):
+        """
+        Filtered value of unobserved trend component
+        """
+        # If present, trend is always the second component of the state vector
+        # (because level is always present if trend is present)
+        out = None
+        spec = self.specification
+        if spec.trend:
+            offset = int(spec.level)
+            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+                        offset=offset)
+        return out
+
+    @property
+    def seasonal(self):
+        # If present, seasonal always follows level/trend (if they are present)
+        # Note that we return only the first seasonal state, but there are
+        # in fact seasonal_period-1 seasonal states, however latter states
+        # are just lagged versions of the first seasonal state.
+        out = None
+        spec = self.specification
+        if spec.seasonal:
+            offset = int(spec.trend + spec.level)
+            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+                        offset=offset)
+        return out
+
+    @property
+    def cycle(self):
+        # If present, cycle always follows level/trend and seasonal
+        # Note that we return only the first cyclical state, but there are
+        # in fact 2 cyclical states. The second cyclical state is not simply
+        # a lag of the first cyclical state, but the first cyclical state is
+        # the one that enters the measurement equation.
+        out = None
+        spec = self.specification
+        if spec.cycle:
+            offset = int(spec.trend + spec.level + (spec.seasonal_period - 1))
+            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+                        offset=offset)
+        return out
+
+    @property
+    def autoregressive(self):
+        # If present, autoregressive always follows level/trend, seasonal, and
+        # cyclical. If it is an AR(p) model, then there are p associated
+        # states, but the second - pth states are just lags of the first state.
+        out = None
+        spec = self.specification
+        if spec.autoregressive:
+            offset = int((spec.trend + spec.level + spec.seasonal_period - 1 +
+                          spec.cycle * 2))
+            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+                        offset=offset)
+        return out
+
+    @property
+    def regression_coefficients(self):
+        # If present, state-vector regression coefficients always are last
+        # (i.e. they follow level/trend, seasonal, cyclical, and
+        # autoregressive states). There is one state associated with each
+        # regressor, and all are returned here.
+        out = None
+        spec = self.specification
+        if spec.regression:
+            if spec.mle_regression:
+                warnings.warn('Regression coefficients estimated via maximum'
+                              ' likelihood. Estimated coefficients are'
+                              ' available in the parameters list, not as part'
+                              ' of the state vector.')
+            else:
+                offset = int((spec.trend + spec.level +
+                              spec.seasonal_period - 1 + spec.cycle * 2 +
+                              spec.ar_order))
+                filtered_state = self.filter_results.filtered_state[offset]
+                out = Bunch(filtered=filtered_state,
+                            offset=offset)
+        return out
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
