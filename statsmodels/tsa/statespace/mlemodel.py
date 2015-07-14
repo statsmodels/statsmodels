@@ -297,6 +297,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
+        params = np.array(params)
+
         if not transformed:
             params = self.transform_params(params)
         self.update(params, transformed=True)
@@ -652,6 +654,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 names = ['param.%d' % i for i in range(len(self.start_params))]
             except NotImplementedError:
                 names = []
+            return names
 
     def transform_jacobian(self, unconstrained):
         """
@@ -699,7 +702,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return unconstrained
+        return np.array(unconstrained)
 
     def untransform_params(self, constrained):
         """
@@ -722,7 +725,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return constrained
+        return np.array(constrained)
 
     def update(self, params, transformed=True):
         """
@@ -884,7 +887,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         res.cov_kwds = {}
 
         # Calculate the new covariance matrix
-        if self.cov_type == 'cs':
+        if len(self.params) == 0:
+            res.cov_params_default = np.zeros((0,0))
+            res.cov_kwds['cov_type'] = (
+                'No parameters estimated.')
+        elif self.cov_type == 'cs':
             res.cov_params_default = res.cov_params_cs
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using numerical (complex-step)'
@@ -1266,8 +1273,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
-        summary.add_table_params(self, alpha=alpha,
-                                 xname=self.data.param_names, use_t=False)
+        if len(self.params) > 0:
+            summary.add_table_params(self, alpha=alpha,
+                                     xname=self.data.param_names, use_t=False)
 
         # Add warnings/notes, added to text format only
         etext = []

@@ -15,7 +15,7 @@ from statsmodels.tsa.statespace import sarimax, tools
 from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
-from numpy.testing import assert_almost_equal, assert_raises, assert_allclose
+from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -210,7 +210,7 @@ class TestARIMADiffuse(ARIMA):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[1], self.true['se_ar_opg'],
@@ -287,7 +287,7 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[1], self.true['se_ar_opg'],
@@ -362,7 +362,7 @@ class TestAirlineHamilton(Airline):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ma_opg'],
@@ -406,7 +406,7 @@ class TestAirlineHarvey(Airline):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ma_opg'],
@@ -467,7 +467,7 @@ class TestAirlineStateDifferencing(Airline):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ma_opg'],
@@ -543,7 +543,7 @@ class TestFriedmanMLERegression(Friedman):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_exog_opg'][0],
@@ -660,7 +660,7 @@ class TestFriedmanStateRegression(Friedman):
 
     def test_bse(self):
         # Make sure the default type is OPG
-        assert(self.result.cov_type == 'opg')
+        assert_equal(self.result.cov_type, 'opg')
         # Test the OPG BSE values
         assert_allclose(
             self.result.bse[0], self.true['se_ar_opg'],

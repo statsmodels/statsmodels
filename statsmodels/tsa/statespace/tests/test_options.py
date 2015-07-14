@@ -124,6 +124,10 @@ class TestOptions(Options):
         model.set_stability_method(stability_method=True)
         assert_equal(model.stability_method, STABILITY_FORCE_SYMMETRY)
 
+        # Try setting via keyword via method
+        model.stability_method = 0
+        model.set_stability_method(stability_force_symmetry=True)
+        assert_equal(model.stability_method, STABILITY_FORCE_SYMMETRY)
 
     def test_conserve_memory(self):
         model = self.model

@@ -537,6 +537,12 @@ class Representation(object):
             raise ValueError('Invalid endogenous array; must be ordered in'
                              ' contiguous memory.')
 
+        # In some corner cases (e.g. np.array(1., ndmin=2) with numpy < 1.8)
+        # we may still have a non-fortran contiguous array, so double-check
+        # that now
+        if not endog.flags['F_CONTIGUOUS']:
+            endog = np.asfortranarray(endog)
+
         # Set the data
         self.endog = endog
         self.nobs = self.endog.shape[1]
@@ -627,14 +633,16 @@ class Representation(object):
         # If they do exist, update them
         else:
             for matrix in self.shapes.keys():
+                existing = self._representations[prefix][matrix]
                 if matrix == 'obs':
-                    self._representations[prefix][matrix] = (
-                        self.obs.astype(dtype)[:]
-                    )
+                    existing = self.obs.astype(dtype)[:]
                 else:
-                    self._representations[prefix][matrix][:] = (
-                        getattr(self, '_' + matrix).astype(dtype)[:]
-                    )
+                    new = getattr(self, '_' + matrix).astype(dtype)
+                    if existing.shape == new.shape:
+                        existing[:] = new[:]
+                    else:
+                        existing = new
+
 
         # Determine if we need to (re-)create the _statespace models
         # (if time-varying matrices changed)
