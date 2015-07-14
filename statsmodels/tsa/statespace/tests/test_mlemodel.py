@@ -90,26 +90,26 @@ def test_cov_params():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         res = mod.fit(res.params, disp=-1, cov_type='cs')
-        assert(res.cov_type == 'cs')
-        assert(res.cov_kwds['description'] == 'Covariance matrix calculated using numerical (complex-step) differentiation.')
+        assert_equal(res.cov_type, 'cs')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using numerical (complex-step) differentiation.')
         res = mod.fit(res.params, disp=-1, cov_type='delta')
-        assert(res.cov_type == 'delta')
-        assert(res.cov_kwds['description'] == 'Covariance matrix calculated using numerical differentiation and the delta method (method of propagation of errors) applied to the parameter transformation function.')
+        assert_equal(res.cov_type, 'delta')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using numerical differentiation and the delta method (method of propagation of errors) applied to the parameter transformation function.')
         res = mod.fit(res.params, disp=-1, cov_type='oim')
-        assert(res.cov_type == 'oim')
-        assert(res.cov_kwds['description'] == 'Covariance matrix calculated using the observed information matrix described in Harvey (1989).')
+        assert_equal(res.cov_type, 'oim')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the observed information matrix described in Harvey (1989).')
         res = mod.fit(res.params, disp=-1, cov_type='opg')
-        assert(res.cov_type == 'opg')
-        assert(res.cov_kwds['description'] == 'Covariance matrix calculated using the outer product of gradients.')
+        assert_equal(res.cov_type, 'opg')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the outer product of gradients.')
         res = mod.fit(res.params, disp=-1, cov_type='robust')
-        assert(res.cov_type == 'robust')
-        assert(res.cov_kwds['description'] == 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix described in Harvey (1989).')
+        assert_equal(res.cov_type, 'robust')
+        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix described in Harvey (1989).')
         res = mod.fit(res.params, disp=-1, cov_type='robust_oim')
-        assert(res.cov_type == 'robust_oim')
-        assert(res.cov_kwds['description'] == 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix described in Harvey (1989).')
+        assert_equal(res.cov_type, 'robust_oim')
+        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix described in Harvey (1989).')
         res = mod.fit(res.params, disp=-1, cov_type='robust_cs')
-        assert(res.cov_type == 'robust_cs')
-        assert(res.cov_kwds['description'] == 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using numerical (complex-step) differentiation.')
+        assert_equal(res.cov_type, 'robust_cs')
+        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using numerical (complex-step) differentiation.')
         assert_raises(NotImplementedError, mod.fit, res.params, disp=-1, cov_type='invalid_cov_type')
 
 
@@ -150,17 +150,17 @@ def test_filter():
 
     # Test return of ssm object
     res = mod.filter([], return_ssm=True)
-    assert(isinstance(res, kalman_filter.FilterResults))
+    assert_equal(isinstance(res, kalman_filter.FilterResults), True)
 
     # Test return of full results object
     res = mod.filter([])
-    assert(isinstance(res, MLEResultsWrapper))
-    assert(res.cov_type == 'opg')
+    assert_equal(isinstance(res, MLEResultsWrapper), True)
+    assert_equal(res.cov_type, 'opg')
 
     # Test return of full results object, specific covariance type
     res = mod.filter([], cov_type='oim')
-    assert(isinstance(res, MLEResultsWrapper))
-    assert(res.cov_type == 'oim')
+    assert_equal(isinstance(res, MLEResultsWrapper), True)
+    assert_equal(res.cov_type, 'oim')
 
 
 def test_params():
@@ -175,8 +175,8 @@ def test_params():
     mod._start_params = [1]
     mod._param_names = ['a']
 
-    assert(mod.start_params == [1])
-    assert(mod.param_names == ['a'])
+    assert_equal(mod.start_params, [1])
+    assert_equal(mod.param_names, ['a'])
 
 
 def test_results():
@@ -200,7 +200,7 @@ def test_predict():
 
     # Test that predict with start=None, end=None does prediction with full
     # dataset
-    assert(res.predict().shape == (mod.k_endog, mod.nobs))
+    assert_equal(res.predict().shape, (mod.k_endog, mod.nobs))
 
     # Test a string value to the dynamic option
     assert_allclose(res.predict(dynamic='1981-01-01'), res.predict())
@@ -209,8 +209,8 @@ def test_predict():
     assert_raises(ValueError, res.predict, dynamic='1982-01-01')
 
     # Test predict with full results
-    assert(isinstance(res.predict(full_results=True),
-                      kalman_filter.FilterResults))
+    assert_equal(isinstance(res.predict(full_results=True),
+                            kalman_filter.FilterResults), True)
 
 
 def test_forecast():
@@ -229,11 +229,11 @@ def test_summary():
     txt = str(res.summary())
 
     # Test res.summary when the model has dates
-    assert(re.search('Sample:\s+01-01-1980', txt) is not None)
-    assert(re.search('\s+- 01-01-1981', txt) is not None)
+    assert_equal(re.search('Sample:\s+01-01-1980', txt) is not None, True)
+    assert_equal(re.search('\s+- 01-01-1981', txt) is not None, True)
 
     # Test res.summary when `model_name` was not provided
-    assert(re.search('Model:\s+MLEModel', txt) is not None)
+    assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
 
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
@@ -242,16 +242,16 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # the data directly available in the model is the Statsmodels version of
     # the data; it should be 2-dim, C-contiguous, long-shaped:
     # (nobs, k_endog) == (2, 1)
-    assert(mod.endog.ndim == 2)
-    assert(mod.endog.flags['C_CONTIGUOUS'] == True)
-    assert(mod.endog.shape == (nobs, k_endog))
+    assert_equal(mod.endog.ndim, 2)
+    assert_equal(mod.endog.flags['C_CONTIGUOUS'], True)
+    assert_equal(mod.endog.shape, (nobs, k_endog))
     # the data in the `ssm` object is the state space version of the data; it
     # should be 2-dim, F-contiguous, wide-shaped (k_endog, nobs) == (1, 2)
     # and it should share data with mod.endog
-    assert(mod.ssm.endog.ndim == 2)
-    assert(mod.ssm.endog.flags['F_CONTIGUOUS'] == True)
-    assert(mod.ssm.endog.shape == (k_endog, nobs))
-    assert(mod.ssm.endog.base is mod.endog)
+    assert_equal(mod.ssm.endog.ndim, 2)
+    assert_equal(mod.ssm.endog.flags['F_CONTIGUOUS'], True)
+    assert_equal(mod.ssm.endog.shape, (k_endog, nobs))
+    assert_equal(mod.ssm.endog.base is mod.endog, True)
 
     return mod
 
@@ -301,9 +301,9 @@ def test_numpy_endog():
     # `mod.endog` arrays
     endog = np.array([1., 2.])
     mod = MLEModel(endog, **kwargs)
-    assert(mod.endog.base is not mod.data.orig_endog)
-    assert(mod.endog.base is not endog)
-    assert(mod.data.orig_endog.base is not endog)
+    assert_equal(mod.endog.base is not mod.data.orig_endog, True)
+    assert_equal(mod.endog.base is not endog, True)
+    assert_equal(mod.data.orig_endog.base is not endog, True)
     endog[0] = 2
     # there is no link to mod.endog
     assert_equal(mod.endog, np.r_[1, 2].reshape(2,1))
@@ -319,28 +319,28 @@ def test_numpy_endog():
 
     # Example : 1-dim array, both C- and F-contiguous, length 2
     endog = np.array([1.,2.])
-    assert(endog.ndim == 1)
-    assert(endog.flags['C_CONTIGUOUS'] == True)
-    assert(endog.flags['F_CONTIGUOUS'] == True)
-    assert(endog.shape == (2,))
+    assert_equal(endog.ndim, 1)
+    assert_equal(endog.flags['C_CONTIGUOUS'], True)
+    assert_equal(endog.flags['F_CONTIGUOUS'], True)
+    assert_equal(endog.shape, (2,))
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
     # Example : 2-dim array, C-contiguous, long-shaped: (nobs, k_endog)
     endog = np.array([1., 2.]).reshape(2, 1)
-    assert(endog.ndim == 2)
-    assert(endog.flags['C_CONTIGUOUS'] == True)
-    assert(endog.flags['F_CONTIGUOUS'] == False)
-    assert(endog.shape == (2, 1))
+    assert_equal(endog.ndim, 2)
+    assert_equal(endog.flags['C_CONTIGUOUS'], True)
+    assert_equal(endog.flags['F_CONTIGUOUS'], False)
+    assert_equal(endog.shape, (2, 1))
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
     # Example : 2-dim array, C-contiguous, wide-shaped: (k_endog, nobs)
     endog = np.array([1., 2.]).reshape(1, 2)
-    assert(endog.ndim == 2)
-    assert(endog.flags['C_CONTIGUOUS'] == True)
-    assert(endog.flags['F_CONTIGUOUS'] == False)
-    assert(endog.shape == (1, 2))
+    assert_equal(endog.ndim, 2)
+    assert_equal(endog.flags['C_CONTIGUOUS'], True)
+    assert_equal(endog.flags['F_CONTIGUOUS'], False)
+    assert_equal(endog.shape, (1, 2))
     # raises error because arrays are always interpreted as
     # (nobs, k_endog), which means that k_endog=2 is incompatibile with shape
     # of design matrix (1, 1)
@@ -348,19 +348,19 @@ def test_numpy_endog():
 
     # Example : 2-dim array, F-contiguous, long-shaped (nobs, k_endog)
     endog = np.array([1., 2.]).reshape(1, 2).transpose()
-    assert(endog.ndim == 2)
-    assert(endog.flags['C_CONTIGUOUS'] == False)
-    assert(endog.flags['F_CONTIGUOUS'] == True)
-    assert(endog.shape == (2, 1))
+    assert_equal(endog.ndim, 2)
+    assert_equal(endog.flags['C_CONTIGUOUS'], False)
+    assert_equal(endog.flags['F_CONTIGUOUS'], True)
+    assert_equal(endog.shape, (2, 1))
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
     # Example : 2-dim array, F-contiguous, wide-shaped (k_endog, nobs)
     endog = np.array([1., 2.]).reshape(2, 1).transpose()
-    assert(endog.ndim == 2)
-    assert(endog.flags['C_CONTIGUOUS'] == False)
-    assert(endog.flags['F_CONTIGUOUS'] == True)
-    assert(endog.shape == (1, 2))
+    assert_equal(endog.ndim, 2)
+    assert_equal(endog.flags['C_CONTIGUOUS'], False)
+    assert_equal(endog.flags['F_CONTIGUOUS'], True)
+    assert_equal(endog.shape, (1, 2))
     # raises error because arrays are always interpreted as
     # (nobs, k_endog), which means that k_endog=2 is incompatibile with shape
     # of design matrix (1, 1)
@@ -421,9 +421,9 @@ def test_pandas_endog():
     # `mod.endog` arrays
     endog = pd.DataFrame({'a': [1., 2.]}, index=dates)
     mod = check_endog(endog, **kwargs)
-    assert(mod.endog.base is not mod.data.orig_endog)
-    assert(mod.endog.base is not endog)
-    assert(mod.data.orig_endog.values.base is not endog)
+    assert_equal(mod.endog.base is not mod.data.orig_endog, True)
+    assert_equal(mod.endog.base is not endog, True)
+    assert_equal(mod.data.orig_endog.values.base is not endog, True)
     endog.iloc[0, 0] = 2
     # there is no link to mod.endog
     assert_equal(mod.endog, np.r_[1, 2].reshape(2,1))

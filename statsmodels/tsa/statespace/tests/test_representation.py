@@ -632,7 +632,7 @@ def test_representation():
     # Test getting the statespace representation
     assert_equal(mod._statespace, None)
     mod._initialize_representation()
-    assert(mod._statespace is not None)
+    assert_equal(mod._statespace is not None, True)
 
 
 def test_bind():
@@ -721,13 +721,13 @@ def test_cython():
         mod._initialize_filter()
 
         # Check that the dtype and prefix are correct
-        assert(mod.prefix == prefix)
-        assert(mod.dtype == dtype)
+        assert_equal(mod.prefix, prefix)
+        assert_equal(mod.dtype, dtype)
 
         # Test that a dKalmanFilter instance was created
-        assert(prefix in mod._kalman_filters)
+        assert_equal(prefix in mod._kalman_filters, True)
         kf = mod._kalman_filters[prefix]
-        assert(isinstance(kf, tools.prefix_kalman_filter_map[prefix]))
+        assert_equal(isinstance(kf, tools.prefix_kalman_filter_map[prefix]), True)
 
         # Test that the default returned _kalman_filter is the above instance
         assert_equal(mod._kalman_filter, kf)
@@ -736,8 +736,8 @@ def test_cython():
     mod = KalmanFilter(k_endog=1, k_states=1)
 
     # Default dtype is float
-    assert(mod.prefix == 'd')
-    assert(mod.dtype == np.float64)
+    assert_equal(mod.prefix, 'd')
+    assert_equal(mod.dtype, np.float64)
 
     # Prior to initialization, no ?KalmanFilter exists
     assert_equal(mod._kalman_filter, None)
@@ -751,20 +751,20 @@ def test_cython():
     # Rebind data, still float, check that we haven't changed
     mod.bind(endog)
     mod._initialize_filter()
-    assert(mod._kalman_filter == kf)
+    assert_equal(mod._kalman_filter, kf)
 
     # Force creating new ?Statespace and ?KalmanFilter, by changing the
     # time-varying character of an array
     mod.design = np.zeros((1,1,2))
     mod._initialize_filter()
-    assert(not mod._kalman_filter == kf)
+    assert_equal(mod._kalman_filter == kf, False)
     kf = mod._kalman_filters['d']
 
     # Rebind data, now complex, check that the ?KalmanFilter instance has
     # changed
     endog = np.ascontiguousarray(np.array([1., 2.], dtype=np.complex128))
     mod.bind(endog)
-    assert(not mod._kalman_filter == kf)
+    assert_equal(mod._kalman_filter == kf, False)
 
 
 def test_filter():
@@ -778,14 +778,14 @@ def test_filter():
 
     # Test default filter results
     res = mod.filter()
-    assert(isinstance(res, FilterResults))
+    assert_equal(isinstance(res, FilterResults), True)
 
     # Test specified invalid results class
     assert_raises(ValueError, mod.filter, results=object)
 
     # Test specified valid results class
     res = mod.filter(results=FilterResults)
-    assert(isinstance(res, FilterResults))
+    assert_equal(isinstance(res, FilterResults), True)
 
 
 def test_loglike():
@@ -843,7 +843,7 @@ def test_predict():
         res.predict(end=1, dynamic=2)
         message = ('Dynamic prediction specified to begin after the end of'
                    ' prediction, and so has no effect.')
-        assert(str(w[0].message) == message)
+        assert_equal(str(w[0].message), message)
 
     # Check that dynamic > nobs is an warning
     with warnings.catch_warnings(record=True) as w:
@@ -851,14 +851,14 @@ def test_predict():
         message = ('Dynamic prediction specified to begin during'
                    ' out-of-sample forecasting period, and so has no'
                    ' effect.')
-        assert(str(w[0].message) == message)
+        assert_equal(str(w[0].message), message)
 
     # Check for a warning when providing a non-used statespace matrix
     with warnings.catch_warnings(record=True) as w:
         res.predict(end=res.nobs+1, design=True, obs_intercept=np.zeros((1,1)))
         message = ('Model has time-invariant design matrix, so the design'
                    ' argument to `predict` has been ignored.')
-        assert(str(w[0].message) == message)
+        assert_equal(str(w[0].message), message)
 
     # Check that an error is raised when a new time-varying matrix is not
     # provided
@@ -875,14 +875,14 @@ def test_predict():
                   obs_intercept=np.zeros(2))
 
     # Check that start=None gives start=0 and end=None gives end=nobs
-    assert(res.predict().shape == (1,res.nobs))
+    assert_equal(res.predict().shape, (1,res.nobs))
 
     # Check that dynamic=True begins dynamic prediction immediately
     # TODO just a smoke test
     res.predict(dynamic=True)
 
     # Check that full_results=True yields a FilterResults object
-    assert(isinstance(res.predict(full_results=True), FilterResults))
+    assert_equal(isinstance(res.predict(full_results=True), FilterResults), True)
 
     # Check that an error is raised when a non-two-dimensional obs_cov
     # is given
