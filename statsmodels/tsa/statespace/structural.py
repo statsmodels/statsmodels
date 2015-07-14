@@ -227,18 +227,22 @@ class UnobservedComponents(MLEModel):
             spec = self.trend_specification
             if spec == 'irregular' or spec == 'ntrend':
                 self.irregular = True
+                self.trend_specification = 'irregular'
             elif spec == 'fixed intercept':
                 self.level = True
             elif spec == 'deterministic constant' or spec == 'dconstant':
                 self.irregular = True
                 self.level = True
+                self.trend_specification = 'deterministic constant'
             elif spec == 'local level' or spec == 'llevel':
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
+                self.trend_specification = 'local level'
             elif spec == 'random walk' or spec == 'rwalk':
                 self.level = True
                 self.stochastic_level = True
+                self.trend_specification = 'random walk'
             elif spec == 'fixed slope':
                 self.level = True
                 self.trend = True
@@ -246,31 +250,37 @@ class UnobservedComponents(MLEModel):
                 self.irregular = True
                 self.level = True
                 self.trend = True
+                self.trend_specification = 'deterministic trend'
             elif (spec == 'local linear deterministic trend' or
                     spec == 'lldtrend'):
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
+                self.trend_specification = 'local linear deterministic trend'
             elif spec == 'random walk with drift' or spec == 'rwdrift':
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
+                self.trend_specification = 'random walk with drift'
             elif spec == 'local linear trend' or spec == 'lltrend':
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
                 self.stochastic_trend = True
+                self.trend_specification = 'local linear trend'
             elif spec == 'smooth trend' or spec == 'strend':
                 self.irregular = True
                 self.level = True
                 self.trend = True
                 self.stochastic_trend = True
+                self.trend_specification = 'smooth trend'
             elif spec == 'random trend' or spec == 'rtrend':
                 self.level = True
                 self.trend = True
                 self.stochastic_trend = True
+                self.trend_specification = 'random trend'
             else:
                 raise ValueError("Invalid level/trend specification: '%s'"
                                  % spec)
