@@ -858,6 +858,7 @@ class UnobservedComponentsResults(MLEResults):
             'damped_cycle': self.model.damped_cycle,
             'regression': self.model.regression,
             'mle_regression': self.model.mle_regression,
+            'k_exog': self.model.k_exog,
 
             # Check for string trend/level specification
             'trend_specification': self.model.trend_specification
@@ -956,8 +957,8 @@ class UnobservedComponentsResults(MLEResults):
                              spec.seasonal * (spec.seasonal_period - 1) +
                              spec.cycle * (1 + spec.stochastic_cycle) +
                              spec.ar_order)
-                filtered_state = self.filter_results.filtered_state[offset]
-                out = Bunch(filtered=filtered_state,
+                filtered_state = self.filter_results.filtered_state
+                out = Bunch(filtered=filtered_state[offset:offset+spec.k_exog],
                             offset=offset)
         return out
 

@@ -191,7 +191,7 @@ def test_mle_reg():
     mod2 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=True)
     res2 = mod2.fit(disp=-1)
 
-    assert_allclose(res1.regression_coefficients.filtered[-1], 0.5, atol=1e-5)
+    assert_allclose(res1.regression_coefficients.filtered[0, -1], 0.5, atol=1e-5)
     assert_allclose(res2.params[1], 0.5, atol=1e-5)
 
 
