@@ -1802,6 +1802,23 @@ def test_bad_start_params():
     inv = load_macrodata().data['realinv']
     arima_mod = ARIMA(np.log(inv), (1,1,2))
     assert_raises(ValueError, mod.fit)
+    
+    # Test start_params as a function
+    def start_params_func(model):
+        p = model.k_ar
+        q = model.k_ma
+        k = model.k_trend + model.k_exog
+        start_params = np.array([1.] * k + [1./(p+1)] * p + [1./(q+1)] * q)
+        return start_params
+    
+    np.random.seed(12345)
+    arparams = np.array([.75, -.25])
+    maparams = np.array([.65, .35])
+
+    nobs = 30
+
+    y = arma_generate_sample(arparams, maparams, nobs)
+    sres = ARMA(y, order=(2, 2)).fit(start_params=start_params_func)
 
 
 def test_arima_small_data_bug():
