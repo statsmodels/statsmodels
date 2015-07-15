@@ -150,8 +150,9 @@ random_trend = {
 }
 
 cycle = {
-    'models': [{'irregular': True, 'cycle': True, 'stochastic_cycle': True}],
-    'params': [37.57197224, 0.1, 2*pi/10],
+    'models': [{'irregular': True, 'cycle': True, 'stochastic_cycle': True,
+                'damped_cycle': True}],
+    'params': [37.57197224, 0.1, 2*pi/10, 1],
     'llf': -672.3102588,
     'kwargs': {
         # Required due to the way KFAS estimated loglikelihood which P1inf is
@@ -164,7 +165,8 @@ seasonal = {
     'models': [{'irregular': True, 'seasonal': 4}],
     'params': [38.1704278, 0.1],
     'llf': -655.3337155,
-    'kwargs': {}
+    'kwargs': {},
+    'rtol': 1e-6
 }
 
 reg = {
@@ -173,6 +175,7 @@ reg = {
         {'irregular': True, 'exog': True, 'mle_regression': False},
         {'level': 'irregular', 'exog': True, 'mle_regression': False},
         {'level': 'ntrend', 'exog': True, 'mle_regression': False},
+        {'level': 'ntrend', 'exog': 'numpy', 'mle_regression': False},
     ],
     'params': [2.215447924],
     'llf': -379.6233483,
@@ -198,16 +201,35 @@ rtrend_ar1 = {
 lltrend_cycle_seasonal_reg_ar1 = {
     # Note: The test needs to fill in exog=np.log(dta['realgdp'])
     'models': [
+        # Complete specification
         {'irregular': True, 'level': True, 'stochastic_level': True,
          'trend': True, 'stochastic_trend': True, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
          'exog': True, 'mle_regression': False},
+        # Verbose string specification
         {'level': 'local linear trend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
          'exog': True, 'mle_regression': False},
+        # Abbreviated string specification
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
          'exog': True, 'mle_regression': False},
+        # Numpy exog dataset
+        {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
+         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'exog': 'numpy', 'mle_regression': False,}, 
+        # Annual frequency dataset
+        {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
+         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'exog': True, 'mle_regression': False, 'freq':'AS'},
+        # Quarterly frequency dataset
+        {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
+         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'exog': True, 'mle_regression': False, 'freq':'QS'},
+        # Monthly frequency dataset
+        {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
+         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'exog': True, 'mle_regression': False, 'freq':'MS'},
     ],
     'params': [0.0001, 0.01, 0.06, 0.0001, 0.0001, 0.1, 2*pi / 10, 0.2],
     'llf': -168.5258709,
