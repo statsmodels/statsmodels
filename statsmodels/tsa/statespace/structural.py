@@ -991,7 +991,7 @@ class UnobservedComponentsResults(MLEResults):
             Default is True.
         fig : Matplotlib Figure instance, optional
             If given, subplots are created in this figure instead of in a new
-            figure. Note that the 2x2 grid will be created in the provided
+            figure. Note that the grid will be created in the provided
             figure using `fig.add_subplot()`.
         figsize : tuple, optional
             If a figure is created, this argument allows specifying a size.
