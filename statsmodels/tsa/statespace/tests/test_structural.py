@@ -20,6 +20,13 @@ from numpy.testing import assert_equal, assert_almost_equal, assert_raises, asse
 from nose.exc import SkipTest
 
 
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except ImportError:
+    have_matplotlib = False
+
+
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
@@ -49,7 +56,15 @@ def run_ucm(name):
             
             kwargs['exog'] = exog
 
+        # Create the model
         mod = UnobservedComponents(values['unemp'], **kwargs)
+
+        # Smoke test for starting parameters, untransform, transform
+        # Also test that transform and untransform are inverses
+        mod.start_params
+        assert_equal(mod.start_params, mod.transform_params(mod.untransform_params(mod.start_params)))
+
+        # Fit the model at the true parameters
         res = mod.filter(true['params'])
 
         # Check that the cycle bounds were computed correctly
@@ -65,15 +80,24 @@ def run_ucm(name):
             # cycle frequency to be between 0 and pi
             cycle_period_bounds = (2, np.inf)
 
+        # Test that the cycle frequency bound is correct
         assert_equal(mod.cycle_frequency_bound,
             (2*np.pi / cycle_period_bounds[1],
              2*np.pi / cycle_period_bounds[0])
         )
 
+        # Test that the likelihood is correct
         rtol = true.get('rtol', 1e-7)
         atol = true.get('atol', 0)
         assert_allclose(res.llf, true['llf'], rtol=rtol, atol=atol)
 
+        # Smoke test for plot_components
+        if have_matplotlib:
+            fig = res.plot_components()
+            plt.close(fig)
+
+        # Smoke test for summary
+        res.summary()
 
 def test_irregular():
     run_ucm('irregular')
@@ -157,6 +181,20 @@ def test_lltrend_cycle_seasonal_reg_ar1():
     run_ucm('lltrend_cycle_seasonal_reg_ar1')
 
 
+def test_mle_reg():
+    endog = np.arange(100)
+    exog = endog*2
+
+    mod1 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=False)
+    res1 = mod1.fit(disp=-1)
+
+    mod2 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=True)
+    res2 = mod2.fit(disp=-1)
+
+    assert_allclose(res1.regression_coefficients.filtered[-1], 0.5, atol=1e-5)
+    assert_allclose(res2.params[1], 0.5, atol=1e-5)
+
+
 def test_specifications():
     endog = [1, 2]
 
@@ -198,3 +236,5 @@ def test_specifications():
             print(w)
             assert_equal(str(w[0].message), message)
 
+    # Test that a seasonal with period less than two is invalid
+    assert_raises(ValueError, UnobservedComponents, endog, seasonal=1)
