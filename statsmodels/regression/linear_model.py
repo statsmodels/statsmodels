@@ -847,14 +847,18 @@ class GLSAR(GLS):
         if hasattr(self, 'pinv_wexog'):
             del self.pinv_wexog
         self.initialize()
-        if _is_using_pandas(history['params'][0], None):
-            history['params'] = pd.concat(history['params'], 1)
-            history['params'].columns = ['iter_' + int(i) for i in range(history['params'].shape[1])]
-        else:
-            history['params'] = np.column_stack(history['params'])
+        if history['params']:
+            if _is_using_pandas(history['params'][0], None):
+                history['params'] = pd.concat(history['params'], 1)
+                history['params'].columns = ['iter_' + int(i) for i in range(history['params'].shape[1])]
+            else:
+                history['params'] = np.array(history['params'])
         # Use kwarg to insert history
 
         results = self.fit(history=history)
+#         # add last fit to history
+#         results.history['params'] = np.vstack((results.history['params'],
+#                                                results.params))
 
         return results
 

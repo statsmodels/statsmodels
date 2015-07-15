@@ -21,7 +21,7 @@ examples = examples_all  # [5]
 if 0 in examples:
     print('\n Example 0')
     X = np.arange(1, 8)
-    X = sm.add_constant(X)
+    X = sm.add_constant(X, prepend=False)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
     rho = 2
     model = GLSAR(Y, X, 2)
