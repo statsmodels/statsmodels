@@ -198,12 +198,12 @@ class UnobservedComponents(MLEModel):
         self.autoregressive = self.ar_order > 0
         self.irregular = irregular
 
-        self.stochastic_level = bool(stochastic_level and level)
-        self.stochastic_trend = bool(stochastic_trend and trend)
-        self.stochastic_seasonal = bool(stochastic_seasonal and seasonal)
-        self.stochastic_cycle = bool(stochastic_cycle and cycle)
+        self.stochastic_level = stochastic_level
+        self.stochastic_trend = stochastic_trend
+        self.stochastic_seasonal = stochastic_seasonal
+        self.stochastic_cycle = stochastic_cycle
 
-        self.damped_cycle = bool(damped_cycle and cycle)
+        self.damped_cycle = damped_cycle
         self.mle_regression = mle_regression
 
         # Check for string trend/level specification
@@ -285,6 +285,27 @@ class UnobservedComponents(MLEModel):
                 raise ValueError("Invalid level/trend specification: '%s'"
                                  % spec)
 
+        # Check for a model that makes sense
+        if trend and not level:
+            warn("Trend component specified without level component;"
+                 " deterministic level component added.")
+            self.level = True
+            self.stochastic_level = False
+
+        if not (self.irregular or
+                (self.level and self.stochastic_level) or
+                (self.trend and self.stochastic_trend) or
+                (self.seasonal and self.stochastic_seasonal) or
+                (self.cycle and self.stochastic_cycle) or
+                self.autoregressive):
+            warn("Specified model does not contain a stochastic element;"
+                 " irregular component added.")
+            self.irregular = True
+
+        if self.seasonal and self.seasonal_period < 2:
+            raise ValueError('Seasonal component must have a seasonal period'
+                             ' of at least 2.')
+
         # Create a bitmask holding the level/trend specification
         self.trend_mask = (
             self.irregular * 0x01 |
@@ -299,24 +320,6 @@ class UnobservedComponents(MLEModel):
             # trend specification may be none, e.g. if the model is only
             # a stochastic cycle, etc.
             self.trend_specification = _mask_map.get(self.trend_mask, None)
-
-        # Check for a model that makes sense
-        if trend and not level:
-            warn("Trend component specified without level component;"
-                 " deterministic level component added.")
-            self.level = True
-            self.stochastic_level = False
-
-        if (self.irregular + self.stochastic_level + self.stochastic_trend +
-                self.stochastic_seasonal + self.stochastic_cycle +
-                self.autoregressive) == 0:
-            warn("Specified model does not contain a stochastic element;"
-                 " irregular component added.")
-            self.irregular = True
-
-        if self.seasonal and self.seasonal_period < 2:
-            raise ValueError('Seasonal component must have a seasonal period'
-                             ' of at least 2.')
 
         # Exogenous component
         self.k_exog = 0
