@@ -630,8 +630,8 @@ class UnobservedComponents(MLEModel):
         # Cyclical
         if self.cycle:
             _start_params['cycle_var'] = np.std(resid)**2
-            _start_params['cycle_damp'] = (
-                np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0]
+            _start_params['cycle_damp'] = np.clip(
+                np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0], 0, 0.99
             )
 
             # Set initial period estimate to 3 year, if we know the frequency
