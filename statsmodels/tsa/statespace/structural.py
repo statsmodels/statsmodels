@@ -1035,7 +1035,7 @@ class UnobservedComponentsResults(MLEResults):
         ])
 
         # Number of plots
-        k_plots = observed + np.sum(components.values())
+        k_plots = observed + np.sum(list(components.values()))
 
         # Get dates, if applicable
         if hasattr(self.data, 'dates') and self.data.dates is not None:
