@@ -297,7 +297,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
-        params = np.array(params)
+        params = np.array(params, ndmin=1)
 
         if not transformed:
             params = self.transform_params(params)
@@ -702,7 +702,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return np.array(unconstrained)
+        return np.array(unconstrained, ndmin=1)
 
     def untransform_params(self, constrained):
         """
@@ -749,7 +749,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         Since Model is a base class, this method should be overridden by
         subclasses to perform actual updating steps.
         """
-        params = np.array(params)
+        params = np.array(params, ndmin=1)
 
         if not transformed:
             params = self.transform_params(params)

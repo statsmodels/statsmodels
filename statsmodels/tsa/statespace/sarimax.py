@@ -842,7 +842,7 @@ class SARIMAX(MLEModel):
 
     def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
                **kwargs):
-        params = np.array(params)
+        params = np.array(params, ndmin=1)
 
         # Transform parameters if necessary
         if not transformed:
@@ -1291,7 +1291,7 @@ class SARIMAX(MLEModel):
         polynomials, although it only excludes a very small portion very close
         to the invertibility boundary.
         """
-        unconstrained = np.array(unconstrained)
+        unconstrained = np.array(unconstrained, ndmin=1)
         constrained = np.zeros(unconstrained.shape, unconstrained.dtype)
 
         start = end = 0
@@ -1395,7 +1395,7 @@ class SARIMAX(MLEModel):
         polynomials, although it only excludes a very small portion very close
         to the invertibility boundary.
         """
-        constrained = np.array(constrained)
+        constrained = np.array(constrained, ndmin=1)
         unconstrained = np.zeros(constrained.shape, constrained.dtype)
 
         start = end = 0
