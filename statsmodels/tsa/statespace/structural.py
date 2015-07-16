@@ -1066,6 +1066,8 @@ class UnobservedComponentsResults(MLEResults):
             ('autoregressive', autoregressive and spec.autoregressive),
         ])
 
+        llb = self.filter_results.loglikelihood_burn
+
         # Number of plots
         k_plots = observed + np.sum(list(components.values()))
 
@@ -1095,8 +1097,11 @@ class UnobservedComponentsResults(MLEResults):
             ci_upper = predict + critical_value * std_errors
 
             # Plot
-            ax.plot(dates, predict, label='One-step-ahead predictions')
-            ci_poly = ax.fill_between(dates, ci_lower, ci_upper, alpha=0.2)
+            ax.plot(dates[llb:], predict[llb:],
+                    label='One-step-ahead predictions')
+            ci_poly = ax.fill_between(
+                dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+            )
             ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
 
             # Proxy artist for fill_between legend entry
@@ -1133,14 +1138,22 @@ class UnobservedComponentsResults(MLEResults):
 
             # Plot
             state_label = '%s (%s)' % (component.title(), which)
-            ax.plot(dates, value, label=state_label)
-            ci_poly = ax.fill_between(dates, ci_lower, ci_upper, alpha=0.2)
+            ax.plot(dates[llb:], value[llb:], label=state_label)
+            ci_poly = ax.fill_between(
+                dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+            )
             ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
 
             # Legend
             ax.legend()
 
             ax.set_title('%s component' % component.title())
+
+        # Add a note if first observations excluded
+        if llb > 0:
+            text = ('Note: The first %d observations are not shown, due to'
+                    ' approximate diffuse initialization.')
+            fig.text(0.1, 0.01, text % llb, fontsize='large');
 
         return fig
 
