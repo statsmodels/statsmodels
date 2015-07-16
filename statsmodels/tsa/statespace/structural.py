@@ -989,7 +989,7 @@ class UnobservedComponentsResults(MLEResults):
                              spec.ar_order)
                 res = self.filter_results
                 start = offset
-                end = offset + k_exog
+                end = offset + spec.k_exog
                 out = Bunch(
                     filtered=res.filtered_state[start:end],
                     filtered_cov=res.filtered_state_cov[start:end, start:end],
