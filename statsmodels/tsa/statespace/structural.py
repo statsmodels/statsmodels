@@ -882,7 +882,9 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.level:
             offset = 0
-            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+            res = self.filter_results
+            out = Bunch(filtered=res.filtered_state[offset],
+                        filtered_cov=res.filtered_state_cov[offset, offset],
                         offset=offset)
         return out
 
@@ -897,12 +899,17 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.trend:
             offset = int(spec.level)
-            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+            res = self.filter_results
+            out = Bunch(filtered=res.filtered_state[offset],
+                        filtered_cov=res.filtered_state_cov[offset, offset],
                         offset=offset)
         return out
 
     @property
     def seasonal(self):
+        """
+        Filtered value of unobserved seasonal component
+        """
         # If present, seasonal always follows level/trend (if they are present)
         # Note that we return only the first seasonal state, but there are
         # in fact seasonal_period-1 seasonal states, however latter states
@@ -911,12 +918,17 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.seasonal:
             offset = int(spec.trend + spec.level)
-            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+            res = self.filter_results
+            out = Bunch(filtered=res.filtered_state[offset],
+                        filtered_cov=res.filtered_state_cov[offset, offset],
                         offset=offset)
         return out
 
     @property
     def cycle(self):
+        """
+        Filtered value of unobserved cycle component
+        """
         # If present, cycle always follows level/trend and seasonal
         # Note that we return only the first cyclical state, but there are
         # in fact 2 cyclical states. The second cyclical state is not simply
@@ -927,12 +939,17 @@ class UnobservedComponentsResults(MLEResults):
         if spec.cycle:
             offset = int(spec.trend + spec.level +
                          spec.seasonal * (spec.seasonal_period - 1))
-            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+            res = self.filter_results
+            out = Bunch(filtered=res.filtered_state[offset],
+                        filtered_cov=res.filtered_state_cov[offset, offset],
                         offset=offset)
         return out
 
     @property
     def autoregressive(self):
+        """
+        Filtered value of unobserved autoregressive component
+        """
         # If present, autoregressive always follows level/trend, seasonal, and
         # cyclical. If it is an AR(p) model, then there are p associated
         # states, but the second - pth states are just lags of the first state.
@@ -942,12 +959,17 @@ class UnobservedComponentsResults(MLEResults):
             offset = int(spec.trend + spec.level +
                          spec.seasonal * (spec.seasonal_period - 1) +
                          2 * spec.cycle)
-            out = Bunch(filtered=self.filter_results.filtered_state[offset],
+            res = self.filter_results
+            out = Bunch(filtered=res.filtered_state[offset],
+                        filtered_cov=res.filtered_state_cov[offset, offset],
                         offset=offset)
         return out
 
     @property
     def regression_coefficients(self):
+        """
+        Filtered value of unobserved regression coefficients
+        """
         # If present, state-vector regression coefficients always are last
         # (i.e. they follow level/trend, seasonal, cyclical, and
         # autoregressive states). There is one state associated with each
@@ -965,9 +987,14 @@ class UnobservedComponentsResults(MLEResults):
                              spec.seasonal * (spec.seasonal_period - 1) +
                              spec.cycle * (1 + spec.stochastic_cycle) +
                              spec.ar_order)
-                filtered_state = self.filter_results.filtered_state
-                out = Bunch(filtered=filtered_state[offset:offset+spec.k_exog],
-                            offset=offset)
+                res = self.filter_results
+                start = offset
+                end = offset + k_exog
+                out = Bunch(
+                    filtered=res.filtered_state[start:end],
+                    filtered_cov=res.filtered_state_cov[start:end, start:end],
+                    offset=offset
+                )
         return out
 
     def plot_components(self, which='filtered', alpha=0.05,
@@ -1028,10 +1055,6 @@ class UnobservedComponentsResults(MLEResults):
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         plt = _import_mpl()
         fig = create_mpl_fig(fig, figsize)
-
-        # Check for a valid estimation type
-        if which not in ['filtered']:
-            raise ValueError('Invalid type of state estimate.')
 
         # Determine which plots we have
         spec = self.specification
@@ -1096,12 +1119,15 @@ class UnobservedComponentsResults(MLEResults):
             ax = fig.add_subplot(k_plots, 1, plot_idx)
             plot_idx += 1
 
+            component_bunch = getattr(self, component)
+
+            # Check for a valid estimation type
+            if which not in component_bunch:
+                raise ValueError('Invalid type of state estimate.')
+
             # Get the predicted values and confidence intervals
-            value = getattr(self, component)[which]
-            offset = getattr(self, component)['offset']
-            std_errors = np.sqrt(
-                self.filter_results.filtered_state_cov[offset, offset]
-            )
+            value = component_bunch[which]
+            std_errors = np.sqrt(component_bunch['%s_cov' % which])
             ci_lower = value - critical_value * std_errors
             ci_upper = value + critical_value * std_errors
 
