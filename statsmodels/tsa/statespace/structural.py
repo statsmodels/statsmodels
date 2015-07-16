@@ -49,8 +49,10 @@ class UnobservedComponents(MLEModel):
     Parameters
     ----------
 
-    level : bool, optional
-        Whether or not to include a level component. Default is False.
+    level : bool or string, optional
+        Whether or not to include a level component. Default is False. Can also
+        be a string specification of the level / trend component; see Notes
+        for available model specification strings.
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
@@ -63,15 +65,15 @@ class UnobservedComponents(MLEModel):
     exog : array_like or None, optional
         Exoenous variables.
     irregular : bool, optional
-        Whether or not to include an irregular component. Default is True
+        Whether or not to include an irregular component. Default is False.
     stochastic_level : bool, optional
-        Whether or not any level component is stochastic. Default is True.
+        Whether or not any level component is stochastic. Default is False.
     stochastic_trend : bool, optional
-        Whether or not any trend component is stochastic. Default is True.
+        Whether or not any trend component is stochastic. Default is False.
     stochastic_seasonal : bool, optional
-        Whether or not any seasonal component is stochastic. Default is True.
+        Whether or not any seasonal component is stochastic. Default is False.
     stochastic_cycle : bool, optional
-        Whether or not any cycle component is stochastic. Default is True.
+        Whether or not any cycle component is stochastic. Default is False.
     damped_cycle : bool, optional
         Whether or not the cycle component is damped. Default is False.
     cycle_period_bounds : tuple, optional
@@ -102,31 +104,67 @@ class UnobservedComponents(MLEModel):
 
     **Trend**
 
-    The trend is modeled either as a *local linear trend* model or as an
-    *integrated random walk* model.
-
-    The local linear trend is specified as:
+    The trend component is a dynamic extension of a regression model that
+    includes an intercept and linear time-trend. It can be written:
 
     .. math::
 
-        \mu_t = \mu_{t-1} + \nu_{t-1} + \xi_{t-1} \\
-        \nu_t = \nu_{t-1} + \zeta_{t-1}
+        \mu_t = \mu_{t-1} + \beta_{t-1} + \eta_{t-1} \\
+        \beta_t = \beta_{t-1} + \zeta_{t-1}
 
-    with :math:`\xi_t \sim N(0, \sigma_\xi^2)` and
+    where the level is a generalization of the intercept term that can
+    dynamically vary across time, and the trend is a generalization of the
+    time-trend such that the slope can dynamically vary across time.
+
+    Here :math:`\eta_t \sim N(0, \sigma_\eta^2)` and
     :math:`\zeta_t \sim N(0, \sigma_\zeta^2)`.
 
-    The integrated random walk model of order `r` is specified as:
+    For both elements (level and trend), we can consider models in which:
 
-    .. math::
+    - The element is included vs excluded (if the trend is included, there must
+      also be a level included).
+    - The element is deterministic vs stochastic (i.e. whether or not the
+      variance on the error term is confined to be zero or not)
+    
+    The only additional parameters to be estimated via MLE are the variances of
+    any included stochastic components.
 
-        \Delta^r \mu_t = \xi_{t-1} \\
+    The level/trend components can be specified using the boolean keyword
+    arguments `level`, `stochastic_level`, `trend`, etc., or all at once as a
+    string argument to `level`. The following table shows the available
+    model specifications:
 
-    This component results in two parameters to be selected via maximum
-    likelihood: :math:`\sigma_\xi^2` and :math:`\sigma_\zeta^2`.
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Model name                       | Full string syntax                   | Abbreviated syntax | Model                                                                                                                |
+    +==================================+======================================+====================+======================================================================================================================+
+    | No trend                         | `'irregular'`                        | `'ntrend'`         | :math:`y_t = \varepsilon_t`                                                                                          |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Fixed intercept                  | `'fixed intercept'`                  |                    | :math:`y_t = \mu`                                                                                                    |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Deterministic constant           | `'deterministic constant'`           | `'dconstant'`      | :math:`y_t = \mu + \varepsilon_t`                                                                                    |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Local level                      | `'local level'`                      | `'llevel'`         | :math:`y_t = \mu_t + \varepsilon_t \\ \mu_t = \mu_{t-1} + \eta_t`                                                    |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Random walk                      | `'random walk'`                      | `'rwalk'`          | :math:`y_t = \mu_t \\ \mu_t = \mu_{t-1} + \eta_t`                                                                    |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Fixed slope                      | `'fixed slope'`                      |                    | :math:`y_t = \mu_t \\ \mu_t = \mu_{t-1} + \beta`                                                                     |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Deterministic trend              | `'deterministic trend'`              | `'dtrend'`         | :math:`y_t = \mu_t + \varepsilon_t \\ \mu_t = \mu_{t-1} + \beta`                                                     |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Local linear deterministic trend | `'local linear deterministic trend'` | `'lldtrend'`       | :math:`y_t = \mu_t + \varepsilon_t \\ \mu_t = \mu_{t-1} + \beta`                                                     |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Random walk with drift           | `'random walk with drift'`           | `'rwdrift'`        | :math:`y_t = \mu_t \\ \mu_t = \mu_{t-1} + \beta`                                                                     |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Local linear trend               | `'local linear trend'`               | `'lltrend'`        | :math:`y_t = \mu_t + \varepsilon_t \\ \mu_t = \mu_{t-1} + \beta_{t-1} + \eta_t \\ \beta_t = \beta_{t-1} + \zeta_t`   |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Smooth trend                     | `'smooth trend'`                     | `'strend'`         | :math:`y_t = \mu_t + \varepsilon_t \\ \mu_t = \mu_{t-1} + \beta_{t-1} \\ \beta_t = \beta_{t-1} + \zeta_t`            |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
+    | Random trend                     | `'random trend'`                     | `'rtrend'`         | :math:`y_t = \mu_t \\ \mu_t = \mu_{t-1} + \beta_{t-1} \\ \beta_t = \beta_{t-1} + \zeta_t`                            |
+    +----------------------------------+--------------------------------------+--------------------+----------------------------------------------------------------------------------------------------------------------+
 
-    In the case of the integrated random walk model, the parameter
-    :math:`\sigma_\xi^2` is constrained to be zero, but the parameter `r` (the
-    order of integration) must be chosen (it is not estimated by MLE).
+    Following the fitting of the model, the unobserved level and trend
+    component time series are available in the results class in the
+    `level` and `trend` attributes, respectively.
 
     **Seasonal**
 
@@ -137,17 +175,27 @@ class UnobservedComponents(MLEModel):
         \gamma_t = - \sum_{j=1}^{s-1} \gamma_{t+1-j} + \omega_t \\
         \omega_t \sim N(0, \sigma_\omega^2)
 
-    where s is the number of seasons and :math:`\omega_t` is an error term that
-    allows the seasonal constants to change over time (if this is not desired,
-    :math:`\sigma_\omega^2` can be set to zero).
+    The periodicity (number of seasons) is s, and the defining character is
+    that (without the error term), the seasonal components sum to zero across
+    one complete cycle. The inclusion of an error term allows the seasonal
+    effects to vary over time (if this is not desired, :math:`\sigma_\omega^2`
+    can be set to zero using the `stochastic_seasonal=False` keyword argument).
 
     This component results in one parameter to be selected via maximum
     likelihood: :math:`\sigma_\omega^2`, and one parameter to be chosen, the
     number of seasons `s`.
 
+    Following the fitting of the model, the unobserved seasonal component
+    time series is available in the results class in the `seasonal`
+    attribute.
+
     **Cycle**
 
-    The cyclical component is modeled as
+    The cyclical component is intended to capture cyclical effects at time
+    frames much longer than captured by the seasonal component. For example,
+    in economics the cyclical term is often intended to capture the business
+    cycle, and is then expected to have a period between "1.5 and 12 years"
+    (see Durbin and Koopman).
 
     .. math::
 
@@ -160,9 +208,37 @@ class UnobservedComponents(MLEModel):
 
     where :math:`\omega_t, \tilde \omega_t iid N(0, \sigma_{\tilde \omega}^2)`
 
-    This component results in three parameters to be selected via maximum
-    likelihood: :math:`\sigma_{\tilde \omega}^2`, :math:`\rho_c`, and
-    :math:`\lambda_c`.
+    The parameter :math:`\lambda_c` (the frequency of the cycle) is an
+    additional parameter to be estimated by MLE.
+
+    If the cyclical effect is stochastic (`stochastic_cycle=True`), then there
+    is another parameter to estimate (the variance of the error term - note
+    that both of the error terms here share the same variance, but are assumed
+    to have independent draws).
+
+    If the cycle is damped (`damped_cycle=True`), then there is a third
+    parameter to estimate, :math:`\rho_c`.
+
+    In order to achieve cycles with the appropriate frequencies, bounds are
+    imposed on the parameter :math:`\lambda_c` in estimation. These can be
+    controlled via the keyword argument `cycle_period_bounds`, which, if
+    specified, must be a tuple of bounds on the **period** `(lower, upper)`.
+    The bounds on the frequency are then calculated from those bounds.
+
+    The default bounds, if none are provided, are selected in the following
+    way:
+
+    1. If no date / time information is provided, the frequency is
+       constrained to be between zero and :math:`\pi`, so the period is
+       constrained to be in :math:`[0.5, \infty]`.
+    2. If the date / time information is provided, the default bounds
+       allow the cyclical component to be between 1.5 and 12 years; depending
+       on the frequency of the endogenous variable, this will imply different
+       specific bounds.
+
+    Following the fitting of the model, the unobserved cyclical component
+    time series is available in the results class in the `cycle`
+    attribute.
 
     **Irregular**
 
@@ -171,6 +247,35 @@ class UnobservedComponents(MLEModel):
     .. math::
 
         \varepsilon_t \sim N(0, \sigma_\varepsilon^2)
+
+    **Autoregressive Irregular**
+
+    An autoregressive component (often used as a replacement for the white
+    noise irregular term) can be specified as:
+
+    .. math::
+
+        \varepsilon_t = \rho(L) \varepsilon_{t-1} + \epsilon_t \\
+        \epsilon_t \sim N(0, \sigma_\epsilon^2)
+
+    In this case, the AR order is specified via the `autoregressive` keyword,
+    and the autoregressive coefficients are estimated.
+
+    Following the fitting of the model, the unobserved autoregressive component
+    time series is available in the results class in the `autoregressive`
+    attribute.
+
+    **Regression effects**
+
+    Exogenous regressors can be pass to the `exog` argument. The regression
+    coefficients will be estimated by maximum likelihood unless
+    `mle_regression=False`, in which case the regression coefficients will be
+    included in the state vector where they are essentially estimated via
+    recursive OLS.
+
+    If the regression_coefficients are included in the state vector, the
+    recursive estimates are available in the results class in the
+    `regression_coefficients` attribute.
 
     References
     ----------

@@ -118,7 +118,7 @@ A very brief example of how to use this model::
    endog = pd.read_csv('your/dataset/here.csv')
 
    # We could fit an AR(2) model, described above
-   mod_ar2 = sm.tsa.statespace.SARIMAX(endog, order=(2,0,0))
+   mod_ar2 = sm.tsa.SARIMAX(endog, order=(2,0,0))
    # Note that mod_ar2 is an instance of the SARIMAX class
 
    # Fit the model via maximum likelihood
@@ -130,8 +130,8 @@ A very brief example of how to use this model::
 
    # We could also fit a more complicated model with seasonal components.
    # As an example, here is an SARIMA(1,1,1) x (0,1,1,4):
-   mod_sarimax = sm.tsa.statespace.SARIMAX(endog, order=(1,1,1),
-                                           seasonal_order=(0,1,1,4))
+   mod_sarimax = sm.tsa.SARIMAX(endog, order=(1,1,1),
+                                seasonal_order=(0,1,1,4))
    res_sarimax = mod_sarimax.fit()
 
    # Show the summary of results
@@ -144,6 +144,51 @@ and prediction / forecasting.
 Behind the scenes, the `SARIMAX` model creates the design and transition
 matrices (and sometimes some of the other matrices) based on the model
 specification.
+
+Unobserved Components
+^^^^^^^^^^^^^^^^^^^^^
+
+The `UnobservedComponents` class is another example of a statespace model.
+
+.. autosummary::
+   :toctree: generated/
+
+   structural.UnobservedComponents
+   structural.UnobservedComponentsResults
+
+A very brief example of how to use this model::
+
+   # Load the statsmodels api
+   import statsmodels.api as sm
+
+   # Load your dataset
+   endog = pd.read_csv('your/dataset/here.csv')
+
+   # Fit a local level model
+   mod_ll = sm.tsa.UnobservedComponents(endog, 'local level')
+   # Note that mod_ar2 is an instance of the UnobservedComponents class
+
+   # Fit the model via maximum likelihood
+   res_ll = mod_ll.fit()
+   # Note that res_ll is an instance of the UnobservedComponentsResults class
+
+   # Show the summary of results
+   print(res_ll.summary())
+
+   # Show a plot of the estimated level and trend component series
+   fig_ll = res_ll.plot_components()
+
+   # We could further add a damped stochastic cycle as follows
+   mod_cycle = sm.tsa.UnobservedComponents(endog, 'local level', cycle=True,
+                                           damped_cycle=true,
+                                           stochastic_cycle=True)
+   res_cycle = mod_cycle.fit()
+
+   # Show the summary of results
+   print(res_cycle.summary())
+
+   # Show a plot of the estimated level, trend, and cycle component series
+   fig_cycle = res_cycle.plot_components()
 
 Custom state space models
 ^^^^^^^^^^^^^^^^^^^^^^^^^
