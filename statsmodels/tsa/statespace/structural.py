@@ -1088,7 +1088,8 @@ class UnobservedComponentsResults(MLEResults):
             plot_idx += 1
 
             # Plot the observed dataset
-            ax.plot(dates, self.model.endog, color='k', label='Observed')
+            ax.plot(dates[llb:], self.model.endog[llb:], color='k',
+                    label='Observed')
 
             # Get the predicted values and confidence intervals
             predict = self.filter_results.forecasts[0]
