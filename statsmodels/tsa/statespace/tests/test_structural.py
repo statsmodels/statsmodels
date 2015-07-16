@@ -89,15 +89,24 @@ def run_ucm(name):
         # Test that the likelihood is correct
         rtol = true.get('rtol', 1e-7)
         atol = true.get('atol', 0)
-        assert_allclose(res.llf, true['llf'], rtol=rtol, atol=atol)
+        assert_allclose(res_true.llf, true['llf'], rtol=rtol, atol=atol)
 
         # Smoke test for plot_components
         if have_matplotlib:
-            fig = res.plot_components()
+            fig = res_true.plot_components()
             plt.close(fig)
 
-        # Smoke test for summary
-        res.summary()
+        # Now fit the model via MLE
+        with warnings.catch_warnings(record=True) as w:
+            res = mod.fit(disp=-1)
+            # If we found a higher likelihood, no problem; otherwise check
+            # that we're very close to that found by R
+            if res.llf <= true['llf']:
+                assert_allclose(res.llf, true['llf'], rtol=1e-4)
+
+            # Smoke test for summary
+            res.summary()
+
 
 def test_irregular():
     run_ucm('irregular')
