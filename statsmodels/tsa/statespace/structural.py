@@ -995,7 +995,19 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def level(self):
         """
-        Filtered value of unobserved level component
+        Estimates of unobserved level component
+
+        Returns
+        -------
+        out: Bunch
+            Has the following attributes:
+            
+            - `filtered`: a time series array with the filtered estimate of
+                          the component
+            - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector where
+                        this component begins
         """
         # If present, level is always the first component of the state vector
         out = None
@@ -1011,7 +1023,19 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def trend(self):
         """
-        Filtered value of unobserved trend component
+        Estimates of of unobserved trend component
+
+        Returns
+        -------
+        out: Bunch
+            Has the following attributes:
+            
+            - `filtered`: a time series array with the filtered estimate of
+                          the component
+            - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector where
+                        this component begins
         """
         # If present, trend is always the second component of the state vector
         # (because level is always present if trend is present)
@@ -1028,7 +1052,19 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def seasonal(self):
         """
-        Filtered value of unobserved seasonal component
+        Estimates of unobserved seasonal component
+
+        Returns
+        -------
+        out: Bunch
+            Has the following attributes:
+            
+            - `filtered`: a time series array with the filtered estimate of
+                          the component
+            - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector where
+                        this component begins
         """
         # If present, seasonal always follows level/trend (if they are present)
         # Note that we return only the first seasonal state, but there are
@@ -1047,7 +1083,19 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def cycle(self):
         """
-        Filtered value of unobserved cycle component
+        Estimates of unobserved cycle component
+
+        Returns
+        -------
+        out: Bunch
+            Has the following attributes:
+            
+            - `filtered`: a time series array with the filtered estimate of
+                          the component
+            - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector where
+                        this component begins
         """
         # If present, cycle always follows level/trend and seasonal
         # Note that we return only the first cyclical state, but there are
@@ -1068,7 +1116,19 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def autoregressive(self):
         """
-        Filtered value of unobserved autoregressive component
+        Estimates of unobserved autoregressive component
+
+        Returns
+        -------
+        out: Bunch
+            Has the following attributes:
+            
+            - `filtered`: a time series array with the filtered estimate of
+                          the component
+            - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector where
+                        this component begins
         """
         # If present, autoregressive always follows level/trend, seasonal, and
         # cyclical. If it is an AR(p) model, then there are p associated
@@ -1088,7 +1148,19 @@ class UnobservedComponentsResults(MLEResults):
     @property
     def regression_coefficients(self):
         """
-        Filtered value of unobserved regression coefficients
+        Estimates of unobserved regression coefficients
+
+        Returns
+        -------
+        out: Bunch
+            Has the following attributes:
+            
+            - `filtered`: a time series array with the filtered estimate of
+                          the component
+            - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector where
+                        this component begins
         """
         # If present, state-vector regression coefficients always are last
         # (i.e. they follow level/trend, seasonal, cyclical, and
