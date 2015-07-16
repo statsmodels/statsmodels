@@ -578,7 +578,7 @@ class UnobservedComponents(MLEModel):
 
     def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
                **kwargs):
-        params = np.array(params)
+        params = np.array(params, ndmin=1)
 
         # Transform parameters if necessary
         if not transformed:
@@ -681,7 +681,7 @@ class UnobservedComponents(MLEModel):
         Transform unconstrained parameters used by the optimizer to constrained
         parameters used in likelihood evaluation
         """
-        unconstrained = np.array(unconstrained)
+        unconstrained = np.array(unconstrained, ndmin=1)
         constrained = np.zeros(unconstrained.shape, dtype=unconstrained.dtype)
 
         # Positive parameters: obs_cov, state_cov
@@ -724,7 +724,7 @@ class UnobservedComponents(MLEModel):
         """
         Reverse the transformation
         """
-        constrained = np.array(constrained)
+        constrained = np.array(constrained, ndmin=1)
         unconstrained = np.zeros(constrained.shape, dtype=constrained.dtype)
 
         # Positive parameters: obs_cov, state_cov
