@@ -504,8 +504,6 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 #                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
 #                                                             exog_idx]
                       )
-    print param_header
-    print params_stubs
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
