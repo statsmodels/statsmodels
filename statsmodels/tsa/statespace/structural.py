@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tsa.tsatools import lagmat
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
@@ -518,33 +519,6 @@ class UnobservedComponents(MLEModel):
         """
         Setup the structural time series representation
         """
-        # TODO fix this
-        # (if we don't set it here, each instance shares a single dictionary)
-        self._start_params = {
-            'irregular_var': 0.1,
-            'level_var': 0.1,
-            'trend_var': 0.1,
-            'seasonal_var': 0.1,
-            'cycle_freq': 0.1,
-            'cycle_var': 0.1,
-            'cycle_damp': 0.1,
-            'ar_coeff': 0,
-            'ar_var': 0.1,
-            'reg_coeff': 0,
-        }
-        self._param_names = {
-            'irregular_var': 'sigma2.irregular',
-            'level_var': 'sigma2.level',
-            'trend_var': 'sigma2.trend',
-            'seasonal_var': 'sigma2.seasonal',
-            'cycle_var': 'sigma2.cycle',
-            'cycle_freq': 'frequency.cycle',
-            'cycle_damp': 'damping.cycle',
-            'ar_coeff': 'ar.L%d',
-            'ar_var': 'sigma2.ar',
-            'reg_coeff': 'beta.%d',
-        }
-
         # Initialize the ordered sets of parameters
         self.parameters = OrderedDict()
         self.parameters_obs_intercept = OrderedDict()
@@ -608,25 +582,11 @@ class UnobservedComponents(MLEModel):
             self._idx_ar_transition = (
                 np.s_['transition', i, i:i+self.ar_order]
             )
-            self._start_params['ar_coeff'] = (
-                [self._start_params['ar_coeff']] * self.ar_order
-            )
-            self._param_names['ar_coeff'] = [
-                self._param_names['ar_coeff'] % k
-                for k in range(1, self.ar_order+1)
-            ]
             j += 1
             i += self.ar_order
         if self.regression:
             if self.mle_regression:
                 self.parameters_obs_intercept['reg_coeff'] = self.k_exog
-                self._start_params['reg_coeff'] = (
-                    [self._start_params['reg_coeff']] * self.k_exog
-                )
-                self._param_names['reg_coeff'] = [
-                    self._param_names['reg_coeff'] % k
-                    for k in range(1, self.k_exog+1)
-                ]
             else:
                 design = np.repeat(self.ssm['design', :, :, 0], self.nobs, axis=0)
                 self.ssm['design'] = design.transpose()[np.newaxis, :, :]
@@ -733,7 +693,7 @@ class UnobservedComponents(MLEModel):
 
         # Level / trend variances
         # (Use the HP filter to get initial estimates of variances)
-        _start_params = self._start_params.copy()
+        _start_params = {}
         if self.level:
             resid, trend1 = hpfilter(endog)
 
@@ -747,14 +707,36 @@ class UnobservedComponents(MLEModel):
         else:
             resid = self.ssm.endog[0]
 
+        # Regression
+        if self.regression and self.mle_regression:
+            _start_params['reg_coeff'] = (
+                np.linalg.pinv(self.exog).dot(resid).tolist()
+            )
+            resid = np.squeeze(
+                resid - np.dot(self.exog, _start_params['reg_coeff'])
+            )
+
+        # Autoregressive
+        if self.autoregressive:
+            Y = resid[self.ar_order:]
+            X = lagmat(resid, self.ar_order, trim='both')
+            _start_params['ar_coeff'] = np.linalg.pinv(X).dot(Y).tolist()
+            resid = np.squeeze(Y - np.dot(X, _start_params['ar_coeff']))
+            _start_params['ar_var'] = np.var(resid)
+
+        # The variance of the residual term can be used for all variances,
+        # just to get something in the right order of magnitude.
+        var_resid = np.var(resid)
+
         # Seasonal
         if self.stochastic_seasonal:
-            # TODO seasonal variance starting values?
-            pass
+            _start_params['seasonal_var'] = var_resid
 
         # Cyclical
         if self.cycle:
-            _start_params['cycle_var'] = np.std(resid)**2
+            _start_params['cycle_var'] = var_resid
+            # Clip this to make sure it is postive and strictly stationary
+            # (i.e. don't want negative or 1)
             _start_params['cycle_damp'] = np.clip(
                 np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0], 0, 0.99
             )
@@ -768,9 +750,10 @@ class UnobservedComponents(MLEModel):
                 _start_params['cycle_freq'] = 2 * np.pi / 12
             elif freq == 'M':
                 _start_params['cycle_freq'] = 2 * np.pi / 36
+
         # Irregular
-        else:
-            _start_params['irregular_var'] = np.std(resid)**2
+        if self.irregular:
+            _start_params['irregular_var'] = var_resid
 
         # Create the starting parameter list
         start_params = []
@@ -787,10 +770,30 @@ class UnobservedComponents(MLEModel):
             return []
         param_names = []
         for key in self.parameters.keys():
-            if np.isscalar(self._param_names[key]):
-                param_names.append(self._param_names[key])
+            if key == 'irregular_var':
+                param_names.append('sigma2.irregular')
+            elif key == 'level_var':
+                param_names.append('sigma2.level')
+            elif key == 'trend_var':
+                param_names.append('sigma2.trend')
+            elif key == 'seasonal_var':
+                param_names.append('sigma2.seasonal')
+            elif key == 'cycle_var':
+                param_names.append('sigma2.cycle')
+            elif key == 'cycle_freq':
+                param_names.append('frequency.cycle')
+            elif key == 'cycle_damp':
+                param_names.append('damping.cycle')
+            elif key == 'ar_coeff':
+                for i in range(self.ar_order):
+                    param_names.append('ar.L%d' % (i+1))
+            elif key == 'ar_var':
+                param_names.append('sigma2.ar')
+            elif key == 'reg_coeff':
+                for i in range(self.ar_order):
+                    param_names.append('beta.%d' % (i+1))
             else:
-                param_names += self._param_names[key]
+                param_names.append(key)
         return param_names
 
     def transform_params(self, unconstrained):

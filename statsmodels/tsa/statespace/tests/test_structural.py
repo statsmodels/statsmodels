@@ -62,10 +62,10 @@ def run_ucm(name):
         # Smoke test for starting parameters, untransform, transform
         # Also test that transform and untransform are inverses
         mod.start_params
-        assert_equal(mod.start_params, mod.transform_params(mod.untransform_params(mod.start_params)))
+        assert_allclose(mod.start_params, mod.transform_params(mod.untransform_params(mod.start_params)))
 
         # Fit the model at the true parameters
-        res = mod.filter(true['params'])
+        res_true = mod.filter(true['params'])
 
         # Check that the cycle bounds were computed correctly
         freqstr = freq[0] if freq is not None else values.index.freqstr[0]
@@ -182,14 +182,18 @@ def test_lltrend_cycle_seasonal_reg_ar1():
 
 
 def test_mle_reg():
-    endog = np.arange(100)
+    endog = np.arange(100)*1.0
     exog = endog*2
+    # Make the fit not-quite-perfect
+    endog[::2] += 0.01
+    endog[1::2] -= 0.01
 
-    mod1 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=False)
-    res1 = mod1.fit(disp=-1)
+    with warnings.catch_warnings(record=True) as w:
+        mod1 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=False)
+        res1 = mod1.fit(disp=-1)
 
-    mod2 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=True)
-    res2 = mod2.fit(disp=-1)
+        mod2 = UnobservedComponents(endog, irregular=True, exog=exog, mle_regression=True)
+        res2 = mod2.fit(disp=-1)
 
     assert_allclose(res1.regression_coefficients.filtered[0, -1], 0.5, atol=1e-5)
     assert_allclose(res2.params[1], 0.5, atol=1e-5)
@@ -233,8 +237,32 @@ def test_specifications():
             message = ("Value of `%s` may be overridden when the trend"
                        " component is specified using a model string."
                        % attribute)
-            print(w)
             assert_equal(str(w[0].message), message)
 
     # Test that a seasonal with period less than two is invalid
     assert_raises(ValueError, UnobservedComponents, endog, seasonal=1)
+
+def test_start_params():
+    # Test that the behavior is correct for multiple exogenous and / or
+    # autoregressive components
+
+    # Parameters
+    nobs = int(1e4)
+    beta = np.r_[10, -2]
+    phi = np.r_[0.5, 0.1]
+
+    # Generate data
+    np.random.seed(1234)
+    exog = np.c_[np.ones(nobs), np.arange(nobs)*1.0]
+    eps = np.random.normal(size=nobs)
+    endog = np.zeros(nobs+2)
+    for t in range(1, nobs):
+        endog[t+1] = phi[0] * endog[t] + phi[1] * endog[t-1] + eps[t]
+    endog = endog[2:]
+    endog += np.dot(exog, beta)
+    
+    # Now just test that the starting parameters are approximately what they
+    # ought to be (could make this arbitrarily precise by increasing nobs,
+    # but that would slow down the test for no real gain)
+    mod = UnobservedComponents(endog, exog=exog, autoregressive=2)
+    assert_allclose(mod.start_params, [1., 0.5, 0.1, 10, -2], atol=1e-1)
