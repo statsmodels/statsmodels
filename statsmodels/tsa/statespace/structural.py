@@ -606,11 +606,19 @@ class UnobservedComponents(MLEModel):
         if not hasattr(self, 'parameters'):
             return []
 
+        # Eliminate missing data to estimate starting parameters
+        endog = self.endog
+        exog = self.exog
+        if np.any(np.isnan(endog)):
+            endog = endog[~np.isnan(endog)]
+            if exog is not None:
+                exog = exog[~np.isnan(endog)]
+
         # Level / trend variances
         # (Use the HP filter to get initial estimates of variances)
         _start_params = self._start_params.copy()
         if self.level:
-            resid, trend1 = hpfilter(self.endog)
+            resid, trend1 = hpfilter(endog)
 
             if self.stochastic_trend:
                 cycle2, trend2 = hpfilter(trend1)
