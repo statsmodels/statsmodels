@@ -100,21 +100,20 @@ class TestRealGDPARStata(object):
             .11576416, .02573029, -.00766572, .13506498, .08649569, .06942822,
             -.10685783, .00007999607
         ]
-        self.model.update(params)
-        self.results = self.model.filter()
+        self.results = self.model.filter(params)
 
     def test_filtered_state(self):
         for i in range(12):
             assert_allclose(
                 realgdp_results.ix[1:, 'u%d' % (i+1)],
-                self.results.filtered_state[i],
+                self.results.filter_results.filtered_state[i],
                 atol=1e-6
             )
 
     def test_standardized_forecasts_error(self):
         assert_allclose(
             realgdp_results.ix[1:, 'rstd'],
-            self.results.standardized_forecasts_error[0],
+            self.results.filter_results.standardized_forecasts_error[0],
             atol=1e-3
         )
 
