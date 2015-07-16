@@ -496,43 +496,6 @@ class TestClark1989ConserveAll(Clark1989):
             self.true_states.iloc[end-1, 3], 4
         )
 
-class TestClark1989ConserveAll(Clark1989):
-    """
-    Memory conservation forecasting test for the loglikelihood and filtered
-    states.
-    """
-    def __init__(self):
-        super(TestClark1989ConserveAll, self).__init__(
-            dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
-        )
-        # self.model.loglikelihood_burn = self.true['start']
-        self.model.loglikelihood_burn = 0
-        self.run_filter()
-
-    def test_loglike(self):
-        assert_almost_equal(
-            self.results.llf_obs[0], self.true['loglike'], 2
-        )
-
-    def test_filtered_state(self):
-        end = self.true_states.shape[0]
-        assert_almost_equal(
-            self.results.filtered_state[0][-1],
-            self.true_states.iloc[end-1, 0], 4
-        )
-        assert_almost_equal(
-            self.results.filtered_state[1][-1],
-            self.true_states.iloc[end-1, 1], 4
-        )
-        assert_almost_equal(
-            self.results.filtered_state[4][-1],
-            self.true_states.iloc[end-1, 2], 4
-        )
-        assert_almost_equal(
-            self.results.filtered_state[5][-1],
-            self.true_states.iloc[end-1, 3], 4
-        )
-
 
 class TestClark1989PartialMissing(Clark1989):
     def __init__(self):
