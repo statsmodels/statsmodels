@@ -1000,7 +1000,7 @@ class UnobservedComponentsResults(MLEResults):
     def plot_components(self, which='filtered', alpha=0.05,
                         observed=True, level=True, trend=True,
                         seasonal=True, cycle=True, autoregressive=True,
-                        fig=None, figsize=None):
+                        legend_loc='upper right', fig=None, figsize=None):
         """
         Plot the estimated components of the model.
 
@@ -1112,7 +1112,7 @@ class UnobservedComponentsResults(MLEResults):
             handles, labels = ax.get_legend_handles_labels()
             handles.append(p)
             labels.append(ci_label)
-            ax.legend(handles, labels)
+            ax.legend(handles, labels, loc=legend_loc)
 
             ax.set_title('Predicted vs observed')
 
@@ -1145,7 +1145,7 @@ class UnobservedComponentsResults(MLEResults):
             ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
 
             # Legend
-            ax.legend()
+            ax.legend(loc=legend_loc)
 
             ax.set_title('%s component' % component.title())
 
