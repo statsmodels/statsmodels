@@ -39,7 +39,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
 
     Returns
     -------
-    Defualt :
+    Default :
     returns='print'
             Prints the summarirized results
 
@@ -450,13 +450,12 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     #Dictionary to store the header names for the parameter part of the
     #summary table. look up by modeltype
-    alp = str((1-alpha)*100)+'%'
     if use_t:
         param_header = ['coef', 'std err', 't', 'P>|t|',
-                        '[' + alp + ' Conf. Int.]']
+                        '[' + str(alpha/2), str(1-alpha/2) + ']']
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
-                        '[' + alp + ' Conf. Int.]']
+                        '[' + str(alpha/2), str(1-alpha/2) + ']']
 
     if skip_header:
         param_header = None
@@ -471,14 +470,21 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     #center confidence intervals if they are unequal lengths
 #    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
 #                                                             exog_idx]
-    confint = ["%s %s" % tuple(lmap(forg, conf_int[i])) for i in \
-                                                             exog_idx]
-    len_ci = lmap(len, confint)
-    max_ci = max(len_ci)
-    min_ci = min(len_ci)
+    
+    ci_lows, ci_highs = zip(*[lmap(forg, conf_int[i]) for i in exog_idx])
+    len_ci_lows = lmap(len, ci_lows)
+    max_ci_lows = max(len_ci_lows)
+    min_ci_lows = min(len_ci_lows)
 
-    if min_ci < max_ci:
-        confint = [ci.center(max_ci) for ci in confint]
+    if min_ci_lows < max_ci_lows:
+        ci_lows = [ci.center(max_ci) for ci in ci_lows]
+
+    len_ci_highs = lmap(len, ci_highs)
+    max_ci_highs = max(len_ci_highs)
+    min_ci_highs = min(len_ci_highs)
+
+    if min_ci_highs < max_ci_highs:
+        ci_highs = [ci.center(max_ci) for ci in ci_highs]
 
     #explicit f/g formatting, now uses forg, f or g depending on values
 #    params_data = lzip(["%#6.4g" % (params[i]) for i in exog_idx],
@@ -494,10 +500,12 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                        [forg(std_err[i]) for i in exog_idx],
                        [forg(tvalues[i]) for i in exog_idx],
                        ["%#6.3f" % (pvalues[i]) for i in exog_idx],
-                       confint
+                       ci_lows, ci_highs 
 #                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
 #                                                             exog_idx]
                       )
+    print param_header
+    print params_stubs
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
