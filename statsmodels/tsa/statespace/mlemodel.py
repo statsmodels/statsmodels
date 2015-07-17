@@ -1959,7 +1959,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))
 
-        format_str = lambda array: [', '.join(['{:.2f}'.format(i) for i in array])]
+        format_str = lambda array: [
+            ', '.join(['{0:.2f}'.format(i) for i in array])
+        ]
         diagn_left = [('Ljung-Box (Q):', format_str(lb[:,0,-1])),
                       ('Prob(Q):', format_str(lb[:,1,-1])),
                       ('Heteroskedasticity (H):', format_str(het[:,0])),
@@ -2013,7 +2015,6 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
-
     _methods = {
         'forecast': 'dates',
         'simulate': 'ynames',
