@@ -554,6 +554,10 @@ class SARIMAX(MLEModel):
                 exog = diff(exog.copy(), self.orig_k_diff,
                             self.orig_k_seasonal_diff, self.k_seasons)
 
+            # Reset the ModelData datasets
+            self.data.endog, self.data.exog = (
+                self.data._convert_endog_exog(endog, exog))
+
         # Reset the nobs
         self.nobs = endog.shape[0]
 
@@ -1875,7 +1879,7 @@ class SARIMAXResults(MLEResults):
         # Handle exogenous parameters
         if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
             # Create a new faux SARIMAX model for the extended dataset
-            nobs = self.model.orig_endog.shape[0] + _out_of_sample
+            nobs = self.model.data.orig_endog.shape[0] + _out_of_sample
             endog = np.zeros((nobs, self.model.k_endog))
 
             if self.model.k_exog > 0:
@@ -1891,7 +1895,7 @@ class SARIMAXResults(MLEResults):
                                      ' appropriate shape. Required %s, got %s.'
                                      % (str(required_exog_shape),
                                         str(exog.shape)))
-                exog = np.c_[self.model.orig_exog.T, exog.T].T
+                exog = np.c_[self.model.data.orig_exog.T, exog.T].T
 
             # TODO replace with init_kwds or specification or similar
             model = SARIMAX(
