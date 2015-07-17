@@ -467,42 +467,12 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     exog_idx = lrange(len(xname))
 
-    #center confidence intervals if they are unequal lengths
-#    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
-#                                                             exog_idx]
-    
-    ci_lows, ci_highs = zip(*[lmap(forg, conf_int[i]) for i in exog_idx])
-    len_ci_lows = lmap(len, ci_lows)
-    max_ci_lows = max(len_ci_lows)
-    min_ci_lows = min(len_ci_lows)
-
-    if min_ci_lows < max_ci_lows:
-        ci_lows = [ci.center(max_ci) for ci in ci_lows]
-
-    len_ci_highs = lmap(len, ci_highs)
-    max_ci_highs = max(len_ci_highs)
-    min_ci_highs = min(len_ci_highs)
-
-    if min_ci_highs < max_ci_highs:
-        ci_highs = [ci.center(max_ci) for ci in ci_highs]
-
-    #explicit f/g formatting, now uses forg, f or g depending on values
-#    params_data = lzip(["%#6.4g" % (params[i]) for i in exog_idx],
-#                       ["%#6.4f" % (std_err[i]) for i in exog_idx],
-#                       ["%#6.3f" % (tvalues[i]) for i in exog_idx],
-#                       ["%#6.3f" % (pvalues[i]) for i in exog_idx],
-#                       confint
-##                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
-##                                                             exog_idx]
-#                      )
-
     params_data = lzip([forg(params[i], prec=4) for i in exog_idx],
                        [forg(std_err[i]) for i in exog_idx],
                        [forg(tvalues[i]) for i in exog_idx],
                        ["%#6.3f" % (pvalues[i]) for i in exog_idx],
-                       ci_lows, ci_highs 
-#                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
-#                                                             exog_idx]
+                       [forg(conf_int[i,0]) for i in exog_idx],
+                       [forg(conf_int[i,1]) for i in exog_idx]
                       )
     parameter_table = SimpleTable(params_data,
                                   param_header,
