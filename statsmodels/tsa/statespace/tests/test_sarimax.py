@@ -872,8 +872,15 @@ class SARIMAXCoverageTest(object):
     def test_results(self):
         self.result = self.model.filter(self.true_params)
 
-        # Just make sure that no exceptions are thrown during summary
+        # Just make sure that no exceptions are thrown during summary, predict
+        # forecast
         self.result.summary()
+        self.result.predict()
+        if self.model.k_exog == 0:
+            self.result.forecast()
+        else:
+            exog = np.r_[[0]*self.model.k_exog].reshape(self.model.k_exog, 1)
+            self.result.forecast(exog=exog)
 
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
