@@ -1843,7 +1843,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.graphics.tsaplots.plot_acf
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
-        _ = _import_mpl()
+        _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         # Eliminate residuals associated with burned likelihoods
         d = self.loglikelihood_burn
