@@ -116,7 +116,7 @@ class GamCV(BaseCV):
         self.cov_der2 = cov_der2 #TODO: Maybe cov_der2 has to be recomputed every time?
         self.y = y
         self.cv = cv
-        self.train_test_cv_indices = self.cv.split(self.basis)
+        self.train_test_cv_indices = self.cv.split(self.basis, self.y, label=None)
         return
 
     def _error(self, train_index, test_index, **kwargs):
