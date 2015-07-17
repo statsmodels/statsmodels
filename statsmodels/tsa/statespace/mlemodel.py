@@ -1441,7 +1441,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Store some values
         squared_resid = self.filter_results.standardized_forecasts_error**2
         d = self.loglikelihood_burn
-        h = np.round((self.nobs - d) / 3)
+        h = int(np.round((self.nobs - d) / 3))
 
         # Calculate the test statistics for each endogenous variable
         test_statistics = np.array([
