@@ -1882,7 +1882,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Bottom-right: Correlogram
         ax = fig.add_subplot(224)
         from statsmodels.graphics.tsaplots import plot_acf
-        plot_acf(resid, ax=ax, lags=10)
+        plot_acf(resid, ax=ax, lags=lags)
         ax.set_title('Correlogram')
 
         ax.set_ylim(-1,1)
