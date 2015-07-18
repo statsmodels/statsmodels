@@ -344,7 +344,6 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGAMResults(GLMResults):
 
-
     def partial_values(self, basis):
 
         y = np.dot(basis, self.params)

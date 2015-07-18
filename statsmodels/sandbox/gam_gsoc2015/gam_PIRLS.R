@@ -88,7 +88,7 @@ points(x, y)
 data = list()
 data$x = x
 data$y = y
-data$spl_x = X
+data$spl_x = spl_x
 data$y_est_spl_x = y_est
 
 
