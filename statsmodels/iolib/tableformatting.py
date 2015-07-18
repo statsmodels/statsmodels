@@ -96,7 +96,7 @@ fmt_2cols.update(fmt2)
 fmt_params = copy.deepcopy(fmt_base)
 
 fmt3 = dict(
-            data_fmts = ["%s", "%s", "%8s", "%s", "%23s"],
+            data_fmts = ["%s", "%s", "%8s", "%s", "%11s", "%11s"],
             )
 fmt_params.update(fmt3)
 

@@ -951,16 +951,16 @@ def test_summary():
 \\textbf{Df Model:}         &           6      & \\textbf{                     } &             \\\\
 \\bottomrule
 \\end{tabular}
-\\begin{tabular}{lccccc}
-                  & \\textbf{coef} & \\textbf{std err} & \\textbf{t} & \\textbf{P$>$$|$t$|$} & \\textbf{[95.0\\% Conf. Int.]}  \\\\
+\\begin{tabular}{lcccccc}
+                  & \\textbf{coef} & \\textbf{std err} & \\textbf{t} & \\textbf{P$>$$|$t$|$} & \\textbf{[0.025} & \\textbf{0.975]}  \\\\
 \\midrule
-\\textbf{GNPDEFL}  &      15.0619  &       84.915     &     0.177  &         0.863        &      -177.029   207.153       \\\\
-\\textbf{GNP}      &      -0.0358  &        0.033     &    -1.070  &         0.313        &        -0.112     0.040       \\\\
-\\textbf{UNEMP}    &      -2.0202  &        0.488     &    -4.136  &         0.003        &        -3.125    -0.915       \\\\
-\\textbf{ARMED}    &      -1.0332  &        0.214     &    -4.822  &         0.001        &        -1.518    -0.549       \\\\
-\\textbf{POP}      &      -0.0511  &        0.226     &    -0.226  &         0.826        &        -0.563     0.460       \\\\
-\\textbf{YEAR}     &    1829.1515  &      455.478     &     4.016  &         0.003        &       798.788  2859.515       \\\\
-\\textbf{constant} &   -3.482e+06  &      8.9e+05     &    -3.911  &         0.004        &      -5.5e+06 -1.47e+06       \\\\
+\\textbf{GNPDEFL}  &      15.0619  &       84.915     &     0.177  &         0.863        &     -177.029    &      207.153     \\\\
+\\textbf{GNP}      &      -0.0358  &        0.033     &    -1.070  &         0.313        &       -0.112    &        0.040     \\\\
+\\textbf{UNEMP}    &      -2.0202  &        0.488     &    -4.136  &         0.003        &       -3.125    &       -0.915     \\\\
+\\textbf{ARMED}    &      -1.0332  &        0.214     &    -4.822  &         0.001        &       -1.518    &       -0.549     \\\\
+\\textbf{POP}      &      -0.0511  &        0.226     &    -0.226  &         0.826        &       -0.563    &        0.460     \\\\
+\\textbf{YEAR}     &    1829.1515  &      455.478     &     4.016  &         0.003        &      798.788    &     2859.515     \\\\
+\\textbf{constant} &   -3.482e+06  &      8.9e+05     &    -3.911  &         0.004        &     -5.5e+06    &    -1.47e+06     \\\\
 \\bottomrule
 \\end{tabular}
 \\begin{tabular}{lclc}

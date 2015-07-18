@@ -1332,7 +1332,7 @@ def test_issue_339():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
     test_case = open(test_case_file, 'r').read()
-    np.testing.assert_(smry == test_case[:-1])
+    np.testing.assert_equal(smry, test_case[:-1])
 
 def test_issue_341():
     data = sm.datasets.anes96.load()
