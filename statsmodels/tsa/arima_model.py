@@ -60,7 +60,7 @@ _arma_params = """\
         The (p,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
     exog : array-like, optional
-        An optional array of exogenous variables. This should *not* include a
+        An optional arry of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
 _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
@@ -74,7 +74,7 @@ _arima_params = """\
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
     exog : array-like, optional
-        An optional array of exogenous variables. This should *not* include a
+        An optional arry of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
 _predict_notes = """
@@ -351,7 +351,7 @@ def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
         endog[i+p] = fcast
 
     #need to do one more without updating endog
-    forecast[steps - 1] = mu[steps - 1] + np.dot(arparams, endog[steps - 1:])
+    forecast[-1] = mu[-1] + np.dot(arparams, endog[steps - 1:])
     return forecast
 
 
@@ -408,14 +408,6 @@ def _make_arma_names(data, k_trend, order, exog_names):
     ma_lag_names = util.make_lag_names([data.ynames], k_ma, 0)
     ma_lag_names = [''.join(('ma.', i)) for i in ma_lag_names]
     trend_name = util.make_lag_names('', 0, k_trend)
-
-    # ensure exog_names stays unchanged when the `fit` method
-    # is called multiple times.
-    if exog_names[-k_ma:] == ma_lag_names and \
-       exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
-       (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
-        return exog_names
-
     exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
     return exog_names
 
@@ -464,7 +456,7 @@ class ARMA(tsbase.TimeSeriesModel):
             k_exog = 0
         self.k_exog = k_exog
 
-    def _fit_start_params_hr(self, order):
+    def _fit_start_params_hr(self, order, longar_maxlag=None):
         """
         Get starting parameters for fit.
 
@@ -473,6 +465,10 @@ class ARMA(tsbase.TimeSeriesModel):
         order : iterable
             (p,q,k) - AR lags, MA lags, and number of exogenous variables
             including the constant.
+        longar_maxlag : int, optional
+            If longar_maxlag is not None, rather than fitting an AR process
+            according to best BIC, fits an AR process with a lag length equal
+            to longar_maxlag.
 
         Returns
         -------
@@ -481,15 +477,19 @@ class ARMA(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        If necessary, fits an AR process with the laglength selected according
-        to best BIC.  Obtain the residuals.  Then fit an ARMA(p,q) model via
-        OLS using these residuals for a first approximation.  Uses a separate
-        OLS regression to find the coefficients of exogenous variables.
+        If necessary, fits an AR process with the laglength longar_maxlag, or
+        selected according to best BIC if longar_maxlag is None.  Obtain the
+        residuals.  Then fit an ARMA(p,q) model via OLS using these residuals
+        for a first approximation.  Uses a separate OLS regression to find the
+        coefficients of exogenous variables.
 
         References
         ----------
         Hannan, E.J. and Rissanen, J.  1982.  "Recursive estimation of mixed
             autoregressive-moving average order."  `Biometrika`.  69.1.
+
+        Durbin, J. 1960. "The Fitting of Time-Series Models."
+        `Review of the International Statistical Institute`. Vol. 28, No. 3
         """
         p, q, k = order
         start_params = zeros((p+q+k))
@@ -503,10 +503,15 @@ class ARMA(tsbase.TimeSeriesModel):
             if p != 0:
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
-                maxlag = int(round(12*(nobs/100.)**(1/4.)))
-                if maxlag >= nobs:
-                    maxlag = nobs - 1
-                armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                if longar_maxlag is not None:
+                    maxlag = int(round(12*(nobs/100.)**(1/4.)))
+                    if maxlag >= nobs:
+                        maxlag = nobs - 1
+                    armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                else:
+                    if longar_maxlag >= nobs:
+                        maxlag = nobs - 1
+                    armod = AR(endog).fit(trend='nc', maxlag=longar_maxlag)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
@@ -555,13 +560,13 @@ class ARMA(tsbase.TimeSeriesModel):
         # check MA coefficients
         return start_params
 
-    def _fit_start_params(self, order, method):
+    def _fit_start_params(self, order, method, longar_maxlag=None):
         if method != 'css-mle':  # use Hannan-Rissanen to get start params
-            start_params = self._fit_start_params_hr(order)
+            start_params = self._fit_start_params_hr(order, longar_maxlag)
         else:  # use CSS to get start params
             func = lambda params: -self.loglike_css(params)
             #start_params = [.1]*(k_ar+k_ma+k_exog) # different one for k?
-            start_params = self._fit_start_params_hr(order)
+            start_params = self._fit_start_params_hr(order, longar_maxlag)
             if self.transparams:
                 start_params = self._invtransparams(start_params)
             bounds = [(None,)*2]*sum(order)
@@ -726,18 +731,14 @@ class ARMA(tsbase.TimeSeriesModel):
         k_ar = self.k_ar
 
         if out_of_sample != 0 and self.k_exog > 0:
-            exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
                 # we need the last k_ar exog for the lag-polynomial
-            if self.k_exog > 0 and k_ar > 0 and not dynamic:
+            if self.k_exog > 0 and k_ar > 0:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[-k_ar:, self.k_trend:], exog))
 
         if dynamic:
-            if self.k_exog > 0:
-                # need the last k_ar exog for the lag-polynomial
-                exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
@@ -812,7 +813,7 @@ class ARMA(tsbase.TimeSeriesModel):
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
-    def fit(self, start_params=None, trend='c', method="css-mle",
+    def fit(self, start_params=None, longar_maxlag=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
@@ -823,6 +824,13 @@ class ARMA(tsbase.TimeSeriesModel):
         start_params : array-like, optional
             Starting parameters for ARMA(p,q). If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
+        longar_maxlag : int, optional
+            Parameter for fitting start_params. When fitting start_params,
+            residuals are obtained from an AR fit, then an ARMA(p,q) model is
+            fit via OLS using these residuals. If longar_maxlag is None, fit
+            an AR process according to best BIC. If longar_maxlag is not None,
+            fits an AR process with a lag length equal to longar_maxlag.
+            See ARMA._fit_start_params_hr for more information.
         transparams : bool, optional
             Whehter or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
@@ -928,7 +936,8 @@ class ARMA(tsbase.TimeSeriesModel):
             start_params = np.asarray(start_params)
 
         else:  # estimate starting parameters
-            start_params = self._fit_start_params((k_ar, k_ma, k), method)
+            start_params = self._fit_start_params((k_ar, k_ma, k), method,
+                                                  longar_maxlag)
 
         if transparams:  # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
@@ -953,6 +962,7 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit = ARMAResults(self, params, normalized_cov_params)
         armafit.mle_retvals = mlefit.mle_retvals
         armafit.mle_settings = mlefit.mle_settings
+        armafit.mlefit = mlefit
         return ARMAResultsWrapper(armafit)
 
 
@@ -1038,7 +1048,7 @@ class ARIMA(ARMA):
 
         return end - self.k_diff, out_of_sample
 
-    def fit(self, start_params=None, trend='c', method="css-mle",
+    def fit(self, start_params=None, longar_maxlag=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
@@ -1049,6 +1059,13 @@ class ARIMA(ARMA):
         start_params : array-like, optional
             Starting parameters for ARMA(p,q).  If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
+        longar_maxlag : int, optional
+            Parameter for fitting start_params. When fitting start_params,
+            residuals are obtained from an AR fit, then an ARMA(p,q) model is
+            fit via OLS using these residuals. If longar_maxlag is None, fit
+            an AR process according to best BIC. If longar_maxlag is not None,
+            fits an AR process with a lag length equal to longar_maxlag.
+            See ARMA._fit_start_params_hr for more information.
         transparams : bool, optional
             Whehter or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
@@ -1109,18 +1126,14 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
-        mlefit = super(ARIMA, self).fit(start_params, trend,
+        arima_fit = super(ARIMA, self).fit(start_params, longar_maxlag, trend,
                                            method, transparams, solver,
                                            maxiter, full_output, disp,
                                            callback, **kwargs)
         normalized_cov_params = None  # TODO: fix this?
-        arima_fit = ARIMAResults(self, mlefit._results.params,
+        arima_fit = ARIMAResults(self, arima_fit._results.params,
                                  normalized_cov_params)
         arima_fit.k_diff = self.k_diff
-
-        arima_fit.mle_retvals = mlefit.mle_retvals
-        arima_fit.mle_settings = mlefit.mle_settings
-
         return ARIMAResultsWrapper(arima_fit)
 
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
@@ -1146,7 +1159,7 @@ class ARIMA(ARMA):
         elif typ == 'levels':
             endog = self.data.endog
             if not dynamic:
-                predict = super(ARIMA, self).predict(params, start, end, exog,
+                predict = super(ARIMA, self).predict(params, start, end,
                                                      dynamic)
 
                 start = self._get_predict_start(start, dynamic)
@@ -1509,9 +1522,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
-            if self.k_ar > 0:
-                exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
-                                  exog))
+            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                              exog))
 
         forecast = _arma_predict_out_of_sample(self.params,
                                                steps, self.resid, self.k_ar,
@@ -1823,9 +1835,8 @@ class ARIMAResults(ARMAResults):
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
-            if self.k_ar > 0:
-                exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
-                                  exog))
+            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                              exog))
         forecast = _arma_predict_out_of_sample(self.params, steps, self.resid,
                                                self.k_ar, self.k_ma,
                                                self.k_trend, self.k_exog,
