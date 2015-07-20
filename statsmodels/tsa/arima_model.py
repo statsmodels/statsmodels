@@ -974,7 +974,6 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit = ARMAResults(self, params, normalized_cov_params)
         armafit.mle_retvals = mlefit.mle_retvals
         armafit.mle_settings = mlefit.mle_settings
-        armafit.mlefit = mlefit
         return ARMAResultsWrapper(armafit)
 
 
@@ -1138,14 +1137,18 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
-        arima_fit = super(ARIMA, self).fit(start_params, longar_maxlag, trend,
+        mlefit = super(ARIMA, self).fit(start_params, longar_maxlag, trend,
                                            method, transparams, solver,
                                            maxiter, full_output, disp,
                                            callback, **kwargs)
         normalized_cov_params = None  # TODO: fix this?
-        arima_fit = ARIMAResults(self, arima_fit._results.params,
+        arima_fit = ARIMAResults(self, mlefit._results.params,
                                  normalized_cov_params)
         arima_fit.k_diff = self.k_diff
+
+        arima_fit.mle_retvals = mlefit.mle_retvals
+        arima_fit.mle_settings = mlefit.mle_settings
+
         return ARIMAResultsWrapper(arima_fit)
 
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
