@@ -60,7 +60,7 @@ _arma_params = """\
         The (p,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
     exog : array-like, optional
-        An optional arry of exogenous variables. This should *not* include a
+        An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
 _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
@@ -74,7 +74,7 @@ _arima_params = """\
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters to use.
     exog : array-like, optional
-        An optional arry of exogenous variables. This should *not* include a
+        An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
 _predict_notes = """
@@ -351,7 +351,7 @@ def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
         endog[i+p] = fcast
 
     #need to do one more without updating endog
-    forecast[-1] = mu[-1] + np.dot(arparams, endog[steps - 1:])
+    forecast[steps - 1] = mu[steps - 1] + np.dot(arparams, endog[steps - 1:])
     return forecast
 
 
@@ -408,6 +408,14 @@ def _make_arma_names(data, k_trend, order, exog_names):
     ma_lag_names = util.make_lag_names([data.ynames], k_ma, 0)
     ma_lag_names = [''.join(('ma.', i)) for i in ma_lag_names]
     trend_name = util.make_lag_names('', 0, k_trend)
+
+    # ensure exog_names stays unchanged when the `fit` method
+    # is called multiple times.
+    if exog_names[-k_ma:] == ma_lag_names and \
+       exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
+       (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
+        return exog_names
+
     exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
     return exog_names
 
@@ -731,14 +739,18 @@ class ARMA(tsbase.TimeSeriesModel):
         k_ar = self.k_ar
 
         if out_of_sample != 0 and self.k_exog > 0:
+            exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
                 # we need the last k_ar exog for the lag-polynomial
-            if self.k_exog > 0 and k_ar > 0:
+            if self.k_exog > 0 and k_ar > 0 and not dynamic:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[-k_ar:, self.k_trend:], exog))
 
         if dynamic:
+            if self.k_exog > 0:
+                # need the last k_ar exog for the lag-polynomial
+                exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
@@ -1159,7 +1171,7 @@ class ARIMA(ARMA):
         elif typ == 'levels':
             endog = self.data.endog
             if not dynamic:
-                predict = super(ARIMA, self).predict(params, start, end,
+                predict = super(ARIMA, self).predict(params, start, end, exog,
                                                      dynamic)
 
                 start = self._get_predict_start(start, dynamic)
@@ -1522,8 +1534,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
-            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
-                              exog))
+            if self.k_ar > 0:
+                exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                                  exog))
 
         forecast = _arma_predict_out_of_sample(self.params,
                                                steps, self.resid, self.k_ar,
@@ -1835,8 +1848,9 @@ class ARIMAResults(ARMAResults):
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
-            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
-                              exog))
+            if self.k_ar > 0:
+                exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                                  exog))
         forecast = _arma_predict_out_of_sample(self.params, steps, self.resid,
                                                self.k_ar, self.k_ma,
                                                self.k_trend, self.k_exog,
