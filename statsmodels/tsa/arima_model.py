@@ -518,7 +518,7 @@ class ARMA(tsbase.TimeSeriesModel):
                     armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
                 else:
                     if longar_maxlag >= nobs:
-                        maxlag = nobs - 1
+                        longar_maxlag = nobs - 1
                     armod = AR(endog).fit(trend='nc', maxlag=longar_maxlag)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
