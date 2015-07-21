@@ -87,6 +87,7 @@ def companion_matrix(polynomial):
     identity_matrix = False
     if isinstance(polynomial, int):
         n = polynomial
+        m = 1
         polynomial = None
     else:
         n = len(polynomial) - 1
@@ -96,7 +97,13 @@ def companion_matrix(polynomial):
                              " least two terms.")
 
         if isinstance(polynomial, list) or isinstance(polynomial, tuple):
-            m = len(polynomial[1])
+            try:
+                # Note: can't use polynomial[0] because of the special behavior
+                # associated with matrix polynomials and the constant 1, see
+                # below.
+                m = len(polynomial[1])
+            except TypeError:
+                m = 1
 
             # Check if we just have a scalar polynomial
             if m == 1:
