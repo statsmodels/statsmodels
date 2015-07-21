@@ -808,7 +808,7 @@ class GLSAR(GLS):
             super(GLSAR, self).__init__(endog, exog, missing=missing,
                                         **kwargs)
 
-    def iterative_fit(self, maxiter=3, rtol=1e-4):
+    def iterative_fit(self, maxiter=3, rtol=1e-4, **kwds):
         """
         Perform an iterative two-stage procedure to estimate a GLS model.
 
@@ -827,7 +827,9 @@ class GLSAR(GLS):
 
         """
         # TODO: update this after going through example.
-        history = {'params': []}
+        converged = False
+        i = -1  # need to initialize for maxiter < 1 (skip loop)
+        history = {'params': [], 'rho':[self.rho]}
         for i in range(maxiter - 1):
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
@@ -839,28 +841,33 @@ class GLSAR(GLS):
             else:
                 diff = np.max(np.abs(last - results.params) / np.abs(last))
                 if diff < rtol:
+                    converged = True
                     break
                 last = results.params
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
-        # why not another call to self.initialize
-        if hasattr(self, 'pinv_wexog'):
-            del self.pinv_wexog
-        self.initialize()
-        if history['params']:
-            if _is_using_pandas(history['params'][0], None):
-                history['params'] = pd.concat(history['params'], 1)
-                history['params'].columns = ['iter_' + int(i) for i in range(history['params'].shape[1])]
-            else:
-                history['params'] = np.array(history['params'])
-        # Use kwarg to insert history
+            history['rho'].append(self.rho)
 
-        results = self.fit(history=history)
-#         # add last fit to history
-#         results.history['params'] = np.vstack((results.history['params'],
-#                                                results.params))
+        # why not another call to self.initialize
+        # Use kwarg to insert history
+        if not converged and maxiter > 0:
+            # maxiter <= 0 just does OLS
+            if hasattr(self, 'pinv_wexog'):
+                del self.pinv_wexog
+            self.initialize()
+
+        # if converged then this is a duplicate fit, because we didn't update rho
+        results = self.fit(history=history, **kwds)
+        results.iter = i + 1
+        # add last fit to history, not if duplicate fit
+        if not converged:
+            results.history['params'].append(results.params)
+            results.iter += 1
+
+        results.converged = converged
 
         return results
+
 
     def whiten(self, X):
         """

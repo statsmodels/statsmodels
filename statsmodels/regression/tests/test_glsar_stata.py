@@ -69,9 +69,12 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         assert_allclose(res.bse, res_arma.bse[[1,2,0]], atol=0.015, rtol=1e-3)
 
         assert_equal(len(res.history['params']), 5)
-        #assert_equal(res.history['params'][-1], res.params)
-        assert_allclose(res.history['params'][-1], res.params, rtol=1e-10)
+        # this should be identical, history has last fit
+        assert_equal(res.history['params'][-1], res.params)
 
+        res2 = mod1.iterative_fit(4, rtol=0)
+        assert_equal(len(res2.history['params']), 4)
+        assert_equal(len(res2.history['rho']), 4)
 
 
     def test_glsar_iter0(self):

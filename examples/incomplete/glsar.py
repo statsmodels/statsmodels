@@ -150,3 +150,7 @@ if 5 in examples:
     model3b = GLSAR(Y, rho=0.1)
     for i in range(6):
         print(i, model3b.iterative_fit(2).params, model3b.rho)
+
+
+print(np.array(res.history['params']))
+print(np.array(res.history['rho']))
