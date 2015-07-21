@@ -42,11 +42,16 @@ def companion_matrix(polynomial):
 
     Parameters
     ----------
-    polynomial : array_like, optional.
+    polynomial : array_like or list
         If an iterable, interpreted as the coefficients of the polynomial from
         which to form the companion matrix. Polynomial coefficients are in
-        order of increasing degree. If an integer, the size of the companion
-        matrix (the polynomial coefficients are then set to zeros).
+        order of increasing degree, and may be either scalars (as in an AR(p)
+        model) or coefficient matrices (as in a VAR(p) model). If an integer,
+        it is interpereted as the size of a companion matrix of a scalar
+        polynomial, where the polynomial coefficients are initialized to zeros.
+        If a matrix polynomial is passed, :math:`C_0` may be set to the scalar
+        value 1 to indicate an identity matrix (doing so will improve the speed
+        of the companion matrix creation).
 
     Returns
     -------
@@ -69,24 +74,56 @@ def companion_matrix(polynomial):
     where some or all of the :math:`\phi_i` may be non-zero (if `polynomial` is
     None, then all are equal to zero).
 
-    If the coefficients provided are :math:`(c_0, c_1, \dots, c_{n})`,
+    If the coefficients provided are scalars :math:`(c_0, c_1, \dots, c_{n})`,
     then the companion matrix is an :math:`n \times n` matrix formed with the
     elements in the first column defined as
     :math:`\phi_i = -\frac{c_i}{c_0}, i \in 1, \dots, n`.
+
+    If the coefficients provided are matrices :math:`(C_0, C_1, \dots, C_{n})`,
+    each of shape :math:`(m, m)`, then the companion matrix is an
+    :math:`nm \times nm` matrix formed with the elements in the first column
+    defined as :math:`\phi_i = -C_0^{-1} C_i', i \in 1, \dots, n`.
     """
+    identity_matrix = False
     if isinstance(polynomial, int):
         n = polynomial
         polynomial = None
     else:
         n = len(polynomial) - 1
-        polynomial = np.asanyarray(polynomial)
 
-    matrix = np.zeros((n, n))
-    idx = np.diag_indices(n - 1)
-    idx = (idx[0], idx[1] + 1)
+        if n < 1:
+            raise ValueError("Companion matrix polynomials must include at"
+                             " least two terms.")
+
+        if isinstance(polynomial, list) or isinstance(polynomial, tuple):
+            m = len(polynomial[1])
+
+            # Check if we just have a scalar polynomial
+            if m == 1:
+                polynomial = np.asanyarray(polynomial)
+            # Check if 1 was passed as the first argument (indicating an
+            # identity matrix)
+            elif polynomial[0] == 1:
+                polynomial[0] = np.eye(m)
+                identity_matrix = True
+        else:
+            m = 1
+            polynomial = np.asanyarray(polynomial)
+
+    matrix = np.zeros((n * m, n * m))
+    idx = np.diag_indices((n - 1) * m)
+    idx = (idx[0], idx[1] + m)
     matrix[idx] = 1
     if polynomial is not None and n > 0:
-        matrix[:, 0] = -polynomial[1:] / polynomial[0]
+        if m == 1:
+            matrix[:, 0] = -polynomial[1:] / polynomial[0]
+        elif identity_matrix:
+            for i in range(n):
+                matrix[i * m:(i + 1) * m, :m] = polynomial[i+1].T
+        else:
+            inv = np.linalg.inv(polynomial[0])
+            for i in range(n):
+                matrix[i * m:(i + 1) * m, :m] = np.dot(inv, polynomial[i+1]).T
     return matrix
 
 
@@ -154,18 +191,24 @@ def is_invertible(polynomial, threshold=1.):
 
     Parameters
     ----------
-    polynomial : array_like
+    polynomial : array_like or tuple, list
         Coefficients of a polynomial, in order of increasing degree.
         For example, `polynomial=[1, -0.5]` corresponds to the polynomial
-        :math:`1 - 0.5x` which has root :math:`2`.
+        :math:`1 - 0.5x` which has root :math:`2`. If it is a matrix
+        polynomial (in which case the coefficients are coefficient matrices),
+        a tuple or list of matrices should be passed.
     threshold : number
         Allowed threshold for `is_invertible` to return True. Default is 1.
 
     Notes
     -----
 
-    If the coefficients provided are :math:`(c_0, c_1, \dots, c_n)`, then
-    the corresponding polynomial is :math:`c_0 + c_1 L + \dots + c_n L^n`.
+    If the coefficients provided are scalars :math:`(c_0, c_1, \dots, c_n)`,
+    then the corresponding polynomial is :math:`c_0 + c_1 L + \dots + c_n L^n`.
+
+
+    If the coefficients provided are matrices :math:`(C_0, C_1, \dots, C_n)`,
+    then the corresponding polynomial is :math:`C_0 + C_1 L + \dots + C_n L^n`.
 
     There are three equivalent methods of determining if the polynomial
     represented by the coefficients is invertible:
@@ -188,7 +231,7 @@ def is_invertible(polynomial, threshold=1.):
     .. math::
 
         C(L) & = c_0 + c_1 L + \dots + c_n L^n \\
-             & = constant (L - \zeta_1 L) (L - \zeta_2) \dots (L - \zeta_3)
+             & = constant (L - \zeta_1) (L - \zeta_2) \dots (L - \zeta_3)
 
     The condition is now :math:`|\zeta_i| > 1`, where :math:`\zeta_i` is a root
     of the polynomial with reversed coefficients and
@@ -437,8 +480,8 @@ def constrain_stationary_multivariate(unconstrained, variance,
 
     Returns
     -------
-    constrained : tuple
-        A tuple of coefficient matrices which lead to a stationary VAR.
+    constrained : list
+        A list of coefficient matrices which lead to a stationary VAR.
 
     Notes
     -----
@@ -513,7 +556,7 @@ def constrain_stationary_multivariate(unconstrained, variance,
                 np.dot(np.dot(transform, constrained[i]), inv_transform)
             )
 
-    return tuple(constrained), variance
+    return constrained, variance
 
 
 def unconstrain_stationary_multivariate(constrained):
@@ -543,7 +586,7 @@ def unconstrain_stationary_multivariate(constrained):
     Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
-    pass
+    raise NotImplementedError
 
 
 def validate_matrix_shape(name, shape, nrows, ncols, nobs):
