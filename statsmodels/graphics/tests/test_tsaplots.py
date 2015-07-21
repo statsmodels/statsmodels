@@ -26,6 +26,7 @@ def test_plot_acf():
     armaprocess = tsp.ArmaProcess(ar, ma)
     acf = armaprocess.acf(20)[:20]
     plot_acf(acf, ax=ax)
+    plot_acf(acf, ax=ax, alpha=None)
 
     plt.close(fig)
 
