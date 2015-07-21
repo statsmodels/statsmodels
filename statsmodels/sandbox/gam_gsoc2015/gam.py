@@ -5,9 +5,9 @@ import numpy as np
 import scipy as sp
 from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
-from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
-from scipy.linalg import pinv
 from scipy.stats import chi2
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults, GLMResultsWrapper, lm
+
 
 ## this class will be later removed and taken from another push
 class PenalizedMixin(object):
@@ -405,7 +405,87 @@ class GLMGAMResults(GLMResults):
         return tr, p_val, rank
 
 
+def get_sqrt(x):
+     """
+     :param x:
+     :return: b the sqrt of the matrix x. np.dot(b.T, b) = x
+     """
+     u, s, v = np.linalg.svd(x)
+     sqrt_s = np.sqrt(s)
+     b = np.dot(u, np.dot(np.diag(sqrt_s), v))
+     return b
+
 
 class GLMGam(PenalizedMixin, GLM):
 
     _results_class = GLMGAMResults
+
+    def _fit_pirls(self, y, spl_x, spl_s, alpha, start_params=None, maxiter=100, tol=1e-8,
+                   scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
+
+        n_samples, n_columns = spl_x.shape
+
+        if isinstance(spl_s, list):
+            alpha_spl_s = [spl_s[i] * alpha[i] for i in range(len(spl_s))]
+            alpha_spl_s = sp.linalg.block_diag(*alpha_spl_s)
+        else:
+            alpha_spl_s = alpha * spl_s
+
+        rs = get_sqrt(alpha_spl_s)
+
+        x1 = np.vstack([spl_x, rs])  # augmented x
+        n_samp1es_x1 = x1.shape[0]
+        y1 = np.array([0] * n_samp1es_x1)  # augmented y
+        y1[:n_samples] = y
+
+        if weights is None:
+            self.weights = np.array([1./n_samp1es_x1] * n_samp1es_x1)  # TODO: should the weight be of size n_samples_x1?
+                                                                       # Probably we have to use equation 4.22 from the Wood's
+                                                                       # book and replace WLS with OLS
+
+        if start_params is None:
+            params = np.zeros(shape=(n_columns,))
+            params[0] = 1
+        else:
+            params = start_params
+
+        lin_pred = np.dot(x1, params)[:n_samples]
+        self.mu = self.family.fitted(lin_pred)
+        dev = self.family.deviance(self.endog, self.mu)
+
+        history = dict(params=[None, params], deviance=[np.inf, dev])
+        converged = False
+        criterion = history['deviance']
+
+        new_norm = 0
+        old_norm = 1
+        iteration = 0
+        for iteration in range(maxiter):
+            if np.abs(new_norm - old_norm) < tol:
+                break
+
+            lin_pred = np.dot(x1, params)[:n_samples]
+            self.mu = self.family.fitted(lin_pred)
+            z = np.zeros(shape=(n_samp1es_x1,))
+            z[:n_samples] = (y - self.mu) / self.mu + lin_pred # TODO: review this and the following line
+            wls_results = lm.WLS(z, x1, self.weights).fit() # TODO: should weights be used?
+            lin_pred = np.dot(spl_x, wls_results.params)
+
+            new_mu = self.family.fitted(lin_pred)
+
+            old_norm = new_norm
+            new_norm = np.linalg.norm((z[:n_samples] - new_mu))
+
+        self.scale = 0 # TODO: check the right value scale
+        self.data_weights = 0 # TODO: add support for weights
+        glm_results = GLMResults(self, wls_results.params,
+                                 wls_results.normalized_cov_params,
+                                 self.scale,
+                                 cov_type=cov_type, cov_kwds=cov_kwds,
+                                 use_t=use_t)
+
+        glm_results.method = "PIRLS"
+        history['iteration'] = iteration + 1
+        glm_results.fit_history = history
+        glm_results.converged = converged
+        return GLMResultsWrapper(glm_results)

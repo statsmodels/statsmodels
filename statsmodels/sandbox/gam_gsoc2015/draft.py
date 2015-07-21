@@ -1,34 +1,33 @@
-''' This file contains draft of code. Do not look at it '''
-import pandas as pd
+from statsmodels.sandbox.gam_gsoc2015.gam import GLMGam
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
 import numpy as np
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
-import smooth_basis
-from smooth_basis import make_poly_basis, make_bsplines_basis
-from gam import GamPenalty, LogitGam, GLMGam, MultivariateGamPenalty
-#from statsmodels.genmod.generalized_linear_model import GLMResults, GLM
-#from gam import PenalizedMixin, GLMGam, GLMGAMResults
+import pandas as pd
+import os
+cur_dir = os.path.dirname(os.path.abspath('__file__'))
+file_path = os.path.join(cur_dir, "tests/results", "gam_PIRLS_results.csv")
+data = pd.read_csv(file_path)
+
+print('Univariate GAM ')
+X = data['x'].as_matrix()
+Y = data['y'].as_matrix()
+
+XK = np.array([0.2, .4, .6, .8])
+
+
+cs = CubicSplines(X, 4).fit()
+
+print(cs.x.shape, cs.xs.shape, cs.s.shape)
 
 
 
-degree = 4
-df = 10
+for i, alpha in enumerate([0, .1, 10, 200]):
 
-n = 200
-x = np.linspace(-1, 1, n)
-y = x * x * x - x + np.random.normal(0, .1, n)
-#y = np.random.normal(0, 1, n)
-
-basis, der_basis, der2_basis = make_poly_basis(x, degree)
-cov_der2 = np.dot(der2_basis.T, der2_basis)
-
-
-
-alpha = 0.1
-gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
-glm_gam = GLMGam(y, basis, penal=gp)
-res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
-                          disp=1, maxiter=5000, maxfun=5000)
-
-
-print('t=', res_glm_gam.significance_test(basis))
+    gam = GLMGam(Y, X, penal=0)
+    gam_results = gam._fit_pirls(Y, cs.xs, cs.s, alpha)
+    Y_EST = np.dot(cs.xs, gam_results.params)
+    plt.subplot(2, 2, i+1)
+    plt.title('Alpha=' + str(alpha))
+    plt.plot(X, Y, '.')
+    plt.plot(X, Y_EST, '.')
+plt.show()
