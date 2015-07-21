@@ -1992,7 +1992,7 @@ def test_arma_missing():
     # bug 1343
     y = np.random.random(40)
     y[-1] = np.nan
-    assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
+        (MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
 @dec.skipif(not have_matplotlib)
@@ -2234,9 +2234,10 @@ def test_long_ar_start_params():
 
     nobs = 30
 
+    y = arma_generate_sample(arparams, maparams, nobs)
+
     model = ARMA(y, order=(2, 2))
 
-    y = arma_generate_sample(arparams, maparams, nobs)
     res = model.fit(method='css',longar_maxlag=10)
     res = model.fit(method='css-mle',longar_maxlag=10)
     res = model.fit(method='mle',longar_maxlag=10)
