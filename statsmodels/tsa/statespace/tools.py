@@ -501,6 +501,9 @@ def constrain_stationary_multivariate(unconstrained, variance,
     If `transform_variance=True`, then only Lemma 2.1 is applied in the second
     step.
 
+    While this function can be used even in the univariate case, it is much
+    slower, so in that case `constrain_stationary_univariate` is preferred.
+
     References
     ----------
     Ansley, Craig F., and Robert Kohn. 1986.
