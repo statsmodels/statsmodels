@@ -1870,7 +1870,7 @@ class SARIMAXResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-                start = 0
+            start = 0
 
         # Handle end (e.g. date)
         _start = self.model._get_predict_start(start)
