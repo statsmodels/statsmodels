@@ -278,6 +278,50 @@ class BS(object):
         return basis
 
 
+class CubicSplines():
+    """
+    Cubic splines as described in the wood's book in chapter 3
+    """
 
+    def __init__(self, x, n_knots):
+        self.x = x
+        self.n_knots = n_knots
+
+    def fit(self):
+        self._equally_spaced_knots()
+        self._splines_s()
+        self._splines_x()
+        return self
+
+    def _equally_spaced_knots(self):
+        x_min = self.x.min()
+        x_max = self.x.max()
+        self.knots = np.linspace(x_min, x_max, self.n_knots)
+        return
+
+    def _rk(self, x, z):
+        p1 = ((z - 1/2)**2 - 1/12) * ((x - 1/2)**2 - 1/12) / 4
+        p2 = ((np.abs(z - x) - 1/2)**4 - 1/2 * (np.abs(z - x) - 1/2)**2 + 7/240) / 24.
+        return p1 - p2
+
+    def _splines_x(self):
+        n_columns = len(self.knots) + 2
+        n_samples = self.x.shape[0]
+        self.xs = np.ones(shape=(n_samples, n_columns))
+        self.xs[:, 1] = self.x
+        # for loop equivalent to outer(x, xk, fun=rk)
+        for i, xi in enumerate(self.x):
+            for j, xkj in enumerate(self.knots):
+                s_ij = self._rk(xi, xkj)
+                self.xs[i, j+2] = s_ij
+        return
+
+    def _splines_s(self):
+        q = len(self.knots) + 2
+        self.s = np.zeros(shape=(q, q))
+        for i, x1 in enumerate(self.knots):
+            for j, x2 in enumerate(self.knots):
+                self.s[i+2, j+2] = self._rk(x1, x2)
+        return
 
 

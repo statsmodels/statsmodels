@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from numpy.testing import assert_allclose
 import numpy as np
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
 
 def test_splines_x():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,13 +19,17 @@ def test_splines_x():
     xk = np.array([0.2, .4, .6, .8])
 
     spl_x_R = data[['spl_x.1', 'spl_x.2', 'spl_x.3', 'spl_x.4', 'spl_x.5', 'spl_x.6']].as_matrix()
-    spl_x = splines_x(x, xk)
+
+    cs = CubicSplines(x, 4)
+    cs.knots = xk
+    cs._splines_x()
+    spl_x = cs.xs
 
     assert_allclose(spl_x_R, spl_x)
 
+
 def test_spl_s():
 
-    xk = np.array([0.2, .4, .6, .8])
     # matrix from R
     spl_s_R = [[0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
                [0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
@@ -32,21 +37,29 @@ def test_spl_s():
                [0,    0,  0.000200000,  0.002733333,  0.001666667, -0.001133333],
                [0,    0, -0.001133333,  0.001666667,  0.002733333,  0.000200000],
                [0,    0, -0.001000000, -0.001133333,  0.000200000,  0.001400000]]
-    spl_s = splines_s(xk=xk)
+
+    xk = np.array([0.2, .4, .6, .8])
+    cs = CubicSplines(None, 4)
+    cs.knots = xk
+    cs._splines_s()
+
+    spl_s = cs.s
     assert_allclose(spl_s_R, spl_s, atol=4.e-10)
 
 
 def test_gest_sqrt():
 
     xk = np.array([0.2, .4, .6, .8])
-    # matrix from R
-    spl_s = splines_s(xk=xk)
+    cs = CubicSplines(None, 4)
+    cs.knots = xk
+    cs._splines_s()
+    spl_s = cs.s
+
     b = get_sqrt(spl_s)
     assert_allclose(np.dot(b.T, b), spl_s)
 
 
-'''
-test_gest_sqrt()
-test_spl_s()
-test_splines_x()
-'''
+
+#test_gest_sqrt()
+#test_spl_s()
+#test_splines_x()
