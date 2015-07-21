@@ -569,6 +569,33 @@ def constrain_stationary_multivariate(unconstrained, variance,
     return constrained, variance
 
 
+def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
+    """
+    Transform matrices with singular values less than one to arbitrary
+    matrices.
+
+    Corresponds to the inverse of Lemma 2.2 in Ansley and Kohn (1986). See
+    `unconstrain_stationary_multivariate` for more details.
+    """
+    from scipy import linalg
+
+    unconstrained = []  # A_s,  s = 1, ..., p
+    if order is None:
+        order = len(constrained)
+    if k_endog is None:
+        k_endog = constrained[0].shape[0]
+
+    eye = np.eye(k_endog)
+    for i in range(order):
+        P = constrained[i]
+        # B^{-1} B^{-1}' = I - P P'
+        B_inv, lower = linalg.cho_factor(eye - np.dot(P, P.T), lower=True)
+        # A = BP
+        # B^{-1} A = P
+        unconstrained.append(linalg.solve_triangular(B_inv, P, lower=lower))
+    return unconstrained
+
+
 def unconstrain_stationary_multivariate(constrained):
     """
     Transform constrained parameters used in likelihood evaluation
