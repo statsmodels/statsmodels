@@ -1179,7 +1179,7 @@ class FilterResults(FrozenRepresentation):
         # KalmanFilter(...) construction call, because the endog has length
         # nstatic + ndynamic + nforecast, whereas the time-varying matrices
         # from `representation` have length nobs.
-        if ndynamic > 0:
+        if ndynamic > 0 and end < self.nobs:
             for name, shape in self.shapes.items():
                 if not name == 'obs' and representation[name].shape[-1] > 1:
                     representation[name] = representation[name][..., :end]
