@@ -2234,11 +2234,13 @@ def test_long_ar_start_params():
 
     nobs = 30
 
+    model = ARMA(y, order=(2, 2))
+
     y = arma_generate_sample(arparams, maparams, nobs)
-    res = ARMA(y, order=(2, 2)).fit(method='css',longar_maxlag=10)
-    res = ARMA(y, order=(2, 2)).fit(method='css-mle',longar_maxlag=10)
-    res = ARMA(y, order=(2, 2)).fit(method='mle',longar_maxlag=10)
-    assert_raises(ValueError, ARMA(y, order=(2, 2)).fit(longar_maxlag=40))
+    res = model.fit(method='css',longar_maxlag=10)
+    res = model.fit(method='css-mle',longar_maxlag=10)
+    res = model.fit(method='mle',longar_maxlag=10)
+    assert_raises(ValueError, model.fit, longar_maxlag=nobs+5)
 
 if __name__ == "__main__":
     import nose
