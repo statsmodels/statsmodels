@@ -528,7 +528,9 @@ class ARMA(tsbase.TimeSeriesModel):
                     raise ValueError("Proper starting parameters cannot"
                                      " be found for this order with this "
                                      "number of observations. Use the "
-                                     "start_params argument.")
+                                     "start_params argument, or set "
+                                     "longar_maxlag to an integer less than "
+                                     "len(endog) - q.")
                 resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
                                                       trim='both'),
                                                arcoefs_tmp)

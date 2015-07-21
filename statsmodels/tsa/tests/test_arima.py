@@ -2238,7 +2238,7 @@ def test_long_ar_start_params():
     res = ARMA(y, order=(2, 2)).fit(method='css',longar_maxlag=10)
     res = ARMA(y, order=(2, 2)).fit(method='css-mle',longar_maxlag=10)
     res = ARMA(y, order=(2, 2)).fit(method='mle',longar_maxlag=10)
-    res = ARMA(y, order=(2, 2)).fit(longar_maxlag=40)
+    assert_raises(ValueError, ARMA(y, order=(2, 2)).fit(longar_maxlag=40))
 
 if __name__ == "__main__":
     import nose
