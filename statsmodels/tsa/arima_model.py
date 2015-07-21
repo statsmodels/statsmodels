@@ -511,7 +511,7 @@ class ARMA(tsbase.TimeSeriesModel):
             if p != 0:
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
-                if longar_maxlag is not None:
+                if longar_maxlag is None:
                     maxlag = int(round(12*(nobs/100.)**(1/4.)))
                     if maxlag >= nobs:
                         maxlag = nobs - 1
