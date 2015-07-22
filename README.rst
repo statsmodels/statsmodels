@@ -3,6 +3,25 @@ What Statsmodels is
 
 Statsmodels is a Python package that provides a complement to scipy for statistical computations including descriptive statistics and estimation and inference for statistical models.
 
+
+Change in Location of Documentation
+===================================
+
+Due to the current outage of our online documentation, we recreated the
+documentation on GitHub.
+
+The documentation for the latest release is at
+
+   http://statsmodels.github.io/stable/index.html
+
+The documentation for the development version is at
+
+   http://statsmodels.github.io/dev/index.html
+
+
+This is currently a temporary solution that will be transformed into the new permanent location.
+
+
 Main Features
 =============
 
