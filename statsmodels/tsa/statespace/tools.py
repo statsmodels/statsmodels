@@ -361,8 +361,10 @@ def _constrain_sv_less_than_one(unconstrained, order=None, k_endog=None):
     return constrained
 
 
-def _constrain_stationary_multivariate(sv_constrained, variance, order=None,
-                                       k_endog=None):
+def _compute_coefficients_from_multivariate_pacf(partial_autocorrelations,
+                                                 error_variance,
+                                                 transform_variance=False,
+                                                 order=None, k_endog=None):
     """
     Transform matrices with singular values less than one to matrices
     corresponding to a stationary (or invertible) process.
@@ -373,23 +375,35 @@ def _constrain_stationary_multivariate(sv_constrained, variance, order=None,
     from scipy import linalg
 
     if order is None:
-        order = len(sv_constrained)
+        order = len(partial_autocorrelations)
     if k_endog is None:
-        k_endog = sv_constrained[0].shape[0]
+        k_endog = partial_autocorrelations[0].shape[0]
 
-    forward_variances = [variance]   # \Sigma_s
-    backward_variances = [variance]  # \Sigma_s^*,  s = 0, ..., p
-    variances = [variance]           # \Gamma_s
+    # If we want to keep the provided variance but with the constrained
+    # coefficient matrices, we need to make a copy here, and then after the
+    # main loop we will transform the coefficients to match the passed variance
+    if not transform_variance:
+        initial_variance = error_variance
+        # Need to make the input variance large enough that the recursions
+        # don't lead to zero-matrices due to roundoff error, which would case
+        # exceptions from the Cholesky decompositions.
+        # Note that this will still not always ensure positive definiteness,
+        # and for k_endog, order large enough an exception may still be raised
+        error_variance = np.eye(k_endog) * (order + k_endog)**10
+
+    forward_variances = [error_variance]   # \Sigma_s
+    backward_variances = [error_variance]  # \Sigma_s^*,  s = 0, ..., p
+    autocovariances = [error_variance]     # \Gamma_s
     # \phi_{s,k}, s = 1, ..., p
     #             k = 1, ..., s+1
-    constrained = []
+    forwards = []
     # \phi_{s,k}^*
     backwards = []
 
-    variance_factor = linalg.cholesky(variance, lower=True)
+    error_variance_factor = linalg.cholesky(error_variance, lower=True)
 
-    forward_factors = [variance_factor]
-    backward_factors = [variance_factor]
+    forward_factors = [error_variance_factor]
+    backward_factors = [error_variance_factor]
 
     # We fill in the entries as follows:
     # [1,1]
@@ -399,9 +413,9 @@ def _constrain_stationary_multivariate(sv_constrained, variance, order=None,
     # [p,p], [p,1], ..., [p,p-1]
     # the last row, correctly ordered, is then used as the coefficients
     for s in range(order):  # s = 0, ..., p-1
-        prev_constrained = constrained
+        prev_forwards = forwards
         prev_backwards = backwards
-        constrained = []
+        forwards = []
         backwards = []
 
         # Create the "last" (k = s+1) matrix
@@ -410,39 +424,43 @@ def _constrain_stationary_multivariate(sv_constrained, variance, order=None,
         # P L^{-1} = x
         # x L = P
         # L' x' = P'
-        constrained.append(linalg.solve_triangular(
-            backward_factors[s], sv_constrained[s].T, lower=True, trans='T'))
-        constrained[0] = np.dot(forward_factors[s], constrained[0].T)
+        forwards.append(
+            linalg.solve_triangular(
+                backward_factors[s], partial_autocorrelations[s].T,
+                lower=True, trans='T'))
+        forwards[0] = np.dot(forward_factors[s], forwards[0].T)
 
         # P' L^{-1} = x
         # x L = P'
         # L' x' = P
-        backwards.append(linalg.solve_triangular(
-            forward_factors[s], sv_constrained[s], lower=True, trans='T'))
+        backwards.append(
+            linalg.solve_triangular(
+                forward_factors[s], partial_autocorrelations[s],
+                lower=True, trans='T'))
         backwards[0] = np.dot(backward_factors[s], backwards[0].T)
 
         # Update the variance
         # Note: if s >= 1, this will be further updated in the for loop
         # below
         # Also, this calculation will be re-used in the forward variance
-        tmp = np.dot(constrained[0], backward_variances[s])
-        variances.append(tmp.copy())
+        tmp = np.dot(forwards[0], backward_variances[s])
+        autocovariances.append(tmp.copy())
 
         # Create the remaining k = 1, ..., s matrices,
         # only has an effect if s >= 1
         for k in range(s):
-            constrained.insert(k, prev_constrained[k] - np.dot(
-                constrained[k], prev_backwards[s-(k+1)]))
+            forwards.insert(k, prev_forwards[k] - np.dot(
+                forwards[k], prev_backwards[s-(k+1)]))
 
             backwards.insert(k, prev_backwards[k] - np.dot(
-                backwards[k], prev_constrained[s-(k+1)]))
+                backwards[k], prev_forwards[s-(k+1)]))
 
-            variances[s+1] += np.dot(prev_constrained[s-(k+1)],
-                                     variances[k+1])
+            autocovariances[s+1] += np.dot(prev_forwards[s-(k+1)],
+                                           autocovariances[k+1])
 
         # Create forward and backwards variances
         forward_variances.append(
-            forward_variances[s] - np.dot(tmp, constrained[s].T)
+            forward_variances[s] - np.dot(tmp, forwards[s].T)
         )
         backward_variances.append(
             backward_variances[s] -
@@ -460,7 +478,29 @@ def _constrain_stationary_multivariate(sv_constrained, variance, order=None,
             linalg.cholesky(backward_variances[s+1], lower=True)
         )
 
-    return constrained, forward_variances[-1]
+    # If we do not want to use the transformed variance, we need to
+    # adjust the constrained matrices, as presented in Lemma 2.3, see above
+    variance = forward_variances[-1]
+    if not transform_variance:
+        # Here, we need to construct T such that:
+        # variance = T * initial_variance * T'
+        # To do that, consider the Cholesky of variance (L) and
+        # input_variance (M) to get:
+        # L L' = T M M' T' = (TM) (TM)'
+        # => L = T M
+        # => L M^{-1} = T
+        initial_variance_factor = np.linalg.cholesky(initial_variance)
+        transformed_variance_factor = np.linalg.cholesky(variance)
+        transform = np.dot(initial_variance_factor,
+                           np.linalg.inv(transformed_variance_factor))
+        inv_transform = np.linalg.inv(transform)
+
+        for i in range(order):
+            forwards[i] = (
+                np.dot(np.dot(transform, forwards[i]), inv_transform)
+            )
+
+    return forwards, variance
 
 
 def constrain_stationary_multivariate(unconstrained, variance,
@@ -531,40 +571,8 @@ def constrain_stationary_multivariate(unconstrained, variance,
     # Step 2: convert matrices from our "partial autocorrelation matrix" space
     # (matrices with singular values less than one) to the space of stationary
     # coefficient matrices
-    if transform_variance:
-        input_variance = variance
-    else:
-        # Need to make the input variance large enough that the recursions
-        # don't lead to zero-matrices due to roundoff error, which would case
-        # exceptions from the Cholesky decompositions.
-        # Note that this will still not always ensure positive definiteness,
-        # and for k_endog, order large enough an exception may still be raised
-        input_variance = np.eye(k_endog) * (order + k_endog)**10
-    constrained, transformed_variance = (
-        _constrain_stationary_multivariate(sv_constrained, input_variance,
-                                           order, k_endog)
-    )
-
-    # Step 3: If we do not want to use the transformed variance, we need to
-    # adjust the constrained matrices, as presented in Lemma 2.3, see Notes
-    if not transform_variance:
-        # Here, we need to construct T such that:
-        # variance = T * initial_variance * T'
-        # To do that, consider the Cholesky of variance (L) and
-        # input_variance (M) to get:
-        # L L' = T M M' T' = (TM) (TM)'
-        # => L = T M
-        # => L M^{-1} = T
-        variance_factor = np.linalg.cholesky(variance)
-        input_variance_factor = np.linalg.cholesky(input_variance)
-        transform = np.dot(variance_factor,
-                           np.linalg.inv(input_variance_factor))
-        inv_transform = np.linalg.inv(transform)
-
-        for i in range(order):
-            constrained[i] = (
-                np.dot(np.dot(transform, constrained[i]), inv_transform)
-            )
+    constrained, variance = _compute_coefficients_from_multivariate_pacf(
+        sv_constrained, variance, transform_variance, order, k_endog)
 
     return constrained, variance
 
@@ -596,7 +604,148 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     return unconstrained
 
 
-def unconstrain_stationary_multivariate(constrained):
+def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
+                                                order=None, k_endog=None):
+    """
+    Transform matrices corresponding to a stationary (or invertible) process
+    to matrices with singular values less than one.
+
+    Note that this computes multivariate partial autocorrelations.
+
+    Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
+    `unconstrain_stationary_multivariate` for more details.
+    """
+    from scipy import linalg
+
+    if order is None:
+        order = len(constrained)
+    if k_endog is None:
+        k_endog = constrained[0].shape[0]
+
+    # Start with VAR(p): w_{t+1} = phi_1 w_t + ... + phi_p w_{t-p+1} + u_{t+1}
+    # Then stack the VAR(p) into a VAR(1) in companion matrix form:
+    # z_{t+1} = F z_t + v_t
+    companion = companion_matrix(
+        [1] + [-constrained[i] for i in range(order)]
+    ).T
+
+    # Compute the error variance matrix for the stacked form: E v_t v_t'
+    selected_variance = np.zeros(companion.shape)
+    selected_variance[:k_endog, :k_endog] = error_variance
+
+    # Compute the unconditional variance of z_t: E z_t z_t'
+    stacked_cov = linalg.solve_discrete_lyapunov(companion, selected_variance)
+
+    # The first (block) row of the variance of z_t gives the first p-1
+    # autocovariances of w_t: \Gamma_i = E w_t w_t+i with \Gamma_0 = Var(w_t)
+    # Note: these are okay, checked against ArmaProcess
+    autocovariances = [
+        stacked_cov[:k_endog, i*k_endog:(i+1)*k_endog]
+        for i in range(order)
+    ]
+
+    # Now apply the Ansley and Kohn (1986) algorithm, except that instead of
+    # calculating phi_{s+1, s+1} = L_s P_{s+1} {L_s^*}^{-1} (which requires
+    # the partial autocorrelation P_{s+1} which is what we're trying to
+    # calculate here), we calculate it as in Ansley and Newbold (1979), using
+    # the autocovariances \Gamma_s and the forwards and backwards residual
+    # variances \Sigma_s, \Sigma_s^*:
+    # phi_{s+1, s+1} = [ \Gamma_{s+1}' - \phi_{s,1} \Gamma_s' - ... -
+    #                    \phi_{s,s} \Gamma_1' ] {\Sigma_s^*}^{-1}
+
+    # Forward and backward variances
+    forward_variances = []   # \Sigma_s
+    backward_variances = []  # \Sigma_s^*,  s = 0, ..., p
+    # \phi_{s,k}, s = 1, ..., p
+    #             k = 1, ..., s+1
+    forwards = []
+    # \phi_{s,k}^*
+    backwards = []
+
+    forward_factors = []   # L_s
+    backward_factors = []  # L_s^*,  s = 0, ..., p
+
+    # Ultimately we want to construct the partial autocorrelation matrices
+    # Note that this is "1-indexed" in the sense that it stores P_1, ... P_p
+    # rather than starting with P_0.
+    partial_autocorrelations = []
+
+    # We fill in the entries of phi_{s,k} as follows:
+    # [1,1]
+    # [2,2], [2,1]
+    # [3,3], [3,1], [3,2]
+    # ...
+    # [p,p], [p,1], ..., [p,p-1]
+    # the last row, correctly ordered, should be the same as the coefficient
+    # matrices provided in the argument `constrained`
+    for s in range(order):  # s = 0, ..., p-1
+        prev_forwards = list(forwards)
+        prev_backwards = list(backwards)
+        forwards = []
+        backwards = []
+
+        # Create forward and backwards variances Sigma_s, Sigma*_s
+        forward_variance = autocovariances[0].copy()
+        backward_variance = autocovariances[0].copy()
+
+        for k in range(s):
+            forward_variance -= np.dot(prev_forwards[k], autocovariances[k+1])
+            backward_variance -= np.dot(prev_backwards[k], autocovariances[k+1].T)
+
+        forward_variances.append(forward_variance)
+        backward_variances.append(backward_variance)
+
+        # Cholesky factors
+        forward_factors.append(
+            linalg.cholesky(forward_variances[s], lower=True)
+        )
+        backward_factors.append(
+            linalg.cholesky(backward_variances[s], lower=True)
+        )
+
+        if s == order-1:
+            forwards = constrained
+        else:
+            # Create the intermediate sum term
+            # G := \Gamma_{s+1}' - \phi_{s,1} \Gamma_s' - .. - \phi_{s,s} \Gamma_1'
+            tmp_sum = autocovariances[s+1].T.copy()
+            for k in range(s):
+                tmp_sum -= np.dot(prev_forwards[k], autocovariances[s-k].T)
+
+            # Create the "last" (k = s+1) matrix
+            # Note: this is for k = s+1. However, below we then have to fill
+            # in for k = 1, ..., s in order.
+            # phi = G Sigma*^{-1}
+            # phi Sigma* = G
+            # Sigma*' phi' = G'
+            forwards.append(linalg.solve_triangular(
+                backward_variances[s], tmp_sum.T, lower=True, trans='T').T)
+
+            # phi = G' Sigma^{-1}
+            # phi Sigma = G'
+            # Sigma' phi' = G
+            backwards.append(linalg.solve_triangular(
+                forward_variances[s], tmp_sum, lower=True, trans='T').T)
+
+            # Create the remaining k = 1, ..., s matrices,
+            # only has an effect if s >= 1
+            for k in range(s):
+                forwards.insert(k, prev_forwards[k] - np.dot(
+                    forwards[-1], prev_backwards[s-(k+1)]))
+                backwards.insert(k, prev_backwards[k] - np.dot(
+                    backwards[-1], prev_forwards[s-(k+1)]))
+
+        # Partial autocorrelation matrix: P_{s+1}
+        # P = L^{-1} phi L*
+        # L P = (phi L*)
+        partial_autocorrelations.append(linalg.solve_triangular(
+            forward_factors[s], np.dot(forwards[s], backward_factors[s]), lower=True))
+
+    return partial_autocorrelations
+
+
+def unconstrain_stationary_multivariate(constrained, error_variance,
+                                        transform_variance=False):
     """
     Transform constrained parameters used in likelihood evaluation
     to unconstrained parameters used by the optimizer
@@ -623,7 +772,23 @@ def unconstrain_stationary_multivariate(constrained):
     Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
-    raise NotImplementedError
+    
+    from scipy import linalg
+
+    order = len(constrained)
+    k_endog = constrained[0].shape[0]
+
+    # Step 1: convert matrices from the space of stationary
+    # coefficient matrices to our "partial autocorrelation matrix" space
+    # (matrices with singular values less than one)
+    partial_autocorrelations = _compute_multivariate_pacf_from_coefficients(
+        constrained, error_variance, order, k_endog)
+
+    # Step 2: convert from arbitrary matrices to those with singular values
+    # less than one.
+    unconstrained = _unconstrain_sv_less_than_one(partial_autocorrelations, order, k_endog)
+
+    return unconstrained, error_variance
 
 
 def validate_matrix_shape(name, shape, nrows, ncols, nobs):
