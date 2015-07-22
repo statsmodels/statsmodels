@@ -1992,7 +1992,7 @@ def test_arma_missing():
     # bug 1343
     y = np.random.random(40)
     y[-1] = np.nan
-        (MissingDataError, ARMA, y, (1, 0), missing='raise')
+    assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
 @dec.skipif(not have_matplotlib)
