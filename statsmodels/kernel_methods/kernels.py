@@ -6,7 +6,7 @@ Module providing a set of kernels for use within the kernel_methods package.
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy.special import erf
-from scipy import fftpack, integrate
+from scipy import fftpack, integrate, linalg
 from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
@@ -86,7 +86,7 @@ def rfftnsize(Ns):
     """
     return tuple(Ns[:-1]) + ((Ns[-1]//2)+1,)
 
-def rfftnfreq(Ns, dx=None):
+def rfftnfreq(Ns, dx=None, sparse=True):
     """
     Return the Discrete Fourier Transform sample frequencies
     (for usage with :py:func:`numpy.fft.rfftn`, :py:func:`numpy.fft.irfftn`).
@@ -99,11 +99,13 @@ def rfftnfreq(Ns, dx=None):
         Number of samples for each dimension
     dx: None, 1D or 2D array
         If not None, this must be of same length as Ns and is the space between samples along that axis
+    sparse: bool
+        If True (default), returns a sparse grid if dx is not a matrix itself
 
     Returns
     -------
     list of ndarray
-        Sparse grid for the frequencies or dx is 1D, a full grid if dx is 2D.
+        Grid for the frequencies, a full grid if dx is 2D.
 
     Notes
     -----
@@ -120,14 +122,14 @@ def rfftnfreq(Ns, dx=None):
             raise ValueError("If 2D, dx must be of a square matrix with as many dimensions as Ns")
     trans = None
     if dx.ndim == 2:
-        trans = dx
+        trans = linalg.inv(dx)
         dx = np.ones((ndim,), dtype=float)
     fs = []
     for d in range(ndim-1):
         fs.append(np.fft.fftfreq(Ns[d], dx[d]))
     fs.append(rfftfreq(Ns[-1], dx[-1]))
     if trans is None:
-        return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+        return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
     grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
     return np.tensordot(trans, grid, axes=([1], [0]))
 
@@ -155,7 +157,7 @@ def fftsamples(N, dx=1.0):
         n = N//2
         return dx*np.concatenate([np.arange(n), np.arange(-n, 0)])
 
-def fftnsamples(Ns, dx=None):
+def fftnsamples(Ns, dx=None, sparse=True):
     """
     Returns the array of sample positions needed to comput the FFT with N samples.
     (for usage with :py:func:`numpy.fft.fftn`, :py:func:`numpy.fft.rfftn`).
@@ -166,6 +168,8 @@ def fftnsamples(Ns, dx=None):
         Number of samples for the FFT for each dimension
     dx: float or None
         Distance between sample points for each dimension. If None, dx = 1.0 for each dimension.
+    sparse: bool
+        If True (default), returns a sparse grid
 
     Returns
     -------
@@ -174,11 +178,24 @@ def fftnsamples(Ns, dx=None):
     """
     ndim = len(Ns)
     if dx is None:
-        dx = [1.0]*ndim
-    elif len(dx) != ndim:
-        raise ValueError("Error, dx must be of same length as Ns")
+        dx = np.ones((ndim,), dtype=float)
+    else:
+        dx = np.asarray(dx)
+        if dx.ndim == 1 and dx.shape != (ndim,):
+            raise ValueError("If 1D, dx must be of same length as Ns")
+        elif dx.ndim == 2 and dx.shape != (ndim, ndim):
+            raise ValueError("If 2D, dx must be of a square matrix with as many dimensions as Ns")
+
+    trans = None
+    if dx.ndim == 2:
+        trans = dx
+        dx = np.ones((ndim,), dtype=float)
     fs = [fftsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    if trans is None:
+        return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
+    grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
+    return np.tensordot(trans, grid, axes=([1], [0]))
+
 
 def dctfreq(N, dx=1.0):
     """
@@ -200,7 +217,7 @@ def dctfreq(N, dx=1.0):
     dz = 1/(2*N*dx)
     return np.arange(N)*dz
 
-def dctnfreq(Ns, dx=None):
+def dctnfreq(Ns, dx=None, sparse=True):
     """
     Return the Discrete Cosine Transform sample frequencies
     (for usage with :py:func:`scipy.fftpack.dct`, :py:func:`scipy.fftpack.idct`).
@@ -211,19 +228,26 @@ def dctnfreq(Ns, dx=None):
         Number of samples for each dimension
     dx: None of list of float
         If not None, this must be of same length as Ns and is the space between samples along that axis
+    sparse: bool
+        If True, return a sparse grid
 
     Returns
     -------
     list of ndarray
-        Sparse grid for the frequencies
+        grid for the frequencies
     """
     ndim = len(Ns)
     if dx is None:
-        dx = [1.0]*ndim
-    elif len(dx) != ndim:
-        raise ValueError("Error, dx must be of same length as Ns")
+        dx = np.ones((ndim,), dtype=float)
+    else:
+        dx = np.asarray(dx)
+        if dx.ndim == 1 and dx.shape != (ndim,):
+            raise ValueError("If 1D, dx must be of same length as Ns")
+        elif dx.ndim == 2:
+            raise ValueError("The DCT requires the kernel to be symmetric, "
+                             "so only a diagonal transformation is possible")
     fs = [dctfreq(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
 
 def dctsamples(N, dx=1.0):
     """
@@ -244,7 +268,7 @@ def dctsamples(N, dx=1.0):
     """
     return np.arange(0.5, N)*dx
 
-def dctnsamples(Ns, dx=None):
+def dctnsamples(Ns, dx=None, sparse=True):
     """
     Returns the array of sample positions needed to comput the DCT with N samples.
     (for usage with :py:func:`scipy.fftpack.dctn`)
@@ -255,6 +279,8 @@ def dctnsamples(Ns, dx=None):
         Number of samples for the DCT for each dimension
     dx: float or None
         Distance between sample points for each dimension. If None, dx = 1.0 for each dimension.
+    sparse: bool
+        If true, returns a sparse grid
 
     Returns
     -------
@@ -263,11 +289,16 @@ def dctnsamples(Ns, dx=None):
     """
     ndim = len(Ns)
     if dx is None:
-        dx = [1.0]*ndim
-    elif len(dx) != ndim:
-        raise ValueError("Error, dx must be of same length as Ns")
+        dx = np.ones((ndim,), dtype=float)
+    else:
+        dx = np.asarray(dx)
+        if dx.ndim == 1 and dx.shape != (ndim,):
+            raise ValueError("If 1D, dx must be of same length as Ns")
+        elif dx.ndim == 2:
+            raise ValueError("The DCT requires the kernel to be symmetric, "
+                             "so only a diagonal transformation is possible")
     fs = [dctsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=True, copy=False)
+    return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
 
 class Kernel1D(object):
     r"""
@@ -769,10 +800,13 @@ class KernelnD(object):
         FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
-        samples = (s[..., None] for s in fftnsamples(N, dx))
-        samples = np.concatenate(np.broadcast_arrays(*samples), axis=-1)
+        samples = fftnsamples(N, dx, sparse=False)
+        samples = np.concatenate([s[..., None] for s in samples], axis=-1)
         pdf = self.pdf(samples)
-        pdf *= np.prod(dx)
+        if dx.ndim == 2:
+            pdf *= linalg.det(dx)
+        else:
+            pdf *= np.prod(dx)
         if out is None:
             out = np.empty(rfftnsize(N), dtype=complex)
         out[:] = np.fft.rfftn(pdf)
@@ -783,16 +817,34 @@ class KernelnD(object):
         DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
-        samples = (s[..., None] for s in dctnsamples(N, dx))
-        samples = np.concatenate(np.broadcast_arrays(*samples), axis=-1)
+        samples = dctnsamples(N, dx, sparse=False)
+        samples = np.concatenate([s[..., None] for s in samples], axis=-1)
         pdf = self.pdf(samples)
-        pdf *= np.prod(dx)
+        if dx.ndim == 2:
+            pdf *= linalg.det(dx)
+        else:
+            pdf *= np.prod(dx)
         if out is None:
             out = np.empty(N, dtype=float)
-        out[:] = fftpack.dct(pdf, axis=0)
-        for a in range(1, out.ndim):
+        for a in range(out.ndim):
             out[:] = fftpack.dct(out, axis=a)
         return out
+
+class fromNDPDF(KernelnD):
+    """
+    This class creates a kernel from a single function computing the PDF.
+    """
+    def __init__(self, pdf, ndim):
+        self._ndim = ndim
+        self._pdf = pdf
+
+    def pdf(self, z, out=None):
+        """
+        Call the pdf function set at construction time
+        """
+        return self._pdf(z, out)
+
+    __call__ = pdf
 
 class normal(KernelnD):
     """

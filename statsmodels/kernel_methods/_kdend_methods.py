@@ -5,7 +5,7 @@ This module contains a set of methods to compute multivariates KDEs.
 """
 
 import numpy as np
-from scipy import linalg
+from scipy import linalg, fftpack
 from ..compat.python import range
 from .kde_utils import numpy_trans_method, atleast_2df, Grid
 from . import kernels
@@ -107,7 +107,7 @@ def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weight
 
     dx = mesh.start_interval.copy()
     if bw_inv.ndim == 2:
-        dx = np.dot(dx, bw_inv)
+        dx = np.dot(np.diag(dx), bw_inv)
     else:
         dx *= bw_inv
 
@@ -115,6 +115,56 @@ def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weight
 
     SmoothFFTData = FFTData * smth
     density = np.fft.irfftn(SmoothFFTData, DataHist.shape)
+    return mesh, density
+
+
+def dctdensity(exog, kernel_dct, bw_inv, lower, upper, N, weights, total_weights):
+    """
+    Compute the density estimate using a FFT approximation.
+
+    Parameters
+    ----------
+    exog: ndarray
+        2D array with the data to fit
+    kernel_dct: function
+        Function computing the DCT for the kernel
+    lower: float
+        Lower bound on which to compute the density
+    upper: float
+        Upper bound on which to compute the density
+    N: int or list of int
+        Number of buckets to compute, for each dimension
+    weights: ndarray or None
+        Weights of the data, or None if they all have the same weight.
+    total_weights: float
+        Sum of the weights, or len(exog) if weights is None
+
+    Returns
+    -------
+    mesh: ndarray
+        Points on which the density had been evaluated
+    density: ndarray
+        Density evaluated on the mesh
+
+    Notes
+    -----
+    No checks are made to ensure the consistency of the input!
+    """
+    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='R')
+    DataHist /= total_weights * mesh.start_volume
+    FFTData = fftpack.dct(DataHist, axis=0)
+    for a in range(1, DataHist.ndim):
+        FFTData[:] = fftpack.dct(FFTData, axis=a)
+
+    dx = mesh.start_interval.copy()
+    dx *= bw_inv
+
+    smth = kernel_dct(DataHist.shape, dx)
+
+    SmoothFFTData = FFTData * smth
+    density = fftpack.idct(SmoothFFTData, DataHist.shape, axis=0)
+    for a in range(1, DataHist.ndim):
+        density[:] = fftpack.idct(density, DataHist.shape, axis=a)
     return mesh, density
 
 
@@ -534,3 +584,120 @@ class Cyclic(KDEnDMethod):
         weights = self.weights
 
         return fftdensity(exog, self.kernel.rfft, bw_inv, lower, upper, N, weights, self.total_weights)
+
+class Reflection(KDEnDMethod):
+
+    name = "reflection"
+
+    def fit(self, kde, compute_bandwidth=True):
+        if kde.ndim == 1:
+            cyc = Cyclic1D()
+            return cyc.fit(kde, compute_bandwidth)
+        return super(Cyclic, self).fit(kde, compute_bandwidth)
+
+    @property
+    def bin_type(self):
+        return 'C'*self.ndim
+
+    @numpy_trans_method('ndim', 1)
+    def pdf(self, points, out):
+        if not self.bounded():
+            return super(Reflection, self).pdf(points, out)
+        exog = self.exog
+
+        m, d = points.shape
+        assert d == self.ndim
+
+        kernel = self.kernel
+        inv_bw = self.inv_bandwidth
+
+        def scalar_inv_bw(pts):
+            return (pts * inv_bw)
+
+        def matrix_inv_bw(pts):
+            return np.dot(pts, inv_bw)
+
+        if inv_bw.ndim == 2:
+            inv_bw_fct = matrix_inv_bw
+        else:
+            inv_bw_fct = scalar_inv_bw
+
+        # if inv_bw.ndim == 2:
+            # raise ValueError("Error, this method cannot handle non-diagonal bandwidth matrix.")
+        det_inv_bw = self.det_inv_bandwidth
+        weights = self.weights
+        adjust = self.adjust
+
+        span = inv_bw_fct(self.upper - self.lower)
+
+        if self.npts > m:
+            factor = weights * det_inv_bw / adjust
+            # There are fewer points that data: loop over points
+            energy = np.empty((exog.shape[0],), dtype=out.dtype)
+            # print("iterate on points")
+            for idx in range(m):
+                diff = inv_bw_fct(points[idx] - exog)
+                kernel.pdf(diff, out=energy)
+                for d in range(self.ndim):
+                    if np.isfinite(span[d]):
+                        energy += kernel.pdf(diff - span)
+                        energy += kernel.pdf(diff + span)
+                energy *= factor
+                out[idx] = np.sum(energy)
+        else:
+            weights = np.atleast_1d(weights)
+            adjust = np.atleast_1d(adjust)
+            out[...] = 0
+
+            # There are fewer data that points: loop over data
+            dw = 1 if weights.shape[0] > 1 else 0
+            da = 1 if adjust.shape[0] > 1 else 0
+            na = 0
+            nw = 0
+            n = self.npts
+            energy = np.empty((points.shape[0],), dtype=out.dtype)
+            # print("iterate on exog")
+            for idx in range(n):
+                diff = inv_bw_fct(points - exog[idx]) / adjust[na]
+                kernel.pdf(diff, out=energy)
+                for d in range(self.ndim):
+                    if np.isfinite(span[d]):
+                        energy += kernel.pdf(diff - span)
+                        energy += kernel.pdf(diff + span)
+                energy *= weights[nw] / adjust[na]
+                out += energy
+                # Iteration for weights and adjust
+                na += da
+                nw += dw
+            out *= det_inv_bw
+
+        out /= self.total_weights
+        return out
+
+    def grid(self, N=None, cut=None):
+        if self.adjust.shape:
+            return KDEnDMethod.grid(self, N, cut)
+        if self.det_inv_bandwidth.ndim == 2:
+            return super(Reflection, self).grid(N, cut)
+        bw_inv = self.inv_bandwidth / self.adjust
+        exog = self.exog
+        N = self.grid_size(N)
+
+        lower = self.lower.copy()
+        upper = self.upper.copy()
+
+        if cut is None:
+            cut = self.kernel.cut
+        if self.bandwidth.ndim == 0:
+            cut = self.bandwidth * cut * np.ones(self.ndim, dtype=float)
+        elif self.bandwidth.ndim == 1:
+            cut = self.bandwidth * cut
+
+        for d in range(self.ndim):
+            if upper[d] == np.inf:
+                lower[d] = np.min(exog[:, d]) - cut[d]
+                upper[d] = np.max(exog[:, d]) + cut[d]
+
+        weights = self.weights
+
+        return dctdensity(exog, self.kernel.rfft, bw_inv, lower, upper, N, weights, self.total_weights)
