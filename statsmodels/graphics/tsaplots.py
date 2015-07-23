@@ -89,7 +89,7 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     if confint is not None:
         # center the confidence interval TODO: do in acf?
-        ax.fill_between(lags, confint[:,0]-acf_x, confint[:,1]-acf_x, alpha=.25)
+        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
 
     return fig
 
@@ -180,7 +180,7 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
 
     if confint is not None:
         # center the confidence interval TODO: do in acf?
-        ax.fill_between(lags, confint[:,0]-acf_x, confint[:,1]-acf_x, alpha=.25)
+        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
 
     return fig
 
