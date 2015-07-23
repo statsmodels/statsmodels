@@ -280,6 +280,7 @@ class CVFunc(object):
         return bw
 
     def __call__(self, bw):
+        bw = np.asarray(bw)
         if np.any(bw <= self.bw_min):
             return np.inf
         return self.value(self.bandwidth(bw))

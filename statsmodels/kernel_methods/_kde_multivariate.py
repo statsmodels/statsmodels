@@ -375,7 +375,7 @@ class Multivariate(KDEMethod):
 
         Parameters
         ----------
-        N: int of tuple of int
+        N: int or tuple of int
             Number of bins on each dimension. If a single number is used, this is valid for each dimension.
         cut: float or tuple of float
             If defined, override the cutting value for each dimension. If a
