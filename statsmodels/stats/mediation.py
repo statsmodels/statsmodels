@@ -353,7 +353,7 @@ class MediationResults(object):
                  "ACME (average)", "ADE (average)", "Prop. mediated (average)"]
         smry = pd.DataFrame(columns=columns, index=index)
 
-        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx, self.ADE_tx, self.ADE_ctrl,
+        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx, self.ADE_ctrl, self.ADE_tx,
                                  self.total_effect, self.prop_med_ctrl,
                                  self.prop_med_tx, self.ACME_avg, self.ADE_avg,
                                  self.prop_med_avg]):
