@@ -108,7 +108,7 @@ local level model can be specified and estimated:
    print res.summary()
 
 The documentation and example notebooks provide further examples of how to
-formulating state space models. Included in this release is a full-fledged
+form state space models. Included in this release is a full-fledged
 model making use of the state space infrastructure to estimate SARIMAX
 models. See below for more details.
 
