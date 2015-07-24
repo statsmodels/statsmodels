@@ -67,22 +67,29 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
         nlags = lags
         lags = np.arange(lags + 1) # +1 for zero lag
 
-    acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
-                         unbiased=unbiased)
+    confint = None
+    # acf has different return type based on alpha
+    if alpha is None:
+        acf_x = acf(x, nlags=nlags, alpha=alpha, fft=fft,
+                    unbiased=unbiased)
+    else:
+        acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
+                             unbiased=unbiased)
 
     if use_vlines:
         ax.vlines(lags, [0], acf_x, **kwargs)
         ax.axhline(**kwargs)
 
-    # center the confidence interval TODO: do in acf?
-    confint = confint - confint.mean(1)[:,None]
     kwargs.setdefault('marker', 'o')
     kwargs.setdefault('markersize', 5)
     kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
-    ax.fill_between(lags, confint[:,0], confint[:,1], alpha=.25)
     ax.set_title("Autocorrelation")
+
+    if confint is not None:
+        # center the confidence interval TODO: do in acf?
+        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
 
     return fig
 
@@ -153,21 +160,27 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
         nlags = lags
         lags = np.arange(lags + 1) # +1 for zero lag
 
-    acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
+    confint = None
+    if alpha is  None:
+        acf_x  = pacf(x, nlags=nlags, alpha=alpha, method=method)
+    else:
+        acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
 
     if use_vlines:
         ax.vlines(lags, [0], acf_x, **kwargs)
         ax.axhline(**kwargs)
 
     # center the confidence interval TODO: do in acf?
-    confint = confint - confint.mean(1)[:,None]
     kwargs.setdefault('marker', 'o')
     kwargs.setdefault('markersize', 5)
     kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
-    ax.fill_between(lags, confint[:,0], confint[:,1], alpha=.25)
     ax.set_title("Partial Autocorrelation")
+
+    if confint is not None:
+        # center the confidence interval TODO: do in acf?
+        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
 
     return fig
 
