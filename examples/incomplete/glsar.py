@@ -21,7 +21,7 @@ examples = examples_all  # [5]
 if 0 in examples:
     print('\n Example 0')
     X = np.arange(1, 8)
-    X = sm.add_constant(X)
+    X = sm.add_constant(X, prepend=False)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
     rho = 2
     model = GLSAR(Y, X, 2)
@@ -150,3 +150,7 @@ if 5 in examples:
     model3b = GLSAR(Y, rho=0.1)
     for i in range(6):
         print(i, model3b.iterative_fit(2).params, model3b.rho)
+
+
+print(np.array(res.history['params']))
+print(np.array(res.history['rho']))
