@@ -38,11 +38,13 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 import numpy as np
+import pandas as pd
 from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
 from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
@@ -225,7 +227,8 @@ class RegressionModel(base.LikelihoodModel):
         else:
             lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params,
-                       cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
+                       cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
+                       **kwargs)
         return RegressionResultsWrapper(lfit)
 
     def fit_regularized(self, method="coord_descent", maxiter=1000,
@@ -805,7 +808,7 @@ class GLSAR(GLS):
             super(GLSAR, self).__init__(endog, exog, missing=missing,
                                         **kwargs)
 
-    def iterative_fit(self, maxiter=3):
+    def iterative_fit(self, maxiter=3, rtol=1e-4):
         """
         Perform an iterative two-stage procedure to estimate a GLS model.
 
@@ -816,21 +819,44 @@ class GLSAR(GLS):
         ----------
         maxiter : integer, optional
             the number of iterations
+        rtol : float, optional
+            Relative tolerance between estimated coefficients to stop the
+            estimation.  Stops if
+
+            max(abs(last - current) / abs(last)) < rtol
+
         """
-        #TODO: update this after going through example.
-        for i in range(maxiter-1):
+        # TODO: update this after going through example.
+        history = {'params': []}
+        for i in range(maxiter - 1):
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
             self.initialize()
             results = self.fit()
+            history['params'].append(results.params)
+            if i == 0:
+                last = results.params
+            else:
+                diff = np.max(np.abs(last - results.params) / np.abs(last))
+                if diff < rtol:
+                    break
+                last = results.params
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
-        #why not another call to self.initialize
+        # why not another call to self.initialize
         if hasattr(self, 'pinv_wexog'):
             del self.pinv_wexog
         self.initialize()
-        results = self.fit() #final estimate
-        return results # add missing return
+        if _is_using_pandas(history['params'][0], None):
+            history['params'] = pd.concat(history['params'], 1)
+            history['params'].columns = ['iter_' + int(i) for i in range(history['params'].shape[1])]
+        else:
+            history['params'] = np.column_stack(history['params'])
+        # Use kwarg to insert history
+
+        results = self.fit(history=history)
+
+        return results
 
     def whiten(self, X):
         """
@@ -994,6 +1020,8 @@ class RegressionResults(base.LikelihoodModelResults):
         adjusted squared residuals for heteroscedasticity robust standard
         errors. Is only available after `HC#_se` or `cov_HC#` is called.
         See HC#_se for more information.
+    history
+        Estimation history for iterative estimators
     HC0_se
         White's (1980) heteroskedasticity robust standard errors.
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
@@ -1076,7 +1104,7 @@ class RegressionResults(base.LikelihoodModelResults):
     _cache = {} # needs to be a class attribute for scale setter?
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
-                       cov_type='nonrobust', cov_kwds=None, use_t=None):
+                       cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         super(RegressionResults, self).__init__(model, params,
                                                 normalized_cov_params,
                                                 scale)
@@ -1110,7 +1138,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 # TODO: warn or not?
             self.get_robustcov_results(cov_type=cov_type, use_self=True,
                                        use_t=use_t, **cov_kwds)
-
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
     def __str__(self):
         self.summary()
