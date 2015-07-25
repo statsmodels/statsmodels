@@ -872,15 +872,8 @@ class SARIMAXCoverageTest(object):
     def test_results(self):
         self.result = self.model.filter(self.true_params)
 
-        # Just make sure that no exceptions are thrown during summary, predict
-        # forecast
+        # Just make sure that no exceptions are thrown during summary
         self.result.summary()
-        self.result.predict()
-        if self.model.k_exog == 0:
-            self.result.forecast()
-        else:
-            exog = np.r_[[0]*self.model.k_exog].reshape(self.model.k_exog, 1)
-            self.result.forecast(exog=exog)
 
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
@@ -898,6 +891,49 @@ class SARIMAXCoverageTest(object):
             pass
         self.result.cov_params_oim
         self.result.cov_params_opg
+
+    def test_predict(self):
+        result = self.model.filter(self.true_params)
+        # Test predict does not throw exceptions, and produces the right shaped
+        # output
+        predict = result.predict()
+        assert_equal(predict.shape, (1, self.model.nobs))
+
+        predict = result.predict(start=10, end=20)
+        assert_equal(predict.shape, (1, 11))
+
+        predict = result.predict(start=10, end=20, dynamic=10)
+        assert_equal(predict.shape, (1, 11))
+
+        # Test forecasts
+        if self.model.k_exog == 0:
+            predict = result.predict(start=self.model.nobs,
+                                 end=self.model.nobs+10, dynamic=-10)
+            assert_equal(predict.shape, (1, 11))
+
+            predict = result.predict(start=self.model.nobs,
+                                     end=self.model.nobs+10, dynamic=-10)
+
+            forecast = result.forecast()
+            assert_equal(forecast.shape, (1, 1))
+
+            forecast = result.forecast(10)
+            assert_equal(forecast.shape, (1, 10))
+        else:
+            exog = np.r_[[0]*self.model.k_exog*11].reshape(11, self.model.k_exog)
+
+            predict = result.predict(start=self.model.nobs,
+                                     end=self.model.nobs+10, dynamic=-10,
+                                     exog=exog)
+            assert_equal(predict.shape, (1, 11))
+
+            predict = result.predict(start=self.model.nobs,
+                                     end=self.model.nobs+10, dynamic=-10,
+                                     exog=exog)
+
+            exog = np.r_[[0]*self.model.k_exog].reshape(1, self.model.k_exog)
+            forecast = result.forecast(exog=exog)
+            assert_equal(forecast.shape, (1, 1))
 
     def test_init_keys_replicate(self):
         mod1 = self.model

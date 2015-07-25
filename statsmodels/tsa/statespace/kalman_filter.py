@@ -1172,6 +1172,18 @@ class FilterResults(FrozenRepresentation):
                             raise ValueError(exception % name)
                         representation[name] = np.c_[representation[name], mat]
 
+        # Update the matrices from kwargs for dynamic prediction in the case
+        # that `end` is less than `nobs` and `dynamic` is less than `end`. In
+        # this case, any time-varying matrices in the default `representation`
+        # will be too long, causing an error to be thrown below in the
+        # KalmanFilter(...) construction call, because the endog has length
+        # nstatic + ndynamic + nforecast, whereas the time-varying matrices
+        # from `representation` have length nobs.
+        if ndynamic > 0 and end < self.nobs:
+            for name, shape in self.shapes.items():
+                if not name == 'obs' and representation[name].shape[-1] > 1:
+                    representation[name] = representation[name][..., :end]
+
         # Construct the predicted state and covariance matrix for each time
         # period depending on whether that time period corresponds to
         # one-step-ahead prediction, dynamic prediction, or out-of-sample
