@@ -112,10 +112,8 @@ class Power(object):
         """
         Derivative of the variance function v'(mu)
         """
-        from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
-        #return approx_fprime_cs(mu, self)  # TODO fix breaks in `fabs
-        # TODO: diag is workaround problem with numdiff for 1d
-        return np.diag(approx_fprime(mu, self))
+
+        return self.power * np.power(np.fabs(mu), self.power - 1)
 
 
 mu = Power()

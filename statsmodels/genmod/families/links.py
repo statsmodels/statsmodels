@@ -91,6 +91,13 @@ class Link(object):
         """
         return 1 / self.deriv(self.inverse(z))
 
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of inverse link function.
+        """
+
+        return - self.deriv2(self.inverse(z)) / (self.deriv(self.inverse(z))**3)
+
 
 class Logit(Link):
     """

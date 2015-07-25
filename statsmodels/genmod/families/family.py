@@ -516,16 +516,16 @@ class Gaussian(Family):
         llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
             (1/2.)*log(2*pi*`scale`))
         """
-        if isinstance(self.link, L.Power) and self.link.power == 1:
-            # This is just the loglikelihood for classical OLS
-            nobs2 = endog.shape[0]/2.
-            SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
-            llf = -np.log(SSR) * nobs2
-            llf -= (1+np.log(np.pi/nobs2))*nobs2
-            return llf
-        else:
+        # if isinstance(self.link, L.Power) and self.link.power == 1:
+        #     # This is just the loglikelihood for classical OLS
+        #     nobs2 = endog.shape[0]/2.
+        #     SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
+        #     llf = -np.log(SSR) * nobs2
+        #     llf -= (1+np.log(np.pi/nobs2))*nobs2
+        #     return llf
+        # else:
             # Return the loglikelihood for Gaussian GLM
-            return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
+        return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
                           - .5*np.log(2 * np.pi * scale))
 
     def resid_anscombe(self, endog, mu):

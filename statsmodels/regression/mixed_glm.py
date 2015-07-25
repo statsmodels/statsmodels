@@ -21,7 +21,7 @@ import statsmodels.genmod.families as fams
 from pandas import DataFrame
 
 from statsmodels.tools.numdiff import (approx_fprime,
-                                       approx_hess_cs)
+                                       approx_hess)
 
 
 def _get_exog_re_names(self, exog_re):
@@ -750,20 +750,8 @@ class MixedGLM(base.LikelihoodModel):
         fe_params = params.get_fe_params()
         cov_re = params.get_cov_re()
 
-        _, cov_re_logdet = np.linalg.slogdet(cov_re)
-
         # Log of the integral over random effects
-        # includes everything but the multi. normal consts
-        ival = self._laplace(fe_params, cov_re, self._scale)
-
-        # Multi. normal consts from the random effects
-        nconst = - self.n_groups * self.k_re * np.log(2 * np.pi) / 2.0
-        nconst -= self.n_groups * cov_re_logdet / 2.0
-
-        likeval = nconst + ival
-
-
-        return likeval
+        return self._laplace(fe_params, cov_re, self._scale)
 
     def _laplace(self, fe_params, cov_re, scale, omethod='BFGS'):
         """
@@ -789,28 +777,27 @@ class MixedGLM(base.LikelihoodModel):
         Returns
         -------
         float
-            The kernel of the marginal log-likelihood. We marginalize out the
-            random effects. This is the kernel as it ignores the normalizing
-            constants of the random effects' distribution.
+            The the marginal log-likelihood. We marginalize out the
+            random effects.
         """
 
         # The max of the function in the exponent of our integral
         mp = self._get_map(fe_params, cov_re, scale, omethod)
 
-        f, h = self._joint_like_hess(mp, fe_params, cov_re, scale)
+        like_grad_hess = self._joint_like_grad_hess(fe_params, cov_re, scale, ref = mp)
+        f = like_grad_hess[0]
+        h = like_grad_hess[2]
 
         d = len(mp)
 
         # This is the log of the Laplace approximation.
         # Algebraically we take the log of integral's approximation to avoid
         # problems with numpy overflow with expressions like np.log(np.exp(.))
-        ival = - f + (d / 2.0) * np.log(2 * np.pi) - (1 / 2.0) * h
+        return - f + (d / 2.0) * np.log(2 * np.pi) - (1 / 2.0) * h
 
-        return(ival)
-
-    def _gen_joint_like_score(self, fe_params, cov_re, scale):
+    def _joint_like_grad_hess(self, fe_params, cov_re, scale, ref):
         """
-        Function and gradient of the joint log likelihood.
+        Function, gradient and hessian of the joint log likelihood.
 
         The log-likelihood is for the data and random effects, viewed as a
         function of the random effects.
@@ -823,14 +810,43 @@ class MixedGLM(base.LikelihoodModel):
             The covariance matrix of the random effects.
         scale : float
             The overdispersion scale parameter for the exponential family.
+        ref_re: array-like 2d
+
+        Returns
+        -------
+        tuple
+            the value of the negative joint log likelihood,
+            its gradient and the log-determinant of it's hessian
+            evaluated at the given state, respectively, in a tuple.
+        """
+
+        return (self._gen_joint_like_grad_hess(fe_params, cov_re, scale))(ref)
+
+    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale):
+        """
+        Function, gradient and hessian of the joint log likelihood.
+
+        The log-likelihood is for the data and random effects, viewed as a
+        function of the random effects.
+
+        Parameters
+        ----------
+        params : array-like, 1d
+            The fixed effects parameters.
+        cov_re : array-like, 2d
+            The covariance matrix of the random effects.
+        scale : float
+            The overdispersion scale parameter for the exponential family.
+        ref_re: array-like 2d
 
         Returns
         -------
         function
             A function that takes a state for the random effects
-            (vectorized) and returns the value of the (kernel of the) negative
-            joint log likelihood and its gradient evaluated at the given state
-            respectively in a tuple.
+            (vectorized) and returns the value of the negative
+            joint log likelihood, its gradient and the log-determinant
+            of it's hessian evaluated at the given state,
+            respectively, in a tuple.
         """
 
         lin_pred = np.dot(self.exog, fe_params)
@@ -841,80 +857,74 @@ class MixedGLM(base.LikelihoodModel):
             # Matrix of current state of random effects
             ref = np.reshape(ref, (self.n_groups, self.k_re))
 
+            _, cov_re_logdet = np.linalg.slogdet(cov_re)
+            cov_re_inv = np.linalg.inv(cov_re)
+
+            # Multi. normal consts from the random effects
             s = np.linalg.solve(cov_re, ref.T)
-            f = -(ref.T * s).sum() / 2  # -1/2 * x'cov^(-1)x
+            f = -(ref.T * s).sum() / 2
+            f -= self.n_groups * self.k_re * np.log(2 * np.pi) / 2.0
+            f -= self.n_groups * cov_re_logdet / 2.0
 
+            # Place holders for gradient and log-det of hessian
             d = np.zeros((self.n_groups, self.k_re))
+            hval = 0
 
-            # Build up log-likelihood group by group
+            # Build up values group by group
             for k, g in enumerate(self.group_labels):
-                lin_predr = lin_pred[k] + np.dot(self.exog_re_li[k], ref[k, :])
+
+                # The groups' contribution to the log-likelihood
+                exog_re = self.exog_re_li[k]
+                lin_predr = lin_pred[k] + np.dot(exog_re, ref[k, :])
                 mean = self.family.fitted(lin_predr)  # mu_i = h(eta_i)
                 log_likes = self.family.loglike(self.endog_li[k], mean,
                                                 scale=scale)
                 f += log_likes
 
-                d[k, :] = ((self.endog_li[k] - mean)[:, None] *
-                           self.exog_re_li[k] * scale).sum(0)
+                # The groups' contribution to the gradient of the log-likelihood
+                deriv_link_inv = self.family.link.inverse_deriv(lin_predr)
+                var_mean = self.family.variance(mean)
+                endog_less_mu = (self.endog_li[k] - mean)[:, None]
+
+                non_canon_ratio = deriv_link_inv / var_mean
+                canon_deriv = endog_less_mu * exog_re * scale
+                component = np.dot(non_canon_ratio,canon_deriv)
+
+                d[k, :] = component
                 d[k, :] -= s[:, k]
 
+                # The group's contribution to the log-det of the hessian of the log-likelihood
+                deriv2_link_inv = self.family.link.inverse_deriv2(lin_predr)
+                deriv_var_mean = self.family.variance.deriv(mean)
+
+                # Outer products of each obs's exog_re
+                outer = np.outer(exog_re,exog_re)
+                b_inds = range(0,self.k_re*exog_re.shape[0],self.k_re)
+                outer_l = [outer[i:(i+self.k_re),i:(i+self.k_re)] for i in b_inds]
+
+                # Hess is the sum of a 'factor' by the outer products of the exog_re
+                # we compute that factor here. In canon case it is (y-mean)/var
+                dfdm = (endog_less_mu.T)[0]
+                part1 = dfdm * deriv2_link_inv
+
+                dmdg2 = deriv_link_inv**2
+                d2fdm2 = 1+(endog_less_mu.T)[0]*(deriv_var_mean / var_mean)
+                part2 = dmdg2 * d2fdm2
+
+                factor = ((part1-part2) / var_mean) * scale
+
+                factor_by_outer = [factor[i]*outer_l[i] for i in range(len(outer_l))]
+                hmat = np.sum(factor_by_outer,0)
+                hmat -= cov_re_inv # Contribution of the r.e.'s density
+
+                hval += np.linalg.slogdet(hmat)[1]
+
             # We need negatives because scipy.optimize can only
-            # find minima not maxima
-            return -f, -d.ravel()
+            # find minima not maxima. We don't change the hess value
+            # because we need the abs. value of it anyways.
+            return -f, -d.ravel(), hval
 
         return fun
-
-    def _joint_like_hess(self, ref, fe_params, cov_re, scale):
-        """
-        Function and Hessian of the joint log likelihood evaluated at
-        the given state.
-
-        The log-likelihood is for the data and random effects, viewed as a
-        function of the random effects.
-
-        Parameters
-        ----------
-        ref : array-like
-            The random effects.
-        fe_params : array-like, 1d
-            The fixed effects parameters.
-        cov_re : array-like, 2d
-            The covariance matrix of the random effects.
-        scale : float
-            The overdispersion scale parameter for the exponential family.
-
-        Returns
-        -------
-        tuple
-            A tuple containing two elements.
-            First, the (kernel of the) negative joint log likelihood and second
-            the log of the determinant of its Hessian evaluated at the given
-            state.
-        """
-
-        lin_pred = np.dot(self.exog, fe_params)
-        lin_pred = self.group_list(lin_pred)
-
-        ref = np.reshape(ref, (self.n_groups, self.k_re))
-
-        s = np.linalg.solve(cov_re, ref.T)
-        f = -(ref.T * s).sum() / 2
-
-        d2 = np.zeros(self.n_groups)
-
-        cov_re_inv = np.linalg.inv(cov_re)
-
-        for k, g in enumerate(self.group_labels):
-            lin_predr = lin_pred[k] + np.dot(self.exog_re_li[k], ref[k, :])
-            mean = self.family.fitted(lin_predr)
-            f += self.family.loglike(self.endog_li[k], mean, scale=scale)
-            va = self.family.variance(mean)
-            hmat = va[:, None] * self.exog_re_li[k]
-            hmat = np.dot(self.exog_re_li[k].T, hmat)
-            hmat += cov_re_inv
-            _, d2[k] = np.linalg.slogdet(hmat)
-
-        return -f, d2.sum()
 
     def _get_map(self, fe_params, cov_re, scale, omethod):
         """
@@ -941,27 +951,52 @@ class MixedGLM(base.LikelihoodModel):
             The MAP predictor of the random effects.
         """
 
-        fun = self._gen_joint_like_score(fe_params, cov_re, scale)
-        x0 = np.random.normal(size=self.n_groups * self.k_re)
+        restarts_allowed = max(100, 10 * self.n_groups * self.k_re)
 
-        result = minimize(fun, x0, jac=True, method=omethod)
+        for _ in range(restarts_allowed):
+
+            fun_grad_hess = self._gen_joint_like_grad_hess(fe_params, cov_re, scale)
+            def fun(x): return fun_grad_hess(x)[0:2]
+
+            # Random starting guess
+            x0 = np.random.normal(size = self.n_groups * self.k_re)
+
+            attempts_allowed = 1000 * x0.size
+            opts = {'gtol': 1e-4, 'maxiter': attempts_allowed}
+            result = minimize(fun, x0, jac=True, tol=1e-5, options= opts)
+
+            if result.success:
+                break
 
         if not result.success:
-            raise Warning(result.message)
+            raise RuntimeError("Failed Laplace too many times.")
 
         mp = np.reshape(result.x, (self.n_groups, self.k_re))
         return mp
 
     def fit(self, start_params=None, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, method='Nelder-Mead', **kwargs):
+            full_output=False, method='nm', **kwargs):
         """
         """
 
-        rslt = super(MixedGLM, self).fit(start_params=start_params,
-                                        skip_hessian=True, method='nm',
-                                        maxfun=1000, maxiter=1000,
-                                        **kwargs)
+        if start_params is None:
+            self.k_re2 = self.k_re * (self.k_re + 1) // 2
+            self.k_tot = self.k_fe + self.k_re2
+            start_params = np.random.uniform(size=self.k_tot)
+
+        try:
+            rslt = super(MixedGLM, self).fit(start_params=start_params,
+                                            skip_hessian=True, method=method,
+                                            maxfun=1000, maxiter=1000,
+                                            **kwargs)
+        except RuntimeError:
+            start_params = np.random.uniform(size=len(start_params))
+            rslt = super(MixedGLM, self).fit(start_params=start_params,
+                                            skip_hessian=True, method=method,
+                                            maxfun=1000, maxiter=1000,
+                                            **kwargs)
+
 
         params = MixedGLMParams.from_packed(rslt.params, self.k_fe,
                                             use_sqrt=self.use_sqrt)
@@ -987,7 +1022,7 @@ class MixedGLM(base.LikelihoodModel):
         results.scale = scale
         results.cov_re_unscaled = cov_re_unscaled
         results.method = "ML"
-        # TODO: track down actually success
+        # TODO: track down actual success
         results.converged = True
         # TODO: hist?
         #results.hist = hist
