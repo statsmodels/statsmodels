@@ -877,6 +877,8 @@ class MixedGLM(base.LikelihoodModel):
                 exog_re = self.exog_re_li[k]
                 lin_predr = lin_pred[k] + np.dot(exog_re, ref[k, :])
                 mean = self.family.fitted(lin_predr)  # mu_i = h(eta_i)
+                #TODO: delete_me
+                self.family.delete_me = False
                 log_likes = self.family.loglike(self.endog_li[k], mean,
                                                 scale=scale)
                 f += log_likes
