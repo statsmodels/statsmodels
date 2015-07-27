@@ -387,6 +387,10 @@ a VAR(p) model estimated at each point in time.
 
 ::
 
+    >>> np.random.seed(1)
+    >>> import pandas.util.testing as ptest
+    >>> ptest.N = 500
+    >>> data = ptest.makeTimeDataFrame().cumsum(0)
     >>> data
     <class 'pandas.core.frame.DataFrame'>
     Index: 500 entries , 2000-01-03 00:00:00 to 2001-11-30 00:00:00
@@ -398,60 +402,69 @@ a VAR(p) model estimated at each point in time.
     >>> var = DynamicVAR(data, lag_order=2, window_type='expanding')
 
 The estimated coefficients for the dynamic model are returned as a
-:class:`pandas.WidePanel` object, which can allow you to easily examine, for
+:class:`pandas.Panel` object, which can allow you to easily examine, for
 example, all of the model coefficients by equation or by date:
 
 ::
 
     >>> var.coefs
-    <class 'pandas.core.panel.WidePanel'>
-    Dimensions: 9 (items) x 489 (major) x 4 (minor)
-    Items: L1.A to intercept
-    Major axis: 2000-01-18 00:00:00 to 2001-11-30 00:00:00
-    Minor axis: A to D
+    <class 'pandas.core.panel.Panel'>
+    Dimensions: 9 (items) x 489 (major_axis) x 4 (minor_axis)
+    Items axis: L1.A to intercept
+    Major_axis axis: 2000-01-18 00:00:00 to 2001-11-30 00:00:00
+    Minor_axis axis: A to D
+
 
     # all estimated coefficients for equation A
     >>> var.coefs.minor_xs('A').info()
-    Index: 489 entries , 2000-01-18 00:00:00 to 2001-11-30 00:00:00
-    Data columns:
-    L1.A         489  non-null values
-    L1.B         489  non-null values
-    L1.C         489  non-null values
-    L1.D         489  non-null values
-    L2.A         489  non-null values
-    L2.B         489  non-null values
-    L2.C         489  non-null values
-    L2.D         489  non-null values
-    intercept    489  non-null values
-    dtype: float64(9)
+    <class 'pandas.core.frame.DataFrame'>
+    DatetimeIndex: 489 entries, 2000-01-18 to 2001-11-30
+    Freq: B
+    Data columns (total 9 columns):
+    L1.A         489 non-null float64
+    L1.B         489 non-null float64
+    L1.C         489 non-null float64
+    L1.D         489 non-null float64
+    L2.A         489 non-null float64
+    L2.B         489 non-null float64
+    L2.C         489 non-null float64
+    L2.D         489 non-null float64
+    intercept    489 non-null float64
+    dtypes: float64(9)
+    memory usage: 38.2 KB
+
 
     # coefficients on 11/30/2001
     >>> var.coefs.major_xs(datetime(2001, 11, 30)).T
-                 A              B              C              D
-    L1.A         0.9567         -0.07389       0.0588         -0.02848
-    L1.B         -0.00839       0.9757         -0.004945      0.005938
-    L1.C         -0.01824       0.1214         0.8875         0.01431
-    L1.D         0.09964        0.02951        0.05275        1.037
-    L2.A         0.02481        0.07542        -0.04409       0.06073
-    L2.B         0.006359       0.01413        0.02667        0.004795
-    L2.C         0.02207        -0.1087        0.08282        -0.01921
-    L2.D         -0.08795       -0.04297       -0.06505       -0.06814
-    intercept    0.07778        -0.283         -0.1009        -0.6426
+                      A         B         C         D
+    L1.A       0.971964  0.045960  0.003883  0.003822
+    L1.B       0.043951  0.937964  0.000735  0.020823
+    L1.C       0.038144  0.018260  0.977037  0.129287
+    L1.D       0.038618  0.036180  0.052855  1.002657
+    L2.A       0.013588 -0.046791  0.011558 -0.005300
+    L2.B      -0.048885  0.041853  0.012185 -0.048732
+    L2.C      -0.029426 -0.015238  0.011520 -0.119014
+    L2.D      -0.049945 -0.025419 -0.045621 -0.019496
+    intercept  0.113331  0.248795 -0.058837 -0.089302
+
 
 Dynamic forecasts for a given number of steps ahead can be produced using the
 `forecast` function and return a :class:`pandas.DataMatrix` object:
 
 ::
 
-    >>> In [76]: var.forecast(2)
-                           A              B              C              D
-    <snip>
-    2001-11-23 00:00:00    -6.661         43.18          33.43          -23.71
-    2001-11-26 00:00:00    -5.942         43.58          34.04          -22.13
-    2001-11-27 00:00:00    -6.666         43.64          33.99          -22.85
-    2001-11-28 00:00:00    -6.521         44.2           35.34          -24.29
-    2001-11-29 00:00:00    -6.432         43.92          34.85          -26.68
-    2001-11-30 00:00:00    -5.445         41.98          34.87          -25.94
+    >>> var.forecast(2)
+    <class 'pandas.core.frame.DataFrame'>
+    DatetimeIndex: 487 entries, 2000-01-20 to 2001-11-30
+    Freq: B
+    Data columns (total 4 columns):
+    A    487 non-null float64
+    B    487 non-null float64
+    C    487 non-null float64
+    D    487 non-null float64
+    dtypes: float64(4)
+    memory usage: 19.0 KB
+
 
 The forecasts can be visualized using `plot_forecast`:
 
