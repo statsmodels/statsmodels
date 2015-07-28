@@ -349,6 +349,7 @@ class MixedGLM(base.LikelihoodModel):
                            family.__class__.__name__))
 
         self.family = family
+        self._canonical = isinstance(self.family.link, self.family._canonical_link)
 
         self.use_sqrt = use_sqrt
         self._scale = scale
@@ -822,7 +823,7 @@ class MixedGLM(base.LikelihoodModel):
 
         return (self._gen_joint_like_grad_hess(fe_params, cov_re, scale))(ref)
 
-    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale):
+    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale, logdet_hess = True):
         """
         Function, gradient and hessian of the joint log likelihood.
 
@@ -869,6 +870,7 @@ class MixedGLM(base.LikelihoodModel):
             # Place holders for gradient and log-det of hessian
             d = np.zeros((self.n_groups, self.k_re))
             hval = 0
+            hmat_l = []
 
             # Build up values group by group
             for k, g in enumerate(self.group_labels):
@@ -876,46 +878,43 @@ class MixedGLM(base.LikelihoodModel):
                 # The groups' contribution to the log-likelihood
                 exog_re = self.exog_re_li[k]
                 lin_predr = lin_pred[k] + np.dot(exog_re, ref[k, :])
-                mean = self.family.fitted(lin_predr)  # mu_i = h(eta_i)
+                mean = self.family.fitted(lin_predr)
                 #TODO: delete_me
                 self.family.delete_me = False
-                log_likes = self.family.loglike(self.endog_li[k], mean,
+                f += self.family.loglike(self.endog_li[k], mean,
                                                 scale=scale)
-                f += log_likes
 
                 # The groups' contribution to the gradient of the log-likelihood
-                deriv_link_inv = self.family.link.inverse_deriv(lin_predr)
-                var_mean = self.family.variance(mean)
                 endog_less_mu = (self.endog_li[k] - mean)[:, None]
+                var_mean = self.family.variance(mean)
 
-                non_canon_ratio = deriv_link_inv / var_mean
                 canon_deriv = endog_less_mu * exog_re * scale
-                component = np.dot(non_canon_ratio,canon_deriv)
 
-                d[k, :] = component
+                if not self._canonical:
+                    deriv_link_inv = self.family.link.inverse_deriv(lin_predr)
+                    non_canon_ratio = deriv_link_inv / var_mean
+                    d[k, :] = np.dot(non_canon_ratio,canon_deriv)
+                else:
+                    d[k, :] = canon_deriv.sum(0)
+
                 d[k, :] -= s[:, k]
 
                 # The group's contribution to the log-det of the hessian of the log-likelihood
-                deriv2_link_inv = self.family.link.inverse_deriv2(lin_predr)
-                deriv_var_mean = self.family.variance.deriv(mean)
-
-                # Outer products of each obs's exog_re
-                outer = np.outer(exog_re,exog_re)
-                b_inds = range(0,self.k_re*exog_re.shape[0],self.k_re)
-                outer_l = [outer[i:(i+self.k_re),i:(i+self.k_re)] for i in b_inds]
-
                 # Hess is the sum of a 'factor' by the outer products of the exog_re
-                # we compute that factor here. In canon case it is (y-mean)/var
-                dfdm = (endog_less_mu.T)[0]
-                part1 = dfdm * deriv2_link_inv
+                # we compute that factor here. In canon case it is -var
+                if not self._canonical:
+                    deriv2_link_inv = self.family.link.inverse_deriv2(lin_predr)
+                    deriv_var_mean = self.family.variance.deriv(mean)
 
-                dmdg2 = deriv_link_inv**2
-                d2fdm2 = 1+(endog_less_mu.T)[0]*(deriv_var_mean / var_mean)
-                part2 = dmdg2 * d2fdm2
+                    part1 = (endog_less_mu.T)[0] * deriv2_link_inv
+                    part2 = deriv_link_inv**2 * (1+(endog_less_mu.T)[0]*(deriv_var_mean / var_mean))
 
-                factor = ((part1-part2) / var_mean) * scale
+                    factor = (part1 - part2) / var_mean * scale
+                else:
+                    factor = - var_mean * scale
 
-                factor_by_outer = [factor[i]*outer_l[i] for i in range(len(outer_l))]
+                factor_by_outer = [factor[i]*np.outer(exog_re[i],exog_re[i]) for i in range(len(exog_re))]
+
                 hmat = np.sum(factor_by_outer,0)
                 hmat -= cov_re_inv # Contribution of the r.e.'s density
 
@@ -924,7 +923,10 @@ class MixedGLM(base.LikelihoodModel):
             # We need negatives because scipy.optimize can only
             # find minima not maxima. We don't change the hess value
             # because we need the abs. value of it anyways.
-            return -f, -d.ravel(), hval
+            if logdet_hess:
+                return -f, -d.ravel(), hval
+            else:
+                return -f, -d.ravel(), hmat
 
         return fun
 
@@ -964,8 +966,8 @@ class MixedGLM(base.LikelihoodModel):
             x0 = np.random.normal(size = self.n_groups * self.k_re)
 
             attempts_allowed = 1000 * x0.size
-            opts = {'gtol': 1e-4, 'maxiter': attempts_allowed}
-            result = minimize(fun, x0, jac=True, tol=1e-5, options= opts)
+            opts = {'gtol': 1e-3, 'maxiter': attempts_allowed}
+            result = minimize(fun, x0, jac=True, tol=1e-3, options= opts)
 
             if result.success:
                 break

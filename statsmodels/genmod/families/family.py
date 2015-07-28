@@ -282,6 +282,7 @@ class Poisson(Family):
     variance = V.mu
     valid = [0, np.inf]
     safe_links = [L.Log,]
+    _canonical_link = L.log
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
@@ -434,6 +435,7 @@ class Gaussian(Family):
     links = [L.log, L.identity, L.inverse_power]
     variance = V.constant
     safe_links = links
+    _canonical_link = L.identity
 
     def __init__(self, link=L.identity):
         self.variance = Gaussian.variance
@@ -580,9 +582,11 @@ class Gamma(Family):
 
     """
 
-    links = [L.log, L.identity, L.inverse_power]
+    links = [L.log, L.identity, L.inverse_power, L.negative_inverse_power]
     variance = V.mu_squared
     safe_links = [L.Log,]
+    # TODO: we need a canonical link for Gamma
+    _canonical_link = L.negative_inverse_power
 
     def __init__(self, link=L.inverse_power):
         self.variance = Gamma.variance
@@ -744,6 +748,7 @@ class Binomial(Family):
 
     # Other safe links, e.g. cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
+    _canonical_link = L.logit
 
     def __init__(self, link=L.logit):  # , n=1.):
         # TODO: it *should* work for a constant n>1 actually, if data_weights
@@ -1002,9 +1007,10 @@ class InverseGaussian(Family):
 
     """
 
-    links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
+    links = [L.inverse_squared, L.inverse_power, L.identity, L.log, L.negative_inverse_squared]
     variance = V.mu_cubed
     safe_links = [L.inverse_squared, L.Log,]
+    _canonical_link = L.negative_inverse_squared
 
     def __init__(self, link=L.inverse_squared):
         self.variance = InverseGaussian.variance
@@ -1147,6 +1153,7 @@ class NegativeBinomial(Family):
     # similar to below
     variance = V.nbinom
     safe_links = [L.Log,]
+    _canonical_link = L.nbinom
 
     def __init__(self, link=L.log, alpha=1.):
         self.alpha = alpha

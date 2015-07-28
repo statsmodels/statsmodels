@@ -19,9 +19,11 @@ probit = links.probit()
 cauchy = links.cauchy()
 cloglog = links.CLogLog()
 negbinom = links.NegativeBinomial()
+negative_inverse_power = links.negative_inverse_power()
+negative_inverse_squared = links.negative_inverse_squared()
 
 Links = [logit, inverse_power, sqrt, inverse_squared, identity, log, probit, cauchy,
-         cloglog, negbinom]
+         cloglog, negbinom, negative_inverse_power, negative_inverse_squared]
 
 
 def get_domainvalue(link):
@@ -31,7 +33,7 @@ def get_domainvalue(link):
     z = -np.log(np.random.uniform(0, 1))
     if type(link) == type(cloglog): # prone to overflow
         z = min(z, 3)
-    elif type(link) == type(negbinom): # domain is negative numbers
+    elif type(link) == type(negbinom) or type(link) == type(negative_inverse_squared): # domain is negative numbers
         z = -z
     return z
 
