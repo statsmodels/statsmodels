@@ -59,8 +59,12 @@ def companion_matrix(polynomial):
 
     Notes
     -----
+    Given coefficients of a lag polynomial of the form:
 
-    Returns a matrix of the form
+    .. math::
+        c(L) = c_0 + c_1 L + \dots + c_p L^p
+
+    returns a matrix of the form
 
     .. math::
         \begin{bmatrix}
@@ -74,15 +78,33 @@ def companion_matrix(polynomial):
     where some or all of the :math:`\phi_i` may be non-zero (if `polynomial` is
     None, then all are equal to zero).
 
-    If the coefficients provided are scalars :math:`(c_0, c_1, \dots, c_{n})`,
+    If the coefficients provided are scalars :math:`(c_0, c_1, \dots, c_p)`,
     then the companion matrix is an :math:`n \times n` matrix formed with the
     elements in the first column defined as
-    :math:`\phi_i = -\frac{c_i}{c_0}, i \in 1, \dots, n`.
+    :math:`\phi_i = -\frac{c_i}{c_0}, i \in 1, \dots, p`.
 
-    If the coefficients provided are matrices :math:`(C_0, C_1, \dots, C_{n})`,
+    If the coefficients provided are matrices :math:`(C_0, C_1, \dots, C_p)`,
     each of shape :math:`(m, m)`, then the companion matrix is an
     :math:`nm \times nm` matrix formed with the elements in the first column
-    defined as :math:`\phi_i = -C_0^{-1} C_i', i \in 1, \dots, n`.
+    defined as :math:`\phi_i = -C_0^{-1} C_i', i \in 1, \dots, p`.
+
+    It is important to understand the expected signs of the coefficients. A
+    typical AR(p) model is written as:
+
+    .. math::
+        y_t = a_1 y_{t-1} + \dots + a_p y_{t-p} + \varepsilon_t
+
+    This can be rewritten as:
+
+    .. math::
+        (1 - a_1 L - \dots - a_p L^p )y_t = \varepsilon_t \\
+        (1 + c_1 L + \dots + c_p L^p )y_t = \varepsilon_t \\
+        c(L) y_t = \varepsilon_t
+
+    The coefficients from this form are defined to be :math:`c_i = - a_i`, and
+    it is the :math:`c_i` coefficients that this function expects to be
+    provided.
+
     """
     identity_matrix = False
     if isinstance(polynomial, int):
@@ -126,11 +148,11 @@ def companion_matrix(polynomial):
             matrix[:, 0] = -polynomial[1:] / polynomial[0]
         elif identity_matrix:
             for i in range(n):
-                matrix[i * m:(i + 1) * m, :m] = polynomial[i+1].T
+                matrix[i * m:(i + 1) * m, :m] = -polynomial[i+1].T
         else:
             inv = np.linalg.inv(polynomial[0])
             for i in range(n):
-                matrix[i * m:(i + 1) * m, :m] = np.dot(inv, polynomial[i+1]).T
+                matrix[i * m:(i + 1) * m, :m] = -np.dot(inv, polynomial[i+1]).T
     return matrix
 
 
@@ -421,9 +443,9 @@ def _compute_coefficients_from_multivariate_pacf(partial_autocorrelations,
         # Create the "last" (k = s+1) matrix
         # Note: this is for k = s+1. However, below we then have to fill
         # in for k = 1, ..., s in order.
-        # P L^{-1} = x
-        # x L = P
-        # L' x' = P'
+        # P L*^{-1} = x
+        # x L* = P
+        # L*' x' = P'
         forwards.append(
             linalg.solve_triangular(
                 backward_factors[s], partial_autocorrelations[s].T,
@@ -444,19 +466,19 @@ def _compute_coefficients_from_multivariate_pacf(partial_autocorrelations,
         # below
         # Also, this calculation will be re-used in the forward variance
         tmp = np.dot(forwards[0], backward_variances[s])
-        autocovariances.append(tmp.copy())
+        autocovariances.append(tmp.copy().T)
 
         # Create the remaining k = 1, ..., s matrices,
         # only has an effect if s >= 1
         for k in range(s):
             forwards.insert(k, prev_forwards[k] - np.dot(
-                forwards[k], prev_backwards[s-(k+1)]))
+                forwards[-1], prev_backwards[s-(k+1)]))
 
             backwards.insert(k, prev_backwards[k] - np.dot(
-                backwards[k], prev_forwards[s-(k+1)]))
+                backwards[-1], prev_forwards[s-(k+1)]))
 
-            autocovariances[s+1] += np.dot(prev_forwards[s-(k+1)],
-                                           autocovariances[k+1])
+            autocovariances[s+1] += np.dot(autocovariances[k+1],
+                                           prev_forwards[s-(k+1)].T)
 
         # Create forward and backwards variances
         forward_variances.append(
@@ -604,29 +626,32 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     return unconstrained
 
 
-def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
-                                                order=None, k_endog=None):
+def _compute_multivariate_acovf_from_coefficients(coefficients, error_variance,
+                                                  order=None, k_endog=None,
+                                                  maxlag=None):
     """
-    Transform matrices corresponding to a stationary (or invertible) process
-    to matrices with singular values less than one.
+    Notes
+    -----
 
-    Note that this computes multivariate partial autocorrelations.
+    Coefficients are assumed to be provided from the VAR model:
 
-    Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
-    `unconstrain_stationary_multivariate` for more details.
+    .. math::
+        y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
     """
     from scipy import linalg
 
     if order is None:
-        order = len(constrained)
+        order = len(coefficients)
     if k_endog is None:
-        k_endog = constrained[0].shape[0]
+        k_endog = coefficients[0].shape[0]
+    if maxlag is None:
+        maxlag = order-1
 
     # Start with VAR(p): w_{t+1} = phi_1 w_t + ... + phi_p w_{t-p+1} + u_{t+1}
     # Then stack the VAR(p) into a VAR(1) in companion matrix form:
     # z_{t+1} = F z_t + v_t
     companion = companion_matrix(
-        [1] + [-constrained[i] for i in range(order)]
+        [1] + [-coefficients[i] for i in range(order)]
     ).T
 
     # Compute the error variance matrix for the stacked form: E v_t v_t'
@@ -641,8 +666,50 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     # Note: these are okay, checked against ArmaProcess
     autocovariances = [
         stacked_cov[:k_endog, i*k_endog:(i+1)*k_endog]
-        for i in range(order)
+        for i in range(min(order, maxlag+1))
     ]
+
+    for i in range(maxlag - (order-1)):
+        stacked_cov = np.dot(companion, stacked_cov)
+        autocovariances += [
+            stacked_cov[:k_endog, -k_endog:]
+        ]
+
+    return autocovariances
+
+
+def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
+                                                order=None, k_endog=None):
+    """
+    Transform matrices corresponding to a stationary (or invertible) process
+    to matrices with singular values less than one.
+
+    Note that this computes multivariate partial autocorrelations.
+
+    Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
+    `unconstrain_stationary_multivariate` for more details.
+
+    Notes
+    -----
+
+    Coefficients are assumed to be provided from the VAR model:
+
+    .. math::
+        y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
+    """
+    from scipy import linalg
+
+    if order is None:
+        order = len(constrained)
+    if k_endog is None:
+        k_endog = constrained[0].shape[0]
+
+    # Get autocovariances for the process; these are defined to be
+    # E z_t z_{t-j}'
+    # However, we want E z_t z_{t+j}' = (E z_t z_{t-j}')'
+    _acovf = _compute_multivariate_acovf_from_coefficients
+    autocovariances = [autocovariance.T for autocovariance in
+        _acovf(constrained, error_variance, order, k_endog, maxlag=order)]
 
     # Now apply the Ansley and Kohn (1986) algorithm, except that instead of
     # calculating phi_{s+1, s+1} = L_s P_{s+1} {L_s^*}^{-1} (which requires
@@ -686,11 +753,13 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
 
         # Create forward and backwards variances Sigma_s, Sigma*_s
         forward_variance = autocovariances[0].copy()
-        backward_variance = autocovariances[0].copy()
+        backward_variance = autocovariances[0].T.copy()
 
         for k in range(s):
-            forward_variance -= np.dot(prev_forwards[k], autocovariances[k+1])
-            backward_variance -= np.dot(prev_backwards[k], autocovariances[k+1].T)
+            forward_variance -= np.dot(prev_forwards[k],
+                                       autocovariances[k+1])
+            backward_variance -= np.dot(prev_backwards[k],
+                                        autocovariances[k+1].T)
 
         forward_variances.append(forward_variance)
         backward_variances.append(backward_variance)
@@ -703,29 +772,48 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
             linalg.cholesky(backward_variances[s], lower=True)
         )
 
-        if s == order-1:
+        if False and s == order-1:
             forwards = constrained
         else:
             # Create the intermediate sum term
-            # G := \Gamma_{s+1}' - \phi_{s,1} \Gamma_s' - .. - \phi_{s,s} \Gamma_1'
-            tmp_sum = autocovariances[s+1].T.copy()
-            for k in range(s):
-                tmp_sum -= np.dot(prev_forwards[k], autocovariances[s-k].T)
+            if s == 0:
+                # phi_11 = \Gamma_1' \Gamma_0^{-1}
+                # phi_11 \Gamma_0 = \Gamma_1'
+                # \Gamma_0 phi_11' = \Gamma_1
+                forwards.append(linalg.cho_solve(
+                    (forward_factors[0], True), autocovariances[1]).T)
+                # backwards.append(forwards[-1])
+                # phi_11_star = \Gamma_1 \Gamma_0^{-1}
+                # phi_11_star \Gamma_0 = \Gamma_1
+                # \Gamma_0 phi_11_star' = \Gamma_1'
+                backwards.append(linalg.cho_solve(
+                    (backward_factors[0], True), autocovariances[1].T).T)
+            else:
+                # G := \Gamma_{s+1}' -
+                #      \phi_{s,1} \Gamma_s' - .. - \phi_{s,s} \Gamma_1'
+                tmp_sum = autocovariances[s+1].T.copy()
 
-            # Create the "last" (k = s+1) matrix
-            # Note: this is for k = s+1. However, below we then have to fill
-            # in for k = 1, ..., s in order.
-            # phi = G Sigma*^{-1}
-            # phi Sigma* = G
-            # Sigma*' phi' = G'
-            forwards.append(linalg.solve_triangular(
-                backward_variances[s], tmp_sum.T, lower=True, trans='T').T)
+                for k in range(s):
+                    tmp_sum -= np.dot(prev_forwards[k], autocovariances[s-k].T)
 
-            # phi = G' Sigma^{-1}
-            # phi Sigma = G'
-            # Sigma' phi' = G
-            backwards.append(linalg.solve_triangular(
-                forward_variances[s], tmp_sum, lower=True, trans='T').T)
+                # Create the "last" (k = s+1) matrix
+                # Note: this is for k = s+1. However, below we then have to
+                # fill in for k = 1, ..., s in order.
+                # phi = G Sigma*^{-1}
+                # phi Sigma* = G
+                # Sigma*' phi' = G'
+                # Sigma* phi' = G'
+                # (because Sigma* is symmetric)
+                forwards.append(linalg.cho_solve(
+                    (backward_factors[s], True), tmp_sum.T).T)
+
+                # phi = G' Sigma^{-1}
+                # phi Sigma = G'
+                # Sigma' phi' = G
+                # Sigma phi' = G
+                # (because Sigma is symmetric)
+                backwards.append(linalg.cho_solve(
+                    (forward_factors[s], True), tmp_sum).T)
 
             # Create the remaining k = 1, ..., s matrices,
             # only has an effect if s >= 1
@@ -739,7 +827,8 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
         # P = L^{-1} phi L*
         # L P = (phi L*)
         partial_autocorrelations.append(linalg.solve_triangular(
-            forward_factors[s], np.dot(forwards[s], backward_factors[s]), lower=True))
+            forward_factors[s], np.dot(forwards[s], backward_factors[s]),
+            lower=True))
 
     return partial_autocorrelations
 
