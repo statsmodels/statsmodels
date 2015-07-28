@@ -12,15 +12,24 @@ import pandas as pd
 from statsmodels.tsa.statespace import tools
 # from .results import results_sarimax
 from numpy.testing import (
-    assert_equal, assert_array_equal, assert_almost_equal, assert_raises
+    assert_allclose, assert_equal, assert_array_equal, assert_almost_equal,
+    assert_raises
 )
 
 class TestCompanionMatrix(object):
 
     cases = [
         (2, np.array([[0,1],[0,0]])),
-        ([1,-1,-2], np.array([[1,1],[2,0]])),
-        ([1,-1,-2,-3], np.array([[1,1,0],[2,0,1],[3,0,0]]))
+        ([1,-1,-2], np.array([[1,1],
+                              [2,0]])),
+        ([1,-1,-2,-3], np.array([[1,1,0],
+                                 [2,0,1],
+                                 [3,0,0]])),
+        ([1,-np.array([[1,2],[3,4]]),-np.array([[5,6],[7,8]])],
+         np.array([[1,2,5,6],
+                   [3,4,7,8],
+                   [1,0,0,0],
+                   [0,1,0,0]]).T)
     ]
 
     def test_cases(self):
@@ -147,3 +156,68 @@ class TestValidateVectorShape(object):
             assert_raises(
                 ValueError, tools.validate_vector_shape, *args
             )
+
+def test_multivariate_acovf():
+    _acovf = tools._compute_multivariate_acovf_from_coefficients
+
+    # Test for a VAR(1) process. From Lutkepohl (2007), pages 27-28.
+    # See (2.1.14) for Phi_1, (2.1.33) for Sigma_u, and (2.1.34) for Gamma_0
+    Sigma_u = np.array([[2.25, 0,   0],
+                        [0,    1.0, 0.5],
+                        [0,    0.5, 0.74]])
+    Phi_1 = np.array([[0.5, 0,   0],
+                      [0.1, 0.1, 0.3],
+                      [0,   0.2, 0.3]])
+    Gamma_0 = np.array([[3.0,   0.161, 0.019],
+                        [0.161, 1.172, 0.674],
+                        [0.019, 0.674, 0.954]])
+    # assert_allclose(_acovf([Phi_1], Sigma_u)[0], Gamma_0, atol=1e-3)
+
+    # Test for a VAR(2) process. From Lutkepohl (2007), pages 28-29
+    # See (2.1.40) for Phi_1, Phi_2, (2.1.14) for Sigma_u, and (2.1.42) for
+    # Gamma_0, Gamma_1
+    Sigma_u = np.diag([0.09, 0.04])
+    Phi_1 = np.array([[0.5, 0.1],
+                      [0.4, 0.5]])
+    Phi_2 = np.array([[0,    0],
+                      [0.25, 0]])
+    Gamma_0 = np.array([[0.131, 0.066],
+                        [0.066, 0.181]])
+    Gamma_1 = np.array([[0.072, 0.051],
+                        [0.104, 0.143]])
+    Gamma_2 = np.array([[0.046, 0.040],
+                        [0.113, 0.108]])
+    Gamma_3 = np.array([[0.035, 0.031],
+                        [0.093, 0.083]])
+
+    assert_allclose(
+        _acovf([Phi_1, Phi_2], Sigma_u, maxlag=0),
+        [Gamma_0], atol=1e-3)
+
+    assert_allclose(
+        _acovf([Phi_1, Phi_2], Sigma_u, maxlag=1),
+        [Gamma_0, Gamma_1], atol=1e-3)
+
+    assert_allclose(
+        _acovf([Phi_1, Phi_2], Sigma_u),
+        [Gamma_0, Gamma_1], atol=1e-3)
+
+    assert_allclose(
+        _acovf([Phi_1, Phi_2], Sigma_u, maxlag=2),
+        [Gamma_0, Gamma_1, Gamma_2], atol=1e-3)
+
+    assert_allclose(
+        _acovf([Phi_1, Phi_2], Sigma_u, maxlag=3),
+        [Gamma_0, Gamma_1, Gamma_2, Gamma_3], atol=1e-3)
+
+class TestConstrainStationaryMultivariate(object):
+
+    cases = [
+        ([np.array([[2.]])], [np.array([[2./((1+2.**2)**0.5)]])])
+    ]
+
+    def test_cases(self):
+        for unconstrained, constrained in self.cases:
+            result = tools.constrain_stationary_multivariate(
+                unconstrained, np.eye(len(unconstrained[0])))
+            assert_allclose(result[0], constrained)
