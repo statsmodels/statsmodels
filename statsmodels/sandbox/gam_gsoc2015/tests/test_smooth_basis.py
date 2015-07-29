@@ -2,7 +2,8 @@
 import numpy as np
 from patsy.state import stateful_transform
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, 
-                                                           make_bsplines_basis, BS, UnivariatePolynomialSmoother, PolynomialSmoother)
+                                                           make_bsplines_basis, BS, UnivariatePolynomialSmoother,
+                                                           PolynomialSmoother)
 from numpy.testing import assert_allclose
 
 
@@ -35,6 +36,6 @@ def test_multivariate_polynomial_basis():
         assert_allclose(mps.smoothers_[i].basis_ , UnivariatePolynomialSmoother(x[:, i], degrees[i]).basis_)
 
 
-# test_multivariate_polynomial_basis()
-# test_univariate_polynomial_smoother()
-# test_make_basis()
+test_multivariate_polynomial_basis()
+test_univariate_polynomial_smoother()
+test_make_basis()

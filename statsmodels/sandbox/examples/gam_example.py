@@ -5,7 +5,7 @@ __date__ = '08/07/15'
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis
-from statsmodels.sandbox.gam_gsoc2015.gam import GamPenalty, LogitGam, GLMGam, MultivariateGamPenalty
+from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, LogitGam, GLMGam, MultivariateGamPenalty
 import statsmodels.api as sm
 
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
@@ -34,7 +34,7 @@ alphas = [0, 0.1, 1, 10]
 for i, alpha in enumerate(alphas):
     plt.subplot(2, 2, i+1)
     params0 = np.random.normal(0, 1, df)
-    gp = GamPenalty(wts=1, alpha=alpha)
+    gp = UnivariateGamPenalty(wts=1, alpha=alpha)
     g = LogitGam(y, basis, penal=gp)
     res_g = g.fit()
     plt.plot(x, sigmoid(np.dot(basis, res_g.params)))
@@ -58,7 +58,7 @@ degree = 4
 basis, der_basis, der2_basis = make_bsplines_basis(x, df, degree)
 cov_der2 = np.dot(der2_basis.T, der2_basis)
 for i, alpha in enumerate(alphas):
-    gp = GamPenalty(alpha=alpha)
+    gp = UnivariateGamPenalty(alpha=alpha)
     gam = LogitGam(y, basis, penal = gp)
     res_gam = gam.fit(method='nm', max_start_irls=0,
                       disp=1, maxiter=5000, maxfun=5000)
@@ -88,7 +88,7 @@ for i, alpha in enumerate(alphas):
     plt.subplot(2, 2, i+1)
 
     # train the model
-    gp = GamPenalty(alpha=alpha)
+    gp = UnivariateGamPenalty(alpha=alpha)
     glm_gam = GLMGam(y, basis, penal = gp)
     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
                               disp=1, maxiter=5000, maxfun=5000)

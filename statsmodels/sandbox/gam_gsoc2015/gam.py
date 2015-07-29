@@ -188,7 +188,7 @@ class Penalty(object):
         raise NotImplementedError
 
 
-class GamPenalty(Penalty):
+class UnivariateGamPenalty(Penalty):
     __doc__ = """
     Penalty for Generalized Additive Models class
 
@@ -298,7 +298,7 @@ class MultivariateGamPenalty(Penalty):
 
         self.gp = []
         for i in range(self.k_variables):
-            gp = GamPenalty(wts=self.wts[i], alpha=self.alphas[i],
+            gp = UnivariateGamPenalty(wts=self.wts[i], alpha=self.alphas[i],
                             univariate_smoother=self.multivariate_smoother.smoothers_[i])
             self.gp.append(gp)
 

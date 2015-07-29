@@ -5,7 +5,7 @@ __date__ = '08/07/15'
 import os
 
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis, UnivariatePolynomialSmoother, PolynomialSmoother, UnivariateBSplines, BSplines
-from statsmodels.sandbox.gam_gsoc2015.gam import GamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
+from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
 import numpy as np
 import pandas as pd
 from statsmodels.genmod.families.family import Gaussian
@@ -83,7 +83,7 @@ def test_gam_penalty():
     pol, y = sample_data()
 
     alpha = 1
-    gp = GamPenalty(alpha=alpha, univariate_smoother=pol)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
 
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
@@ -100,7 +100,7 @@ def test_gam_gradient():
     pol, y = sample_data()
 
     alpha = 1
-    gp = GamPenalty(alpha=alpha, univariate_smoother=pol)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
         params = np.array([1, 1, 1, 1])
@@ -118,7 +118,7 @@ def test_gam_hessian():
     """
     pol, y = sample_data()
     alpha = 1
-    gp = GamPenalty(alpha=alpha, univariate_smoother=pol)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
 
     for i in range(10):
         params = np.random.randint(-2, 2, 5)
@@ -136,7 +136,7 @@ def test_approximation():
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
         cost, err, itg = cost_function(params, poly, y, alpha)
-        gp = GamPenalty(alpha=alpha, univariate_smoother=poly)
+        gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=poly)
         gam_itg = gp.func(params)
         glm_gam = GLMGam(y, poly.basis_, penal=gp)
         res_glm_gam = glm_gam.fit(
@@ -162,7 +162,7 @@ def test_gam_glm():
     y_mgcv = data_from_r.y_est
 
     alpha = 0.03
-    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
     glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)
     y_gam = np.dot(univ_bsplines.basis_, res_glm_gam.params)
@@ -194,7 +194,7 @@ def test_gam_discrete():
     y_mgcv = data_from_r.ybin_est
 
     alpha = 0.00002
-    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
     lg_gam = LogitGam(y, univ_bsplines.basis_, penal=gp)
     res_lg_gam = lg_gam.fit(maxiter=10000)
     y_gam = np.dot(univ_bsplines.basis_, res_lg_gam.params)
@@ -235,8 +235,8 @@ def test_multivariate_penalty():
     univ_pol1 = UnivariatePolynomialSmoother(x[:, 0], degree=pol.degrees[0])
     univ_pol2 = UnivariatePolynomialSmoother(x[:, 1], degree=pol.degrees[1])
 
-    gp1 = GamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
-    gp2 = GamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
+    gp1 = UnivariateGamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
+    gp2 = UnivariateGamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
     mgp = MultivariateGamPenalty(wts=wts, alphas=alphas, multivariate_smoother=pol)
 
     for i in range(10):
@@ -276,7 +276,7 @@ def test_gam_glm_significance():
     univ_bspline = UnivariateBSplines(x, df, degree)
 
     alpha = 0.045
-    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bspline)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bspline)
     glm_gam = GLMGam(y, univ_bspline.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
@@ -311,7 +311,7 @@ def test_partial_values():
     univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
     alpha = 0.025
-    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
     glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS') # TODO: if IRLS is used res_glm_gam has not partial_values.
 
@@ -341,7 +341,7 @@ def test_partial_plot():
 
 
     alpha = 0.03
-    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
     glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
@@ -380,7 +380,7 @@ def test_gam_GamKFoldsCV():
 
     cv_path_m, cv_path_std = gam_cv.fit_alphas_path(alphas, method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
     best_alpha = alphas[np.argmin(cv_path_m)]
-    gp = GamPenalty(alpha=best_alpha)
+    gp = UnivariateGamPenalty(alpha=best_alpha)
     model = GLMGam(y, basis, penal=gp)
     res = model.fit(method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
     y_est = res.predict()

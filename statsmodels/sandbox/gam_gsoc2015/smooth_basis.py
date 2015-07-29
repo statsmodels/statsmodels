@@ -6,8 +6,6 @@ Created on Fri Jun  5 16:32:00 2015
 """
 
 ## import usefull only for development ## 
-import matplotlib.pyplot as plt
-import pandas as pd
 from abc import ABCMeta, abstractmethod
 
 ########################################
