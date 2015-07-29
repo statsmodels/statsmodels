@@ -34,7 +34,7 @@ alphas = [0, 0.1, 1, 10]
 for i, alpha in enumerate(alphas):
     plt.subplot(2, 2, i+1)
     params0 = np.random.normal(0, 1, df)
-    gp = GamPenalty(wts=1, alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
+    gp = GamPenalty(wts=1, alpha=alpha)
     g = LogitGam(y, basis, penal=gp)
     res_g = g.fit()
     plt.plot(x, sigmoid(np.dot(basis, res_g.params)))
@@ -58,7 +58,7 @@ degree = 4
 basis, der_basis, der2_basis = make_bsplines_basis(x, df, degree)
 cov_der2 = np.dot(der2_basis.T, der2_basis)
 for i, alpha in enumerate(alphas):
-    gp = GamPenalty(alpha=alpha, der2=der2_basis, cov_der2=cov_der2)
+    gp = GamPenalty(alpha=alpha)
     gam = LogitGam(y, basis, penal = gp)
     res_gam = gam.fit(method='nm', max_start_irls=0,
                       disp=1, maxiter=5000, maxfun=5000)
@@ -88,7 +88,7 @@ for i, alpha in enumerate(alphas):
     plt.subplot(2, 2, i+1)
 
     # train the model
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2_basis)
+    gp = GamPenalty(alpha=alpha)
     glm_gam = GLMGam(y, basis, penal = gp)
     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
                               disp=1, maxiter=5000, maxfun=5000)
@@ -124,8 +124,7 @@ cov_der2 = [np.dot(der2_basis1.T, der2_basis1),
 
 alpha = [0, 0]
 wts = [1, 1]
-mgp = MultivariateGamPenalty(wts=wts, alphas=alpha, cov_der2=cov_der2,
-                             der2=der2_basis)
+mgp = MultivariateGamPenalty(wts=wts, alphas=alpha)
 
 mLG = LogitGam(y, basis, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
@@ -151,8 +150,7 @@ plt.legend()
 alpha = [.1, .2]
 wts = [1, 1]
 
-mgp = MultivariateGamPenalty(wts=wts, alphas=alpha, cov_der2=cov_der2,
-                             der2=der2_basis)
+mgp = MultivariateGamPenalty(wts=wts, alphas=alpha)
 
 mLG = LogitGam(y, basis, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)

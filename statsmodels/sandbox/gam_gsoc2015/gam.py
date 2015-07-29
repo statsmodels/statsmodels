@@ -220,13 +220,12 @@ class GamPenalty(Penalty):
 
     """
 
-    def __init__(self, wts=1, alpha=1, cov_der2=None, der2=None):
+    def __init__(self, wts=1, alpha=1, univariate_smoother=None):
 
         self.wts = wts #should we keep wts????
         self.alpha = alpha
-        self.cov_der2 = cov_der2
-        self.der2 = der2
-        self.n_samples = der2.shape[0]
+        self.univariate_smoother = univariate_smoother
+        self.n_samples, self.n_columns = self.univariate_smoother.n_samples, self.univariate_smoother.dim_basis
 
     def func(self, params):
         '''
@@ -235,7 +234,7 @@ class GamPenalty(Penalty):
         '''
 
         # The second derivative of the estimated regression function
-        f = np.dot(self.der2, params)
+        f = np.dot(self.univariate_smoother.der2_basis_, params)
 
         return self.alpha * np.sum(f**2) / self.n_samples
 
@@ -246,13 +245,10 @@ class GamPenalty(Penalty):
         3) cov_der2 is obtained as np.dot(der2.T, der2)
         '''
 
-        return 2 * self.alpha * np.dot(self.cov_der2, params) / self.n_samples
+        return 2 * self.alpha * np.dot(self.univariate_smoother.cov_der2_, params) / self.n_samples
 
     def deriv2(self, params):
-
-        return 2 * self.alpha * self.cov_der2 / self.n_samples
-
-
+        return 2 * self.alpha * self.univariate_smoother.cov_der2_ / self.n_samples
 
 
 class MultivariateGamPenalty(Penalty):
@@ -276,46 +272,41 @@ class MultivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, wts=None, alphas=None, cov_der2=None, der2=None):
+    def __init__(self, wts=None, alphas=None, multivariate_smoother=None):
 
-        if len(cov_der2) != len(der2) or len(alphas) != len(der2):
+        if len(multivariate_smoother.smoothers_) != len(alphas):
             raise ValueError('all the input values should be list of the same length')
 
-        # the total number of columns in der2 i.e. the len of the params vector
-        self.k_columns = np.sum(d2.shape[1] for d2 in der2)
-
-        # the number of variables in the GAM model
-        self.n_variables = len(cov_der2)
-
-        # if wts and alpha are not a list then each function has the same penalty
-        # TODO: Review this
+        self.multivariate_smoother = multivariate_smoother
+        self.k_columns = self.multivariate_smoother.k_columns
+        self.k_variables = self.multivariate_smoother.k_variables
+        self.n_samples = self.multivariate_smoother.n_samples
         self.alphas = alphas
+
+        # TODO: Review this
         self.wts = wts
 
-        n_samples = der2[0].shape[0]
         self.mask = [np.array([False]*self.k_columns)
-                     for _ in range(self.n_variables)]
+                     for _ in range(self.k_variables)]
         param_count = 0
-        for i, d2 in enumerate(der2):
-            n, dim_base = d2.shape
-            # check that all the basis have the same number of samples
-            assert(n_samples == n)
+        for i, smoother in enumerate(self.multivariate_smoother.smoothers_):
+
             # the mask[i] contains a vector of length k_columns. The index
             # corresponding to the i-th input variable are set to True.
-            self.mask[i][param_count: param_count + dim_base] = True
-            param_count += dim_base
+            self.mask[i][param_count: param_count + smoother.dim_basis] = True
+            param_count += smoother.dim_basis
 
         self.gp = []
-        for i in range(self.n_variables):
+        for i in range(self.k_variables):
             gp = GamPenalty(wts=self.wts[i], alpha=self.alphas[i],
-                            cov_der2=cov_der2[i], der2=der2[i])
+                            univariate_smoother=self.multivariate_smoother.smoothers_[i])
             self.gp.append(gp)
 
         return
 
     def func(self, params):
         cost = 0
-        for i in range(self.n_variables):
+        for i in range(self.k_variables):
             params_i = params[self.mask[i]]
             cost += self.gp[i].func(params_i)
 
@@ -323,7 +314,7 @@ class MultivariateGamPenalty(Penalty):
 
     def grad(self, params):
         grad = []
-        for i in range(self.n_variables):
+        for i in range(self.k_variables):
             params_i = params[self.mask[i]]
             grad.append(self.gp[i].grad(params_i))
 
@@ -331,7 +322,7 @@ class MultivariateGamPenalty(Penalty):
 
     def deriv2(self, params):
         deriv2 = np.empty(shape=(0,0))
-        for i in range(self.n_variables):
+        for i in range(self.k_variables):
             params_i = params[self.mask[i]]
             deriv2 = block_diag(deriv2, self.gp[i].deriv2(params_i))
 
@@ -364,9 +355,9 @@ class GLMGAMResults(GLMResults):
         y_est, se = self.partial_values(basis)
 
         plt.figure()
-        plt.plot(x, y_est)
-        plt.plot(x, y_est + se)
-        plt.plot(x, y_est - se)
+        plt.plot(x, y_est, '.')
+        plt.plot(x, y_est + 1.96 * se, '.')
+        plt.plot(x, y_est - 1.96 * se, '.')
         plt.xlabel(var_name)
 
         return

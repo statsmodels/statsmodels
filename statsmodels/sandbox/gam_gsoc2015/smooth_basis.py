@@ -8,6 +8,8 @@ Created on Fri Jun  5 16:32:00 2015
 ## import usefull only for development ## 
 import matplotlib.pyplot as plt
 import pandas as pd
+from abc import ABCMeta, abstractmethod
+
 ########################################
 import numpy as np
 from patsy.state import stateful_transform
@@ -92,7 +94,7 @@ def make_bsplines_basis(x, df, degree):
     basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
     return basis, der_basis, der2_basis
 
-
+# TODO: this function should be deleted
 def make_poly_basis(x, degree, intercept=True):
     '''
     given a vector x returns poly=(1, x, x^2, ..., x^degree)
@@ -325,3 +327,116 @@ class CubicSplines():
         return
 
 
+class UnivariateGamSmoother(metaclass=ABCMeta):
+
+    def __init__(self, x):
+
+        self.x = x
+        self.n_samples, self.k_variables = len(x), 1
+        self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = self._smooth_basis_for_single_variable()
+        self.dim_basis = self.basis_.shape[1]
+        return
+
+    @abstractmethod
+    def _smooth_basis_for_single_variable(self):
+
+        return
+
+
+class UnivariatePolynomialSmoother(UnivariateGamSmoother):
+
+    def __init__(self, x=None, degree=None):
+
+        self.degree = degree
+        super().__init__(x)
+
+        return
+
+    def _smooth_basis_for_single_variable(self):
+
+        # TODO: unclear description
+        """
+        given a vector x returns poly=(1, x, x^2, ..., x^degree)
+        and its first and second derivative
+        """
+
+        basis = np.zeros(shape=(self.n_samples, self.degree))
+        der_basis = np.zeros(shape=(self.n_samples, self.degree))
+        der2_basis = np.zeros(shape=(self.n_samples, self.degree))
+        for i in range(self.degree):
+            dg = i + 1
+            basis[:, i] = self.x**dg
+            der_basis[:, i] = dg * self.x**(dg-1)
+            der2_basis[:, i] = dg * (dg-1) * self.x**(dg-2)
+
+        cov_der2 = np.dot(der2_basis.T, der2_basis)
+
+        return basis, der_basis, der2_basis, cov_der2
+
+
+class UnivariateBSplines(UnivariateGamSmoother):
+
+    def __init__(self, x, df, degree):
+
+        self.degree = degree
+        self.df = df
+        super().__init__(x)
+
+        return
+
+    def _smooth_basis_for_single_variable(self):
+
+        basis, der_basis, der2_basis = make_bsplines_basis(self.x, self.df,
+                                                           self.degree)
+        cov_der2 = np.dot(der2_basis.T, der2_basis)
+
+        return basis, der_basis, der2_basis, cov_der2
+
+
+class MultivariateGamSmoother(metaclass=ABCMeta):
+
+    def __init__(self, x):
+
+        self.x = x
+        self.n_samples, self.k_variables = x.shape
+        self.smoothers_ = self._make_smoothers_list()
+        self.basis_ = np.hstack(smoother.basis_ for smoother in self.smoothers_)
+        self.k_columns = self.basis_.shape[1]
+        return
+
+    @abstractmethod
+    def _make_smoothers_list(self):
+
+        return
+
+
+class PolynomialSmoother(MultivariateGamSmoother):
+
+    def __init__(self, x, degrees):
+
+        self.degrees = degrees
+        super().__init__(x)
+        return
+
+    def _make_smoothers_list(self):
+
+        smoothers = []
+        for v in range(self.k_variables):
+            smoothers.append(UnivariatePolynomialSmoother(self.x[:, v], degree=self.degrees[v]))
+        return smoothers
+
+
+class BSplines(MultivariateGamSmoother):
+
+    def __init__(self, x, dfs, degrees):
+        self.degrees = degrees
+        self.dfs = dfs
+        super().__init__(x)
+        return
+
+    def _make_smoothers_list(self):
+        smoothers = []
+        for v in range(self.k_variables):
+            smoothers.append(UnivariateBSplines(self.x[:, v], self.dfs[v], self.degrees[v]))
+
+        return smoothers

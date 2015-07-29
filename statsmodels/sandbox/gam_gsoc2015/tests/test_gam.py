@@ -4,7 +4,7 @@ __date__ = '08/07/15'
 
 import os
 
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis, UnivariatePolynomialSmoother, PolynomialSmoother, UnivariateBSplines, BSplines
 from statsmodels.sandbox.gam_gsoc2015.gam import GamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ from numpy.linalg import norm
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
-from statsmodels.sandbox.gam_gsoc2015.cross_validation import GamKFoldsCV
+
 
 sigmoid = np.vectorize(lambda x: 1.0/ (1.0 + np.exp(-x)))
 
@@ -32,38 +32,38 @@ def sample_data():
     y = 2 * x ** 3 - x
 
     degree = 4
-    basis, der_basis, der2 = make_poly_basis(x, degree)
-    cov_der2 = np.dot(der2.T, der2)
+    pol = UnivariatePolynomialSmoother(x, degree)
 
-    return x, y, basis, cov_der2, der2
+    return pol, y
 
 
 def integral(params):
-    e, d, c, b, a = params
+    d, c, b, a = params
     itg = (288 * a ** 2) / 5 + (32 * a * c) + 8 * (3 * b ** 2 + c ** 2)
     itg /= 2
     return itg
 
 
 def grad(params):
-    e, d, c, b, a = params
-    grd = np.array([576 * a / 5 + 32 * c, 48 * b, 32 * a + 16 * c, 0, 0])
+    d, c, b, a = params
+    grd = np.array([576 * a / 5 + 32 * c, 48 * b, 32 * a + 16 * c, 0])
     grd = grd[::-1]
     return grd / 2
 
 
 def hessian(params):
-    hess = np.array([[576 / 5, 0, 32, 0, 0],
-                     [0, 48, 0, 0, 0],
-                     [32, 0, 16, 0, 0],
-                     [0, 0, 0, 0, 0],
-                     [0, 0, 0, 0, 0]])
+    hess = np.array([[576 / 5, 0, 32, 0],
+                     [0, 48, 0, 0],
+                     [32, 0, 16, 0],
+                     [0, 0, 0, 0]
+                     ])
     return hess / 2
 
 
-def cost_function(params, basis, y, alpha):
+def cost_function(params, pol, y, alpha):
+
     # this should be the MSE or log likelihood value
-    lin_pred = np.dot(basis, params)
+    lin_pred = np.dot(pol.basis_, params)
     gaussian = Gaussian()
     expval = gaussian.link.inverse(lin_pred)
     loglike = gaussian.loglike(expval, y)
@@ -80,13 +80,13 @@ def test_gam_penalty():
     test the func method of the gam penalty
     :return:
     """
-    x, y, basis, cov_der2, der2 = sample_data()
+    pol, y = sample_data()
 
     alpha = 1
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+    gp = GamPenalty(alpha=alpha, univariate_smoother=pol)
 
     for i in range(10):
-        params = np.random.randint(-2, 2, 5)
+        params = np.random.randint(-2, 2, 4)
         gp_score = gp.func(params)
         itg = integral(params)
         assert_allclose(gp_score, itg, atol=1.e-1)
@@ -97,13 +97,13 @@ def test_gam_gradient():
     test the gam gradient for the example polynomial
     :return:
     """
-    x, y, basis, cov_der2, der2 = sample_data()
+    pol, y = sample_data()
 
     alpha = 1
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-
+    gp = GamPenalty(alpha=alpha, univariate_smoother=pol)
     for i in range(10):
-        params = np.random.randint(-2, 2, 5)
+        params = np.random.randint(-2, 2, 4)
+        params = np.array([1, 1, 1, 1])
         gam_grad = gp.grad(params)
         grd = grad(params)
         assert_allclose(gam_grad, grd, rtol=1.e-2, atol=1.e-2)
@@ -116,9 +116,9 @@ def test_gam_hessian():
     test the deriv2 method of the gam penalty
     :return:
     """
-    x, y, basis, cov_der2, der2 = sample_data()
+    pol, y = sample_data()
     alpha = 1
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+    gp = GamPenalty(alpha=alpha, univariate_smoother=pol)
 
     for i in range(10):
         params = np.random.randint(-2, 2, 5)
@@ -131,14 +131,14 @@ def test_gam_hessian():
 
 
 def test_approximation():
-    x, y, basis, cov_der2, der2 = sample_data()
+    poly, y = sample_data()
     alpha = 0
     for i in range(10):
-        params = np.random.randint(-2, 2, 5)
-        cost, err, itg = cost_function(params, basis, y, alpha)
-        gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
+        params = np.random.randint(-2, 2, 4)
+        cost, err, itg = cost_function(params, poly, y, alpha)
+        gp = GamPenalty(alpha=alpha, univariate_smoother=poly)
         gam_itg = gp.func(params)
-        glm_gam = GLMGam(y, basis, penal=gp)
+        glm_gam = GLMGam(y, poly.basis_, penal=gp)
         res_glm_gam = glm_gam.fit(
             maxiter=1)  # TODO: can this fit be removed? It is useless. We just need the log likelihood
         gam_loglike = glm_gam.loglike(params)
@@ -156,21 +156,19 @@ def test_gam_glm():
 
     df = 10
     degree = 5
-    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-    cov_der2 = np.dot(der2.T, der2)
-
+    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
 
-    alpha = 0.045
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-    glm_gam = GLMGam(y, basis, penal=gp)
+    alpha = 0.03
+    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)
-    y_gam = np.dot(basis, res_glm_gam.params)
+    y_gam = np.dot(univ_bsplines.basis_, res_glm_gam.params)
 
-    # plt.plot(x, y_gam, label='gam')
-    # plt.plot(x, y_mgcv, label='mgcv')
+    # plt.plot(x, y_gam, '.', label='gam')
+    # plt.plot(x, y_mgcv, '.', label='mgcv')
     # plt.plot(x, y, '.', label='y')
     # plt.legend()
     # plt.show()
@@ -189,18 +187,17 @@ def test_gam_discrete():
 
     df = 10
     degree = 5
-    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-    cov_der2 = np.dot(der2.T, der2)
+    univ_bsplines = UnivariateBSplines(x, df, degree)
 
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.ybin_est
 
     alpha = 0.00002
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-    lg_gam = LogitGam(y, basis, penal=gp)
+    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    lg_gam = LogitGam(y, univ_bsplines.basis_, penal=gp)
     res_lg_gam = lg_gam.fit(maxiter=10000)
-    y_gam = np.dot(basis, res_lg_gam.params)
+    y_gam = np.dot(univ_bsplines.basis_, res_lg_gam.params)
     y_gam = sigmoid(y_gam)
     y_mgcv = sigmoid(y_mgcv)
 
@@ -220,40 +217,31 @@ def sample_multivariate_data():
     n = 1000
     x1 = np.linspace(-1, 1, n)
     x2 = np.linspace(-10, 10, n)
+    x = np.vstack([x1, x2]).T
+
     y = x1 * x1 * x1 + x2 + np.random.normal(0, 0.01, n)
     degree1 = 4
     degree2 = 3
-    basis1, der_basis1, der2_basis1 = make_poly_basis(x1, degree1, intercept=False)
-    basis2, der_basis2, der2_basis2 = make_poly_basis(x2, degree2, intercept=False)
-    cov_der2_1 = np.dot(der2_basis1.T, der2_basis1)
-    cov_der2_2 = np.dot(der2_basis2.T, der2_basis2)
-
-    basis = np.hstack([basis1, basis2])
-    # der_basis = [der_basis1, der_basis2]
-    der2_basis = [der2_basis1, der2_basis2]
-    cov_der2 = [cov_der2_1,
-                cov_der2_2]
-
-    return x1, x2, y, basis, cov_der2, der2_basis, basis1, cov_der2_1, der2_basis1, basis2, cov_der2_2, der2_basis2
+    degrees = [degree1, degree2]
+    pol = PolynomialSmoother(x, degrees)
+    return x, y, pol
 
 
 def test_multivariate_penalty():
     alphas = [1, 2]
     wts = [1, 1]
-    x1, x2, y, basis, cov_der2, der2, basis1, cov_der2_1, der2_1, basis2, cov_der2_2, der2_2 = sample_multivariate_data()
+    x, y, pol = sample_multivariate_data()
 
-    p = basis.shape[1]
-    p1 = basis1.shape[1]
-    p2 = basis2.shape[1]
+    univ_pol1 = UnivariatePolynomialSmoother(x[:, 0], degree=pol.degrees[0])
+    univ_pol2 = UnivariatePolynomialSmoother(x[:, 1], degree=pol.degrees[1])
 
-    gp1 = GamPenalty(alpha=alphas[0], cov_der2=cov_der2_1, der2=der2_1)
-    gp2 = GamPenalty(alpha=alphas[1], cov_der2=cov_der2_2, der2=der2_2)
-    mgp = MultivariateGamPenalty(wts=wts, alphas=alphas, cov_der2=cov_der2,
-                                 der2=der2)
+    gp1 = GamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
+    gp2 = GamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
+    mgp = MultivariateGamPenalty(wts=wts, alphas=alphas, multivariate_smoother=pol)
 
     for i in range(10):
-        params1 = np.random.randint(-3, 3, p1)
-        params2 = np.random.randint(-3, 3, p2)
+        params1 = np.random.randint(-3, 3, pol.smoothers_[0].dim_basis)
+        params2 = np.random.randint(-3, 3, pol.smoothers_[1].dim_basis)
         params = np.concatenate([params1, params2])
         c1 = gp1.func(params1)
         c2 = gp2.func(params2)
@@ -285,15 +273,14 @@ def test_gam_glm_significance():
 
     df = 10
     degree = 6
-    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-    cov_der2 = np.dot(der2.T, der2)
+    univ_bspline = UnivariateBSplines(x, df, degree)
 
     alpha = 0.045
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-    glm_gam = GLMGam(y, basis, penal=gp)
+    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bspline)
+    glm_gam = GLMGam(y, univ_bspline.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
-    t, pvalues, rank = res_glm_gam.significance_test(basis)
+    t, pvalues, rank = res_glm_gam.significance_test(univ_bspline.basis_)
     t_from_mgcv = 8.141  # these are the Chi.sq value and p values obtained from MGCV in R with the function summary(g)
     pvalues_from_mgcv = 0.0864
     rank_from_mgcv = 3.997
@@ -321,17 +308,16 @@ def test_partial_values():
     se_from_mgcv = data_from_r.y_est_se
     df = 10
     degree = 6
-    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-    cov_der2 = np.dot(der2.T, der2)
+    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
-    alpha = 0.045
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-    glm_gam = GLMGam(y, basis, penal=gp)
-    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
+    alpha = 0.025
+    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS') # TODO: if IRLS is used res_glm_gam has not partial_values.
 
-    hat_y, se = res_glm_gam.partial_values(basis)
+    hat_y, se = res_glm_gam.partial_values(univ_bsplines.basis_)
 
-    assert_allclose(se, se_from_mgcv, rtol=1.e-1)
+    assert_allclose(se, se_from_mgcv, rtol=0, atol=0.008)
 
     return
 
@@ -351,16 +337,16 @@ def test_partial_plot():
     se_from_mgcv = data_from_r.y_est_se
     df = 10
     degree = 6
-    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-    cov_der2 = np.dot(der2.T, der2)
+    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
-    alpha = 0.045
-    gp = GamPenalty(alpha=alpha, cov_der2=cov_der2, der2=der2)
-    glm_gam = GLMGam(y, basis, penal=gp)
+
+    alpha = 0.03
+    gp = GamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
     ## Uncomment to visualize the plot
-    res_glm_gam.plot_partial(x, basis)
+    res_glm_gam.plot_partial(x, univ_bsplines.basis_, '.')
     plt.plot(x, y, '.')
     plt.show()
 
@@ -394,7 +380,7 @@ def test_gam_GamKFoldsCV():
 
     cv_path_m, cv_path_std = gam_cv.fit_alphas_path(alphas, method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
     best_alpha = alphas[np.argmin(cv_path_m)]
-    gp = GamPenalty(alpha=best_alpha, cov_der2=cov_der2, der2=der2)
+    gp = GamPenalty(alpha=best_alpha)
     model = GLMGam(y, basis, penal=gp)
     res = model.fit(method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
     y_est = res.predict()
@@ -426,14 +412,13 @@ def test_gam_GamKFoldsCV():
 
     return
 
-test_gam_GamKFoldsCV()
-
-# test_gam_glm_significance()
-# test_gam_gradient()
+#
 # test_gam_hessian()
+# test_gam_gradient()
 # test_gam_discrete()
-# test_multivariate_penalty()
 # test_approximation()
+# test_multivariate_penalty()
+# test_gam_glm_significance()
 # test_gam_glm()
 # test_gam_penalty()
 # test_partial_plot()

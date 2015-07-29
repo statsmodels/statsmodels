@@ -127,7 +127,7 @@ class GamCV(BaseCV):
         y_train = self.y[train_index]
         y_test = self.y[test_index]
 
-        gp = GamPenalty(1, self.alpha, self.cov_der2, der2_train)
+        gp = GamPenalty(1, self.alpha)
         gam = self.gam(y_train, basis_train, penal=gp).fit(**kwargs)
         y_est = gam.predict(basis_test)
 
@@ -224,7 +224,7 @@ gam_cv_path.fit(method='nm', max_start_irls=0, disp=1, maxiter=5000, maxfun=5000
 best_alpha = gam_cv_path.alpha_cv_
 
 
-gp = GamPenalty(alpha=gam_cv_path.alpha_cv_, cov_der2=cov_der2, der2=der2)
+gp = GamPenalty(alpha=gam_cv_path.alpha_cv_)
 gam = GLMGam(y, basis, penal=gp)
 res = gam.fit(method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
 y_est = res.predict()
