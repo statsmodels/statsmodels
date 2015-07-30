@@ -858,7 +858,8 @@ class KalmanFilter(Representation):
 
             # Iterate the measurement equation
             simulated_obs[t] = (
-                obs_intercept + np.dot(design, simulated_states[t]))
+                obs_intercept + np.dot(design, simulated_states[t])
+                + measurement_shock)
 
             # Iterate the state equation
             simulated_states[t+1] = (
