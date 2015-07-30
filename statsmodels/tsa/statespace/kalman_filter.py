@@ -860,6 +860,148 @@ class KalmanFilter(Representation):
 
         return simulated_obs, simulated_states
 
+    def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
+                          cumulative=False, **kwargs):
+        """
+        Impulse response function
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of steps for which impulse responses are calculated.
+            Default is 1.
+        impulse : int or array_like
+            If an integer, the state innovation to pulse; must be between 0
+            and `k_posdef-1`. Alternatively, a custom impulse vector may be
+            provided; must be shaped `k_posdef x 1`.
+        orthogonalized : boolean, optional
+            Whether or not to perform impulse using orthogonalized innovations.
+            Note that this will also affect custum `impulse` vectors. Default
+            is False.
+        cumulative : boolean, optional
+            Whether or not to return cumulative impulse responses. Default is
+            False.
+        **kwargs
+            If the model is time-varying and `steps` is greater than the number
+            of observations, any of the state space representation matrices
+            that are time-varying must have updated values provided for the
+            out-of-sample steps.
+            For example, if `design` is a time-varying component, `nobs` is 10,
+            and `steps` is 15, a (`k_endog` x `k_states` x 5) matrix must be
+            provided with the new design matrix values.
+
+        Notes
+        -----
+        Intercepts in the measurement and state equation are ignored when
+        calculating impulse responses.
+
+        """
+        # Since the first step is the impulse itself, we actually want steps+1
+        steps += 1
+
+        # Check for what kind of impulse we want
+        if type(impulse) == int:
+            if impulse >= self.k_posdef or impulse < 0:
+                raise ValueError('Invalid value for `impulse`. Must be the'
+                                 ' of one of the state innovations.')
+
+            # Create the (non-orthogonalized) impulse vector
+            idx = impulse
+            impulse = np.zeros(self.k_posdef)
+            impulse[idx] = 1
+        else:
+            impulse = np.array(impulse)
+
+        # Orthogonalize the impulses, if requested, using Cholesky on the
+        # first state covariance matrix
+        if orthogonalized:
+            state_chol = np.linalg.cholesky(self.state_cov[:,:,0])
+            impulse = np.dot(state_chol, impulse)
+
+        # If we have a time-invariant system, we can solve for the IRF directly
+        if self.time_invariant:
+            # Get the state space matrices
+            design = self.design[:, :, 0]
+            transition = self.transition[:, :, 0]
+            selection = self.selection[:, :, 0]
+
+            # Holding arrays
+            irf = np.zeros((steps, self.k_endog), dtype=self.dtype)
+            states = np.zeros((steps, self.k_states), dtype=self.dtype)
+
+            # First iteration
+            states[0] = np.dot(selection, impulse)
+            irf[0] = np.dot(design, states[0])
+
+            # Iterations
+            for t in range(1, steps):
+                states[t] = np.dot(transition, states[t-1])
+                irf[t] = np.dot(design, states[t])
+
+        # Otherwise, create a new model
+        else:
+            # Get the basic model components
+            representation = {}
+            for name, shape in self.shapes.items():
+                if name in ['obs', 'obs_intercept', 'state_intercept']:
+                    continue
+                representation[name] = getattr(self, name)
+
+            # Allow additional specification
+            warning = ('Model has time-invariant %s matrix, so the %s'
+                       ' argument to `irf` has been ignored.')
+            exception = ('Impulse response functions for models with'
+                         ' time-varying %s matrix requires an updated'
+                         ' time-varying matrix for any periods beyond those in'
+                         ' the original model.')
+            for name, shape in self.shapes.items():
+                if name in ['obs', 'obs_intercept', 'state_intercept']:
+                    continue
+                if representation[name].shape[-1] == 1:
+                    if name in kwargs:
+                        warn(warning % (name, name))
+                elif name not in kwargs:
+                    raise ValueError(exception % name)
+                else:
+                    mat = np.asarray(kwargs[name])
+                    validate_matrix_shape(name, mat.shape, shape[0],
+                                          shape[1], nforecast)
+                    if mat.ndim < 3 or not mat.shape[2] == nforecast:
+                        raise ValueError(exception % name)
+                    representation[name] = np.c_[representation[name], mat]
+
+            # Setup the new statespace representation
+            model_kwargs = {
+                'filter_method': self.filter_method,
+                'inversion_method': self.inversion_method,
+                'stability_method': self.stability_method,
+                'conserve_memory': self.conserve_memory,
+                'tolerance': self.tolerance,
+                'loglikelihood_burn': self.loglikelihood_burn
+            }
+            model_kwargs.update(representation)
+            model = KalmanFilter(np.zeros(self.endog.T.shape), self.k_states,
+                                 self.k_posdef, **model_kwargs)
+            model.initialize_known(self.initial_state, self.initial_state_cov)
+            model._initialize_filter()
+            model._initialize_state()
+
+            # Get the impulse response function via simulation of the state
+            # space model, but with other shocks set to zero
+            measurement_shocks = np.zeros((steps, self.k_endog))
+            state_shocks = np.zeros((steps, self.k_posdef))
+            state_shocks[0] = impulse
+            irf, _ = model.simulate(
+                steps, measurement_shocks=measurement_shocks,
+                state_shocks=state_shocks)
+
+        # Get the cumulative response if requested
+        if cumulative:
+            irf = np.cumsum(irf, axis=0)
+
+        return irf
+
+
 class FilterResults(FrozenRepresentation):
     """
     Results from applying the Kalman filter to a state space model.
@@ -1307,7 +1449,7 @@ class FilterResults(FrozenRepresentation):
                 else:
                     mat = np.asarray(kwargs[name])
                     if len(shape) == 2:
-                        validate_vector_shape('obs_intercept', mat.shape,
+                        validate_vector_shape(name, mat.shape,
                                               shape[0], nforecast)
                         if mat.ndim < 2 or not mat.shape[1] == nforecast:
                             raise ValueError(exception % name)
