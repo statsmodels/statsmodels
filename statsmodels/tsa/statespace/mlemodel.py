@@ -825,6 +825,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self._rank = None
         self._get_robustcov_results(cov_type=cov_type, use_self=True,
                                     **cov_kwds)
+        self.model.update(self.params)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
