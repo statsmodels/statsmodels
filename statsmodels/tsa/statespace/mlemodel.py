@@ -1263,6 +1263,97 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecasts = self.predict(start=self.nobs, end=end, **kwargs)
         return forecasts
 
+    def simulate(self, nsimulations, measurement_shocks=None,
+                 state_shocks=None, initial_state=None):
+        """
+        Simulate a new time series following the state space model
+
+        Parameters
+        ----------
+        nsimulations : int
+            The number of observations to simulate. If the model is
+            time-invariant this can be any number. If the model is
+            time-varying, then this number must be less than or equal to the
+            number
+        measurement_shocks : array_like, optional
+            If specified, these are the shocks to the measurement equation,
+            :math:`\varepsilon_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_endog`, where `k_endog` is the
+            same as in the state space model.
+        state_shocks : array_like, optional
+            If specified, these are the shocks to the state equation,
+            :math:`\eta_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_posdef` where `k_posdef` is the
+            same as in the state space model.
+        initial_state : array_like, optional
+            If specified, this is the state vector at time zero, which should
+            be shaped (`k_states` x 1), where `k_states` is the same as in the
+            state space model. If unspecified, but the model has been
+            initialized, then that initialization is used. If unspecified and
+            the model has not been initialized, then a vector of zeros is used.
+            Note that this is not included in the returned `simulated_states`
+            array.
+
+        Returns
+        -------
+        simulated_obs : array
+            An (nsimulations x k_endog) array of simulated observations.
+        simulated_states : array
+            An (nsimulations x k_states) array of simulated states.
+        """
+        self.model.update(self.params)
+        return self.model.ssm.simulate(
+            nsimulations, measurement_shocks, state_shocks, initial_state)
+
+    def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
+                          cumulative=False, **kwargs):
+        """
+        Impulse response function
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of steps for which impulse responses are calculated.
+            Default is 1. Note that the initial impulse is not counted as a
+            step, so if `steps=1`, the output will have 2 entries.
+        impulse : int or array_like
+            If an integer, the state innovation to pulse; must be between 0
+            and `k_posdef-1`. Alternatively, a custom impulse vector may be
+            provided; must be shaped `k_posdef x 1`.
+        orthogonalized : boolean, optional
+            Whether or not to perform impulse using orthogonalized innovations.
+            Note that this will also affect custum `impulse` vectors. Default
+            is False.
+        cumulative : boolean, optional
+            Whether or not to return cumulative impulse responses. Default is
+            False.
+        **kwargs
+            If the model is time-varying and `steps` is greater than the number
+            of observations, any of the state space representation matrices
+            that are time-varying must have updated values provided for the
+            out-of-sample steps.
+            For example, if `design` is a time-varying component, `nobs` is 10,
+            and `steps` is 15, a (`k_endog` x `k_states` x 5) matrix must be
+            provided with the new design matrix values.
+
+        Returns
+        -------
+        impulse_responses : array
+            Responses for each endogenous variable due to the impulse
+            given by the `impulse` argument. A (steps + 1 x k_endog) array.
+
+        Notes
+        -----
+        Intercepts in the measurement and state equation are ignored when
+        calculating impulse responses.
+
+        """
+        self.model.update(self.params)
+        return self.model.ssm.impulse_responses(
+            steps, impulse, orthogonalized, cumulative, **kwargs)
+
     def summary(self, alpha=.05, start=None, model_name=None):
         """
         Summarize the Model
@@ -1364,7 +1455,8 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
 
-    _methods = {'forecast': 'dates'}
+    _methods = {'forecast': 'dates', 'simulate': None,
+                'impulse_responses': None}
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
