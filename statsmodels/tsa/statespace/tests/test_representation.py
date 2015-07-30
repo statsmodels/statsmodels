@@ -892,3 +892,258 @@ def test_standardized_forecasts_error():
         res.filter_results.standardized_forecasts_error[0],
         standardized_forecasts_error,
     )
+
+def test_simulate():
+    # Test for simulation of new time-series
+    from scipy.signal import lfilter
+
+    # Common parameters
+    nsimulations = 10
+    sigma2 = 2
+    measurement_shocks = np.zeros(nsimulations)
+    state_shocks = np.random.normal(scale=sigma2**0.5, size=nsimulations)
+
+    # Random walk model, so simulated series is just the cumulative sum of
+    # the shocks
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+
+    actual = mod.simulate(
+        nsimulations, measurement_shocks=measurement_shocks,
+        state_shocks=state_shocks)[0].squeeze()
+    desired = np.r_[0, np.cumsum(state_shocks)[:-1]]
+
+    assert_allclose(actual, desired)
+
+    # Local level model, so simulated series is just the cumulative sum of
+    # the shocks plus the measurement shock
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+
+    actual = mod.simulate(
+        nsimulations, measurement_shocks=np.ones(nsimulations),
+        state_shocks=state_shocks)[0].squeeze()
+    desired = np.r_[1, np.cumsum(state_shocks)[:-1] + 1]
+
+    assert_allclose(actual, desired)
+
+    # Local level-like model with observation and state intercepts, so
+    # simulated series is just the cumulative sum of the shocks minus the state
+    # intercept, plus the observation intercept and the measurement shock
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['obs_intercept', 0, 0] = 5.
+    mod['design', 0, 0] = 1.
+    mod['state_intercept', 0, 0] = -2.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+
+    actual = mod.simulate(
+        nsimulations, measurement_shocks=np.ones(nsimulations),
+        state_shocks=state_shocks)[0].squeeze()
+    desired = np.r_[1 + 5, np.cumsum(state_shocks - 2)[:-1] + 1 + 5]
+
+    assert_allclose(actual, desired)
+
+    # Model with time-varying observation intercept
+    mod = KalmanFilter(k_endog=1, k_states=1, nobs=10)
+    mod['obs_intercept'] = (np.arange(10)*1.).reshape(1, 10)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+
+    actual = mod.simulate(
+        nsimulations, measurement_shocks=measurement_shocks,
+        state_shocks=state_shocks)[0].squeeze()
+    desired = np.r_[0, np.cumsum(state_shocks)[:-1] + np.arange(1,10)]
+
+    assert_allclose(actual, desired)
+
+    # Model with time-varying observation intercept, check that error is raised
+    # if more simulations are requested than are nobs.
+    mod = KalmanFilter(k_endog=1, k_states=1, nobs=10)
+    mod['obs_intercept'] = (np.arange(10)*1.).reshape(1, 10)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+    assert_raises(ValueError, mod.simulate, nsimulations+1, measurement_shocks,
+                  state_shocks)
+
+    # ARMA(1,1): phi = [0.1], theta = [0.5], sigma^2 = 2
+    phi = np.r_[0.1]
+    theta = np.r_[0.5]
+    mod = sarimax.SARIMAX([0], order=(1,0,1))
+    mod.update(np.r_[phi, theta, sigma2])
+
+    actual = mod.ssm.simulate(
+        nsimulations, measurement_shocks=measurement_shocks,
+        state_shocks=state_shocks)[0].squeeze()
+    desired = lfilter([1, theta], [1, -phi], np.r_[0, state_shocks[:-1]])
+
+    assert_allclose(actual, desired)
+
+    # SARIMAX(1,0,1)x(1,0,1,4), this time using the results object call
+    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1,0,1),
+                          seasonal_order=(1,0,1,4))
+    res = mod.filter([0.1, 0.5, 0.2, -0.3, 1])
+
+    actual = res.simulate(
+        nsimulations, measurement_shocks=measurement_shocks,
+        state_shocks=state_shocks)[0].squeeze()
+    desired = lfilter(
+        res.polynomial_reduced_ma, res.polynomial_reduced_ar,
+        np.r_[0, state_shocks[:-1]])
+
+    assert_allclose(actual, desired)
+
+def test_impulse_responses():
+    # Test for impulse response functions
+
+    # Random walk: 1-unit impulse response (i.e. non-orthogonalized irf) is 1
+    # for all periods
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+    mod['state_cov', 0, 0] = 2.
+
+    actual = mod.impulse_responses(steps=10)
+    desired = np.ones((11, 1))
+
+    assert_allclose(actual, desired)
+
+    # Random walk: 1-standard-deviation response (i.e. orthogonalized irf) is
+    # sigma for all periods (here sigma^2 = 2)
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+    mod['state_cov', 0, 0] = 2.
+
+    actual = mod.impulse_responses(steps=10, orthogonalized=True)
+    desired = np.ones((11, 1)) * 2**0.5
+
+    assert_allclose(actual, desired)
+
+    # Random walk: 1-standard-deviation cumulative response (i.e. cumulative
+    # orthogonalized irf)
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+    mod['state_cov', 0, 0] = 2.
+
+    actual = mod.impulse_responses(steps=10, orthogonalized=True,
+                                   cumulative=True)
+    desired = np.cumsum(np.ones((11, 1)) * 2**0.5)[:, np.newaxis]
+
+    assert_allclose(actual, desired)
+
+    # Random walk: 1-unit impulse response (i.e. non-orthogonalized irf) is 1
+    # for all periods, even when intercepts are present
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['state_intercept', 0] = 100.
+    mod['design', 0, 0] = 1.
+    mod['obs_intercept', 0] = -1000.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+    mod['state_cov', 0, 0] = 2.
+
+    actual = mod.impulse_responses(steps=10)
+    desired = np.ones((11, 1))
+
+    assert_allclose(actual, desired)
+
+    # Univariate model (random walk): test that an error is thrown when
+    # a multivariate or empty "impulse" is sent
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    assert_raises(ValueError, mod.impulse_responses, impulse=1)
+    assert_raises(ValueError, mod.impulse_responses, impulse=[1,1])
+    assert_raises(ValueError, mod.impulse_responses, impulse=[])
+
+    # Univariate model with two uncorrelated shocks
+    mod = KalmanFilter(k_endog=1, k_states=2)
+    mod['design', 0, 0:2] = 1.
+    mod['transition', :, :] = np.eye(2)
+    mod['selection', :, :] = np.eye(2)
+    mod['state_cov', :, :] = np.eye(2)
+
+    desired = np.ones((11, 1))
+
+    actual = mod.impulse_responses(steps=10, impulse=0)
+    assert_allclose(actual, desired)
+
+    actual = mod.impulse_responses(steps=10, impulse=1)
+    assert_allclose(actual, desired)
+
+    # In this case (with sigma=sigma^2=1), orthogonalized is the same as not
+    actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
+    assert_allclose(actual, desired)
+
+    # Univariate model with two correlated shocks
+    mod = KalmanFilter(k_endog=1, k_states=2)
+    mod['design', 0, 0:2] = 1.
+    mod['transition', :, :] = np.eye(2)
+    mod['selection', :, :] = np.eye(2)
+    mod['state_cov', :, :] = np.array([[1, 0.5], [0.5, 1.25]])
+
+    desired = np.ones((11, 1))
+
+    # Non-orthogonalized (i.e. 1-unit) impulses still just generate 1's
+    actual = mod.impulse_responses(steps=10, impulse=0)
+    assert_allclose(actual, desired)
+
+    actual = mod.impulse_responses(steps=10, impulse=1)
+    assert_allclose(actual, desired)
+
+    # Orthogonalized (i.e. 1-std-dev) impulses now generate different responses
+    actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
+    assert_allclose(actual, desired + desired * 0.5)
+
+    actual = mod.impulse_responses(steps=10, impulse=1, orthogonalized=True)
+    assert_allclose(actual, desired)
+
+    # Multivariate model with two correlated shocks
+    mod = KalmanFilter(k_endog=2, k_states=2)
+    mod['design', :, :] = np.eye(2)
+    mod['transition', :, :] = np.eye(2)
+    mod['selection', :, :] = np.eye(2)
+    mod['state_cov', :, :] = np.array([[1, 0.5], [0.5, 1.25]])
+
+    ones = np.ones((11, 1))
+    zeros = np.zeros((11, 1))
+
+    # Non-orthogonalized (i.e. 1-unit) impulses still just generate 1's, but
+    # only for the appropriate series
+    actual = mod.impulse_responses(steps=10, impulse=0)
+    assert_allclose(actual, np.c_[ones, zeros])
+
+    actual = mod.impulse_responses(steps=10, impulse=1)
+    assert_allclose(actual, np.c_[zeros, ones])
+
+    # Orthogonalized (i.e. 1-std-dev) impulses now generate different
+    # responses, and only for the appropriate series
+    actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
+    assert_allclose(actual, np.c_[ones, ones * 0.5])
+
+    actual = mod.impulse_responses(steps=10, impulse=1, orthogonalized=True)
+    assert_allclose(actual, np.c_[zeros, ones])
+
+    # AR(1) model generates a geometrically declining series
+    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1,0,0))
+    phi = 0.5
+    mod.update([phi, 1])
+
+    desired = np.cumprod(np.r_[1, [phi]*10])[:, np.newaxis]
+    
+    # Test going through the model directly
+    actual = mod.ssm.impulse_responses(steps=10)
+    assert_allclose(actual, desired)
+
+    # Test going through the results object
+    res = mod.filter([phi, 1.])
+    actual = res.impulse_responses(steps=10)
+    assert_allclose(actual, desired)
