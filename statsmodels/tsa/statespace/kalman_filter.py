@@ -712,6 +712,153 @@ class KalmanFilter(Representation):
 
         return llf_obs
 
+    def simulate(self, nsimulations, measurement_shocks=None,
+                 state_shocks=None, initial_state=None):
+        """
+        Simulate a new time series following the state space model
+
+        Parameters
+        ----------
+        nsimulations : int
+            The number of observations to simulate. If the model is
+            time-invariant this can be any number. If the model is
+            time-varying, then this number must be less than or equal to the
+            number
+        measurement_shocks : array_like, optional
+            If specified, these are the shocks to the measurement equation,
+            :math:`\varepsilon_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_endog`, where `k_endog` is the
+            same as in the state space model.
+        state_shocks : array_like, optional
+            If specified, these are the shocks to the state equation,
+            :math:`\eta_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_posdef` where `k_posdef` is the
+            same as in the state space model.
+        initial_state : array_like, optional
+            If specified, this is the state vector at time zero, which should
+            be shaped (`k_states` x 1), where `k_states` is the same as in the
+            state space model. If unspecified, but the model has been
+            initialized, then that initialization is used. If unspecified and
+            the model has not been initialized, then a vector of zeros is used.
+            Note that this is not included in the returned `simulated_states`
+            array.
+
+        Returns
+        -------
+        simulated_obs : array
+            An (nsimulations x k_endog) array of simulated observations.
+        simulated_states : array
+            An (nsimulations x k_states) array of simulated states.
+        """
+        time_invariant = self.time_invariant
+        # Check for valid number of simulations
+        if not time_invariant and nsimulations > self.nobs:
+            raise ValueError('In a time-varying model, cannot create more'
+                             ' simulations than there are observations.')
+
+        # Check / generate measurement shocks
+        if measurement_shocks is not None:
+            measurement_shocks = np.array(measurement_shocks)
+            if measurement_shocks.ndim == 0:
+                measurement_shocks = measurement_shocks[np.newaxis, np.newaxis]
+            elif measurement_shocks.ndim == 1:
+                measurement_shocks = measurement_shocks[:, np.newaxis]
+            if not measurement_shocks.shape == (nsimulations, self.k_endog):
+                raise ValueError('Invalid shape of provided measurement shocks.'
+                                 ' Required (%d, %d)'
+                                 % (nsimulations, self.k_endog))
+        elif self.shapes['obs_cov'][-1] == 1:
+            measurement_shocks = np.random.multivariate_normal(
+                mean=np.zeros(self.k_endog), cov=self['obs_cov'],
+                size=nsimulations)
+
+        # Check / generate state shocks
+        if state_shocks is not None:
+            state_shocks = np.array(state_shocks)
+            if state_shocks.ndim == 0:
+                state_shocks = state_shocks[np.newaxis, np.newaxis]
+            elif state_shocks.ndim == 1:
+                state_shocks = state_shocks[:, np.newaxis]
+            if not state_shocks.shape == (nsimulations, self.k_posdef):
+                raise ValueError('Invalid shape of provided state shocks.'
+                                 ' Required (%d, %d).'
+                                 % (nsimulations, self.k_posdef))
+        elif self.shapes['state_cov'][-1] == 1:
+            state_shocks = np.random.multivariate_normal(
+                mean=np.zeros(self.k_posdef), cov=self['state_cov'],
+                size=nsimulations)
+
+        # Get the initial states
+        if initial_state is not None:
+            initial_state = np.array(initial_state)
+            if initial_state.ndim == 0:
+                initial_state = initial_state[np.newaxis]
+            elif (initial_state.ndim > 1 and
+                  not initial_state.shape == (self.k_states, 1)):
+                raise ValueError('Invalid shape of provided initial state'
+                                 ' vector. Required (%d, 1)' % self.k_states)
+        elif self.initialization == 'known':
+            initial_state = self._initial_state
+        elif self.initialization in ['approximate_diffuse', 'stationary']:
+            initial_state = np.zeros(self.k_states)
+        else:
+            initial_state = np.zeros(self.k_states)
+
+        # Holding variables for the simulations
+        simulated_obs = np.zeros((nsimulations, self.k_endog),
+                                 dtype=self.dtype)
+        simulated_states = np.zeros((nsimulations, self.k_states),
+                                    dtype=self.dtype)
+
+        # Perform iterations to create the new time series
+        obs_intercept_t = 0
+        design_t = 0
+        state_intercept_t = 0
+        transition_t = 0
+        selection_t = 0
+        for t in range(nsimulations):
+            # Get the current shocks (this accomodates time-varying matrices)
+            if measurement_shocks is None:
+                measurement_shock = np.random.multivariate_normal(
+                    mean=np.zeros(self.k_endog), cov=self['obs_cov', :, :, t])
+            else:
+                measurement_shock = measurement_shocks[t]
+
+            if state_shocks is None:
+                state_shock = np.random.multivariate_normal(
+                    mean=np.zeros(self.k_posdef),
+                    cov=self['state_cov', :, :, t])
+            else:
+                state_shock = state_shocks[t]
+
+            # Get current-iteration matrices
+            if not time_invariant:
+                obs_intercept_t = 0 if self.obs_intercept.shape[-1] == 1 else t
+                design_t = 0 if self.design.shape[-1] == 1 else t
+                state_intercept_t = (
+                    0 if self.state_intercept.shape[-1] == 1 else t)
+                transition_t = 0 if self.transition.shape[-1] == 1 else t
+                selection_t = 0 if self.selection.shape[-1] == 1 else t
+
+            obs_intercept = self['obs_intercept', :, obs_intercept_t]
+            design = self['design', :, :, design_t]
+            state_intercept = self['state_intercept', :, state_intercept_t]
+            transition = self['transition', :, :, transition_t]
+            selection = self['selection', :, :, selection_t]
+
+            # Iterate the state equation
+            prev_state = initial_state if t == 0 else simulated_states[t-1]
+            simulated_states[t] = (
+                state_intercept + np.dot(transition, prev_state) +
+                np.dot(selection, state_shock))
+
+            # Iterate the measurement equation
+            simulated_obs[t] = (
+                obs_intercept + np.dot(design, simulated_states[t]))
+
+        return simulated_obs, simulated_states
 
 class FilterResults(FrozenRepresentation):
     """
