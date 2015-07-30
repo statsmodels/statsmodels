@@ -806,11 +806,19 @@ class KalmanFilter(Representation):
         else:
             initial_state = np.zeros(self.k_states)
 
+        return self._simulate(nsimulations, measurement_shocks, state_shocks,
+                              initial_state)
+
+    def _simulate(self, nsimulations, measurement_shocks, state_shocks,
+                  initial_state):
+        time_invariant = self.time_invariant
+
         # Holding variables for the simulations
         simulated_obs = np.zeros((nsimulations, self.k_endog),
                                  dtype=self.dtype)
-        simulated_states = np.zeros((nsimulations, self.k_states),
+        simulated_states = np.zeros((nsimulations+1, self.k_states),
                                     dtype=self.dtype)
+        simulated_states[0] = initial_state
 
         # Perform iterations to create the new time series
         obs_intercept_t = 0
@@ -848,17 +856,16 @@ class KalmanFilter(Representation):
             transition = self['transition', :, :, transition_t]
             selection = self['selection', :, :, selection_t]
 
-            # Iterate the state equation
-            prev_state = initial_state if t == 0 else simulated_states[t-1]
-            simulated_states[t] = (
-                state_intercept + np.dot(transition, prev_state) +
-                np.dot(selection, state_shock))
-
             # Iterate the measurement equation
             simulated_obs[t] = (
                 obs_intercept + np.dot(design, simulated_states[t]))
 
-        return simulated_obs, simulated_states
+            # Iterate the state equation
+            simulated_states[t+1] = (
+                state_intercept + np.dot(transition, simulated_states[t]) +
+                np.dot(selection, state_shock))
+
+        return simulated_obs, simulated_states[:-1]
 
     def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
