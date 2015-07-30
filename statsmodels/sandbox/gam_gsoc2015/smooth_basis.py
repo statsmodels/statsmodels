@@ -79,9 +79,7 @@ def _eval_bspline_basis(x, knots, degree):
     return basis, der1_basis, der2_basis
 
 
-
-def make_bsplines_basis(x, df, degree):
-    ''' make a spline basis for x '''
+def compute_all_knots(x, df, degree):
     order = degree + 1
     n_inner_knots = df - order
     lower_bound = np.min(x)
@@ -89,8 +87,17 @@ def make_bsplines_basis(x, df, degree):
     knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
     inner_knots = _R_compat_quantile(x, knot_quantiles)
     all_knots = np.concatenate(([lower_bound, upper_bound] * order, inner_knots))
+    return all_knots, lower_bound, upper_bound, inner_knots
+
+
+def make_bsplines_basis(x, df, degree):
+    ''' make a spline basis for x '''
+
+    all_knots, _, _, _ = compute_all_knots(x, df, degree)
     basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
     return basis, der_basis, der2_basis
+
+
 
 # TODO: this function should be deleted
 def make_poly_basis(x, degree, intercept=True):
@@ -115,7 +122,6 @@ def make_poly_basis(x, degree, intercept=True):
         der2_basis[:, i-start] = i * (i-1) * x**(i-2)
         
     return basis, der_basis, der2_basis
-
 
 
 class BS(object):
@@ -277,53 +283,20 @@ class BS(object):
                 basis.index = x.index
         return basis
 
-
-class CubicSplines():
-    """
-    Cubic splines as described in the wood's book in chapter 3
-    """
-
-    def __init__(self, x, n_knots):
-        self.x = x
-        self.n_knots = n_knots
-
-    def fit(self):
-        self._equally_spaced_knots()
-        self._splines_s()
-        self._splines_x()
-        return self
-
-    def _equally_spaced_knots(self):
-        x_min = self.x.min()
-        x_max = self.x.max()
-        self.knots = np.linspace(x_min, x_max, self.n_knots)
-        return
-
-    def _rk(self, x, z):
-        p1 = ((z - 1/2)**2 - 1/12) * ((x - 1/2)**2 - 1/12) / 4
-        p2 = ((np.abs(z - x) - 1/2)**4 - 1/2 * (np.abs(z - x) - 1/2)**2 + 7/240) / 24.
-        return p1 - p2
-
-    def _splines_x(self):
-        n_columns = len(self.knots) + 2
-        n_samples = self.x.shape[0]
-        self.xs = np.ones(shape=(n_samples, n_columns))
-        self.xs[:, 1] = self.x
-        # for loop equivalent to outer(x, xk, fun=rk)
-        for i, xi in enumerate(self.x):
-            for j, xkj in enumerate(self.knots):
-                s_ij = self._rk(xi, xkj)
-                self.xs[i, j+2] = s_ij
-        return
-
-    def _splines_s(self):
-        q = len(self.knots) + 2
-        self.s = np.zeros(shape=(q, q))
-        for i, x1 in enumerate(self.knots):
-            for j, x2 in enumerate(self.knots):
-                self.s[i+2, j+2] = self._rk(x1, x2)
-        return
-
+# TODO: try to include other kinds of splines from patsy
+# x = np.linspace(0, 1, 30)
+# df = 10
+# degree = 3
+# from patsy.mgcv_cubic_splines import cc, cr, te
+# all_knots, lower, upper, inner  = compute_all_knots(x, df, degree)
+# result = cc(x, df=df, knots=all_knots, lower_bound=lower, upper_bound=upper, constraints=None)
+#
+# import matplotlib.pyplot as plt
+#
+# result = np.array(result)
+# print(result.shape)
+# plt.plot(result.T)
+# plt.show()
 
 class UnivariateGamSmoother(metaclass=ABCMeta):
 
@@ -438,3 +411,50 @@ class BSplines(MultivariateGamSmoother):
             smoothers.append(UnivariateBSplines(self.x[:, v], self.dfs[v], self.degrees[v]))
 
         return smoothers
+
+
+class CubicSplines():
+    """
+    Cubic splines as described in the wood's book in chapter 3
+    """
+
+    def __init__(self, x, n_knots):
+        self.x = x
+        self.n_knots = n_knots
+
+    def fit(self):
+        self._equally_spaced_knots()
+        self._splines_s()
+        self._splines_x()
+        return self
+
+    def _equally_spaced_knots(self):
+        x_min = self.x.min()
+        x_max = self.x.max()
+        self.knots = np.linspace(x_min, x_max, self.n_knots)
+        return
+
+    def _rk(self, x, z):
+        p1 = ((z - 1/2)**2 - 1/12) * ((x - 1/2)**2 - 1/12) / 4
+        p2 = ((np.abs(z - x) - 1/2)**4 - 1/2 * (np.abs(z - x) - 1/2)**2 + 7/240) / 24.
+        return p1 - p2
+
+    def _splines_x(self):
+        n_columns = len(self.knots) + 2
+        n_samples = self.x.shape[0]
+        self.xs = np.ones(shape=(n_samples, n_columns))
+        self.xs[:, 1] = self.x
+        # for loop equivalent to outer(x, xk, fun=rk)
+        for i, xi in enumerate(self.x):
+            for j, xkj in enumerate(self.knots):
+                s_ij = self._rk(xi, xkj)
+                self.xs[i, j+2] = s_ij
+        return
+
+    def _splines_s(self):
+        q = len(self.knots) + 2
+        self.s = np.zeros(shape=(q, q))
+        for i, x1 in enumerate(self.knots):
+            for j, x2 in enumerate(self.knots):
+                self.s[i+2, j+2] = self._rk(x1, x2)
+        return

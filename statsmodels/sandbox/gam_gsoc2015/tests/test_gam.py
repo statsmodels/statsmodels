@@ -3,9 +3,10 @@ __date__ = '08/07/15'
 
 
 import os
-
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis, UnivariatePolynomialSmoother, PolynomialSmoother, UnivariateBSplines, BSplines
 from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
+from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import UnivariateGamCV, UnivariateGamCVPath
+from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.cross_validators import KFold
 import numpy as np
 import pandas as pd
 from statsmodels.genmod.families.family import Gaussian
@@ -353,7 +354,7 @@ def test_partial_plot():
     return
 
 
-def test_gam_GamKFoldsCV():
+def test_gam_gam_cv_kfolds():
 
     def sample_metric(y1, y2):
 
@@ -370,23 +371,19 @@ def test_gam_GamKFoldsCV():
     se_from_mgcv = data_from_r.y_est_se
     df = 10
     degree = 6
-    basis, der_basis, der2 = make_bsplines_basis(x, df=df, degree=degree)
-    cov_der2 = np.dot(der2.T, der2)
+    univ_bsplines = UnivariateBSplines(x, df, degree)
 
     gam = GLMGam
     alphas = np.linspace(0, .02, 25)
     k = 10
-    gam_cv = GamKFoldsCV(gam, 0, sample_metric, basis, der_basis, der2, cov_der2, y, k)
+    cv = KFold(k_folds=k)
+    gam_cv = UnivariateGamCVPath(univariate_smoother=univ_bsplines, alphas=alphas, gam=gam, cost=sample_metric,
+                                 y=y, cv=cv).fit()
 
-    cv_path_m, cv_path_std = gam_cv.fit_alphas_path(alphas, method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
-    best_alpha = alphas[np.argmin(cv_path_m)]
-    gp = UnivariateGamPenalty(alpha=best_alpha)
-    model = GLMGam(y, basis, penal=gp)
-    res = model.fit(method='nm', max_start_irls=0, disp=0, maxiter=5000, maxfun=5000)
-    y_est = res.predict()
-
-    err = y_est - data_from_r.y_mgcv_gcv
-
+    gp = UnivariateGamPenalty(alpha=gam_cv.alpha_cv_, univariate_smoother=univ_bsplines)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
+    y_est = res_glm_gam.predict(univ_bsplines.basis_)
     # plt.subplot(3, 1, 1)
     # plt.plot(x, data_from_r.y, '.', label='y')
     # plt.plot(x, y_est, '.', label='sm')
@@ -412,6 +409,8 @@ def test_gam_GamKFoldsCV():
 
     return
 
+
+
 #
 # test_gam_hessian()
 # test_gam_gradient()
@@ -423,3 +422,4 @@ def test_gam_GamKFoldsCV():
 # test_gam_penalty()
 # test_partial_plot()
 # test_partial_values()
+#   test_gam_gam_cv_kfolds()

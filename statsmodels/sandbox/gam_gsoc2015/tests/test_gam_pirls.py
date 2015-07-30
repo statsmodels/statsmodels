@@ -2,12 +2,13 @@ __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 __date__ = '18/07/15'
 
 
-from statsmodels.sandbox.gam_gsoc2015.pirls import GamPirls, splines_x, splines_s, get_sqrt
 import os
 import pandas as pd
 from numpy.testing import assert_allclose
 import numpy as np
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
+from statsmodels.sandbox.gam_gsoc2015.gam import GLMGam, get_sqrt
+
 
 def test_splines_x():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,6 +61,6 @@ def test_gest_sqrt():
 
 
 
-#test_gest_sqrt()
-#test_spl_s()
-#test_splines_x()
+# test_gest_sqrt()
+# test_spl_s()
+# test_splines_x()
