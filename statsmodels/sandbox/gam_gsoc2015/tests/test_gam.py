@@ -1,3 +1,6 @@
+
+from __future__ import division
+
 __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 __date__ = '08/07/15'
 

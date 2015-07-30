@@ -1,3 +1,6 @@
+
+from __future__ import division
+
 __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 __date__ = '18/07/15'
 
@@ -15,8 +18,10 @@ def test_splines_x():
     file_path = os.path.join(cur_dir, "results", "gam_PIRLS_results.csv")
     data = pd.read_csv(file_path)
 
-    x = data['x'].as_matrix()
-    y = data['y'].as_matrix()
+    #x = data['x'].as_matrix()
+    #y = data['y'].as_matrix()
+    x = np.asarray(data['x'])
+    y = np.asarray(data['y'])
     xk = np.array([0.2, .4, .6, .8])
 
     spl_x_R = data[['spl_x.1', 'spl_x.2', 'spl_x.3', 'spl_x.4', 'spl_x.5', 'spl_x.6']].as_matrix()
