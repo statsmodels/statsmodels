@@ -98,7 +98,6 @@ def make_bsplines_basis(x, df, degree):
     return basis, der_basis, der2_basis
 
 
-
 # TODO: this function should be deleted
 def make_poly_basis(x, degree, intercept=True):
     '''

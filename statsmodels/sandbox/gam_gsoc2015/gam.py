@@ -220,7 +220,7 @@ class UnivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, wts=1, alpha=1, univariate_smoother=None):
+    def __init__(self, univariate_smoother, wts=1, alpha=1):
 
         self.wts = wts #should we keep wts????
         self.alpha = alpha
@@ -272,7 +272,7 @@ class MultivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, wts=None, alphas=None, multivariate_smoother=None):
+    def __init__(self, multivariate_smoother, wts=None, alphas=None):
 
         if len(multivariate_smoother.smoothers_) != len(alphas):
             raise ValueError('all the input values should be list of the same length')
@@ -299,7 +299,7 @@ class MultivariateGamPenalty(Penalty):
         self.gp = []
         for i in range(self.k_variables):
             gp = UnivariateGamPenalty(wts=self.wts[i], alpha=self.alphas[i],
-                            univariate_smoother=self.multivariate_smoother.smoothers_[i])
+                                      univariate_smoother=self.multivariate_smoother.smoothers_[i])
             self.gp.append(gp)
 
         return

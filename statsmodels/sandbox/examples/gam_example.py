@@ -4,7 +4,7 @@ __date__ = '08/07/15'
 
 import numpy as np
 import matplotlib.pyplot as plt
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import UnivariateBSplines, UnivariatePolynomialSmoother, BSplines, PolynomialSmoother
 from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, LogitGam, GLMGam, MultivariateGamPenalty
 import statsmodels.api as sm
 
@@ -24,9 +24,8 @@ y[y < mu] = 0
 df = 10
 degree = 5
 x = x - x.mean()
-basis, der_basis, der2_basis = make_bsplines_basis(x, df, degree)
-cov_der2 = np.dot(der2_basis.T, der2_basis)
 
+univ_bsplines = UnivariateBSplines(x, df, degree)
 
 # train the gam logit model ##
 alphas = [0, 0.1, 1, 10]
@@ -34,10 +33,10 @@ alphas = [0, 0.1, 1, 10]
 for i, alpha in enumerate(alphas):
     plt.subplot(2, 2, i+1)
     params0 = np.random.normal(0, 1, df)
-    gp = UnivariateGamPenalty(wts=1, alpha=alpha)
-    g = LogitGam(y, basis, penal=gp)
+    gp = UnivariateGamPenalty(univ_bsplines, wts=1, alpha=alpha)
+    g = LogitGam(y, univ_bsplines.basis_, penal=gp)
     res_g = g.fit()
-    plt.plot(x, sigmoid(np.dot(basis, res_g.params)))
+    plt.plot(x, sigmoid(np.dot(univ_bsplines.basis_, res_g.params)))
     plt.plot(x, y, '.')
     plt.ylim(-1, 2)
     plt.title('alpha=' + str(alpha))
@@ -55,15 +54,14 @@ x = X[:, 2]
 
 x = x - x.mean()
 degree = 4
-basis, der_basis, der2_basis = make_bsplines_basis(x, df, degree)
-cov_der2 = np.dot(der2_basis.T, der2_basis)
+univ_bsplines = UnivariateBSplines(x, df, degree)
 for i, alpha in enumerate(alphas):
-    gp = UnivariateGamPenalty(alpha=alpha)
-    gam = LogitGam(y, basis, penal = gp)
+    gp = UnivariateGamPenalty(univ_bsplines, alpha=alpha)
+    gam = LogitGam(y, univ_bsplines.basis_, penal = gp)
     res_gam = gam.fit(method='nm', max_start_irls=0,
                       disp=1, maxiter=5000, maxfun=5000)
     plt.subplot(2, 2, i+1)
-    plt.plot(x, sigmoid(np.dot(basis, res_gam.params)), 'o')
+    plt.plot(x, sigmoid(np.dot(univ_bsplines.basis_, res_gam.params)), 'o')
     plt.plot(x, y, '.')
     plt.title('alpha=' + str(alpha))
     plt.ylim(-1, 2)
@@ -75,24 +73,22 @@ plt.show()
 # y is continuous
 n = 200
 x = np.linspace(-10, 10, n)
-y = x * x + np.random.normal(0, 1, n)
+y = x * x + np.random.normal(0, 5, n)
 y -= y.mean()
 
 x = x - x.mean()
-basis, der_basis, der2_basis = make_bsplines_basis(x, df, degree)
-cov_der2 = np.dot(der2_basis.T, der2_basis)
-
+univ_bsplines = UnivariateBSplines(x, df, degree)
 plt.figure()
 alphas = [0, 0.001, 0.01, 100]
 for i, alpha in enumerate(alphas):
     plt.subplot(2, 2, i+1)
 
     # train the model
-    gp = UnivariateGamPenalty(alpha=alpha)
-    glm_gam = GLMGam(y, basis, penal = gp)
+    gp = UnivariateGamPenalty(univ_bsplines, alpha=alpha)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal = gp)
     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
                               disp=1, maxiter=5000, maxfun=5000)
-    plt.plot(x, np.dot(basis, res_glm_gam.params))
+    plt.plot(x, np.dot(univ_bsplines.basis_, res_glm_gam.params))
     plt.plot(x, y, '.')
     plt.title('GLM alpha=' + str(alpha))
 plt.show()
@@ -112,66 +108,45 @@ y[y <= mu] = 0
 
 degree1 = 3
 degree2 = 4
-
-basis1, der_basis1, der2_basis1 = make_poly_basis(x1, degree1, intercept=False)
-basis2, der_basis2, der2_basis2 = make_poly_basis(x2, degree2, intercept=False)
-
-basis = np.hstack([basis1, basis2])
-der_basis = [der_basis1, der_basis2]
-der2_basis = [der2_basis1, der2_basis2]
-cov_der2 = [np.dot(der2_basis1.T, der2_basis1),
-            np.dot(der2_basis2.T, der2_basis2)]
-
+x = np.vstack([x1, x2]).T
+bsplines = BSplines(x, [df, df], [degree1, degree2])
 alpha = [0, 0]
-wts = [1, 1]
-mgp = MultivariateGamPenalty(wts=wts, alphas=alpha)
 
-mLG = LogitGam(y, basis, penal=mgp)
+mgp = MultivariateGamPenalty(bsplines, alphas=alpha, wts=[1, 1])
+
+mLG = LogitGam(y, bsplines.basis_, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
 
 param1 = res_mLG.params[mgp.mask[0]]
 param2 = res_mLG.params[mgp.mask[1]]
 param = res_mLG.params
 
-
-plt.subplot(3, 2, 1)
-plt.title('alpha=' + str(alpha))
-plt.plot(x1, np.dot(basis1, param1), label='x1')
-plt.legend()
-plt.subplot(3, 2, 3)
-plt.plot(x2, np.dot(basis2, param2), label='x2')
-plt.legend()
-plt.subplot(3, 2, 5)
-plt.plot(sigmoid(np.dot(basis, param)), label=r'$\hat y$')
-plt.plot(y, '*', label='y')
-plt.ylim(-1, 2)
-plt.legend()
+# TODO: Use partial plot. We should define a partial plot for logit_gam
 
 alpha = [.1, .2]
 wts = [1, 1]
 
-mgp = MultivariateGamPenalty(wts=wts, alphas=alpha)
+mgp = MultivariateGamPenalty(bsplines, wts=wts, alphas=alpha)
 
-mLG = LogitGam(y, basis, penal=mgp)
+mLG = LogitGam(y, bsplines.basis_, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
 
 param1 = res_mLG.params[mgp.mask[0]]
 param2 = res_mLG.params[mgp.mask[1]]
 param = res_mLG.params
 
+# TODO: Use partial plot
 
-# plot with different alpha
-plt.subplot(3, 2, 2)
-plt.title('alpha=' + str(alpha))
-plt.plot(x1, np.dot(basis1, param1), label='x1')
-plt.legend()
-plt.subplot(3, 2, 4)
-plt.plot(x2, np.dot(basis2, param2), label='x2')
-plt.legend()
-plt.subplot(3, 2, 6)
-plt.plot(sigmoid(np.dot(basis, param)), label=r'$\hat y$')
-plt.plot(y, '*', label='y')
-plt.ylim(-1, 2)
-plt.legend()
-plt.show()
+
+# Multivariate GLMGam.
+x = np.zeros(shape=(n, 2))
+x[:, 0] = np.linspace(-10, -5, n)
+x[:, 1] = np.linspace(5, 10, n)
+
+y = x[:, 0]**3 + x[:, 1]**2
+
+poly = PolynomialSmoother(x, degrees=6)
+
+gp = MultivariateGamPenalty(poly, wts=[1, 1], alphas=[0, 0])
+gam = GLMGam(y, gp)
 

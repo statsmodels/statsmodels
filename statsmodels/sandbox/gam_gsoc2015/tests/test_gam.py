@@ -347,9 +347,9 @@ def test_partial_plot():
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
     ## Uncomment to visualize the plot
-    res_glm_gam.plot_partial(x, univ_bsplines.basis_, '.')
-    plt.plot(x, y, '.')
-    plt.show()
+    # res_glm_gam.plot_partial(x, univ_bsplines.basis_, '.')
+    # plt.plot(x, y, '.')
+    # plt.show()
 
     return
 
