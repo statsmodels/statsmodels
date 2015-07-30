@@ -877,7 +877,8 @@ class KalmanFilter(Representation):
         ----------
         steps : int, optional
             The number of steps for which impulse responses are calculated.
-            Default is 1.
+            Default is 1. Note that the initial impulse is not counted as a
+            step, so if `steps=1`, the output will have 2 entries.
         impulse : int or array_like
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. Alternatively, a custom impulse vector may be
@@ -897,6 +898,12 @@ class KalmanFilter(Representation):
             For example, if `design` is a time-varying component, `nobs` is 10,
             and `steps` is 15, a (`k_endog` x `k_states` x 5) matrix must be
             provided with the new design matrix values.
+
+        Returns
+        -------
+        impulse_responses : array
+            Responses for each endogenous variable due to the impulse
+            given by the `impulse` argument. A (steps + 1 x k_endog) array.
 
         Notes
         -----
