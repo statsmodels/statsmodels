@@ -918,7 +918,10 @@ class KalmanFilter(Representation):
             impulse = np.zeros(self.k_posdef)
             impulse[idx] = 1
         else:
-            impulse = np.array(impulse)
+            impulse = np.array(impulse).squeeze()
+            if not impulse.shape == (self.k_posdef,):
+                raise ValueError('Invalid impulse vector. Must be shaped'
+                                 ' (%d,)' % self.k_posdef)
 
         # Orthogonalize the impulses, if requested, using Cholesky on the
         # first state covariance matrix
