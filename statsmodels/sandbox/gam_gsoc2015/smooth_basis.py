@@ -5,8 +5,11 @@ Created on Fri Jun  5 16:32:00 2015
 @author: Luca
 """
 
+from __future__ import division
+
 ## import usefull only for development ## 
 from abc import ABCMeta, abstractmethod
+from statsmodels.compat.python import with_metaclass
 
 ########################################
 import numpy as np
@@ -297,7 +300,7 @@ class BS(object):
 # plt.plot(result.T)
 # plt.show()
 
-class UnivariateGamSmoother(metaclass=ABCMeta):
+class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
     def __init__(self, x):
 
@@ -318,7 +321,7 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
     def __init__(self, x=None, degree=None):
 
         self.degree = degree
-        super().__init__(x)
+        super(UnivariatePolynomialSmoother, self).__init__(x)
 
         return
 
@@ -350,7 +353,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
         self.degree = degree
         self.df = df
-        super().__init__(x)
+        super(UnivariateBSplines, self).__init__(x)
 
         return
 
@@ -363,7 +366,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
         return basis, der_basis, der2_basis, cov_der2
 
 
-class MultivariateGamSmoother(metaclass=ABCMeta):
+class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
     def __init__(self, x):
 
@@ -385,7 +388,7 @@ class PolynomialSmoother(MultivariateGamSmoother):
     def __init__(self, x, degrees):
 
         self.degrees = degrees
-        super().__init__(x)
+        super(PolynomialSmoother, self).__init__(x)
         return
 
     def _make_smoothers_list(self):
