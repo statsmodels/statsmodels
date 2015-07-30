@@ -86,7 +86,6 @@ Potential problems for Python 3
 from __future__ import division
 from statsmodels.compat.python import (lmap, lrange, zip, next, iteritems,
                                        zip_longest, range)
-import logging
 
 from itertools import cycle
 import csv
@@ -288,7 +287,7 @@ class SimpleTable(list):
         """Return list of Row,
         the raw data as rows of cells.
         """
-        logging.debug('Enter SimpleTable.data2rows.')
+        
         _Cell = self._Cell
         _Row = self._Row
         rows = []
@@ -299,7 +298,7 @@ class SimpleTable(list):
                 cell.datatype = next(dtypes)
                 cell.row = newrow  # a cell knows its row
             rows.append(newrow)
-        logging.debug('Exit SimpleTable.data2rows.')
+         
         return rows
 
     def pad(self, s, width, align):
