@@ -391,10 +391,10 @@ cdef class {{prefix}}Statespace(object):
 
         dim[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
-        self.initial_state_cov = solve_discrete_lyapunov(
+        self.initial_state_cov = np.asfortranarray(solve_discrete_lyapunov(
             np.array(self.transition[:,:,0], dtype={{dtype}}),
             np.array(self.selected_state_cov[:,:,0], dtype={{dtype}})
-        ).T
+        ).T)
 
         self.initialized = True
 
