@@ -120,11 +120,8 @@ mgp = MultivariateGamPenalty(bsplines, alphas=alpha, wts=[1, 1])
 mLG = LogitGam(y, bsplines.basis_, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
 
-param1 = res_mLG.params[mgp.mask[0]]
-param2 = res_mLG.params[mgp.mask[1]]
-param = res_mLG.params
-
-# TODO: Use partial plot. We should define a partial plot for logit_gam
+# TODO: this does not work.
+# res_mLG.plot_partial()
 
 alpha = [.1, .2]
 wts = [1, 1]
@@ -144,7 +141,7 @@ x = np.zeros(shape=(n, 2))
 x[:, 0] = np.linspace(-10, -5, n)
 x[:, 1] = np.linspace(5, 10, n)
 
-y = x[:, 0]**3 + x[:, 1]**2
+y = x[:, 0]**3 + x[:, 1]**2 + np.random.normal(n)
 
 poly = PolynomialSmoother(x, degrees=[5, 3])
 
