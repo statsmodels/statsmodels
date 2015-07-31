@@ -11,6 +11,9 @@ import statsmodels.api as sm
 sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
 
+
+###############################################
+
 n = 100
 
 # make the data
@@ -25,7 +28,7 @@ df = 10
 degree = 5
 x = x - x.mean()
 
-univ_bsplines = UnivariateBSplines(x, df, degree)
+univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
 # train the gam logit model ##
 alphas = [0, 0.1, 1, 10]
@@ -54,7 +57,7 @@ x = X[:, 2]
 
 x = x - x.mean()
 degree = 4
-univ_bsplines = UnivariateBSplines(x, df, degree)
+univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 for i, alpha in enumerate(alphas):
     gp = UnivariateGamPenalty(univ_bsplines, alpha=alpha)
     gam = LogitGam(y, univ_bsplines.basis_, penal = gp)
@@ -77,7 +80,7 @@ y = x * x + np.random.normal(0, 5, n)
 y -= y.mean()
 
 x = x - x.mean()
-univ_bsplines = UnivariateBSplines(x, df, degree)
+univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 plt.figure()
 alphas = [0, 0.001, 0.01, 100]
 for i, alpha in enumerate(alphas):
@@ -131,22 +134,23 @@ mgp = MultivariateGamPenalty(bsplines, wts=wts, alphas=alpha)
 mLG = LogitGam(y, bsplines.basis_, penal=mgp)
 res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
 
-param1 = res_mLG.params[mgp.mask[0]]
-param2 = res_mLG.params[mgp.mask[1]]
-param = res_mLG.params
+#res_mLG.plot_partial() # TODO: partial_plot is not working
 
-# TODO: Use partial plot
 
 
 # Multivariate GLMGam.
+n = 200
 x = np.zeros(shape=(n, 2))
 x[:, 0] = np.linspace(-10, -5, n)
 x[:, 1] = np.linspace(5, 10, n)
 
 y = x[:, 0]**3 + x[:, 1]**2
 
-poly = PolynomialSmoother(x, degrees=6)
+poly = PolynomialSmoother(x, degrees=[5, 3])
 
 gp = MultivariateGamPenalty(poly, wts=[1, 1], alphas=[0, 0])
-gam = GLMGam(y, gp)
+gam = GLMGam(y, poly.basis_, penal=gp)
+gam_ris = gam.fit()
+gam_ris.plot_partial(poly)
+plt.show()
 

@@ -302,9 +302,10 @@ class BS(object):
 
 class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
-    def __init__(self, x):
+    def __init__(self, x, variable_name='x'):
 
         self.x = x
+        self.variable_name = variable_name
         self.n_samples, self.k_variables = len(x), 1
         self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = self._smooth_basis_for_single_variable()
         self.dim_basis = self.basis_.shape[1]
@@ -318,10 +319,10 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
 
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 
-    def __init__(self, x=None, degree=None):
+    def __init__(self, x, degree, variable_name='x'):
 
         self.degree = degree
-        super(UnivariatePolynomialSmoother, self).__init__(x)
+        super(UnivariatePolynomialSmoother, self).__init__(x, variable_name)
 
         return
 
@@ -349,11 +350,11 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
 
 class UnivariateBSplines(UnivariateGamSmoother):
 
-    def __init__(self, x, df, degree):
+    def __init__(self, x, degree, df, variable_name='x'):
 
         self.degree = degree
         self.df = df
-        super(UnivariateBSplines, self).__init__(x)
+        super(UnivariateBSplines, self).__init__(x, variable_name)
 
         return
 
@@ -368,13 +369,29 @@ class UnivariateBSplines(UnivariateGamSmoother):
 
 class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
-    def __init__(self, x):
+    def __init__(self, x, variables_name=None):
 
         self.x = x
         self.n_samples, self.k_variables = x.shape
+
+        if variables_name is None:
+            self.variables_name = ['x' + str(i) for i in range(self.k_variables)]
+        else:
+            self.variables_name = variables_name
+
         self.smoothers_ = self._make_smoothers_list()
         self.basis_ = np.hstack(smoother.basis_ for smoother in self.smoothers_)
         self.k_columns = self.basis_.shape[1]
+
+        self.mask = []
+        last_column = 0
+        for smoother in self.smoothers_:
+            mask = np.array([False] * self.k_columns)
+            mask[last_column:smoother.dim_basis+last_column] = True
+            last_column = last_column + smoother.dim_basis
+            self.mask.append(mask)
+
+
         return
 
     @abstractmethod
@@ -385,32 +402,34 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
 class PolynomialSmoother(MultivariateGamSmoother):
 
-    def __init__(self, x, degrees):
+    def __init__(self, x, degrees, variables_name=None):
 
         self.degrees = degrees
-        super(PolynomialSmoother, self).__init__(x)
+        super(PolynomialSmoother, self).__init__(x, variables_name)
         return
 
     def _make_smoothers_list(self):
 
         smoothers = []
         for v in range(self.k_variables):
-            smoothers.append(UnivariatePolynomialSmoother(self.x[:, v], degree=self.degrees[v]))
+            smoothers.append(UnivariatePolynomialSmoother(self.x[:, v], degree=self.degrees[v],
+                                                          variable_name=self.variables_name[v]))
         return smoothers
 
 
 class BSplines(MultivariateGamSmoother):
 
-    def __init__(self, x, dfs, degrees):
+    def __init__(self, x, dfs, degrees, variables_name=None):
         self.degrees = degrees
         self.dfs = dfs
-        super().__init__(x)
+        super().__init__(x, variables_name)
         return
 
     def _make_smoothers_list(self):
         smoothers = []
         for v in range(self.k_variables):
-            smoothers.append(UnivariateBSplines(self.x[:, v], self.dfs[v], self.degrees[v]))
+            smoothers.append(UnivariateBSplines(self.x[:, v], degree=self.degrees[v], df=self.dfs[v],
+                                                variable_name=self.variables_name[v]))
 
         return smoothers
 

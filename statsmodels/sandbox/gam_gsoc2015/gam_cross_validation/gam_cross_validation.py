@@ -56,7 +56,7 @@ class UnivariateGamCV(BaseCV):
         y_train = self.y[train_index]
         y_test = self.y[test_index]
 
-        gp = UnivariateGamPenalty(1, self.alpha, univariate_smoother=self.univariate_smoother)
+        gp = UnivariateGamPenalty(self.univariate_smoother, self.alpha)
         gam = self.gam(y_train, basis_train, penal=gp).fit(**kwargs)
         y_est = gam.predict(basis_test)
 

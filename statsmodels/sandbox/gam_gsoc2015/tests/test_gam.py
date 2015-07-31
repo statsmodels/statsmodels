@@ -191,7 +191,7 @@ def test_gam_discrete():
 
     df = 10
     degree = 5
-    univ_bsplines = UnivariateBSplines(x, df, degree)
+    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
@@ -277,7 +277,7 @@ def test_gam_glm_significance():
 
     df = 10
     degree = 6
-    univ_bspline = UnivariateBSplines(x, df, degree)
+    univ_bspline = UnivariateBSplines(x, degree=degree, df=df)
 
     alpha = 0.045
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bspline)
@@ -319,7 +319,7 @@ def test_partial_values():
     glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS') # TODO: if IRLS is used res_glm_gam has not partial_values.
 
-    hat_y, se = res_glm_gam.partial_values(univ_bsplines.basis_)
+    hat_y, se = res_glm_gam.partial_values(univ_bsplines, mask=np.array([True]*univ_bsplines.dim_basis))
 
     assert_allclose(se, se_from_mgcv, rtol=0, atol=0.008)
 
@@ -374,7 +374,7 @@ def test_gam_gam_cv_kfolds():
     se_from_mgcv = data_from_r.y_est_se
     df = 10
     degree = 6
-    univ_bsplines = UnivariateBSplines(x, df, degree)
+    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
     gam = GLMGam
     alphas = np.linspace(0, .02, 25)
@@ -425,4 +425,4 @@ def test_gam_gam_cv_kfolds():
 # test_gam_penalty()
 # test_partial_plot()
 # test_partial_values()
-#   test_gam_gam_cv_kfolds()
+# test_gam_gam_cv_kfolds()

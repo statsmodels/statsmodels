@@ -338,14 +338,18 @@ class LogitGam(PenalizedMixin, Logit):
 
 class GLMGAMResults(GLMResults):
 
-    def partial_values(self, basis):
+    def partial_values(self, smoother, mask):
 
-        y = np.dot(basis, self.params)
-        var = np.diag(basis.dot(self.normalized_cov_params).dot(basis.T))
+        y = np.dot(smoother.basis_, self.params[mask])
+        # select the submatrix corresponding to a single variable
+        partial_normalized_cov_params = self.normalized_cov_params[mask, :]
+        partial_normalized_cov_params = partial_normalized_cov_params[:, mask]
+
+        var = np.diag(smoother.basis_.dot(partial_normalized_cov_params).dot(smoother.basis_.T))
         se = np.sqrt(var)
         return y, se
 
-    def plot_partial(self, x=None, basis=None, var_name='x'):
+    def plot_partial(self, multivariate_smoother):
         """just to try a method in overridden Results class
         """
         import matplotlib.pyplot as plt
@@ -355,13 +359,15 @@ class GLMGAMResults(GLMResults):
         #     plt.plot(self.model.x, self.predict())
         # else:
 
-        y_est, se = self.partial_values(basis)
+        for i, smoother in enumerate(multivariate_smoother.smoothers_):
+            y_est, se = self.partial_values(smoother, multivariate_smoother.mask[i])
 
-        plt.figure()
-        plt.plot(x, y_est, '.')
-        plt.plot(x, y_est + 1.96 * se, '.')
-        plt.plot(x, y_est - 1.96 * se, '.')
-        plt.xlabel(var_name)
+            plt.figure()
+            plt.plot(smoother.x, y_est, '.')
+            plt.plot(smoother.x, y_est + 1.96 * se, '.')
+            plt.plot(smoother.x, y_est - 1.96 * se, '.')
+            plt.xlabel(smoother.variable_name)
+            plt.show()
 
         return
 
