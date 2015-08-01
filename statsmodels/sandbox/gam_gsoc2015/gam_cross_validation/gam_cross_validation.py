@@ -5,19 +5,23 @@ __author__ = 'Luca Puggini'
 
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
-
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
-from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty
+from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, MultivariateGamPenalty
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import GenericSmoothers
 
 class BaseCV(with_metaclass(ABCMeta)):
     """
     BaseCV class. It computes the cross validation error of a given model.
     All the cross validation classes can be derived by this one (e.g. GamCV, LassoCV,...)
     """
-    def __init__(self):
+    def __init__(self, cv, x, y):
+        self.cv = cv
+        self.x = x
+        self.y = y
+        self.train_test_cv_indices = self.cv.split(self.x, self.y, label=None)
 
-        self.train_test_cv_indices = None
         return
 
     def fit(self, **kwargs):
@@ -43,9 +47,8 @@ class UnivariateGamCV(BaseCV):
         self.gam = gam
         self.univariate_smoother = univariate_smoother
         self.alpha = alpha
-        self.y = y
         self.cv = cv
-        self.train_test_cv_indices = self.cv.split(self.univariate_smoother.der2_basis_, self.y, label=None)
+        super(UnivariateGamCV, self).__init__(cv, self.univariate_smoother.basis_, y)
         return
 
     def _error(self, train_index, test_index, **kwargs):
@@ -53,12 +56,49 @@ class UnivariateGamCV(BaseCV):
         der2_train = self.univariate_smoother.der2_basis_[train_index]
         basis_train = self.univariate_smoother.basis_[train_index]
         basis_test = self.univariate_smoother.basis_[test_index]
+
         y_train = self.y[train_index]
         y_test = self.y[test_index]
 
         gp = UnivariateGamPenalty(self.univariate_smoother, self.alpha)
         gam = self.gam(y_train, basis_train, penal=gp).fit(**kwargs)
         y_est = gam.predict(basis_test)
+
+        return self.cost(y_test, y_est)
+
+
+class MultivariateGAMCV(BaseCV):
+
+    def __init__(self, smoothers, alphas, gam, cost, y, cv):
+
+        # the gam class has already an instance
+        self.cost = cost
+        self.gam = gam
+        self.smoothers = smoothers
+        self.alphas = alphas
+        self.cv = cv
+        super(MultivariateGAMCV, self).__init__(cv, self.smoothers.basis_, y)
+
+    def _error(self, train_index, test_index, **kwargs):
+
+        full_basis_train = self.smoothers.basis_[train_index]
+        basis_train = [smoother.basis_[train_index] for smoother in self.smoothers.smoothers_]
+        der_train = [smoother.der_basis_[train_index] for smoother in self.smoothers.smoothers_]
+        der2_train = [smoother.der2_basis_[train_index] for smoother in self.smoothers.smoothers_]
+        cov_der2 = [smoother.cov_der2_ for smoother in self.smoothers.smoothers_]
+
+        basis_test = self.smoothers.basis_[test_index]
+
+        y_train = self.y[train_index]
+        y_test = self.y[test_index]
+
+        #print('basis train =', basis_train.shape)
+        train_smoothers = GenericSmoothers(self.smoothers.x, basis_train, der_train, der2_train, cov_der2)
+
+        gp = MultivariateGamPenalty(train_smoothers, alphas=self.alphas)
+        gam = self.gam(y_train, full_basis_train, penal=gp)
+        gam_res = gam.fit(**kwargs)
+        y_est = gam_res.predict(basis_test)
 
         return self.cost(y_test, y_est)
 
@@ -79,12 +119,12 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
     def plot_path(self):
 
         plt.plot(self.alphas, self.cv_error_, c='black')
-        plt.plot(self.alphas, self.cv_error_ + self.cv_std_, c='blue')
-        plt.plot(self.alphas, self.cv_error_ - self.cv_std_, c='blue')
+        plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, c='blue')
+        plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, c='blue')
 
         plt.plot(self.alphas, self.cv_error_, 'o', c='black')
-        plt.plot(self.alphas, self.cv_error_ + self.cv_std_, 'o', c='blue')
-        plt.plot(self.alphas, self.cv_error_ - self.cv_std_, 'o', c='blue')
+        plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, 'o', c='blue')
+        plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, 'o', c='blue')
 
         return
 
@@ -116,3 +156,34 @@ class UnivariateGamCVPath(BasePenaltiesPathCV):
         self.alpha_cv_ = self.alphas[np.argmin(self.cv_error_)]
         return self
 
+
+class MultivariateGAMCVPath():
+
+    def __init__(self, smoothers, alphas, gam, cost, y, cv):
+
+        self.cost = cost
+        self.smoothers = smoothers
+        self.gam = gam
+        self.alphas = alphas
+        self.alphas_grid = itertools.product(*self.alphas)
+        self.y = y
+        self.cv = cv
+        self.cv_error_ = None
+        self.cv_std_ = None
+        self.alpha_cv_ = None
+
+        return
+
+    def fit(self, **kwargs):
+
+        self.cv_error_ = np.zeros(shape=(len(self.alphas,)))
+        self.cv_std_ = np.zeros(shape=(len(self.alphas, )))
+        for i, alphas in enumerate(self.alphas_grid):
+            gam_cv = MultivariateGAMCV(smoothers=self.smoothers, alphas=self.alphas,
+                                       gam=self.gam, cost=self.cost, y=self.y, cv=self.cv)
+            cv_err = gam_cv.fit(**kwargs)
+            self.cv_error_[i] = cv_err.mean()
+            self.cv_std_[i] = cv_err.std()
+
+        self.alpha_cv_ = self.alphas[np.argmin(self.cv_error_)]
+        return self

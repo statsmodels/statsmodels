@@ -307,6 +307,7 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
         self.x = x
         self.variable_name = variable_name
         self.n_samples, self.k_variables = len(x), 1
+
         self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_ = self._smooth_basis_for_single_variable()
         self.dim_basis = self.basis_.shape[1]
         return
@@ -315,6 +316,26 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
     def _smooth_basis_for_single_variable(self):
 
         return
+
+
+class UnivariateGenericSmoother(UnivariateGamSmoother):
+
+    def __init__(self, x, basis, der_basis, der2_basis, cov_der2, variable_name='x'):
+
+        self.x = x
+        self.basis_ = basis
+        self.der_basis_ = der_basis
+        self.der2_basis_ = der2_basis
+        self.cov_der2_ = cov_der2
+        self.variable_name = variable_name
+
+        super(UnivariateGenericSmoother, self).__init__(self.x, variable_name)
+
+        return
+
+    def _smooth_basis_for_single_variable(self):
+
+        return self.basis_, self.der_basis_, self.der2_basis_, self.cov_der2_
 
 
 class UnivariatePolynomialSmoother(UnivariateGamSmoother):
@@ -398,6 +419,27 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
     def _make_smoothers_list(self):
 
         return
+
+
+class GenericSmoothers(MultivariateGamSmoother):
+
+    def __init__(self, x, basis, der_basis, der2_basis, cov_der2):
+
+        self.x = x
+        self.basis_ = basis
+        self.der_basis_ = basis
+        self.der2_basis_ = der2_basis
+        self.cov_der2_ = cov_der2
+        super(GenericSmoothers, self).__init__(self.x, variables_name=None)
+        return
+
+    def _make_smoothers_list(self):
+
+        smoothers = []
+        for v in range(self.k_variables):
+            smoothers.append(UnivariateGenericSmoother(self.x[:, v], self.basis_[v], self.der_basis_[v],
+                                                       self.der2_basis_[v], self.cov_der2_[v]))
+        return smoothers
 
 
 class PolynomialSmoother(MultivariateGamSmoother):

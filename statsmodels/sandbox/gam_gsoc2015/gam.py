@@ -287,7 +287,10 @@ class MultivariateGamPenalty(Penalty):
         self.alphas = alphas
 
         # TODO: Review this
-        self.wts = wts
+        if wts is None:
+            self.wts = [1] * len(alphas)
+        else:
+            self.wts = wts
 
         self.mask = [np.array([False]*self.k_columns)
                      for _ in range(self.k_variables)]
@@ -349,7 +352,7 @@ class GLMGAMResults(GLMResults):
         se = np.sqrt(var)
         return y, se
 
-    def plot_partial(self, multivariate_smoother):
+    def plot_partial(self, multivariate_smoother, plot_se=True):
         """just to try a method in overridden Results class
         """
         import matplotlib.pyplot as plt
@@ -364,8 +367,9 @@ class GLMGAMResults(GLMResults):
 
             plt.figure()
             plt.plot(smoother.x, y_est, '.')
-            plt.plot(smoother.x, y_est + 1.96 * se, '.')
-            plt.plot(smoother.x, y_est - 1.96 * se, '.')
+            if plot_se:
+                plt.plot(smoother.x, y_est + 1.96 * se, '.')
+                plt.plot(smoother.x, y_est - 1.96 * se, '.')
             plt.xlabel(smoother.variable_name)
             plt.show()
 
