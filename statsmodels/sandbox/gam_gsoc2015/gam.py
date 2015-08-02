@@ -275,7 +275,7 @@ class MultivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, multivariate_smoother, wts=None, alphas=None):
+    def __init__(self, multivariate_smoother, alphas, wts=None):
 
         if len(multivariate_smoother.smoothers_) != len(alphas):
             raise ValueError('all the input values should be list of the same length')

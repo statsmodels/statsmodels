@@ -378,7 +378,7 @@ keymap.all_axes : a                 # enable all axes
 # files, but sometimes you want to avoid that. In that case set
 # examples.download to False and examples.directory to the directory
 # where you have a checkout of
-# https://matplotlib.svn.sourceforge.net/svnroot/matplotlib/trunk/sample_data
+# https://matplotlib.svn.sourceforge.net/svnroot/matplotlib/trunk/univariate_sample_data
 
 #examples.download : True  # False to bypass downloading mechanism
 #examples.directory : ''   # directory to look in if download is false

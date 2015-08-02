@@ -322,14 +322,12 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
 
     def __init__(self, x, basis, der_basis, der2_basis, cov_der2, variable_name='x'):
 
-        self.x = x
         self.basis_ = basis
         self.der_basis_ = der_basis
         self.der2_basis_ = der2_basis
         self.cov_der2_ = cov_der2
-        self.variable_name = variable_name
 
-        super(UnivariateGenericSmoother, self).__init__(self.x, variable_name)
+        super(UnivariateGenericSmoother, self).__init__(x, variable_name)
 
         return
 
@@ -392,8 +390,13 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
     def __init__(self, x, variables_name=None):
 
-        self.x = x
-        self.n_samples, self.k_variables = x.shape
+        if x.ndim == 1:
+            self.x = x.copy()
+            self.x.shape = (len(x), 1)
+        else:
+            self.x = x
+
+        self.n_samples, self.k_variables = self.x.shape
 
         if variables_name is None:
             self.variables_name = ['x' + str(i) for i in range(self.k_variables)]
@@ -423,23 +426,15 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
 class GenericSmoothers(MultivariateGamSmoother):
 
-    def __init__(self, x, basis, der_basis, der2_basis, cov_der2):
+    def __init__(self, x, smoothers):
 
-        self.x = x
-        self.basis_ = basis
-        self.der_basis_ = basis
-        self.der2_basis_ = der2_basis
-        self.cov_der2_ = cov_der2
-        super(GenericSmoothers, self).__init__(self.x, variables_name=None)
+        self.smoothers_ = smoothers
+        super(GenericSmoothers, self).__init__(x, variables_name=None)
         return
 
     def _make_smoothers_list(self):
 
-        smoothers = []
-        for v in range(self.k_variables):
-            smoothers.append(UnivariateGenericSmoother(self.x[:, v], self.basis_[v], self.der_basis_[v],
-                                                       self.der2_basis_[v], self.cov_der2_[v]))
-        return smoothers
+        return self.smoothers_
 
 
 class PolynomialSmoother(MultivariateGamSmoother):

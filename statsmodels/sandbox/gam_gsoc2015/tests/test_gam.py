@@ -6,9 +6,15 @@ __date__ = '08/07/15'
 
 
 import os
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import make_poly_basis, make_bsplines_basis, UnivariatePolynomialSmoother, PolynomialSmoother, UnivariateBSplines, BSplines
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make_bsplines_basis,
+                                                           UnivariatePolynomialSmoother, PolynomialSmoother,
+                                                           UnivariateBSplines, BSplines, UnivariateGenericSmoother,
+                                                           GenericSmoothers)
 from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
-from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import UnivariateGamCV, UnivariateGamCVPath
+from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
+                                                                                        UnivariateGamCVPath,
+                                                                                        MultivariateGAMCV,
+                                                                                        MultivariateGAMCVPath)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.cross_validators import KFold
 import numpy as np
 import pandas as pd
@@ -22,7 +28,7 @@ from numpy.testing import assert_allclose
 sigmoid = np.vectorize(lambda x: 1.0/ (1.0 + np.exp(-x)))
 
 
-def sample_data():
+def univariate_sample_data():
     """
     A polynomial of degree 4
     poly -> ax^4 + bx^3 + cx^2 + dx + e
@@ -84,7 +90,7 @@ def test_gam_penalty():
     test the func method of the gam penalty
     :return:
     """
-    pol, y = sample_data()
+    pol, y = univariate_sample_data()
 
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
@@ -101,7 +107,7 @@ def test_gam_gradient():
     test the gam gradient for the example polynomial
     :return:
     """
-    pol, y = sample_data()
+    pol, y = univariate_sample_data()
 
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
@@ -120,7 +126,7 @@ def test_gam_hessian():
     test the deriv2 method of the gam penalty
     :return:
     """
-    pol, y = sample_data()
+    pol, y = univariate_sample_data()
     alpha = 1
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
 
@@ -135,7 +141,7 @@ def test_gam_hessian():
 
 
 def test_approximation():
-    poly, y = sample_data()
+    poly, y = univariate_sample_data()
     alpha = 0
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
@@ -217,7 +223,7 @@ def test_gam_discrete():
     return
 
 
-def sample_multivariate_data():
+def multivariate_sample_data():
     n = 1000
     x1 = np.linspace(-1, 1, n)
     x2 = np.linspace(-10, 10, n)
@@ -234,14 +240,14 @@ def sample_multivariate_data():
 def test_multivariate_penalty():
     alphas = [1, 2]
     wts = [1, 1]
-    x, y, pol = sample_multivariate_data()
+    x, y, pol = multivariate_sample_data()
 
     univ_pol1 = UnivariatePolynomialSmoother(x[:, 0], degree=pol.degrees[0])
     univ_pol2 = UnivariatePolynomialSmoother(x[:, 1], degree=pol.degrees[1])
 
     gp1 = UnivariateGamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
     gp2 = UnivariateGamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
-    mgp = MultivariateGamPenalty(wts=wts, alphas=alphas, multivariate_smoother=pol)
+    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alphas=alphas, wts=wts)
 
     for i in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers_[0].dim_basis)
@@ -357,7 +363,7 @@ def test_partial_plot():
     return
 
 
-def test_gam_gam_cv_kfolds():
+def test_univariate_gam_cv_kfolds():
 
     def sample_metric(y1, y2):
 
@@ -377,7 +383,7 @@ def test_gam_gam_cv_kfolds():
     univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
 
     gam = GLMGam
-    alphas = np.linspace(0, .02, 25)
+    alphas = np.linspace(0, .02, 2)
     k = 10
     cv = KFold(k_folds=k)
     gam_cv = UnivariateGamCVPath(univariate_smoother=univ_bsplines, alphas=alphas, gam=gam, cost=sample_metric,
@@ -387,24 +393,7 @@ def test_gam_gam_cv_kfolds():
     glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
     y_est = res_glm_gam.predict(univ_bsplines.basis_)
-    # plt.subplot(3, 1, 1)
-    # plt.plot(x, data_from_r.y, '.', label='y')
-    # plt.plot(x, y_est, '.', label='sm')
-    # plt.plot(x, data_from_r.y_mgcv_gcv, '.', label='mgcv')
-    # plt.legend(loc='best')
-    #
-    # plt.subplot(3, 1, 2)
-    # plt.plot(alphas, cv_path_m)
-    # plt.plot(alphas, cv_path_m, 'o')
-    # plt.plot(alphas, cv_path_m + cv_path_std)
-    # plt.plot(alphas, cv_path_m - cv_path_std)
-    #
-    # plt.subplot(3, 1, 3)
-    # plt.plot(x, y_est, '.', label='sm')
-    # plt.plot(x, data_from_r.y_mgcv_gcv, '.', label='mgcv')
-    # plt.legend()
-    #
-    # plt.show()
+
 
     # The test is done with the result obtained with GCV and not KFOLDS CV.
     # This is because MGCV does not support KFOLD CV
@@ -413,6 +402,159 @@ def test_gam_gam_cv_kfolds():
     return
 
 
+def test_univariate_generic_smoother():
+
+    poly, y = univariate_sample_data()
+    alpha = 0.5
+
+    univ_gs = UnivariateGenericSmoother(poly.x, poly.basis_, poly.der_basis_, poly.der2_basis_, poly.cov_der2_)
+
+    gp_poly = UnivariateGamPenalty(poly, wts=1, alpha=alpha)
+    gam_poly = GLMGam(y, poly.basis_, penal=gp_poly)
+    gam_poly_res = gam_poly.fit()
+
+
+    gp_gs = UnivariateGamPenalty(univ_gs, wts=1, alpha=alpha)
+    gam_gs = GLMGam(y, univ_gs.basis_, penal=gp_gs)
+    gam_gs_res = gam_gs.fit()
+
+    assert_allclose(gam_gs_res.params, gam_poly_res.params)
+
+    return
+
+
+def test_multivariate_generic_smoother():
+
+    x, y, poly = multivariate_sample_data()
+    alphas = [0.4, 0.7]
+    wts = [1, 1]
+
+    gs = GenericSmoothers(poly.x, poly.smoothers_)
+    gp_gs = MultivariateGamPenalty(gs, alphas=alphas, wts=wts)
+    gam_gs = GLMGam(y, gs.basis_, penal=gp_gs)
+    gam_gs_res = gam_gs.fit()
+
+    gp_poly = MultivariateGamPenalty(poly, alphas=alphas, wts=wts)
+    gam_poly = GLMGam(y, poly.basis_, penal=gp_poly)
+    gam_poly_res = gam_poly.fit()
+
+    assert_allclose(gam_gs_res.params, gam_poly_res.params)
+
+    return
+
+
+def test_multivariate_gam_1d_data():
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    data_from_r = pd.read_csv(file_path)
+    # dataset used to train the R model
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y
+
+    df = [10]
+    degree = [5]
+    bsplines = BSplines(x, degrees=degree, dfs=df)
+    # y_mgcv is obtained from R with the following code
+    # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
+    y_mgcv = data_from_r.y_est
+
+    alpha = [0.0251]
+    gp = MultivariateGamPenalty(bsplines, alphas=alpha)
+    glm_gam = GLMGam(y, bsplines.basis_, penal=gp)
+    res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
+                              disp=1, maxiter=10000, maxfun=5000)
+    y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
+
+    # plt.plot(x, y_gam, '.', label='gam')
+    # plt.plot(x, y_mgcv, '.', label='mgcv')
+    # plt.plot(x, y, '.', label='y')
+    # plt.legend()
+    # plt.show()
+
+    assert_allclose(y_gam, y_mgcv, atol=8.e-2)
+    return
+
+
+def test_multivariate_gam_cv():
+    # no test is performed. It only checks that there isn't any runtime error
+
+    def cost(x1, x2):
+        return np.linalg.norm(x1 - x2) / len(x1)
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    data_from_r = pd.read_csv(file_path)
+    # dataset used to train the R model
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y.as_matrix()
+
+
+    df = [10]
+    degree = [5]
+    bsplines = BSplines(x, degrees=degree, dfs=df)
+    # y_mgcv is obtained from R with the following code
+    # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
+
+    alphas = [0.0251]
+    alphas = [2]
+    cv = KFold(3)
+
+    gp = MultivariateGamPenalty(bsplines, alphas=alphas)
+    gam_cv = MultivariateGAMCV(smoothers=bsplines, alphas=alphas, gam=GLMGam, cost=cost, y=y, cv=cv)
+    gam_cv_res = gam_cv.fit()
+
+    return
+
+
+def test_multivariate_gam_cv_path():
+
+    def sample_metric(y1, y2):
+
+        return np.linalg.norm(y1 - y2)/len(y1)
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+
+    data_from_r = pd.read_csv(file_path)
+
+    # dataset used to train the R model
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y.as_matrix()
+    se_from_mgcv = data_from_r.y_est_se
+    y_mgcv = data_from_r.y_mgcv_gcv
+
+    df = [10]
+    degree = [6]
+
+    bsplines = BSplines(x, degrees=degree, dfs=df)
+
+    gam = GLMGam
+    alphas = [np.linspace(0, 2, 5)]
+    k = 3
+    cv = KFold(k_folds=k)
+
+    # TODO: penal=?
+    gam_cv = MultivariateGAMCVPath(smoothers=bsplines, alphas=alphas, gam=gam, cost=sample_metric, y=y, cv=cv)
+    gam_cv_res = gam_cv.fit()
+
+    print('alpha cv =', gam_cv.alpha_cv_)
+    gp = MultivariateGamPenalty(bsplines, alphas=gam_cv.alpha_cv_)
+
+    glm_gam = GLMGam(y, bsplines.basis_, penal=gp)
+    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
+    y_est = res_glm_gam.predict(bsplines.basis_)
+
+    plt.plot(x, y, '.', label='y')
+    plt.plot(x, y_est, '.', label='y est')
+    plt.plot(x, y_mgcv, '.', label='y mgcv')
+    plt.show()
+    
+    # The test is done with the result obtained with GCV and not KFOLDS CV.
+    # This is because MGCV does not support KFOLD CV
+    assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.e-1, rtol=1.e-1)
+
+    return
 
 #
 # test_gam_hessian()
@@ -424,5 +566,16 @@ def test_gam_gam_cv_kfolds():
 # test_gam_glm()
 # test_gam_penalty()
 # test_partial_plot()
-# test_partial_values()
-#test_gam_gam_cv_kfolds()
+# test_partial_valu1es()
+
+# test_univariate_generic_smoother()
+# test_multivariate_generic_smoother()
+
+# test_multivariate_gam_1d_data()
+
+# test_univariate_gam_cv_kfolds()
+
+test_multivariate_gam_cv()
+
+test_multivariate_gam_cv_path()
+

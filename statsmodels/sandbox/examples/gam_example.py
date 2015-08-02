@@ -144,9 +144,9 @@ x[:, 0] = np.linspace(-10, -5, n)
 x[:, 1] = np.linspace(5, 10, n)
 
 y = x[:, 0]**3 + x[:, 1]**2 + np.random.normal(0, 10, n)
-poly = PolynomialSmoother(x, degrees=[5, 3])
+poly = PolynomialSmoother(x, degrees=[5, 5])
 
-gp = MultivariateGamPenalty(poly, wts=[1, 1], alphas=[0, 0])
+gp = MultivariateGamPenalty(poly, alphas=[0, 0], wts=[1, 1])
 gam = GLMGam(y, poly.basis_, penal=gp)
 gam_ris = gam.fit()
 #
@@ -164,7 +164,7 @@ def cost(x, y):
     return np.linalg.norm(x - y) / len(y)
 
 cv = KFold(k_folds=5, shuffle=True)
-gam_cv = MultivariateGAMCV(poly, alphas=[0, 0], gam=GLMGam, cost=cost, y=y, cv=cv)
+gam_cv = MultivariateGAMCV(poly, alphas=[1, 1], gam=GLMGam, cost=cost, y=y, cv=cv)
 ris_gam_cv = gam_cv.fit()
 
 print('Cross validation error=', ris_gam_cv)
