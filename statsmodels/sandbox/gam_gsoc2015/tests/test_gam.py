@@ -592,14 +592,10 @@ def test_train_test_smoothers():
 # test_gam_penalty()
 # test_partial_plot()
 # test_partial_valu1es()
-
 # test_univariate_generic_smoother()
 # test_multivariate_generic_smoother()
-
 # test_multivariate_gam_1d_data()
-
 # test_univariate_gam_cv_kfolds()
-
 # test_multivariate_gam_cv()
 #test_multivariate_gam_cv_path()
 
