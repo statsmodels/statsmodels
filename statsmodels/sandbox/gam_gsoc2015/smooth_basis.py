@@ -28,7 +28,6 @@ def _R_compat_quantile(x, probs):
     return quantiles.reshape(probs.shape, order="C")
 
 
-
 ## from patsy splines.py
 def _eval_bspline_basis(x, knots, degree):
     try:
@@ -78,7 +77,6 @@ def _eval_bspline_basis(x, knots, degree):
         der1_basis[:, i] = splev(x, (knots, coefs, degree), der=1)
         der2_basis[:, i] = splev(x, (knots, coefs, degree), der=2)
         
-
     return basis, der1_basis, der2_basis
 
 

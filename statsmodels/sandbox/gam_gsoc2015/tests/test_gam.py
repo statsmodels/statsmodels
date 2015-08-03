@@ -14,7 +14,8 @@ from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, GLMGam, M
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
                                                                                         UnivariateGamCVPath,
                                                                                         MultivariateGAMCV,
-                                                                                        MultivariateGAMCVPath)
+                                                                                        MultivariateGAMCVPath,
+                                                                                        _split_train_test_smoothers)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.cross_validators import KFold
 import numpy as np
 import pandas as pd
@@ -489,7 +490,6 @@ def test_multivariate_gam_cv():
     x = data_from_r.x.as_matrix()
     y = data_from_r.y.as_matrix()
 
-
     df = [10]
     degree = [5]
     bsplines = BSplines(x, degrees=degree, dfs=df)
@@ -530,29 +530,54 @@ def test_multivariate_gam_cv_path():
     bsplines = BSplines(x, degrees=degree, dfs=df)
 
     gam = GLMGam
-    alphas = [np.linspace(0, 2, 5)]
+    alphas = [np.linspace(0, 2, 10)]
     k = 3
-    cv = KFold(k_folds=k)
+    cv = KFold(k_folds=k, shuffle=True)
 
     # TODO: penal=?
     gam_cv = MultivariateGAMCVPath(smoothers=bsplines, alphas=alphas, gam=gam, cost=sample_metric, y=y, cv=cv)
     gam_cv_res = gam_cv.fit()
 
-    print('alpha cv =', gam_cv.alpha_cv_)
+    #print('alpha cv =', gam_cv.alpha_cv_)
     gp = MultivariateGamPenalty(bsplines, alphas=gam_cv.alpha_cv_)
 
     glm_gam = GLMGam(y, bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
     y_est = res_glm_gam.predict(bsplines.basis_)
 
-    plt.plot(x, y, '.', label='y')
-    plt.plot(x, y_est, '.', label='y est')
-    plt.plot(x, y_mgcv, '.', label='y mgcv')
-    plt.show()
+    # plt.plot(x, y, '.', label='y')
+    # plt.plot(x, y_est, '.', label='y est')
+    # plt.plot(x, y_mgcv, '.', label='y mgcv')
+    # plt.legend()
+    # plt.show()
     
     # The test is done with the result obtained with GCV and not KFOLDS CV.
     # This is because MGCV does not support KFOLD CV
     assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.e-1, rtol=1.e-1)
+
+    return
+
+
+def test_train_test_smoothers():
+
+    n = 6
+    x = np.zeros(shape=(n, 2))
+    x[:, 0] = range(6)
+    x[:, 1] = range(6, 12)
+    poly = PolynomialSmoother(x, degrees=[3, 3])
+    train_index = list(range(3))
+    test_index = list(range(3, 6))
+    train_smoother, test_smoother = _split_train_test_smoothers(poly.x, poly, train_index, test_index)
+
+    expected_train_basis = [[0., 0., 0., 6., 36., 216.],
+                            [1., 1., 1., 7., 49., 343.],
+                            [2., 4., 8., 8., 64., 512.]]
+    assert_allclose(train_smoother.basis_, expected_train_basis)
+
+    expected_test_basis = [[3., 9., 27., 9., 81., 729.],
+                           [4., 16., 64., 10., 100., 1000.],
+                           [5., 25., 125., 11., 121., 1331.]]
+    assert_allclose(test_smoother.basis_, expected_test_basis)
 
     return
 
@@ -575,7 +600,7 @@ def test_multivariate_gam_cv_path():
 
 # test_univariate_gam_cv_kfolds()
 
-test_multivariate_gam_cv()
+# test_multivariate_gam_cv()
+#test_multivariate_gam_cv_path()
 
-test_multivariate_gam_cv_path()
-
+# test_train_test_smoothers()

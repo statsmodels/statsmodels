@@ -74,7 +74,7 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
 
     train_smoothers = []
     test_smoothers = []
-    for smoother in smoothers.smoothers_:
+    for i, smoother in enumerate(smoothers.smoothers_):
         train_basis = smoother.basis_[train_index]
         train_der_basis = smoother.der_basis_[train_index]
         train_der2_basis = smoother.der2_basis_[train_index]
@@ -93,10 +93,10 @@ def _split_train_test_smoothers(x, smoothers, train_index, test_index):
         test_smoothers.append(UnivariateGenericSmoother(test_x, test_basis, test_der_basis, train_der2_basis,
                                                         test_cov_der2, smoother.variable_name + ' test'))
 
-        train_multivariate_smoothers = GenericSmoothers(x[train_index], train_smoothers)
-        test_multivariate_smoothers = GenericSmoothers(x[test_index], test_smoothers)
+    train_multivariate_smoothers = GenericSmoothers(x[train_index], train_smoothers)
+    test_multivariate_smoothers = GenericSmoothers(x[test_index], test_smoothers)
 
-        return train_multivariate_smoothers, test_multivariate_smoothers
+    return train_multivariate_smoothers, test_multivariate_smoothers
 
 
 class MultivariateGAMCV(BaseCV):
@@ -201,7 +201,6 @@ class MultivariateGAMCVPath:
     def fit(self, **kwargs):
 
         for i, alphas_i in enumerate(self.alphas_grid):
-            print(' alpha i', alphas_i)
             gam_cv = MultivariateGAMCV(smoothers=self.smoothers, alphas=alphas_i,
                                        gam=self.gam, cost=self.cost, y=self.y, cv=self.cv)
             cv_err = gam_cv.fit(**kwargs)

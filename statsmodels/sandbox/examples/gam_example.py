@@ -160,8 +160,8 @@ gam_ris = gam.fit()
 
 
 # Multivariate Gam CV
-def cost(x, y):
-    return np.linalg.norm(x - y) / len(y)
+def cost(y1, y2):
+    return np.linalg.norm(y1 - y2) / len(y2)
 
 cv = KFold(k_folds=5, shuffle=True)
 gam_cv = MultivariateGAMCV(poly, alphas=[1, 1], gam=GLMGam, cost=cost, y=y, cv=cv)
