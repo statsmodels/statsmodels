@@ -1,16 +1,17 @@
-__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
-__date__ = '16/07/15'
-
-import matplotlib.pyplot as plt
-import numpy as np
-import sklearn
-from sklearn.linear_model import LinearRegression
-import pandas as pd
-from numpy.testing import assert_allclose
-from statsmodels.genmod.generalized_linear_model import GLM, GLMResults, GLMResultsWrapper
-import statsmodels.regression.linear_model as lm
-import scipy as sp
-
+# __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
+# __date__ = '16/07/15'
+#
+# import matplotlib.pyplot as plt
+# import numpy as np
+# import sklearn
+# from sklearn.linear_model import LinearRegression
+# import pandas as pd
+# from numpy.testing import assert_allclose
+# from statsmodels.genmod.generalized_linear_model import GLM, GLMResults, GLMResultsWrapper
+# import statsmodels.regression.linear_model as lm
+# import scipy as sp
+# from statsmodels.sandbox.gam_gsoc2015.gam import GLMGam
+#
 # def equally_spaced_knots(x, n_knots):
 #     x_min = x.min()
 #     x_max = x.max()
@@ -126,79 +127,76 @@ import scipy as sp
 #         glm_results.fit_history = history
 #         glm_results.converged = converged
 #         return GLMResultsWrapper(glm_results)
-
-"""
-import os
-cur_dir = os.path.dirname(os.path.abspath('__file__'))
-file_path = os.path.join(cur_dir, "tests/results", "gam_PIRLS_results.csv")
-data = pd.read_csv(file_path)
-
-print('Univariate GAM ')
-X = data['x'].as_matrix()
-Y = data['y'].as_matrix()
-
-XK = np.array([0.2, .4, .6, .8])
-
-spl_x_R = data[['spl_x.1', 'spl_x.2', 'spl_x.3', 'spl_x.4', 'spl_x.5', 'spl_x.6']].as_matrix()
-SPL_X = splines_x(X, XK)
-
-assert_allclose(spl_x_R, SPL_X)
-
-spl_s_R = [[0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
-           [0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
-           [0,    0,  0.001400000,  0.000200000, -0.001133333, -0.001000000],
-           [0,    0,  0.000200000,  0.002733333,  0.001666667, -0.001133333],
-           [0,    0, -0.001133333,  0.001666667,  0.002733333,  0.000200000],
-           [0,    0, -0.001000000, -0.001133333,  0.000200000,  0.001400000]]
-SPL_S = splines_s(xk=XK)
-assert_allclose(spl_s_R, SPL_S, atol=4.e-10)
-
-b = get_sqrt(SPL_S)
-
-assert_allclose(np.dot(b.T, b), SPL_S)
-
-for i, alpha in enumerate([0, .1, 10, 200]):
-
-    gam = GamPirls(Y, SPL_X)
-    gam_results = gam._fit_pirls(Y, SPL_X, SPL_S, alpha)
-    Y_EST = np.dot(SPL_X, gam_results.params)
-    plt.subplot(2, 2, i+1)
-    plt.title('Alpha=' + str(alpha))
-    plt.plot(X, Y, '.')
-    plt.plot(X, Y_EST, '.')
-plt.show()
-
-
-
-print('multivariate gam')
-X2 = np.random.uniform(0, 1, len(Y))
-XK2 = [0, 0.5, 1]
-SPL_X2 = splines_x(X2, XK2)
-SPL_S2 = splines_s(xk=XK2)
-
-SPL_X_FULL = np.hstack([SPL_X, SPL_X2])
-SPL_S_FULL = [SPL_S, SPL_S2]
-
-Y = X2*X2 + X*X*X + np.random.normal(0, .2, len(Y))
-gam = GamPirls(Y, SPL_X_FULL)
-alpha = 0
-gam_results = gam._fit_pirls(Y, SPL_X_FULL, SPL_S_FULL, alpha=[alpha]*2)
-
-n_var1 = SPL_X.shape[1]
-n_var2 = SPL_X2.shape[1]
-
-plt.subplot(3, 1, 1)
-plt.plot(X, np.dot(SPL_X, gam_results.params[:n_var1]), '.', label='Estimated')
-plt.plot(X, X*X*X, '.', label='Real')
-plt.legend(loc='best')
-plt.subplot(3, 1, 2)
-plt.plot(X2, np.dot(SPL_X2, gam_results.params[n_var1:]), '.', label='Estimated')
-plt.plot(X2, X2*X2, '.', label='Real')
-plt.legend(loc='best')
-plt.subplot(3, 1, 3)
-plt.plot(Y, '.')
-plt.plot(np.dot(SPL_X_FULL, gam_results.params), '.')
-plt.show()
-
-
-"""
+#
+# import os
+# cur_dir = os.path.dirname(os.path.abspath('__file__'))
+# file_path = os.path.join(cur_dir, "tests/results", "gam_PIRLS_results.csv")
+# data = pd.read_csv(file_path)
+#
+# print('Univariate GAM ')
+# X = data['x'].as_matrix()
+# Y = data['y'].as_matrix()
+#
+# XK = np.array([0.2, .4, .6, .8])
+#
+# spl_x_R = data[['spl_x.1', 'spl_x.2', 'spl_x.3', 'spl_x.4', 'spl_x.5', 'spl_x.6']].as_matrix()
+# SPL_X = splines_x(X, XK)
+#
+# assert_allclose(spl_x_R, SPL_X)
+#
+# spl_s_R = [[0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
+#            [0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
+#            [0,    0,  0.001400000,  0.000200000, -0.001133333, -0.001000000],
+#            [0,    0,  0.000200000,  0.002733333,  0.001666667, -0.001133333],
+#            [0,    0, -0.001133333,  0.001666667,  0.002733333,  0.000200000],
+#            [0,    0, -0.001000000, -0.001133333,  0.000200000,  0.001400000]]
+# SPL_S = splines_s(xk=XK)
+# assert_allclose(spl_s_R, SPL_S, atol=4.e-10)
+#
+# b = get_sqrt(SPL_S)
+#
+# assert_allclose(np.dot(b.T, b), SPL_S)
+#
+# for i, alpha in enumerate([0, .1, 10, 200]):
+#
+#     gam = GLMGam(Y, SPL_X)
+#     gam_results = gam._fit_pirls(Y, SPL_X, SPL_S, alpha)
+#     Y_EST = np.dot(SPL_X, gam_results.params)
+#     plt.subplot(2, 2, i+1)
+#     plt.title('Alpha=' + str(alpha))
+#     plt.plot(X, Y, '.')
+#     plt.plot(X, Y_EST, '.')
+# plt.show()
+#
+#
+#
+# print('multivariate gam')
+# X2 = np.random.uniform(0, 1, len(Y))
+# XK2 = [0, 0.5, 1]
+# SPL_X2 = splines_x(X2, XK2)
+# SPL_S2 = splines_s(xk=XK2)
+#
+# SPL_X_FULL = np.hstack([SPL_X, SPL_X2])
+# SPL_S_FULL = [SPL_S, SPL_S2]
+#
+# Y = X2*X2 + X*X*X + np.random.normal(0, .2, len(Y))
+# gam = GamPirls(Y, SPL_X_FULL)
+# alpha = 0
+# gam_results = gam._fit_pirls(Y, SPL_X_FULL, SPL_S_FULL, alpha=[alpha]*2)
+#
+# n_var1 = SPL_X.shape[1]
+# n_var2 = SPL_X2.shape[1]
+#
+# plt.subplot(3, 1, 1)
+# plt.plot(X, np.dot(SPL_X, gam_results.params[:n_var1]), '.', label='Estimated')
+# plt.plot(X, X*X*X, '.', label='Real')
+# plt.legend(loc='best')
+# plt.subplot(3, 1, 2)
+# plt.plot(X2, np.dot(SPL_X2, gam_results.params[n_var1:]), '.', label='Estimated')
+# plt.plot(X2, X2*X2, '.', label='Real')
+# plt.legend(loc='best')
+# plt.subplot(3, 1, 3)
+# plt.plot(Y, '.')
+# plt.plot(np.dot(SPL_X_FULL, gam_results.params), '.')
+# plt.show()
+#

@@ -53,7 +53,7 @@ def test_spl_s():
     assert_allclose(spl_s_R, spl_s, atol=4.e-10)
 
 
-def test_gest_sqrt():
+def test_get_sqrt():
 
     xk = np.array([0.2, .4, .6, .8])
     cs = CubicSplines(None, 4)
@@ -66,6 +66,6 @@ def test_gest_sqrt():
 
 
 
-# test_gest_sqrt()
+# test_get_sqrt()
 # test_spl_s()
 # test_splines_x()

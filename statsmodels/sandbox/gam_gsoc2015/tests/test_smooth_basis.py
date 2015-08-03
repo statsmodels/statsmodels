@@ -23,6 +23,8 @@ def test_make_basis():
 
 def test_univariate_polynomial_smoother():
     x = np.linspace(0, 1, 5)
+# test_univariate_polynomial_smoother()
+# test_make_basis()
     pol = UnivariatePolynomialSmoother(x, degree=3)
     assert pol.basis_.shape == (5, 3)
     assert_allclose(pol.basis_[:, 2], x.ravel()**3)

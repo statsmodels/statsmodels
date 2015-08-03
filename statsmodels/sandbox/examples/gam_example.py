@@ -138,17 +138,18 @@ sigmoid = np.vectorize(lambda x: 1.0/(1.0 + np.exp(-x)))
 
 
 # Multivariate GLMGam.
-n = 200
-x = np.zeros(shape=(n, 2))
-x[:, 0] = np.linspace(-10, -5, n)
-x[:, 1] = np.linspace(5, 10, n)
+# n = 200
+# x = np.zeros(shape=(n, 2))
+# x[:, 0] = np.linspace(-10, -5, n)
+# x[:, 1] = np.linspace(5, 10, n)
+#
+# y = x[:, 0]**3 + x[:, 1]**2 + np.random.normal(0, 10, n)
+# poly = PolynomialSmoother(x, degrees=[5, 5])
+#
+# gp = MultivariateGamPenalty(poly, alphas=[0, 0], wts=[1, 1])
+# gam = GLMGam(y, poly.basis_, penal=gp)
+# gam_ris = gam.fit()
 
-y = x[:, 0]**3 + x[:, 1]**2 + np.random.normal(0, 10, n)
-poly = PolynomialSmoother(x, degrees=[5, 5])
-
-gp = MultivariateGamPenalty(poly, alphas=[0, 0], wts=[1, 1])
-gam = GLMGam(y, poly.basis_, penal=gp)
-gam_ris = gam.fit()
 #
 # gam_ris.plot_partial(poly, plot_se=False)
 # plt.show()
@@ -160,18 +161,91 @@ gam_ris = gam.fit()
 
 
 # Multivariate Gam CV
-def cost(y1, y2):
-    return np.linalg.norm(y1 - y2) / len(y2)
+# def cost(y1, y2):
+#     return np.linalg.norm(y1 - y2) / len(y2)
+#
+# cv = KFold(k_folds=5, shuffle=True)
+# gam_cv = MultivariateGAMCV(poly, alphas=[1, 1], gam=GLMGam, cost=cost, y=y, cv=cv)
+# ris_gam_cv = gam_cv.fit()
+#
+# print('Cross validation error=', ris_gam_cv)
+#
+# # Multivariate GAM CV path
+#
+# alphas = np.linspace(0, 10, 5)
+# gam_cv_path = MultivariateGAMCVPath(poly, alphas=[alphas, alphas], gam=GLMGam, cost=cost, y=y, cv=cv).fit()
+#
+# print(gam_cv_path.alpha_cv_, gam_cv_path.cv_error_)
 
-cv = KFold(k_folds=5, shuffle=True)
-gam_cv = MultivariateGAMCV(poly, alphas=[1, 1], gam=GLMGam, cost=cost, y=y, cv=cv)
-ris_gam_cv = gam_cv.fit()
 
-print('Cross validation error=', ris_gam_cv)
+# GAM PIRLS
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
 
-# Multivariate GAM CV path
+n = 500
+x = np.random.uniform(-1, 1, n)
 
-alphas = np.linspace(0, 10, 5)
-gam_cv_path = MultivariateGAMCVPath(poly, alphas=[alphas, alphas], gam=GLMGam, cost=cost, y=y, cv=cv).fit()
+y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
 
-print(gam_cv_path.alpha_cv_, gam_cv_path.cv_error_)
+y -= y.mean()
+cs = CubicSplines(x, 10).fit()
+
+# required only to initialize the gam. they have no influence on the result.
+dummy_smoother = PolynomialSmoother(x, [2])
+gp = MultivariateGamPenalty(dummy_smoother, alphas=[0])
+#
+# for i, alpha in enumerate([0, 1, 5, 10]):
+#
+#     gam = GLMGam(y, cs.xs, penal=gp)
+#     gam_res = gam._fit_pirls(y=y, spl_x=cs.xs, spl_s=cs.s, alpha=alpha)
+#     y_est = gam_res.predict(cs.xs)
+#
+#     plt.subplot(2, 2, i+1)
+#     plt.plot(x, y, '.')
+#     plt.plot(x, y_est, '.')
+#     plt.title('alpha=' + str(alpha))
+#
+# plt.show()
+#
+
+# Multivariate GAM PIRLS
+x2 = np.random.uniform(-1, 1, n)
+y2 = x2**2 + np.random.normal(0, 0.1, n)
+y2 -= y2.mean()
+
+Y = y + y2
+
+cs2 = CubicSplines(x2, 10).fit()
+
+spl_X = np.hstack([cs.xs, cs2.xs])
+spl_S = [cs.s, cs2.s]
+
+n_var1 = cs.xs.shape[1]
+n_var2 = cs2.xs.shape[1]
+
+gam = GLMGam(y, cs.xs, penal=gp)
+
+i = 0
+for alpha in [0, 1, 2]:
+
+    gam_results = gam._fit_pirls(Y, spl_X, spl_S, alpha=[alpha]*2)
+    y1_est = np.dot(cs.xs, gam_results.params[:n_var1])
+    y2_est = np.dot(cs2.xs, gam_results.params[n_var1:])
+
+    y1_est -= y1_est.mean() # TODO: the estimate is good but has a very large mean. Why is this happening?
+    y2_est -= y2_est.mean()
+
+    i += 1
+    plt.subplot(3, 2, i)
+    plt.title('x1  alpha=' + str(alpha))
+    plt.plot(x, y, '.', label='Real', c='green')
+    plt.plot(x, y1_est, '.', label='Estimated', c='blue')
+
+
+    i += 1
+    plt.subplot(3, 2, i)
+    plt.title('x2  alpha=' + str(alpha))
+    plt.plot(x2, y2, '.', label='Real', c='green')
+    plt.plot(x2, y2_est, '.', label='Estimated', c='blue')
+
+plt.tight_layout()
+plt.show()
