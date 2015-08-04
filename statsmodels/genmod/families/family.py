@@ -885,6 +885,7 @@ class Binomial(Family):
                             (1 - endog) * np.log((1 - endog)/(1 - mu) +
                                                  1e-200)))/scale)
 
+    #@profile
     def loglike(self, endog, mu, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
@@ -919,8 +920,9 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale * np.sum(endog * np.log(mu/(1 - mu) + 1e-200) +
-                                  np.log(1 - mu))
+            p1 = endog * np.log(mu/(1 - mu) + 1e-200)
+            p2 = np.log(1 - mu)
+            return scale * np.sum(p1 + p2)
         else:
             y = endog * self.n  # convert back to successes
             return scale * np.sum(special.gammaln(self.n + 1) -

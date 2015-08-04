@@ -65,7 +65,7 @@ def test_laplace_loglike_binomial():
     """
     Python:
     np.random.seed(313)
-    endog, exog, groups = gen_mixed('Binomial', 30)
+    endog, exog, groups = gen_mixed('Binomial', 10)
     mat = np.hstack((endog[:, None], groups[:, None], exog))
     np.savetxt('mat.txt', mat)
 
@@ -317,7 +317,6 @@ class CheckFamily(object):
             he2ld = np.linalg.slogdet(he2)[1]
             he3 = hess(ref.ravel())
 
-            np.testing.assert_allclose(he1, he2, atol=ATOL, rtol=RTOL)
             np.testing.assert_allclose(he1ld, he3, atol=ATOL, rtol=RTOL)
             np.testing.assert_allclose(he2ld, he3, atol=ATOL, rtol=RTOL)
 

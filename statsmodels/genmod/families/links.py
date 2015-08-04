@@ -227,6 +227,7 @@ class Logit(Link):
         -------
         The value of the second derivative of the logit function
         """
+        p = self._clean(p)
         v = p * (1 - p)
         return (2*p - 1) / v**2
 
@@ -429,6 +430,23 @@ class NegativePower(Power):
     def __init__(self, power=1.):
         self.power = power
 
+    def _clean(self, p):
+        """
+        Clip logistic values to range (eps, 1-eps)
+
+        Parameters
+        -----------
+        p : array-like
+            Probabilities
+
+        Returns
+        --------
+        pclip : array
+            Clipped probabilities
+        """
+        return np.clip(p, FLOAT_EPS, np.inf)
+
+
     def __call__(self, p):
         """
         Negative power transform link function
@@ -447,7 +465,7 @@ class NegativePower(Power):
         -----
         g(p) = - (x**self.power)
         """
-
+        p = self._clean(p)
         return - super(NegativePower, self).__call__(p)
 
     def inverse(self, z):
@@ -468,7 +486,6 @@ class NegativePower(Power):
         -----
         g^(-1)(z`) = - `(-z)`**(1/`power`)
         """
-
         return super(NegativePower, self).inverse(-z)
 
     def deriv(self, p):
@@ -489,6 +506,7 @@ class NegativePower(Power):
         -----
         g'(`p`) = - `power` * `p`**(`power` - 1)
         """
+        p = self._clean(p)
         return - super(NegativePower, self).deriv(p)
 
     def deriv2(self, p):
@@ -509,6 +527,7 @@ class NegativePower(Power):
         -----
         g''(`p`) = - `power` * (`power` - 1) * `p`**(`power` - 2)
         """
+        p = self._clean(p)
         return - super(NegativePower, self).deriv2(p)
 
     def inverse_deriv(self, z):

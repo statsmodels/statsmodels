@@ -455,6 +455,9 @@ class MixedGLM(base.LikelihoodModel):
             self.exog_names = ["FE%d" % (k + 1) for k in
                                range(self.exog.shape[1])]
 
+        # For fitting. Used to store the previous laplace map.
+        self.prev_start = np.random.normal(size = self.n_groups * self.k_re)
+
     def _setup_vcomp(self, exog_vc):
         if exog_vc is None:
             exog_vc = {}
@@ -678,6 +681,11 @@ class MixedGLM(base.LikelihoodModel):
 
         mod.family = family
         mod._scale = scale
+        mod._canonical = isinstance(mod.family.link, mod.family._canonical_link)
+        # For fitting. Used to store the previous laplace map.
+        mod.prev_start = np.random.normal(size = mod.n_groups * mod.k_re)
+
+
 
         return mod
 
@@ -727,7 +735,7 @@ class MixedGLM(base.LikelihoodModel):
         else:
             return [np.array(array[self.row_indices[k], :])
                     for k in self.group_labels]
-
+    
     def loglike(self, params):
         """
         Evaluate the log-likelihood of the generalized linear mixed
@@ -783,10 +791,9 @@ class MixedGLM(base.LikelihoodModel):
         """
 
         # The max of the function in the exponent of our integral
-        mp = self._get_map(fe_params, cov_re, scale, omethod)
+        f, mp = self._get_map(fe_params, cov_re, scale, omethod)
 
-        like_grad_hess = self._joint_like_grad_hess(fe_params, cov_re, scale, ref = mp)
-        f = like_grad_hess[0]
+        like_grad_hess = self._joint_like_grad_hess(fe_params, cov_re, scale, ref = mp, fn=False, grad = False)
         h = like_grad_hess[2]
 
         d = len(mp)
@@ -796,7 +803,8 @@ class MixedGLM(base.LikelihoodModel):
         # problems with numpy overflow with expressions like np.log(np.exp(.))
         return - f + (d / 2.0) * np.log(2 * np.pi) - (1 / 2.0) * h
 
-    def _joint_like_grad_hess(self, fe_params, cov_re, scale, ref):
+    
+    def _joint_like_grad_hess(self, fe_params, cov_re, scale, ref, fn = True, grad = True, hess = True):
         """
         Function, gradient and hessian of the joint log likelihood.
 
@@ -821,9 +829,10 @@ class MixedGLM(base.LikelihoodModel):
             evaluated at the given state, respectively, in a tuple.
         """
 
-        return (self._gen_joint_like_grad_hess(fe_params, cov_re, scale))(ref)
+        return (self._gen_joint_like_grad_hess(fe_params, cov_re, scale, fn, grad, hess))(ref)
 
-    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale, logdet_hess = True):
+    
+    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale, fn = True, grad = True, hess = True):
         """
         Function, gradient and hessian of the joint log likelihood.
 
@@ -838,98 +847,131 @@ class MixedGLM(base.LikelihoodModel):
             The covariance matrix of the random effects.
         scale : float
             The overdispersion scale parameter for the exponential family.
-        ref_re: array-like 2d
+        fn: bool, optional
+            If True the returned function calculates the loglikelihood value.
+            Else the returned function always reports zero for the loglike.
+            If not specified defaults to True
+        grad: bool, optional
+            If True the returned function calculates the gradient value.
+            Else the returned function always reports a matrix of zeroes
+            for the gradient.
+            If not specified defaults to True
+        hess: bool, optional
+            If True the returned function calculates the value of the logdet
+            of the hessian. Else the returned function always reports zero for
+            the logdet of the hessian.
+            If not specified defaults to True
 
         Returns
         -------
         function
             A function that takes a state for the random effects
             (vectorized) and returns the value of the negative
-            joint log likelihood, its gradient and the log-determinant
-            of it's hessian evaluated at the given state,
+            joint log likelihood, the negative of its gradient
+            and the log-determinant of it's hessian --
+            all evaluated at the given state,
             respectively, in a tuple.
+
+            I.e. it returns a tuple
+            (fn_val, grad_val, log_det_hess_val)
+            where fn_val, log_det_hess_val are float and
+            grad_val is a 2d numpy array of floats of size
+            n_groups by k_re.
         """
+
+        # Common terms that don't depend on ref.
+        if fn:
+            # MVN constants from dist. of REs.
+            _, cov_re_logdet = np.linalg.slogdet(cov_re)
+            const = -self.n_groups * self.k_re * np.log(2 * np.pi) / 2.0
+            const -= self.n_groups * cov_re_logdet / 2.0
+
+        if hess: cov_re_inv = np.linalg.inv(cov_re)
 
         lin_pred = np.dot(self.exog, fe_params)
         lin_pred = self.group_list(lin_pred)
 
+        
         def fun(ref):
+
+            # Place holders for values to be calculated
+            f = 0
+            d = np.zeros((self.n_groups, self.k_re))
+            hval = 0
+
 
             # Matrix of current state of random effects
             ref = np.reshape(ref, (self.n_groups, self.k_re))
 
-            _, cov_re_logdet = np.linalg.slogdet(cov_re)
-            cov_re_inv = np.linalg.inv(cov_re)
-
-            # Multi. normal consts from the random effects
-            s = np.linalg.solve(cov_re, ref.T)
-            f = -(ref.T * s).sum() / 2
-            f -= self.n_groups * self.k_re * np.log(2 * np.pi) / 2.0
-            f -= self.n_groups * cov_re_logdet / 2.0
-
-            # Place holders for gradient and log-det of hessian
-            d = np.zeros((self.n_groups, self.k_re))
-            hval = 0
-            hmat_l = []
+            if fn:
+                s = np.dot(cov_re_inv, ref.T) if hess else np.linalg.solve(cov_re, ref.T)
+                f += -(ref.T * s).sum() / 2
+                f += const
+            elif grad:
+                s = np.linalg.solve(cov_re, ref.T)
 
             # Build up values group by group
-            for k, g in enumerate(self.group_labels):
+            for k in range(self.n_groups):
 
-                # The groups' contribution to the log-likelihood
+                #Commonly needed terms. Always need to calculate.
                 exog_re = self.exog_re_li[k]
                 lin_predr = lin_pred[k] + np.dot(exog_re, ref[k, :])
                 mean = self.family.fitted(lin_predr)
-                #TODO: delete_me
-                self.family.delete_me = False
-                f += self.family.loglike(self.endog_li[k], mean,
-                                                scale=scale)
+
+                # The groups' contribution to the log-likelihood
+                if fn:
+
+                    #TODO: delete_me. This is a hack because of broken Gaussian loglike.
+                    self.family.delete_me = False
+                    f += self.family.loglike(self.endog_li[k], mean, scale=scale)
 
                 # The groups' contribution to the gradient of the log-likelihood
-                endog_less_mu = (self.endog_li[k] - mean)[:, None]
-                var_mean = self.family.variance(mean)
+                if grad:
 
-                canon_deriv = endog_less_mu * exog_re * scale
+                    resid = (self.endog_li[k] - mean)[:, None]
+                    canon_deriv = resid * exog_re * scale
 
-                if not self._canonical:
-                    deriv_link_inv = self.family.link.inverse_deriv(lin_predr)
-                    non_canon_ratio = deriv_link_inv / var_mean
-                    d[k, :] = np.dot(non_canon_ratio,canon_deriv)
-                else:
-                    d[k, :] = canon_deriv.sum(0)
-
-                d[k, :] -= s[:, k]
+                    if not self._canonical:
+                        var_mean = self.family.variance(mean)
+                        deriv_link_inv = self.family.link.inverse_deriv(lin_predr)
+                        d[k, :] = np.dot(deriv_link_inv / var_mean, canon_deriv) - s[:, k]
+                    else:
+                        d[k, :] = canon_deriv.sum(0) - s[:, k]
 
                 # The group's contribution to the log-det of the hessian of the log-likelihood
                 # Hess is the sum of a 'factor' by the outer products of the exog_re
                 # we compute that factor here. In canon case it is -var
-                if not self._canonical:
-                    deriv2_link_inv = self.family.link.inverse_deriv2(lin_predr)
-                    deriv_var_mean = self.family.variance.deriv(mean)
+                if hess:
 
-                    part1 = (endog_less_mu.T)[0] * deriv2_link_inv
-                    part2 = deriv_link_inv**2 * (1+(endog_less_mu.T)[0]*(deriv_var_mean / var_mean))
+                    if not self._canonical:
 
-                    factor = (part1 - part2) / var_mean * scale
-                else:
-                    factor = - var_mean * scale
+                        if not grad:
+                            resid = (self.endog_li[k] - mean)[:, None]
+                            deriv_link_inv = self.family.link.inverse_deriv(lin_predr)
+                            var_mean = self.family.variance(mean)
 
-                factor_by_outer = [factor[i]*np.outer(exog_re[i],exog_re[i]) for i in range(len(exog_re))]
+                        deriv2_link_inv = self.family.link.inverse_deriv2(lin_predr)
+                        deriv_var_mean = self.family.variance.deriv(mean)
 
-                hmat = np.sum(factor_by_outer,0)
-                hmat -= cov_re_inv # Contribution of the r.e.'s density
+                        part1 = (resid.T)[0] * deriv2_link_inv
+                        part2 = deriv_link_inv**2 * (1+(resid.T)[0]*(deriv_var_mean / var_mean))
 
-                hval += np.linalg.slogdet(hmat)[1]
+                        factor = (part1 - part2) / var_mean * scale
+                    else:
+                        factor = - self.family.variance(mean) * scale
+
+                    hmat = (exog_re[:,:,np.newaxis] * (exog_re*factor[:,np.newaxis])[:,np.newaxis,:]).sum(0)
+                    hmat -= cov_re_inv # Contribution of the r.e.'s density
+                    hval += np.linalg.slogdet(hmat)[1]
 
             # We need negatives because scipy.optimize can only
             # find minima not maxima. We don't change the hess value
             # because we need the abs. value of it anyways.
-            if logdet_hess:
-                return -f, -d.ravel(), hval
-            else:
-                return -f, -d.ravel(), hmat
+            return -f, -d.ravel(), hval
 
         return fun
 
+    
     def _get_map(self, fe_params, cov_re, scale, omethod):
         """
         Obtain the MAP predictor of the random effects.
@@ -954,30 +996,40 @@ class MixedGLM(base.LikelihoodModel):
         array-like, 1d
             The MAP predictor of the random effects.
         """
+        x0 = self.prev_start
 
-        restarts_allowed = max(100, 10 * self.n_groups * self.k_re)
+        TOL = 1E-5
+        GTOL = 1E-5
 
-        for _ in range(restarts_allowed):
+        d = self.n_groups * self.k_re
+        iters_allowed = 10000 * d
+        restarts_allowed = d
 
-            fun_grad_hess = self._gen_joint_like_grad_hess(fe_params, cov_re, scale)
+        opts = {'gtol': GTOL, 'maxiter': iters_allowed}
+
+        for _ in range(1,restarts_allowed):
+
+            fun_grad_hess = self._gen_joint_like_grad_hess(fe_params, cov_re, scale, hess = False)
             def fun(x): return fun_grad_hess(x)[0:2]
 
-            # Random starting guess
-            x0 = np.random.normal(size = self.n_groups * self.k_re)
+            result = minimize(fun, x0, jac=True, tol=TOL, options= opts)
 
-            attempts_allowed = 1000 * x0.size
-            opts = {'gtol': 1e-3, 'maxiter': attempts_allowed}
-            result = minimize(fun, x0, jac=True, tol=1e-3, options= opts)
+            def func(x): return fun_grad_hess(x)[0]
 
             if result.success:
                 break
 
+            x0 = np.random.normal(size = d)
+
         if not result.success:
             raise RuntimeError("Failed Laplace too many times.")
 
+        self.prev_start = result.x
         mp = np.reshape(result.x, (self.n_groups, self.k_re))
-        return mp
 
+        return result.fun, mp
+
+    
     def fit(self, start_params=None, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
             full_output=False, method='nm', **kwargs):
@@ -987,20 +1039,23 @@ class MixedGLM(base.LikelihoodModel):
         if start_params is None:
             self.k_re2 = self.k_re * (self.k_re + 1) // 2
             self.k_tot = self.k_fe + self.k_re2
-            start_params = np.random.uniform(size=self.k_tot)
 
-        try:
-            rslt = super(MixedGLM, self).fit(start_params=start_params,
-                                            skip_hessian=True, method=method,
-                                            maxfun=1000, maxiter=1000,
-                                            **kwargs)
-        except RuntimeError:
-            start_params = np.random.uniform(size=len(start_params))
-            rslt = super(MixedGLM, self).fit(start_params=start_params,
-                                            skip_hessian=True, method=method,
-                                            maxfun=1000, maxiter=1000,
-                                            **kwargs)
+        run = 0
+        max_run = 10 * self.k_tot**2
+        keep_running = True
 
+        while keep_running:
+            try:
+                run += 1
+                start_params = np.random.uniform(size=self.k_tot)
+                rslt = super(MixedGLM, self).fit(start_params=start_params,
+                                                skip_hessian=True, method=method,
+                                                maxfun=10000, maxiter=10000,
+                                               **kwargs)
+                keep_running = False
+            except RuntimeError:
+                if run > max_run:
+                    raise
 
         params = MixedGLMParams.from_packed(rslt.params, self.k_fe,
                                             use_sqrt=self.use_sqrt)
