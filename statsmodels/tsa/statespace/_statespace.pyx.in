@@ -1811,7 +1811,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised
-        error_variance = np.asfortranarray(np.eye(k_endog) * (order + k_endog)**10)
+        error_variance = np.asfortranarray(np.eye(k_endog, dtype={{dtype}}) * (order + k_endog)**10)
 
     # Initialize matrices
     dim2[0] = k_endog; dim2[1] = k_endog;
@@ -2091,7 +2091,7 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
     tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
     eye = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
-    eye = np.asfortranarray(np.eye(k_endog))
+    eye = np.asfortranarray(np.eye(k_endog, dtype={{dtype}}))
     for i in range(order):
         {{prefix}}copy(&k_endog2, &eye[0, 0], &inc, &tmp[0, 0], &inc)
         {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
