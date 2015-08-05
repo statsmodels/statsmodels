@@ -51,9 +51,15 @@ class CheckVAR(object):
         self.results = self.model.filter(true['params'], cov_type=cov_type)
 
     def test_mle(self):
-        results = self.model.fit(method='powell', disp=-1)
-        results = self.model.fit(results.params, disp=False)
-        assert_allclose(results.llf, self.results.llf, rtol=1e-4)
+        # Fit with all transformations
+        # results = self.model.fit(method='powell', disp=-1)
+        results = self.model.fit(maxiter=100, disp=False)
+        # Fit now without transformations
+        self.model.enforce_stationarity = False
+        self.model.enforce_invertibility = False
+        results = self.model.fit(results.params, method='nm', maxiter=1000,
+                                 disp=False)
+        assert_allclose(results.llf, self.results.llf)
 
     def test_loglike(self):
         assert_allclose(self.results.llf, self.true['loglike'], rtol=1e-6)
@@ -136,10 +142,3 @@ class TestVAR2(CheckVAR):
         # Exclude the covariance cholesky terms
         assert_allclose(
             self.results.bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
-
-    def test_mle(self):
-        # Found maximum needs lower tolerance here than other tests
-        results = self.model.fit(method='powell', disp=-1)
-        results = self.model.fit(results.params, disp=False)
-        assert_allclose(results.llf, self.results.llf, rtol=1e-3)
-
