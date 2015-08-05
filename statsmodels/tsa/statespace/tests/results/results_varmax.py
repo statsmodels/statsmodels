@@ -95,3 +95,27 @@ lutkepohl_ar1_obs_intercept = {
     'aic': -1101.634,
     'bic': -1073.824
 }
+
+lutkepohl_ar2 = {
+    'params': [
+        -.25244981, .62528114,  # Phi_1, row 1
+        -.13011679, .58173748,  # Phi_1, row 2
+        .05369178,  .35716349,  # Phi_2, row 1
+        .03861472,  .43812606,  # Phi_2, row 2
+        # .00197786,              # Covariance, lower triangle
+        # .00008091,  .00018269
+        0.04447314,             # Covariance cholesky, lower triangle
+        0.0018193, 0.01339329
+    ],
+    'var_oim': [
+        .01315844, .11805816,  # Phi_1, row 1
+        .01321036, .11300702,  # Phi_1, row 2
+        .00122666, .01064478,  # Phi_2, row 1
+        .0012571,  .0106738,   # Phi_2, row 2
+        1.048e-07,             # Covariance, lower triangle
+        4.994e-09, 8.940e-10
+    ],
+    'loglike': 343.3149718445623,
+    'aic': -664.6299,
+    'bic': -639.1376
+}

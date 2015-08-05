@@ -45,4 +45,19 @@ predict dyn_predict_int1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_int2, dynamic(tq(1961q1)) equation(dln_inc)
 predict dyn_predict_int3, dynamic(tq(1961q1)) equation(dln_consump)
 
+
+// VAR(2)
+dfactor (dln_inv dln_inc = , ar(1/2) arstructure(general) noconstant covstructure(unstructured)) if qtr<=tq(1978q4)
+estat ic
+
+// predict + forecast, see above
+predict predict_var2_1, dynamic(tq(1979q1)) equation(dln_inv)
+predict predict_var2_2, dynamic(tq(1979q1)) equation(dln_inc)
+
+// predict + dynamic predict + forecast, see above
+predict dyn_predict_var2_1, dynamic(tq(1961q1)) equation(dln_inv)
+predict dyn_predict_var2_2, dynamic(tq(1961q1)) equation(dln_inc)
+
+
 outsheet pred* dyn* using results_varmax_stata.csv, comma replace
+

@@ -31,6 +31,7 @@ class CheckVAR(object):
     """
     
     def __init__(self, true, order, trend, error_cov_type, cov_type='oim',
+                 included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
                  **kwargs):
         self.true = true
         # 1960:Q1 - 1982:Q4
@@ -42,8 +43,7 @@ class CheckVAR(object):
         dta['dln_inc'] = np.log(dta['inc']).diff()
         dta['dln_consump'] = np.log(dta['consump']).diff()
 
-        endog = dta.ix['1960-04-01':'1978-10-01',
-                       ['dln_inv', 'dln_inc', 'dln_consump']]
+        endog = dta.ix['1960-04-01':'1978-10-01', included_vars]
 
         self.model = varmax.VARMAX(endog, order=order, trend=trend,
                                    error_cov_type=error_cov_type, **kwargs)
@@ -93,6 +93,7 @@ class TestVAR(CheckVAR):
             true,  order=(1,0), trend='nc',
             error_cov_type="unstructured")
 
+
 class TestVAR_diagonal(CheckVAR):
     def __init__(self):
         true = results_varmax.lutkepohl_ar1_diag.copy()
@@ -101,6 +102,7 @@ class TestVAR_diagonal(CheckVAR):
         super(TestVAR_diagonal, self).__init__(
             true,  order=(1,0), trend='nc',
             error_cov_type="diagonal")
+
 
 class TestVAR_obs_intercept(CheckVAR):
     def __init__(self):
@@ -120,3 +122,24 @@ class TestVAR_obs_intercept(CheckVAR):
         # Since the obs_intercept is added in in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
+
+class TestVAR2(CheckVAR):
+    def __init__(self):
+        true = results_varmax.lutkepohl_ar2.copy()
+        true['predict'] = output_results.ix[1:, ['predict_var2_1', 'predict_var2_2']]
+        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_var2_1', 'dyn_predict_var2_2']]
+        super(TestVAR2, self).__init__(
+            true, order=(2,0), trend='nc', error_cov_type='unstructured',
+            included_vars=['dln_inv', 'dln_inc'])
+
+    def test_bse_oim(self):
+        # Exclude the covariance cholesky terms
+        assert_allclose(
+            self.results.bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
+
+    def test_mle(self):
+        # Found maximum needs lower tolerance here than other tests
+        results = self.model.fit(method='powell', disp=-1)
+        results = self.model.fit(results.params, disp=False)
+        assert_allclose(results.llf, self.results.llf, rtol=1e-3)
+
