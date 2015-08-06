@@ -213,11 +213,11 @@ def test_multivariate_acovf():
 class TestConstrainStationaryMultivariate(object):
 
     cases = [
-        ([np.array([[2.]])], [np.array([[2./((1+2.**2)**0.5)]])])
+        (np.array([[2.]]), np.array([[2./((1+2.**2)**0.5)]]))
     ]
 
     def test_cases(self):
         for unconstrained, constrained in self.cases:
             result = tools.constrain_stationary_multivariate(
-                unconstrained, np.eye(len(unconstrained[0])))
+                unconstrained, np.eye(unconstrained.shape[0]))
             assert_allclose(result[0], constrained)

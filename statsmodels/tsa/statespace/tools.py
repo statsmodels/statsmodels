@@ -10,11 +10,11 @@ import numpy as np
 from statsmodels.tools.data import _is_using_pandas
 from . import _statespace
 
-old_scipy_compat = False
+has_find_best_blas_type = True
 try:
     from scipy.linalg.blas import find_best_blas_type
 except ImportError:  # pragma: no cover
-    old_scipy_compat = True
+    has_find_best_blas_type = False
     # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
     _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
 
@@ -23,6 +23,12 @@ except ImportError:  # pragma: no cover
             [(ar.dtype, i) for i, ar in enumerate(arrays)])
         prefix = _type_conv.get(dtype.char, 'd')
         return prefix, dtype, None
+
+has_trmm = True
+try:
+    from scipy.linalg.blas import dtrmm
+except ImportError:
+    has_trmm = False
 
 
 prefix_dtype_map = {
@@ -36,18 +42,19 @@ prefix_kalman_filter_map = {
     's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
     'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
 }
-prefix_pacf_map = {
-    's': _statespace._scompute_coefficients_from_multivariate_pacf,
-    'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
-    'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
-    'z': _statespace._zcompute_coefficients_from_multivariate_pacf
-}
-prefix_sv_map = {
-    's': _statespace._sconstrain_sv_less_than_one,
-    'd': _statespace._dconstrain_sv_less_than_one,
-    'c': _statespace._cconstrain_sv_less_than_one,
-    'z': _statespace._zconstrain_sv_less_than_one
-}
+if has_trmm:
+    prefix_pacf_map = {
+        's': _statespace._scompute_coefficients_from_multivariate_pacf,
+        'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
+        'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
+        'z': _statespace._zcompute_coefficients_from_multivariate_pacf
+    }
+    prefix_sv_map = {
+        's': _statespace._sconstrain_sv_less_than_one,
+        'd': _statespace._dconstrain_sv_less_than_one,
+        'c': _statespace._cconstrain_sv_less_than_one,
+        'z': _statespace._zconstrain_sv_less_than_one
+    }
 
 
 def companion_matrix(polynomial):
@@ -399,8 +406,8 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
 
 
 def _compute_coefficients_from_multivariate_pacf_python(
-    partial_autocorrelations, error_variance, order, k_endog,
-    transform_variance=False):
+        partial_autocorrelations, error_variance, order, k_endog,
+        transform_variance=False):
     """
     Transform matrices with singular values less than one to matrices
     corresponding to a stationary (or invertible) process.
@@ -463,7 +470,8 @@ def _compute_coefficients_from_multivariate_pacf_python(
         forwards[:, s*k_endog:(s+1)*k_endog] = np.dot(
             forward_factors,
             linalg.solve_triangular(
-                backward_factors, partial_autocorrelations[:, s*k_endog:(s+1)*k_endog].T,
+                backward_factors,
+                partial_autocorrelations[:, s*k_endog:(s+1)*k_endog].T,
                 lower=True, trans='T').T
         )
 
@@ -473,7 +481,8 @@ def _compute_coefficients_from_multivariate_pacf_python(
         backwards[:, s*k_endog:(s+1)*k_endog] = np.dot(
             backward_factors,
             linalg.solve_triangular(
-                forward_factors, partial_autocorrelations[:, s*k_endog:(s+1)*k_endog],
+                forward_factors,
+                partial_autocorrelations[:, s*k_endog:(s+1)*k_endog],
                 lower=True, trans='T').T
         )
 
@@ -512,7 +521,8 @@ def _compute_coefficients_from_multivariate_pacf_python(
         backward_variance = (
             backward_variance -
             np.dot(
-                np.dot(backwards[:, s*k_endog:(s+1)*k_endog], forward_variance),
+                np.dot(
+                    backwards[:, s*k_endog:(s+1)*k_endog], forward_variance),
                 backwards[:, s*k_endog:(s+1)*k_endog].T
             )
         )
@@ -523,7 +533,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
 
         # Cholesky factors
         forward_factors = linalg.cholesky(forward_variance, lower=True)
-        backward_factors =  linalg.cholesky(backward_variance, lower=True)
+        backward_factors = linalg.cholesky(backward_variance, lower=True)
 
     # If we do not want to use the transformed variance, we need to
     # adjust the constrained matrices, as presented in Lemma 2.3, see above
@@ -544,15 +554,16 @@ def _compute_coefficients_from_multivariate_pacf_python(
 
         for s in range(order):
             forwards[:, s*k_endog:(s+1)*k_endog] = (
-                np.dot(np.dot(transform, forwards[:, s*k_endog:(s+1)*k_endog]), inv_transform)
-            )
+                np.dot(
+                    np.dot(transform, forwards[:, s*k_endog:(s+1)*k_endog]),
+                    inv_transform))
 
     return forwards, variance
 
 
 def _compute_coefficients_from_multivariate_pacf_python2(
-    partial_autocorrelations, error_variance, order=None, k_endog=None,
-    transform_variance=False):
+        partial_autocorrelations, error_variance, order=None, k_endog=None,
+        transform_variance=False):
     """
     Transform matrices with singular values less than one to matrices
     corresponding to a stationary (or invertible) process.
@@ -691,56 +702,6 @@ def _compute_coefficients_from_multivariate_pacf_python2(
     return forwards, variance
 
 
-if not old_scipy_compat:
-
-    def constrain_stationary_multivariate(unconstrained, variance,
-                                          transform_variance=False,
-                                          prefix=None):
-
-        use_list = type(unconstrained) == list
-        if use_list:
-            unconstrained = np.concatenate(unconstrained, axis=1)
-        
-        unconstrained = np.asfortranarray(unconstrained)
-        variance = np.asfortranarray(variance)
-
-        k_endog, order = unconstrained.shape
-        order //= k_endog
-
-        if prefix is None:
-            prefix, dtype, _ = find_best_blas_type(
-                [unconstrained, variance])
-
-        # Step 1: convert from arbitrary matrices to those with singular values
-        # less than one.
-        # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
-        #                                              k_endog, prefix)
-        sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
-
-        # Step 2: convert matrices from our "partial autocorrelation matrix" space
-        # (matrices with singular values less than one) to the space of stationary
-        # coefficient matrices
-        constrained, variance = prefix_pacf_map[prefix](
-            sv_constrained, variance, order, k_endog, transform_variance)
-
-        constrained = np.array(constrained)
-        variance = np.array(variance)
-
-        if use_list:
-            constrained = [
-                constrained[:k_endog, i*k_endog:(i+1)*k_endog]
-                for i in range(order)
-            ]
-
-        return constrained, variance
-
-else:
-    _compute_coefficients_from_multivariate_pacf = (
-        _compute_coefficients_from_multivariate_pacf_python)
-    _constrain_sv_less_than_one = _constrain_sv_less_than_one_python
-    constrain_stationary_multivariate = constrain_stationary_multivariate_python
-
-
 def constrain_stationary_multivariate_python(unconstrained, variance,
                                              transform_variance=False,
                                              prefix=None):
@@ -824,7 +785,8 @@ def constrain_stationary_multivariate_python(unconstrained, variance,
         sv_constrained, variance, order, k_endog, transform_variance)
 
     if not use_list:
-        constrained = np.concatenate(constrained, axis=1)
+        constrained = np.concatenate(constrained, axis=1).reshape(
+            k_endog, k_endog * order)
 
     return constrained, variance
 
@@ -909,7 +871,7 @@ def _compute_multivariate_acovf_from_coefficients(coefficients, error_variance,
 
 
 def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
-                                                order=None, k_endog=None):
+                                                 order=None, k_endog=None):
     """
     Transform matrices corresponding to a stationary (or invertible) process
     to matrices with singular values less than one.
@@ -938,7 +900,8 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     # E z_t z_{t-j}'
     # However, we want E z_t z_{t+j}' = (E z_t z_{t-j}')'
     _acovf = _compute_multivariate_acovf_from_coefficients
-    autocovariances = [autocovariance.T for autocovariance in
+    autocovariances = [
+        autocovariance.T for autocovariance in
         _acovf(constrained, error_variance, order, k_endog, maxlag=order)]
 
     # Now apply the Ansley and Kohn (1986) algorithm, except that instead of
@@ -1002,7 +965,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
             linalg.cholesky(backward_variances[s], lower=True)
         )
 
-        if False and s == order-1:
+        if s == order-1:
             forwards = constrained
         else:
             # Create the intermediate sum term
@@ -1063,6 +1026,57 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     return partial_autocorrelations
 
 
+if has_trmm:
+
+    def constrain_stationary_multivariate(unconstrained, variance,
+                                          transform_variance=False,
+                                          prefix=None):
+
+        use_list = type(unconstrained) == list
+        if use_list:
+            unconstrained = np.concatenate(unconstrained, axis=1)
+
+        unconstrained = np.asfortranarray(unconstrained)
+        variance = np.asfortranarray(variance)
+
+        k_endog, order = unconstrained.shape
+        order //= k_endog
+
+        if prefix is None:
+            prefix, dtype, _ = find_best_blas_type(
+                [unconstrained, variance])
+
+        # Step 1: convert from arbitrary matrices to those with singular values
+        # less than one.
+        # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
+        #                                              k_endog, prefix)
+        sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
+
+        # Step 2: convert matrices from our "partial autocorrelation matrix"
+        # space (matrices with singular values less than one) to the space of
+        # stationary coefficient matrices
+        constrained, variance = prefix_pacf_map[prefix](
+            sv_constrained, variance, order, k_endog, transform_variance)
+
+        constrained = np.array(constrained)
+        variance = np.array(variance)
+
+        if use_list:
+            constrained = [
+                constrained[:k_endog, i*k_endog:(i+1)*k_endog]
+                for i in range(order)
+            ]
+
+        return constrained, variance
+
+else:
+    _compute_coefficients_from_multivariate_pacf = (
+        _compute_coefficients_from_multivariate_pacf_python)
+    _constrain_sv_less_than_one = _constrain_sv_less_than_one_python
+    constrain_stationary_multivariate = (
+        constrain_stationary_multivariate_python)
+
+
 def unconstrain_stationary_multivariate(constrained, error_variance,
                                         transform_variance=False):
     """
@@ -1091,7 +1105,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance,
     Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
-    
+
     from scipy import linalg
 
     use_list = type(constrained) == list
@@ -1115,7 +1129,8 @@ def unconstrain_stationary_multivariate(constrained, error_variance,
 
     # Step 2: convert from arbitrary matrices to those with singular values
     # less than one.
-    unconstrained = _unconstrain_sv_less_than_one(partial_autocorrelations, order, k_endog)
+    unconstrained = _unconstrain_sv_less_than_one(
+        partial_autocorrelations, order, k_endog)
 
     if not use_list:
         unconstrained = np.concatenate(unconstrained, axis=1)

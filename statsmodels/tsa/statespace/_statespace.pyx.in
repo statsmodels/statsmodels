@@ -17,7 +17,7 @@ TYPES = {
     "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
 }
 
-BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "scal", "trmm", "symm"]
+BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "scal"]
 LAPACK_FUNCTIONS = ["getrf", "getri", "getrs", "potrf", "potri", "potrs", "trtrs"]
 
 }}
@@ -1797,6 +1797,8 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         {{cython_type}} * prev_forwards
         {{cython_type}} * backwards
         {{cython_type}} * prev_backwards
+    # ?trmm
+    cdef {{prefix}}trmm_t *{{prefix}}trmm = <{{prefix}}trmm_t*>Capsule_AsVoidPtr(blas.{{prefix}}trmm._cpointer)
     
     # dim2[0] = self.k_endog; dim2[1] = storage;
     # self.forecast = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
