@@ -409,7 +409,7 @@ class GLMGAMResults(GLMResults):
 
         return tr, p_val, rank
 
-
+# TODO: once pirls_version2 is complete this function can be removed.
 def get_sqrt(x):
      """
      :param x:
@@ -546,12 +546,8 @@ class GLMGam(PenalizedMixin, GLM):
                         - self._offset_exposure)
 
             # this defines the augmented matrix point 2a on page 136
-            aug_wlsendog, aug_wlsexog, aug_weights = make_augmented_matrix(wlsexog, wlsendog,
-                                                                           spl_s, self.weights, alpha)
-
-            wls_results = lm.WLS(aug_wlsendog, aug_wlsexog, aug_weights).fit()
-
-            lin_pred = np.dot(spl_x, wls_results.params.T).ravel() + self._offset_exposure
+            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights, alpha)
+            lin_pred = np.dot(spl_x, wls_results.params).ravel() + self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
             history = self._update_history(wls_results, mu, history)
@@ -572,11 +568,21 @@ class GLMGam(PenalizedMixin, GLM):
                                  cov_type=cov_type, cov_kwds=cov_kwds,
                                  use_t=use_t)
 
-        glm_results.method = "IRLS"
+        glm_results.method = "PIRLS"
         history['iteration'] = iteration + 1
         glm_results.fit_history = history
         glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
+
+
+def penalized_wls(wlsexog, wlsendog, spl_s, weights, alpha):
+
+    aug_wlsendog, aug_wlsexog, aug_weights = make_augmented_matrix(wlsexog, wlsendog,
+                                                                   spl_s, weights, alpha)
+    wls_results = lm.WLS(aug_wlsendog, aug_wlsexog, aug_weights).fit()
+    wls_results.params = wls_results.params.ravel()
+
+    return wls_results
 
 
 def make_augmented_matrix(x, y, s, w, alpha):
@@ -587,7 +593,7 @@ def make_augmented_matrix(x, y, s, w, alpha):
     if alpha == 0:
         rs = np.zeros(shape=(n_columns, n_columns))
     else:
-        rs = sp.linalg.sqrtm(alpha_s)
+        rs = sp.linalg.cholesky(alpha_s)
 
     x1 = np.vstack([x, rs])  # augmented x
     n_samp1es_x1 = x1.shape[0]

@@ -11,7 +11,8 @@ from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make
                                                            UnivariateBSplines, BSplines, UnivariateGenericSmoother,
                                                            GenericSmoothers, CubicSplines)
 from statsmodels.sandbox.gam_gsoc2015.gam import (UnivariateGamPenalty, GLMGam,
-                                                  MultivariateGamPenalty, LogitGam, make_augmented_matrix, get_sqrt)
+                                                  MultivariateGamPenalty, LogitGam, make_augmented_matrix, get_sqrt,
+                                                  penalized_wls)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
                                                                                         UnivariateGamCVPath,
                                                                                         MultivariateGAMCV,
@@ -26,6 +27,7 @@ from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
 import scipy as sp
+from statsmodels.genmod.generalized_linear_model import lm
 
 
 sigmoid = np.vectorize(lambda x: 1.0/ (1.0 + np.exp(-x)))
@@ -605,8 +607,8 @@ def test_make_augmented_matrix():
 
     alpha = 1
     aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w, alpha)
-    rs = sp.linalg.sqrtm(alpha * s)
-    assert_allclose(np.dot(rs,rs.T), alpha*s)
+    rs = sp.linalg.cholesky(alpha * s)
+    assert_allclose(np.dot(rs.T, rs), alpha*s)
     x1 = np.vstack([x, rs])  # augmented x
     expected_aug_x = np.vstack([x, rs])
     assert_allclose(aug_x, expected_aug_x)
@@ -618,6 +620,25 @@ def test_make_augmented_matrix():
 
     return
 
+
+def test_penalized_wls():
+
+    n = 20
+    p = 3
+    x = np.random.normal(0, 1, (n, 3))
+    y = x[:, 1] - x[:, 2] + np.random.normal(0, .1, n)
+    y -= y.mean()
+
+    weights = np.ones(shape=(n,)) / n
+    s = np.random.normal(0, 1, (p, p))
+
+    pen_wls_res = penalized_wls(x, y, s, weights, alpha=0)
+
+    ls_res = lm.OLS(y, x).fit()
+
+    assert_allclose(ls_res.params, pen_wls_res.params) # TODO: is this test right?
+
+    return
 
 #
 # test_gam_hessian()
@@ -638,4 +659,5 @@ def test_make_augmented_matrix():
 #test_multivariate_gam_cv_path()
 
 # test_train_test_smoothers()
-test_make_augmented_matrix()
+# test_make_augmented_matrix()
+# test_penalized_wls()

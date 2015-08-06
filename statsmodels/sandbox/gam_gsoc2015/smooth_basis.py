@@ -545,8 +545,12 @@ class CubicCyclicSplines():
         """
         h = knots[1:] - knots[:-1]
         n = knots.size - 1
-        b = np.zeros((n, n))
-        d = np.zeros((n, n))
+
+        # b and d are defined such that the penalty matrix is equivalent to:
+        # s = d.T.dot(b^-1).dot(d)
+        # reference in particular to pag 146 of Wood's book
+        b = np.zeros((n, n)) # the b matrix on page 146 of Wood's book
+        d = np.zeros((n, n)) # the d matrix on page 146 of Wood's book
 
         b[0, 0] = (h[n - 1] + h[0]) / 3.
         b[0, n - 1] = h[n - 1] / 6.
