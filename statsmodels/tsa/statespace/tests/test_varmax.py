@@ -22,7 +22,6 @@ output_path = 'results' + os.sep + 'results_varmax_stata.csv'
 output_results = pd.read_csv(current_path + os.sep + output_path)
 
 
-
 class CheckVAR(object):
     """
     Test Vector Autoregression against Stata's `dfactor` code (Stata's
@@ -59,7 +58,7 @@ class CheckVAR(object):
         self.model.enforce_invertibility = False
         results = self.model.fit(results.params, method='nm', maxiter=1000,
                                  disp=False)
-        assert_allclose(results.llf, self.results.llf)
+        assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     def test_loglike(self):
         assert_allclose(self.results.llf, self.true['loglike'], rtol=1e-6)
@@ -142,3 +141,4 @@ class TestVAR2(CheckVAR):
         # Exclude the covariance cholesky terms
         assert_allclose(
             self.results.bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
+
