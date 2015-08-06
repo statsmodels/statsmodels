@@ -514,3 +514,55 @@ class CubicSplines():
             for j, x2 in enumerate(self.knots):
                 self.s[i+2, j+2] = self._rk(x1, x2)
         return
+
+# TODO: this class is not tested yet
+from patsy.mgcv_cubic_splines import _get_all_sorted_knots
+
+
+class CubicCyclicSplines():
+
+    def __init__(self, x, df=10):
+        self.df = df
+        self.xs = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
+
+        n_inner_knots = df - 2 + 1 # +n_constraints # TODO: from CubicSplines class
+
+        all_knots = _get_all_sorted_knots(x, n_inner_knots=n_inner_knots, inner_knots=None,
+                                          lower_bound=None, upper_bound=None)
+        b, d = self._get_cyclic_f(all_knots)
+        self.s = d.T.dot(np.linalg.inv(b)).dot(d)
+        return
+
+    def _get_b_and_d(self, knots):
+        """Returns mapping of cyclic cubic spline values to 2nd derivatives.
+
+        .. note:: See 'Generalized Additive Models', Simon N. Wood, 2006, pp 146-147
+
+        :param knots: The 1-d array knots used for cubic spline parametrization,
+         must be sorted in ascending order.
+        :return: A 2-d array mapping cyclic cubic spline values at
+         knots to second derivatives.
+        """
+        h = knots[1:] - knots[:-1]
+        n = knots.size - 1
+        b = np.zeros((n, n))
+        d = np.zeros((n, n))
+
+        b[0, 0] = (h[n - 1] + h[0]) / 3.
+        b[0, n - 1] = h[n - 1] / 6.
+        b[n - 1, 0] = h[n - 1] / 6.
+
+        d[0, 0] = -1. / h[0] - 1. / h[n - 1]
+        d[0, n - 1] = 1. / h[n - 1]
+        d[n - 1, 0] = 1. / h[n - 1]
+
+        for i in range(1, n):
+            b[i, i] = (h[i - 1] + h[i]) / 3.
+            b[i, i - 1] = h[i - 1] / 6.
+            b[i - 1, i] = h[i - 1] / 6.
+
+            d[i, i] = -1. / h[i - 1] - 1. / h[i]
+            d[i, i - 1] = 1. / h[i - 1]
+            d[i - 1, i] = 1. / h[i - 1]
+
+        return b, d

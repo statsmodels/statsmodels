@@ -9,8 +9,9 @@ import os
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make_bsplines_basis,
                                                            UnivariatePolynomialSmoother, PolynomialSmoother,
                                                            UnivariateBSplines, BSplines, UnivariateGenericSmoother,
-                                                           GenericSmoothers)
-from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, GLMGam, MultivariateGamPenalty, LogitGam
+                                                           GenericSmoothers, CubicSplines)
+from statsmodels.sandbox.gam_gsoc2015.gam import (UnivariateGamPenalty, GLMGam,
+                                                  MultivariateGamPenalty, LogitGam, make_augmented_matrix, get_sqrt)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
                                                                                         UnivariateGamCVPath,
                                                                                         MultivariateGAMCV,
@@ -24,6 +25,7 @@ from numpy.linalg import norm
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
+import scipy as sp
 
 
 sigmoid = np.vectorize(lambda x: 1.0/ (1.0 + np.exp(-x)))
@@ -581,6 +583,42 @@ def test_train_test_smoothers():
 
     return
 
+
+def test_make_augmented_matrix():
+
+    n = 500
+    x = np.random.uniform(-1, 1, (n, 3))
+    s = np.dot(x.T, x)
+    y = np.array(list(range(n)))
+    w = np.random.uniform(0, 1, n)
+    n_samples, n_columns = x.shape
+
+    alpha = 0
+    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w, alpha)
+    expected_aug_x = np.vstack([x, np.zeros(shape=(n_columns, n_columns))])
+    assert_allclose(aug_x, expected_aug_x)
+    expected_aug_y = np.zeros(shape=(n_samples + n_columns, ))
+    expected_aug_y[:n_samples] = y
+    assert_allclose(aug_y, expected_aug_y)
+    expected_aug_w = np.array([np.sqrt(i) for i in w] + [1] * n_columns)
+    assert_allclose(aug_w, expected_aug_w)
+
+    alpha = 1
+    aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w, alpha)
+    rs = sp.linalg.sqrtm(alpha * s)
+    assert_allclose(np.dot(rs,rs.T), alpha*s)
+    x1 = np.vstack([x, rs])  # augmented x
+    expected_aug_x = np.vstack([x, rs])
+    assert_allclose(aug_x, expected_aug_x)
+    expected_aug_y = np.zeros(shape=(n_samples + n_columns, ))
+    expected_aug_y[:n_samples] = y
+    assert_allclose(aug_y, expected_aug_y)
+    expected_aug_w = np.array([np.sqrt(i) for i in w] + [1] * n_columns)
+    assert_allclose(aug_w, expected_aug_w)
+
+    return
+
+
 #
 # test_gam_hessian()
 # test_gam_gradient()
@@ -600,3 +638,4 @@ def test_train_test_smoothers():
 #test_multivariate_gam_cv_path()
 
 # test_train_test_smoothers()
+test_make_augmented_matrix()

@@ -193,18 +193,18 @@ cs = CubicSplines(x, 10).fit()
 dummy_smoother = PolynomialSmoother(x, [2])
 gp = MultivariateGamPenalty(dummy_smoother, alphas=[0])
 #
-# for i, alpha in enumerate([0, 1, 5, 10]):
-#
-#     gam = GLMGam(y, cs.xs, penal=gp)
-#     gam_res = gam._fit_pirls(y=y, spl_x=cs.xs, spl_s=cs.s, alpha=alpha)
-#     y_est = gam_res.predict(cs.xs)
-#
-#     plt.subplot(2, 2, i+1)
-#     plt.plot(x, y, '.')
-#     plt.plot(x, y_est, '.')
-#     plt.title('alpha=' + str(alpha))
-#
-# plt.show()
+for i, alpha in enumerate([0, 1, 5, 10]):
+
+    gam = GLMGam(y, cs.xs, penal=gp)
+    gam_res = gam._fit_pirls(y=y, spl_x=cs.xs, spl_s=cs.s, alpha=alpha)
+    y_est = gam_res.predict(cs.xs)
+
+    plt.subplot(2, 2, i+1)
+    plt.plot(x, y, '.')
+    plt.plot(x, y_est, '.')
+    plt.title('alpha=' + str(alpha))
+
+plt.show()
 #
 
 # Multivariate GAM PIRLS
@@ -227,7 +227,7 @@ gam = GLMGam(y, cs.xs, penal=gp)
 i = 0
 for alpha in [0, 1, 2]:
 
-    gam_results = gam._fit_pirls(Y, spl_X, spl_S, alpha=[alpha]*2)
+    gam_results = gam._fit_pirls_version2(Y, spl_X, spl_S, alpha=[alpha]*2)
     y1_est = np.dot(cs.xs, gam_results.params[:n_var1])
     y2_est = np.dot(cs2.xs, gam_results.params[n_var1:])
 

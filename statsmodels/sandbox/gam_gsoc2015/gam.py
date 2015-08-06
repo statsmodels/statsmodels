@@ -9,7 +9,8 @@ import scipy as sp
 from scipy.linalg import block_diag
 from statsmodels.discrete.discrete_model import Logit
 from scipy.stats import chi2
-from statsmodels.genmod.generalized_linear_model import GLM, GLMResults, GLMResultsWrapper, lm
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults, GLMResultsWrapper, lm, _check_convergence
+from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 
 ## this class will be later removed and taken from another push
@@ -465,14 +466,19 @@ class GLMGam(PenalizedMixin, GLM):
         old_norm = 1
         iteration = 0
         for iteration in range(maxiter):
+
+            print('iteration=, ', iteration)
+
             if np.abs(new_norm - old_norm) < tol:
                 break
 
             lin_pred = np.dot(x1, params)[:n_samples]
+
             self.mu = self.family.fitted(lin_pred)
             z = np.zeros(shape=(n_samp1es_x1,))
             z[:n_samples] = (y - self.mu) / self.mu + lin_pred # TODO: review this and the following line
-            wls_results = lm.WLS(z, x1, self.weights).fit() # TODO: should weights be used?
+            wls_results = lm.OLS(z, x1).fit() # TODO: should weights be used?
+            #wls_results = lm.WLS(z, x1, self.weights).fit() # TODO: should weights be used?
             lin_pred = np.dot(spl_x, wls_results.params)
 
             new_mu = self.family.fitted(lin_pred)
@@ -493,3 +499,104 @@ class GLMGam(PenalizedMixin, GLM):
         glm_results.fit_history = history
         glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
+
+    # pag 165 4.3 # pag 136 PIRLS
+    def _fit_pirls_version2(self, y, spl_x, spl_s, alpha, start_params=None, maxiter=100, tol=1e-8,
+                            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
+
+        endog = y
+        wlsexog = spl_x
+
+        n_samples, n_columns = wlsexog.shape
+
+        # TODO what are these values?
+        self.data_weights = weights
+        self._offset_exposure = np.array([.1] * n_samples)
+        self.scaletype = 'dev'
+
+
+        if start_params is None:
+            mu = self.family.starting_mu(endog)
+            lin_pred = self.family.predict(mu)
+        else:
+            lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
+            mu = self.family.fitted(lin_pred)
+        dev = self.family.deviance(endog, mu)
+
+        history = dict(params=[None, start_params], deviance=[np.inf, dev])
+        converged = False
+        criterion = history['deviance']
+        # This special case is used to get the likelihood for a specific
+        # params vector.
+        if maxiter == 0:
+            mu = self.family.fitted(lin_pred)
+            self.scale = self.estimate_scale(mu)
+            wls_results = lm.RegressionResults(self, start_params, None)
+            iteration = 0
+
+
+        for iteration in range(maxiter):
+            print('iteration =', iteration)
+
+            # TODO: is this equivalent to point 1 of page 136: w = 1 / (V(mu) * g'(mu))  ?
+            self.weights = self.data_weights * self.family.weights(mu)
+
+            #TODO: is this equivalent to point 1 of page 136:  z = g(mu)(y - mu) + X beta  ?
+            wlsendog = (lin_pred + self.family.link.deriv(mu) * (endog-mu)
+                        - self._offset_exposure)
+
+            # this defines the augmented matrix point 2a on page 136
+            aug_wlsendog, aug_wlsexog, aug_weights = make_augmented_matrix(wlsexog, wlsendog,
+                                                                           spl_s, self.weights, alpha)
+
+            wls_results = lm.WLS(aug_wlsendog, aug_wlsexog, aug_weights).fit()
+
+            lin_pred = np.dot(spl_x, wls_results.params.T).ravel() + self._offset_exposure
+            mu = self.family.fitted(lin_pred)
+
+            history = self._update_history(wls_results, mu, history)
+
+            self.scale = self.estimate_scale(mu)
+            if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
+                msg = "Perfect separation detected, results not available"
+                raise PerfectSeparationError(msg)
+            converged = _check_convergence(criterion, iteration, tol)
+            if converged:
+                print('Converged!')
+                break
+        self.mu = mu
+
+        glm_results = GLMResults(self, wls_results.params,
+                                 wls_results.normalized_cov_params,
+                                 self.scale,
+                                 cov_type=cov_type, cov_kwds=cov_kwds,
+                                 use_t=use_t)
+
+        glm_results.method = "IRLS"
+        history['iteration'] = iteration + 1
+        glm_results.fit_history = history
+        glm_results.converged = converged
+        return GLMResultsWrapper(glm_results)
+
+
+def make_augmented_matrix(x, y, s, w, alpha):
+
+    n_samples, n_columns = x.shape
+    alpha_s = alpha * s
+
+    if alpha == 0:
+        rs = np.zeros(shape=(n_columns, n_columns))
+    else:
+        rs = sp.linalg.sqrtm(alpha_s)
+
+    x1 = np.vstack([x, rs])  # augmented x
+    n_samp1es_x1 = x1.shape[0]
+
+    y1 = np.array([0] * n_samp1es_x1)  # augmented y
+    y1[:n_samples] = y
+
+    id1 = np.array([1] * n_columns)
+    w1 = np.concatenate([w, id1])
+    w1 = np.sqrt(w1)
+
+    return x1, y1, w1

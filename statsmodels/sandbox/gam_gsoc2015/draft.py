@@ -1,33 +1,33 @@
-from statsmodels.sandbox.gam_gsoc2015.gam import GLMGam
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
-import os
-cur_dir = os.path.dirname(os.path.abspath('__file__'))
-file_path = os.path.join(cur_dir, "tests/results", "gam_PIRLS_results.csv")
-data = pd.read_csv(file_path)
+from statsmodels.sandbox.gam_gsoc2015.gam import MultivariateGamPenalty, GLMGam
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines, PolynomialSmoother
 
-print('Univariate GAM ')
-X = data['x'].as_matrix()
-Y = data['y'].as_matrix()
+n = 500
+x = np.random.uniform(-1, 1, n)
 
-XK = np.array([0.2, .4, .6, .8])
+y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
+
+y -= y.mean()
+cs = CubicSplines(x, 10).fit()
+
+# required only to initialize the gam. they have no influence on the result.
+dummy_smoother = PolynomialSmoother(x, [2])
+gp = MultivariateGamPenalty(dummy_smoother, alphas=[0])
+#
+
+gam = GLMGam(y, cs.xs, penal=gp)
+
+start_params = np.ones(shape=(cs.xs.shape[1],))
+weights = np.array([0.5] * n)
+gam_res = gam._fit_pirls_version2(y=y, spl_x=cs.xs, spl_s=cs.s, alpha=0, start_params=start_params, weights=weights)
+
+print(cs.xs.shape, gam_res.params.shape)
+y_est = np.dot(cs.xs, gam_res.params.T)
 
 
-cs = CubicSplines(X, 4).fit()
+plt.plot(x, y, '.')
+plt.plot(x, y_est, '.')
 
-print(cs.x.shape, cs.xs.shape, cs.s.shape)
-
-
-
-for i, alpha in enumerate([0, .1, 10, 200]):
-
-    gam = GLMGam(Y, X, penal=0)
-    gam_results = gam._fit_pirls(Y, cs.xs, cs.s, alpha)
-    Y_EST = np.dot(cs.xs, gam_results.params)
-    plt.subplot(2, 2, i+1)
-    plt.title('Alpha=' + str(alpha))
-    plt.plot(X, Y, '.')
-    plt.plot(X, Y_EST, '.')
 plt.show()
+#
