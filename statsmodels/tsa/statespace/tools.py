@@ -704,7 +704,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
 
 # Conditionally use the Cython versions of the multivariate constraint if
 # possible (i.e. if Scipy >= 0.14.0 is available.)
-if False and has_trmm:
+if has_trmm:
 
     def constrain_stationary_multivariate(unconstrained, variance,
                                           transform_variance=False,
