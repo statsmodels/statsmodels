@@ -629,14 +629,13 @@ def test_penalized_wls():
     y = x[:, 1] - x[:, 2] + np.random.normal(0, .1, n)
     y -= y.mean()
 
-    weights = np.ones(shape=(n,)) / n
+    weights = np.ones(shape=(n,))
     s = np.random.normal(0, 1, (p, p))
 
     pen_wls_res = penalized_wls(x, y, s, weights, alpha=0)
-
     ls_res = lm.OLS(y, x).fit()
 
-    assert_allclose(ls_res.params, pen_wls_res.params) # TODO: is this test right?
+    assert_allclose(ls_res.params, pen_wls_res.params)
 
     return
 
@@ -656,8 +655,7 @@ def test_penalized_wls():
 # test_multivariate_gam_1d_data()
 # test_univariate_gam_cv_kfolds()
 # test_multivariate_gam_cv()
-#test_multivariate_gam_cv_path()
-
+# test_multivariate_gam_cv_path()
 # test_train_test_smoothers()
 # test_make_augmented_matrix()
-# test_penalized_wls()
+test_penalized_wls()

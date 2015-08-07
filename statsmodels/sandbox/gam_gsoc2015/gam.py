@@ -510,7 +510,11 @@ class GLMGam(PenalizedMixin, GLM):
         n_samples, n_columns = wlsexog.shape
 
         # TODO what are these values?
-        self.data_weights = weights
+        if weights is None:
+            self.data_weights = np.array([1.] * n_samples)
+        else:
+            self.data_weights = weights
+
         self._offset_exposure = np.array([.1] * n_samples)
         self.scaletype = 'dev'
 
@@ -533,7 +537,6 @@ class GLMGam(PenalizedMixin, GLM):
             self.scale = self.estimate_scale(mu)
             wls_results = lm.RegressionResults(self, start_params, None)
             iteration = 0
-
 
         for iteration in range(maxiter):
             print('iteration =', iteration)
@@ -575,11 +578,11 @@ class GLMGam(PenalizedMixin, GLM):
         return GLMResultsWrapper(glm_results)
 
 
-def penalized_wls(wlsexog, wlsendog, spl_s, weights, alpha):
+def penalized_wls(x, y, s, weights, alpha):
 
-    aug_wlsendog, aug_wlsexog, aug_weights = make_augmented_matrix(wlsexog, wlsendog,
-                                                                   spl_s, weights, alpha)
-    wls_results = lm.WLS(aug_wlsendog, aug_wlsexog, aug_weights).fit()
+    aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, s, weights, alpha)
+    wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
+
     wls_results.params = wls_results.params.ravel()
 
     return wls_results
@@ -590,18 +593,20 @@ def make_augmented_matrix(x, y, s, w, alpha):
     n_samples, n_columns = x.shape
     alpha_s = alpha * s
 
+    print('in make augmented eig s =', np.linalg.eigvals(s))
+
     if alpha == 0:
         rs = np.zeros(shape=(n_columns, n_columns))
     else:
         rs = sp.linalg.cholesky(alpha_s)
 
-    x1 = np.vstack([x, rs])  # augmented x
+    x1 = np.vstack([x, rs]) # augmented x
     n_samp1es_x1 = x1.shape[0]
 
-    y1 = np.array([0] * n_samp1es_x1)  # augmented y
+    y1 = np.array([0.] * n_samp1es_x1)  # augmented y
     y1[:n_samples] = y
 
-    id1 = np.array([1] * n_columns)
+    id1 = np.array([1.] * n_columns)
     w1 = np.concatenate([w, id1])
     w1 = np.sqrt(w1)
 

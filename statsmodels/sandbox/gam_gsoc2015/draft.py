@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from statsmodels.sandbox.gam_gsoc2015.gam import MultivariateGamPenalty, GLMGam
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines, PolynomialSmoother
+from statsmodels.sandbox.gam_gsoc2015.gam import MultivariateGamPenalty, GLMGam, UnivariateGamPenalty
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (CubicSplines, PolynomialSmoother,
+                                                           UnivariatePolynomialSmoother, UnivariateBSplines)
 
 n = 500
 x = np.random.uniform(-1, 1, n)
@@ -9,25 +10,20 @@ x = np.random.uniform(-1, 1, n)
 y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
 
 y -= y.mean()
-cs = CubicSplines(x, 10).fit()
 
 # required only to initialize the gam. they have no influence on the result.
-dummy_smoother = PolynomialSmoother(x, [2])
-gp = MultivariateGamPenalty(dummy_smoother, alphas=[0])
-#
+poly = UnivariateBSplines(x, df=10, degree=4)
+gp = UnivariateGamPenalty(poly, alpha=0)
+gam = GLMGam(y, poly.basis_, penal=gp)
 
-gam = GLMGam(y, cs.xs, penal=gp)
+for i, alpha in enumerate([0, .1, .2, .4]):
+    gam_res = gam._fit_pirls_version2(y=y, spl_x=poly.basis_, spl_s=poly.cov_der2_, alpha=alpha)
 
-start_params = np.ones(shape=(cs.xs.shape[1],))
-weights = np.array([0.5] * n)
-gam_res = gam._fit_pirls_version2(y=y, spl_x=cs.xs, spl_s=cs.s, alpha=0, start_params=start_params, weights=weights)
+    y_est = np.dot(poly.basis_, gam_res.params.T)
 
-print(cs.xs.shape, gam_res.params.shape)
-y_est = np.dot(cs.xs, gam_res.params.T)
-
-
-plt.plot(x, y, '.')
-plt.plot(x, y_est, '.')
+    plt.subplot(2, 2, i+1)
+    plt.plot(x, y, '.')
+    plt.plot(x, y_est, '.')
 
 plt.show()
 
