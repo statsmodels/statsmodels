@@ -46,11 +46,7 @@ class CheckStaticFactor(object):
         self.results = self.model.filter(true['params'], cov_type=cov_type)
 
     def test_mle(self):
-        # Fit with all transformations
-        # results = self.model.fit(method='powell', disp=-1)
         results = self.model.fit(maxiter=100, disp=False)
-        # Fit now without transformations
-        self.model.enforce_stationarity = False
         results = self.model.fit(results.params, method='nm', maxiter=1000,
                                  disp=False)
         assert_allclose(results.llf, self.results.llf, rtol=1e-5)
