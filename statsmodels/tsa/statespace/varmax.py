@@ -61,11 +61,11 @@ class VARMAX(MLEModel):
         `KalmanFilter` for more details.
     """
 
-    def __init__(self, endog, exog=None, order=(1,0), trend='c',
+    def __init__(self, endog, exog=None, order=(1, 0), trend='c',
                  error_cov_type='unstructured', measurement_error=False,
                  enforce_stationarity=True, enforce_invertibility=True,
                  **kwargs):
-        
+
         # Model parameters
         self.error_cov_type = error_cov_type
         self.measurement_error = measurement_error
@@ -82,7 +82,7 @@ class VARMAX(MLEModel):
         self.k_trend = int(self.trend == 'c')
 
         # Check for valid model
-        if trend not in ['c','nc']:
+        if trend not in ['c', 'nc']:
             raise ValueError('Invalid trend specification.')
         if error_cov_type not in ['diagonal', 'unstructured']:
             raise ValueError('Invalid error covariance matrix type'
@@ -212,7 +212,7 @@ class VARMAX(MLEModel):
             param_slice = np.s_[offset:offset + length]
             offset += length
             return param_slice, offset
-        
+
         offset = 0
         self._params_trend, offset = _slice('trend', offset)
         self._params_ar, offset = _slice('ar', offset)
@@ -249,8 +249,8 @@ class VARMAX(MLEModel):
             res_ar = mod_ar.fit(maxlags=self.k_ar, ic=None, trend=self.trend)
             ar_params = np.array(res_ar.params.T)
             if self.trend == 'c':
-                trend_params = ar_params[:,0]
-                ar_params = ar_params[:,1:].ravel()
+                trend_params = ar_params[:, 0]
+                ar_params = ar_params[:, 1:].ravel()
             else:
                 ar_params = ar_params.ravel()
             endog = res_ar.resid
@@ -375,17 +375,15 @@ class VARMAX(MLEModel):
             if self.error_cov_type == 'diagonal':
                 state_cov = np.diag(unconstrained[self._params_state_cov]**2)
             elif self.error_cov_type == 'unstructured':
-                state_cov_lower = np.zeros(self.ssm['state_cov'].shape, dtype=unconstrained.dtype)
-                state_cov_lower[self._idx_lower_state_cov] = unconstrained[self._params_state_cov]
+                state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+                                           dtype=unconstrained.dtype)
+                state_cov_lower[self._idx_lower_state_cov] = (
+                    unconstrained[self._params_state_cov])
                 state_cov = np.dot(state_cov_lower, state_cov_lower.T)
 
             # Transform the parameters
-            # coefficients = unconstrained[self._params_ar].reshape(self.k_endog, self.k_endog * self.k_ar)
-            # unconstrained_matrices = [coefficients[:,i*self.k_endog:(i+1)*self.k_endog] for i in range(self.k_ar)]
-            # coefficient_matrices, variance = (
-            #     constrain_stationary_multivariate(unconstrained_matrices, state_cov))
-            # constrained[self._params_ar] = np.concatenate(coefficient_matrices, axis=1).ravel()
-            coefficients = unconstrained[self._params_ar].reshape(self.k_endog, self.k_endog * self.k_ar)
+            coefficients = unconstrained[self._params_ar].reshape(
+                self.k_endog, self.k_endog * self.k_ar)
             coefficient_matrices, variance = (
                 constrain_stationary_multivariate(coefficients, state_cov))
             constrained[self._params_ar] = coefficient_matrices.ravel()
@@ -395,15 +393,11 @@ class VARMAX(MLEModel):
         # 3. MA terms: optionally force to be invertible
         if self.k_ma > 0 and self.enforce_invertibility:
             # Transform the parameters, using an identity variance matrix
-            # coefficients = unconstrained[self._params_ma].reshape(self.k_endog, self.k_endog * self.k_ma)
-            # unconstrained_matrices = [coefficients[:,i*self.k_endog:(i+1)*self.k_endog] for i in range(self.k_ma)]
-            # # TODO cache this np.eye call
-            # coefficient_matrices, variance = (
-            #     constrain_stationary_multivariate(unconstrained_matrices, np.eye(self.k_endog, dtype=constrained.dtype)))
-            # constrained[self._params_ma] = np.concatenate(coefficient_matrices, axis=1).ravel()
-            coefficients = unconstrained[self._params_ma].reshape(self.k_endog, self.k_endog * self.k_ma)
+            state_cov = np.eye(self.k_endog, dtype=constrained.dtype)
+            coefficients = unconstrained[self._params_ma].reshape(
+                self.k_endog, self.k_endog * self.k_ma)
             coefficient_matrices, variance = (
-                constrain_stationary_multivariate(coefficients, np.eye(self.k_endog, dtype=constrained.dtype)))
+                constrain_stationary_multivariate(coefficients, state_cov))
             constrained[self._params_ma] = coefficient_matrices.ravel()
         else:
             constrained[self._params_ma] = unconstrained[self._params_ma]
@@ -458,17 +452,15 @@ class VARMAX(MLEModel):
             if self.error_cov_type == 'diagonal':
                 state_cov = np.diag(constrained[self._params_state_cov]**2)
             elif self.error_cov_type == 'unstructured':
-                state_cov_lower = np.zeros(self.ssm['state_cov'].shape, dtype=constrained.dtype)
-                state_cov_lower[self._idx_lower_state_cov] = constrained[self._params_state_cov]
+                state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+                                           dtype=constrained.dtype)
+                state_cov_lower[self._idx_lower_state_cov] = (
+                    constrained[self._params_state_cov])
                 state_cov = np.dot(state_cov_lower, state_cov_lower.T)
 
             # Transform the parameters
-            # coefficients = constrained[self._params_ar].reshape(self.k_endog, self.k_endog * self.k_ar)
-            # coefficient_matrices = [coefficients[:,i*self.k_endog:(i+1)*self.k_endog] for i in range(self.k_ar)]
-            # unconstrained_matrices, variance = (
-            #     unconstrain_stationary_multivariate(coefficient_matrices, state_cov))
-            # unconstrained[self._params_ar] = np.concatenate(unconstrained_matrices, axis=1).ravel()
-            coefficients = constrained[self._params_ar].reshape(self.k_endog, self.k_endog * self.k_ar)
+            coefficients = constrained[self._params_ar].reshape(
+                self.k_endog, self.k_endog * self.k_ar)
             unconstrained_matrices, variance = (
                 unconstrain_stationary_multivariate(coefficients, state_cov))
             unconstrained[self._params_ar] = unconstrained_matrices.ravel()
@@ -478,14 +470,11 @@ class VARMAX(MLEModel):
         # 3. MA terms: optionally were forced to be invertible
         if self.k_ma > 0 and self.enforce_invertibility:
             # Transform the parameters, using an identity variance matrix
-            # coefficients = constrained[self._params_ma].reshape(self.k_endog, self.k_endog * self.k_ma)
-            # coefficient_matrices = [coefficients[:,i*self.k_endog:(i+1)*self.k_endog] for i in range(self.k_ma)]
-            # unconstrained_matrices, variance = (
-            #     unconstrain_stationary_multivariate(coefficient_matrices, np.eye(self.k_endog, dtype=constrained.dtype)))
-            # unconstrained[self._params_ma] = np.concatenate(unconstrained_matrices, axis=1).ravel()
-            coefficients = constrained[self._params_ma].reshape(self.k_endog, self.k_endog * self.k_ma)
+            state_cov = np.eye(self.k_endog, dtype=constrained.dtype)
+            coefficients = constrained[self._params_ma].reshape(
+                self.k_endog, self.k_endog * self.k_ma)
             unconstrained_matrices, variance = (
-                unconstrain_stationary_multivariate(coefficients, np.eye(self.k_endog, dtype=constrained.dtype)))
+                unconstrain_stationary_multivariate(coefficients, state_cov))
             unconstrained[self._params_ma] = unconstrained_matrices.ravel()
         else:
             unconstrained[self._params_ma] = constrained[self._params_ma]
@@ -517,7 +506,8 @@ class VARMAX(MLEModel):
 
         # 1. State intercept
         if self.mle_regression:
-            exog_params = params[self._params_regression].reshape(self.k_exog, self.k_endog)
+            exog_params = params[self._params_regression].reshape(
+                self.k_exog, self.k_endog)
             intercept = np.dot(self.exog, exog_params)
             if self.trend == 'c':
                 intercept += params[self._params_trend]
@@ -526,8 +516,10 @@ class VARMAX(MLEModel):
             self.ssm[self._idx_state_intercept] = params[self._params_trend]
 
         # 2. Transition
-        ar = params[self._params_ar].reshape(self.k_endog, self.k_endog * self.k_ar)
-        ma = params[self._params_ma].reshape(self.k_endog, self.k_endog * self.k_ma)
+        ar = params[self._params_ar].reshape(
+            self.k_endog, self.k_endog * self.k_ar)
+        ma = params[self._params_ma].reshape(
+            self.k_endog, self.k_endog * self.k_ma)
         self.ssm[self._idx_transition] = np.c_[ar, ma]
 
         # 3. State covariance
@@ -536,8 +528,10 @@ class VARMAX(MLEModel):
                 params[self._params_state_cov]
             )
         elif self.error_cov_type == 'unstructured':
-            state_cov_lower = np.zeros(self.ssm['state_cov'].shape, dtype=params.dtype)
-            state_cov_lower[self._idx_lower_state_cov] = params[self._params_state_cov]
+            state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+                                       dtype=params.dtype)
+            state_cov_lower[self._idx_lower_state_cov] = (
+                params[self._params_state_cov])
             self.ssm['state_cov'] = np.dot(state_cov_lower, state_cov_lower.T)
 
         # 4. Observation covariance

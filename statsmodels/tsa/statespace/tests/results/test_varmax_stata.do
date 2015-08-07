@@ -58,6 +58,5 @@ predict predict_var2_2, dynamic(tq(1979q1)) equation(dln_inc)
 predict dyn_predict_var2_1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_var2_2, dynamic(tq(1961q1)) equation(dln_inc)
 
-
 outsheet pred* dyn* using results_varmax_stata.csv, comma replace
 

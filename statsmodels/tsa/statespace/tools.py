@@ -726,7 +726,7 @@ if False and has_trmm:
             prefix, dtype, _ = find_best_blas_type(
                 [unconstrained, variance])
         dtype = prefix_dtype_map[prefix]
-        
+
         unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
         variance = np.asfortranarray(variance, dtype=dtype)
 
@@ -845,7 +845,7 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
     if endog.ndim == 1:
         endog = endog[:, np.newaxis]
     endog -= np.mean(endog, axis=0)
-    
+
     # Dimensions
     nobs, k_endog = endog.shape
 
@@ -967,6 +967,7 @@ def _compute_multivariate_acovf_from_coefficients(
 
     return autocovariances
 
+
 def _compute_multivariate_sample_pacf(endog, maxlag):
     """
     Computer multivariate sample partial autocorrelations
@@ -990,6 +991,7 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
 
     return _compute_multivariate_pacf_from_autocovariances(
         sample_autocovariances)
+
 
 def _compute_multivariate_pacf_from_autocovariances(autocovariances,
                                                     order=None, k_endog=None):
@@ -1149,6 +1151,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
 
     return partial_autocorrelations
 
+
 def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
                                                  order=None, k_endog=None):
     """
@@ -1197,7 +1200,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     else:
         k_endog, order = constrained.shape
         order //= k_endog
-    
+
     # Get autocovariances for the process; these are defined to be
     # E z_t z_{t-j}'
     # However, we want E z_t z_{t+j}' = (E z_t z_{t-j}')'

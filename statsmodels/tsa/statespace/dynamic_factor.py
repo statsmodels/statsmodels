@@ -66,7 +66,7 @@ class StaticFactors(MLEModel):
 
     We assume that :math:`\varepsilon_{it} \sim N(0, \sigma_{\varepsilon_i}^2)`
     and :math:`\eta_t \sim N(0, I)`
-    
+
     References
     ----------
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
@@ -124,7 +124,7 @@ class StaticFactors(MLEModel):
             param_slice = np.s_[offset:offset + length]
             offset += length
             return param_slice, offset
-        
+
         offset = 0
         self._params_loadings, offset = _slice('factor_loadings', offset)
         self._params_idiosyncratic, offset = _slice('idiosyncratic', offset)
@@ -156,7 +156,7 @@ class StaticFactors(MLEModel):
             X = lagmat(res_pca.factors, self.factor_order, trim='both')
             params_ar = np.linalg.pinv(X).dot(Y)
             resid = Y - np.dot(X, params_ar)
-            params[self._params_transition] = params_ar[:,0]
+            params[self._params_transition] = params_ar[:, 0]
 
         return params
 
@@ -220,13 +220,17 @@ class StaticFactors(MLEModel):
         # VAR transition: optionally force to be stationary
         if self.enforce_stationarity:
             # Transform the parameters
-            coefficients = unconstrained[self._params_transition].reshape(self.k_factors, self.k_factors * self.factor_order)
-            unconstrained_matrices = [coefficients[:,i*self.k_factors:(i+1)*self.k_factors] for i in range(self.factor_order)]
+            unconstrained_matrices = (
+                unconstrained[self._params_transition].reshape(
+                    self.k_factors, self.k_factors * self.factor_order))
             coefficient_matrices, variance = (
-                constrain_stationary_multivariate(unconstrained_matrices, self.ssm['state_cov']))
-            constrained[self._params_transition] = np.concatenate(coefficient_matrices, axis=1).ravel()
+                constrain_stationary_multivariate(unconstrained_matrices,
+                                                  self.ssm['state_cov']))
+            constrained[self._params_transition] = (
+                coefficient_matrices.ravel())
         else:
-            constrained[self._params_transition] = unconstrained[self._params_transition]
+            constrained[self._params_transition] = (
+                unconstrained[self._params_transition])
 
         return constrained
 
@@ -259,13 +263,16 @@ class StaticFactors(MLEModel):
 
         # VAR transition: optionally were forced to be stationary
         if self.enforce_stationarity:
-            coefficients = constrained[self._params_transition].reshape(self.k_factors, self.k_factors * self.factor_order)
-            coefficient_matrices = [coefficients[:,i*self.k_factors:(i+1)*self.k_factors] for i in range(self.factor_order)]
+            coefficients = constrained[self._params_transition].reshape(
+                self.k_factors, self.k_factors * self.factor_order)
             unconstrained_matrices, variance = (
-                unconstrain_stationary_multivariate(coefficient_matrices, self.ssm['state_cov']))
-            unconstrained[self._params_transition] = np.concatenate(unconstrained_matrices, axis=1).ravel()
+                unconstrain_stationary_multivariate(coefficients,
+                                                    self.ssm['state_cov']))
+            unconstrained[self._params_transition] = (
+                unconstrained_matrices.ravel())
         else:
-            unconstrained[self._params_transition] = constrained[self._params_transition]
+            unconstrained[self._params_transition] = (
+                constrained[self._params_transition])
 
         return unconstrained
 
@@ -330,4 +337,6 @@ class StaticFactors(MLEModel):
         self.ssm[self._idx_obs_cov] = params[self._params_idiosyncratic]
 
         # Update the transition matrix
-        self.ssm[self._idx_transition] = params[self._params_transition].reshape(self.k_factors, self.k_factors * self.factor_order)
+        self.ssm[self._idx_transition] = (
+            params[self._params_transition].reshape(
+                self.k_factors, self.k_factors * self.factor_order))
