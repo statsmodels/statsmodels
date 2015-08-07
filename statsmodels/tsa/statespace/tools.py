@@ -325,11 +325,10 @@ def constrain_stationary_univariate(unconstrained):
 
     References
     ----------
-
-    Monahan, John F. 1984.
-    "A Note on Enforcing Stationarity in
-    Autoregressive-moving Average Models."
-    Biometrika 71 (2) (August 1): 403-404.
+    .. [1] Monahan, John F. 1984.
+       "A Note on Enforcing Stationarity in
+       Autoregressive-moving Average Models."
+       Biometrika 71 (2) (August 1): 403-404.
     """
 
     n = unconstrained.shape[0]
@@ -363,11 +362,10 @@ def unconstrain_stationary_univariate(constrained):
 
     References
     ----------
-
-    Monahan, John F. 1984.
-    "A Note on Enforcing Stationarity in
-    Autoregressive-moving Average Models."
-    Biometrika 71 (2) (August 1): 403-404.
+    .. [1] Monahan, John F. 1984.
+       "A Note on Enforcing Stationarity in
+       Autoregressive-moving Average Models."
+       Biometrika 71 (2) (August 1): 403-404.
     """
     n = constrained.shape[0]
     y = np.zeros((n, n), dtype=constrained.dtype)
@@ -386,9 +384,33 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
     Transform arbitrary matrices to matrices with singular values less than
     one.
 
+    Parameters
+    ----------
+    unconstrained : list
+        Arbitrary matrices. Should be a list of length `order`, where each
+        element is an array sized `k_endog` x `k_endog`.
+    order : integer, optional
+        The order of the autoregression.
+    k_endog : integer, optional
+        The dimension of the data vector.
+
+    Returns
+    -------
+    constrained : list
+        Partial autocorrelation matrices. Should be a list of length
+        `order`, where each element is an array sized `k_endog` x `k_endog`.
+
+    Notes
+    -----
     Corresponds to Lemma 2.2 in Ansley and Kohn (1986). See
     `constrain_stationary_multivariate` for more details.
+
+    There is a Cython implementation of this function that can be much faster,
+    but which requires SciPy 0.14.0 or greater. See
+    `constrain_stationary_multivariate` for details.
+
     """
+
     from scipy import linalg
 
     constrained = []  # P_s,  s = 1, ..., p
@@ -406,170 +428,46 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
 
 
 def _compute_coefficients_from_multivariate_pacf_python(
-        partial_autocorrelations, error_variance, order, k_endog,
-        transform_variance=False):
+        partial_autocorrelations, error_variance, transform_variance=False,
+        order=None, k_endog=None):
     """
     Transform matrices with singular values less than one to matrices
     corresponding to a stationary (or invertible) process.
 
+    Parameters
+    ----------
+    partial_autocorrelations : list
+        Partial autocorrelation matrices. Should be a list of length `order`,
+        where each element is an array sized `k_endog` x `k_endog`.
+    error_variance : array
+        The variance / covariance matrix of the error term. Should be sized
+        `k_endog` x `k_endog`. This is used as input in the algorithm even if
+        is not transformed by it (when `transform_variance` is False). The
+        error term variance is required input when transformation is used
+        either to force an autoregressive component to be stationary or to
+        force a moving average component to be invertible.
+    transform_variance : boolean, optional
+        Whether or not to transform the error variance term. This option is
+        not typically used, and the default is False.
+    order : integer, optional
+        The order of the autoregression.
+    k_endog : integer, optional
+        The dimension of the data vector.
+
+    Returns
+    -------
+    coefficient_matrices : list
+        Transformed coefficient matrices leading to a stationary VAR
+        representation.
+
+    Notes
+    -----
     Corresponds to Lemma 2.1 in Ansley and Kohn (1986). See
     `constrain_stationary_multivariate` for more details.
-    """
-    from scipy import linalg
 
-    partial_autocorrelations = np.concatenate(partial_autocorrelations, axis=1)
-
-    # If we want to keep the provided variance but with the constrained
-    # coefficient matrices, we need to make a copy here, and then after the
-    # main loop we will transform the coefficients to match the passed variance
-    if not transform_variance:
-        initial_variance = error_variance
-        # Need to make the input variance large enough that the recursions
-        # don't lead to zero-matrices due to roundoff error, which would case
-        # exceptions from the Cholesky decompositions.
-        # Note that this will still not always ensure positive definiteness,
-        # and for k_endog, order large enough an exception may still be raised
-        error_variance = np.eye(k_endog) * (order + k_endog)**10
-
-    forward_variance = error_variance   # \Sigma_s
-    backward_variance = error_variance  # \Sigma_s^*,  s = 0, ..., p
-    autocovariances = np.zeros((k_endog, k_endog * (order+1)))     # \Gamma_s
-    autocovariances[:, :k_endog] = error_variance
-    # \phi_{s,k}, s = 1, ..., p
-    #             k = 1, ..., s+1
-    forwards = np.zeros((k_endog, k_endog * order))
-    prev_forwards = np.zeros((k_endog, k_endog * order))
-    # \phi_{s,k}^*
-    backwards = np.zeros((k_endog, k_endog * order))
-    prev_backwards = np.zeros((k_endog, k_endog * order))
-
-    error_variance_factor = linalg.cholesky(error_variance, lower=True)
-
-    forward_factors = error_variance_factor
-    backward_factors = error_variance_factor
-
-    tmp = np.zeros((k_endog, k_endog))
-
-    # We fill in the entries as follows:
-    # [1,1]
-    # [2,2], [2,1]
-    # [3,3], [3,1], [3,2]
-    # ...
-    # [p,p], [p,1], ..., [p,p-1]
-    # the last row, correctly ordered, is then used as the coefficients
-    for s in range(order):  # s = 0, ..., p-1
-        prev_forwards = forwards.copy()
-        prev_backwards = backwards.copy()
-
-        # Create the "last" (k = s+1) matrix
-        # Note: this is for k = s+1. However, below we then have to fill
-        # in for k = 1, ..., s in order.
-        # P L*^{-1} = x
-        # x L* = P
-        # L*' x' = P'
-        forwards[:, s*k_endog:(s+1)*k_endog] = np.dot(
-            forward_factors,
-            linalg.solve_triangular(
-                backward_factors,
-                partial_autocorrelations[:, s*k_endog:(s+1)*k_endog].T,
-                lower=True, trans='T').T
-        )
-
-        # P' L^{-1} = x
-        # x L = P'
-        # L' x' = P
-        backwards[:, s*k_endog:(s+1)*k_endog] = np.dot(
-            backward_factors,
-            linalg.solve_triangular(
-                forward_factors,
-                partial_autocorrelations[:, s*k_endog:(s+1)*k_endog],
-                lower=True, trans='T').T
-        )
-
-        # Update the variance
-        # Note: if s >= 1, this will be further updated in the for loop
-        # below
-        # Also, this calculation will be re-used in the forward variance
-        tmp = np.dot(forwards[:, s*k_endog:(s+1)*k_endog], backward_variance)
-        autocovariances[:, (s+1)*k_endog:(s+2)*k_endog] = tmp.copy().T
-
-        # Create the remaining k = 1, ..., s matrices,
-        # only has an effect if s >= 1
-        for k in range(s):
-            forwards[:, k*k_endog:(k+1)*k_endog] = (
-                prev_forwards[:, k*k_endog:(k+1)*k_endog] -
-                np.dot(
-                    forwards[:, s*k_endog:(s+1)*k_endog],
-                    prev_backwards[:, (s-k-1)*k_endog:(s-k)*k_endog]
-                )
-            )
-
-            backwards[:, k*k_endog:(k+1)*k_endog] = (
-                prev_backwards[:, k*k_endog:(k+1)*k_endog] -
-                np.dot(
-                    backwards[:, s*k_endog:(s+1)*k_endog],
-                    prev_forwards[:, (s-k-1)*k_endog:(s-k)*k_endog]
-                )
-            )
-
-            autocovariances[:, (s+1)*k_endog:(s+2)*k_endog] += np.dot(
-                autocovariances[:, (k+1)*k_endog:(k+2)*k_endog],
-                prev_forwards[:, (s-k-1)*k_endog:(s-k)*k_endog].T
-            )
-
-        # Create forward and backwards variances
-        backward_variance = (
-            backward_variance -
-            np.dot(
-                np.dot(
-                    backwards[:, s*k_endog:(s+1)*k_endog], forward_variance),
-                backwards[:, s*k_endog:(s+1)*k_endog].T
-            )
-        )
-        forward_variance = (
-            forward_variance -
-            np.dot(tmp, forwards[:, s*k_endog:(s+1)*k_endog].T)
-        )
-
-        # Cholesky factors
-        forward_factors = linalg.cholesky(forward_variance, lower=True)
-        backward_factors = linalg.cholesky(backward_variance, lower=True)
-
-    # If we do not want to use the transformed variance, we need to
-    # adjust the constrained matrices, as presented in Lemma 2.3, see above
-    variance = forward_variance
-    if not transform_variance:
-        # Here, we need to construct T such that:
-        # variance = T * initial_variance * T'
-        # To do that, consider the Cholesky of variance (L) and
-        # input_variance (M) to get:
-        # L L' = T M M' T' = (TM) (TM)'
-        # => L = T M
-        # => L M^{-1} = T
-        initial_variance_factor = np.linalg.cholesky(initial_variance)
-        transformed_variance_factor = np.linalg.cholesky(variance)
-        transform = np.dot(initial_variance_factor,
-                           np.linalg.inv(transformed_variance_factor))
-        inv_transform = np.linalg.inv(transform)
-
-        for s in range(order):
-            forwards[:, s*k_endog:(s+1)*k_endog] = (
-                np.dot(
-                    np.dot(transform, forwards[:, s*k_endog:(s+1)*k_endog]),
-                    inv_transform))
-
-    return forwards, variance
-
-
-def _compute_coefficients_from_multivariate_pacf_python2(
-        partial_autocorrelations, error_variance, order=None, k_endog=None,
-        transform_variance=False):
-    """
-    Transform matrices with singular values less than one to matrices
-    corresponding to a stationary (or invertible) process.
-
-    Corresponds to Lemma 2.1 in Ansley and Kohn (1986). See
-    `constrain_stationary_multivariate` for more details.
+    There is a Cython implementation of this function that can be much faster,
+    but which requires SciPy 0.14.0 or greater. See
+    `constrain_stationary_multivariate` for details.
     """
     from scipy import linalg
 
@@ -702,7 +600,7 @@ def _compute_coefficients_from_multivariate_pacf_python2(
     return forwards, variance
 
 
-def constrain_stationary_multivariate_python(unconstrained, variance,
+def constrain_stationary_multivariate_python(unconstrained, error_variance,
                                              transform_variance=False,
                                              prefix=None):
     """
@@ -711,24 +609,33 @@ def constrain_stationary_multivariate_python(unconstrained, variance,
 
     Parameters
     ----------
-    unconstrained : iterable
+    unconstrained : array or list
         Arbitrary matrices to be transformed to stationary coefficient matrices
-        of the VAR.
-    variance : array, 2-dim
-        Variance matrix corresponding to the error term. This is used as
-        input in the algorithm even if is not transformed by it (when
-        `transform_variance` is False. The error term variance is required
-        input when transformation is used either to force an autoregressive
-        component to be stationary or to force  a moving average component to
-        be invertible.
+        of the VAR. If a list, should be a list of length `order`, where each
+        element is an array sized `k_endog` x `k_endog`. If an array, should be
+        the matrices horizontally concatenated and sized
+        `k_endog` x `k_endog * order`.
+    error_variance : array
+        The variance / covariance matrix of the error term. Should be sized
+        `k_endog` x `k_endog`. This is used as input in the algorithm even if
+        is not transformed by it (when `transform_variance` is False). The
+        error term variance is required input when transformation is used
+        either to force an autoregressive component to be stationary or to
+        force a moving average component to be invertible.
     transform_variance : boolean, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
+    prefix : {'s','d','c','z'}, optional
+        The appropriate BLAS prefix to use for the passed datatypes. Only
+        use if absolutely sure that the prefix is correct or an error will
+        result.
 
     Returns
     -------
-    constrained : list
-        A list of coefficient matrices which lead to a stationary VAR.
+    constrained : array or list
+        Transformed coefficient matrices leading to a stationary VAR
+        representation. Will match the type of the passed `unconstrained`
+        variable (so if a list was passed, a list will be returned).
 
     Notes
     -----
@@ -753,13 +660,16 @@ def constrain_stationary_multivariate_python(unconstrained, variance,
 
     References
     ----------
-    Ansley, Craig F., and Robert Kohn. 1986.
-    "A Note on Reparameterizing a Vector Autoregressive Moving Average Model to
-    Enforce Stationarity."
-    Journal of Statistical Computation and Simulation 24 (2): 99-106.
+    .. [1] Ansley, Craig F., and Robert Kohn. 1986.
+       "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
+       to Enforce Stationarity."
+       Journal of Statistical Computation and Simulation 24 (2): 99-106.
+    .. [2] Ansley, Craig F, and Paul Newbold. 1979.
+       "Multivariate Partial Autocorrelations."
+       In Proceedings of the Business and Economic Statistics Section, 349-53.
+       American Statistical Association
 
     """
-    from scipy import linalg
 
     use_list = type(unconstrained) == list
     if not use_list:
@@ -776,19 +686,78 @@ def constrain_stationary_multivariate_python(unconstrained, variance,
 
     # Step 1: convert from arbitrary matrices to those with singular values
     # less than one.
-    sv_constrained = _constrain_sv_less_than_one(unconstrained, order, k_endog)
+    sv_constrained = _constrain_sv_less_than_one_python(
+        unconstrained, order, k_endog)
 
     # Step 2: convert matrices from our "partial autocorrelation matrix" space
     # (matrices with singular values less than one) to the space of stationary
     # coefficient matrices
-    constrained, variance = _compute_coefficients_from_multivariate_pacf(
-        sv_constrained, variance, order, k_endog, transform_variance)
+    constrained, var = _compute_coefficients_from_multivariate_pacf_python(
+        sv_constrained, error_variance, transform_variance, order, k_endog)
 
     if not use_list:
         constrained = np.concatenate(constrained, axis=1).reshape(
             k_endog, k_endog * order)
 
-    return constrained, variance
+    return constrained, var
+
+
+# Conditionally use the Cython versions of the multivariate constraint if
+# possible (i.e. if Scipy >= 0.14.0 is available.)
+if False and has_trmm:
+
+    def constrain_stationary_multivariate(unconstrained, variance,
+                                          transform_variance=False,
+                                          prefix=None):
+
+        use_list = type(unconstrained) == list
+        if use_list:
+            unconstrained = np.concatenate(unconstrained, axis=1)
+
+        k_endog, order = unconstrained.shape
+        order //= k_endog
+
+        if order < 1:
+            raise ValueError('Must have order at least 1')
+        if k_endog < 1:
+            raise ValueError('Must have at least 1 endogenous variable')
+
+        if prefix is None:
+            prefix, dtype, _ = find_best_blas_type(
+                [unconstrained, variance])
+        dtype = prefix_dtype_map[prefix]
+        
+        unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
+        variance = np.asfortranarray(variance, dtype=dtype)
+
+        # Step 1: convert from arbitrary matrices to those with singular values
+        # less than one.
+        # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
+        #                                              k_endog, prefix)
+        sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
+
+        # Step 2: convert matrices from our "partial autocorrelation matrix"
+        # space (matrices with singular values less than one) to the space of
+        # stationary coefficient matrices
+        constrained, variance = prefix_pacf_map[prefix](
+            sv_constrained, variance, transform_variance, order, k_endog)
+
+        constrained = np.array(constrained)
+        variance = np.array(variance)
+
+        if use_list:
+            constrained = [
+                constrained[:k_endog, i*k_endog:(i+1)*k_endog]
+                for i in range(order)
+            ]
+
+        return constrained, variance
+    constrain_stationary_multivariate.__doc__ = (
+        constrain_stationary_multivariate_python.__doc__)
+
+else:
+    constrain_stationary_multivariate = (
+        constrain_stationary_multivariate_python)
 
 
 def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
@@ -796,8 +765,27 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     Transform matrices with singular values less than one to arbitrary
     matrices.
 
+    Parameters
+    ----------
+    constrained : list
+        The partial autocorrelation matrices. Should be a list of length
+        `order`, where each element is an array sized `k_endog` x `k_endog`.
+    order : integer, optional
+        The order of the autoregression.
+    k_endog : integer, optional
+        The dimension of the data vector.
+
+    Returns
+    -------
+    unconstrained : list
+        Unconstrained matrices. A list of length `order`, where each element is
+        an array sized `k_endog` x `k_endog`.
+
+    Notes
+    -----
     Corresponds to the inverse of Lemma 2.2 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
+
     """
     from scipy import linalg
 
@@ -818,24 +806,130 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     return unconstrained
 
 
-def _compute_multivariate_acovf_from_coefficients(coefficients, error_variance,
-                                                  order=None, k_endog=None,
-                                                  maxlag=None):
+def _compute_multivariate_sample_acovf(endog, maxlag):
     """
+    Computer multivariate sample autocovariances
+
+    Parameters
+    ----------
+    endog : array_like
+        Sample data on which to compute sample autocovariances. Shaped
+        `nobs` x `k_endog`.
+
+    Returns
+    -------
+    sample_autocovariances : list
+        A list of the first `maxlag` sample autocovariance matrices. Each
+        matrix is shaped `k_endog` x `k_endog`.
+
     Notes
     -----
+    This function computes the forward sample autocovariances:
+
+    .. math::
+
+        \hat \Gamma(s) = \frac{1}{n} \sum_{t=1}^{n-s}
+        (Z_t - \bar Z) (Z_{t+s} - \bar Z)'
+
+    See page 353 of Wei (1990). This function is primarily implemented for
+    checking the partial autocorrelation functions below, and so is quite slow.
+
+    References
+    ----------
+    .. [1] Wei, William. 1990.
+        Time Series Analysis : Univariate and Multivariate Methods.
+       Boston: Pearson.
+    """
+    # Get the (demeaned) data as an array
+    endog = np.array(endog)
+    if endog.ndim == 1:
+        endog = endog[:, np.newaxis]
+    endog -= np.mean(endog, axis=0)
+    
+    # Dimensions
+    nobs, k_endog = endog.shape
+
+    sample_autocovariances = []
+    for s in range(maxlag + 1):
+        sample_autocovariances.append(np.zeros((k_endog, k_endog)))
+        for t in range(nobs - s):
+            sample_autocovariances[s] += np.outer(endog[t], endog[t+s])
+        sample_autocovariances[s] /= nobs
+
+    return sample_autocovariances
+
+
+def _compute_multivariate_acovf_from_coefficients(
+        coefficients, error_variance, maxlag=None,
+        forward_autocovariances=False):
+    """
+    Compute multivariate autocovariances from vector autoregression coefficient
+    matrices
+
+    Parameters
+    ----------
+    coefficients : array or list
+        The coefficients matrices. If a list, should be a list of length
+        `order`, where each element is an array sized `k_endog` x `k_endog`. If
+        an array, should be the coefficient matrices horizontally concatenated
+        and sized `k_endog` x `k_endog * order`.
+    error_variance : array
+        The variance / covariance matrix of the error term. Should be sized
+        `k_endog` x `k_endog`.
+    maxlag : integer, optional
+        The maximum autocovariance to compute. Default is `order`-1. Can be
+        zero, in which case it returns the variance.
+    forward_autocovariances : boolean, optional
+        Whether or not to compute forward autocovariances
+        :math:`E(y_t y_{t+j}')`. Default is False, so that backward
+        autocovariances :math:`E(y_t y_{t-j}')` are returned.
+
+    Returns
+    -------
+    autocovariances : list
+        A list of the first `maxlag` autocovariance matrices. Each matrix is
+        shaped `k_endog` x `k_endog`.
+
+    Notes
+    -----
+    Computes
+
+    ..math::
+
+        \Gamma(j) = E(y_t y_{t-j}')
+
+    for j = 1, ..., `maxlag`, unless `forward_autocovariances` is specified,
+    in which case it computes:
+
+    ..math::
+
+        E(y_t y_{t+j}') = \Gamma(j)'
 
     Coefficients are assumed to be provided from the VAR model:
 
     .. math::
         y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
+
+    Autocovariances are calculated by solving the associated discrete Lyapunov
+    equation of the state space representation of the VAR process.
+
     """
     from scipy import linalg
 
-    if order is None:
+    # Convert coefficients to a list of matrices, for use in
+    # `companion_matrix`; get dimensions
+    if type(coefficients) == list:
         order = len(coefficients)
-    if k_endog is None:
         k_endog = coefficients[0].shape[0]
+    else:
+        k_endog, order = coefficients.shape
+        order //= k_endog
+
+        coefficients = [
+            coefficients[:k_endog, i*k_endog:(i+1)*k_endog]
+            for i in range(order)
+        ]
+
     if maxlag is None:
         maxlag = order-1
 
@@ -867,15 +961,58 @@ def _compute_multivariate_acovf_from_coefficients(coefficients, error_variance,
             stacked_cov[:k_endog, -k_endog:]
         ]
 
+    if forward_autocovariances:
+        for i in range(len(autocovariances)):
+            autocovariances[i] = autocovariances[i].T
+
     return autocovariances
 
-
-def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
-                                                 order=None, k_endog=None):
+def _compute_multivariate_sample_pacf(endog, maxlag):
     """
-    Transform matrices corresponding to a stationary (or invertible) process
-    to matrices with singular values less than one.
+    Computer multivariate sample partial autocorrelations
 
+    Parameters
+    ----------
+    endog : array_like
+        Sample data on which to compute sample autocovariances. Shaped
+        `nobs` x `k_endog`.
+    maxlag : integer
+        Maximum lag for which to calculate sample partial autocorrelations.
+
+    Returns
+    -------
+    sample_pacf : list
+        A list of the first `maxlag` sample partial autocorrelation matrices.
+        Each matrix is shaped `k_endog` x `k_endog`.
+
+    """
+    sample_autocovariances = _compute_multivariate_sample_acovf(endog, maxlag)
+
+    return _compute_multivariate_pacf_from_autocovariances(
+        sample_autocovariances)
+
+def _compute_multivariate_pacf_from_autocovariances(autocovariances,
+                                                    order=None, k_endog=None):
+    """
+    Compute multivariate partial autocorrelations from autocovariances.
+
+    Parameters
+    ----------
+    autocovariances : list
+        Autocorrelations matrices. Should be a list of length `order` + 1,
+        where each element is an array sized `k_endog` x `k_endog`.
+    order : integer, optional
+        The order of the autoregression.
+    k_endog : integer, optional
+        The dimension of the data vector.
+
+    Returns
+    -------
+    pacf : list
+        List of first `order` multivariate partial autocorrelations.
+
+    Notes
+    -----
     Note that this computes multivariate partial autocorrelations.
 
     Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
@@ -883,26 +1020,16 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
 
     Notes
     -----
+    Computes sample partial autocorrelations if sample autocovariances are
+    given.
 
-    Coefficients are assumed to be provided from the VAR model:
-
-    .. math::
-        y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
     """
     from scipy import linalg
 
     if order is None:
-        order = len(constrained)
+        order = len(autocovariances)-1
     if k_endog is None:
-        k_endog = constrained[0].shape[0]
-
-    # Get autocovariances for the process; these are defined to be
-    # E z_t z_{t-j}'
-    # However, we want E z_t z_{t+j}' = (E z_t z_{t-j}')'
-    _acovf = _compute_multivariate_acovf_from_coefficients
-    autocovariances = [
-        autocovariance.T for autocovariance in
-        _acovf(constrained, error_variance, order, k_endog, maxlag=order)]
+        k_endog = autocovariances[0].shape[0]
 
     # Now apply the Ansley and Kohn (1986) algorithm, except that instead of
     # calculating phi_{s+1, s+1} = L_s P_{s+1} {L_s^*}^{-1} (which requires
@@ -965,56 +1092,53 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
             linalg.cholesky(backward_variances[s], lower=True)
         )
 
-        if s == order-1:
-            forwards = constrained
+        # Create the intermediate sum term
+        if s == 0:
+            # phi_11 = \Gamma_1' \Gamma_0^{-1}
+            # phi_11 \Gamma_0 = \Gamma_1'
+            # \Gamma_0 phi_11' = \Gamma_1
+            forwards.append(linalg.cho_solve(
+                (forward_factors[0], True), autocovariances[1]).T)
+            # backwards.append(forwards[-1])
+            # phi_11_star = \Gamma_1 \Gamma_0^{-1}
+            # phi_11_star \Gamma_0 = \Gamma_1
+            # \Gamma_0 phi_11_star' = \Gamma_1'
+            backwards.append(linalg.cho_solve(
+                (backward_factors[0], True), autocovariances[1].T).T)
         else:
-            # Create the intermediate sum term
-            if s == 0:
-                # phi_11 = \Gamma_1' \Gamma_0^{-1}
-                # phi_11 \Gamma_0 = \Gamma_1'
-                # \Gamma_0 phi_11' = \Gamma_1
-                forwards.append(linalg.cho_solve(
-                    (forward_factors[0], True), autocovariances[1]).T)
-                # backwards.append(forwards[-1])
-                # phi_11_star = \Gamma_1 \Gamma_0^{-1}
-                # phi_11_star \Gamma_0 = \Gamma_1
-                # \Gamma_0 phi_11_star' = \Gamma_1'
-                backwards.append(linalg.cho_solve(
-                    (backward_factors[0], True), autocovariances[1].T).T)
-            else:
-                # G := \Gamma_{s+1}' -
-                #      \phi_{s,1} \Gamma_s' - .. - \phi_{s,s} \Gamma_1'
-                tmp_sum = autocovariances[s+1].T.copy()
+            # G := \Gamma_{s+1}' -
+            #      \phi_{s,1} \Gamma_s' - .. - \phi_{s,s} \Gamma_1'
+            tmp_sum = autocovariances[s+1].T.copy()
 
-                for k in range(s):
-                    tmp_sum -= np.dot(prev_forwards[k], autocovariances[s-k].T)
-
-                # Create the "last" (k = s+1) matrix
-                # Note: this is for k = s+1. However, below we then have to
-                # fill in for k = 1, ..., s in order.
-                # phi = G Sigma*^{-1}
-                # phi Sigma* = G
-                # Sigma*' phi' = G'
-                # Sigma* phi' = G'
-                # (because Sigma* is symmetric)
-                forwards.append(linalg.cho_solve(
-                    (backward_factors[s], True), tmp_sum.T).T)
-
-                # phi = G' Sigma^{-1}
-                # phi Sigma = G'
-                # Sigma' phi' = G
-                # Sigma phi' = G
-                # (because Sigma is symmetric)
-                backwards.append(linalg.cho_solve(
-                    (forward_factors[s], True), tmp_sum).T)
-
-            # Create the remaining k = 1, ..., s matrices,
-            # only has an effect if s >= 1
             for k in range(s):
-                forwards.insert(k, prev_forwards[k] - np.dot(
-                    forwards[-1], prev_backwards[s-(k+1)]))
-                backwards.insert(k, prev_backwards[k] - np.dot(
-                    backwards[-1], prev_forwards[s-(k+1)]))
+                tmp_sum -= np.dot(prev_forwards[k], autocovariances[s-k].T)
+
+            # Create the "last" (k = s+1) matrix
+            # Note: this is for k = s+1. However, below we then have to
+            # fill in for k = 1, ..., s in order.
+            # phi = G Sigma*^{-1}
+            # phi Sigma* = G
+            # Sigma*' phi' = G'
+            # Sigma* phi' = G'
+            # (because Sigma* is symmetric)
+            forwards.append(linalg.cho_solve(
+                (backward_factors[s], True), tmp_sum.T).T)
+
+            # phi = G' Sigma^{-1}
+            # phi Sigma = G'
+            # Sigma' phi' = G
+            # Sigma phi' = G
+            # (because Sigma is symmetric)
+            backwards.append(linalg.cho_solve(
+                (forward_factors[s], True), tmp_sum).T)
+
+        # Create the remaining k = 1, ..., s matrices,
+        # only has an effect if s >= 1
+        for k in range(s):
+            forwards.insert(k, prev_forwards[k] - np.dot(
+                forwards[-1], prev_backwards[s-(k+1)]))
+            backwards.insert(k, prev_backwards[k] - np.dot(
+                backwards[-1], prev_forwards[s-(k+1)]))
 
         # Partial autocorrelation matrix: P_{s+1}
         # P = L^{-1} phi L*
@@ -1025,84 +1149,104 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
 
     return partial_autocorrelations
 
+def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
+                                                 order=None, k_endog=None):
+    """
+    Transform matrices corresponding to a stationary (or invertible) process
+    to matrices with singular values less than one.
 
-if has_trmm:
+    Parameters
+    ----------
+    constrained : array or list
+        The coefficients matrices. If a list, should be a list of length
+        `order`, where each element is an array sized `k_endog` x `k_endog`. If
+        an array, should be the coefficient matrices horizontally concatenated
+        and sized `k_endog` x `k_endog * order`.
+    error_variance : array
+        The variance / covariance matrix of the error term. Should be sized
+        `k_endog` x `k_endog`.
+    order : integer, optional
+        The order of the autoregression.
+    k_endog : integer, optional
+        The dimension of the data vector.
 
-    def constrain_stationary_multivariate(unconstrained, variance,
-                                          transform_variance=False,
-                                          prefix=None):
+    Returns
+    -------
+    pacf : list
+        List of first `order` multivariate partial autocorrelations.
 
-        use_list = type(unconstrained) == list
-        if use_list:
-            unconstrained = np.concatenate(unconstrained, axis=1)
+    Notes
+    -----
+    Note that this computes multivariate partial autocorrelations.
 
-        unconstrained = np.asfortranarray(unconstrained)
-        variance = np.asfortranarray(variance)
+    Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
+    `unconstrain_stationary_multivariate` for more details.
 
-        k_endog, order = unconstrained.shape
+    Notes
+    -----
+
+    Coefficients are assumed to be provided from the VAR model:
+
+    .. math::
+        y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
+    """
+
+    if type(constrained) == list:
+        order = len(constrained)
+        k_endog = constrained[0].shape[0]
+    else:
+        k_endog, order = constrained.shape
         order //= k_endog
+    
+    # Get autocovariances for the process; these are defined to be
+    # E z_t z_{t-j}'
+    # However, we want E z_t z_{t+j}' = (E z_t z_{t-j}')'
+    _acovf = _compute_multivariate_acovf_from_coefficients
 
-        if prefix is None:
-            prefix, dtype, _ = find_best_blas_type(
-                [unconstrained, variance])
+    autocovariances = [
+        autocovariance.T for autocovariance in
+        _acovf(constrained, error_variance, maxlag=order)]
 
-        # Step 1: convert from arbitrary matrices to those with singular values
-        # less than one.
-        # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
-        #                                              k_endog, prefix)
-        sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
-
-        # Step 2: convert matrices from our "partial autocorrelation matrix"
-        # space (matrices with singular values less than one) to the space of
-        # stationary coefficient matrices
-        constrained, variance = prefix_pacf_map[prefix](
-            sv_constrained, variance, order, k_endog, transform_variance)
-
-        constrained = np.array(constrained)
-        variance = np.array(variance)
-
-        if use_list:
-            constrained = [
-                constrained[:k_endog, i*k_endog:(i+1)*k_endog]
-                for i in range(order)
-            ]
-
-        return constrained, variance
-
-else:
-    _compute_coefficients_from_multivariate_pacf = (
-        _compute_coefficients_from_multivariate_pacf_python)
-    _constrain_sv_less_than_one = _constrain_sv_less_than_one_python
-    constrain_stationary_multivariate = (
-        constrain_stationary_multivariate_python)
+    return _compute_multivariate_pacf_from_autocovariances(autocovariances)
 
 
-def unconstrain_stationary_multivariate(constrained, error_variance,
-                                        transform_variance=False):
+def unconstrain_stationary_multivariate(constrained, error_variance):
     """
     Transform constrained parameters used in likelihood evaluation
     to unconstrained parameters used by the optimizer
 
     Parameters
     ----------
-    constrained : array
+    constrained : array or list
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
-        optimizer.
+        optimizer. If a list, should be a list of length `order`, where each
+        element is an array sized `k_endog` x `k_endog`. If an array, should be
+        the coefficient matrices horizontally concatenated and sized
+        `k_endog` x `k_endog * order`.
+    error_variance : array
+        The variance / covariance matrix of the error term. Should be sized
+        `k_endog` x `k_endog`. This is used as input in the algorithm even if
+        is not transformed by it (when `transform_variance` is False).
 
     Returns
     -------
     unconstrained : array
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
-        component.
+        component. Will match the type of the passed `constrained`
+        variable (so if a list was passed, a list will be returned).
+
+    Notes
+    -----
+    Uses the list representation internally, even if an array is passed.
 
     References
     ----------
-    Ansley, Craig F., and Robert Kohn. 1986.
-    "A Note on Reparameterizing a Vector Autoregressive Moving Average Model to
-    Enforce Stationarity."
-    Journal of Statistical Computation and Simulation 24 (2): 99-106.
+    .. [1] Ansley, Craig F., and Robert Kohn. 1986.
+       "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
+       to Enforce Stationarity."
+       Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
 
@@ -1117,9 +1261,9 @@ def unconstrain_stationary_multivariate(constrained, error_variance,
             constrained[:k_endog, i*k_endog:(i+1)*k_endog]
             for i in range(order)
         ]
-
-    order = len(constrained)
-    k_endog = constrained[0].shape[0]
+    else:
+        order = len(constrained)
+        k_endog = constrained[0].shape[0]
 
     # Step 1: convert matrices from the space of stationary
     # coefficient matrices to our "partial autocorrelation matrix" space

@@ -1757,8 +1757,8 @@ cdef class {{prefix}}KalmanFilter(object):
 
 cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::1,:] partial_autocorrelations,
                                                              {{cython_type}} [::1,:] error_variance,
-                                                             int order, int k_endog,
-                                                             int transform_variance=False):
+                                                             int transform_variance,
+                                                             int order, int k_endog):
     """
     Notes
     -----
