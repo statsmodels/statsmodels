@@ -12,19 +12,23 @@ y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
 y -= y.mean()
 
 # required only to initialize the gam. they have no influence on the result.
-poly = UnivariateBSplines(x, df=10, degree=4)
-gp = UnivariateGamPenalty(poly, alpha=0)
-gam = GLMGam(y, poly.basis_, penal=gp)
+smoother = UnivariatePolynomialSmoother(x,  degree=4)
+smoother = UnivariateBSplines(x, degree=4, df=10)
 
-for i, alpha in enumerate([0, .1, .2, .4]):
-    gam_res = gam._fit_pirls_version2(y=y, spl_x=poly.basis_, spl_s=poly.cov_der2_, alpha=alpha)
+gp = UnivariateGamPenalty(smoother, alpha=0)
+gam = GLMGam(y, smoother.basis_, penal=gp)
 
-    y_est = np.dot(poly.basis_, gam_res.params.T)
+for i, alpha in enumerate([0, .001, .01, .1]):
+    gam_res = gam._fit_pirls_version2(y=y, spl_x=smoother.basis_, spl_s=smoother.cov_der2_, alpha=alpha)
+
+    y_est = np.dot(smoother.basis_, gam_res.params.T)
 
     plt.subplot(2, 2, i+1)
     plt.plot(x, y, '.')
     plt.plot(x, y_est, '.')
+    plt.title('alpha=' + str(alpha))
 
+plt.tight_layout()
 plt.show()
 
 

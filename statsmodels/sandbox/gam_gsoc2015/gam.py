@@ -409,16 +409,6 @@ class GLMGAMResults(GLMResults):
 
         return tr, p_val, rank
 
-# TODO: once pirls_version2 is complete this function can be removed.
-def get_sqrt(x):
-     """
-     :param x:
-     :return: b the sqrt of the matrix x. np.dot(b.T, b) = x
-     """
-     u, s, v = np.linalg.svd(x)
-     sqrt_s = np.sqrt(s)
-     b = np.dot(u, np.dot(np.diag(sqrt_s), v))
-     return b
 
 
 class GLMGam(PenalizedMixin, GLM):
@@ -539,7 +529,6 @@ class GLMGam(PenalizedMixin, GLM):
             iteration = 0
 
         for iteration in range(maxiter):
-            print('iteration =', iteration)
 
             # TODO: is this equivalent to point 1 of page 136: w = 1 / (V(mu) * g'(mu))  ?
             self.weights = self.data_weights * self.family.weights(mu)
@@ -561,7 +550,6 @@ class GLMGam(PenalizedMixin, GLM):
                 raise PerfectSeparationError(msg)
             converged = _check_convergence(criterion, iteration, tol)
             if converged:
-                print('Converged!')
                 break
         self.mu = mu
 
@@ -578,6 +566,7 @@ class GLMGam(PenalizedMixin, GLM):
         return GLMResultsWrapper(glm_results)
 
 
+
 def penalized_wls(x, y, s, weights, alpha):
 
     aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, s, weights, alpha)
@@ -588,19 +577,18 @@ def penalized_wls(x, y, s, weights, alpha):
     return wls_results
 
 
-def make_augmented_matrix(x, y, s, w, alpha):
+def make_augmented_matrix(x, y, s, w, alphas):
 
     n_samples, n_columns = x.shape
-    alpha_s = alpha * s
+    import collections
 
-    print('in make augmented eig s =', np.linalg.eigvals(s))
-
-    if alpha == 0:
-        rs = np.zeros(shape=(n_columns, n_columns))
+    if isinstance(alphas, collections.Iterable):
+        alpha_s = sp.linalg.block_diag(*[s[i] * alphas[i] for i in range(len(alphas))])
     else:
-        rs = sp.linalg.cholesky(alpha_s)
+        alpha_s = alphas * s
 
-    x1 = np.vstack([x, rs]) # augmented x
+    rs = get_sqrt(alpha_s)
+    x1 = np.vstack([x, rs])  # augmented x
     n_samp1es_x1 = x1.shape[0]
 
     y1 = np.array([0.] * n_samp1es_x1)  # augmented y
@@ -611,3 +599,12 @@ def make_augmented_matrix(x, y, s, w, alpha):
     w1 = np.sqrt(w1)
 
     return x1, y1, w1
+
+
+def get_sqrt(x):
+    u, s, v = np.linalg.svd(x)
+    s[s < 0] = 0
+
+    sqrt_s = np.sqrt(s)
+    b = np.dot(u, np.dot(np.diag(sqrt_s), v))
+    return b
