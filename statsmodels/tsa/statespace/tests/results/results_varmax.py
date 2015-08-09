@@ -40,7 +40,7 @@ lutkepohl_data = [
     [801, 2639, 2235], [824, 2618, 2237], [831, 2628, 2250], [830, 2651, 2271],
 ]
 
-lutkepohl_ar1 = {
+lutkepohl_var1 = {
     'params': [
         -0.25034303,  0.28759168,  0.81626475,  # Phi, row 1
         0.023383,     0.19048278,  0.66502259,  # Phi, row 2
@@ -60,7 +60,7 @@ lutkepohl_ar1 = {
     'bic': -1110.934,
 }
 
-lutkepohl_ar1_diag = {
+lutkepohl_var1_diag = {
     'params': [
         -0.24817904,  0.29283012,  0.80794938,  # Phi, row 1
         0.02282985,   0.19672157,  0.66329776,  # Phi, row 2
@@ -77,7 +77,7 @@ lutkepohl_ar1_diag = {
     'bic': -1073.824
 }
 
-lutkepohl_ar1_obs_intercept = {
+lutkepohl_var1_obs_intercept = {
     'params': [
         -.24762,   .25961003,  .75992623,   # Phi, row 1
         .03186854, -.07271862, .23697765,   # Phi, row 2
@@ -96,7 +96,7 @@ lutkepohl_ar1_obs_intercept = {
     'bic': -1073.824
 }
 
-lutkepohl_ar2 = {
+lutkepohl_var2 = {
     'params': [
         -.25244981, .62528114,  # Phi_1, row 1
         -.13011679, .58173748,  # Phi_1, row 2
@@ -118,4 +118,24 @@ lutkepohl_ar2 = {
     'loglike': 343.3149718445623,
     'aic': -664.6299,
     'bic': -639.1376
+}
+
+fred_varma11 = {
+    'params': [
+        .80580312,  0,           # Phi_1, row 1
+        .17348681,  -.48093755,  # Phi_1, row 2
+        -.51890703, 0,           # Theta_1, row 1
+        0,          0,           # Theta_1, row 2
+        .0000582,   .00003815,   # Variances
+    ],
+    'var_oim': [
+        .00272999,  0,          # Phi_1, row 1
+        .00164152, .00248576,   # Phi_1, row 2
+        .0049259,  0,           # Theta_1, row 1
+        0,         0,           # Theta_1, row 2
+        1.529e-11, 6.572e-12,   # Variances
+    ],
+    'loglike': 3156.056423235071,
+    'aic': -6300.113,
+    'bic': -6275.551
 }

@@ -9,6 +9,7 @@ from __future__ import division, absolute_import, print_function
 from warnings import warn
 from statsmodels.compat.collections import OrderedDict
 
+import pandas as pd
 import numpy as np
 from .kalman_filter import (
     KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
@@ -122,7 +123,8 @@ class VARMAX(MLEModel):
 
         # Model order
         # Used internally in various places
-        self._k_order = self.k_ar + self.k_ma
+        _min_k_ar = max(self.k_ar, 1)
+        self._k_order = _min_k_ar + self.k_ma
 
         # Number of states
         k_endog = endog.shape[1]
@@ -171,13 +173,14 @@ class VARMAX(MLEModel):
         # The transition matrix is described in four blocks, where the upper
         # left block is in companion form with the autoregressive coefficient
         # matrices (so it is shaped k_endog * k_ar x k_endog * k_ar) ...
-        idx = np.diag_indices((self.k_ar - 1) * self.k_endog)
-        idx = idx[0] + self.k_endog, idx[1]
-        self.ssm[('transition',) + idx] = 1
+        if self.k_ar > 0:
+            idx = np.diag_indices((self.k_ar - 1) * self.k_endog)
+            idx = idx[0] + self.k_endog, idx[1]
+            self.ssm[('transition',) + idx] = 1
         # ... and the  lower right block is in companion form with zeros as the
         # coefficient matrices (it is shaped k_endog * k_ma x k_endog * k_ma).
         idx = np.diag_indices((self.k_ma - 1) * self.k_endog)
-        idx = idx[0] + (self.k_ar + 1) * self.k_endog, idx[1]
+        idx = idx[0] + (_min_k_ar + 1) * self.k_endog, idx[1] + _min_k_ar * self.k_endog
         self.ssm[('transition',) + idx] = 1
 
         # The selection matrix is described in two blocks, where the upper
@@ -186,9 +189,8 @@ class VARMAX(MLEModel):
         # also selects all k_posdef errors in the first k_endog rows (the lower
         # block is shaped k_endog * k_ma x k).
         idx = np.diag_indices(self.k_endog)
-        if self.k_ar > 0:
-            self.ssm[('selection',) + idx] = 1
-        idx = idx[0] + self.k_ar * self.k_endog, idx[1]
+        self.ssm[('selection',) + idx] = 1
+        idx = idx[0] + _min_k_ar * self.k_endog, idx[1]
         if self.k_ma > 0:
             self.ssm[('selection',) + idx] = 1
 
@@ -197,7 +199,10 @@ class VARMAX(MLEModel):
             self._idx_state_intercept = np.s_['state_intercept', :k_endog]
         elif self.k_exog > 0:
             self._idx_state_intercept = np.s_['state_intercept', :k_endog, :]
-        self._idx_transition = np.s_['transition', :k_endog, :]
+        if self.k_ar > 0:
+            self._idx_transition = np.s_['transition', :k_endog, :]
+        else:
+            self._idx_transition = np.s_['transition', :k_endog, k_endog:]
         if self.error_cov_type == 'diagonal':
             self._idx_state_cov = (
                 ('state_cov',) + np.diag_indices(self.k_endog))
@@ -244,16 +249,21 @@ class VARMAX(MLEModel):
 
         # B. Run a VAR model on endog to get trend, AR parameters
         ar_params = []
-        if self.k_ar > 0 or self.trend == 'c':
-            mod_ar = var_model.VAR(endog)
-            res_ar = mod_ar.fit(maxlags=self.k_ar, ic=None, trend=self.trend)
-            ar_params = np.array(res_ar.params.T)
-            if self.trend == 'c':
-                trend_params = ar_params[:, 0]
+        k_ar = self.k_ar if self.k_ar > 0 else 1
+        mod_ar = var_model.VAR(endog)
+        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend=self.trend)
+        ar_params = np.array(res_ar.params.T)
+        if self.trend == 'c':
+            trend_params = ar_params[:, 0]
+            if self.k_ar > 0:
                 ar_params = ar_params[:, 1:].ravel()
             else:
-                ar_params = ar_params.ravel()
-            endog = res_ar.resid
+                ar_params = []
+        elif self.k_ar > 0:
+            ar_params = ar_params.ravel()
+        else:
+            ar_params = []
+        endog = res_ar.resid
 
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
@@ -393,7 +403,7 @@ class VARMAX(MLEModel):
         # 3. MA terms: optionally force to be invertible
         if self.k_ma > 0 and self.enforce_invertibility:
             # Transform the parameters, using an identity variance matrix
-            state_cov = np.eye(self.k_endog, dtype=constrained.dtype)
+            state_cov = np.eye(self.k_endog, dtype=unconstrained.dtype)
             coefficients = unconstrained[self._params_ma].reshape(
                 self.k_endog, self.k_endog * self.k_ma)
             coefficient_matrices, variance = (

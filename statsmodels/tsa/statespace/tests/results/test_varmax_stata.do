@@ -58,5 +58,36 @@ predict predict_var2_2, dynamic(tq(1979q1)) equation(dln_inc)
 predict dyn_predict_var2_1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_var2_2, dynamic(tq(1961q1)) equation(dln_inc)
 
-outsheet pred* dyn* using results_varmax_stata.csv, comma replace
+outsheet pred* dyn* using results_var_stata.csv, comma replace
 
+// VARMA(1,1)
+// Note: Stata does not have this built-in, so we need to create the state space form ourselves
+// This replicates example 4 from the Stata documentation
+use http://www.stata-press.com/data/r12/manufac, clear
+
+gen dlncaputil = D.lncaputil
+gen dlnhours = D.lnhours
+
+constraint 1 [u1]L.u2 = 1
+constraint 2 [u1]e.u1 = 1
+constraint 3 [u3]e.u3 = 1
+constraint 4 [dlncaputil]u1 = 1
+constraint 5 [dlnhours]u3 = 1
+
+sspace (u1 L.u1 L.u2 e.u1, state noconstant) ///
+       (u2 e.u1, state noconstant) ///
+       (u3 L.u1 L.u3 e.u3, state noconstant) ///
+       (dlncaputil u1, noconstant) ///
+       (dlnhours u3, noconstant), ///
+       constraints(1/5) technique(nr) covstate(diagonal)
+
+// in-sample predict + forecast 5 new observations (sample ends at 1999m12)
+tsappend, add(5)
+predict predict_varma11_1, dynamic(tm(2009m1)) equation(dlncaputil)
+predict predict_varma11_2, dynamic(tm(2009m1)) equation(dlnhours)
+
+// predict + dynamic predict + forecast
+predict dyn_predict_varma11_1, dynamic(tm(2000m1)) equation(dlncaputil)
+predict dyn_predict_varma11_2, dynamic(tm(2000m1)) equation(dlnhours)
+
+outsheet pred* dyn* using results_varmax_stata.csv, comma replace
