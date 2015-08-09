@@ -45,6 +45,16 @@ class CheckStaticFactor(object):
 
         self.results = self.model.filter(true['params'], cov_type=cov_type)
 
+    def test_no_enforce(self):
+        # Test that nothing goes wrong when we don't enforce stationarity
+        params = self.model.untransform_params(self.true['params'])
+        params[self.model._params_transition] = (
+            self.true['params'][self.model._params_transition])
+        self.model.enforce_stationarity = False
+        results = self.model.filter(params, transformed=False)
+        self.model.enforce_stationarity = True
+        assert_allclose(results.llf, self.results.llf, rtol=1e-5)
+
     def test_mle(self):
         results = self.model.fit(maxiter=100, disp=False)
         results = self.model.fit(results.params, method='nm', maxiter=1000,
