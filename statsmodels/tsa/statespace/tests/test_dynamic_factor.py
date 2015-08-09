@@ -86,3 +86,32 @@ class TestStaticFactor(CheckStaticFactor):
         true['predict'] = output_results.ix[1:, ['predict_dfm_1', 'predict_dfm_2', 'predict_dfm_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
         super(TestStaticFactor, self).__init__(true, k_factors=1, factor_order=2)
+
+class TestStaticFactor2(CheckStaticFactor):
+    def __init__(self):
+        true = results_dynamic_factor.lutkepohl_dfm2.copy()
+        true['predict'] = output_results.ix[1:, ['predict_dfm2_1', 'predict_dfm2_2', 'predict_dfm2_3']]
+        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm2_1', 'dyn_predict_dfm2_2', 'dyn_predict_dfm2_3']]
+        super(TestStaticFactor2, self).__init__(true, k_factors=2, factor_order=1)
+
+    def test_mle(self):
+        # Stata's MLE on this model doesn't converge, so no reason to check
+        pass
+
+    def test_bse(self):
+        # Stata's MLE on this model doesn't converge, and four of their
+        # params don't even have bse (possibly they are still at starting
+        # values?), so no reason to check this
+        pass
+
+    def test_aic(self):
+        # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
+        # model didn't coverge, 4 of the parameters aren't fully estimated
+        # (possibly they are still at starting values?) so the AIC is off
+        pass
+
+    def test_bic(self):
+        # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
+        # model didn't coverge, 4 of the parameters aren't fully estimated
+        # (possibly they are still at starting values?) so the BIC is off
+        pass

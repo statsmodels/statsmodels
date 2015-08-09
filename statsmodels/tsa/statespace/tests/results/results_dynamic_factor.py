@@ -27,3 +27,19 @@ lutkepohl_dfm = {
     'aic': -1172.18,
     'bic': -1153.641,
 }
+
+lutkepohl_dfm2 = {
+    'params': [
+        .03411188, .03478764,  # Factor loadings: y1
+        .03553366, .0344871,  # Factor loadings: y2
+        .03536757, .03433391,  # Factor loadings: y3
+        .00224401, .00014678, .00010922,   # Idiosyncratic variances
+        .08845946, .08862982,      # Factor transitions: Phi, row 1
+        .08754759, .08758589    # Phi, row 2
+    ],
+    'bse_oim': None,
+    'loglike': 496.379832917306,
+    'aic': -974.7597,
+    'bic': -953.9023,
+}
+
