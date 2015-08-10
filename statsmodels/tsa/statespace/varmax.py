@@ -23,6 +23,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tsa.vector_ar import var_model
+import statsmodels.base.wrapper as wrap
 
 
 class VARMAX(MLEModel):
@@ -114,7 +115,7 @@ class VARMAX(MLEModel):
             self.k_exog = exog.shape[1]
 
         # Note: at some point in the future might add state regression, as in
-        # SARIMAX.
+        # VARMAX.
         self.mle_regression = self.k_exog > 0
 
         # We need to have an array or pandas at this point
@@ -180,7 +181,8 @@ class VARMAX(MLEModel):
         # ... and the  lower right block is in companion form with zeros as the
         # coefficient matrices (it is shaped k_endog * k_ma x k_endog * k_ma).
         idx = np.diag_indices((self.k_ma - 1) * self.k_endog)
-        idx = idx[0] + (_min_k_ar + 1) * self.k_endog, idx[1] + _min_k_ar * self.k_endog
+        idx = (idx[0] + (_min_k_ar + 1) * self.k_endog,
+               idx[1] + _min_k_ar * self.k_endog)
         self.ssm[('transition',) + idx] = 1
 
         # The selection matrix is described in two blocks, where the upper
@@ -225,6 +227,30 @@ class VARMAX(MLEModel):
         self._params_regression, offset = _slice('regression', offset)
         self._params_state_cov, offset = _slice('state_cov', offset)
         self._params_obs_cov, offset = _slice('obs_cov', offset)
+
+    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        params = np.array(params, ndmin=1)
+
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(VARMAX, self).filter(params, transformed, cov_type,
+                                            return_ssm=True, **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = VARMAXResultsWrapper(
+                VARMAXResults(self, params, result, **result_kwargs)
+            )
+
+        return result
 
     @property
     def start_params(self):
@@ -550,3 +576,220 @@ class VARMAX(MLEModel):
         # 4. Observation covariance
         if self.measurement_error:
             self.ssm[self._idx_obs_cov] = params[self._params_obs_cov]
+
+
+class VARMAXResults(MLEResults):
+    """
+    Class to hold results from fitting an VARMAX model.
+
+    Parameters
+    ----------
+    model : VARMAX instance
+        The fitted model instance
+
+    Attributes
+    ----------
+    specification : dictionary
+        Dictionary including all attributes from the VARMAX model instance.
+    coefficient_matrices_var : array
+        Array containing autoregressive lag polynomial coefficient matrices,
+        ordered from lowest degree to highest.
+    coefficient_matrices_vma : array
+        Array containing moving average lag polynomial coefficients,
+        ordered from lowest degree to highest.
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
+    """
+    def __init__(self, model, params, filter_results, cov_type='opg',
+                 **kwargs):
+        super(VARMAXResults, self).__init__(model, params, filter_results,
+                                            cov_type, **kwargs)
+
+        self.df_resid = np.inf  # attribute required for wald tests
+
+        self.specification = Bunch(**{
+            # Set additional model parameters
+            'error_cov_type': self.model.error_cov_type,
+            'measurement_error': self.model.measurement_error,
+            'enforce_stationarity': self.model.enforce_stationarity,
+            'enforce_invertibility': self.model.enforce_invertibility,
+
+            'order': self.model.order,
+
+            # Model order
+            'k_ar': self.model.k_ar,
+            'k_ma': self.model.k_ma,
+
+            # Trend / Regression
+            'trend': self.model.trend,
+            'k_trend': self.model.k_trend,
+            'k_exog': self.model.k_exog,
+        })
+
+        # Polynomials / coefficient matrices
+        self.coefficient_matrices_var = None
+        self.coefficient_matrices_vma = None
+        if self.model.k_ar > 0:
+            ar_params = self.params[self.model._params_ar]
+            k_endog = self.model.k_endog
+            k_ar = self.model.k_ar
+            self.coefficient_matrices_var = (
+                ar_params.reshape(k_endog * k_ar, k_endog).T
+            ).reshape(k_endog, k_endog, k_ar).T
+        if self.model.k_ma > 0:
+            ma_params = self.params[self.model._params_ma]
+            k_endog = self.model.k_endog
+            k_ma = self.model.k_ma
+            self.coefficient_matrices_vma = (
+                ma_params.reshape(k_endog * k_ma, k_endog).T
+            ).reshape(k_endog, k_endog, k_ma).T
+
+    def predict(self, start=None, end=None, exog=None, dynamic=False,
+                **kwargs):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        exog : array_like, optional
+            If the model includes exogenous regressors, you must provide
+            exactly enough out-of-sample values for the exogenous variables if
+            end is beyond the last observation in the sample.
+        dynamic : boolean, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        """
+        if start is None:
+                start = 0
+
+        # Handle end (e.g. date)
+        _start = self.model._get_predict_start(start)
+        _end, _out_of_sample = self.model._get_predict_end(end)
+
+        # Handle exogenous parameters
+        if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
+            # Create a new faux VARMAX model for the extended dataset
+            nobs = self.model.data.orig_endog.shape[0] + _out_of_sample
+            endog = np.zeros((nobs, self.model.k_endog))
+
+            if self.model.k_exog > 0:
+                if exog is None:
+                    raise ValueError('Out-of-sample forecasting in a model'
+                                     ' with a regression component requires'
+                                     ' additional exogenous values via the'
+                                     ' `exog` argument.')
+                exog = np.array(exog)
+                required_exog_shape = (_out_of_sample, self.model.k_exog)
+                if not exog.shape == required_exog_shape:
+                    raise ValueError('Provided exogenous values are not of the'
+                                     ' appropriate shape. Required %s, got %s.'
+                                     % (str(required_exog_shape),
+                                        str(exog.shape)))
+                exog = np.c_[self.model.data.orig_exog.T, exog.T].T
+
+            # TODO replace with init_kwds or specification or similar
+            model = VARMAX(
+                endog,
+                exog=exog,
+                order=self.model.order,
+                trend=self.model.trend,
+                error_cov_type=self.model.error_cov_type,
+                measurement_error=self.model.measurement_error,
+                enforce_stationarity=self.model.enforce_stationarity,
+                enforce_invertibility=self.model.enforce_invertibility
+            )
+            model.update(self.params)
+
+            # Set the kwargs with the update time-varying state space
+            # representation matrices
+            for name in self.filter_results.shapes.keys():
+                if name == 'obs':
+                    continue
+                mat = getattr(model.ssm, name)
+                if mat.shape[-1] > 1:
+                    if len(mat.shape) == 2:
+                        kwargs[name] = mat[:, -_out_of_sample:]
+                    else:
+                        kwargs[name] = mat[:, :, -_out_of_sample:]
+        elif self.model.k_exog == 0 and exog is not None:
+            warn('Exogenous array provided to predict, but additional data not'
+                 ' required. `exog` argument ignored.')
+
+        return super(VARMAXResults, self).predict(
+            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        )
+
+    def forecast(self, steps=1, exog=None, **kwargs):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of out of sample forecasts from the end of the
+            sample. Default is 1.
+        exog : array_like, optional
+            If the model includes exogenous regressors, you must provide
+            exactly enough out-of-sample values for the exogenous variables for
+            each step forecasted.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        """
+        return super(VARMAXResults, self).forecast(steps, exog=exog, **kwargs)
+
+    def summary(self, alpha=.05, start=None):
+        # Create the model name
+
+        # See if we have an ARIMA component
+        order = '(%d, %d)' % (self.specification.k_ar, self.specification.k_ma)
+
+        model_name = (
+            '%s%s' % (self.model.__class__.__name__, order)
+            )
+        return super(VARMAXResults, self).summary(
+            alpha=alpha, start=start, model_name=model_name
+        )
+    summary.__doc__ = MLEResults.summary.__doc__
+
+
+class VARMAXResultsWrapper(MLEResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(VARMAXResultsWrapper, VARMAXResults)

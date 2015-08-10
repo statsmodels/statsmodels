@@ -65,6 +65,30 @@ class CheckVARMAX(object):
         self.model.enforce_invertibility = True
         assert_allclose(actual, self.model.start_params)
 
+    def test_results(self):
+        # Smoke test for creating the summary
+        self.results.summary()
+
+        # Test cofficient matrix creation (via a different, more direct, method)
+        if self.model.k_ar > 0:
+            coefficients = self.results.params[self.model._params_ar].reshape(self.model.k_endog, self.model.k_endog * self.model.k_ar)
+            coefficient_matrices = np.array([
+                coefficients[:self.model.k_endog, i*self.model.k_endog:(i+1)*self.model.k_endog]
+                for i in range(self.model.k_ar)
+            ])
+            assert_equal(self.results.coefficient_matrices_var, coefficient_matrices)
+        else:
+            assert_equal(self.results.coefficient_matrices_var, None)
+        if self.model.k_ma > 0:
+            coefficients = self.results.params[self.model._params_ma].reshape(self.model.k_endog, self.model.k_endog * self.model.k_ma)
+            coefficient_matrices = np.array([
+                coefficients[:self.model.k_endog, i*self.model.k_endog:(i+1)*self.model.k_endog]
+                for i in range(self.model.k_ma)
+            ])
+            assert_equal(self.results.coefficient_matrices_vma, coefficient_matrices)
+        else:
+            assert_equal(self.results.coefficient_matrices_vma, None)
+
     def test_loglike(self):
         assert_allclose(self.results.llf, self.true['loglike'], rtol=1e-6)
 
@@ -260,9 +284,15 @@ class TestVAR_exog(CheckLutkepohl):
     def test_forecast(self):
         # Tests forecast
         exog = (np.arange(75, 75+16) + 3)[:, np.newaxis]
+
+        # Test it through the results class wrapper
+        desired = self.results.forecast(steps=16, exog=exog)
+        assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
+
+        # Test it directly
         beta = self.results.params[-9:-6]
         state_intercept = np.concatenate([exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
-        desired = self.results.forecast(steps=16, state_intercept=state_intercept)
+        desired = super(varmax.VARMAXResultsWrapper, self.results).predict(start=75, end=75+15, state_intercept=state_intercept)
         assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
 
 
