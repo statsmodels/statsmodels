@@ -10,6 +10,7 @@ from __future__ import division
 ## import usefull only for development ## 
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
+from patsy import dmatrix
 
 ########################################
 import numpy as np
@@ -474,20 +475,19 @@ class CubicSplines():
     Cubic splines as described in the wood's book in chapter 3
     """
 
-    def __init__(self, x, n_knots):
+    def __init__(self, x, df):
         self.x = x
-        self.n_knots = n_knots
-
-    def fit(self):
+        self.df = df
         self._equally_spaced_knots()
         self._splines_s()
         self._splines_x()
-        return self
+        return
 
     def _equally_spaced_knots(self):
+        n_knots = self.df - 2
         x_min = self.x.min()
         x_max = self.x.max()
-        self.knots = np.linspace(x_min, x_max, self.n_knots)
+        self.knots = np.linspace(x_min, x_max, n_knots)
         return
 
     def _rk(self, x, z):
@@ -498,13 +498,13 @@ class CubicSplines():
     def _splines_x(self):
         n_columns = len(self.knots) + 2
         n_samples = self.x.shape[0]
-        self.xs = np.ones(shape=(n_samples, n_columns))
-        self.xs[:, 1] = self.x
+        self.basis_ = np.ones(shape=(n_samples, n_columns))
+        self.basis_[:, 1] = self.x
         # for loop equivalent to outer(x, xk, fun=rk)
         for i, xi in enumerate(self.x):
             for j, xkj in enumerate(self.knots):
                 s_ij = self._rk(xi, xkj)
-                self.xs[i, j+2] = s_ij
+                self.basis_[i, j+2] = s_ij
         return
 
     def _splines_s(self):
@@ -519,18 +519,41 @@ class CubicSplines():
 from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
 
-class CubicCyclicSplines():
+class BaseCubicSplines(with_metaclass(ABCMeta)):
+
+    def __init__(self, x, df):
+
+        self.x = np.atleast_2d(x)
+        self.n_samples, self.k_variables = self.x.shape
+
+        return
+
+    @abstractmethod
+    def _get_b_and_d(self):
+
+        return
+
+    @abstractmethod
+    def _get_s(self):
+
+        return
+
+class CubicCyclicSplines(BaseCubicSplines):
 
     def __init__(self, x, df=10):
-        self.df = df
-        self.xs = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
 
+        super().__init__(x, df)
+
+        self.basis_ = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
         n_inner_knots = df - 2 + 1 # +n_constraints # TODO: from CubicSplines class
-
         all_knots = _get_all_sorted_knots(x, n_inner_knots=n_inner_knots, inner_knots=None,
                                           lower_bound=None, upper_bound=None)
-        b, d = self._get_cyclic_f(all_knots)
-        self.s = d.T.dot(np.linalg.inv(b)).dot(d)
+
+        b, d = self._get_b_and_d(all_knots)
+        self.s = self._get_s(b, d)
+
+        self.dim_basis = self.basis_.shape[1]
+
         return
 
     def _get_b_and_d(self, knots):
@@ -570,3 +593,33 @@ class CubicCyclicSplines():
             d[i - 1, i] = 1. / h[i - 1]
 
         return b, d
+
+    def _get_s(self, b, d):
+
+        return d.T.dot(np.linalg.inv(b)).dot(d)
+
+
+class MultivariateSmoother():
+    """
+    Aggregator for smoothers like BaseCubicSplines
+    """
+    def __init__(self, univariate_smoothers):
+
+        self.x = np.hstack([smoother.x for smoother in univariate_smoothers])
+        self.n_samples, self.k_variables = self.x.shape
+
+        self.basis_ = np.hstack([smoother.basis_ for smoother in univariate_smoothers])
+        _, self.n_columns = self.basis_.shape
+
+        self.s = [smoother.s for smoother in univariate_smoothers]
+
+        self.mask = []
+        last_column = 0
+        for smoother in univariate_smoothers:
+            mask = np.array([False] * self.n_columns)
+            mask[last_column:smoother.dim_basis+last_column] = True
+            last_column = last_column + smoother.dim_basis
+            self.mask.append(mask)
+
+        return
+

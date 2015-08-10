@@ -29,7 +29,7 @@ def test_splines_x():
     cs = CubicSplines(x, 4)
     cs.knots = xk
     cs._splines_x()
-    spl_x = cs.xs
+    spl_x = cs.basis_
 
     assert_allclose(spl_x_R, spl_x)
 

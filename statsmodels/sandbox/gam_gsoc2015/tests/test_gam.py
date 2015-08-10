@@ -9,7 +9,8 @@ import os
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make_bsplines_basis,
                                                            UnivariatePolynomialSmoother, PolynomialSmoother,
                                                            UnivariateBSplines, BSplines, UnivariateGenericSmoother,
-                                                           GenericSmoothers, CubicSplines)
+                                                           GenericSmoothers, CubicSplines, CubicCyclicSplines,
+                                                           MultivariateSmoother)
 from statsmodels.sandbox.gam_gsoc2015.gam import (UnivariateGamPenalty, GLMGam,
                                                   MultivariateGamPenalty, LogitGam, make_augmented_matrix, get_sqrt,
                                                   penalized_wls)
@@ -639,7 +640,57 @@ def test_penalized_wls():
 
     return
 
-#
+
+def test_cyclic_cubic_splines():
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(cur_dir, "results", "cubic_cyclic_splines_from_mgcv.csv")
+    data_from_r = pd.read_csv(file_path)
+
+    x = data_from_r[['x0', 'x2']].as_matrix()
+    y = data_from_r['y'].as_matrix()
+    y_est_mgcv = data_from_r[['y_est']].as_matrix()
+    s_mgcv = data_from_r[['s(x0)', 's(x2)']].as_matrix()
+
+    smoothers = [CubicCyclicSplines(x[:, i], df=10) for i in range(2) ]
+    multivariate_smoother = MultivariateSmoother(smoothers)
+
+    gam = GLMGam(y, x)
+    alphas = [0.05, 0.0005]
+
+    gam_res = gam._fit_pirls(y, multivariate_smoother.basis_, multivariate_smoother.s, alpha=alphas)
+
+    s0 = np.dot(multivariate_smoother.basis_[:, multivariate_smoother.mask[0]],
+                gam_res.params[multivariate_smoother.mask[0]])
+    s0 -= s0.mean() # TODO: Mean has to be removed
+
+    s1 = np.dot(multivariate_smoother.basis_[:, multivariate_smoother.mask[1]],
+                gam_res.params[multivariate_smoother.mask[1]])
+    s1 -= s1.mean() # TODO: Mean has to be removed
+
+
+    # plt.subplot(2, 1, 1)
+    # plt.plot(x[:, 0], s0, '.', label='y_est')
+    # plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='y_mgcv')
+    # plt.legend(loc='best')
+    #
+    # plt.subplot(2, 1, 2)
+    # plt.plot(x[:, 1], s1, '.', label='y_est')
+    # plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='y_mgcv')
+    # plt.legend(loc='best')
+    # plt.show()
+
+    print(np.max(np.abs(s1 - s_mgcv[:, 1])))
+    assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
+    assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
+
+
+
+
+
+    return
+
+
 # test_gam_hessian()
 # test_gam_gradient()
 # test_gam_discrete()
@@ -658,4 +709,6 @@ def test_penalized_wls():
 # test_multivariate_gam_cv_path()
 # test_train_test_smoothers()
 # test_make_augmented_matrix()
-test_penalized_wls()
+# test_penalized_wls()
+
+test_cyclic_cubic_splines()

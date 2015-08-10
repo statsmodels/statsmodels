@@ -3,7 +3,7 @@ import numpy as np
 from patsy.state import stateful_transform
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, 
                                                            make_bsplines_basis, BS, UnivariatePolynomialSmoother,
-                                                           PolynomialSmoother)
+                                                           PolynomialSmoother, CubicCyclicSplines, CubicSplines)
 from numpy.testing import assert_allclose
 
 
@@ -36,6 +36,8 @@ def test_multivariate_polynomial_basis():
     mps = PolynomialSmoother(x, degrees)
     for i, deg in enumerate(degrees):
         assert_allclose(mps.smoothers_[i].basis_ , UnivariatePolynomialSmoother(x[:, i], degree=deg).basis_)
+
+
 
 
 # test_multivariate_polynomial_basis()

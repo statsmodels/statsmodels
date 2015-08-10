@@ -203,16 +203,16 @@ if example == 'ex7':
     y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
 
     y -= y.mean()
-    cs = CubicSplines(x, 10).fit()
+    cs = CubicSplines(x, 10)
 
     # required only to initialize the gam. they have no influence on the result.
     dummy_smoother = PolynomialSmoother(x, [2])
     gp = MultivariateGamPenalty(dummy_smoother, alphas=[0])
     for i, alpha in enumerate([0, 1, 5, 10]):
 
-        gam = GLMGam(y, cs.xs, penal=gp)
-        gam_res = gam._fit_pirls_version2(y=y, spl_x=cs.xs, spl_s=cs.s, alpha=alpha)
-        y_est = gam_res.predict(cs.xs)
+        gam = GLMGam(y, cs.basis_, penal=gp)
+        gam_res = gam._fit_pirls(y=y, spl_x=cs.basis_, spl_s=cs.s, alpha=alpha)
+        y_est = gam_res.predict(cs.basis_)
 
         plt.subplot(2, 2, i+1)
         plt.plot(x, y, '.')
@@ -234,25 +234,25 @@ if example == 'ex8':
     y2 -= y2.mean()
 
     Y = y1 + y2
-    cs1 = CubicSplines(x1, 10).fit()
-    cs2 = CubicSplines(x2, 10).fit()
+    cs1 = CubicSplines(x1, 10)
+    cs2 = CubicSplines(x2, 10)
 
-    spl_X = np.hstack([cs1.xs, cs2.xs])
+    spl_X = np.hstack([cs1.basis_, cs2.basis_])
     spl_S = [cs1.s, cs2.s]
 
-    n_var1 = cs1.xs.shape[1]
-    n_var2 = cs2.xs.shape[1]
+    n_var1 = cs1.basis_.shape[1]
+    n_var2 = cs2.basis_.shape[1]
 
     dummy_smoother = BSplines(x1, dfs=[10], degrees=[3])
     gp = MultivariateGamPenalty(dummy_smoother, alphas=[1])
-    gam = GLMGam(y1, cs1.xs, penal=gp)
+    gam = GLMGam(y1, cs1.basis_, penal=gp)
 
     i = 0
     for alpha in [0, 1, 2]:
 
-        gam_results = gam._fit_pirls_version2(Y, spl_X, spl_S, alpha=[alpha]*2)
-        y1_est = np.dot(cs1.xs, gam_results.params[:n_var1])
-        y2_est = np.dot(cs2.xs, gam_results.params[n_var1:])
+        gam_results = gam._fit_pirls(Y, spl_X, spl_S, alpha=[alpha]*2)
+        y1_est = np.dot(cs1.basis_, gam_results.params[:n_var1])
+        y2_est = np.dot(cs2.basis_, gam_results.params[n_var1:])
 
         y1_est -= y1_est.mean() # TODO: the estimate is good but has a very large mean. Why is this happening?
         y2_est -= y2_est.mean()
@@ -272,8 +272,9 @@ if example == 'ex8':
     plt.tight_layout()
     plt.show()
 
-example = 'ex9'
+#example = 'ex9'
 if example == 'ex9':
+    print(example)
     # PIRLS ###
     n = 500
     x = np.random.uniform(-1, 1, n)
@@ -290,7 +291,7 @@ if example == 'ex9':
     gam = GLMGam(y, smoother.basis_, penal=gp)
 
     for i, alpha in enumerate([0, .001, .01, .1]):
-        gam_res = gam._fit_pirls_version2(y=y, spl_x=smoother.basis_, spl_s=smoother.cov_der2_, alpha=alpha)
+        gam_res = gam._fit_pirls(y=y, spl_x=smoother.basis_, spl_s=smoother.cov_der2_, alpha=alpha)
 
         y_est = np.dot(smoother.basis_, gam_res.params.T)
 
