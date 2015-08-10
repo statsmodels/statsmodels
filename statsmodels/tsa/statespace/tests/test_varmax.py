@@ -9,6 +9,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 import os
+import re
 
 import warnings
 from statsmodels.datasets import webuse
@@ -16,6 +17,7 @@ from statsmodels.tsa.statespace import varmax
 from .results import results_varmax
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
+from statsmodels.iolib.summary import forg
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -155,6 +157,40 @@ class TestVAR(CheckLutkepohl):
             true,  order=(1,0), trend='nc',
             error_cov_type="unstructured")
 
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*VAR\(1\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset = i * self.model.k_endog
+            table = tables[i+1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 8)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.dln_inv +%.4f' % params[offset + 0], table) is None, False)
+            assert_equal(re.search('L1.dln_inc +%.4f' % params[offset + 1], table) is None, False)
+            assert_equal(re.search('L1.dln_consump +%.4f' % params[offset + 2], table) is None, False)
+
+        # Test the error covariance matrix table
+        table = tables[-1]
+        assert_equal(re.search('Error covariance matrix', table) is None, False)
+        assert_equal(len(table.split('\n')), 11)
+
+        params = params[self.model._params_state_cov]
+        names = self.model.param_names[self.model._params_state_cov]
+        for i in range(len(names)):
+            assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 class TestVAR_diagonal(CheckLutkepohl):
     def __init__(self):
@@ -164,6 +200,41 @@ class TestVAR_diagonal(CheckLutkepohl):
         super(TestVAR_diagonal, self).__init__(
             true,  order=(1,0), trend='nc',
             error_cov_type="diagonal")
+
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*VAR\(1\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset = i * self.model.k_endog
+            table = tables[i+1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 8)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.dln_inv +%.4f' % params[offset + 0], table) is None, False)
+            assert_equal(re.search('L1.dln_inc +%.4f' % params[offset + 1], table) is None, False)
+            assert_equal(re.search('L1.dln_consump +%.4f' % params[offset + 2], table) is None, False)
+
+        # Test the error covariance matrix table
+        table = tables[-1]
+        assert_equal(re.search('Error covariance matrix', table) is None, False)
+        assert_equal(len(table.split('\n')), 8)
+
+        params = params[self.model._params_state_cov]
+        names = self.model.param_names[self.model._params_state_cov]
+        for i in range(len(names)):
+            assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 
 class TestVAR_measurement_error(CheckLutkepohl):
@@ -224,6 +295,42 @@ class TestVAR_measurement_error(CheckLutkepohl):
             else:
                 assert_equal(getattr(self.results2.filter_results, name),
                              getattr(self.results.filter_results, name))
+
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*VAR\(1\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset = i * self.model.k_endog
+            table = tables[i+1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 9)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.dln_inv +%.4f' % params[offset + 0], table) is None, False)
+            assert_equal(re.search('L1.dln_inc +%.4f' % params[offset + 1], table) is None, False)
+            assert_equal(re.search('L1.dln_consump +%.4f' % params[offset + 2], table) is None, False)
+            assert_equal(re.search('measurement_variance +%.4g' % params[-(i+1)], table) is None, False)
+
+        # Test the error covariance matrix table
+        table = tables[-1]
+        assert_equal(re.search('Error covariance matrix', table) is None, False)
+        assert_equal(len(table.split('\n')), 8)
+
+        params = params[self.model._params_state_cov]
+        names = self.model.param_names[self.model._params_state_cov]
+        for i in range(len(names)):
+            assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 class TestVAR_obs_intercept(CheckLutkepohl):
     def __init__(self):
@@ -295,6 +402,42 @@ class TestVAR_exog(CheckLutkepohl):
         desired = super(varmax.VARMAXResultsWrapper, self.results).predict(start=75, end=75+15, state_intercept=state_intercept)
         assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
 
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*VARX\(1\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset = i * self.model.k_endog
+            table = tables[i+1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 9)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.dln_inv +%.4f' % params[offset + 0], table) is None, False)
+            assert_equal(re.search('L1.dln_inc +%.4f' % params[offset + 1], table) is None, False)
+            assert_equal(re.search('L1.dln_consump +%.4f' % params[offset + 2], table) is None, False)
+            assert_equal(re.search('beta.x1 +' + forg(params[self.model._params_regression][i], prec=4), table) is None, False)
+
+        # Test the error covariance matrix table
+        table = tables[-1]
+        assert_equal(re.search('Error covariance matrix', table) is None, False)
+        assert_equal(len(table.split('\n')), 11)
+
+        params = params[self.model._params_state_cov]
+        names = self.model.param_names[self.model._params_state_cov]
+        for i in range(len(names)):
+            assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
+
 
 class TestVAR2(CheckLutkepohl):
     def __init__(self):
@@ -309,6 +452,42 @@ class TestVAR2(CheckLutkepohl):
         # Exclude the covariance cholesky terms
         assert_allclose(
             self.results.bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
+
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*VAR\(2\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset = i * self.model.k_endog * self.model.k_ar
+            table = tables[i+1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 9)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.dln_inv +%.4f' % params[offset + 0], table) is None, False)
+            assert_equal(re.search('L1.dln_inc +%.4f' % params[offset + 1], table) is None, False)
+            assert_equal(re.search('L2.dln_inv +%.4f' % params[offset + 2], table) is None, False)
+            assert_equal(re.search('L2.dln_inc +%.4f' % params[offset + 3], table) is None, False)
+
+        # Test the error covariance matrix table
+        table = tables[-1]
+        assert_equal(re.search('Error covariance matrix', table) is None, False)
+        assert_equal(len(table.split('\n')), 8)
+
+        params = params[self.model._params_state_cov]
+        names = self.model.param_names[self.model._params_state_cov]
+        for i in range(len(names)):
+            assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 
 class CheckFREDManufacturing(CheckVARMAX):
@@ -371,6 +550,43 @@ class TestVARMA(CheckFREDManufacturing):
 
     def test_dynamic_predict(self):
         super(TestVARMA, self).test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
+
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*VARMA\(1,1\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset_ar = i * self.model.k_endog
+            offset_ma = self.model.k_endog**2 * self.model.k_ar + i * self.model.k_endog
+            table = tables[i+1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 9)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.dlncaputil +' + forg(params[offset_ar + 0], prec=4), table) is None, False)
+            assert_equal(re.search('L1.dlnhours +' + forg(params[offset_ar + 1], prec=4), table) is None, False)
+            assert_equal(re.search(r'L1.e\(dlncaputil\) +' + forg(params[offset_ma + 0], prec=4), table) is None, False)
+            assert_equal(re.search(r'L1.e\(dlnhours\) +' + forg(params[offset_ma + 1], prec=4), table) is None, False)
+
+        # Test the error covariance matrix table
+        table = tables[-1]
+        assert_equal(re.search('Error covariance matrix', table) is None, False)
+        assert_equal(len(table.split('\n')), 7)
+
+        params = params[self.model._params_state_cov]
+        names = self.model.param_names[self.model._params_state_cov]
+        for i in range(len(names)):
+            assert_equal(re.search('%s +%s' % (names[i], forg(params[i], prec=4)), table) is None, False)
 
 
 class TestVMA1(CheckFREDManufacturing):
