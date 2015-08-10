@@ -106,14 +106,16 @@ if example == 'ex3':
         plt.title('GLM alpha=' + str(alpha))
     plt.show()
 
+#example = 'ex4'
 if example == 'ex4':
     # Multivariate GAM
     print(example)
-
+    np.random.seed(0)
     n = 100
-    x1 = np.sort(np.random.uniform(-5, 5, n))
-    x2 = np.sort(np.random.uniform(0, 10, n))
-    poly = x1*x1 + x2 + np.random.normal(0, 0.01, n)
+    x1 = np.linspace(-1, 1, n)
+    x2 = np.linspace(0, 1, n)
+
+    poly = x1*x1*x1 + x2*x2 + np.random.normal(0, .5, n)
     y = sigmoid(poly)
     mu = y.mean()
     yc = y.copy()
@@ -121,29 +123,26 @@ if example == 'ex4':
     y[y <= mu] = 0
 
     degree1 = 3
-    degree2 = 4
+    degree2 = 3
+    df = 3
+
     x = np.vstack([x1, x2]).T
     bsplines = BSplines(x, [df, df], [degree1, degree2])
-    alpha = [0, 0]
 
+    alpha = [30] * 2
     mgp = MultivariateGamPenalty(bsplines, alphas=alpha, wts=[1, 1])
 
     mLG = LogitGam(y, bsplines.basis_, penal=mgp)
-    res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
+    res_mLG = mLG.fit(maxiter=1000, tol=1e-13, method='nm')
 
-    # TODO: this does not work.
-    res_mLG.plot_partial()
+    y_est = np.dot(bsplines.basis_, res_mLG.params)
+    y_est = sigmoid(y_est)
 
-
-    alpha = [.1, .2]
-    wts = [1, 1]
-
-    mgp = MultivariateGamPenalty(bsplines, wts=wts, alphas=alpha)
-
-    mLG = LogitGam(y, bsplines.basis_, penal=mgp)
-    res_mLG = mLG.fit(maxiter=1000, tol=1e-13)
-
-    res_mLG.plot_partial()  # TODO: partial_plot is not working
+    plt.plot(y_est, label='y est')
+    plt.plot(y, '.', label='y')
+    plt.legend(loc='best')
+    plt.ylim(-0.2, 1.2)
+    plt.show()
 
 if example == 'ex5':
     print(example)
@@ -190,7 +189,7 @@ if example == 'ex6':
 
     print(gam_cv_path.alpha_cv_, gam_cv_path.cv_error_)
 
-example = 'ex7'
+#example = 'ex7'
 if example == 'ex7':
     print(example)
 
@@ -224,13 +223,14 @@ if example == 'ex7':
 example = 'ex8'
 if example == 'ex8':
     print(example)
+    np.random.seed(0)
     # Multivariate GAM PIRLS
     n = 500
     x1 = np.random.uniform(-1, 1, n)
-    y1 = 10*x1**3 - 10*x1 + np.random.normal(0, 1, n)
+    y1 = 10*x1**3 - 10*x1 + np.random.normal(0, 3, n)
     y1 -= y1.mean()
     x2 = np.random.uniform(-1, 1, n)
-    y2 = x2**2 + np.random.normal(0, 0.1, n)
+    y2 = x2**2 + np.random.normal(0, 0.5, n)
     y2 -= y2.mean()
 
     Y = y1 + y2
@@ -248,9 +248,9 @@ if example == 'ex8':
     gam = GLMGam(y1, cs1.basis_, penal=gp)
 
     i = 0
-    for alpha in [0, 1, 2]:
+    for alpha1, alpha2 in zip([0, 1, 2], [0, 1, 2]):
 
-        gam_results = gam._fit_pirls(Y, spl_X, spl_S, alpha=[alpha]*2)
+        gam_results = gam._fit_pirls(Y, spl_X, spl_S, alpha=[alpha1, alpha2])
         y1_est = np.dot(cs1.basis_, gam_results.params[:n_var1])
         y2_est = np.dot(cs2.basis_, gam_results.params[n_var1:])
 
@@ -259,13 +259,13 @@ if example == 'ex8':
 
         i += 1
         plt.subplot(3, 2, i)
-        plt.title('x1  alpha=' + str(alpha))
+        plt.title('x1  alpha=' + str(alpha1))
         plt.plot(x1, y1, '.', label='Real', c='green')
         plt.plot(x1, y1_est, '.', label='Estimated', c='blue')
 
         i += 1
         plt.subplot(3, 2, i)
-        plt.title('x2  alpha=' + str(alpha))
+        plt.title('x2  alpha=' + str(alpha2))
         plt.plot(x2, y2, '.', label='Real', c='green')
         plt.plot(x2, y2_est, '.', label='Estimated', c='blue')
 

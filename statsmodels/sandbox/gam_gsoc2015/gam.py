@@ -410,7 +410,6 @@ class GLMGAMResults(GLMResults):
         return tr, p_val, rank
 
 
-
 class GLMGam(PenalizedMixin, GLM):
 
     _results_class = GLMGAMResults
@@ -491,12 +490,10 @@ class GLMGam(PenalizedMixin, GLM):
         return GLMResultsWrapper(glm_results)
 
 
-
 def penalized_wls(x, y, s, weights, alpha):
 
     aug_x, aug_y, aug_weights = make_augmented_matrix(x, y, s, weights, alpha)
     wls_results = lm.WLS(aug_y, aug_x, aug_weights).fit()
-
     wls_results.params = wls_results.params.ravel()
 
     return wls_results

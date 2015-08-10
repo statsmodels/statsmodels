@@ -419,7 +419,6 @@ def test_univariate_generic_smoother():
     gam_poly = GLMGam(y, poly.basis_, penal=gp_poly)
     gam_poly_res = gam_poly.fit()
 
-
     gp_gs = UnivariateGamPenalty(univ_gs, wts=1, alpha=alpha)
     gam_gs = GLMGam(y, univ_gs.basis_, penal=gp_gs)
     gam_gs_res = gam_gs.fit()
@@ -668,7 +667,6 @@ def test_cyclic_cubic_splines():
                 gam_res.params[multivariate_smoother.mask[1]])
     s1 -= s1.mean() # TODO: Mean has to be removed
 
-
     # plt.subplot(2, 1, 1)
     # plt.plot(x[:, 0], s0, '.', label='y_est')
     # plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='y_mgcv')
@@ -680,7 +678,6 @@ def test_cyclic_cubic_splines():
     # plt.legend(loc='best')
     # plt.show()
 
-    print(np.max(np.abs(s1 - s_mgcv[:, 1])))
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
 
@@ -710,5 +707,4 @@ def test_cyclic_cubic_splines():
 # test_train_test_smoothers()
 # test_make_augmented_matrix()
 # test_penalized_wls()
-
-test_cyclic_cubic_splines()
+# test_cyclic_cubic_splines()
