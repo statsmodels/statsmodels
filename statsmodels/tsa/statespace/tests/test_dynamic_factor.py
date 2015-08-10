@@ -9,6 +9,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 import os
+import re
 
 import warnings
 from statsmodels.datasets import webuse
@@ -16,6 +17,7 @@ from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
+from statsmodels.iolib.summary import forg
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -155,6 +157,48 @@ class TestStaticFactor2(CheckStaticFactor):
         # model didn't coverge, 4 of the parameters aren't fully estimated
         # (possibly they are still at starting values?) so the BIC is off
         pass
+
+    def test_summary(self):
+        summary = self.results.summary()
+        tables = [str(table) for table in summary.tables]
+        params = self.true['params']
+
+        # Check the model overview table
+        assert_equal(re.search(r'Model:.*StaticFactors\(factors=2, order=1\)', tables[0]) is None, False)
+
+        # For each endogenous variable, check the output
+        for i in range(self.model.k_endog):
+            offset_loading = self.model.k_factors * i
+            offset_var = self.model.k_factors * self.model.k_endog
+            table = tables[i + 1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for equation %s' % name, table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 8)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('loading.f1 +' + forg(params[offset_loading + 0], prec=4), table) is None, False)
+            assert_equal(re.search('loading.f2 +' + forg(params[offset_loading + 1], prec=4), table) is None, False)
+            assert_equal(re.search('sigma2 +' + forg(params[offset_var + i], prec=4), table) is None, False)
+
+        # For each factor, check the output
+        for i in range(self.model.k_factors):
+            offset = self.model.k_endog * (self.model.k_factors + 1) + i * self.model.k_factors
+            table = tables[self.model.k_endog + i + 1]
+
+            # -> Make sure we have the right table / table name
+            name = self.model.endog_names[i]
+            assert_equal(re.search('Results for factor equation f%d' % (i+1), table) is None, False)
+
+            # -> Make sure it's the right size
+            assert_equal(len(table.split('\n')), 7)
+
+            # -> Check that we have the right coefficients
+            assert_equal(re.search('L1.f1 +' + forg(params[offset + 0], prec=4), table) is None, False)
+            assert_equal(re.search('L1.f2 +' + forg(params[offset + 1], prec=4), table) is None, False)
 
 
 def test_misspecification():

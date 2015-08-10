@@ -196,19 +196,22 @@ class StaticFactors(MLEModel):
 
         # 1. Factor loadings (estimated via PCA)
         param_names += [
-            'loading%d.y%d' % (j+1, i+1)
+            'loading.f%d.%s' % (j+1, self.endog_names[i])
             for i in range(self.k_endog)
             for j in range(self.k_factors)
         ]
 
         # 2. Idiosyncratic variances
-        param_names += ['sigma2.y%d' % (i+1) for i in range(self.k_endog)]
+        param_names += [
+            'sigma2.%s' % self.endog_names[i]
+            for i in range(self.k_endog)
+        ]
 
         # 3. VAR transition (OLS on factors estimated via PCA)
         param_names += [
-            'L%df%d.f%d' % (i+1, k+1, j+1)
-            for i in range(self.factor_order)
+            'L%d.f%d.f%d' % (i+1, k+1, j+1)
             for j in range(self.k_factors)
+            for i in range(self.factor_order)
             for k in range(self.k_factors)
         ]
 
@@ -426,6 +429,7 @@ class StaticFactorsResults(MLEResults):
             ).reshape(k_factors, k_factors, factor_order).T
 
     def summary(self, alpha=.05, start=None):
+        from statsmodels.iolib.summary import summary_params
         # Create the model name
 
         # See if we have an ARIMA component
@@ -435,9 +439,71 @@ class StaticFactorsResults(MLEResults):
         model_name = (
             '%s%s' % (self.model.__class__.__name__, order)
             )
-        return super(StaticFactorsResults, self).summary(
-            alpha=alpha, start=start, model_name=model_name
+        summary = super(StaticFactorsResults, self).summary(
+            alpha=alpha, start=start, model_name=model_name,
+            display_params=False
         )
+
+        # Add parameter tables for each endogenous variable
+        k_endog = self.model.k_endog
+        k_factors = self.model.k_factors
+        factor_order = self.model.factor_order
+        for i in range(k_endog):
+            mask = []
+            offset = 0
+
+            # 1. Loadings
+            offset = k_factors * i
+            mask.append(np.arange(offset, offset + k_factors))
+
+            # 2. Idiosyncratic variance
+            offset = k_factors * k_endog
+            mask.append(np.array(offset + i, ndmin=1))
+
+            # Create the table
+            mask = np.concatenate(mask)
+            res = (self, self.params[mask], self.bse[mask], self.zvalues[mask],
+                   self.pvalues[mask], self.conf_int(alpha)[mask])
+
+            param_names = [
+                '.'.join(name.split('.')[:-1])
+                for name in
+                np.array(self.data.param_names)[mask].tolist()
+            ]
+            title = "Results for equation %s" % self.model.endog_names[i]
+
+            table = summary_params(res, yname=None, xname=param_names,
+                                   alpha=alpha, use_t=False, title=title)
+
+            summary.tables.append(table)
+
+        # Add parameter tables for each factor
+        offset = k_endog * (k_factors + 1)
+        for i in range(k_factors):
+            mask = []
+            start = i * k_factors * factor_order
+            end = (i + 1) * k_factors * factor_order
+            mask.append(
+                offset + np.arange(start, end))
+
+            # Create the table
+            mask = np.concatenate(mask)
+            res = (self, self.params[mask], self.bse[mask], self.zvalues[mask],
+                   self.pvalues[mask], self.conf_int(alpha)[mask])
+
+            param_names = [
+                '.'.join(name.split('.')[:-1])
+                for name in
+                np.array(self.data.param_names)[mask].tolist()
+            ]
+            title = "Results for factor equation f%d" % (i+1)
+
+            table = summary_params(res, yname=None, xname=param_names,
+                                   alpha=alpha, use_t=False, title=title)
+
+            summary.tables.append(table)
+
+        return summary
     summary.__doc__ = MLEResults.summary.__doc__
 
 
