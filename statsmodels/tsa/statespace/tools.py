@@ -742,8 +742,8 @@ if has_trmm:
         constrained, variance = prefix_pacf_map[prefix](
             sv_constrained, variance, transform_variance, order, k_endog)
 
-        constrained = np.array(constrained)
-        variance = np.array(variance)
+        constrained = np.array(constrained, dtype=dtype)
+        variance = np.array(variance, dtype=dtype)
 
         if use_list:
             constrained = [
