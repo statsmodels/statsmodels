@@ -433,7 +433,7 @@ class VARMAX(MLEModel):
         if self.measurement_error:
             # Force these to be positive
             constrained[self._params_obs_cov] = (
-                constrained[self._params_obs_cov]**2)
+                unconstrained[self._params_obs_cov]**2)
 
         return constrained
 
