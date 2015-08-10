@@ -780,13 +780,26 @@ class VARMAXResults(MLEResults):
         from statsmodels.iolib.summary import summary_params
 
         # Create the model name
+        spec = self.specification
+        if spec.k_ar > 0 and spec.k_ma > 0:
+            model_name = 'VARMA'
+            order = '(%s,%s)' % (spec.k_ar, spec.k_ma)
+        elif spec.k_ar > 0:
+            model_name = 'VAR'
+            order = '(%s)' % (spec.k_ar)
+        else:
+            model_name = 'VMA'
+            order = '(%s)' % (spec.k_ma)
+        if spec.k_exog > 0:
+            model_name += 'X'
+        model_name = [model_name + order]
 
-        # See if we have an ARIMA component
-        order = '(%d, %d)' % (self.specification.k_ar, self.specification.k_ma)
+        if spec.trend == 'c':
+            model_name.append('intercept')
 
-        model_name = (
-            '%s%s' % (self.model.__class__.__name__, order)
-            )
+        if spec.measurement_error:
+            model_name.append('measurement error')
+
         summary = super(VARMAXResults, self).summary(
             alpha=alpha, start=start, model_name=model_name,
             display_params=False
@@ -808,14 +821,18 @@ class VARMAXResults(MLEResults):
 
             # 2. AR terms
             if k_ar > 0:
+                start = i * k_endog * k_ar
+                end = (i + 1) * k_endog * k_ar
                 mask.append(
-                    offset + np.arange(i * k_endog * k_ar, (i + 1) * k_endog * k_ar))
+                    offset + np.arange(start, end))
                 offset += k_ar * k_endog**2
 
             # 3. MA terms
             if k_ma > 0:
+                start = i * k_endog * k_ma
+                end = (i + 1) * k_endog * k_ma
                 mask.append(
-                    offset + np.arange(i * k_endog * k_ma, (i + 1) * k_endog * k_ma))
+                    offset + np.arange(start, end))
                 offset += k_ma * k_endog**2
 
             # 4. Regression terms
@@ -842,9 +859,8 @@ class VARMAXResults(MLEResults):
 
             table = summary_params(res, yname=None, xname=param_names,
                                    alpha=alpha, use_t=False, title=title)
-            
-            summary.tables.append(table)
 
+            summary.tables.append(table)
 
         # State covariance terms
         mask = self.model._params_state_cov
