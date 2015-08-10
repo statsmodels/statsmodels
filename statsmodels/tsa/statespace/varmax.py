@@ -460,7 +460,7 @@ class VARMAX(MLEModel):
         if self.k_ar > 0 and self.enforce_stationarity:
             # Create the state covariance matrix
             if self.error_cov_type == 'diagonal':
-                state_cov = np.diag(constrained[self._params_state_cov]**2)
+                state_cov = np.diag(constrained[self._params_state_cov])
             elif self.error_cov_type == 'unstructured':
                 state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
                                            dtype=constrained.dtype)
