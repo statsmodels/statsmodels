@@ -61,6 +61,59 @@ class VARMAX(MLEModel):
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
         `KalmanFilter` for more details.
+
+    Attributes
+    ----------
+    order : iterable
+        The (p,q) order of the model for the number of AR and MA parameters to
+        use.
+    trend : {'nc', 'c'}, optional
+        Parameter controlling the deterministic trend polynomial.
+        Can be specified as a string where 'c' indicates a constant intercept
+        and 'nc' indicates no intercept term.
+    error_cov_type : {'diagonal', 'unstructured'}, optional
+        The structure of the covariance matrix of the error term, where
+        "unstructured" puts no restrictions on the matrix and "diagonal"
+        requires it to be a diagonal matrix (uncorrelated errors). Default is
+        "unstructured".
+    measurement_error : boolean, optional
+        Whether or not to assume the endogenous observations `endog` were
+        measured with error. Default is False.
+    enforce_stationarity : boolean, optional
+        Whether or not to transform the AR parameters to enforce stationarity
+        in the autoregressive component of the model. Default is True.
+    enforce_invertibility : boolean, optional
+        Whether or not to transform the MA parameters to enforce invertibility
+        in the moving average component of the model. Default is True.
+
+    Notes
+    -----
+    Generically, the VARMAX model is specified (see for example chapter 18 of
+    [1]_):
+
+    .. math::
+
+        y_t = \nu + A_1 y_{t-1} + \dots + A_p y_{t-p} + B x_t + \epsilon_t +
+        M_1 \epsilon_{t-1} + \dots M_q \epsilon_{t-q}
+
+    where :math:`\epsilon_t \sim N(0, \Omega)`, and where :math:`y_t` is a
+    `k_endog x 1` vector. Additionally, this model allows considering the case
+    where the variables are measured with error.
+
+    Note that in the full VARMA(p,q) case there is a fundamental identification
+    problem in that the coefficient matrices :math:`\{A_i, M_j\}` are not
+    generally unique, meaning that for a given time series process there may
+    be multiple sets of matrices that equivalently represent it. See Chapter 12
+    of [1]_ for more informationl. Although this class can be used to estimate
+    VARMA(p,q) models, a warning is issued to remind users that no steps have
+    been taken to ensure identification in this case.
+
+    References
+    ----------
+    .. [1] Lutkepohl, Helmut. 2007.
+       New Introduction to Multiple Time Series Analysis.
+       Berlin: Springer.
+
     """
 
     def __init__(self, endog, exog=None, order=(1, 0), trend='c',
@@ -251,6 +304,7 @@ class VARMAX(MLEModel):
             )
 
         return result
+        filter.__doc__ = MLEModel.filter.__doc__
 
     @property
     def start_params(self):

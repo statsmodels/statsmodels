@@ -50,6 +50,13 @@ class StaticFactors(MLEModel):
 
     Attributes
     ----------
+    k_factors : int
+        The number of unobserved factors.
+    factor_order : int
+        The order of the vector autoregression followed by the factors.
+    enforce_stationarity : boolean, optional
+        Whether or not to transform the AR parameters to enforce stationarity
+        in the autoregressive component of the model. Default is True.
 
     Notes
     -----
@@ -159,6 +166,7 @@ class StaticFactors(MLEModel):
             )
 
         return result
+        filter.__doc__ = MLEModel.filter.__doc__
 
     @property
     def start_params(self):
@@ -333,7 +341,7 @@ class StaticFactors(MLEModel):
         -----
         Let `n = k_endog`, `m = k_factors`, and `p = factor_order`. Then the
         `params` vector has length
-        :math:`[n \times m] + [n] + [m^2 \times p] + [m \times (m + 1) / 2]`.
+        :math:`[n \times m] + [n] + [m^2 \times p]`.
         It is expanded in the following way:
 
         - The first :math:`n \times m` parameters fill out the factor loading
@@ -351,12 +359,6 @@ class StaticFactors(MLEModel):
           we assume that the first :math:`m^2` parameters fill the first
           coefficient matrix (starting at [0,0] and filling along rows), the
           second :math:`m^2` parameters fill the second matrix, etc.
-        - The last :math:`m \times (m + 1) / 2` parameters are used to fill in
-          a lower-triangular matrix, which is multipled with its transpose to
-          create a positive definite variance / covariance matrix for the
-          factor's VAR. The are not transformed in `transform_params` because
-          the matrix multiplication procedure ensures the variance terms are
-          positive and the matrix is positive definite.
 
         """
         params = super(StaticFactors, self).update(params, transformed)
@@ -391,9 +393,6 @@ class StaticFactorsResults(MLEResults):
         instance.
     coefficient_matrices_var : array
         Array containing autoregressive lag polynomial coefficient matrices,
-        ordered from lowest degree to highest.
-    coefficient_matrices_vma : array
-        Array containing moving average lag polynomial coefficients,
         ordered from lowest degree to highest.
 
     See Also
