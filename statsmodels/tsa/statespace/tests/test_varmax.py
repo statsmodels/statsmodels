@@ -265,6 +265,47 @@ class TestVARMA(CheckFREDManufacturing):
         super(TestVARMA, self).test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
 
 
+class TestVMA1(CheckFREDManufacturing):
+    """
+    Test against the sspace VARMA example with some params set to zeros.
+    """
+
+    def __init__(self):
+        true = results_varmax.fred_vma1.copy()
+        true['predict'] = varmax_results.ix[1:, ['predict_vma1_1', 'predict_vma1_2']]
+        true['dynamic_predict'] = varmax_results.ix[1:, ['dyn_predict_vma1_1', 'dyn_predict_vma1_2']]
+        super(TestVMA1, self).__init__(
+              true, order=(0,1), trend='nc', error_cov_type='diagonal')
+
+    def test_mle(self):
+        # Since the VARMA model here is generic (we're just forcing zeros
+        # in some params) whereas Stata's is restricted, the MLE test isn't
+        # meaninful
+        pass
+
+    def test_bse_oim(self):
+        # Standard errors do not match Stata's
+        raise SkipTest('Known failure: standard errors do not match.')
+
+    def test_aic(self):
+        # Since the VARMA model here is generic (we're just putting in zeros
+        # for some params), Stata assumes a different estimated number of
+        # parameters; hence the aic and bic, will be off
+        pass
+
+    def test_bic(self):
+        # Since the VARMA model here is generic (we're just putting in zeros
+        # for some params), Stata assumes a different estimated number of
+        # parameters; hence the aic and bic, will be off
+        pass
+
+    def test_predict(self):
+        super(TestVMA1, self).test_predict(end='2009-05-01', atol=1e-4)
+
+    def test_dynamic_predict(self):
+        super(TestVMA1, self).test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
+
+
 def test_specifications():
     # Tests for model specification and state space creation
     endog = np.arange(20).reshape(10,2)

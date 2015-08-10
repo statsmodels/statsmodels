@@ -166,3 +166,19 @@ fred_varma11 = {
     'aic': -6300.113,
     'bic': -6275.551
 }
+
+fred_vma1 = {
+    'params': [
+        .24803941, 0,          # Theta_1, row 1
+        0,         0,          # Theta_1, row 2
+        .00006514, .00004621,  # Variances
+    ],
+    'var_oim': [
+        .00154773, 0,           # Theta_1, row 1
+        0,         0,           # Theta_1, row 2
+        1.916e-11, 9.639e-12,   # Variances
+    ],
+    'loglike': 3088.909619417645,
+    'aic': -6171.819,
+    'bic': -6159.539
+}
