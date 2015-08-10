@@ -84,6 +84,26 @@ lutkepohl_var1_diag = {
     'bic': -1073.824
 }
 
+lutkepohl_var1_diag_meas = {
+    'params': [
+        -0.24817904,  0.29283012,  0.80794938,  # Phi, row 1
+        0.02282985,   0.19672157,  0.66329776,  # Phi, row 2
+        -0.01522531,  0.53500874,  0.28859213,  # Phi, row 3
+        0.00199106,   0.00018529,  0.00016179,  # Variances, diagonal
+        0,            0,           0            # Measurement error variances
+    ],
+    'var_oim': [
+        .01314245, .1902972,  .23400828,
+        .00124336, .01840132, .02229946,
+        .00107322, .01558391, .01909303,
+        1.057e-07, 9.233e-10, 7.011e-10,
+        None, None, None
+    ],
+    'loglike': 562.8168476509002,
+    'aic': None,
+    'bic': None
+}
+
 lutkepohl_var1_obs_intercept = {
     'params': [
         -.24762,   .25961003,  .75992623,   # Phi, row 1

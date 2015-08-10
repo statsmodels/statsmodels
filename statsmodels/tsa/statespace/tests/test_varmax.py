@@ -142,6 +142,65 @@ class TestVAR_diagonal(CheckLutkepohl):
             error_cov_type="diagonal")
 
 
+class TestVAR_measurement_error(CheckLutkepohl):
+    """
+    Notes
+    -----
+    There does not appear to be a way to get Stata to estimate a VAR with
+    measurement errors. Thus this test is mostly a smoke test that measurement
+    errors are setup correctly: it uses the same params from TestVAR_diagonal
+    and sets the measurement errors variance params to zero to check that the
+    loglike and predict are the same.
+
+    It also checks that the state-space representation with positive
+    measurement errors is correct.
+    """
+    def __init__(self):
+        true = results_varmax.lutkepohl_var1_diag_meas.copy()
+        true['predict'] = var_results.ix[1:, ['predict_diag1', 'predict_diag2', 'predict_diag3']]
+        true['dynamic_predict'] = var_results.ix[1:, ['dyn_predict_diag1', 'dyn_predict_diag2', 'dyn_predict_diag3']]
+        super(TestVAR_measurement_error, self).__init__(
+            true,  order=(1,0), trend='nc',
+            error_cov_type="diagonal", measurement_error=True)
+
+        # Create another filter results with positive measurement errors
+        self.true_measurement_error_variances = [1., 2., 3.]
+        params = np.r_[true['params'][:-3], self.true_measurement_error_variances]
+        self.results2 = self.model.filter(params)
+
+    def test_mle(self):
+        # With the additional measurment error parameters, this wouldn't be
+        # a meaningful test
+        pass
+
+    def test_bse_oim(self):
+        # This would just test the same thing as TestVAR_diagonal.test_bse_oim
+        pass
+
+    def test_aic(self):
+        # Since the measurement error is added, the number
+        # of parameters, and hence the aic and bic, will be off
+        pass
+
+    def test_bic(self):
+        # Since the measurement error is added, the number
+        # of parameters, and hence the aic and bic, will be off
+        pass
+
+    def test_representation(self):
+        # Test that the state space representation in the measurement error
+        # case is correct
+        for name in self.model.ssm.shapes.keys():
+            if name == 'obs':
+                pass
+            elif name == 'obs_cov':
+                actual = self.results2.filter_results.obs_cov
+                desired = np.diag(self.true_measurement_error_variances)[:,:,np.newaxis]
+                assert_equal(actual, desired)
+            else:
+                assert_equal(getattr(self.results2.filter_results, name),
+                             getattr(self.results.filter_results, name))
+
 class TestVAR_obs_intercept(CheckLutkepohl):
     def __init__(self):
         true = results_varmax.lutkepohl_var1_obs_intercept.copy()
@@ -349,7 +408,7 @@ def test_misspecifications():
     assert_raises(ValueError, varmax.VARMAX, endog, order=(1,0), error_cov_type='')
 
     # Bad order specification
-    assert_raises(ValueError, varmax.VARMAX, endog, order=(0,0), trend='')
+    assert_raises(ValueError, varmax.VARMAX, endog, order=(0,0))
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
