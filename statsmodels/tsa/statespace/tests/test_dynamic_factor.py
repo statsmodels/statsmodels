@@ -68,7 +68,7 @@ class CheckStaticFactor(object):
 
         # Test cofficient matrix creation (via a different, more direct, method)
         if self.model.factor_order > 0:
-            coefficients = self.results.params[self.model._params_transition].reshape(self.model.k_factors, self.model.k_factors * self.model.factor_order)
+            coefficients = np.array(self.results.params[self.model._params_transition]).reshape(self.model.k_factors, self.model.k_factors * self.model.factor_order)
             coefficient_matrices = np.array([
                 coefficients[:self.model.k_factors, i*self.model.k_factors:(i+1)*self.model.k_factors]
                 for i in range(self.model.factor_order)

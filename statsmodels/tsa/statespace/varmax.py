@@ -639,14 +639,14 @@ class VARMAXResults(MLEResults):
         self.coefficient_matrices_var = None
         self.coefficient_matrices_vma = None
         if self.model.k_ar > 0:
-            ar_params = self.params[self.model._params_ar]
+            ar_params = np.array(self.params[self.model._params_ar])
             k_endog = self.model.k_endog
             k_ar = self.model.k_ar
             self.coefficient_matrices_var = (
                 ar_params.reshape(k_endog * k_ar, k_endog).T
             ).reshape(k_endog, k_endog, k_ar).T
         if self.model.k_ma > 0:
-            ma_params = self.params[self.model._params_ma]
+            ma_params = np.array(self.params[self.model._params_ma])
             k_endog = self.model.k_endog
             k_ma = self.model.k_ma
             self.coefficient_matrices_vma = (

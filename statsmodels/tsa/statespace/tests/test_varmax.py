@@ -73,7 +73,7 @@ class CheckVARMAX(object):
 
         # Test cofficient matrix creation (via a different, more direct, method)
         if self.model.k_ar > 0:
-            coefficients = self.results.params[self.model._params_ar].reshape(self.model.k_endog, self.model.k_endog * self.model.k_ar)
+            coefficients = np.array(self.results.params[self.model._params_ar]).reshape(self.model.k_endog, self.model.k_endog * self.model.k_ar)
             coefficient_matrices = np.array([
                 coefficients[:self.model.k_endog, i*self.model.k_endog:(i+1)*self.model.k_endog]
                 for i in range(self.model.k_ar)
@@ -82,7 +82,7 @@ class CheckVARMAX(object):
         else:
             assert_equal(self.results.coefficient_matrices_var, None)
         if self.model.k_ma > 0:
-            coefficients = self.results.params[self.model._params_ma].reshape(self.model.k_endog, self.model.k_endog * self.model.k_ma)
+            coefficients = np.array(self.results.params[self.model._params_ma]).reshape(self.model.k_endog, self.model.k_endog * self.model.k_ma)
             coefficient_matrices = np.array([
                 coefficients[:self.model.k_endog, i*self.model.k_endog:(i+1)*self.model.k_endog]
                 for i in range(self.model.k_ma)

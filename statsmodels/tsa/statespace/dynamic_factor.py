@@ -421,7 +421,7 @@ class StaticFactorsResults(MLEResults):
         # Polynomials / coefficient matrices
         self.coefficient_matrices_var = None
         if self.model.factor_order > 0:
-            ar_params = self.params[self.model._params_transition]
+            ar_params = np.array(self.params[self.model._params_transition])
             k_factors = self.model.k_factors
             factor_order = self.model.factor_order
             self.coefficient_matrices_var = (
