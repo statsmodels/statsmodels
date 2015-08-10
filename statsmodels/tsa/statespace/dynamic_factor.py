@@ -135,6 +135,31 @@ class StaticFactors(MLEModel):
         self._params_idiosyncratic, offset = _slice('idiosyncratic', offset)
         self._params_transition, offset = _slice('transition', offset)
 
+    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        params = np.array(params, ndmin=1)
+
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(StaticFactors, self).filter(params, transformed,
+                                                   cov_type, return_ssm=True,
+                                                   **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = StaticFactorsResultsWrapper(
+                StaticFactorsResults(self, params, result, **result_kwargs)
+            )
+
+        return result
+
     @property
     def start_params(self):
         params = np.zeros(self.k_params, dtype=np.float64)
@@ -345,3 +370,82 @@ class StaticFactors(MLEModel):
         self.ssm[self._idx_transition] = (
             params[self._params_transition].reshape(
                 self.k_factors, self.k_factors * self.factor_order))
+
+
+class StaticFactorsResults(MLEResults):
+    """
+    Class to hold results from fitting an StaticFactors model.
+
+    Parameters
+    ----------
+    model : StaticFactors instance
+        The fitted model instance
+
+    Attributes
+    ----------
+    specification : dictionary
+        Dictionary including all attributes from the StaticFactors model
+        instance.
+    coefficient_matrices_var : array
+        Array containing autoregressive lag polynomial coefficient matrices,
+        ordered from lowest degree to highest.
+    coefficient_matrices_vma : array
+        Array containing moving average lag polynomial coefficients,
+        ordered from lowest degree to highest.
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
+    """
+    def __init__(self, model, params, filter_results, cov_type='opg',
+                 **kwargs):
+        super(StaticFactorsResults, self).__init__(model, params,
+                                                   filter_results, cov_type,
+                                                   **kwargs)
+
+        self.df_resid = np.inf  # attribute required for wald tests
+
+        self.specification = Bunch(**{
+            # Set additional model parameters
+            'enforce_stationarity': self.model.enforce_stationarity,
+
+            # Factors
+            'k_factors': self.model.k_factors,
+            'factor_order': self.model.factor_order
+        })
+
+        # Polynomials / coefficient matrices
+        self.coefficient_matrices_var = None
+        if self.model.factor_order > 0:
+            ar_params = self.params[self.model._params_transition]
+            k_factors = self.model.k_factors
+            factor_order = self.model.factor_order
+            self.coefficient_matrices_var = (
+                ar_params.reshape(k_factors * factor_order, k_factors).T
+            ).reshape(k_factors, k_factors, factor_order).T
+
+    def summary(self, alpha=.05, start=None):
+        # Create the model name
+
+        # See if we have an ARIMA component
+        order = '(factors=%d, order=%d)' % (self.specification.k_factors,
+                                            self.specification.factor_order)
+
+        model_name = (
+            '%s%s' % (self.model.__class__.__name__, order)
+            )
+        return super(StaticFactorsResults, self).summary(
+            alpha=alpha, start=start, model_name=model_name
+        )
+    summary.__doc__ = MLEResults.summary.__doc__
+
+
+class StaticFactorsResultsWrapper(MLEResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(StaticFactorsResultsWrapper, StaticFactorsResults)

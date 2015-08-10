@@ -60,6 +60,21 @@ class CheckStaticFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(actual, self.model.start_params)
 
+    def test_results(self):
+        # Smoke test for creating the summary
+        self.results.summary()
+
+        # Test cofficient matrix creation (via a different, more direct, method)
+        if self.model.factor_order > 0:
+            coefficients = self.results.params[self.model._params_transition].reshape(self.model.k_factors, self.model.k_factors * self.model.factor_order)
+            coefficient_matrices = np.array([
+                coefficients[:self.model.k_factors, i*self.model.k_factors:(i+1)*self.model.k_factors]
+                for i in range(self.model.factor_order)
+            ])
+            assert_equal(self.results.coefficient_matrices_var, coefficient_matrices)
+        else:
+            assert_equal(self.results.coefficient_matrices_var, None)
+
     def test_no_enforce(self):
         # Test that nothing goes wrong when we don't enforce stationarity
         params = self.model.untransform_params(self.true['params'])
