@@ -45,6 +45,21 @@ class CheckStaticFactor(object):
 
         self.results = self.model.filter(true['params'], cov_type=cov_type)
 
+    def test_params(self):
+        # Smoke test to make sure the start_params are well-defined and
+        # lead to a well-defined model
+        self.model.filter(self.model.start_params)
+        # Similarly a smoke test for param_names
+        assert_equal(len(self.model.start_params), len(self.model.param_names))
+        # Finally make sure the transform and untransform do their job
+        actual = self.model.transform_params(self.model.untransform_params(self.model.start_params))
+        assert_allclose(actual, self.model.start_params)
+        # Also in the case of enforce stationarity = False
+        self.model.enforce_stationarity = False
+        actual = self.model.transform_params(self.model.untransform_params(self.model.start_params))
+        self.model.enforce_stationarity = True
+        assert_allclose(actual, self.model.start_params)
+
     def test_no_enforce(self):
         # Test that nothing goes wrong when we don't enforce stationarity
         params = self.model.untransform_params(self.true['params'])
