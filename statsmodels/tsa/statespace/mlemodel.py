@@ -2104,7 +2104,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return fig
 
-    def summary(self, alpha=.05, start=None, title=None, model_name=None):
+    def summary(self, alpha=.05, start=None, title=None, model_name=None,
+                display_params=True):
         """
         Summarize the Model
 
@@ -2198,7 +2199,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
-        if len(self.params) > 0:
+        if len(self.params) > 0 and display_params:
             summary.add_table_params(self, alpha=alpha,
                                      xname=self.data.param_names, use_t=False)
         summary.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
