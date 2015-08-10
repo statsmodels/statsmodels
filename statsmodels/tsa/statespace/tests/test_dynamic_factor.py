@@ -140,3 +140,11 @@ class TestStaticFactor2(CheckStaticFactor):
         # model didn't coverge, 4 of the parameters aren't fully estimated
         # (possibly they are still at starting values?) so the BIC is off
         pass
+
+
+def test_misspecification():
+    # Tests for model specification and misspecification exceptions
+    endog = np.arange(20).reshape(10,2)
+
+    # Too many factors
+    assert_raises(ValueError, dynamic_factor.StaticFactors, endog, k_factors=2, factor_order=1)

@@ -100,6 +100,11 @@ class StaticFactors(MLEModel):
             endog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Test for too many factors
+        if self.k_factors >= self.k_endog:
+            raise ValueError('Number of factors must be less than the number'
+                             ' of endogenous variables.')
+
         # Initialize the parameters
         self.parameters = OrderedDict()
         self.parameters['factor_loadings'] = self.k_endog * self.k_factors
