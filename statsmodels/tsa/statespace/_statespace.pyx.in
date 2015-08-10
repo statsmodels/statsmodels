@@ -2025,6 +2025,12 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         {{prefix}}potrf("U", &k_endog, &tmp[0,0], &k_endog, &info)
         # {{prefix}}potri("L", &k_endog, &tmp[0,0], &k_endog, &info)
 
+        # We need to zero out the lower triangle of L', because ?trtrs only
+        # knows that M' is upper triangular
+        for s in range(k_endog - 1):          # column
+            for k in range(s+1, k_endog):     # row
+                initial_variance[k, s] = 0
+
         # Note that T is lower triangular
         # L M^{-1} = T
         # M' T' = L'
