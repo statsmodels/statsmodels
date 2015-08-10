@@ -335,38 +335,44 @@ class VARMAX(MLEModel):
 
         # 1. Intercept terms
         if self.trend == 'c':
-            param_names += ['const.y%d' % (i+1) for i in range(self.k_endog)]
+            param_names += [
+                'const.%s' % self.endog_names[i]
+                for i in range(self.k_endog)
+            ]
 
         # 2. AR terms
         param_names += [
-            'L%dy%d.y%d' % (i+1, k+1, j+1)
-            for i in range(self.k_ar)
+            'L%d.%s.%s' % (i+1, self.endog_names[k], self.endog_names[j])
             for j in range(self.k_endog)
+            for i in range(self.k_ar)
             for k in range(self.k_endog)
         ]
 
         # 3. MA terms
         param_names += [
-            'L%de%d.y%d' % (i+1, k+1, j+1)
-            for i in range(self.k_ma)
+            'L%d.e(%s).%s' % (i+1, self.endog_names[k], self.endog_names[j])
             for j in range(self.k_endog)
+            for i in range(self.k_ma)
             for k in range(self.k_endog)
         ]
 
         # 4. Regression terms
-        # TODO replace "beta" with the name of the exog, when possible
         param_names += [
-            'beta%d.y%d' % (j+1, i+1)
+            'beta.%s.%s' % (self.exog_names[j], self.endog_names[i])
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
 
         # 5. State covariance terms
         if self.error_cov_type == 'diagonal':
-            param_names += ['sigma2.y%d' % i for i in range(self.k_endog)]
+            param_names += [
+                'sigma2.%s' % self.endog_names[i]
+                for i in range(self.k_endog)
+            ]
         elif self.error_cov_type == 'unstructured':
             param_names += [
-                'sqrt.cov.y%d.y%d' % (j+1, i+1)
+                ('sqrt.var.%s' % self.endog_names[i] if i == j else
+                 'sqrt.cov.%s.%s' % (self.endog_names[j], self.endog_names[i]))
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
@@ -374,7 +380,7 @@ class VARMAX(MLEModel):
         # 5. Measurement error variance terms
         if self.measurement_error:
             param_names += [
-                'measurement_variance.y%d' % (i+1)
+                'measurement_variance.%s' % self.endog_names[i]
                 for i in range(self.k_endog)
             ]
 
@@ -771,6 +777,8 @@ class VARMAXResults(MLEResults):
         return super(VARMAXResults, self).forecast(steps, exog=exog, **kwargs)
 
     def summary(self, alpha=.05, start=None):
+        from statsmodels.iolib.summary import summary_params
+
         # Create the model name
 
         # See if we have an ARIMA component
@@ -779,9 +787,78 @@ class VARMAXResults(MLEResults):
         model_name = (
             '%s%s' % (self.model.__class__.__name__, order)
             )
-        return super(VARMAXResults, self).summary(
-            alpha=alpha, start=start, model_name=model_name
+        summary = super(VARMAXResults, self).summary(
+            alpha=alpha, start=start, model_name=model_name,
+            display_params=False
         )
+
+        # Add parameter tables for each endogenous variable
+        k_endog = self.model.k_endog
+        k_ar = self.model.k_ar
+        k_ma = self.model.k_ma
+        k_exog = self.model.k_exog
+        for i in range(k_endog):
+            mask = []
+            offset = 0
+
+            # 1. Intercept terms
+            if self.model.trend == 'c':
+                mask.append(np.array(i, ndmin=1))
+                offset += k_endog
+
+            # 2. AR terms
+            if k_ar > 0:
+                mask.append(
+                    offset + np.arange(i * k_endog * k_ar, (i + 1) * k_endog * k_ar))
+                offset += k_ar * k_endog**2
+
+            # 3. MA terms
+            if k_ma > 0:
+                mask.append(
+                    offset + np.arange(i * k_endog * k_ma, (i + 1) * k_endog * k_ma))
+                offset += k_ma * k_endog**2
+
+            # 4. Regression terms
+            if k_exog > 0:
+                mask.append(
+                    offset + np.arange(i * k_exog, (i + 1) * k_exog))
+                offset += k_endog * k_exog
+
+            # 5. Measurement error variance terms
+            if self.model.measurement_error:
+                mask.append(np.array(self.model.k_params - i - 1, ndmin=1))
+
+            # Create the table
+            mask = np.concatenate(mask)
+            res = (self, self.params[mask], self.bse[mask], self.zvalues[mask],
+                   self.pvalues[mask], self.conf_int(alpha)[mask])
+
+            param_names = [
+                '.'.join(name.split('.')[:-1])
+                for name in
+                np.array(self.data.param_names)[mask].tolist()
+            ]
+            title = "Results for equation %s" % self.model.endog_names[i]
+
+            table = summary_params(res, yname=None, xname=param_names,
+                                   alpha=alpha, use_t=False, title=title)
+            
+            summary.tables.append(table)
+
+
+        # State covariance terms
+        mask = self.model._params_state_cov
+        res = (self, self.params[mask], self.bse[mask], self.zvalues[mask],
+               self.pvalues[mask], self.conf_int(alpha)[mask])
+
+        param_names = np.array(self.data.param_names)[mask].tolist()
+        title = "Error covariance matrix"
+
+        table = summary_params(res, yname=None, xname=param_names,
+                               alpha=alpha, use_t=False, title=title)
+        summary.tables.append(table)
+
+        return summary
     summary.__doc__ = MLEResults.summary.__doc__
 
 
