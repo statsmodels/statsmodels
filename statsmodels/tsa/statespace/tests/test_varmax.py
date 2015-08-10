@@ -34,15 +34,17 @@ class CheckVARMAX(object):
     """
 
     def test_mle(self):
-        # Fit with all transformations
-        # results = self.model.fit(method='powell', disp=-1)
-        results = self.model.fit(maxiter=100, disp=False)
-        # Fit now without transformations
-        self.model.enforce_stationarity = False
-        self.model.enforce_invertibility = False
-        results = self.model.fit(results.params, method='nm', maxiter=1000,
-                                 disp=False)
-        assert_allclose(results.llf, self.results.llf, rtol=1e-5)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            # Fit with all transformations
+            # results = self.model.fit(method='powell', disp=-1)
+            results = self.model.fit(maxiter=100, disp=False)
+            # Fit now without transformations
+            self.model.enforce_stationarity = False
+            self.model.enforce_invertibility = False
+            results = self.model.fit(results.params, method='nm', maxiter=1000,
+                                     disp=False)
+            assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     def test_loglike(self):
         assert_allclose(self.results.llf, self.true['loglike'], rtol=1e-6)
@@ -58,17 +60,17 @@ class CheckVARMAX(object):
         # We only get 3 digits from Stata
         assert_allclose(self.results.bic, self.true['bic'], atol=3)
 
-    def test_predict(self, end, atol=1e-6):
+    def test_predict(self, end, atol=1e-6, **kwargs):
         # Tests predict + forecast
         assert_allclose(
-            self.results.predict(end=end),
+            self.results.predict(end=end, **kwargs),
             self.true['predict'].T,
             atol=atol)
 
-    def test_dynamic_predict(self, end, dynamic, atol=1e-6):
+    def test_dynamic_predict(self, end, dynamic, atol=1e-6, **kwargs):
         # Tests predict + dynamic predict + forecast
         assert_allclose(
-            self.results.predict(end=end, dynamic=dynamic),
+            self.results.predict(end=end, dynamic=dynamic, **kwargs),
             self.true['dynamic_predict'].T,
             atol=atol)
 
@@ -94,11 +96,11 @@ class CheckLutkepohl(CheckVARMAX):
 
         self.results = self.model.filter(true['params'], cov_type=cov_type)
 
-    def test_predict(self):
-        super(CheckLutkepohl, self).test_predict(end='1982-10-01')
+    def test_predict(self, **kwargs):
+        super(CheckLutkepohl, self).test_predict(end='1982-10-01', **kwargs)
 
-    def test_dynamic_predict(self):
-        super(CheckLutkepohl, self).test_dynamic_predict(end='1982-10-01', dynamic='1961-01-01')
+    def test_dynamic_predict(self, **kwargs):
+        super(CheckLutkepohl, self).test_dynamic_predict(end='1982-10-01', dynamic='1961-01-01', **kwargs)
 
 
 class TestVAR(CheckLutkepohl):
@@ -140,6 +142,52 @@ class TestVAR_obs_intercept(CheckLutkepohl):
         # of parameters, and hence the aic and bic, will be off
         pass
 
+
+class TestVAR_exog(CheckLutkepohl):
+    # Note: unlike the other tests in this file, this is against the Stata
+    # var function rather than the Stata dfactor function
+    def __init__(self):
+        true = results_varmax.lutkepohl_var1_exog.copy()
+        true['predict'] = var_results.ix[1:75, ['predict_exog1', 'predict_exog2', 'predict_exog3']]
+        true['predict'].iloc[0, :] = 0
+        true['fcast'] = var_results.ix[76:, ['fcast_exog_dln_inv', 'fcast_exog_dln_inc', 'fcast_exog_dln_consump']]
+        exog = np.arange(75) + 3
+        super(TestVAR_exog, self).__init__(
+            true, order=(1,0), trend='nc', error_cov_type='unstructured',
+            exog=exog, initialization='approximate_diffuse', loglikelihood_burn=1)
+
+    def test_mle(self):
+        pass
+
+    def test_aic(self):
+        # Stata's var calculates AIC differently
+        pass
+
+    def test_bic(self):
+        # Stata's var calculates BIC differently
+        pass
+
+    def test_bse_oim(self):
+        # Exclude the covariance cholesky terms
+        assert_allclose(
+            self.results.bse[:-6]**2, self.true['var_oim'], atol=1e-2)
+
+    def test_predict(self):
+        super(CheckLutkepohl, self).test_predict(end='1978-10-01', atol=1e-3)
+
+    def test_dynamic_predict(self):
+        # Stata's var cannot subsequently use dynamic
+        pass
+
+    def test_forecast(self):
+        # Tests forecast
+        exog = (np.arange(75, 75+16) + 3)[:, np.newaxis]
+        beta = self.results.params[-9:-6]
+        state_intercept = np.concatenate([exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
+        desired = self.results.forecast(steps=16, state_intercept=state_intercept)
+        assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
+
+
 class TestVAR2(CheckLutkepohl):
     def __init__(self):
         true = results_varmax.lutkepohl_var2.copy()
@@ -155,11 +203,6 @@ class TestVAR2(CheckLutkepohl):
             self.results.bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
 
 
-# class TestVARX(CheckVARMAX):
-#     pass
-# pandas, numpy; use 1-dim
-
-
 class CheckFREDManufacturing(CheckVARMAX):
     def __init__(self, true, order, trend, error_cov_type, cov_type='oim',
                  **kwargs):
@@ -173,8 +216,10 @@ class CheckFREDManufacturing(CheckVARMAX):
 
         endog = dta.ix['1972-02-01':, ['dlncaputil', 'dlnhours']]
 
-        self.model = varmax.VARMAX(endog, order=order, trend=trend,
-                                   error_cov_type=error_cov_type, **kwargs)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.model = varmax.VARMAX(endog, order=order, trend=trend,
+                                       error_cov_type=error_cov_type, **kwargs)
 
         self.results = self.model.filter(true['params'], cov_type=cov_type)
 
@@ -189,7 +234,7 @@ class TestVARMA(CheckFREDManufacturing):
         true['predict'] = varmax_results.ix[1:, ['predict_varma11_1', 'predict_varma11_2']]
         true['dynamic_predict'] = varmax_results.ix[1:, ['dyn_predict_varma11_1', 'dyn_predict_varma11_2']]
         super(TestVARMA, self).__init__(
-            true, order=(1,1), trend='nc', error_cov_type='diagonal')
+              true, order=(1,1), trend='nc', error_cov_type='diagonal')
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
@@ -246,11 +291,19 @@ def test_misspecifications():
     # Bad order specification
     assert_raises(ValueError, varmax.VARMAX, endog, order=(0,0), trend='')
 
-    # Warning with VARMA specification
-    warnings.simplefilter("always")
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
         varmax.VARMAX(endog, order=(1,1))
+
+    # Warning with VARMA specification
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+
+        varmax.VARMAX(endog, order=(1,1))
+
+        print(w)
         message = ('Estimation of VARMA(p,q) models is not generically robust,'
                    ' due especially to identification issues.')
         assert_equal(str(w[0].message), message)
+    warnings.resetwarnings()
 

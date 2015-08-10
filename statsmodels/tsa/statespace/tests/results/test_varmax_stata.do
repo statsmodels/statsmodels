@@ -45,6 +45,21 @@ predict dyn_predict_int1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_int2, dynamic(tq(1961q1)) equation(dln_inc)
 predict dyn_predict_int3, dynamic(tq(1961q1)) equation(dln_consump)
 
+// VAR(1), diagonal covariance + exog
+gen t = _n
+//dfactor (dln_inv dln_inc dln_consump = t, ar(1) arstructure(general) noconstant covstructure(diagonal)) if qtr<=tq(1978q4)
+var dln_inv dln_inc dln_consump if qtr<=tq(1978q4), lags(1) noconstant exog(t)
+
+// predict, see above (Note: uses actual data for forecasting, so we will want
+// to ignore the predictions after 1978q4, see below
+predict predict_exog1, equation(dln_inv)
+predict predict_exog2, equation(dln_inc)
+predict predict_exog3, equation(dln_consump)
+
+// We will want to use these values to compare for forecasting, but note that
+// this also includes in the columns the value for 1978q4 (i.e. a VAR(1) needs
+// 1 sample from which to compute forecasts.
+fcast compute fcast_exog_ , dynamic(tq(1979q1)) step(16) replace
 
 // VAR(2)
 dfactor (dln_inv dln_inc = , ar(1/2) arstructure(general) noconstant covstructure(unstructured)) if qtr<=tq(1978q4)
@@ -58,7 +73,7 @@ predict predict_var2_2, dynamic(tq(1979q1)) equation(dln_inc)
 predict dyn_predict_var2_1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_var2_2, dynamic(tq(1961q1)) equation(dln_inc)
 
-outsheet pred* dyn* using results_var_stata.csv, comma replace
+outsheet pred* dyn* fcas* using results_var_stata.csv, comma replace
 
 // VARMA(1,1)
 // Note: Stata does not have this built-in, so we need to create the state space form ourselves
