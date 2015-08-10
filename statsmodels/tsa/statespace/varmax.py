@@ -296,7 +296,10 @@ class VARMAX(MLEModel):
 
         # 5. Measurement error variance terms
         if self.measurement_error:
-            params[self._params_obs_cov] = res_ma.sigma_u.diagonal()
+            if self.k_ma > 0:
+                params[self._params_obs_cov] = res_ma.sigma_u.diagonal()
+            else:
+                params[self._params_obs_cov] = res_ar.sigma_u.diagonal()
 
         return params
 
