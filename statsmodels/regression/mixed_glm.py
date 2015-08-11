@@ -17,6 +17,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
 from statsmodels.compat.numpy import np_matrix_rank
 import statsmodels.genmod.families as fams
+from statsmodels.genmod.generalized_linear_model import GLM
 
 from pandas import DataFrame
 
@@ -457,6 +458,7 @@ class MixedGLM(base.LikelihoodModel):
 
         # For fitting. Used to store the previous laplace map.
         self.prev_start = np.random.normal(size = self.n_groups * self.k_re)
+        self.glm_model = GLM(endog, exog, family=family, **kwargs)
 
     def _setup_vcomp(self, exog_vc):
         if exog_vc is None:
@@ -682,9 +684,10 @@ class MixedGLM(base.LikelihoodModel):
         mod.family = family
         mod._scale = scale
         mod._canonical = isinstance(mod.family.link, mod.family._canonical_link)
+
         # For fitting. Used to store the previous laplace map.
         mod.prev_start = np.random.normal(size = mod.n_groups * mod.k_re)
-
+        mod.glm_model = GLM.from_formula(formula=formula, data=data, family=family, **kwargs)
 
 
         return mod
@@ -804,37 +807,9 @@ class MixedGLM(base.LikelihoodModel):
         return - f + (d / 2.0) * np.log(2 * np.pi) - (1 / 2.0) * h
 
     
-    def _joint_like_grad_hess(self, fe_params, cov_re, scale, ref, fn = True, grad = True, hess = True):
+    def _joint_like_grad_hess(self, fe_params, cov_re, scale, ref, fn = True, grad = True, hess_logdet = True):
         """
-        Function, gradient and hessian of the joint log likelihood.
-
-        The log-likelihood is for the data and random effects, viewed as a
-        function of the random effects.
-
-        Parameters
-        ----------
-        params : array-like, 1d
-            The fixed effects parameters.
-        cov_re : array-like, 2d
-            The covariance matrix of the random effects.
-        scale : float
-            The overdispersion scale parameter for the exponential family.
-        ref_re: array-like 2d
-
-        Returns
-        -------
-        tuple
-            the value of the negative joint log likelihood,
-            its gradient and the log-determinant of it's hessian
-            evaluated at the given state, respectively, in a tuple.
-        """
-
-        return (self._gen_joint_like_grad_hess(fe_params, cov_re, scale, fn, grad, hess))(ref)
-
-    
-    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale, fn = True, grad = True, hess = True):
-        """
-        Function, gradient and hessian of the joint log likelihood.
+        Gradient and hessian of the joint log likelihood with respect to the random effects.
 
         The log-likelihood is for the data and random effects, viewed as a
         function of the random effects.
@@ -856,7 +831,57 @@ class MixedGLM(base.LikelihoodModel):
             Else the returned function always reports a matrix of zeroes
             for the gradient.
             If not specified defaults to True
-        hess: bool, optional
+        hess_logdet: bool, optional
+            If True the returned function calculates the value of the logdet
+            of the hessian. Else the returned function always reports zero for
+            the logdet of the hessian.
+            If not specified defaults to True
+
+        Returns
+        -------
+        function
+            The value of the negativej oint log likelihood,
+            the negative of its gradient
+            and the log-determinant of it's hessian --
+            all evaluated at the given state,
+            respectively, in a tuple. All derivatives are with
+            respect to the random effects.
+
+            I.e. it returns a tuple
+            (fn_val, grad_val, log_det_hess_val)
+            where fn_val, log_det_hess_val are float and
+            grad_val is a 2d numpy array of floats of size
+            n_groups by k_re.
+        """
+
+        return (self._gen_joint_like_grad_hess(fe_params, cov_re, scale, fn, grad, hess_logdet))(ref)
+
+    
+    def _gen_joint_like_grad_hess(self, fe_params, cov_re, scale, fn = True, grad = True, hess_logdet = True):
+        """
+        Function, gradient and hessian of the joint log likelihood with respect to the random effects.
+
+        The log-likelihood is for the data and random effects, viewed as a
+        function of the random effects.
+
+        Parameters
+        ----------
+        params : array-like, 1d
+            The fixed effects parameters.
+        cov_re : array-like, 2d
+            The covariance matrix of the random effects.
+        scale : float
+            The overdispersion scale parameter for the exponential family.
+        fn: bool, optional
+            If True the returned function calculates the loglikelihood value.
+            Else the returned function always reports zero for the loglike.
+            If not specified defaults to True
+        grad: bool, optional
+            If True the returned function calculates the gradient value.
+            Else the returned function always reports a matrix of zeroes
+            for the gradient.
+            If not specified defaults to True
+        hess_logdet: bool, optional
             If True the returned function calculates the value of the logdet
             of the hessian. Else the returned function always reports zero for
             the logdet of the hessian.
@@ -870,7 +895,8 @@ class MixedGLM(base.LikelihoodModel):
             joint log likelihood, the negative of its gradient
             and the log-determinant of it's hessian --
             all evaluated at the given state,
-            respectively, in a tuple.
+            respectively, in a tuple. All derivatives are with
+            respect to the random effects.
 
             I.e. it returns a tuple
             (fn_val, grad_val, log_det_hess_val)
@@ -886,7 +912,7 @@ class MixedGLM(base.LikelihoodModel):
             const = -self.n_groups * self.k_re * np.log(2 * np.pi) / 2.0
             const -= self.n_groups * cov_re_logdet / 2.0
 
-        if hess: cov_re_inv = np.linalg.inv(cov_re)
+        if hess_logdet: cov_re_inv = np.linalg.inv(cov_re)
 
         lin_pred = np.dot(self.exog, fe_params)
         lin_pred = self.group_list(lin_pred)
@@ -904,7 +930,7 @@ class MixedGLM(base.LikelihoodModel):
             ref = np.reshape(ref, (self.n_groups, self.k_re))
 
             if fn:
-                s = np.dot(cov_re_inv, ref.T) if hess else np.linalg.solve(cov_re, ref.T)
+                s = np.dot(cov_re_inv, ref.T) if hess_logdet else np.linalg.solve(cov_re, ref.T)
                 f += -(ref.T * s).sum() / 2
                 f += const
             elif grad:
@@ -941,7 +967,7 @@ class MixedGLM(base.LikelihoodModel):
                 # The group's contribution to the log-det of the hessian of the log-likelihood
                 # Hess is the sum of a 'factor' by the outer products of the exog_re
                 # we compute that factor here. In canon case it is -var
-                if hess:
+                if hess_logdet:
 
                     if not self._canonical:
 
@@ -1009,7 +1035,7 @@ class MixedGLM(base.LikelihoodModel):
 
         for _ in range(1,restarts_allowed):
 
-            fun_grad_hess = self._gen_joint_like_grad_hess(fe_params, cov_re, scale, hess = False)
+            fun_grad_hess = self._gen_joint_like_grad_hess(fe_params, cov_re, scale, hess_logdet = False)
             def fun(x): return fun_grad_hess(x)[0:2]
 
             result = minimize(fun, x0, jac=True, tol=TOL, options= opts)
@@ -1036,9 +1062,11 @@ class MixedGLM(base.LikelihoodModel):
         """
         """
 
-        if start_params is None:
-            self.k_re2 = self.k_re * (self.k_re + 1) // 2
-            self.k_tot = self.k_fe + self.k_re2
+        glm_mod_fit = self.glm_model.fit()
+        start_params = np.append(glm_mod_fit.params, np.eye(self.k_re).ravel())
+
+        self.k_re2 = self.k_re * (self.k_re + 1) // 2
+        self.k_tot = self.k_fe + self.k_re2
 
         run = 0
         max_run = 10 * self.k_tot**2
@@ -1047,13 +1075,14 @@ class MixedGLM(base.LikelihoodModel):
         while keep_running:
             try:
                 run += 1
-                start_params = np.random.uniform(size=self.k_tot)
+                print(str(run)+": "+str(start_params))
                 rslt = super(MixedGLM, self).fit(start_params=start_params,
                                                 skip_hessian=True, method=method,
                                                 maxfun=10000, maxiter=10000,
                                                **kwargs)
                 keep_running = False
             except RuntimeError:
+                start_params = np.append(glm_mod_fit.params+np.random.uniform(-1,1), np.random.uniform(.5,1)*np.eye(self.k_re).ravel())
                 if run > max_run:
                     raise
 
