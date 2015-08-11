@@ -279,6 +279,36 @@ def test_fitted_binomial_logit():
 
     np.testing.assert_allclose(fit.params, [0.7400841, 1.2799780, 0.76278], rtol=1e-2)
 
+def test_fitted_gaussian_identity():
+    code = """
+    Python:
+    np.random.seed(313)
+    endog, exog, groups = gen_mixed('Gaussian', 30)
+    mat = np.hstack((endog[:, None], groups[:, None], exog))
+    np.savetxt('mat.txt', mat)
+
+    R:
+    df = read.table('mat.txt')
+    names(df) = c('y', 'g', 'x1', 'x2')
+    library(lme4)
+    m = lmer(y ~ 0 + x1 + x2 + (1 | g), data=df)
+    logLik(m)
+    summary(m)$coef
+    VarCorr(m)
+
+    coefs 0.4772450 0.7778554 1.7440e-08
+
+    """
+
+    np.random.seed(313)
+    endog, exog, groups = gen_mixed('Gaussian', 30)
+
+    model = MixedGLM(endog, exog, groups=groups, family=sm.families.Gaussian())
+    fit = model.fit()
+
+    np.testing.assert_allclose(fit.params, [0.4772450, 0.7778554, 1.7440e-08], rtol=1e-2)
+
+
 # TODO: Takes too long to fit. Unclear why.
 def test_fitted_negative_binomial():
     code = """
