@@ -1029,6 +1029,23 @@ class MixedGLM(base.LikelihoodModel):
 
         return result.fun, mp
 
+    def score(self, params):
+        '''
+        Gradient of log-likelihood evaluated at params
+        '''
+        kwds = {}
+        kwds.setdefault('centered', True)
+        return approx_fprime(params, self.loglike, **kwds).ravel()
+
+
+    def hessian(self, params):
+        '''
+        Hessian of log-likelihood evaluated at params
+        '''
+        from statsmodels.tools.numdiff import approx_hess
+        # need options for hess (epsilon)
+        return approx_hess(params, self.loglike, centered=True)
+
     
     def fit(self, start_params=None, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
