@@ -400,7 +400,6 @@ def test_univariate_gam_cv_kfolds():
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
     y_est = res_glm_gam.predict(univ_bsplines.basis_)
 
-
     # The test is done with the result obtained with GCV and not KFOLDS CV.
     # This is because MGCV does not support KFOLD CV
     assert_allclose(data_from_r.y_mgcv_gcv, y_est, atol=1.e-1, rtol=1.e-1)
@@ -680,10 +679,6 @@ def test_cyclic_cubic_splines():
 
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
-
-
-
-
 
     return
 

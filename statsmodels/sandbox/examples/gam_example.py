@@ -280,7 +280,6 @@ if example == 'ex9':
     x = np.random.uniform(-1, 1, n)
 
     y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
-
     y -= y.mean()
 
     # required only to initialize the gam. they have no influence on the result.
