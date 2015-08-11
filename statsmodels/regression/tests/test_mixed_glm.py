@@ -15,7 +15,7 @@ def endog_gen(family,lin_pred, n_group, gsize):
         mn = np.exp(lin_pred)
         endog = np.random.gamma(shape=1,scale=mn)
     elif family == "Gaussian":
-        endog = .5 * lin_pred.sum()
+        endog = .5 * lin_pred + np.random.randn(len(lin_pred)) #.sum()
     else:
         1/0
 
