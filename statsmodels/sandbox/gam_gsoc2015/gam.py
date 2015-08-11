@@ -528,5 +528,6 @@ def get_sqrt(x):
     s[s < 0] = 0
 
     sqrt_s = np.sqrt(s)
+
     b = np.dot(u, np.dot(np.diag(sqrt_s), v))
     return b

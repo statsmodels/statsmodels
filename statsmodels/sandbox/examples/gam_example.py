@@ -220,7 +220,7 @@ if example == 'ex7':
 
     plt.show()
 
-example = 'ex8'
+#example = 'ex8'
 if example == 'ex8':
     print(example)
     np.random.seed(0)

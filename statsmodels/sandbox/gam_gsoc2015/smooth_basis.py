@@ -538,6 +538,7 @@ class BaseCubicSplines(with_metaclass(ABCMeta)):
 
         return
 
+
 class CubicCyclicSplines(BaseCubicSplines):
 
     def __init__(self, x, df=10):
@@ -545,7 +546,7 @@ class CubicCyclicSplines(BaseCubicSplines):
         super().__init__(x, df)
 
         self.basis_ = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
-        n_inner_knots = df - 2 + 1 # +n_constraints # TODO: from CubicSplines class
+        n_inner_knots = df - 2 + 1 # +n_constraints # TODO: from CubicRegressionSplines class
         all_knots = _get_all_sorted_knots(x, n_inner_knots=n_inner_knots, inner_knots=None,
                                           lower_bound=None, upper_bound=None)
 
@@ -597,6 +598,53 @@ class CubicCyclicSplines(BaseCubicSplines):
     def _get_s(self, b, d):
 
         return d.T.dot(np.linalg.inv(b)).dot(d)
+
+
+class CubicRegressionSplines(BaseCubicSplines):
+    # TODO: this class is still not tested
+
+    def __init__(self, x, df=10):
+
+        super().__init__(x, df)
+
+        self.basis_ = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
+        n_inner_knots = df - 2 + 1 # +n_constraints # TODO: ACcording to CubicRegressionSplines class this should be
+                                                    #  n_inner_knots = df - 2
+        all_knots = _get_all_sorted_knots(x, n_inner_knots=n_inner_knots, inner_knots=None,
+                                          lower_bound=None, upper_bound=None)
+
+        b, d = self._get_b_and_d(all_knots)
+        self.s = self._get_s(b, d)
+
+        self.dim_basis = self.basis_.shape[1]
+
+    def _get_b_and_d(self, knots):
+
+        h = knots[1:] - knots[:-1]
+        n = knots.size - 1
+
+        # b and d are defined such that the penalty matrix is equivalent to:
+        # s = d.T.dot(b^-1).dot(d)
+        # reference in particular to pag 146 of Wood's book
+        b = np.zeros((n, n)) # the b matrix on page 146 of Wood's book
+        d = np.zeros((n, n)) # the d matrix on page 146 of Wood's book
+
+        for i in range(n-2):
+            d[i, i] = 1/h[i]
+            d[i, i+1] = -1/h[i] - 1/h[i+1]
+            d[i, i+2] = 1/h[i+1]
+
+            b[i, i] = (h[i] + h[i+1])/3
+
+        for i in range(n-3):
+            b[i, i+1] = h[i+1]/6
+            b[i+1, i] = h[i+1]/6
+
+        return b, d
+
+    def _get_s(self, b, d):
+
+        return d.T.dot(np.linalg.pinv(b)).dot(d)
 
 
 class MultivariateSmoother():
