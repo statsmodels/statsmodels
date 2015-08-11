@@ -1092,7 +1092,6 @@ class MixedGLM(base.LikelihoodModel):
         while keep_running:
             try:
                 run += 1
-                print(str(run)+": "+str(start_params))
                 rslt = super(MixedGLM, self).fit(start_params=start_params,
                                                 skip_hessian=True, method=method,
                                                 maxfun=10000, maxiter=10000,

@@ -93,7 +93,7 @@ def test_laplace_loglike_binomial():
     np.testing.assert_allclose(logLik, -31.78661, rtol=1e-6)
 
 # TODO:Need to get working for more than one RE. Not yet working.
-def t_est_laplace_loglike_binomial2():
+def test_laplace_loglike_binomial2():
     code = """
     Python:
     np.random.seed(313)
@@ -158,7 +158,7 @@ def test_laplace_loglike_poisson():
     np.testing.assert_allclose(logLik, -85.99506, rtol=1e-5)
 
 # TODO: Non canonical and hence doesn't match R
-def t_est_laplace_loglike_poisson_sqrt():
+def test_laplace_loglike_poisson_sqrt():
     code = """
     Python:
     np.random.seed(313)
@@ -189,7 +189,7 @@ def t_est_laplace_loglike_poisson_sqrt():
     np.testing.assert_allclose(logLik, -118.5216, rtol=1e-4)
 
 # TODO: Non canonical and hence doesn't match R
-def t_est_laplace_loglike_gamma_log():
+def test_laplace_loglike_gamma_log():
     code = """
     Python:
     np.random.seed(313)
@@ -280,7 +280,7 @@ def test_fitted_binomial_logit():
     np.testing.assert_allclose(fit.params, [0.7400841, 1.2799780, 0.76278], rtol=1e-2)
 
 # TODO: Takes too long to fit. Unclear why.
-def t_est_fitted_negative_binomial():
+def test_fitted_negative_binomial():
     code = """
     Python:
     np.random.seed(313)
@@ -318,11 +318,7 @@ class CheckFamily(object):
 
     def test_links_derivs(self):
         for lnk in self.test_links:
-            try:
-                self.like_hess_grad(self.family, lnk)
-            except Exception as e:
-                e.args += ("Link type: " + str(lnk),)
-                raise
+            self.like_hess_grad(self.family, lnk)
 
     def like_hess_grad(self, fam, lnk):
         # Test the function, gradient and Hessian of the joint
@@ -344,11 +340,7 @@ class CheckFamily(object):
 
     def test_links_derivs2(self):
         for lnk in self.test_links:
-            try:
-                self.like_hess_grad2(self.family, lnk)
-            except Exception as e:
-                e.args += ("Link type: " + str(lnk),)
-                raise
+            self.like_hess_grad2(self.family, lnk)
 
     def like_hess_grad2(self, fam, lnk):
         # Test the function, gradient and Hessian of the joint
@@ -389,7 +381,7 @@ class CheckFamily(object):
 
             # Check the gradient
             fp1 = approx_fprime(ref, fun1, centered=True)
-            fp2 = grad(ref)
+            fp2, he3 = fungradhess(ref)[1:3]
             np.testing.assert_allclose(fp1, fp2, atol=ATOL, rtol=RTOL)
 
             # Check the Hessian
@@ -397,10 +389,9 @@ class CheckFamily(object):
             he1ld = np.linalg.slogdet(he1)[1]
             he2 = approx_fprime(ref, grad, centered=True)
             he2ld = np.linalg.slogdet(he2)[1]
-            he3 = hess(ref)
 
-            np.testing.assert_allclose(he1ld, he3, atol=ATOL, rtol=RTOL)
-            np.testing.assert_allclose(he2ld, he3, atol=ATOL, rtol=RTOL)
+            np.testing.assert_allclose(he1ld, he3, atol=ATOL, rtol=RTOL, err_msg=str(model.family.link))
+            np.testing.assert_allclose(he2ld, he3, atol=ATOL, rtol=RTOL, err_msg=str(model.family.link))
 
 
 class TestPoisson(CheckFamily):
@@ -409,7 +400,7 @@ class TestPoisson(CheckFamily):
 
 
 # TODO: Gaussian Throws weird errors about 'unrecognized data structure'
-class T_estGaussian(CheckFamily):
+class TestGaussian(CheckFamily):
     family = sm.families.Gaussian
     test_links = family.safe_links
 
@@ -420,13 +411,13 @@ class TestGamma(CheckFamily):
 
 class TestBinomial(CheckFamily):
     family = sm.families.Binomial
-    test_links = [links.logit, links.cauchy]
+    #test_links = [links.logit, links.cauchy]
     # TODO: cloglog and probit throw errors when testing derivs
-    #test_links = [links.logit, links.probit, links.cauchy, links.cloglog]
+    test_links = [links.logit, links.probit, links.cauchy, links.cloglog]
 
 
 # TODO: Throws weird errors with NaNs in derivs
-class T_estInverseGaussian(CheckFamily):
+class TestInverseGaussian(CheckFamily):
     family = sm.families.InverseGaussian
     test_links = family.safe_links
 
