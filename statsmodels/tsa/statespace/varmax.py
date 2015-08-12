@@ -168,7 +168,7 @@ class VARMAX(MLEModel):
             self.k_exog = exog.shape[1]
 
         # Note: at some point in the future might add state regression, as in
-        # VARMAX.
+        # SARIMAX.
         self.mle_regression = self.k_exog > 0
 
         # We need to have an array or pandas at this point
@@ -830,7 +830,7 @@ class VARMAXResults(MLEResults):
         """
         return super(VARMAXResults, self).forecast(steps, exog=exog, **kwargs)
 
-    def summary(self, alpha=.05, start=None):
+    def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params
 
         # Create the model name
@@ -856,77 +856,79 @@ class VARMAXResults(MLEResults):
 
         summary = super(VARMAXResults, self).summary(
             alpha=alpha, start=start, model_name=model_name,
-            display_params=False
+            display_params=not separate_params
         )
 
-        # Add parameter tables for each endogenous variable
-        k_endog = self.model.k_endog
-        k_ar = self.model.k_ar
-        k_ma = self.model.k_ma
-        k_exog = self.model.k_exog
-        for i in range(k_endog):
-            mask = []
-            offset = 0
+        if separate_params:
+            # Add parameter tables for each endogenous variable
+            k_endog = self.model.k_endog
+            k_ar = self.model.k_ar
+            k_ma = self.model.k_ma
+            k_exog = self.model.k_exog
+            for i in range(k_endog):
+                mask = []
+                offset = 0
 
-            # 1. Intercept terms
-            if self.model.trend == 'c':
-                mask.append(np.array(i, ndmin=1))
-                offset += k_endog
+                # 1. Intercept terms
+                if self.model.trend == 'c':
+                    mask.append(np.array(i, ndmin=1))
+                    offset += k_endog
 
-            # 2. AR terms
-            if k_ar > 0:
-                start = i * k_endog * k_ar
-                end = (i + 1) * k_endog * k_ar
-                mask.append(
-                    offset + np.arange(start, end))
-                offset += k_ar * k_endog**2
+                # 2. AR terms
+                if k_ar > 0:
+                    start = i * k_endog * k_ar
+                    end = (i + 1) * k_endog * k_ar
+                    mask.append(
+                        offset + np.arange(start, end))
+                    offset += k_ar * k_endog**2
 
-            # 3. MA terms
-            if k_ma > 0:
-                start = i * k_endog * k_ma
-                end = (i + 1) * k_endog * k_ma
-                mask.append(
-                    offset + np.arange(start, end))
-                offset += k_ma * k_endog**2
+                # 3. MA terms
+                if k_ma > 0:
+                    start = i * k_endog * k_ma
+                    end = (i + 1) * k_endog * k_ma
+                    mask.append(
+                        offset + np.arange(start, end))
+                    offset += k_ma * k_endog**2
 
-            # 4. Regression terms
-            if k_exog > 0:
-                mask.append(
-                    offset + np.arange(i * k_exog, (i + 1) * k_exog))
-                offset += k_endog * k_exog
+                # 4. Regression terms
+                if k_exog > 0:
+                    mask.append(
+                        offset + np.arange(i * k_exog, (i + 1) * k_exog))
+                    offset += k_endog * k_exog
 
-            # 5. Measurement error variance terms
-            if self.model.measurement_error:
-                mask.append(np.array(self.model.k_params - i - 1, ndmin=1))
+                # 5. Measurement error variance terms
+                if self.model.measurement_error:
+                    mask.append(np.array(self.model.k_params - i - 1, ndmin=1))
 
-            # Create the table
-            mask = np.concatenate(mask)
+                # Create the table
+                mask = np.concatenate(mask)
+                res = (self, self.params[mask], self.bse[mask],
+                       self.zvalues[mask], self.pvalues[mask],
+                       self.conf_int(alpha)[mask])
+
+                param_names = [
+                    '.'.join(name.split('.')[:-1])
+                    for name in
+                    np.array(self.data.param_names)[mask].tolist()
+                ]
+                title = "Results for equation %s" % self.model.endog_names[i]
+
+                table = summary_params(res, yname=None, xname=param_names,
+                                       alpha=alpha, use_t=False, title=title)
+
+                summary.tables.append(table)
+
+            # State covariance terms
+            mask = self.model._params_state_cov
             res = (self, self.params[mask], self.bse[mask], self.zvalues[mask],
                    self.pvalues[mask], self.conf_int(alpha)[mask])
 
-            param_names = [
-                '.'.join(name.split('.')[:-1])
-                for name in
-                np.array(self.data.param_names)[mask].tolist()
-            ]
-            title = "Results for equation %s" % self.model.endog_names[i]
+            param_names = np.array(self.data.param_names)[mask].tolist()
+            title = "Error covariance matrix"
 
             table = summary_params(res, yname=None, xname=param_names,
                                    alpha=alpha, use_t=False, title=title)
-
             summary.tables.append(table)
-
-        # State covariance terms
-        mask = self.model._params_state_cov
-        res = (self, self.params[mask], self.bse[mask], self.zvalues[mask],
-               self.pvalues[mask], self.conf_int(alpha)[mask])
-
-        param_names = np.array(self.data.param_names)[mask].tolist()
-        title = "Error covariance matrix"
-
-        table = summary_params(res, yname=None, xname=param_names,
-                               alpha=alpha, use_t=False, title=title)
-        summary.tables.append(table)
 
         return summary
     summary.__doc__ = MLEResults.summary.__doc__
