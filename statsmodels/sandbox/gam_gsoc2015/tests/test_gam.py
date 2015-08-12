@@ -11,14 +11,14 @@ from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make
                                                            UnivariateBSplines, BSplines, UnivariateGenericSmoother,
                                                            GenericSmoothers, CubicSplines, CubicCyclicSplines,
                                                            MultivariateSmoother)
-from statsmodels.sandbox.gam_gsoc2015.gam import (UnivariateGamPenalty, GLMGam,
-                                                  MultivariateGamPenalty, LogitGam, make_augmented_matrix, get_sqrt,
+from statsmodels.sandbox.gam_gsoc2015.gam import (GLMGam, LogitGam, make_augmented_matrix, get_sqrt,
                                                   penalized_wls)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
                                                                                         UnivariateGamCVPath,
                                                                                         MultivariateGAMCV,
                                                                                         MultivariateGAMCVPath,
                                                                                         _split_train_test_smoothers)
+from statsmodels.sandbox.gam_gsoc2015.gam_penalties import UnivariateGamPenalty, MultivariateGamPenalty
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.cross_validators import KFold
 import numpy as np
 import pandas as pd
@@ -178,10 +178,14 @@ def test_gam_glm():
     y_mgcv = data_from_r.y_est
 
     alpha = 0.03
-    #gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    #glm_gam = GLMGam(y, univ_bsplines, penal=gp)
-    glm_gam = GLMGam(y, univ_bsplines, alpha=alpha)
 
+    from statsmodels.sandbox.gam_gsoc2015.gam import OLD_GLMGam
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    glm_gam = OLD_GLMGam(y, univ_bsplines.basis_, penal=gp)
+    res_glm_gam = glm_gam.fit(maxiter=10000)
+
+
+    glm_gam = GLMGam(y, univ_bsplines, alpha=alpha)
 
     res_glm_gam = glm_gam.fit(maxiter=10000)
     y_gam = np.dot(univ_bsplines.basis_, res_glm_gam.params)

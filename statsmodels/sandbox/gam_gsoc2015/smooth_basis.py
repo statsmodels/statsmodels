@@ -604,6 +604,9 @@ class CubicRegressionSplines(BaseCubicSplines):
     # TODO: this class is still not tested
 
     def __init__(self, x, df=10):
+        import warnings
+        warnings.warn("This class is still not tested and it is probably not working properly. "
+                      "I suggest to use another smoother", Warning)
 
         super().__init__(x, df)
 
