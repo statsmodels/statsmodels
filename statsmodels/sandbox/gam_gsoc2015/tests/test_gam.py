@@ -178,8 +178,11 @@ def test_gam_glm():
     y_mgcv = data_from_r.y_est
 
     alpha = 0.03
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    #gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
+    #glm_gam = GLMGam(y, univ_bsplines, penal=gp)
+    glm_gam = GLMGam(y, univ_bsplines, alpha=alpha)
+
+
     res_glm_gam = glm_gam.fit(maxiter=10000)
     y_gam = np.dot(univ_bsplines.basis_, res_glm_gam.params)
 
@@ -653,10 +656,11 @@ def test_cyclic_cubic_splines():
     smoothers = [CubicCyclicSplines(x[:, i], df=10) for i in range(2) ]
     multivariate_smoother = MultivariateSmoother(smoothers)
 
-    gam = GLMGam(y, x)
     alphas = [0.05, 0.0005]
+    gam = GLMGam(y, multivariate_smoother, alpha=alphas)
 
-    gam_res = gam._fit_pirls(y, multivariate_smoother.basis_, multivariate_smoother.s, alpha=alphas)
+    gam_res = gam.fit(method='pirls')
+    #gam_res = gam._fit_pirls(y, multivariate_smoother.basis_, multivariate_smoother.s, alpha=alphas)
 
     s0 = np.dot(multivariate_smoother.basis_[:, multivariate_smoother.mask[0]],
                 gam_res.params[multivariate_smoother.mask[0]])
@@ -666,16 +670,16 @@ def test_cyclic_cubic_splines():
                 gam_res.params[multivariate_smoother.mask[1]])
     s1 -= s1.mean() # TODO: Mean has to be removed
 
-    # plt.subplot(2, 1, 1)
-    # plt.plot(x[:, 0], s0, '.', label='y_est')
-    # plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='y_mgcv')
-    # plt.legend(loc='best')
-    #
-    # plt.subplot(2, 1, 2)
-    # plt.plot(x[:, 1], s1, '.', label='y_est')
-    # plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='y_mgcv')
-    # plt.legend(loc='best')
-    # plt.show()
+    plt.subplot(2, 1, 1)
+    plt.plot(x[:, 0], s0, '.', label='s0')
+    plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
+    plt.legend(loc='best')
+
+    plt.subplot(2, 1, 2)
+    plt.plot(x[:, 1], s1, '.', label='s1_est')
+    plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
+    plt.legend(loc='best')
+    plt.show()
 
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
@@ -689,10 +693,10 @@ def test_cyclic_cubic_splines():
 # test_approximation()
 # test_multivariate_penalty()
 # test_gam_glm_significance()
-# test_gam_glm()
+test_gam_glm()
 # test_gam_penalty()
 # test_partial_plot()
-# test_partial_valu1es()
+# test_partial_values()
 # test_univariate_generic_smoother()
 # test_multivariate_generic_smoother()
 # test_multivariate_gam_1d_data()

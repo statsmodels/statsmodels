@@ -414,6 +414,37 @@ class GLMGam(PenalizedMixin, GLM):
 
     _results_class = GLMGAMResults
 
+    def __init__(self, endog, smoother, alpha=None, family=None, offset=None, exposure=None,
+                 missing='none', **kwargs):
+
+        gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=smoother)
+        super(GLMGam, self).__init__(endog, smoother.basis_, family=None, offset=None, exposure=None,
+                                     missing='none', penal=gp, **kwargs)
+        self.smoother = smoother
+
+        return
+
+    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
+            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
+            full_output=True, disp=False, max_start_irls=3, **kwargs):
+
+        if method.lower() == 'pirls':
+
+            try:
+                pen_matrix = self.smoother.cov_der2_
+            except AttributeError:
+                pen_matrix = self.smoother.s
+
+            return self._fit_pirls(self.endog, self.smoother.basis_, pen_matrix, self.alpha,
+                                   start_params=None, maxiter=100, tol=1e-8,
+                                   scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None)
+
+        else:
+            return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
+                                                   scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
+                                                   full_output=full_output, disp=disp, max_start_irls=max_start_irls,
+                                                   **kwargs)
+
     # pag 165 4.3 # pag 136 PIRLS
     def _fit_pirls(self, y, spl_x, spl_s, alpha, start_params=None, maxiter=100, tol=1e-8,
                    scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
@@ -431,7 +462,6 @@ class GLMGam(PenalizedMixin, GLM):
 
         self._offset_exposure = np.array([.1] * n_samples)
         self.scaletype = 'dev'
-
 
         if start_params is None:
             mu = self.family.starting_mu(endog)
@@ -463,7 +493,7 @@ class GLMGam(PenalizedMixin, GLM):
 
             # this defines the augmented matrix point 2a on page 136
             wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights, alpha)
-            lin_pred = np.dot(spl_x, wls_results.params).ravel() + self._offset_exposure
+            lin_pred = np.dot(wlsexog, wls_results.params).ravel() + self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
             history = self._update_history(wls_results, mu, history)

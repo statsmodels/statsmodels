@@ -19,3 +19,22 @@ res = cbind(dat, partial, y_est)
 head(res)
 #write.csv(x = res, file = 'Documenti/statsmodels/statsmodels/sandbox/gam_gsoc2015/tests/results/cubic_cyclic_splines_from_mgcv.csv')
 
+
+### part 2 ###
+
+
+n = 300
+x = seq(-5, 5, length.out = n)
+y = x*x*x - x*x + rnorm(n, 0, 10)
+
+
+g_cc = gam(y~s(x, k = 30, bs = "cc" ))
+g_cr = gam(y~s(x, k = 30, bs = "cr" ))
+g_cs = gam(y~s(x, k=30, ))
+
+y_est_cc = predict(g_cc)
+y_est_cr = predict(g_cr)
+
+plot(x, y)
+lines(x, y_est_cc)
+lines(x, y_est_cr)

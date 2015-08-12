@@ -243,9 +243,7 @@ if example == 'ex8':
     n_var1 = cs1.basis_.shape[1]
     n_var2 = cs2.basis_.shape[1]
 
-    dummy_smoother = BSplines(x1, dfs=[10], degrees=[3])
-    gp = MultivariateGamPenalty(dummy_smoother, alphas=[1])
-    gam = GLMGam(y1, cs1.basis_, penal=gp)
+    gam = GLMGam(y1, cs1.basis_)
 
     i = 0
     for alpha1, alpha2 in zip([0, 1, 2], [0, 1, 2]):
