@@ -149,6 +149,30 @@ lutkepohl_var1_exog = {
     'bic': None
 }
 
+lutkepohl_var1_exog2 = {
+    'params': [
+        -.2552236,  .21722691,  .81525457,  # Phi, row 1
+        .02998355,  -.08130972, .24772266,  # Phi, row 2
+        -.00476998, .24016112, -.19910237,  # Phi, row 3
+        .00811096, -.00015244,  # exog, y1
+        .01878355, -.00005086,  # exog, y2
+        .01889825, 2.577e-06,   # exog, y3
+        # .00199918,                         # Covariance, lower triangle
+        # .00005435,  .00013469,
+        # .00012306,  .00006251,   .00010039
+        # Note: the following are the Cholesky of the covariance
+        # matrix defined just above
+        .04471219,                         # Cholesky, lower triangle
+        .00121555,  .01102644,
+        .00275227,  .00536569,  .00800152
+    ],
+    'var_oim': None,
+    # 'loglike': 600.9801664685759,  # From Stata
+    'loglike': 600.65449034396283,   # From VARMAX (regression test)
+    'aic': None,
+    'bic': None
+}
+
 lutkepohl_var2 = {
     'params': [
         -.25244981, .62528114,  # Phi_1, row 1

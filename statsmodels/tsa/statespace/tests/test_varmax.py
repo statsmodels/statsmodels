@@ -357,9 +357,9 @@ class TestVAR_exog(CheckLutkepohl):
     # var function rather than the Stata dfactor function
     def __init__(self):
         true = results_varmax.lutkepohl_var1_exog.copy()
-        true['predict'] = var_results.ix[1:75, ['predict_exog1', 'predict_exog2', 'predict_exog3']]
+        true['predict'] = var_results.ix[1:75, ['predict_exog1_1', 'predict_exog1_2', 'predict_exog1_3']]
         true['predict'].iloc[0, :] = 0
-        true['fcast'] = var_results.ix[76:, ['fcast_exog_dln_inv', 'fcast_exog_dln_inc', 'fcast_exog_dln_consump']]
+        true['fcast'] = var_results.ix[76:, ['fcast_exog1_dln_inv', 'fcast_exog1_dln_inc', 'fcast_exog1_dln_consump']]
         exog = np.arange(75) + 3
         super(TestVAR_exog, self).__init__(
             true, order=(1,0), trend='nc', error_cov_type='unstructured',
@@ -437,6 +437,47 @@ class TestVAR_exog(CheckLutkepohl):
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
+
+class TestVAR_exog2(CheckLutkepohl):
+    # This is a regression test, to make sure that the setup with multiple exog
+    # works correctly. The params are from Stata, but the loglike is from
+    # this model. Likely the small discrepancy (see the results file) is from
+    # the approximate diffuse initialization.
+    def __init__(self):
+        true = results_varmax.lutkepohl_var1_exog2.copy()
+        true['predict'] = var_results.ix[1:75, ['predict_exog2_1', 'predict_exog2_2', 'predict_exog2_3']]
+        true['predict'].iloc[0, :] = 0
+        true['fcast'] = var_results.ix[76:, ['fcast_exog2_dln_inv', 'fcast_exog2_dln_inc', 'fcast_exog2_dln_consump']]
+        exog = np.c_[np.ones((75,1)), (np.arange(75) + 3)[:, np.newaxis]]
+        super(TestVAR_exog2, self).__init__(
+            true, order=(1,0), trend='nc', error_cov_type='unstructured',
+            exog=exog, initialization='approximate_diffuse', loglikelihood_burn=1)
+
+    def test_mle(self):
+        pass
+
+    def test_aic(self):
+        pass
+
+    def test_bic(self):
+        pass
+
+    def test_bse_oim(self):
+        pass
+
+    def test_predict(self):
+        super(CheckLutkepohl, self).test_predict(end='1978-10-01', atol=1e-3)
+
+    def test_dynamic_predict(self):
+        # Stata's var cannot subsequently use dynamic
+        pass
+
+    def test_forecast(self):
+        # Tests forecast
+        exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 3)[:, np.newaxis]]
+
+        desired = self.results.forecast(steps=16, exog=exog)
+        assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
 
 
 class TestVAR2(CheckLutkepohl):

@@ -45,21 +45,37 @@ predict dyn_predict_int1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_int2, dynamic(tq(1961q1)) equation(dln_inc)
 predict dyn_predict_int3, dynamic(tq(1961q1)) equation(dln_consump)
 
-// VAR(1), diagonal covariance + exog
+// VAR(1), diagonal covariance + 1 exog
 gen t = _n
 //dfactor (dln_inv dln_inc dln_consump = t, ar(1) arstructure(general) noconstant covstructure(diagonal)) if qtr<=tq(1978q4)
 var dln_inv dln_inc dln_consump if qtr<=tq(1978q4), lags(1) noconstant exog(t)
 
 // predict, see above (Note: uses actual data for forecasting, so we will want
 // to ignore the predictions after 1978q4, see below
-predict predict_exog1, equation(dln_inv)
-predict predict_exog2, equation(dln_inc)
-predict predict_exog3, equation(dln_consump)
+predict predict_exog1_1, equation(dln_inv)
+predict predict_exog1_2, equation(dln_inc)
+predict predict_exog1_3, equation(dln_consump)
 
 // We will want to use these values to compare for forecasting, but note that
 // this also includes in the columns the value for 1978q4 (i.e. a VAR(1) needs
 // 1 sample from which to compute forecasts.
-fcast compute fcast_exog_ , dynamic(tq(1979q1)) step(16) replace
+fcast compute fcast_exog1_ , dynamic(tq(1979q1)) step(16) replace
+
+// VAR(1), diagonal covariance + 2 exog
+gen c = 1
+//dfactor (dln_inv dln_inc dln_consump = t, ar(1) arstructure(general) noconstant covstructure(diagonal)) if qtr<=tq(1978q4)
+var dln_inv dln_inc dln_consump if qtr<=tq(1978q4), lags(1) noconstant exog(c t)
+
+// predict, see above (Note: uses actual data for forecasting, so we will want
+// to ignore the predictions after 1978q4, see below
+predict predict_exog2_1, equation(dln_inv)
+predict predict_exog2_2, equation(dln_inc)
+predict predict_exog2_3, equation(dln_consump)
+
+// We will want to use these values to compare for forecasting, but note that
+// this also includes in the columns the value for 1978q4 (i.e. a VAR(1) needs
+// 1 sample from which to compute forecasts.
+fcast compute fcast_exog2_ , dynamic(tq(1979q1)) step(16) replace
 
 // VAR(2)
 dfactor (dln_inv dln_inc = , ar(1/2) arstructure(general) noconstant covstructure(unstructured)) if qtr<=tq(1978q4)
