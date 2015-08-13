@@ -9,7 +9,7 @@ import os
 import pandas as pd
 from numpy.testing import assert_allclose
 import numpy as np
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import UnivariateCubicSplines
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import MultivariateCubicSplines, UnivariateCubicSplines
 from statsmodels.sandbox.gam_gsoc2015.gam import GLMGam, get_sqrt
 
 
@@ -44,28 +44,14 @@ def test_spl_s():
                [0,    0, -0.001133333,  0.001666667,  0.002733333,  0.000200000],
                [0,    0, -0.001000000, -0.001133333,  0.000200000,  0.001400000]]
 
+    x = np.random.normal(0, 1, 10)
     xk = np.array([0.2, .4, .6, .8])
-    cs = UnivariateCubicSplines(None, 4)
+    cs = UnivariateCubicSplines(x, df=4)
     cs.knots = xk
-    cs._splines_s()
 
-    spl_s = cs.s
+    spl_s = cs._splines_s()
     assert_allclose(spl_s_R, spl_s, atol=4.e-10)
 
 
-def test_get_sqrt():
-
-    xk = np.array([0.2, .4, .6, .8])
-    cs = UnivariateCubicSplines(None, 4)
-    cs.knots = xk
-    cs._splines_s()
-    spl_s = cs.s
-
-    b = get_sqrt(spl_s)
-    assert_allclose(np.dot(b.T, b), spl_s)
-
-
-
-# test_get_sqrt()
 # test_spl_s()
 # test_splines_x()

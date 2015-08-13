@@ -130,7 +130,7 @@ if example == 'ex4':
     bsplines = BSplines(x, [df, df], [degree1, degree2])
 
     alpha = [30] * 2
-    mgp = MultivariateGamPenalty(bsplines, alphas=alpha, wts=[1, 1])
+    mgp = MultivariateGamPenalty(bsplines, alpha=alpha, wts=[1, 1])
 
     mLG = LogitGam(y, bsplines.basis_, penal=mgp)
     res_mLG = mLG.fit(maxiter=1000, tol=1e-13, method='nm')
@@ -156,7 +156,7 @@ if example == 'ex5':
     y = x[:, 0]**3 + x[:, 1]**2 + np.random.normal(0, 10, n)
     poly = PolynomialSmoother(x, degrees=[5, 5])
 
-    gp = MultivariateGamPenalty(poly, alphas=[0, 0], wts=[1, 1])
+    gp = MultivariateGamPenalty(poly, alpha=[0, 0], wts=[1, 1])
     gam = GLMGam(y, poly.basis_, penal=gp)
     gam_ris = gam.fit()
 
@@ -206,7 +206,7 @@ if example == 'ex7':
 
     # required only to initialize the gam. they have no influence on the result.
     dummy_smoother = PolynomialSmoother(x, [2])
-    gp = MultivariateGamPenalty(dummy_smoother, alphas=[0])
+    gp = MultivariateGamPenalty(dummy_smoother, alpha=[0])
     for i, alpha in enumerate([0, 1, 5, 10]):
 
         gam = GLMGam(y, cs.basis_, penal=gp)

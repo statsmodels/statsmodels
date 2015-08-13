@@ -463,9 +463,9 @@ class PolynomialSmoother(MultivariateGamSmoother):
 
 class BSplines(MultivariateGamSmoother):
 
-    def __init__(self, x, dfs, degrees, variables_name=None):
-        self.degrees = degrees
-        self.dfs = dfs
+    def __init__(self, x, df, degree, variables_name=None):
+        self.degrees = degree
+        self.dfs = df
         super().__init__(x, variables_name)
         return
 
@@ -528,8 +528,8 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
 class MultivariateCubicSplines(MultivariateGamSmoother):
 
-    def __init__(self, x, dfs, variables_name=None):
-        self.dfs = dfs
+    def __init__(self, x, df, variables_name=None):
+        self.dfs = df
         super(MultivariateCubicSplines, self).__init__(x, variables_name)
         return
 
@@ -615,8 +615,8 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
 class MultivariateCyclicCubicSplines(MultivariateGamSmoother):
 
-    def __init__(self, x, dfs, variables_name=None):
-        self.dfs = dfs
+    def __init__(self, x, df, variables_name=None):
+        self.dfs = df
         super(MultivariateCyclicCubicSplines, self).__init__(x, variables_name)
         return
 

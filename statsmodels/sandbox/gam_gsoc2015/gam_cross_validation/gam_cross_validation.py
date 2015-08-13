@@ -42,32 +42,32 @@ class BaseCV(with_metaclass(ABCMeta)):
         return
 
 
-class UnivariateGamCV(BaseCV):
-
-    def __init__(self, gam, alpha, cost, univariate_smoother, y, cv):
-        # the gam class has already an instance
-        self.cost = cost
-        self.gam = gam
-        self.univariate_smoother = univariate_smoother
-        self.alpha = alpha
-        self.cv = cv
-        super(UnivariateGamCV, self).__init__(cv, self.univariate_smoother.basis_, y)
-        return
-
-    def _error(self, train_index, test_index, **kwargs):
-
-        der2_train = self.univariate_smoother.der2_basis_[train_index]
-        basis_train = self.univariate_smoother.basis_[train_index]
-        basis_test = self.univariate_smoother.basis_[test_index]
-
-        y_train = self.y[train_index]
-        y_test = self.y[test_index]
-
-        gp = UnivariateGamPenalty(self.univariate_smoother, self.alpha)
-        gam = self.gam(y_train, basis_train, penal=gp).fit(**kwargs)
-        y_est = gam.predict(basis_test)
-
-        return self.cost(y_test, y_est)
+# class UnivariateGamCV(BaseCV):
+#
+#     def __init__(self, gam, alpha, cost, univariate_smoother, y, cv):
+#         # the gam class has already an instance
+#         self.cost = cost
+#         self.gam = gam
+#         self.univariate_smoother = univariate_smoother
+#         self.alpha = alpha
+#         self.cv = cv
+#         super(UnivariateGamCV, self).__init__(cv, self.univariate_smoother.basis_, y)
+#         return
+#
+#     def _error(self, train_index, test_index, **kwargs):
+#
+#         # der2_train = self.univariate_smoother.der2_basis_[train_index]
+#         # basis_train = self.univariate_smoother.basis_[train_index]
+#         # basis_test = self.univariate_smoother.basis_[test_index]
+#
+#         y_train = self.y[train_index]
+#         y_test = self.y[test_index]
+#
+#         # gp = UnivariateGamPenalty(self.univariate_smoother, self.alpha)
+#         gam = self.gam(y_train, basis_train, penal=gp).fit(**kwargs)
+#         y_est = gam.predict(basis_test)
+#
+#         return self.cost(y_test, y_est)
 
 
 def _split_train_test_smoothers(x, smoothers, train_index, test_index):
@@ -119,8 +119,7 @@ class MultivariateGAMCV(BaseCV):
         y_train = self.y[train_index]
         y_test = self.y[test_index]
 
-        gp = MultivariateGamPenalty(train_smoothers, alphas=self.alphas)
-        gam = self.gam(y_train, train_smoothers.basis_, penal=gp)
+        gam = self.gam(y_train, train_smoothers, alpha=self.alphas)
         gam_res = gam.fit(**kwargs)
         y_est = gam_res.predict(test_smoothers.basis_)
 

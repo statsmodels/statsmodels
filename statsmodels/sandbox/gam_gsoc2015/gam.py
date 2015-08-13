@@ -21,7 +21,6 @@ class PenalizedMixin(object):
 
     def __init__(self, *args, **kwds):
         super(PenalizedMixin, self).__init__(*args, **kwds)
-        print(kwds)
         penal = kwds.pop('penal', None)
         # I keep the following instead of adding default in pop for future changes
         if penal is None:
@@ -224,12 +223,39 @@ class GLMGam(PenalizedMixin, GLM):
 
     _results_class = GLMGAMResults
 
+    def __init__(self, endog, smoother, alpha, family=None, offset=None, exposure=None,
+                 missing='none', **kwargs):
+
+        import collections
+        if not isinstance(alpha, collections.Iterable):
+            alpha = np.array([alpha]*len(smoother.smoothers_))
+
+        self.smoother = smoother
+        self.alpha = alpha
+
+        penal = MultivariateGamPenalty(smoother, alpha=alpha)
+        super(GLMGam, self).__init__(endog, exog=smoother.basis_, family=family, offset=offset, exposure=exposure,
+                                     missing=missing, penal=penal, **kwargs)
+        return
+
+    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
+            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
+            full_output=True, disp=False, max_start_irls=3, **kwargs):
+
+        if method.lower() == 'pirls':
+            return self._fit_pirls(self.endog, self.smoother, self.alpha)
+        else:
+            return super(GLMGam, self).fit()
+
+        return
+
     # pag 165 4.3 # pag 136 PIRLS
-    def _fit_pirls(self, y, spl_x, spl_s, alpha, start_params=None, maxiter=100, tol=1e-8,
+    def _fit_pirls(self, y, smoother, alpha, start_params=None, maxiter=100, tol=1e-8,
                    scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
 
         endog = y
-        wlsexog = spl_x
+        wlsexog = smoother.basis_
+        spl_s = smoother.penalty_matrices_
 
         n_samples, n_columns = wlsexog.shape
 

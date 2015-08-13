@@ -134,20 +134,20 @@ class MultivariateGamPenalty(Penalty):
 
     """
 
-    def __init__(self, multivariate_smoother, alphas, wts=None):
+    def __init__(self, multivariate_smoother, alpha, wts=None):
 
-        if len(multivariate_smoother.smoothers_) != len(alphas):
-            raise ValueError('all the input values should be list of the same length. len(smoothers_)=', len(multivariate_smoother.smoothers_), ' len(alphas)=', len(alphas))
+        if len(multivariate_smoother.smoothers_) != len(alpha):
+            raise ValueError('all the input values should be list of the same length. len(smoothers_)=', len(multivariate_smoother.smoothers_), ' len(alphas)=', len(alpha))
 
         self.multivariate_smoother = multivariate_smoother
         self.k_columns = self.multivariate_smoother.k_columns
         self.k_variables = self.multivariate_smoother.k_variables
         self.n_samples = self.multivariate_smoother.n_samples
-        self.alphas = alphas
+        self.alpha = alpha
 
         # TODO: Review this
         if wts is None:
-            self.wts = [1] * len(alphas)
+            self.wts = [1] * len(alpha)
         else:
             self.wts = wts
 
@@ -163,7 +163,7 @@ class MultivariateGamPenalty(Penalty):
 
         self.gp = []
         for i in range(self.k_variables):
-            gp = UnivariateGamPenalty(wts=self.wts[i], alpha=self.alphas[i],
+            gp = UnivariateGamPenalty(wts=self.wts[i], alpha=self.alpha[i],
                                       univariate_smoother=self.multivariate_smoother.smoothers_[i])
             self.gp.append(gp)
 

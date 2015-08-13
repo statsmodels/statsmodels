@@ -14,7 +14,7 @@ from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make
                                                            MultivariateCubicSplines, MultivariateCyclicCubicSplines)
 from statsmodels.sandbox.gam_gsoc2015.gam import (GLMGam, LogitGam, make_augmented_matrix, get_sqrt,
                                                   penalized_wls)
-from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
+from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (
                                                                                         UnivariateGamCVPath,
                                                                                         MultivariateGAMCV,
                                                                                         MultivariateGAMCVPath,
@@ -48,8 +48,8 @@ def univariate_sample_data():
     x = np.linspace(-1, 1, n)
     y = 2 * x ** 3 - x
 
-    degree = 4
-    pol = UnivariatePolynomialSmoother(x, degree)
+    degree = [4]
+    pol = PolynomialSmoother(x, degree)
 
     return pol, y
 
@@ -98,9 +98,9 @@ def test_gam_penalty():
     :return:
     """
     pol, y = univariate_sample_data()
-
+    univ_pol = pol.smoothers_[0]
     alpha = 1
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
@@ -153,9 +153,7 @@ def test_approximation():
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
         cost, err, itg = cost_function(params, poly, y, alpha)
-        gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=poly)
-        gam_itg = gp.func(params)
-        glm_gam = GLMGam(y, poly.basis_, penal=gp)
+        glm_gam = GLMGam(y, poly, alpha=alpha)
         res_glm_gam = glm_gam.fit(
             maxiter=1)  # TODO: can this fit be removed? It is useless. We just need the log likelihood
         gam_loglike = glm_gam.loglike(params)
@@ -168,27 +166,26 @@ def test_gam_glm():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x
-    y = data_from_r.y
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y.as_matrix()
 
-    df = 10
-    degree = 5
-    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
+    df = [10]
+    degree = [5]
+    bsplines = BSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
 
     alpha = 0.03
 
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000)
 
 
-    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
 
     res_glm_gam = glm_gam.fit(maxiter=10000)
-    y_gam = np.dot(univ_bsplines.basis_, res_glm_gam.params)
+    y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
 
     # plt.plot(x, y_gam, '.', label='gam')
     # plt.plot(x, y_mgcv, '.', label='mgcv')
@@ -260,7 +257,7 @@ def test_multivariate_penalty():
 
     gp1 = UnivariateGamPenalty(alpha=alphas[0], univariate_smoother=univ_pol1)
     gp2 = UnivariateGamPenalty(alpha=alphas[1], univariate_smoother=univ_pol2)
-    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alphas=alphas, wts=wts)
+    mgp = MultivariateGamPenalty(multivariate_smoother=pol, alpha=alphas, wts=wts)
 
     for i in range(10):
         params1 = np.random.randint(-3, 3, pol.smoothers_[0].dim_basis)
@@ -291,19 +288,18 @@ def test_gam_glm_significance():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x
-    y = data_from_r.y
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y.as_matrix()
 
-    df = 10
-    degree = 6
-    univ_bspline = UnivariateBSplines(x, degree=degree, df=df)
+    df = [10]
+    degree = [6]
+    bspline = BSplines(x, degree=degree, df=df)
 
     alpha = 0.045
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bspline)
-    glm_gam = GLMGam(y, univ_bspline.basis_, penal=gp)
+    glm_gam = GLMGam(y, bspline, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
-    t, pvalues, rank = res_glm_gam.significance_test(univ_bspline.basis_)
+    t, pvalues, rank = res_glm_gam.significance_test(bspline.basis_)
     t_from_mgcv = 8.141  # these are the Chi.sq value and p values obtained from MGCV in R with the function summary(g)
     pvalues_from_mgcv = 0.0864
     rank_from_mgcv = 3.997
@@ -326,19 +322,19 @@ def test_partial_values():
     data_from_r = pd.read_csv(file_path)
 
     # dataset used to train the R model
-    x = data_from_r.x
-    y = data_from_r.y
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y.as_matrix()
     se_from_mgcv = data_from_r.y_est_se
-    df = 10
-    degree = 6
-    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
+    df = [10]
+    degree = [6]
+    bsplines = BSplines(x, degree=degree, df=df)
 
     alpha = 0.025
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS') # TODO: if IRLS is used res_glm_gam has not partial_values.
 
-    hat_y, se = res_glm_gam.partial_values(univ_bsplines, mask=np.array([True]*univ_bsplines.dim_basis))
+    univ_bsplines = bsplines.smoothers_[0]
+    hat_y, se = res_glm_gam.partial_values(bsplines, mask=np.array([True]*univ_bsplines.dim_basis))
 
     assert_allclose(se, se_from_mgcv, rtol=0, atol=0.008)
 
@@ -355,21 +351,20 @@ def test_partial_plot():
     data_from_r = pd.read_csv(file_path)
 
     # dataset used to train the R model
-    x = data_from_r.x
-    y = data_from_r.y
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.y.as_matrix()
     se_from_mgcv = data_from_r.y_est_se
-    df = 10
-    degree = 6
-    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
+    df = [10]
+    degree = [6]
+    bsplines = BSplines(x, degree=degree, df=df)
 
 
     alpha = 0.03
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
 
     ## Uncomment to visualize the plot
-    # res_glm_gam.plot_partial(x, univ_bsplines.basis_, '.')
+    # res_glm_gam.plot_partial(x, bsplines.basis_, '.')
     # plt.plot(x, y, '.')
     # plt.show()
 
@@ -414,39 +409,17 @@ def test_univariate_gam_cv_kfolds():
     return
 
 
-def test_univariate_generic_smoother():
-
-    poly, y = univariate_sample_data()
-    alpha = 0.5
-
-    univ_gs = UnivariateGenericSmoother(poly.x, poly.basis_, poly.der_basis_, poly.der2_basis_, poly.cov_der2_)
-
-    gp_poly = UnivariateGamPenalty(poly, wts=1, alpha=alpha)
-    gam_poly = GLMGam(y, poly.basis_, penal=gp_poly)
-    gam_poly_res = gam_poly.fit()
-
-    gp_gs = UnivariateGamPenalty(univ_gs, wts=1, alpha=alpha)
-    gam_gs = GLMGam(y, univ_gs.basis_, penal=gp_gs)
-    gam_gs_res = gam_gs.fit()
-
-    assert_allclose(gam_gs_res.params, gam_poly_res.params)
-
-    return
-
-
-def test_multivariate_generic_smoother():
+def test_generic_smoother():
 
     x, y, poly = multivariate_sample_data()
     alphas = [0.4, 0.7]
     wts = [1, 1]
 
     gs = GenericSmoothers(poly.x, poly.smoothers_)
-    gp_gs = MultivariateGamPenalty(gs, alphas=alphas, wts=wts)
-    gam_gs = GLMGam(y, gs.basis_, penal=gp_gs)
+    gam_gs = GLMGam(y, gs, alpha=alphas)
     gam_gs_res = gam_gs.fit()
 
-    gp_poly = MultivariateGamPenalty(poly, alphas=alphas, wts=wts)
-    gam_poly = GLMGam(y, poly.basis_, penal=gp_poly)
+    gam_poly = GLMGam(y, poly, alpha=alphas)
     gam_poly_res = gam_poly.fit()
 
     assert_allclose(gam_gs_res.params, gam_poly_res.params)
@@ -465,14 +438,15 @@ def test_multivariate_gam_1d_data():
 
     df = [10]
     degree = [5]
-    bsplines = BSplines(x, degrees=degree, dfs=df)
+    bsplines = BSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
 
     alpha = [0.0251]
-    gp = MultivariateGamPenalty(bsplines, alphas=alpha)
-    glm_gam = GLMGam(y, bsplines.basis_, penal=gp)
+    gp = MultivariateGamPenalty(bsplines, alpha=alpha)
+
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='nm', max_start_irls=0,
                               disp=1, maxiter=10000, maxfun=5000)
     y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
@@ -502,7 +476,7 @@ def test_multivariate_gam_cv():
 
     df = [10]
     degree = [5]
-    bsplines = BSplines(x, degrees=degree, dfs=df)
+    bsplines = BSplines(x, degree=degree, df=df)
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
 
@@ -510,7 +484,7 @@ def test_multivariate_gam_cv():
     alphas = [2]
     cv = KFold(3)
 
-    gp = MultivariateGamPenalty(bsplines, alphas=alphas)
+    gp = MultivariateGamPenalty(bsplines, alpha=alphas)
     gam_cv = MultivariateGAMCV(smoothers=bsplines, alphas=alphas, gam=GLMGam, cost=cost, y=y, cv=cv)
     gam_cv_res = gam_cv.fit()
 
@@ -537,7 +511,7 @@ def test_multivariate_gam_cv_path():
     df = [10]
     degree = [6]
 
-    bsplines = BSplines(x, degrees=degree, dfs=df)
+    bsplines = BSplines(x, degree=degree, df=df)
 
     gam = GLMGam
     alphas = [np.linspace(0, 2, 10)]
@@ -548,10 +522,7 @@ def test_multivariate_gam_cv_path():
     gam_cv = MultivariateGAMCVPath(smoothers=bsplines, alphas=alphas, gam=gam, cost=sample_metric, y=y, cv=cv)
     gam_cv_res = gam_cv.fit()
 
-    #print('alpha cv =', gam_cv.alpha_cv_)
-    gp = MultivariateGamPenalty(bsplines, alphas=gam_cv.alpha_cv_)
-
-    glm_gam = GLMGam(y, bsplines.basis_, penal=gp)
+    glm_gam = GLMGam(y, bsplines, alpha=gam_cv.alpha_cv_)
     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
     y_est = res_glm_gam.predict(bsplines.basis_)
 
@@ -673,12 +644,12 @@ def test_cyclic_cubic_splines():
     s_mgcv = data_from_r[['s(x0)', 's(x2)']].as_matrix()
 
     dfs = [10, 10]
-    ccs = MultivariateCyclicCubicSplines(x, dfs=dfs)
-    alphas = [0.05, 0.0005]
+    ccs = MultivariateCyclicCubicSplines(x, df=dfs)
+    alpha = [0.05, 0.0005]
 
-    gp = MultivariateGamPenalty(ccs, alphas=alphas)
-    gam = GLMGam(y, ccs.basis_, penal=gp)
-    gam_res = gam._fit_pirls(y, ccs.basis_, ccs.penalty_matrices_, alpha=alphas)
+    gam = GLMGam(y, ccs, alpha=alpha)
+    #gam_res = gam._fit_pirls(y, ccs, alpha=alpha)
+    gam_res = gam.fit(method='pirls')
 
     s0 = np.dot(ccs.basis_[:, ccs.mask[0]],
                 gam_res.params[ccs.mask[0]])
@@ -688,16 +659,16 @@ def test_cyclic_cubic_splines():
                 gam_res.params[ccs.mask[1]])
     s1 -= s1.mean() # TODO: Mean has to be removed
 
-    plt.subplot(2, 1, 1)
-    plt.plot(x[:, 0], s0, '.', label='s0')
-    plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
-    plt.legend(loc='best')
-
-    plt.subplot(2, 1, 2)
-    plt.plot(x[:, 1], s1, '.', label='s1_est')
-    plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
-    plt.legend(loc='best')
-    plt.show()
+    # plt.subplot(2, 1, 1)
+    # plt.plot(x[:, 0], s0, '.', label='s0')
+    # plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
+    # plt.legend(loc='best')
+    #
+    # plt.subplot(2, 1, 2)
+    # plt.plot(x[:, 1], s1, '.', label='s1_est')
+    # plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
+    # plt.legend(loc='best')
+    # plt.show()
 
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
@@ -723,11 +694,11 @@ def test_multivariate_cubic_splines():
     y0 -= y0.mean()
 
     alphas = [1.5] * 2
-    cs = MultivariateCubicSplines(x, dfs=[10, 10])
-    gp = MultivariateGamPenalty(cs, alphas=alphas)
+    cs = MultivariateCubicSplines(x, df=[10, 10])
 
-    gam = GLMGam(y, cs.basis_, penal=gp)
-    gam_res = gam._fit_pirls(y, cs.basis_, cs.penalty_matrices_, alpha=alphas)
+    gam = GLMGam(y, cs, alpha=alphas)
+    #gam_res = gam._fit_pirls(y, cs, alpha=alphas)
+    gam_res = gam.fit(y, cs, alpha=alphas, method='pirls')
 
     y_est = np.dot(cs.basis_, gam_res.params)
     y_est -= y_est.mean()
@@ -754,21 +725,19 @@ def test_multivariate_cubic_splines():
 # test_gam_gradient()
 # test_gam_discrete()
 # test_approximation()
-# test_multivariate_penalty()
-# test_gam_glm_significance()
-# test_gam_glm()
-# test_gam_penalty()
-# test_partial_plot()
-# test_partial_values()
-# test_univariate_generic_smoother()
-# test_multivariate_generic_smoother()
-# test_multivariate_gam_1d_data()
-# test_univariate_gam_cv_kfolds()
-# test_multivariate_gam_cv()
-# test_multivariate_gam_cv_path()
-# test_train_test_smoothers()
-# test_make_augmented_matrix()
-# test_penalized_wls()
-# test_cyclic_cubic_splines()
-# test_multivariate_cubic_splines()
-# test_get_sqrt()
+test_multivariate_penalty()
+test_gam_glm_significance()
+test_gam_glm()
+test_gam_penalty()
+test_partial_plot()
+test_partial_values()
+test_generic_smoother()
+test_multivariate_gam_1d_data()
+test_multivariate_gam_cv()
+test_multivariate_gam_cv_path()
+test_train_test_smoothers()
+test_make_augmented_matrix()
+test_penalized_wls()
+test_cyclic_cubic_splines()
+test_multivariate_cubic_splines()
+test_get_sqrt()

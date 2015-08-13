@@ -17,5 +17,5 @@ y -= y.mean()
 
 
 
-gp = MultivariateGamPenalty(multivariate_smoother=bs, alphas=alphas)
+gp = MultivariateGamPenalty(multivariate_smoother=bs, alpha=alphas)
 gam = GLMGam
