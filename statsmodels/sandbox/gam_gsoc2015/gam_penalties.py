@@ -140,7 +140,7 @@ class MultivariateGamPenalty(Penalty):
             raise ValueError('all the input values should be list of the same length. len(smoothers_)=', len(multivariate_smoother.smoothers_), ' len(alphas)=', len(alpha))
 
         self.multivariate_smoother = multivariate_smoother
-        self.k_columns = self.multivariate_smoother.k_columns
+        self.dim_basis = self.multivariate_smoother.dim_basis
         self.k_variables = self.multivariate_smoother.k_variables
         self.n_samples = self.multivariate_smoother.n_samples
         self.alpha = alpha
@@ -151,7 +151,7 @@ class MultivariateGamPenalty(Penalty):
         else:
             self.wts = wts
 
-        self.mask = [np.array([False]*self.k_columns)
+        self.mask = [np.array([False]*self.dim_basis)
                      for _ in range(self.k_variables)]
         param_count = 0
         for i, smoother in enumerate(self.multivariate_smoother.smoothers_):

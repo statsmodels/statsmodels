@@ -413,13 +413,13 @@ class MultivariateGamSmoother(with_metaclass(ABCMeta)):
 
         self.smoothers_ = self._make_smoothers_list()
         self.basis_ = np.hstack(smoother.basis_ for smoother in self.smoothers_)
-        self.k_columns = self.basis_.shape[1]
+        self.dim_basis = self.basis_.shape[1]
         self.penalty_matrices_ = [smoother.cov_der2_ for smoother in self.smoothers_]
 
         self.mask = []
         last_column = 0
         for smoother in self.smoothers_:
-            mask = np.array([False] * self.k_columns)
+            mask = np.array([False] * self.dim_basis)
             mask[last_column:smoother.dim_basis+last_column] = True
             last_column = last_column + smoother.dim_basis
             self.mask.append(mask)

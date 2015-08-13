@@ -180,7 +180,7 @@ class GLMGAMResults(GLMResults):
                 plt.plot(smoother.x, y_est + 1.96 * se, '.')
                 plt.plot(smoother.x, y_est - 1.96 * se, '.')
             plt.xlabel(smoother.variable_name)
-            plt.show()
+
 
         return
 
@@ -238,14 +238,17 @@ class GLMGam(PenalizedMixin, GLM):
                                      missing=missing, penal=penal, **kwargs)
         return
 
-    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
+    def fit(self, start_params=None, maxiter=1000, method='IRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):
 
         if method.lower() == 'pirls':
             return self._fit_pirls(self.endog, self.smoother, self.alpha)
         else:
-            return super(GLMGam, self).fit()
+            return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
+                                           scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
+                                           full_output=full_output, disp=disp, max_start_irls=max_start_irls, **kwargs)
+
 
         return
 

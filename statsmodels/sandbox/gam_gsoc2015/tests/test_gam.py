@@ -117,7 +117,7 @@ def test_gam_gradient():
     pol, y = univariate_sample_data()
 
     alpha = 1
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol.smoothers_[0])
     for i in range(10):
         params = np.random.randint(-2, 2, 4)
         params = np.array([1, 1, 1, 1])
@@ -134,8 +134,9 @@ def test_gam_hessian():
     :return:
     """
     pol, y = univariate_sample_data()
+    univ_pol = pol.smoothers_[0]
     alpha = 1
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=pol)
+    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_pol)
 
     for i in range(10):
         params = np.random.randint(-2, 2, 5)
@@ -154,8 +155,7 @@ def test_approximation():
         params = np.random.randint(-2, 2, 4)
         cost, err, itg = cost_function(params, poly, y, alpha)
         glm_gam = GLMGam(y, poly, alpha=alpha)
-        res_glm_gam = glm_gam.fit(
-            maxiter=1)  # TODO: can this fit be removed? It is useless. We just need the log likelihood
+        res_glm_gam = glm_gam.fit(maxiter=1)  # TODO: can this fit be removed? It is useless. We just need the log likelihood
         gam_loglike = glm_gam.loglike(params)
         assert_allclose(gam_loglike, err)
     return
@@ -176,22 +176,24 @@ def test_gam_glm():
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.y_est
 
+    # alpha = 1000
     alpha = 0.03
 
     glm_gam = GLMGam(y, bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(maxiter=10000)
-
+    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
+                              disp=1, maxiter=10000, maxfun=5000)
 
     glm_gam = GLMGam(y, bsplines, alpha=alpha)
 
-    res_glm_gam = glm_gam.fit(maxiter=10000)
+    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
+                              disp=1, maxiter=10000, maxfun=5000)
     y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
 
-    # plt.plot(x, y_gam, '.', label='gam')
-    # plt.plot(x, y_mgcv, '.', label='mgcv')
-    # plt.plot(x, y, '.', label='y')
-    # plt.legend()
-    # plt.show()
+    plt.plot(x, y_gam, '.', label='gam')
+    plt.plot(x, y_mgcv, '.', label='mgcv')
+    plt.plot(x, y, '.', label='y')
+    plt.legend()
+    plt.show()
 
     assert_allclose(y_gam, y_mgcv, atol=1.e-1)
     return
@@ -283,36 +285,36 @@ def test_multivariate_penalty():
     return
 
 
-def test_gam_glm_significance():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
-    data_from_r = pd.read_csv(file_path)
-    # dataset used to train the R model
-    x = data_from_r.x.as_matrix()
-    y = data_from_r.y.as_matrix()
-
-    df = [10]
-    degree = [6]
-    bspline = BSplines(x, degree=degree, df=df)
-
-    alpha = 0.045
-    glm_gam = GLMGam(y, bspline, alpha=alpha)
-    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
-
-    t, pvalues, rank = res_glm_gam.significance_test(bspline.basis_)
-    t_from_mgcv = 8.141  # these are the Chi.sq value and p values obtained from MGCV in R with the function summary(g)
-    pvalues_from_mgcv = 0.0864
-    rank_from_mgcv = 3.997
-
-    #assert_allclose(t, t_from_mgcv, atol=1.e-16, rtol=1.e-01)
-
-    # TODO: it should be possible to extract the rank from MGCV but I do not know how. Maybe it is the value Ref.df=4.038
-    #assert_allclose(rank, rank_from_mgcv)
-
-    # TODO: this test is not passed. The error is probably due to the way in which the rank is computed. If rank is replaced by 4 then the test is passed
-    #assert_allclose(pvalues, pvalues_from_mgcv, atol=1.e-16, rtol=1.e-01)
-
-    return
+# def test_gam_glm_significance():
+#     cur_dir = os.path.dirname(os.path.abspath(__file__))
+#     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+#     data_from_r = pd.read_csv(file_path)
+#     # dataset used to train the R model
+#     x = data_from_r.x.as_matrix()
+#     y = data_from_r.y.as_matrix()
+#
+#     df = [10]
+#     degree = [6]
+#     bspline = BSplines(x, degree=degree, df=df)
+#
+#     alpha = 0.045
+#     glm_gam = GLMGam(y, bspline, alpha=alpha)
+#     res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
+#
+#     t, pvalues, rank = res_glm_gam.significance_test(bspline.basis_)
+#     t_from_mgcv = 8.141  # these are the Chi.sq value and p values obtained from MGCV in R with the function summary(g)
+#     pvalues_from_mgcv = 0.0864
+#     rank_from_mgcv = 3.997
+#
+#     #assert_allclose(t, t_from_mgcv, atol=1.e-16, rtol=1.e-01)
+#
+#     # TODO: it should be possible to extract the rank from MGCV but I do not know how. Maybe it is the value Ref.df=4.038
+#     #assert_allclose(rank, rank_from_mgcv)
+#
+#     # TODO: this test is not passed. The error is probably due to the way in which the rank is computed. If rank is replaced by 4 then the test is passed
+#     #assert_allclose(pvalues, pvalues_from_mgcv, atol=1.e-16, rtol=1.e-01)
+#
+#     return
 
 
 def test_partial_values():
@@ -331,7 +333,7 @@ def test_partial_values():
 
     alpha = 0.025
     glm_gam = GLMGam(y, bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS') # TODO: if IRLS is used res_glm_gam has not partial_values.
+    res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs') # TODO: if IRLS is used res_glm_gam has not partial_values.
 
     univ_bsplines = bsplines.smoothers_[0]
     hat_y, se = res_glm_gam.partial_values(bsplines, mask=np.array([True]*univ_bsplines.dim_basis))
@@ -342,7 +344,7 @@ def test_partial_values():
 
 
 def test_partial_plot():
-
+    # TODO: No test is performed.
     # Generate a plot to visualize analyze the result.
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -361,12 +363,12 @@ def test_partial_plot():
 
     alpha = 0.03
     glm_gam = GLMGam(y, bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
+    res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
 
-    ## Uncomment to visualize the plot
-    # res_glm_gam.plot_partial(x, bsplines.basis_, '.')
-    # plt.plot(x, y, '.')
-    # plt.show()
+    # Uncomment to visualize the plot
+    res_glm_gam.plot_partial(bsplines)
+    plt.plot(x, y, '.')
+    plt.show()
 
     return
 
@@ -721,23 +723,25 @@ def test_multivariate_cubic_splines():
     return
 
 
+# test_gam_glm_significance() # TODO: not implemented
+# test_approximation() # Computationally demanding
+
+
 # test_gam_hessian()
 # test_gam_gradient()
 # test_gam_discrete()
-# test_approximation()
-test_multivariate_penalty()
-test_gam_glm_significance()
-test_gam_glm()
-test_gam_penalty()
-test_partial_plot()
-test_partial_values()
-test_generic_smoother()
-test_multivariate_gam_1d_data()
-test_multivariate_gam_cv()
-test_multivariate_gam_cv_path()
-test_train_test_smoothers()
-test_make_augmented_matrix()
-test_penalized_wls()
-test_cyclic_cubic_splines()
-test_multivariate_cubic_splines()
-test_get_sqrt()
+# test_multivariate_penalty()
+# test_gam_glm()
+# test_gam_penalty()
+# test_partial_plot()
+# test_partial_values()
+# test_generic_smoother()
+# test_multivariate_gam_1d_data()
+# test_multivariate_gam_cv()
+# test_multivariate_gam_cv_path()
+# test_train_test_smoothers()
+# test_make_augmented_matrix()
+# test_penalized_wls()
+# test_cyclic_cubic_splines()
+# test_multivariate_cubic_splines()
+# test_get_sqrt()
