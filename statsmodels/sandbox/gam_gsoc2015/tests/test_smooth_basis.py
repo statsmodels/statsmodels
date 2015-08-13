@@ -3,7 +3,7 @@ import numpy as np
 from patsy.state import stateful_transform
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, 
                                                            make_bsplines_basis, BS, UnivariatePolynomialSmoother,
-                                                           PolynomialSmoother, CubicCyclicSplines, CubicSplines)
+                                                           PolynomialSmoother, UnivariateCubicCyclicSplines, UnivariateCubicSplines)
 from numpy.testing import assert_allclose
 
 

@@ -5,7 +5,7 @@ __date__ = '08/07/15'
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (UnivariateBSplines, UnivariatePolynomialSmoother, BSplines,
-                                                           PolynomialSmoother, CubicSplines)
+                                                           PolynomialSmoother, UnivariateCubicSplines)
 from statsmodels.sandbox.gam_gsoc2015.gam import UnivariateGamPenalty, LogitGam, GLMGam, MultivariateGamPenalty
 import statsmodels.api as sm
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import MultivariateGAMCV, MultivariateGAMCVPath
@@ -194,7 +194,7 @@ if example == 'ex7':
     print(example)
 
     # GAM PIRLS
-    from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
+    from statsmodels.sandbox.gam_gsoc2015.smooth_basis import UnivariateCubicSplines
 
     n = 500
     x = np.random.uniform(-1, 1, n)
@@ -202,7 +202,7 @@ if example == 'ex7':
     y = 10*x**3 - 10*x + np.random.normal(0, 1, n)
 
     y -= y.mean()
-    cs = CubicSplines(x, 10)
+    cs = UnivariateCubicSplines(x, 10)
 
     # required only to initialize the gam. they have no influence on the result.
     dummy_smoother = PolynomialSmoother(x, [2])
@@ -234,8 +234,8 @@ if example == 'ex8':
     y2 -= y2.mean()
 
     Y = y1 + y2
-    cs1 = CubicSplines(x1, 10)
-    cs2 = CubicSplines(x2, 10)
+    cs1 = UnivariateCubicSplines(x1, 10)
+    cs2 = UnivariateCubicSplines(x2, 10)
 
     spl_X = np.hstack([cs1.basis_, cs2.basis_])
     spl_S = [cs1.s, cs2.s]

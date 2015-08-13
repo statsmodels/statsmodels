@@ -9,8 +9,9 @@ import os
 from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make_bsplines_basis,
                                                            UnivariatePolynomialSmoother, PolynomialSmoother,
                                                            UnivariateBSplines, BSplines, UnivariateGenericSmoother,
-                                                           GenericSmoothers, CubicSplines, CubicCyclicSplines,
-                                                           MultivariateSmoother)
+                                                           GenericSmoothers, UnivariateCubicSplines,
+                                                           UnivariateCubicCyclicSplines,
+                                                           MultivariateCubicSplines, MultivariateCyclicCubicSplines)
 from statsmodels.sandbox.gam_gsoc2015.gam import (GLMGam, LogitGam, make_augmented_matrix, get_sqrt,
                                                   penalized_wls)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (UnivariateGamCV,
@@ -179,13 +180,12 @@ def test_gam_glm():
 
     alpha = 0.03
 
-    from statsmodels.sandbox.gam_gsoc2015.gam import OLD_GLMGam
     gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    glm_gam = OLD_GLMGam(y, univ_bsplines.basis_, penal=gp)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
     res_glm_gam = glm_gam.fit(maxiter=10000)
 
 
-    glm_gam = GLMGam(y, univ_bsplines, alpha=alpha)
+    glm_gam = GLMGam(y, univ_bsplines.basis_, penal=gp)
 
     res_glm_gam = glm_gam.fit(maxiter=10000)
     y_gam = np.dot(univ_bsplines.basis_, res_glm_gam.params)
@@ -592,6 +592,19 @@ def test_train_test_smoothers():
     return
 
 
+def test_get_sqrt():
+    n = 1000
+    x = np.random.normal(0, 1, (n,3))
+    x2 = np.dot(x.T, x)
+
+    sqrt_x2 = get_sqrt(x2)
+
+    x2_reconstruction = np.dot(sqrt_x2, sqrt_x2)
+    assert_allclose(x2_reconstruction, x2)
+
+    return
+
+
 def test_make_augmented_matrix():
 
     n = 500
@@ -611,9 +624,11 @@ def test_make_augmented_matrix():
     expected_aug_w = np.array([np.sqrt(i) for i in w] + [1] * n_columns)
     assert_allclose(aug_w, expected_aug_w)
 
+    from statsmodels.sandbox.gam_gsoc2015.gam import get_sqrt
     alpha = 1
     aug_x, aug_y, aug_w = make_augmented_matrix(x, y, s, w, alpha)
-    rs = sp.linalg.cholesky(alpha * s)
+    rs = get_sqrt(alpha * s)
+    # rs = sp.linalg.cholesky(alpha * s)
     assert_allclose(np.dot(rs.T, rs), alpha*s)
     x1 = np.vstack([x, rs])  # augmented x
     expected_aug_x = np.vstack([x, rs])
@@ -657,21 +672,20 @@ def test_cyclic_cubic_splines():
     y_est_mgcv = data_from_r[['y_est']].as_matrix()
     s_mgcv = data_from_r[['s(x0)', 's(x2)']].as_matrix()
 
-    smoothers = [CubicCyclicSplines(x[:, i], df=10) for i in range(2) ]
-    multivariate_smoother = MultivariateSmoother(smoothers)
-
+    dfs = [10, 10]
+    ccs = MultivariateCyclicCubicSplines(x, dfs=dfs)
     alphas = [0.05, 0.0005]
-    gam = GLMGam(y, multivariate_smoother, alpha=alphas)
 
-    gam_res = gam.fit(method='pirls')
-    #gam_res = gam._fit_pirls(y, multivariate_smoother.basis_, multivariate_smoother.s, alpha=alphas)
+    gp = MultivariateGamPenalty(ccs, alphas=alphas)
+    gam = GLMGam(y, ccs.basis_, penal=gp)
+    gam_res = gam._fit_pirls(y, ccs.basis_, ccs.penalty_matrices_, alpha=alphas)
 
-    s0 = np.dot(multivariate_smoother.basis_[:, multivariate_smoother.mask[0]],
-                gam_res.params[multivariate_smoother.mask[0]])
+    s0 = np.dot(ccs.basis_[:, ccs.mask[0]],
+                gam_res.params[ccs.mask[0]])
     s0 -= s0.mean() # TODO: Mean has to be removed
 
-    s1 = np.dot(multivariate_smoother.basis_[:, multivariate_smoother.mask[1]],
-                gam_res.params[multivariate_smoother.mask[1]])
+    s1 = np.dot(ccs.basis_[:, ccs.mask[1]],
+                gam_res.params[ccs.mask[1]])
     s1 -= s1.mean() # TODO: Mean has to be removed
 
     plt.subplot(2, 1, 1)
@@ -691,13 +705,58 @@ def test_cyclic_cubic_splines():
     return
 
 
+def test_multivariate_cubic_splines():
+
+    np.random.seed(0)
+    from statsmodels.sandbox.gam_gsoc2015.smooth_basis import MultivariateCubicSplines
+
+    n = 500
+    x1 = np.linspace(-3, 3, n)
+    x2 = np.linspace(0, 1, n)
+
+    x = np.vstack([x1, x2]).T
+    y1 = np.sin(x1)/x1
+    y2 = x2*x2
+    y0 = y1 + y2
+    y = y0 + np.random.normal(0, .3, n)
+    y -= y.mean()
+    y0 -= y0.mean()
+
+    alphas = [1.5] * 2
+    cs = MultivariateCubicSplines(x, dfs=[10, 10])
+    gp = MultivariateGamPenalty(cs, alphas=alphas)
+
+    gam = GLMGam(y, cs.basis_, penal=gp)
+    gam_res = gam._fit_pirls(y, cs.basis_, cs.penalty_matrices_, alpha=alphas)
+
+    y_est = np.dot(cs.basis_, gam_res.params)
+    y_est -= y_est.mean()
+
+    # cut the tails
+    index = list(range(50, n-50))
+    y_est = y_est[index]
+    y0 = y0[index]
+    y = y[index]
+
+    # print(np.max(np.abs(y0 - y_est)))
+    # plt.plot(y_est, label='y est')
+    # plt.plot(y0, label='y0')
+    # plt.plot(y, '.', label='y')
+    # plt.legend(loc='best')
+    # plt.show()
+
+    assert_allclose(y_est, y0, atol=0.04)
+
+    return
+
+
 # test_gam_hessian()
 # test_gam_gradient()
 # test_gam_discrete()
 # test_approximation()
 # test_multivariate_penalty()
 # test_gam_glm_significance()
-test_gam_glm()
+# test_gam_glm()
 # test_gam_penalty()
 # test_partial_plot()
 # test_partial_values()
@@ -711,3 +770,5 @@ test_gam_glm()
 # test_make_augmented_matrix()
 # test_penalized_wls()
 # test_cyclic_cubic_splines()
+# test_multivariate_cubic_splines()
+# test_get_sqrt()

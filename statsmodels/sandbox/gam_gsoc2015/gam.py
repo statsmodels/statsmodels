@@ -28,7 +28,6 @@ class PenalizedMixin(object):
            print("Define a penalty")
 
         else:
-            print('the penal is ', penal, 'with alpha=', penal.alpha)
             self.penal = penal
 
         # TODO: define pen_weight as average pen_weight? i.e. per observation
@@ -220,120 +219,8 @@ class GLMGAMResults(GLMResults):
         return tr, p_val, rank
 
 
-class GLMGam(PenalizedMixin, GLM):
-
-    _results_class = GLMGAMResults
-
-    def __init__(self, endog, smoother, alpha=None, family=None, offset=None, exposure=None,
-                 missing='none', **kwargs):
-
-        gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=smoother)
-        kwargs['penal'] = gp
-
-        super(GLMGam, self).__init__(endog, smoother.basis_, family=family, offset=offset, exposure=exposure,
-                                     missing=missing, **kwargs)
-        self.smoother = smoother
-
-        return
-
-    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
-            scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
-            full_output=True, disp=False, max_start_irls=3, weights=None, **kwargs):
-
-        if method.lower() == 'pirls':
-
-            try:
-                pen_matrix = self.smoother.cov_der2_
-            except AttributeError:
-                pen_matrix = self.smoother.s
-
-            return self._fit_pirls(self.endog, self.smoother.basis_, pen_matrix, self.alpha,
-                                   start_params=None, maxiter=100, tol=1e-8,
-                                   scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t, weights=weights)
-
-        else:
-            return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
-                                           scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
-                                           full_output=full_output, disp=disp, max_start_irls=max_start_irls,
-                                           **kwargs)
-
-    # pag 165 4.3 # pag 136 PIRLS
-    def _fit_pirls(self, y, spl_x, spl_s, alpha, start_params=None, maxiter=100, tol=1e-8,
-                   scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
-
-        endog = y
-        wlsexog = spl_x
-
-        n_samples, n_columns = wlsexog.shape
-
-        # TODO what are these values?
-        if weights is None:
-            self.data_weights = np.array([1.] * n_samples)
-        else:
-            self.data_weights = weights
-
-        self._offset_exposure = np.array([.1] * n_samples)
-        self.scaletype = 'dev'
-
-        if start_params is None:
-            mu = self.family.starting_mu(endog)
-            lin_pred = self.family.predict(mu)
-        else:
-            lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
-            mu = self.family.fitted(lin_pred)
-        dev = self.family.deviance(endog, mu)
-
-        history = dict(params=[None, start_params], deviance=[np.inf, dev])
-        converged = False
-        criterion = history['deviance']
-        # This special case is used to get the likelihood for a specific
-        # params vector.
-        if maxiter == 0:
-            mu = self.family.fitted(lin_pred)
-            self.scale = self.estimate_scale(mu)
-            wls_results = lm.RegressionResults(self, start_params, None)
-            iteration = 0
-
-        for iteration in range(maxiter):
-
-            # TODO: is this equivalent to point 1 of page 136: w = 1 / (V(mu) * g'(mu))  ?
-            self.weights = self.data_weights * self.family.weights(mu)
-
-            #TODO: is this equivalent to point 1 of page 136:  z = g(mu)(y - mu) + X beta  ?
-            wlsendog = (lin_pred + self.family.link.deriv(mu) * (endog-mu)
-                        - self._offset_exposure)
-
-            # this defines the augmented matrix point 2a on page 136
-            wls_results = penalized_wls(wlsexog, wlsendog, spl_s, self.weights, alpha)
-            lin_pred = np.dot(wlsexog, wls_results.params).ravel() + self._offset_exposure
-            mu = self.family.fitted(lin_pred)
-
-            history = self._update_history(wls_results, mu, history)
-
-            self.scale = self.estimate_scale(mu)
-            if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
-                msg = "Perfect separation detected, results not available"
-                raise PerfectSeparationError(msg)
-            converged = _check_convergence(criterion, iteration, tol)
-            if converged:
-                break
-        self.mu = mu
-
-        glm_results = GLMResults(self, wls_results.params,
-                                 wls_results.normalized_cov_params,
-                                 self.scale,
-                                 cov_type=cov_type, cov_kwds=cov_kwds,
-                                 use_t=use_t)
-
-        glm_results.method = "PIRLS"
-        history['iteration'] = iteration + 1
-        glm_results.fit_history = history
-        glm_results.converged = converged
-        return GLMResultsWrapper(glm_results)
-
-
 # TODO: This is an old version of GLMGAM and is used only for testing. This will soon be removed
-class OLD_GLMGam(PenalizedMixin, GLM):
+class GLMGam(PenalizedMixin, GLM):
 
     _results_class = GLMGAMResults
 
