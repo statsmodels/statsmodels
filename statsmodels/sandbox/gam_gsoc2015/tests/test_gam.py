@@ -189,11 +189,11 @@ def test_gam_glm():
                               disp=1, maxiter=10000, maxfun=5000)
     y_gam = np.dot(bsplines.basis_, res_glm_gam.params)
 
-    plt.plot(x, y_gam, '.', label='gam')
-    plt.plot(x, y_mgcv, '.', label='mgcv')
-    plt.plot(x, y, '.', label='y')
-    plt.legend()
-    plt.show()
+    # plt.plot(x, y_gam, '.', label='gam')
+    # plt.plot(x, y_mgcv, '.', label='mgcv')
+    # plt.plot(x, y, '.', label='y')
+    # plt.legend()
+    # plt.show()
 
     assert_allclose(y_gam, y_mgcv, atol=1.e-1)
     return
@@ -204,22 +204,24 @@ def test_gam_discrete():
     file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
-    x = data_from_r.x
-    y = data_from_r.ybin
+    x = data_from_r.x.as_matrix()
+    y = data_from_r.ybin.as_matrix()
 
-    df = 10
-    degree = 5
-    univ_bsplines = UnivariateBSplines(x, degree=degree, df=df)
+    df = [10]
+    degree = [5]
+    bsplines = BSplines(x, degree=degree, df=df)
 
     # y_mgcv is obtained from R with the following code
     # g = gam(y~s(x, k = 10, bs = "cr"), data = data, scale = 80)
     y_mgcv = data_from_r.ybin_est
 
     alpha = 0.00002
-    gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=univ_bsplines)
-    lg_gam = LogitGam(y, univ_bsplines.basis_, penal=gp)
+    # gp = UnivariateGamPenalty(alpha=alpha, univariate_smoother=bsplines)
+    # lg_gam = LogitGam(y, bsplines.basis_, penal=gp)
+    #
+    lg_gam = LogitGam(y, bsplines, alpha=alpha)
     res_lg_gam = lg_gam.fit(maxiter=10000)
-    y_gam = np.dot(univ_bsplines.basis_, res_lg_gam.params)
+    y_gam = np.dot(bsplines.basis_, res_lg_gam.params)
     y_gam = sigmoid(y_gam)
     y_mgcv = sigmoid(y_mgcv)
 
@@ -525,7 +527,8 @@ def test_multivariate_gam_cv_path():
     gam_cv_res = gam_cv.fit()
 
     glm_gam = GLMGam(y, bsplines, alpha=gam_cv.alpha_cv_)
-    res_glm_gam = glm_gam.fit(maxiter=10000)#, method='IRLS')
+    res_glm_gam = glm_gam.fit(method='irls', max_start_irls=0,
+                              disp=1, maxiter=10000, maxfun=5000)
     y_est = res_glm_gam.predict(bsplines.basis_)
 
     # plt.plot(x, y, '.', label='y')
@@ -661,16 +664,16 @@ def test_cyclic_cubic_splines():
                 gam_res.params[ccs.mask[1]])
     s1 -= s1.mean() # TODO: Mean has to be removed
 
-    plt.subplot(2, 1, 1)
-    plt.plot(x[:, 0], s0, '.', label='s0')
-    plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
-    plt.legend(loc='best')
-
-    plt.subplot(2, 1, 2)
-    plt.plot(x[:, 1], s1, '.', label='s1_est')
-    plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
-    plt.legend(loc='best')
-    plt.show()
+    # plt.subplot(2, 1, 1)
+    # plt.plot(x[:, 0], s0, '.', label='s0')
+    # plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
+    # plt.legend(loc='best')
+    #
+    # plt.subplot(2, 1, 2)
+    # plt.plot(x[:, 1], s1, '.', label='s1_est')
+    # plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
+    # plt.legend(loc='best')
+    # plt.show()
 
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
@@ -712,7 +715,6 @@ def test_multivariate_cubic_splines():
     y0 = y0[index]
     y = y[index]
 
-    print(np.max(np.abs(y0 - y_est)))
     # plt.plot(y_est, label='y est')
     # plt.plot(y0, label='y0')
     # plt.plot(y, '.', label='y')
@@ -724,7 +726,7 @@ def test_multivariate_cubic_splines():
     return
 
 
-# test_gam_glm_significance() # TODO: not implemented
+# test_gam_glm_significance() # TODO1: not implemented
 # test_approximation() # Computationally demanding
 # test_gam_hessian()
 # test_gam_gradient()
@@ -742,5 +744,5 @@ def test_multivariate_cubic_splines():
 # test_make_augmented_matrix()
 # test_penalized_wls()
 # test_cyclic_cubic_splines()
-test_multivariate_cubic_splines()
+# test_multivariate_cubic_splines()
 # test_get_sqrt()

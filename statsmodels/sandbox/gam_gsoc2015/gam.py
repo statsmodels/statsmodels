@@ -323,10 +323,26 @@ class GLMGam(PenalizedMixin, GLM):
         return GLMResultsWrapper(glm_results)
 
 
-# TODO: The logic class should be updated
-class LogitGam(PenalizedMixin, Logit):
-    pass
+from statsmodels.discrete.discrete_model import BinaryModel
+from statsmodels.discrete.discrete_model import MultinomialModel
 
+
+class LogitGam(PenalizedMixin, Logit):
+
+    def __init__(self, endog, smoother, alpha, *args, **kwargs):
+
+        import collections
+        if not isinstance(alpha, collections.Iterable):
+            alpha = np.array([alpha]*len(smoother.smoothers_))
+
+        self.smoother = smoother
+        self.alpha = alpha
+        self.pen_weight = 1 # TODO: pen weight should not be defined here!!
+        penal = MultivariateGamPenalty(smoother, alpha=alpha)
+
+        super(LogitGam, self).__init__(endog, smoother.basis_, penal=penal, *args, **kwargs)
+
+    pass
 
 def penalized_wls(x, y, s, weights, alpha):
 
