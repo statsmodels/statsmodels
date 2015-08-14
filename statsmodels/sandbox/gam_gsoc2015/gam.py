@@ -144,10 +144,6 @@ class PenalizedMixin(object):
                 return res
 
 
-class LogitGam(PenalizedMixin, Logit):
-    pass
-
-
 class GLMGAMResults(GLMResults):
 
     def partial_values(self, smoother, mask):
@@ -218,7 +214,6 @@ class GLMGAMResults(GLMResults):
         return tr, p_val, rank
 
 
-# TODO: This is an old version of GLMGAM and is used only for testing. This will soon be removed
 class GLMGam(PenalizedMixin, GLM):
 
     _results_class = GLMGAMResults
@@ -238,7 +233,7 @@ class GLMGam(PenalizedMixin, GLM):
                                      missing=missing, penal=penal, **kwargs)
         return
 
-    def fit(self, start_params=None, maxiter=1000, method='IRLS', tol=1e-8,
+    def fit(self, start_params=None, maxiter=1000, method='PIRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
             full_output=True, disp=False, max_start_irls=3, **kwargs):
 
@@ -326,6 +321,11 @@ class GLMGam(PenalizedMixin, GLM):
         glm_results.fit_history = history
         glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
+
+
+# TODO: The logic class should be updated
+class LogitGam(PenalizedMixin, Logit):
+    pass
 
 
 def penalized_wls(x, y, s, weights, alpha):

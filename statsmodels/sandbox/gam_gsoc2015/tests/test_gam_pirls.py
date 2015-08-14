@@ -9,7 +9,7 @@ import os
 import pandas as pd
 from numpy.testing import assert_allclose
 import numpy as np
-from statsmodels.sandbox.gam_gsoc2015.smooth_basis import MultivariateCubicSplines, UnivariateCubicSplines
+from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines, UnivariateCubicSplines
 from statsmodels.sandbox.gam_gsoc2015.gam import GLMGam, get_sqrt
 
 

@@ -11,7 +11,7 @@ from statsmodels.sandbox.gam_gsoc2015.smooth_basis import (make_poly_basis, make
                                                            UnivariateBSplines, BSplines, UnivariateGenericSmoother,
                                                            GenericSmoothers, UnivariateCubicSplines,
                                                            UnivariateCubicCyclicSplines,
-                                                           MultivariateCubicSplines, MultivariateCyclicCubicSplines)
+                                                           CubicSplines, CyclicCubicSplines)
 from statsmodels.sandbox.gam_gsoc2015.gam import (GLMGam, LogitGam, make_augmented_matrix, get_sqrt,
                                                   penalized_wls)
 from statsmodels.sandbox.gam_gsoc2015.gam_cross_validation.gam_cross_validation import (
@@ -646,7 +646,7 @@ def test_cyclic_cubic_splines():
     s_mgcv = data_from_r[['s(x0)', 's(x2)']].as_matrix()
 
     dfs = [10, 10]
-    ccs = MultivariateCyclicCubicSplines(x, df=dfs)
+    ccs = CyclicCubicSplines(x, df=dfs)
     alpha = [0.05, 0.0005]
 
     gam = GLMGam(y, ccs, alpha=alpha)
@@ -661,16 +661,16 @@ def test_cyclic_cubic_splines():
                 gam_res.params[ccs.mask[1]])
     s1 -= s1.mean() # TODO: Mean has to be removed
 
-    # plt.subplot(2, 1, 1)
-    # plt.plot(x[:, 0], s0, '.', label='s0')
-    # plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
-    # plt.legend(loc='best')
-    #
-    # plt.subplot(2, 1, 2)
-    # plt.plot(x[:, 1], s1, '.', label='s1_est')
-    # plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
-    # plt.legend(loc='best')
-    # plt.show()
+    plt.subplot(2, 1, 1)
+    plt.plot(x[:, 0], s0, '.', label='s0')
+    plt.plot(x[:, 0], s_mgcv[:, 0], '.', label='s0_mgcv')
+    plt.legend(loc='best')
+
+    plt.subplot(2, 1, 2)
+    plt.plot(x[:, 1], s1, '.', label='s1_est')
+    plt.plot(x[:, 1], s_mgcv[:, 1], '.', label='s1_mgcv')
+    plt.legend(loc='best')
+    plt.show()
 
     assert_allclose(s0, s_mgcv[:, 0], atol=0.02)
     assert_allclose(s1, s_mgcv[:, 1], atol=0.33)
@@ -681,7 +681,7 @@ def test_cyclic_cubic_splines():
 def test_multivariate_cubic_splines():
 
     np.random.seed(0)
-    from statsmodels.sandbox.gam_gsoc2015.smooth_basis import MultivariateCubicSplines
+    from statsmodels.sandbox.gam_gsoc2015.smooth_basis import CubicSplines
 
     n = 500
     x1 = np.linspace(-3, 3, n)
@@ -696,11 +696,12 @@ def test_multivariate_cubic_splines():
     y0 -= y0.mean()
 
     alphas = [1.5] * 2
-    cs = MultivariateCubicSplines(x, df=[10, 10])
+    cs = CubicSplines(x, df=[10, 10])
 
     gam = GLMGam(y, cs, alpha=alphas)
-    #gam_res = gam._fit_pirls(y, cs, alpha=alphas)
-    gam_res = gam.fit(y, cs, alpha=alphas, method='pirls')
+    #gam_res = gam.fit(y, cs, alpha=alphas, method='pirls')
+    gam_res = gam.fit()
+
 
     y_est = np.dot(cs.basis_, gam_res.params)
     y_est -= y_est.mean()
@@ -711,7 +712,7 @@ def test_multivariate_cubic_splines():
     y0 = y0[index]
     y = y[index]
 
-    # print(np.max(np.abs(y0 - y_est)))
+    print(np.max(np.abs(y0 - y_est)))
     # plt.plot(y_est, label='y est')
     # plt.plot(y0, label='y0')
     # plt.plot(y, '.', label='y')
@@ -725,8 +726,6 @@ def test_multivariate_cubic_splines():
 
 # test_gam_glm_significance() # TODO: not implemented
 # test_approximation() # Computationally demanding
-
-
 # test_gam_hessian()
 # test_gam_gradient()
 # test_gam_discrete()
@@ -743,5 +742,5 @@ def test_multivariate_cubic_splines():
 # test_make_augmented_matrix()
 # test_penalized_wls()
 # test_cyclic_cubic_splines()
-# test_multivariate_cubic_splines()
+test_multivariate_cubic_splines()
 # test_get_sqrt()

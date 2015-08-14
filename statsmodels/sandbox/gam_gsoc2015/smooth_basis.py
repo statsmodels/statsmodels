@@ -526,11 +526,11 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         return s
 
 
-class MultivariateCubicSplines(MultivariateGamSmoother):
+class CubicSplines(MultivariateGamSmoother):
 
     def __init__(self, x, df, variables_name=None):
         self.dfs = df
-        super(MultivariateCubicSplines, self).__init__(x, variables_name)
+        super(CubicSplines, self).__init__(x, variables_name)
         return
 
     def _make_smoothers_list(self):
@@ -613,11 +613,11 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return d.T.dot(np.linalg.inv(b)).dot(d)
 
 
-class MultivariateCyclicCubicSplines(MultivariateGamSmoother):
+class CyclicCubicSplines(MultivariateGamSmoother):
 
     def __init__(self, x, df, variables_name=None):
         self.dfs = df
-        super(MultivariateCyclicCubicSplines, self).__init__(x, variables_name)
+        super(CyclicCubicSplines, self).__init__(x, variables_name)
         return
 
     def _make_smoothers_list(self):
