@@ -345,12 +345,42 @@ class VARMAX(MLEModel):
             ar_params = []
         endog = res_ar.resid
 
+        # Test for stationarity
+        if self.k_ar > 0 and self.enforce_stationarity:
+            coefficient_matrices = (
+                ar_params.reshape(
+                    self.k_endog * self.k_ar, self.k_endog
+                ).T
+            ).reshape(self.k_endog, self.k_endog, self.k_ar).T
+
+            stationary = is_invertible([1] + list(-coefficient_matrices))
+
+            if not stationary:
+                raise ValueError('Non-stationary starting autoregressive'
+                         ' parameters found with `enforce_stationarity`'
+                         ' set to True.')
+
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
         if self.k_ma > 0:
             mod_ma = var_model.VAR(endog)
             res_ma = mod_ma.fit(maxlags=self.k_ma, ic=None, trend='nc')
             ma_params = np.array(res_ma.params.T).ravel()
+
+            # Test for invertibility
+            if self.enforce_invertibility:
+                coefficient_matrices = (
+                    ma_params.reshape(
+                        self.k_endog * self.k_ma, self.k_endog
+                    ).T
+                ).reshape(self.k_endog, self.k_endog, self.k_ma).T
+
+                invertible = is_invertible([1] + list(-coefficient_matrices))
+
+                if not invertible:
+                    raise ValueError('Non-invertible starting moving-average'
+                             ' parameters found with `enforce_stationarity`'
+                             ' set to True.')
 
         # 1. Intercept terms
         if self.trend == 'c':
