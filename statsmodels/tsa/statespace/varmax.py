@@ -324,8 +324,8 @@ class VARMAX(MLEModel):
         # Regression effects via OLS
         exog_params = np.zeros(0)
         if self.k_exog > 0:
-            exog_params = np.linalg.pinv(exog).dot(endog)
-            endog -= np.dot(exog, exog_params)
+            exog_params = np.linalg.pinv(exog).dot(endog).T
+            endog -= np.dot(exog, exog_params.T)
 
         # B. Run a VAR model on endog to get trend, AR parameters
         ar_params = []
@@ -606,7 +606,7 @@ class VARMAX(MLEModel):
         # 1. State intercept
         if self.mle_regression:
             exog_params = params[self._params_regression].reshape(
-                self.k_exog, self.k_endog)
+                self.k_endog, self.k_exog).T
             intercept = np.dot(self.exog, exog_params)
             if self.trend == 'c':
                 intercept += params[self._params_trend]
