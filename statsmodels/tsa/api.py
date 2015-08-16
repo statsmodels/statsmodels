@@ -20,4 +20,4 @@ from .statespace import api as statespace
 from .statespace.sarimax import SARIMAX
 from .statespace.structural import UnobservedComponents
 from .statespace.varmax import VARMAX
-from .statespace.dynamic_factor import StaticFactors
+from .statespace.dynamic_factor import DynamicFactor
