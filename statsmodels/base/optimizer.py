@@ -323,6 +323,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
 
     # Use unconstrained optimization by default.
     bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
+    kwargs.setdefault('iprint', 0)
 
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
