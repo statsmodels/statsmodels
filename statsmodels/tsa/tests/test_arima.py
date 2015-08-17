@@ -1585,6 +1585,17 @@ def test_1dexog():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         mod = ARMA(endog, (1,1), exog).fit(disp=-1)
+        mod.predict(193, 203, exog[-10:])
+
+        # check for dynamic is true and pandas Series  see #2589
+        mod.predict(193, 202, exog[-10:], dynamic=True)
+
+        dta.index = pandas.Index(cpi_dates)
+        mod = ARMA(dta['realcons'], (1,1), dta['m1']).fit(disp=-1)
+        mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:], dynamic=True)
+
+        mod = ARMA(dta['realcons'], (1,1), dta['m1']).fit(trend='nc', disp=-1)
+        mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:], dynamic=True)
 
 
 def test_arima_predict_bug():
@@ -1594,6 +1605,17 @@ def test_arima_predict_bug():
     dta.index = pandas.Index(dates_from_range('1700', '2008'))
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
+
+    # test prediction with time stamp, see #2587
+    predict = arma_mod20.predict(dta.index[-20], dta.index[-1])
+    assert_(predict.index.equals(dta.index[-20:]))
+    predict = arma_mod20.predict(dta.index[-20], dta.index[-1], dynamic=True)
+    assert_(predict.index.equals(dta.index[-20:]))
+    # partially out of sample
+    predict_dates = pandas.Index(dates_from_range('2000', '2015'))
+    predict = arma_mod20.predict(predict_dates[0], predict_dates[-1])
+    assert_(predict.index.equals(predict_dates))
+    #assert_(1 == 0)
 
 
 def test_arima_predict_q2():
@@ -1684,7 +1706,6 @@ def test_arima_predict_exog():
 
     # check 626
     assert_(len(arma_res.model.exog_names) == 5)
-
 
     # exog for out-of-sample and in-sample dynamic
     predict = arma_res.model.predict(params, end=124, exog=X[100:])
@@ -2223,9 +2244,9 @@ def test_arima_fit_mutliple_calls():
     mod = ARIMA(y, (1, 0, 2))
     # Make multiple calls to fit
     mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
-    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y']) 
+    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
     mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
-    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y']) 
+    assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
 if __name__ == "__main__":
     import nose
