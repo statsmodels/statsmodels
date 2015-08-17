@@ -145,12 +145,18 @@ class TimeSeriesModel(base.LikelihoodModel):
         dates = self.data.dates
         freq = self.data.freq
 
-        if isinstance(end, str):
+        if isinstance(end, str) or (dates is not None
+                                    and isinstance(end, type(dates[0]))):
             if dates is None:
-                raise ValueError("Got a string for end and dates is None")
-            try:
+                raise ValueError("Got a string or date for `end` and `dates` is None")
+
+            if isinstance(end, str):
                 dtend = self._str_to_date(end)
-                self.data.predict_end = dtend
+            else:
+                dtend = end  # end could be a pandas TimeStamp not a datetime
+
+            self.data.predict_end = dtend
+            try:
                 end = self._get_dates_loc(dates, dtend)
             except KeyError as err: # end is greater than dates[-1]...probably
                 if dtend > self.data.dates[-1]:
@@ -203,6 +209,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         elif freq is None: # should have a date with freq = None
             raise ValueError("When freq is None, you must give an integer "
                              "index for end.")
+
+        else:
+            raise ValueError("no rule for interpreting end")
 
         return end, out_of_sample
 
