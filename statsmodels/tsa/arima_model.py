@@ -504,9 +504,11 @@ class ARMA(tsbase.TimeSeriesModel):
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
                 maxlag = int(round(12*(nobs/100.)**(1/4.)))
+                maxlag = max(p, q) + 1
                 if maxlag >= nobs:
                     maxlag = nobs - 1
-                armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                #armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                armod = AR(endog).fit(trend='nc', maxlag=maxlag)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
@@ -532,7 +534,9 @@ class ARMA(tsbase.TimeSeriesModel):
                 coefs = GLS(endog[max(p_tmp + q, p):], X).fit().params
                 start_params[k:k+p+q] = coefs
             else:
-                start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
+                ar_coeffs = yule_walker(endog, order=q)[0]
+                ar = np.r_[[1], -ar_coeffs.squeeze()]
+                start_params[k+p:k+p+q] = arma2ma(ar, [1], nobs=q+1)[1:]
         if q == 0 and p != 0:
             arcoefs = yule_walker(endog, order=p)[0]
             start_params[k:k+p] = arcoefs
