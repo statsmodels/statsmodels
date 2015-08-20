@@ -694,10 +694,10 @@ def test_glm_pirls_compatibility():
     y_est_pirls = np.dot(cs.basis_, gam_res_pirls.params)
     y_est_pirls -= y_est_pirls.mean()
 
-    plt.plot(y_est_pirls)
-    plt.plot(y_est_glm)
-    plt.plot(y, '.')
-    plt.show()
+    # plt.plot(y_est_pirls)
+    # plt.plot(y_est_glm)
+    # plt.plot(y, '.')
+    # plt.show()
 
     assert_allclose(y_est_glm, y_est_pirls, atol=0.131)
 
@@ -715,6 +715,24 @@ def test_zero_penalty():
 
     assert_allclose(y_est, y_est_gam)
 
+
+def test_spl_s():
+
+    # matrix from R
+    spl_s_R = [[0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
+               [0,    0,  0.000000000,  0.000000000,  0.000000000,  0.000000000],
+               [0,    0,  0.001400000,  0.000200000, -0.001133333, -0.001000000],
+               [0,    0,  0.000200000,  0.002733333,  0.001666667, -0.001133333],
+               [0,    0, -0.001133333,  0.001666667,  0.002733333,  0.000200000],
+               [0,    0, -0.001000000, -0.001133333,  0.000200000,  0.001400000]]
+
+    x = np.random.normal(0, 1, 10)
+    xk = np.array([0.2, .4, .6, .8])
+    cs = UnivariateCubicSplines(x, df=4)
+    cs.knots = xk
+
+    spl_s = cs._splines_s()
+    assert_allclose(spl_s_R, spl_s, atol=4.e-10)
 
 
 
@@ -739,5 +757,7 @@ def test_zero_penalty():
 # test_get_sqrt()
 # test_glm_pirls_compatibility() # TODO: this test will be upddated in the future
 # test_zero_penalty()
+# test_spl_s()
+
 # print('finish')
 
