@@ -1,4 +1,4 @@
-__author__ = 'Luca Puggini'
+__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 
 import numpy as np
 from scipy.linalg import block_diag

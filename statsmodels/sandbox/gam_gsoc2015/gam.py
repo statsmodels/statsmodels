@@ -251,6 +251,7 @@ class GLMGam(PenalizedMixin, GLM):
     def _fit_pirls(self, y, smoother, alpha, start_params=None, maxiter=100, tol=1e-8,
                    scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None, weights=None):
 
+        # alpha = alpha * len(y) * self.scale / 100 # TODO: we need to rescale alpha
         endog = y
         wlsexog = smoother.basis_
         spl_s = smoother.penalty_matrices_
@@ -263,7 +264,9 @@ class GLMGam(PenalizedMixin, GLM):
         else:
             self.data_weights = weights
 
-        self._offset_exposure = np.array([.1] * n_samples)
+        if not hasattr(self, '_offset_exposure'):
+            self._offset_exposure = 0
+
         self.scaletype = 'dev'
 
         if start_params is None:
@@ -343,6 +346,7 @@ class LogitGam(PenalizedMixin, Logit):
         super(LogitGam, self).__init__(endog, smoother.basis_, penal=penal, *args, **kwargs)
 
     pass
+
 
 def penalized_wls(x, y, s, weights, alpha):
 

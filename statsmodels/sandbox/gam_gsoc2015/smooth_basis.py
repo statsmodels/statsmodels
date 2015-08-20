@@ -2,7 +2,7 @@
 """
 Created on Fri Jun  5 16:32:00 2015
 
-@author: Luca
+@author: Luca Puggini <lucapuggio@gmail.com>
 """
 
 from __future__ import division

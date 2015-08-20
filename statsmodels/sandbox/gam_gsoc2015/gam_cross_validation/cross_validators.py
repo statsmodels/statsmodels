@@ -1,7 +1,7 @@
 
 from __future__ import division
 
-__author__ = 'Luca Puggini'
+__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass

@@ -1,6 +1,6 @@
 from __future__ import division
 
-__author__ = 'Luca Puggini'
+__author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 
 from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
@@ -150,33 +150,33 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
 
         return
 
-
-class UnivariateGamCVPath(BasePenaltiesPathCV):
-
-    def __init__(self, univariate_smoother, alphas, gam, cost, y, cv):
-
-        self.cost = cost
-        self.univariate_smoother = univariate_smoother
-        self.gam = gam
-        self.alphas = alphas
-        self.y = y
-        self.cv = cv
-
-        return
-
-    def fit(self, **kwargs):
-
-        self.cv_error_ = np.zeros(shape=(len(self.alphas,)))
-        self.cv_std_ = np.zeros(shape=(len(self.alphas, )))
-        for i, alpha in enumerate(self.alphas):
-            gam_cv = UnivariateGamCV(self.gam, alpha, self.cost, univariate_smoother=self.univariate_smoother, y=self.y,
-                                     cv=self.cv)
-            cv_err = gam_cv.fit(**kwargs)
-            self.cv_error_[i] = cv_err.mean()
-            self.cv_std_[i] = cv_err.std()
-
-        self.alpha_cv_ = self.alphas[np.argmin(self.cv_error_)]
-        return self
+# TODO: this can probably be removed
+# class UnivariateGamCVPath(BasePenaltiesPathCV):
+#
+#     def __init__(self, univariate_smoother, alphas, gam, cost, y, cv):
+#
+#         self.cost = cost
+#         self.univariate_smoother = univariate_smoother
+#         self.gam = gam
+#         self.alphas = alphas
+#         self.y = y
+#         self.cv = cv
+#
+#         return
+#
+#     def fit(self, **kwargs):
+#
+#         self.cv_error_ = np.zeros(shape=(len(self.alphas,)))
+#         self.cv_std_ = np.zeros(shape=(len(self.alphas, )))
+#         for i, alpha in enumerate(self.alphas):
+#             gam_cv = UnivariateGamCV(self.gam, alpha, self.cost, univariate_smoother=self.univariate_smoother, y=self.y,
+#                                      cv=self.cv)
+#             cv_err = gam_cv.fit(**kwargs)
+#             self.cv_error_[i] = cv_err.mean()
+#             self.cv_std_[i] = cv_err.std()
+#
+#         self.alpha_cv_ = self.alphas[np.argmin(self.cv_error_)]
+#         return self
 
 
 class MultivariateGAMCVPath:
