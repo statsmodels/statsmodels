@@ -924,10 +924,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Handle covariance matrix calculation
         if cov_kwds is None:
                 cov_kwds = {}
-        self._rank = None
-        self._get_robustcov_results(cov_type=cov_type, use_self=True,
-                                    **cov_kwds)
-        self.model.update(self.params)
+        try:
+            self._rank = None
+            self._get_robustcov_results(cov_type=cov_type, use_self=True,
+                                        **cov_kwds)
+        except np.linalg.LinAlgError:
+            self._rank = 0
+            k_params = len(self.params)
+            res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
+            res.cov_kwds['cov_type'] = (
+                'Covariance matrix could not be calculated: singular.'
+                ' information matrix.')
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
