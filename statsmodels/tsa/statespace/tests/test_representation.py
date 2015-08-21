@@ -20,7 +20,7 @@ import pandas as pd
 import os
 
 from statsmodels.tsa.statespace.representation import Representation
-from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults, PredictionResults
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
@@ -838,14 +838,51 @@ def test_predict():
                   obs_intercept=np.zeros(2))
 
     # Check that start=None gives start=0 and end=None gives end=nobs
-    assert_equal(res.predict().shape, (1,res.nobs))
+    assert_equal(res.predict().forecasts.shape, (1,res.nobs))
 
     # Check that dynamic=True begins dynamic prediction immediately
     # TODO just a smoke test
     res.predict(dynamic=True)
 
-    # Check that full_results=True yields a FilterResults object
-    assert_equal(isinstance(res.predict(full_results=True), FilterResults), True)
+    # Check that on success, PredictionResults object is returned
+    prediction_results = res.predict(start=3, end=5)
+    assert_equal(isinstance(prediction_results, PredictionResults), True)
+
+    # Check for correctly subset representation arrays
+    # (k_endog, npredictions) = (1, 2)
+    assert_equal(prediction_results.endog.shape, (1, 2))
+    # (k_endog, npredictions) = (1, 2)
+    assert_equal(prediction_results.obs_intercept.shape, (1, 2))
+    # (k_endog, k_states) = (1, 1)
+    assert_equal(prediction_results.design.shape, (1, 1))
+    # (k_endog, k_endog) = (1, 1)
+    assert_equal(prediction_results.obs_cov.shape, (1, 1))
+    # (k_state,) = (1,)
+    assert_equal(prediction_results.state_intercept.shape, (1,))
+    # (k_state, npredictions) = (1, 2)
+    assert_equal(prediction_results.obs_intercept.shape, (1, 2))
+    # (k_state, k_state) = (1, 1)
+    assert_equal(prediction_results.transition.shape, (1, 1))
+    # (k_state, k_posdef) = (1, 1)
+    assert_equal(prediction_results.selection.shape, (1, 1))
+    # (k_posdef, k_posdef) = (1, 1)
+    assert_equal(prediction_results.state_cov.shape, (1, 1))
+
+    # Check for correctly subset filter output arrays
+    # (k_endog, npredictions) = (1, 2)
+    assert_equal(prediction_results.forecasts.shape, (1, 2))
+    assert_equal(prediction_results.forecasts_error.shape, (1, 2))
+    # (k_states, npredictions) = (1, 2)
+    assert_equal(prediction_results.filtered_state.shape, (1, 2))
+    assert_equal(prediction_results.predicted_state.shape, (1, 2))
+    # (k_endog, k_endog, npredictions) = (1, 1, 2)
+    assert_equal(prediction_results.forecasts_error_cov.shape, (1, 1, 2))
+    # (k_states, k_states, npredictions) = (1, 1, 2)
+    assert_equal(prediction_results.filtered_state_cov.shape, (1, 1, 2))
+    assert_equal(prediction_results.predicted_state_cov.shape, (1, 1, 2))
+
+    # Check for invalid attribute
+    assert_raises(AttributeError, getattr, prediction_results, 'test')
 
     # Check that an error is raised when a non-two-dimensional obs_cov
     # is given

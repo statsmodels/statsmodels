@@ -210,7 +210,9 @@ def test_predict():
 
     # Test that predict with start=None, end=None does prediction with full
     # dataset
-    assert_equal(res.predict().shape, (mod.nobs,))
+    predict = res.predict()
+    assert_equal(predict.shape, (mod.nobs,))
+    assert_equal(res.get_prediction().predicted_mean, predict)
 
     # Test a string value to the dynamic option
     assert_allclose(res.predict(dynamic='1981-01-01'), res.predict())
@@ -218,12 +220,19 @@ def test_predict():
     # Test an invalid date string value to the dynamic option
     assert_raises(ValueError, res.predict, dynamic='1982-01-01')
 
+    # Test for passing a string to predict when dates are not set
+    mod = MLEModel([1,2], **kwargs)
+    res = mod.filter([])
+    assert_raises(ValueError, res.predict, dynamic='string')
+
 
 def test_forecast():
     # Numpy
     mod = MLEModel([1,2], **kwargs)
     res = mod.filter([])
-    assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
+    forecast = res.forecast(steps=10)
+    assert_allclose(forecast, np.ones((10,)) * 2)
+    assert_allclose(res.get_forecast(steps=10).predicted_mean, forecast)
 
     # Pandas
     index = pd.date_range('1960-01-01', periods=2, freq='MS')
@@ -231,6 +240,7 @@ def test_forecast():
     res = mod.filter([])
     assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
     assert_allclose(res.forecast(steps='1960-12-01'), np.ones((10,)) * 2)
+    assert_allclose(res.get_forecast(steps=10).predicted_mean, np.ones((10,)) * 2)
 
 
 def test_summary():

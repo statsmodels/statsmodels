@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from .kalman_filter import (
-    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
+    KalmanFilter, FilterResults, PredictionResults, INVERT_UNIVARIATE, SOLVE_LU
 )
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
@@ -21,6 +21,9 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.tools import Bunch
+import statsmodels.genmod._prediction as pred
+from statsmodels.genmod.families.links import identity
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -1272,8 +1275,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def predict(self, start=None, end=None, dynamic=False, full_results=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1298,10 +1300,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
-            If True, returns a FilterResults instance; if False returns a
-            tuple with forecasts, the forecast errors, and the forecast error
-            covariance matrices. Default is False.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -1336,14 +1334,111 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Perform the prediction
         # This is a (k_endog x npredictions) array; don't want to squeeze in
         # case of npredictions = 1
-        predictions = self.filter_results.predict(
+        prediction_results = self.filter_results.predict(
             start, end+out_of_sample+1, dynamic, **kwargs
         )
-        if predictions.shape[0] == 1:
-            predictions = predictions[0,:]
+
+        # Return a new mlemodel.PredictionResults object
+        if self.data.dates is None:
+            row_labels = self.data.row_labels
         else:
-            predictions = predictions.T
-        return predictions
+            row_labels = self.data.predict_dates
+        return PredictionResults(prediction_results, row_labels=row_labels)
+
+    def get_forecast(self, steps=1, **kwargs):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, str, or datetime, optional
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency, steps
+            must be an integer. Default
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts. A (steps x k_endog) array.
+        """
+        if isinstance(steps, int):
+            end = self.nobs+steps-1
+        else:
+            end = steps
+        return self.get_prediction(start=self.nobs, end=end, **kwargs)
+
+    def predict(self, start=None, end=None, dynamic=False, **kwargs):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        dynamic : boolean, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict x k_endog) array.
+        """
+        if start is None:
+            start = 0
+
+        # Handle start and end (e.g. dates)
+        start = self.model._get_predict_start(start)
+        end, out_of_sample = self.model._get_predict_end(end)
+
+        # Handle string dynamic
+        dates = self.data.dates
+        if isinstance(dynamic, str):
+            if dates is None:
+                raise ValueError("Got a string for dynamic and dates is None")
+            dtdynamic = self.model._str_to_date(dynamic)
+            try:
+                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
+
+                dynamic = dynamic_start - start
+            except KeyError:
+                raise ValueError("Dynamic must be in dates. Got %s | %s" %
+                                 (str(dynamic), str(dtdynamic)))
+
+        # Perform the prediction
+        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # case of npredictions = 1
+        prediction_results = self.filter_results.predict(
+            start, end+out_of_sample+1, dynamic, **kwargs
+        )
+        predicted_mean = prediction_results.forecasts
+        if predicted_mean.shape[0] == 1:
+            predicted_mean = predicted_mean[0,:]
+        else:
+            predicted_mean = predicted_mean.T
+        return predicted_mean
 
     def forecast(self, steps=1, **kwargs):
         """
@@ -1369,8 +1464,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             end = self.nobs+steps-1
         else:
             end = steps
-        forecasts = self.predict(start=self.nobs, end=end, **kwargs)
-        return forecasts
+        return self.predict(start=self.nobs, end=end, **kwargs)
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None):
@@ -1568,3 +1662,41 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
+
+
+class PredictionResults(pred.PredictionResults):
+    """
+
+    Parameters
+    ----------
+    prediction_results : kalman_filter.PredictionResults instance
+        Results object from prediction after fitting or filtering a state space
+        model.
+    row_labels : iterable
+        Row labels for the predicted data.
+
+    Attributes
+    ----------
+
+    """
+    def __init__(self, prediction_results, row_labels=None):
+        self.prediction_results = prediction_results
+
+        # Get required values
+        predicted_mean = self.prediction_results.forecasts
+        if predicted_mean.shape[0] == 1:
+            predicted_mean = predicted_mean[0, :]
+        else:
+            predicted_mean = predicted_mean.transpose()
+
+        var_pred_mean = self.prediction_results.forecasts_error_cov
+        if var_pred_mean.shape[0] == 1:
+            var_pred_mean = var_pred_mean[0, 0, :]
+        else:
+            var_pred_mean = var_pred_mean.transpose()
+
+        # Initialize
+        super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
+                                                dist='norm',
+                                                row_labels=row_labels,
+                                                link=identity)

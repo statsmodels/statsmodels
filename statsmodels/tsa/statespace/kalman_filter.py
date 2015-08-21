@@ -1499,7 +1499,7 @@ class FilterResults(FrozenRepresentation):
         # If we only have simple prediction, then we can use the already saved
         # Kalman filter output
         if ndynamic == 0 and nforecast == 0:
-            result = self
+            results = self
         else:
             # Construct the new endogenous array.
             endog = np.empty((self.k_endog, ndynamic + nforecast))
@@ -1526,12 +1526,10 @@ class FilterResults(FrozenRepresentation):
             model._initialize_filter()
             model._initialize_state()
 
-            result = self._predict(nstatic, ndynamic, nforecast, model)
+            results = self._predict(nstatic, ndynamic, nforecast, model)
 
-        if full_results:
-            return result
-        else:
-            return result.forecasts[:, start:end]
+        return PredictionResults(results, start, end, nstatic, ndynamic,
+                                 nforecast)
 
     def _predict(self, nstatic, ndynamic, nforecast, model):
         # TODO: this doesn't use self, and can either be a static method or
@@ -1578,3 +1576,144 @@ class FilterResults(FrozenRepresentation):
         results = FilterResults(model)
         results.update_filter(kfilter)
         return results
+
+
+class PredictionResults(FilterResults):
+    """
+    Results of in-sample and out-of-sample prediction for state space models
+    generally
+
+    Parameters
+    ----------
+    results : FilterResults
+        Output from filtering, corresponding to the prediction desired
+    start : int
+        Zero-indexed observation number at which to start forecasting,
+        i.e., the first forecast will be at start.
+    end : int
+        Zero-indexed observation number at which to end forecasting, i.e.,
+        the last forecast will be at end.
+    nstatic : int
+        Number of in-sample static predictions (these are always the first
+        elements of the prediction output).
+    ndynamic : int
+        Number of in-sample dynamic predictions (these always follow the static
+        predictions directly, and are directly followed by the forecasts).
+    nforecast : int
+        Number of in-sample forecasts (these always follow the dynamic
+        predictions directly).
+
+    Attributes
+    ----------
+    npredictions : int
+        Number of observations in the predicted series; this is not necessarily
+        the same as the number of observations in the original model from which
+        prediction was performed.
+    start : int
+        Zero-indexed observation number at which to start prediction,
+        i.e., the first predict will be at `start`; this is relative to the
+        original model from which prediction was performed.
+    end : int
+        Zero-indexed observation number at which to end prediction,
+        i.e., the last predict will be at `end`; this is relative to the
+        original model from which prediction was performed.
+    nstatic : int
+        Number of in-sample static predictions.
+    ndynamic : int
+        Number of in-sample dynamic predictions.
+    nforecast : int
+        Number of in-sample forecasts.
+    endog : array
+        The observation vector.
+    design : array
+        The design matrix, :math:`Z`.
+    obs_intercept : array
+        The intercept for the observation equation, :math:`d`.
+    obs_cov : array
+        The covariance matrix for the observation equation :math:`H`.
+    transition : array
+        The transition matrix, :math:`T`.
+    state_intercept : array
+        The intercept for the transition equation, :math:`c`.
+    selection : array
+        The selection matrix, :math:`R`.
+    state_cov : array
+        The covariance matrix for the state equation :math:`Q`.
+    filtered_state : array
+        The filtered state vector at each time period.
+    filtered_state_cov : array
+        The filtered state covariance matrix at each time period.
+    predicted_state : array
+        The predicted state vector at each time period.
+    predicted_state_cov : array
+        The predicted state covariance matrix at each time period.
+    forecasts : array
+        The one-step-ahead forecasts of observations at each time period.
+    forecasts_error : array
+        The forecast errors at each time period.
+    forecasts_error_cov : array
+        The forecast error covariance matrices at each time period.
+
+    Notes
+    -----
+    The provided ranges must be conformable, meaning that it must be that
+    `end - start == nstatic + ndynamic + nforecast`.
+
+    This class is essentially a view to the FilterResults object, but
+    returning the appropriate ranges for everything.
+
+    """
+    representation_attributes = [
+        'endog', 'design', 'design', 'obs_intercept',
+        'obs_cov', 'transition', 'state_intercept', 'selection',
+        'state_cov'
+    ]
+    filter_attributes = [
+        'filtered_state', 'filtered_state_cov',
+        'predicted_state', 'predicted_state_cov',
+        'forecasts', 'forecasts_error', 'forecasts_error_cov'
+    ]
+
+    def __init__(self, results, start, end, nstatic, ndynamic, nforecast):
+        from scipy import stats
+
+        # Save the filter results object
+        self.results = results
+
+        # Save prediction ranges
+        self.npredictions = start - end
+        self.start = start
+        self.end = end
+        self.nstatic = nstatic
+        self.ndynamic = ndynamic
+        self.nforecast = nforecast
+
+    def __getattr__(self, attr):
+        """
+        Provide access to the representation and filtered output in the
+        appropriate range (`start` - `end`).
+        """
+        _attr = '_' + attr
+
+        # Cache the attribute
+        if not hasattr(self, _attr):
+            if attr == 'endog' or attr in self.filter_attributes:
+                # Get a copy
+                value = getattr(self.results, attr).copy()
+                # Subset to the correct time frame
+                value = value[..., self.start:self.end]
+            elif attr in self.representation_attributes:
+                value = getattr(self.results, attr).copy()
+                # If a time-invariant matrix, return it. Otherwise, subset to
+                # the correct period.
+                if value.shape[-1] == 1:
+                    value = value[..., 0]
+                else:
+                    value = value[..., self.start:self.end]
+            else:
+                raise AttributeError("'%s' object has no attribute '%s'" %
+                                     (self.__class__.__name__, attr))
+
+            setattr(self, _attr, value)
+
+        return getattr(self, _attr)
