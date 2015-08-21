@@ -531,8 +531,10 @@ class PandasData(ModelData):
     def attach_rows(self, result):
         # assumes if len(row_labels) > len(result) it's bc it was truncated
         # at the front, for AR lags, for example
-        if result.squeeze().ndim == 1:
-            return Series(result, index=self.row_labels[-len(result):])
+        squeezed = result.squeeze()
+        # May be zero-dim, for example in the case of forecast one step in tsa
+        if squeezed.ndim < 2:
+            return Series(squeezed, index=self.row_labels[-len(result):])
         else:  # this is for VAR results, may not be general enough
             return DataFrame(result, index=self.row_labels[-len(result):],
                              columns=self.ynames)
