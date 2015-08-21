@@ -28,11 +28,16 @@ kwargs = {
 }
 
 
-def get_dummy_mod(fit=True):
+def get_dummy_mod(fit=True, pandas=False):
     # This tests time-varying parameters regression when in fact the parameters
     # are not time-varying, and in fact the regression fit is perfect
     endog = np.arange(100)*1.0
     exog = 2*endog
+
+    if pandas:
+        index = pd.date_range('1960-01-01', periods=100, freq='MS')
+        endog = pd.TimeSeries(endog, index=index)
+        exog = pd.TimeSeries(exog, index=index)
 
     mod = sarimax.SARIMAX(endog, exog=exog, order=(0,0,0), time_varying_regression=True, mle_regression=False)
 
@@ -179,17 +184,18 @@ def test_params():
     assert_equal(mod.param_names, ['a'])
 
 
-def test_results():
-    mod, res = get_dummy_mod()
+def test_results(pandas=False):
+    for pandas in [True, False]:
+        mod, res = get_dummy_mod(pandas=pandas)
 
-    # Test fitted values
-    assert_almost_equal(res.fittedvalues()[2:], mod.ssm.endog[2:])
+        # Test fitted values
+        assert_almost_equal(res.fittedvalues()[2:], mod.ssm.endog[2:])
 
-    # Test residuals
-    assert_almost_equal(res.resid()[0,2:], np.zeros(mod.nobs-2))
+        # Test residuals
+        assert_almost_equal(res.resid()[0,2:], np.zeros(mod.nobs-2))
 
-    # Test loglikelihood_burn
-    assert_equal(res.loglikelihood_burn, 1)
+        # Test loglikelihood_burn
+        assert_equal(res.loglikelihood_burn, 1)
 
 
 def test_predict():
