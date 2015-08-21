@@ -534,7 +534,8 @@ class PandasData(ModelData):
         squeezed = result.squeeze()
         # May be zero-dim, for example in the case of forecast one step in tsa
         if squeezed.ndim < 2:
-            return Series(squeezed, index=self.row_labels[-len(result):])
+            return Series(squeezed, index=self.row_labels[-len(result):],
+                          name=self.ynames)
         else:  # this is for VAR results, may not be general enough
             return DataFrame(result, index=self.row_labels[-len(result):],
                              columns=self.ynames)
@@ -543,7 +544,8 @@ class PandasData(ModelData):
         squeezed = result.squeeze()
         # May be zero-dim, for example in the case of forecast one step in tsa
         if squeezed.ndim < 2:
-            return TimeSeries(squeezed, index=self.predict_dates)
+            return TimeSeries(squeezed, index=self.predict_dates,
+                              name=self.ynames)
         else:
             return DataFrame(result, index=self.predict_dates,
                              columns=self.ynames)
