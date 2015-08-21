@@ -538,8 +538,13 @@ class PandasData(ModelData):
                              columns=self.ynames)
 
     def attach_dates(self, result):
-        return TimeSeries(result, index=self.predict_dates)
-
+        squeezed = result.squeeze()
+        # May be zero-dim, for example in the case of forecast one step in tsa
+        if squeezed.ndim < 2:
+            return TimeSeries(squeezed, index=self.predict_dates)
+        else:
+            return DataFrame(result, index=self.predict_dates,
+                             columns=self.ynames)
 
 def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:
