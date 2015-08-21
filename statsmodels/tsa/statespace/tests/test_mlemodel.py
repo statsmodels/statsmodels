@@ -184,18 +184,22 @@ def test_params():
     assert_equal(mod.param_names, ['a'])
 
 
+def check_results(pandas):
+    mod, res = get_dummy_mod(pandas=pandas)
+
+    # Test fitted values
+    assert_almost_equal(res.fittedvalues[2:], mod.endog[2:].squeeze())
+
+    # Test residuals
+    assert_almost_equal(res.resid[2:], np.zeros(mod.nobs-2))
+
+    # Test loglikelihood_burn
+    assert_equal(res.loglikelihood_burn, 1)
+
+
 def test_results(pandas=False):
-    for pandas in [True, False]:
-        mod, res = get_dummy_mod(pandas=pandas)
-
-        # Test fitted values
-        assert_almost_equal(res.fittedvalues()[2:], mod.ssm.endog[2:])
-
-        # Test residuals
-        assert_almost_equal(res.resid()[0,2:], np.zeros(mod.nobs-2))
-
-        # Test loglikelihood_burn
-        assert_equal(res.loglikelihood_burn, 1)
+    check_results(pandas=False)
+    check_results(pandas=True)
 
 
 def test_predict():
@@ -206,7 +210,7 @@ def test_predict():
 
     # Test that predict with start=None, end=None does prediction with full
     # dataset
-    assert_equal(res.predict().shape, (mod.k_endog, mod.nobs))
+    assert_equal(res.predict().shape, (mod.nobs,))
 
     # Test a string value to the dynamic option
     assert_allclose(res.predict(dynamic='1981-01-01'), res.predict())
@@ -214,15 +218,18 @@ def test_predict():
     # Test an invalid date string value to the dynamic option
     assert_raises(ValueError, res.predict, dynamic='1982-01-01')
 
-    # Test predict with full results
-    assert_equal(isinstance(res.predict(full_results=True),
-                            kalman_filter.FilterResults), True)
-
 
 def test_forecast():
+    # Numpy
     mod = MLEModel([1,2], **kwargs)
     res = mod.filter([])
-    assert_allclose(res.forecast(steps=10), [[2]*10])
+    assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
+
+    # Pandas
+    index = pd.date_range('1960-01-01', periods=2, freq='MS')
+    mod = MLEModel(pd.Series([1,2], index=index), **kwargs)
+    res = mod.filter([])
+    assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
 
 
 def test_summary():
