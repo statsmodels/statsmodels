@@ -1300,12 +1300,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         -------
         simulated_obs : array
             An (nsimulations x k_endog) array of simulated observations.
-        simulated_states : array
-            An (nsimulations x k_states) array of simulated states.
         """
         self.model.update(self.params)
-        return self.model.ssm.simulate(
+
+        simulated_obs, simulated_states = self.model.ssm.simulate(
             nsimulations, measurement_shocks, state_shocks, initial_state)
+
+        # Simulated obs is (k_endog x nobs); don't want to squeeze in
+        # case of npredictions = 1
+        if simulated_obs.shape[0] == 1:
+            simulated_obs = simulated_obs[0,:]
+        else:
+            simulated_obs = simulated_obs.T
+        return simulated_obs
 
     def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
@@ -1455,8 +1462,11 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
 
-    _methods = {'forecast': 'dates', 'simulate': None,
-                'impulse_responses': None}
+    _methods = {
+        'forecast': 'dates',
+        'simulate': 'ynames',
+        'impulse_responses': 'ynames'
+    }
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
