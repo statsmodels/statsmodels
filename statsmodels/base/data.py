@@ -419,6 +419,8 @@ class ModelData(object):
             return self.attach_generic_columns(obj, names)
         elif how == 'generic_columns_2d':
             return self.attach_generic_columns_2d(obj, names)
+        elif how == 'ynames':
+            return self.attach_ynames(obj)
         else:
             return obj
 
@@ -444,6 +446,9 @@ class ModelData(object):
         return result
 
     def attach_generic_columns_2d(self, result, *args, **kwargs):
+        return result
+
+    def attach_ynames(self, result):
         return result
 
 
@@ -549,6 +554,14 @@ class PandasData(ModelData):
         else:
             return DataFrame(result, index=self.predict_dates,
                              columns=self.ynames)
+
+    def attach_ynames(self, result):
+        squeezed = result.squeeze()
+        # May be zero-dim, for example in the case of forecast one step in tsa
+        if squeezed.ndim < 2:
+            return TimeSeries(squeezed, name=self.ynames)
+        else:
+            return DataFrame(result, columns=self.ynames)
 
 def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:
