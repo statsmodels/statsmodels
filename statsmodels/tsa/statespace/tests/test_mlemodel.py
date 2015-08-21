@@ -230,6 +230,7 @@ def test_forecast():
     mod = MLEModel(pd.Series([1,2], index=index), **kwargs)
     res = mod.filter([])
     assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
+    assert_allclose(res.forecast(steps='1960-12-01'), np.ones((10,)) * 2)
 
 
 def test_summary():
