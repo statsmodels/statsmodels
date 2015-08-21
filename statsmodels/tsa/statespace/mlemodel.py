@@ -1170,11 +1170,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
+            Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
@@ -1241,9 +1241,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
+        steps : int, str, or datetime, optional
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency, steps
+            must be an integer. Default
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -1253,8 +1255,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecast : array
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        forecasts = self.predict(start=self.nobs, end=self.nobs+steps-1, **kwargs)
-        print(forecasts.shape)
+        if isinstance(steps, int):
+            end = self.nobs+steps-1
+        else:
+            end = steps
+        forecasts = self.predict(start=self.nobs, end=end, **kwargs)
         return forecasts
 
     def summary(self, alpha=.05, start=None, model_name=None):
