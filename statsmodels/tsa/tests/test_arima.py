@@ -2238,10 +2238,10 @@ def test_long_ar_start_params():
 
     model = ARMA(y, order=(2, 2))
 
-    res = model.fit(method='css',longar_maxlag=10)
-    res = model.fit(method='css-mle',longar_maxlag=10)
-    res = model.fit(method='mle',longar_maxlag=10)
-    assert_raises(ValueError, model.fit, longar_maxlag=nobs+5)
+    res = model.fit(method='css',start_ar_lags=10)
+    res = model.fit(method='css-mle',start_ar_lags=10)
+    res = model.fit(method='mle',start_ar_lags=10)
+    assert_raises(ValueError, model.fit, start_ar_lags=nobs+5)
 
 if __name__ == "__main__":
     import nose
