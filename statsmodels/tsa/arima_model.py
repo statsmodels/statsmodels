@@ -464,7 +464,7 @@ class ARMA(tsbase.TimeSeriesModel):
             k_exog = 0
         self.k_exog = k_exog
 
-    def _fit_start_params_hr(self, order, longar_maxlag=None):
+    def _fit_start_params_hr(self, order, start_ar_lags=None):
         """
         Get starting parameters for fit.
 
@@ -473,10 +473,10 @@ class ARMA(tsbase.TimeSeriesModel):
         order : iterable
             (p,q,k) - AR lags, MA lags, and number of exogenous variables
             including the constant.
-        longar_maxlag : int, optional
-            If longar_maxlag is not None, rather than fitting an AR process
+        start_ar_lags : int, optional
+            If start_ar_lags is not None, rather than fitting an AR process
             according to best BIC, fits an AR process with a lag length equal
-            to longar_maxlag.
+            to start_ar_lags.
 
         Returns
         -------
@@ -485,8 +485,8 @@ class ARMA(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        If necessary, fits an AR process with the laglength longar_maxlag, or
-        selected according to best BIC if longar_maxlag is None.  Obtain the
+        If necessary, fits an AR process with the laglength start_ar_lags, or
+        selected according to best BIC if start_ar_lags is None.  Obtain the
         residuals.  Then fit an ARMA(p,q) model via OLS using these residuals
         for a first approximation.  Uses a separate OLS regression to find the
         coefficients of exogenous variables.
@@ -511,15 +511,15 @@ class ARMA(tsbase.TimeSeriesModel):
             if p != 0:
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
-                if longar_maxlag is None:
+                if start_ar_lags is None:
                     maxlag = int(round(12*(nobs/100.)**(1/4.)))
                     if maxlag >= nobs:
                         maxlag = nobs - 1
                     armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
                 else:
-                    if longar_maxlag >= nobs:
-                        longar_maxlag = nobs - 1
-                    armod = AR(endog).fit(trend='nc', maxlag=longar_maxlag)
+                    if start_ar_lags >= nobs:
+                        start_ar_lags = nobs - 1
+                    armod = AR(endog).fit(trend='nc', maxlag=start_ar_lags)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
@@ -529,7 +529,7 @@ class ARMA(tsbase.TimeSeriesModel):
                                      " be found for this order with this "
                                      "number of observations. Use the "
                                      "start_params argument, or set "
-                                     "longar_maxlag to an integer less than "
+                                     "start_ar_lags to an integer less than "
                                      "len(endog) - q.")
                 resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
                                                       trim='both'),
@@ -570,13 +570,13 @@ class ARMA(tsbase.TimeSeriesModel):
         # check MA coefficients
         return start_params
 
-    def _fit_start_params(self, order, method, longar_maxlag=None):
+    def _fit_start_params(self, order, method, start_ar_lags=None):
         if method != 'css-mle':  # use Hannan-Rissanen to get start params
-            start_params = self._fit_start_params_hr(order, longar_maxlag)
+            start_params = self._fit_start_params_hr(order, start_ar_lags)
         else:  # use CSS to get start params
             func = lambda params: -self.loglike_css(params)
             #start_params = [.1]*(k_ar+k_ma+k_exog) # different one for k?
-            start_params = self._fit_start_params_hr(order, longar_maxlag)
+            start_params = self._fit_start_params_hr(order, start_ar_lags)
             if self.transparams:
                 start_params = self._invtransparams(start_params)
             bounds = [(None,)*2]*sum(order)
@@ -827,9 +827,9 @@ class ARMA(tsbase.TimeSeriesModel):
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
-    def fit(self, start_params=None, longar_maxlag=None, trend='c', method="css-mle",
+    def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
-            disp=5, callback=None, **kwargs):
+            disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
 
@@ -838,13 +838,6 @@ class ARMA(tsbase.TimeSeriesModel):
         start_params : array-like, optional
             Starting parameters for ARMA(p,q). If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
-        longar_maxlag : int, optional
-            Parameter for fitting start_params. When fitting start_params,
-            residuals are obtained from an AR fit, then an ARMA(p,q) model is
-            fit via OLS using these residuals. If longar_maxlag is None, fit
-            an AR process according to best BIC. If longar_maxlag is not None,
-            fits an AR process with a lag length equal to longar_maxlag.
-            See ARMA._fit_start_params_hr for more information.
         transparams : bool, optional
             Whehter or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
@@ -884,6 +877,13 @@ class ARMA(tsbase.TimeSeriesModel):
         callback : function, optional
             Called after each iteration as callback(xk) where xk is the current
             parameter vector.
+        start_ar_lags : int, optional
+            Parameter for fitting start_params. When fitting start_params,
+            residuals are obtained from an AR fit, then an ARMA(p,q) model is
+            fit via OLS using these residuals. If start_ar_lags is None, fit
+            an AR process according to best BIC. If start_ar_lags is not None,
+            fits an AR process with a lag length equal to start_ar_lags.
+            See ARMA._fit_start_params_hr for more information.
         kwargs
             See Notes for keyword arguments that can be passed to fit.
 
@@ -951,7 +951,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
         else:  # estimate starting parameters
             start_params = self._fit_start_params((k_ar, k_ma, k), method,
-                                                  longar_maxlag)
+                                                  start_ar_lags)
 
         if transparams:  # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
@@ -1061,9 +1061,9 @@ class ARIMA(ARMA):
 
         return end - self.k_diff, out_of_sample
 
-    def fit(self, start_params=None, longar_maxlag=None, trend='c', method="css-mle",
+    def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
-            disp=5, callback=None, **kwargs):
+            disp=5, callback=None, start_ar_lags=None **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
 
@@ -1072,13 +1072,6 @@ class ARIMA(ARMA):
         start_params : array-like, optional
             Starting parameters for ARMA(p,q).  If None, the default is given
             by ARMA._fit_start_params.  See there for more information.
-        longar_maxlag : int, optional
-            Parameter for fitting start_params. When fitting start_params,
-            residuals are obtained from an AR fit, then an ARMA(p,q) model is
-            fit via OLS using these residuals. If longar_maxlag is None, fit
-            an AR process according to best BIC. If longar_maxlag is not None,
-            fits an AR process with a lag length equal to longar_maxlag.
-            See ARMA._fit_start_params_hr for more information.
         transparams : bool, optional
             Whehter or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
@@ -1118,6 +1111,13 @@ class ARIMA(ARMA):
         callback : function, optional
             Called after each iteration as callback(xk) where xk is the current
             parameter vector.
+        start_ar_lags : int, optional
+            Parameter for fitting start_params. When fitting start_params,
+            residuals are obtained from an AR fit, then an ARMA(p,q) model is
+            fit via OLS using these residuals. If start_ar_lags is None, fit
+            an AR process according to best BIC. If start_ar_lags is not None,
+            fits an AR process with a lag length equal to start_ar_lags.
+            See ARMA._fit_start_params_hr for more information.
         kwargs
             See Notes for keyword arguments that can be passed to fit.
 
@@ -1139,10 +1139,10 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
-        mlefit = super(ARIMA, self).fit(start_params, longar_maxlag, trend,
+        mlefit = super(ARIMA, self).fit(start_params, trend,
                                            method, transparams, solver,
                                            maxiter, full_output, disp,
-                                           callback, **kwargs)
+                                           callback, start_ar_lags, **kwargs)
         normalized_cov_params = None  # TODO: fix this?
         arima_fit = ARIMAResults(self, mlefit._results.params,
                                  normalized_cov_params)
