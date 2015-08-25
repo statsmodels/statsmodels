@@ -1063,7 +1063,7 @@ class ARIMA(ARMA):
 
     def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
-            disp=5, callback=None, start_ar_lags=None **kwargs):
+            disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
 
