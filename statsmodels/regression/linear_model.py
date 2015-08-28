@@ -185,7 +185,8 @@ class RegressionModel(base.LikelihoodModel):
             if ((not hasattr(self, 'pinv_wexog')) or
                 (not hasattr(self, 'normalized_cov_params')) or
                 (not hasattr(self, 'rank'))):
-
+                if np.any(np.isnan(self.wexog)):
+                    raise LinAlgError("nan observed, this may not converge.")
                 self.pinv_wexog, singular_values = pinv_extended(self.wexog)
                 self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
