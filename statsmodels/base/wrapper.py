@@ -89,7 +89,11 @@ def make_wrapper(func, how):
     def wrapper(self, *args, **kwargs):
         results = object.__getattribute__(self, '_results')
         data = results.model.data
-        return data.wrap_output(func(results, *args, **kwargs), how)
+        if how and isinstance(how, tuple):
+            obj = data.wrap_output(func(results, *args, **kwargs), how[0], how[1:])
+        elif how:
+            obj = data.wrap_output(func(results, *args, **kwargs), how)
+        return obj
 
     argspec = inspect.getargspec(func)
     formatted = inspect.formatargspec(argspec[0], varargs=argspec[1],
