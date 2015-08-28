@@ -1222,8 +1222,8 @@ class PHReg(model.LikelihoodModel):
                 xp0 -= e_linpred[ix].sum()
 
             cumhaz = np.cumsum(h0) - h0
-            surv = np.exp(-cumhaz)
-            rslt.append([uft, cumhaz, surv])
+            current_strata_surv = np.exp(-cumhaz)
+            rslt.append([uft, cumhaz, current_strata_surv])
 
         return rslt
 
