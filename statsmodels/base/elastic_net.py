@@ -58,7 +58,7 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
 
 def fit(model, method="coord_descent", maxiter=100, alpha=0.,
          L1_wt=1., start_params=None, cnvrg_tol=1e-7, zero_tol=1e-8,
-         return_object=False, loglike_kwds=None, score_kwds=None,
+         refit=False, loglike_kwds=None, score_kwds=None,
          hess_kwds=None):
     """
     Return an elastic net regularized fit to a regression model.
@@ -91,8 +91,12 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
     zero_tol : scalar
         Any estimated coefficient smaller than this value is
         replaced with zero.
-    return_object : bool
-        If False, only the parameter estimates are returned.
+    refit : bool
+        If True, the model is refit using only the variables that have
+        non-zero coefficients in the regularized fit and returns a
+        results object.  The refitted model is not regularized.  If
+        False, only the array of coefficients from the regularized fit
+        is returned.
     loglike_kwds : dict-like or None
         Keyword arguments for the log-likelihood function.
     score_kwds : dict-like or None
@@ -102,9 +106,8 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
 
     Returns
     -------
-    If `return_object` is true, a results object of the same type
-    returned by `model.fit`, otherise returns the estimated parameter
-    vector.
+    If `refit` is true, a results object of the same type returned by
+    `model.fit`, otherise returns the estimated parameter vector.
 
     Notes
     -----
@@ -195,14 +198,14 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
     # Set approximate zero coefficients to be exactly zero
     params *= np.abs(params) >= zero_tol
 
-    if not return_object:
+    if not refit:
         return params
 
     # Fit the reduced model to get standard errors and other
     # post-estimation results.
     ii = np.flatnonzero(params)
     cov = np.zeros((k_exog, k_exog))
-    init_args = dict([(k, getattr(model, k)) for k in model._init_keys])
+    init_args = dict([(k, getattr(model, k, None)) for k in model._init_keys])
     if len(ii) > 0:
         model1 = model.__class__(model.endog, model.exog[:, ii],
                                **init_args)
@@ -230,6 +233,8 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
     # Assuming a standard signature for creating results classes.
     refit = klass(model, params, cov, scale=scale)
     refit.regularized = True
+    refit.method = method
+    refit.fit_history = {'iteration' : itr + 1}
 
     return refit
 
