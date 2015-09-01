@@ -1,6 +1,7 @@
 import numpy as np
 import statsmodels.base.wrapper as wrap
 from statsmodels.base.model import Results
+import statsmodels.base.wrapper as wrap
 
 """
 Elastic net regularization.
@@ -197,7 +198,8 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
     params *= np.abs(params) >= zero_tol
 
     if not refit:
-        return Results(model, params)
+        results = RegularizedResults(model, params)
+        return RegularizedResultsWrapper(results)
 
     # Fit the reduced model to get standard errors and other
     # post-estimation results.
@@ -296,3 +298,24 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
 
     x_opt = brent(func, args=(model,), brack=(x-1, x+1), tol=tol)
     return x_opt
+
+
+class RegularizedResults(Results):
+
+    def __init__(self, model, params):
+        super(RegularizedResults, self).__init__(model, params)
+
+
+class RegularizedResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {
+        'params': 'columns',
+        'resid': 'rows',
+        'fittedvalues': 'rows',
+    }
+
+    _wrap_attrs = _attrs
+    _wrap_methods = {
+    }
+
+wrap.populate_wrapper(RegularizedResultsWrapper,
+                      RegularizedResults)
