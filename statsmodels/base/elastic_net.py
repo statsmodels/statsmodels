@@ -2,6 +2,7 @@ import numpy as np
 import statsmodels.base.wrapper as wrap
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.decorators import cache_readonly
 
 """
 Elastic net regularization.
@@ -291,6 +292,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
         h = (L1_wt - b) / c
     elif d < 0:
         h = -(L1_wt + b) / c
+    else:
+        return np.nan
 
     f1 = func(x + h, model) + L1_wt*np.abs(x + h)
     if f1 <= f + L1_wt*np.abs(x) + 1e-10:
@@ -305,6 +308,10 @@ class RegularizedResults(Results):
     def __init__(self, model, params):
         super(RegularizedResults, self).__init__(model, params)
 
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params)
+
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
@@ -314,8 +321,6 @@ class RegularizedResultsWrapper(wrap.ResultsWrapper):
     }
 
     _wrap_attrs = _attrs
-    _wrap_methods = {
-    }
 
 wrap.populate_wrapper(RegularizedResultsWrapper,
                       RegularizedResults)
