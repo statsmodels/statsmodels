@@ -447,7 +447,7 @@ class PHReg(model.LikelihoodModel):
 
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=True, **kwargs):
+                        start_params=None, refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
@@ -464,15 +464,13 @@ class PHReg(model.LikelihoodModel):
             Starting values for `params`.
         refit : bool
             If True, the model is refit using only the variables that
-            have non-zero coefficients in the regularized fit and
-            returns a results object.  The refitted model is not
-            regularized.  If False, only the array of coefficients
-            from the regularized fit are returned.
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
 
 
         Returns
         -------
-        An array of coefficient estimates, or a PHregResults object.
+        A results object.
 
         Notes
         -----
@@ -507,15 +505,14 @@ class PHReg(model.LikelihoodModel):
             raise ValueError("method for fit_regularied must be elastic_net")
 
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
-                    "zero_tol" : 1e-10, "refit" : True}
-        for ky in defaults:
-            if ky not in kwargs:
-                kwargs[ky] = defaults[ky]
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
 
         return elastic_net.fit(self, method=method,
                                alpha=alpha,
                                start_params=start_params,
-                               **kwargs)
+                               refit=refit,
+                               **defaults)
 
 
     def loglike(self, params):

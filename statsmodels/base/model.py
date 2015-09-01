@@ -770,6 +770,10 @@ class Results(object):
             return predict_results
 
 
+    def summary(self):
+        pass
+
+
 #TODO: public method?
 class LikelihoodModelResults(Results):
     """

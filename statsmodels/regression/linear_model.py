@@ -754,7 +754,7 @@ class OLS(WLS):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, profile_scale=False,
-                        refit=True, **kwargs):
+                        refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
@@ -775,10 +775,8 @@ class OLS(WLS):
             Otherwise the fit uses the residual sum of squares.
         refit : bool
             If True, the model is refit using only the variables that
-            have non-zero coefficients in the regularized fit and
-            returns a results object.  The refitted model is not
-            regularized.  If False, only the array of coefficients
-            from the regularized fit are returned.
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
 
         Returns
         -------
@@ -830,10 +828,8 @@ class OLS(WLS):
 
         # Set default parameters.
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
-                    "zero_tol" : 1e-10, "refit" : True}
-        for ky in defaults:
-            if ky not in kwargs:
-                kwargs[ky] = defaults[ky]
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
 
         # If a scale parameter is passed in, the non-profile
         # likelihood (residual sum of squares divided by -2) is used,
@@ -853,7 +849,8 @@ class OLS(WLS):
                                loglike_kwds=loglike_kwds,
                                score_kwds=score_kwds,
                                hess_kwds=hess_kwds,
-                               **kwargs)
+                               refit=refit,
+                               **defaults)
 
 
 class GLSAR(GLS):

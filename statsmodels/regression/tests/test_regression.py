@@ -989,7 +989,6 @@ class TestRegularizedFit(object):
        result = model.fit_regularized(alpha=1000)
 
        assert_equal(result.params, 0.)
-       assert_equal(result.bse, 0.)
 
 
     def test_regularized(self):

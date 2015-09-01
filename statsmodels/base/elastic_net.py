@@ -1,5 +1,6 @@
 import numpy as np
 import statsmodels.base.wrapper as wrap
+from statsmodels.base.model import Results
 
 """
 Elastic net regularization.
@@ -93,10 +94,8 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
         replaced with zero.
     refit : bool
         If True, the model is refit using only the variables that have
-        non-zero coefficients in the regularized fit and returns a
-        results object.  The refitted model is not regularized.  If
-        False, only the array of coefficients from the regularized fit
-        is returned.
+        non-zero coefficients in the regularized fit.  The refitted
+        model is not regularized.
     loglike_kwds : dict-like or None
         Keyword arguments for the log-likelihood function.
     score_kwds : dict-like or None
@@ -106,8 +105,7 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
 
     Returns
     -------
-    If `refit` is true, a results object of the same type returned by
-    `model.fit`, otherise returns the estimated parameter vector.
+    A results object.
 
     Notes
     -----
@@ -199,7 +197,7 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
     params *= np.abs(params) >= zero_tol
 
     if not refit:
-        return params
+        return Results(model, params)
 
     # Fit the reduced model to get standard errors and other
     # post-estimation results.
