@@ -1015,7 +1015,7 @@ class GLM(base.LikelihoodModel):
 
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, **kwargs):
+                        start_params=None, refit=True, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
@@ -1030,10 +1030,16 @@ class GLM(base.LikelihoodModel):
             penalty weight for each coefficient.
         start_params : array-like
             Starting values for `params`.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit and
+            returns a results object.  The refitted model is not
+            regularized.  If False, only the array of coefficients
+            from the regularized fit are returned.
 
         Returns
         -------
-        A GLMResults object, of the same type returned by `fit`.
+        An array, or a GLMResults object of the same type returned by `fit`.
 
         Notes
         -----
@@ -1068,7 +1074,7 @@ class GLM(base.LikelihoodModel):
             raise ValueError("method for fit_regularied must be elastic_net")
 
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
-                    "zero_tol" : 1e-10}
+                    "zero_tol" : 1e-10, "refit" : refit}
         for ky in defaults:
             if ky not in kwargs:
                 kwargs[ky] = defaults[ky]
@@ -1076,8 +1082,11 @@ class GLM(base.LikelihoodModel):
         result = elastic_net.fit(self, method=method,
                                  alpha=alpha,
                                  start_params=start_params,
-                                 return_object=True,
                                  **kwargs)
+
+        if not refit:
+            import pandas as pd
+            return pd.Series(index=self.exog_names, data=result)
 
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)

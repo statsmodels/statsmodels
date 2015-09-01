@@ -754,7 +754,7 @@ class OLS(WLS):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, profile_scale=False,
-                        **kwargs):
+                        refit=True, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
@@ -773,11 +773,17 @@ class OLS(WLS):
             If True the penalized fit is computed using the profile
             (concentrated) log-likelihood for the Gaussian model.
             Otherwise the fit uses the residual sum of squares.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit and
+            returns a results object.  The refitted model is not
+            regularized.  If False, only the array of coefficients
+            from the regularized fit are returned.
 
         Returns
         -------
-        A RegressionResults object, of the same type returned by
-        ``fit``.
+        An array of coefficients, or a RegressionResults object of the
+        same type returned by ``fit``.
 
         Notes
         -----
@@ -824,7 +830,7 @@ class OLS(WLS):
 
         # Set default parameters.
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
-                    "zero_tol" : 1e-10}
+                    "zero_tol" : 1e-10, "refit" : True}
         for ky in defaults:
             if ky not in kwargs:
                 kwargs[ky] = defaults[ky]
@@ -844,7 +850,6 @@ class OLS(WLS):
         return elastic_net.fit(self, method=method,
                                alpha=alpha,
                                start_params=start_params,
-                               return_object=True,
                                loglike_kwds=loglike_kwds,
                                score_kwds=score_kwds,
                                hess_kwds=hess_kwds,
