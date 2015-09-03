@@ -80,7 +80,7 @@ class TestPHReg(object):
         coef_r, se_r, time_r, hazard_r = get_results(n, p, None, ties1)
         assert_allclose(phrb.params, coef_r, rtol=1e-3)
         assert_allclose(phrb.bse, se_r, rtol=1e-4)
-        #time_h, cumhaz, surv = phrb.baseline_hazard[0]
+        time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
         # Entry times but no stratification
         phrb = PHReg(time, exog, status, entry=entry,
@@ -102,6 +102,9 @@ class TestPHReg(object):
         coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-3)
         assert_allclose(phrb.bse, se, rtol=1e-4)
+        
+        #smoke test
+        time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
 
     # Run all the tests
