@@ -725,11 +725,14 @@ class ARMA(tsbase.TimeSeriesModel):
         resid = self.geterrors(params)
         k_ar = self.k_ar
 
-        if out_of_sample != 0 and self.k_exog > 0:
+        if exog is not None:
+            # Note: we ignore currently the index of exog if it is available
             exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
-                # we need the last k_ar exog for the lag-polynomial
+
+        if out_of_sample != 0 and self.k_exog > 0:
+            # we need the last k_ar exog for the lag-polynomial
             if self.k_exog > 0 and k_ar > 0 and not dynamic:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[-k_ar:, self.k_trend:], exog))
