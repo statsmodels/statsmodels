@@ -144,7 +144,7 @@ class ECDF(StepFunction):
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
-    Given a monotone function x (no checking is done to verify monotonicity)
+    Given a monotone function fn (no checking is done to verify monotonicity)
     and a set of x values, return an linearly interpolated approximation
     to its inverse from its values on x.
     """
