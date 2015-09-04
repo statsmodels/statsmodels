@@ -480,7 +480,7 @@ def test_diagnostics_nile_eviews():
     # For Ljung-Box and Jarque-Beta statistics and p-values, see Figure 5
     # The Heteroskedasticity statistic is not provided in this paper.
     niledata = nile.data.load_pandas().data
-    niledata.index = pd.date_range('1871', '1970', freq='AS')
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
 
     mod = MLEModel(niledata['volume'], k_states=1,
         initialization='approximate_diffuse', initial_variance=1e15,
@@ -506,7 +506,7 @@ def test_diagnostics_nile_durbinkoopman():
     # Durbin and Koopman (2012); parameter values reported on page 37; test
     # statistics on page 40
     niledata = nile.data.load_pandas().data
-    niledata.index = pd.date_range('1871', '1970', freq='AS')
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
 
     mod = MLEModel(niledata['volume'], k_states=1,
         initialization='approximate_diffuse', initial_variance=1e15,
