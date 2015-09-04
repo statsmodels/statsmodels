@@ -934,8 +934,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         except np.linalg.LinAlgError:
             self._rank = 0
             k_params = len(self.params)
-            res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
-            res.cov_kwds['cov_type'] = (
+            self.cov_params_default = np.zeros((k_params, k_params)) * np.nan
+            self.cov_kwds['cov_type'] = (
                 'Covariance matrix could not be calculated: singular.'
                 ' information matrix.')
 
