@@ -26,6 +26,12 @@ realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
 coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
 coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
 
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except ImportError:
+    have_matplotlib = False
+
 
 class TestSARIMAXStatsmodels(object):
     """
@@ -915,6 +921,11 @@ class SARIMAXCoverageTest(object):
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
+        # Make sure that no exceptions are thrown during plot_diagnostics
+        if have_matplotlib:
+            fig = self.result.plot_diagnostics()
+            plt.close(fig)
+
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
         self.result.cov_params_default
@@ -1539,6 +1550,11 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
 
+        # Make sure that no exceptions are thrown during plot_diagnostics
+        if have_matplotlib:
+            fig = self.result.plot_diagnostics()
+            plt.close(fig)
+
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
         self.result.cov_params_default
@@ -1581,6 +1597,11 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
 
         # Just make sure that no exceptions are thrown during summary
         self.result.summary()
+
+        # Make sure that no exceptions are thrown during plot_diagnostics
+        if have_matplotlib:
+            fig = self.result.plot_diagnostics()
+            plt.close(fig)
 
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
