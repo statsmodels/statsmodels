@@ -1693,6 +1693,11 @@ class PredictionResults(FilterResults):
         Provide access to the representation and filtered output in the
         appropriate range (`start` - `end`).
         """
+        # Prevent infinite recursive lookups
+        if attr[0] == '_':
+            raise AttributeError("'%s' object has no attribute '%s'" %
+                                     (self.__class__.__name__, attr))
+
         _attr = '_' + attr
 
         # Cache the attribute
