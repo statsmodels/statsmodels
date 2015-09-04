@@ -1861,10 +1861,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ax.set_title('Standardized residual')
 
         # Top-right: histogram, Gaussian kernel density, Normal density
+        # Can only do histogram and Gaussian kernel density on the non-null
+        # elements
+        resid_nonmissing = resid[~(np.isnan(resid))]
         ax = fig.add_subplot(222)
-        ax.hist(resid, normed=True, label='Hist')
+        ax.hist(resid_nonmissing, normed=True, label='Hist')
         from scipy.stats import gaussian_kde, norm
-        kde = gaussian_kde(resid)
+        kde = gaussian_kde(resid_nonmissing)
         xlim = (-1.96*2, 1.96*2)
         x = np.linspace(xlim[0], xlim[1])
         ax.plot(x, kde(x), label='KDE')
