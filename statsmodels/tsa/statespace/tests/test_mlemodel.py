@@ -14,11 +14,18 @@ import re
 import warnings
 from statsmodels.tsa.statespace import sarimax, kalman_filter
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
+from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from nose.exc import SkipTest
 from .results import results_sarimax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except ImportError:
+    have_matplotlib = False
 
 # Basic kwargs
 kwargs = {
@@ -464,3 +471,66 @@ def test_pandas_endog():
     endog = pd.DataFrame({'a': [1., 2.], 'b': [3., 4.]}, index=dates)
     mod = check_endog(endog, k_endog=2, **kwargs2)
     mod.filter([])
+
+def test_diagnostics_nile_eviews():
+    # Test the diagnostic tests using the Nile dataset. Results are from 
+    # "Fitting State Space Models with EViews" (Van den Bossche 2011,
+    # Journal of Statistical Software).
+    # For parameter values, see Figure 2
+    # For Ljung-Box and Jarque-Beta statistics and p-values, see Figure 5
+    # The Heteroskedasticity statistic is not provided in this paper.
+    niledata = nile.data.load_pandas().data
+    niledata.index = pd.date_range('1871', '1970', freq='AS')
+
+    mod = MLEModel(niledata['volume'], k_states=1,
+        initialization='approximate_diffuse', initial_variance=1e15,
+        loglikelihood_burn=1)
+    mod.ssm['design', 0, 0] = 1
+    mod.ssm['obs_cov', 0, 0] = np.exp(9.600350)
+    mod.ssm['transition', 0, 0] = 1
+    mod.ssm['selection', 0, 0] = 1
+    mod.ssm['state_cov', 0, 0] = np.exp(7.348705)
+    res = mod.filter([])
+
+    # Test Ljung-Box
+    # Note: only 3 digits provided in the reference paper
+    actual = res.test_serial_correlation(lags=10)[0, :, -1]
+    assert_allclose(actual, [13.117, 0.217], atol=1e-3)
+
+    # Test Jarque-Bera
+    actual = res.test_normality()[0, :2]
+    assert_allclose(actual, [0.041686, 0.979373], atol=1e-5)
+
+def test_diagnostics_nile_durbinkoopman():
+    # Test the diagnostic tests using the Nile dataset. Results are from 
+    # Durbin and Koopman (2012); parameter values reported on page 37; test
+    # statistics on page 40
+    niledata = nile.data.load_pandas().data
+    niledata.index = pd.date_range('1871', '1970', freq='AS')
+
+    mod = MLEModel(niledata['volume'], k_states=1,
+        initialization='approximate_diffuse', initial_variance=1e15,
+        loglikelihood_burn=1)
+    mod.ssm['design', 0, 0] = 1
+    mod.ssm['obs_cov', 0, 0] = 15099.
+    mod.ssm['transition', 0, 0] = 1
+    mod.ssm['selection', 0, 0] = 1
+    mod.ssm['state_cov', 0, 0] = 1469.1
+    res = mod.filter([])
+
+    # Test Ljung-Box
+    # Note: only 3 digits provided in the reference paper
+    actual = res.test_serial_correlation(lags=9)[0, 0, -1]
+    assert_allclose(actual, [8.84], atol=1e-2)
+
+    # Test Jarque-Bera
+    # Note: The book reports 0.09 for Kurtosis, because it is reporting the
+    # statistic less the mean of the Kurtosis distribution (which is 3).
+    norm = res.test_normality()[0]
+    actual = [norm[0], norm[2], norm[3]]
+    assert_allclose(actual, [0.05, -0.03, 3.09], atol=1e-2)
+
+    # Test Heteroskedasticity
+    # Note: only 2 digits provided in the book
+    actual = res.test_heteroskedasticity()[0, 0]
+    assert_allclose(actual, [0.61], atol=1e-2)
