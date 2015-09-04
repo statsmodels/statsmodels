@@ -28,11 +28,16 @@ kwargs = {
 }
 
 
-def get_dummy_mod(fit=True):
+def get_dummy_mod(fit=True, pandas=False):
     # This tests time-varying parameters regression when in fact the parameters
     # are not time-varying, and in fact the regression fit is perfect
     endog = np.arange(100)*1.0
     exog = 2*endog
+
+    if pandas:
+        index = pd.date_range('1960-01-01', periods=100, freq='MS')
+        endog = pd.TimeSeries(endog, index=index)
+        exog = pd.TimeSeries(exog, index=index)
 
     mod = sarimax.SARIMAX(endog, exog=exog, order=(0,0,0), time_varying_regression=True, mle_regression=False)
 
@@ -179,17 +184,22 @@ def test_params():
     assert_equal(mod.param_names, ['a'])
 
 
-def test_results():
-    mod, res = get_dummy_mod()
+def check_results(pandas):
+    mod, res = get_dummy_mod(pandas=pandas)
 
     # Test fitted values
-    assert_almost_equal(res.fittedvalues()[2:], mod.ssm.endog[2:])
+    assert_almost_equal(res.fittedvalues[2:], mod.endog[2:].squeeze())
 
     # Test residuals
-    assert_almost_equal(res.resid()[0,2:], np.zeros(mod.nobs-2))
+    assert_almost_equal(res.resid[2:], np.zeros(mod.nobs-2))
 
     # Test loglikelihood_burn
     assert_equal(res.loglikelihood_burn, 1)
+
+
+def test_results(pandas=False):
+    check_results(pandas=False)
+    check_results(pandas=True)
 
 
 def test_predict():
@@ -200,7 +210,7 @@ def test_predict():
 
     # Test that predict with start=None, end=None does prediction with full
     # dataset
-    assert_equal(res.predict().shape, (mod.k_endog, mod.nobs))
+    assert_equal(res.predict().shape, (mod.nobs,))
 
     # Test a string value to the dynamic option
     assert_allclose(res.predict(dynamic='1981-01-01'), res.predict())
@@ -208,15 +218,19 @@ def test_predict():
     # Test an invalid date string value to the dynamic option
     assert_raises(ValueError, res.predict, dynamic='1982-01-01')
 
-    # Test predict with full results
-    assert_equal(isinstance(res.predict(full_results=True),
-                            kalman_filter.FilterResults), True)
-
 
 def test_forecast():
+    # Numpy
     mod = MLEModel([1,2], **kwargs)
     res = mod.filter([])
-    assert_allclose(res.forecast(steps=10), [[2]*10])
+    assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
+
+    # Pandas
+    index = pd.date_range('1960-01-01', periods=2, freq='MS')
+    mod = MLEModel(pd.Series([1,2], index=index), **kwargs)
+    res = mod.filter([])
+    assert_allclose(res.forecast(steps=10), np.ones((10,)) * 2)
+    assert_allclose(res.forecast(steps='1960-12-01'), np.ones((10,)) * 2)
 
 
 def test_summary():

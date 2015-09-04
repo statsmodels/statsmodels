@@ -1055,11 +1055,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
+    @cache_readonly
     def fittedvalues(self):
         """
-        (array) The predicted values of the model.
+        (array) The predicted values of the model. An (nobs x k_endog) array.
         """
-        return self.filter_results.forecasts
+        # This is a (k_endog x nobs array; don't want to squeeze in case of
+        # the corner case where nobs = 1 (mostly a concern in the predict or
+        # forecast functions, but here also to maintain consistency)
+        fittedvalues = self.filter_results.forecasts
+        if fittedvalues.shape[0] == 1:
+            fittedvalues = fittedvalues[0,:]
+        else:
+            fittedvalues = fittedvalues.T
+        return fittedvalues
 
     @cache_readonly
     def hqic(self):
@@ -1100,11 +1109,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return norm.sf(np.abs(self.zvalues)) * 2
 
+    @cache_readonly
     def resid(self):
         """
-        (array) The model residuals.
+        (array) The model residuals. An (nobs x k_endog) array.
         """
-        return self.filter_results.forecasts_error
+        # This is a (k_endog x nobs array; don't want to squeeze in case of
+        # the corner case where nobs = 1 (mostly a concern in the predict or
+        # forecast functions, but here also to maintain consistency)
+        resid = self.filter_results.forecasts_error
+        if resid.shape[0] == 1:
+            resid = resid[0,:]
+        else:
+            resid = resid.T
+        return resid
 
     @cache_readonly
     def zvalues(self):
@@ -1121,11 +1139,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
+            Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
@@ -1150,7 +1168,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         forecast : array
-            Array of out of sample forecasts.
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict x k_endog) array.
         """
         if start is None:
             start = 0
@@ -1174,20 +1193,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                  (str(dynamic), str(dtdynamic)))
 
         # Perform the prediction
-        results = self.filter_results.predict(
-            start, end+out_of_sample+1, dynamic, full_results, **kwargs
+        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # case of npredictions = 1
+        predictions = self.filter_results.predict(
+            start, end+out_of_sample+1, dynamic, **kwargs
         )
-
-        # Note: to be consistent with Statsmodels, return only the forecasts
-        # unless full_results is specified. Confidence intervals and the date
-        # indices are left out for now, but will likely be moved to a separate
-        # function in the future.
-        if full_results:
-            return results
+        if predictions.shape[0] == 1:
+            predictions = predictions[0,:]
         else:
-            forecasts = results
-
-        return forecasts
+            predictions = predictions.T
+        return predictions
 
     def forecast(self, steps=1, **kwargs):
         """
@@ -1195,9 +1210,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
+        steps : int, str, or datetime, optional
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency, steps
+            must be an integer. Default
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -1205,9 +1222,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         forecast : array
-            Array of out of sample forecasts.
+            Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        return self.predict(start=self.nobs, end=self.nobs+steps-1, **kwargs)
+        if isinstance(steps, int):
+            end = self.nobs+steps-1
+        else:
+            end = steps
+        forecasts = self.predict(start=self.nobs, end=end, **kwargs)
+        return forecasts
 
     def summary(self, alpha=.05, start=None, model_name=None):
         """
@@ -1292,17 +1314,21 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
 
 class MLEResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {}
+    _attrs = {
+        'zvalues': 'columns',
+        'cov_params_cs': 'cov',
+        'cov_params_default': 'cov',
+        'cov_params_delta': 'cov',
+        'cov_params_oim': 'cov',
+        'cov_params_opg': 'cov',
+        'cov_params_robust': 'cov',
+        'cov_params_robust_cs': 'cov',
+        'cov_params_robust_oim': 'cov',
+    }
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
-    # TODO right now, predict with full_results=True can return something other
-    # than a time series, so the `attach_dates` call will fail if we have
-    # 'predict': 'dates' here. In the future, remove `full_results` and replace
-    # it with new methods, e.g. get_prediction, get_forecast, and likely will
-    # want those to be a subclass of FilterResults with e.g. confidence
-    # intervals calculated and dates attached.
-    # Also, need to modify `attach_dates` to account for DataFrames.
-    _methods = {'predict': None}
-    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
-                                     _methods)
+
+    _methods = {'forecast': 'dates'}
+    _wrap_methods = wrap.union_dicts(
+        tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
