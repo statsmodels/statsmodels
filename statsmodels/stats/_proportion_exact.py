@@ -161,29 +161,33 @@ class ExactTwoProportion(object):
 
         grid = np.concatenate(([self.prob_pooled], grid))
         #TODO: store rejection region and use for ys1, ys2
-        ys1 = np.arange(n1 + 1)
-        ys2 = np.arange(n2 + 1)
+        ys1 = np.arange(n1 + 1, dtype=np.uint16)
+        ys2 = np.arange(n2 + 1, dtype=np.uint16)
         pvo = self.pvalue_base  # TODO check, define attribute rejection set
         st, pv =  self.chisquare_proportion_indep(ys1[None, :], ys2[:,None],
                                                   #prob_var=prob0,  # trying out, doesn't work well
                                                   alternative=alternative)
         #TODO: store rejection region
         reject_mask = pv <= pvo * (1 + 1e-15)  # TODO move outside of loop
+        ys2m, ys1m = np.nonzero(reject_mask)
 
         for prob0 in grid:
             #print(prob0,)
 
-
             prob1 = stats.binom.pmf(ys1, n1, prob0)
             prob2 = stats.binom.pmf(ys2, n2, prob0)
 
-            prob = prob1[None, :] * prob2[:, None]
+            # with reject mask
+            #prob = prob1[None, :] * prob2[:, None]
+            #pvemp = prob[reject_mask].sum()
 
-            pvemp = prob[reject_mask].sum()
+            # if ys1 ys2 contain only rejection region, a little bit faster
+            prob = prob1[ys1m] * prob2[ys2m]
+            pvemp = prob.sum()
             #print(pvemp)
             res.append([prob0, pvemp])
 
-        res =np.array(res)
+        res = np.array(res)
         pvm_ind = res[:,1].argmax(0)
         pval = np.clip(res[pvm_ind, 1] + bb_correct, 0, 1)
 
