@@ -164,24 +164,27 @@ class ExactTwoProportion(object):
         ys1 = np.arange(n1 + 1)
         ys2 = np.arange(n2 + 1)
         pvo = self.pvalue_base  # TODO check, define attribute rejection set
+        st, pv =  self.chisquare_proportion_indep(ys1[None, :], ys2[:,None],
+                                                  #prob_var=prob0,  # trying out, doesn't work well
+                                                  alternative=alternative)
+        #TODO: store rejection region
+        reject_mask = pv <= pvo * (1 + 1e-15)  # TODO move outside of loop
 
         for prob0 in grid:
-            #print(prob,)
-            st, pv =  self.chisquare_proportion_indep(ys1[None, :], ys2[:,None],
-                                             #prob_var=prob0,  # trying out, doesn't work well
-                                             alternative=alternative)
+            #print(prob0,)
+
 
             prob1 = stats.binom.pmf(ys1, n1, prob0)
             prob2 = stats.binom.pmf(ys2, n2, prob0)
 
             prob = prob1[None, :] * prob2[:, None]
-            #TODO: store rejection region
-            reject_mask = pv <= pvo  # TODO move outside of loop
+
             pvemp = prob[reject_mask].sum()
             #print(pvemp)
             res.append([prob0, pvemp])
 
         res =np.array(res)
         pvm_ind = res[:,1].argmax(0)
+        pval = np.clip(res[pvm_ind, 1] + bb_correct, 0, 1)
 
-        return res[pvm_ind, 1] + bb_correct, res[pvm_ind, 0], pvm_ind, res
+        return pval, res[pvm_ind, 0], pvm_ind, res
