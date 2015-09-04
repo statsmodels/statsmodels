@@ -212,7 +212,7 @@ def test_predict():
     # dataset
     predict = res.predict()
     assert_equal(predict.shape, (mod.nobs,))
-    assert_equal(res.get_prediction().predicted_mean, predict)
+    assert_allclose(res.get_prediction().predicted_mean, predict)
 
     # Test a string value to the dynamic option
     assert_allclose(res.predict(dynamic='1981-01-01'), res.predict())

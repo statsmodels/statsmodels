@@ -1343,7 +1343,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             row_labels = self.data.row_labels
         else:
             row_labels = self.data.predict_dates
-        return PredictionResults(prediction_results, row_labels=row_labels)
+        return PredictionResultsWrapper(
+            PredictionResults(self, prediction_results, row_labels=row_labels))
 
     def get_forecast(self, steps=1, **kwargs):
         """
@@ -1679,7 +1680,11 @@ class PredictionResults(pred.PredictionResults):
     ----------
 
     """
-    def __init__(self, prediction_results, row_labels=None):
+    def __init__(self, model, prediction_results, row_labels=None):
+        self.model = Bunch(data=model.data.__class__(
+            endog=prediction_results.endog.T,
+            predict_dates=getattr(model.data, 'predict_dates', None))
+        )
         self.prediction_results = prediction_results
 
         # Get required values
@@ -1699,4 +1704,61 @@ class PredictionResults(pred.PredictionResults):
         super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
                                                 dist='norm',
                                                 row_labels=row_labels,
-                                                link=identity)
+                                                link=identity())
+
+    def conf_int(self, method='endpoint', alpha=0.05, **kwds):
+        # TODO: this performs metadata wrapping, and that should be handled
+        #       by attach_* methods. However, they don't currently support
+        #       this use case.
+        conf_int = super(PredictionResults, self).conf_int(
+            method, alpha, **kwds)
+
+        if self.model.data.predict_dates is not None:
+            conf_int = pd.DataFrame(conf_int,
+                                    index=self.model.data.predict_dates)
+
+        return conf_int
+
+    def summary_frame(self, endog=0, what='all', alpha=0.05):
+        # TODO: finish and cleanup
+        # import pandas as pd
+        from statsmodels.compat.collections import OrderedDict
+        #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
+        ci_mean = self.conf_int(alpha=alpha)
+        to_include = OrderedDict()
+        if self.predicted_mean.ndim == 1:
+            yname = self.model.data.ynames
+            to_include['mean'] = self.predicted_mean
+            to_include['mean_se'] = self.se_mean
+            k_endog = 1
+        else:
+            yname = self.model.data.ynames[endog]
+            to_include['mean'] = self.predicted_mean[:, endog]
+            to_include['mean_se'] = self.se_mean[:, endog]
+            k_endog = self.predicted_mean.shape[1]
+        to_include['mean_ci_lower'] = ci_mean[:, endog]
+        to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
+
+
+        self.table = to_include
+        #OrderedDict doesn't work to preserve sequence
+        # pandas dict doesn't handle 2d_array
+        #data = np.column_stack(list(to_include.values()))
+        #names = ....
+        res = pd.DataFrame(to_include, index=self.row_labels,
+                           columns=to_include.keys())
+        res.columns.name = yname
+        return res
+
+
+class PredictionResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {
+        'predicted_mean': 'dates',
+        'se_mean': 'dates',
+        't_values': 'dates',
+    }
+    _wrap_attrs = wrap.union_dicts(_attrs)
+
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(_methods)
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)
