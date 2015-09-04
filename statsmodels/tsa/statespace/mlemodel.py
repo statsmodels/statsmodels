@@ -1522,7 +1522,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         d = self.loglikelihood_burn
         return np.c_[[
             acorr_ljungbox(
-                self.filter_results.standardized_forecasts_error[i][d:]
+                self.filter_results.standardized_forecasts_error[i][d:],
+                lags=lags, boxpierce=boxpierce
             )
             for i in range(self.model.k_endog)
         ]]
