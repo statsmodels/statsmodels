@@ -369,7 +369,7 @@ class TestClark1989(Clark1989):
 
     def test_kalman_gain(self):
         assert_allclose(self.results.kalman_gain.sum(axis=1).sum(axis=0),
-                        clark1989_results['V1'], atol=1e-5)
+                        clark1989_results['V1'], atol=1e-4)
 
 
 class TestClark1989Conserve(Clark1989):
