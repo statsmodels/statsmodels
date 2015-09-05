@@ -20,6 +20,7 @@ from statsmodels.tools.numdiff import (
 )
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
+from statsmodels.tools.tools import pinv_extended
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -821,6 +822,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Handle covariance matrix calculation
         if cov_kwds is None:
                 cov_kwds = {}
+        self._rank = None
         self._get_robustcov_results(cov_type=cov_type, use_self=True,
                                     **cov_kwds)
 
@@ -962,7 +964,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         )
         self.model.update(self.params)
 
-        return -np.linalg.pinv(nobs * evaluated_hessian)
+        neg_cov, singular_values = pinv_extended(nobs * evaluated_hessian)
+
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return -neg_cov
 
     @cache_readonly
     def cov_params_delta(self):
@@ -975,11 +982,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         unconstrained = self.model.untransform_params(self.params)
         jacobian = self.model.transform_jacobian(unconstrained)
-        cov_cs = -np.linalg.pinv(
+        neg_cov, singular_values = pinv_extended(
             nobs * self.model._hessian_cs(unconstrained, transformed=False)
         )
 
-        return np.dot(np.dot(jacobian, cov_cs), jacobian.transpose())
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return np.dot(np.dot(jacobian, -neg_cov), jacobian.transpose())
 
     @cache_readonly
     def cov_params_oim(self):
@@ -988,9 +998,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         from Harvey (1989).
         """
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        return np.linalg.pinv(
+        cov_params, singular_values = pinv_extended(
             nobs * self.model.observed_information_matrix(self.params)
         )
+
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return cov_params
 
     @cache_readonly
     def cov_params_opg(self):
@@ -1003,12 +1018,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # because variance parameters will then have a complex component which
         # which implies non-positive-definiteness.
         inversion_method = INVERT_UNIVARIATE | SOLVE_LU
-        return np.linalg.pinv(
+        cov_params, singular_values = pinv_extended(
             nobs *
             self.model.opg_information_matrix(
                 self.params, inversion_method=inversion_method
             )
         )
+
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return cov_params
 
     @cache_readonly
     def cov_params_robust(self):
@@ -1029,9 +1049,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         evaluated_hessian = (
             nobs * self.model.observed_information_matrix(self.params)
         )
-        return np.linalg.pinv(
+        cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
+
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return cov_params
 
     @cache_readonly
     def cov_params_robust_cs(self):
@@ -1051,9 +1076,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._hessian_cs(self.params, transformed=True,
                                    inversion_method=inversion_method)
         )
-        return np.linalg.pinv(
+        cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
+
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return cov_params
 
     def fittedvalues(self):
         """
@@ -1281,6 +1311,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         etext = []
         if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
             etext.append(self.cov_kwds['description'])
+        if self._rank < len(self.params):
+            etext.append("Covariance matrix is singular or near-singular,"
+                         " with condition number %6.3g. Standard errors may be"
+                         " unstable." % np.linalg.cond(self.cov_params()))
 
         if etext:
             etext = ["[{0}] {1}".format(i + 1, text)
