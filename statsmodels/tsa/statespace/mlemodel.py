@@ -962,7 +962,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         )
         self.model.update(self.params)
 
-        return -np.linalg.inv(nobs * evaluated_hessian)
+        return -np.linalg.pinv(nobs * evaluated_hessian)
 
     @cache_readonly
     def cov_params_delta(self):
@@ -975,7 +975,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         unconstrained = self.model.untransform_params(self.params)
         jacobian = self.model.transform_jacobian(unconstrained)
-        cov_cs = -np.linalg.inv(
+        cov_cs = -np.linalg.pinv(
             nobs * self.model._hessian_cs(unconstrained, transformed=False)
         )
 
@@ -988,7 +988,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         from Harvey (1989).
         """
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        return np.linalg.inv(
+        return np.linalg.pinv(
             nobs * self.model.observed_information_matrix(self.params)
         )
 
@@ -1003,7 +1003,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # because variance parameters will then have a complex component which
         # which implies non-positive-definiteness.
         inversion_method = INVERT_UNIVARIATE | SOLVE_LU
-        return np.linalg.inv(
+        return np.linalg.pinv(
             nobs *
             self.model.opg_information_matrix(
                 self.params, inversion_method=inversion_method
@@ -1029,7 +1029,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         evaluated_hessian = (
             nobs * self.model.observed_information_matrix(self.params)
         )
-        return np.linalg.inv(
+        return np.linalg.pinv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
@@ -1051,7 +1051,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._hessian_cs(self.params, transformed=True,
                                    inversion_method=inversion_method)
         )
-        return np.linalg.inv(
+        return np.linalg.pinv(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
