@@ -891,6 +891,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Calculate the new covariance matrix
         if len(self.params) == 0:
             res.cov_params_default = np.zeros((0,0))
+            res._rank = 0
             res.cov_kwds['cov_type'] = (
                 'No parameters estimated.')
         elif self.cov_type == 'cs':
