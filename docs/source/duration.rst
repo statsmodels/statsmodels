@@ -3,8 +3,22 @@
 
 .. _duration:
 
-Models for Survival and Duration Analysis
+Methods for Survival and Duration Analysis
 =========================================
+
+Statsmodels implements several standard methods for working with
+right-censored data.
+
+To estimate a survival function using right censored data, use the
+`surfunc_right` class.  This class supports several post-estimation
+analyses including estimation and inference for survival distribution
+quantiles, and plotting procedures.
+
+The `logrank` function can be used to test equality of two survival
+distributions.
+
+Proportional hazard regression models ("Cox models") can be fit to
+data that may be right censored.
 
 Examples
 --------
@@ -41,7 +55,7 @@ There are some notebook examples on the Wiki:
 `Wiki notebooks for PHReg and Survival Analysis <https://github.com/statsmodels/statsmodels/wiki/Examples#survival-analysis>`_
 
 
-.. todo:: 
+.. todo::
 
    Technical Documentation
 

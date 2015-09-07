@@ -23,6 +23,7 @@ from .graphics.gofplots import qqplot, qqplot_2samples, qqline, ProbPlot
 from .graphics import api as graphics
 from .stats import api as stats
 from .emplike import api as emplike
+from .duration import api as duration
 
 from .formula import api as formula
 
