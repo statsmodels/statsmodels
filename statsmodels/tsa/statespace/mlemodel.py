@@ -430,6 +430,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         Cambridge University Press.
 
         """
+        params = np.array(params, ndmin=1)
+
         # Setup
         n = len(params)
         epsilon = _get_epsilon(params, 1, None, n)
@@ -537,6 +539,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
+        params = np.array(params, ndmin=1)
+
         transformed = (
             args[0] if len(args) > 0 else kwargs.get('transformed', False)
         )
@@ -568,6 +572,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglikeobs` method.
         """
+        params = np.array(params, ndmin=1)
+
         self.update(params)
         return approx_fprime_cs(params, self.loglikeobs, kwargs=kwargs)
 
@@ -624,6 +630,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         Hessian matrix computed by second-order complex-step differentiation
         on the `loglike` function.
         """
+
         transformed = (
             args[0] if len(args) > 0 else kwargs.get('transformed', False)
         )
@@ -729,7 +736,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return np.array(constrained)
+        return np.array(constrained, ndmin=1)
 
     def update(self, params, transformed=True):
         """
