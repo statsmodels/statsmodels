@@ -336,6 +336,7 @@ class KalmanSmoother(KalmanFilter):
             filtering and smoothing results.
         prefix : string
             The prefix of the datatype. Usually only used internally.
+
         Returns
         -------
         SmootherResults object
