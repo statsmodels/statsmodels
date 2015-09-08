@@ -877,12 +877,13 @@ class KalmanFilter(Representation):
         ----------
         steps : int, optional
             The number of steps for which impulse responses are calculated.
-            Default is 1. Note that the initial impulse is not counted as a
+            Default is 10. Note that the initial impulse is not counted as a
             step, so if `steps=1`, the output will have 2 entries.
         impulse : int or array_like
             If an integer, the state innovation to pulse; must be between 0
-            and `k_posdef-1`. Alternatively, a custom impulse vector may be
-            provided; must be shaped `k_posdef x 1`.
+            and `k_posdef-1` where `k_posdef` is the same as in the state
+            space model. Alternatively, a custom impulse vector may be
+            provided; must be a column vector with shape `(k_posdef, 1)`.
         orthogonalized : boolean, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
