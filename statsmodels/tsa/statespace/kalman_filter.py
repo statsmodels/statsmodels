@@ -868,7 +868,7 @@ class KalmanFilter(Representation):
 
         return simulated_obs, simulated_states[:-1]
 
-    def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
+    def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
         """
         Impulse response function
