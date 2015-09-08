@@ -1335,11 +1335,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def test_normality(self):
+    def test_normality(self, method):
         """
-        Jarque-Bera test for normaility of standardized residuals.
+        Test for normality of standardized residuals.
 
         Null hypothesis is normality.
+
+        Parameters
+        ----------
+        method : string {'jb'}
+            The statistical test for normality. Must be 'jarquebera' for
+            Jarque-Bera normality test.
 
         Notes
         -----
@@ -1352,17 +1358,22 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.stats.stattools.jarque_bera
 
         """
-        from statsmodels.stats.stattools import jarque_bera
-        d = self.loglikelihood_burn
-        return np.array(jarque_bera(
-            self.filter_results.standardized_forecasts_error[:, d:],
-            axis=1
-        )).transpose()
+        if method == 'jarquebera':
+            from statsmodels.stats.stattools import jarque_bera
+            d = self.loglikelihood_burn
+            output = np.array(jarque_bera(
+                self.filter_results.standardized_forecasts_error[:, d:],
+                axis=1
+            )).transpose()
+        else:
+            raise NotImplementedError('Invalid normality test method.')
 
-    def test_heteroskedasticity(self, alternative='two-sided',
+        return output
+
+    def test_heteroskedasticity(self, method='', alternative='two-sided',
                                 asymptotic=False):
         """
-        Sum-of-squares test for heteroskedasticity of standardized residuals
+        Test for heteroskedasticity of standardized residuals
 
         Tests whether the sum-of-squares in the first third of the sample is
         significantly different than the sum-of-squares in the last third
@@ -1370,6 +1381,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
+        method : string {'sumsquares'}
+            The statistical test for heteroskedasticity. Must be 'sumsquares'
+            for a sum-of-squares test.
         alternative : string, 'increasing', 'decreasing' or 'two-sided'
             This specifies the alternative for the p-value calculation. Default
             is two-sided.
@@ -1438,45 +1452,51 @@ class MLEResults(tsbase.TimeSeriesModelResults):
            Cambridge University Press.
 
         """
-        # Store some values
-        squared_resid = self.filter_results.standardized_forecasts_error**2
-        d = self.loglikelihood_burn
-        h = int(np.round((self.nobs - d) / 3))
+        if method == 'sumsquares':
+            # Store some values
+            squared_resid = self.filter_results.standardized_forecasts_error**2
+            d = self.loglikelihood_burn
+            h = int(np.round((self.nobs - d) / 3))
 
-        # Calculate the test statistics for each endogenous variable
-        test_statistics = np.array([
-            np.sum(squared_resid[i][-h:]) / np.sum(squared_resid[i][d:d+h])
-            for i in range(self.model.k_endog)
-        ])
+            # Calculate the test statistics for each endogenous variable
+            test_statistics = np.array([
+                np.sum(squared_resid[i][-h:]) / np.sum(squared_resid[i][d:d+h])
+                for i in range(self.model.k_endog)
+            ])
 
-        # Setup functions to calculate the p-values
-        if not asymptotic:
-            from scipy.stats import f
-            pval_lower = lambda test_statistics: f.cdf(test_statistics, h, h)
-            pval_upper = lambda test_statistics: f.sf(test_statistics, h, h)
+            # Setup functions to calculate the p-values
+            if not asymptotic:
+                from scipy.stats import f
+                pval_lower = lambda test_statistics: f.cdf(test_statistics, h, h)
+                pval_upper = lambda test_statistics: f.sf(test_statistics, h, h)
+            else:
+                from scipy.stats import chi2
+                pval_lower = lambda test_statistics: chi2.cdf(h*test_statistics, h)
+                pval_upper = lambda test_statistics: chi2.sf(h*test_statistics, h)
+
+            # Calculate the one- or two-sided p-values
+            alternative = alternative.lower()
+            if alternative in ['i', 'inc', 'increasing']:
+                p_values = pval_upper(test_statistics)
+            elif alternative in ['d', 'dec', 'decreasing']:
+                test_statistics = 1. / test_statistics
+                p_values = pval_upper(test_statistics)
+            elif alternative in ['2', '2-sided', 'two-sided']:
+                p_values = 2 * np.minimum(
+                    pval_lower(test_statistics),
+                    pval_upper(test_statistics)
+                )
+            else:
+                raise ValueError('Invalid alternative.')
+
+            output = np.c_[test_statistics, p_values]
         else:
-            from scipy.stats import chi2
-            pval_lower = lambda test_statistics: chi2.cdf(h*test_statistics, h)
-            pval_upper = lambda test_statistics: chi2.sf(h*test_statistics, h)
+            raise NotImplementedError('Invalid heteroskedasticity test'
+                                      ' method.')
 
-        # Calculate the one- or two-sided p-values
-        alternative = alternative.lower()
-        if alternative in ['i', 'inc', 'increasing']:
-            p_values = pval_upper(test_statistics)
-        elif alternative in ['d', 'dec', 'decreasing']:
-            test_statistics = 1. / test_statistics
-            p_values = pval_upper(test_statistics)
-        elif alternative in ['2', '2-sided', 'two-sided']:
-            p_values = 2 * np.minimum(
-                pval_lower(test_statistics),
-                pval_upper(test_statistics)
-            )
-        else:
-            raise ValueError('Invalid alternative.')
+        return output
 
-        return np.c_[test_statistics, p_values]
-
-    def test_serial_correlation(self, lags=None, boxpierce=False):
+    def test_serial_correlation(self, method, lags=None, boxpierce=False):
         """
         Ljung-box test for no serial correlation of standardized residuals
 
@@ -1484,6 +1504,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
+        method : string {'ljungbox'}
+            The statistical test for serial correlation.
         lags : None, int or array_like
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
@@ -1518,15 +1540,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.stats.diagnostic.acorr_ljungbox
 
         """
-        from statsmodels.stats.diagnostic import acorr_ljungbox
-        d = self.loglikelihood_burn
-        return np.c_[[
-            acorr_ljungbox(
-                self.filter_results.standardized_forecasts_error[i][d:],
-                lags=lags, boxpierce=boxpierce
-            )
-            for i in range(self.model.k_endog)
-        ]]
+        if method == 'ljungbox':
+            from statsmodels.stats.diagnostic import acorr_ljungbox
+            d = self.loglikelihood_burn
+            output = np.c_[[
+                acorr_ljungbox(
+                    self.filter_results.standardized_forecasts_error[i][d:],
+                    lags=lags, boxpierce=boxpierce
+                )
+                for i in range(self.model.k_endog)
+            ]]
+        else:
+            raise NotImplementedError('Invalid serial correlation test'
+                                      ' method.')
+        return output
 
     def get_prediction(self, start=None, end=None, dynamic=False, **kwargs):
         """
@@ -1809,8 +1836,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """
-        Diagnostic plots for the standardized residual assocaited with one
-        endogenous variable.
+        Diagnostic plots for standardized residuals of one endogenous variable
 
         Parameters
         ----------
@@ -1937,9 +1963,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             model_name = model.__class__.__name__
 
         # Diagnostic tests results
-        het = self.test_heteroskedasticity()
-        lb = self.test_serial_correlation()
-        jb = self.test_normality()
+        het = self.test_heteroskedasticity(method='sumsquares')
+        lb = self.test_serial_correlation(method='ljungbox')
+        jb = self.test_normality(method='jarquebera')
 
         # Create the tables
 
