@@ -1323,8 +1323,7 @@ class FilterResults(FrozenRepresentation):
 
         return self._standardized_forecasts_error
 
-    def predict(self, start=None, end=None, dynamic=None, full_results=False,
-                **kwargs):
+    def predict(self, start=None, end=None, dynamic=None, **kwargs):
         """
         In-sample and out-of-sample prediction for state space models generally
 
@@ -1342,10 +1341,6 @@ class FilterResults(FrozenRepresentation):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
-            If True, returns a FilterResults instance; if False returns a
-            tuple with forecasts, the forecast errors, and the forecast error
-            covariance matrices. Default is False.
         **kwargs
             If the prediction range is outside of the sample range, any
             of the state space representation matrices that are time-varying
@@ -1357,9 +1352,8 @@ class FilterResults(FrozenRepresentation):
 
         Returns
         -------
-        results : FilterResults or array
-            Either a FilterResults object (if `full_results=True`) or an
-            array of forecasts otherwise.
+        results : PredictionResults
+            A PredictionResults object.
 
         Notes
         -----
@@ -1385,8 +1379,7 @@ class FilterResults(FrozenRepresentation):
 
         # Prediction and forecasting is performed by iterating the Kalman
         # Kalman filter through the entire range [0, end]
-        # Then, unless `full_results=True`, forecasts are returned
-        # corresponding to the range [start, end].
+        # Then, everything is returned corresponding to the range [start, end].
         # In order to perform the calculations, the range is separately split
         # up into the following categories:
         # - static:   (in-sample) the Kalman filter is run as usual
