@@ -347,6 +347,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
         """
+        params = np.array(params, ndmin=1)
+
         if not transformed:
             params = self.transform_params(params)
         self.update(params, transformed=True)
