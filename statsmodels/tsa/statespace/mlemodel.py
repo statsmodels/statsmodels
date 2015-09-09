@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from .kalman_smoother import KalmanSmoother, SmootherResults
 from .kalman_filter import (
     KalmanFilter, FilterResults, PredictionResults, INVERT_UNIVARIATE, SOLVE_LU
 )
@@ -138,7 +139,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         endog = self.endog.T
 
         # Instantiate the state space object
-        self.ssm = KalmanFilter(endog.shape[0], self.k_states, **kwargs)
+        self.ssm = KalmanSmoother(endog.shape[0], self.k_states, **kwargs)
         # Bind the data to the model
         self.ssm.bind(endog)
 
@@ -312,6 +313,54 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Get the state space output
         result = self.ssm.filter(**kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = MLEResultsWrapper(
+                MLEResults(self, params, result, **result_kwargs)
+            )
+
+        return result
+
+    def smooth(self, params, transformed=True, cov_type=None, cov_kwds=None,
+               return_ssm=False, **kwargs):
+        """
+        Kalman smoothing
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        transformed : boolean, optional
+            Whether or not `params` is already transformed. Default is True.
+        return_ssm : boolean,optional
+            Whether or not to return only the state space output or a full
+            results object. Default is to return a full results object.
+        cov_type : str, optional
+            See `MLEResults.fit` for a description of covariance matrix types
+            for results object.
+        cov_kwds : dict or None, optional
+            See `MLEResults.get_robustcov_results` for a description required
+            keywords for alternative covariance estimators
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+        """
+        params = np.array(params, ndmin=1)
+
+        if not transformed:
+            params = self.transform_params(params)
+        self.update(params, transformed=True)
+
+        # Save the parameter names
+        self.data.param_names = self.param_names
+
+        # Get the state space output
+        result = self.ssm.smooth(**kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -909,7 +958,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
-    def __init__(self, model, params, filter_results, cov_type='opg',
+    def __init__(self, model, params, results, cov_type='opg',
                  cov_kwds=None, **kwargs):
         self.data = model.data
 
@@ -918,7 +967,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                                scale=1.)
 
         # Save the state space representation output
-        self.filter_results = filter_results
+        self.filter_results = results
+        if isinstance(results, SmootherResults):
+            self.smoother_results = results
+        else:
+            self.smoother_results = None
 
         # Dimensions
         self.nobs = model.nobs
