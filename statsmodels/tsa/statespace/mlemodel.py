@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from .kalman_filter import (
-    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
+    KalmanFilter, FilterResults, PredictionResults, INVERT_UNIVARIATE, SOLVE_LU
 )
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
@@ -21,6 +21,9 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.tools import Bunch
+import statsmodels.genmod._prediction as pred
+from statsmodels.genmod.families.links import identity
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -427,6 +430,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         Cambridge University Press.
 
         """
+        params = np.array(params, ndmin=1)
+
         # Setup
         n = len(params)
         epsilon = _get_epsilon(params, 1, None, n)
@@ -534,6 +539,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
+        params = np.array(params, ndmin=1)
+
         transformed = (
             args[0] if len(args) > 0 else kwargs.get('transformed', False)
         )
@@ -565,6 +572,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglikeobs` method.
         """
+        params = np.array(params, ndmin=1)
+
         self.update(params)
         return approx_fprime_cs(params, self.loglikeobs, kwargs=kwargs)
 
@@ -621,6 +630,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         Hessian matrix computed by second-order complex-step differentiation
         on the `loglike` function.
         """
+
         transformed = (
             args[0] if len(args) > 0 else kwargs.get('transformed', False)
         )
@@ -726,7 +736,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a noop in the base class, subclasses should override where
         appropriate.
         """
-        return np.array(constrained)
+        return np.array(constrained, ndmin=1)
 
     def update(self, params, transformed=True):
         """
@@ -756,6 +766,108 @@ class MLEModel(tsbase.TimeSeriesModel):
             params = self.transform_params(params)
 
         return params
+
+    def simulate(self, params, nsimulations, measurement_shocks=None,
+                 state_shocks=None, initial_state=None):
+        """
+        Simulate a new time series following the state space model
+
+        Parameters
+        ----------
+        params : array_like
+            Array of model parameters.
+        nsimulations : int
+            The number of observations to simulate. If the model is
+            time-invariant this can be any number. If the model is
+            time-varying, then this number must be less than or equal to the
+            number
+        measurement_shocks : array_like, optional
+            If specified, these are the shocks to the measurement equation,
+            :math:`\varepsilon_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_endog`, where `k_endog` is the
+            same as in the state space model.
+        state_shocks : array_like, optional
+            If specified, these are the shocks to the state equation,
+            :math:`\eta_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_posdef` where `k_posdef` is the
+            same as in the state space model.
+        initial_state : array_like, optional
+            If specified, this is the state vector at time zero, which should
+            be shaped (`k_states` x 1), where `k_states` is the same as in the
+            state space model. If unspecified, but the model has been
+            initialized, then that initialization is used. If unspecified and
+            the model has not been initialized, then a vector of zeros is used.
+            Note that this is not included in the returned `simulated_states`
+            array.
+
+        Returns
+        -------
+        simulated_obs : array
+            An (nsimulations x k_endog) array of simulated observations.
+        """
+        self.update(params)
+
+        simulated_obs, simulated_states = self.ssm.simulate(
+            nsimulations, measurement_shocks, state_shocks, initial_state)
+
+        # Simulated obs is (k_endog x nobs); don't want to squeeze in
+        # case of npredictions = 1
+        if simulated_obs.shape[0] == 1:
+            simulated_obs = simulated_obs[0,:]
+        else:
+            simulated_obs = simulated_obs.T
+        return simulated_obs
+
+    def impulse_responses(self, params, steps=1, impulse=0,
+                          orthogonalized=False, cumulative=False, **kwargs):
+        """
+        Impulse response function
+
+        Parameters
+        ----------
+        params : array_like
+            Array of model parameters.
+        steps : int, optional
+            The number of steps for which impulse responses are calculated.
+            Default is 1. Note that the initial impulse is not counted as a
+            step, so if `steps=1`, the output will have 2 entries.
+        impulse : int or array_like
+            If an integer, the state innovation to pulse; must be between 0
+            and `k_posdef-1`. Alternatively, a custom impulse vector may be
+            provided; must be shaped `k_posdef x 1`.
+        orthogonalized : boolean, optional
+            Whether or not to perform impulse using orthogonalized innovations.
+            Note that this will also affect custum `impulse` vectors. Default
+            is False.
+        cumulative : boolean, optional
+            Whether or not to return cumulative impulse responses. Default is
+            False.
+        **kwargs
+            If the model is time-varying and `steps` is greater than the number
+            of observations, any of the state space representation matrices
+            that are time-varying must have updated values provided for the
+            out-of-sample steps.
+            For example, if `design` is a time-varying component, `nobs` is 10,
+            and `steps` is 15, a (`k_endog` x `k_states` x 5) matrix must be
+            provided with the new design matrix values.
+
+        Returns
+        -------
+        impulse_responses : array
+            Responses for each endogenous variable due to the impulse
+            given by the `impulse` argument. A (steps + 1 x k_endog) array.
+
+        Notes
+        -----
+        Intercepts in the measurement and state equation are ignored when
+        calculating impulse responses.
+
+        """
+        self.update(params)
+        return self.ssm.impulse_responses(
+            steps, impulse, orthogonalized, cumulative, **kwargs)
 
     @classmethod
     def from_formula(cls, formula, data, subset=None):
@@ -822,9 +934,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Handle covariance matrix calculation
         if cov_kwds is None:
                 cov_kwds = {}
-        self._rank = None
-        self._get_robustcov_results(cov_type=cov_type, use_self=True,
-                                    **cov_kwds)
+        try:
+            self._rank = None
+            self._get_robustcov_results(cov_type=cov_type, use_self=True,
+                                        **cov_kwds)
+        except np.linalg.LinAlgError:
+            self._rank = 0
+            k_params = len(self.params)
+            self.cov_params_default = np.zeros((k_params, k_params)) * np.nan
+            self.cov_kwds['cov_type'] = (
+                'Covariance matrix could not be calculated: singular.'
+                ' information matrix.')
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
@@ -1086,11 +1206,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return cov_params
 
+    @cache_readonly
     def fittedvalues(self):
         """
-        (array) The predicted values of the model.
+        (array) The predicted values of the model. An (nobs x k_endog) array.
         """
-        return self.filter_results.forecasts
+        # This is a (k_endog x nobs array; don't want to squeeze in case of
+        # the corner case where nobs = 1 (mostly a concern in the predict or
+        # forecast functions, but here also to maintain consistency)
+        fittedvalues = self.filter_results.forecasts
+        if fittedvalues.shape[0] == 1:
+            fittedvalues = fittedvalues[0,:]
+        else:
+            fittedvalues = fittedvalues.T
+        return fittedvalues
 
     @cache_readonly
     def hqic(self):
@@ -1131,11 +1260,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return norm.sf(np.abs(self.zvalues)) * 2
 
+    @cache_readonly
     def resid(self):
         """
-        (array) The model residuals.
+        (array) The model residuals. An (nobs x k_endog) array.
         """
-        return self.filter_results.forecasts_error
+        # This is a (k_endog x nobs array; don't want to squeeze in case of
+        # the corner case where nobs = 1 (mostly a concern in the predict or
+        # forecast functions, but here also to maintain consistency)
+        resid = self.filter_results.forecasts_error
+        if resid.shape[0] == 1:
+            resid = resid[0,:]
+        else:
+            resid = resid.T
+        return resid
 
     @cache_readonly
     def zvalues(self):
@@ -1144,19 +1282,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def predict(self, start=None, end=None, dynamic=False, full_results=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
+            Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
@@ -1170,10 +1307,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        full_results : boolean, optional
-            If True, returns a FilterResults instance; if False returns a
-            tuple with forecasts, the forecast errors, and the forecast error
-            covariance matrices. Default is False.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -1181,7 +1314,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         forecast : array
-            Array of out of sample forecasts.
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict x k_endog) array.
         """
         if start is None:
             start = 0
@@ -1205,30 +1339,31 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                  (str(dynamic), str(dtdynamic)))
 
         # Perform the prediction
-        results = self.filter_results.predict(
-            start, end+out_of_sample+1, dynamic, full_results, **kwargs
+        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # case of npredictions = 1
+        prediction_results = self.filter_results.predict(
+            start, end+out_of_sample+1, dynamic, **kwargs
         )
 
-        # Note: to be consistent with Statsmodels, return only the forecasts
-        # unless full_results is specified. Confidence intervals and the date
-        # indices are left out for now, but will likely be moved to a separate
-        # function in the future.
-        if full_results:
-            return results
+        # Return a new mlemodel.PredictionResults object
+        if self.data.dates is None:
+            row_labels = self.data.row_labels
         else:
-            forecasts = results
+            row_labels = self.data.predict_dates
+        return PredictionResultsWrapper(
+            PredictionResults(self, prediction_results, row_labels=row_labels))
 
-        return forecasts
-
-    def forecast(self, steps=1, **kwargs):
+    def get_forecast(self, steps=1, **kwargs):
         """
         Out-of-sample forecasts
 
         Parameters
         ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
+        steps : int, str, or datetime, optional
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency, steps
+            must be an integer. Default
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -1236,9 +1371,195 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         forecast : array
-            Array of out of sample forecasts.
+            Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        return self.predict(start=self.nobs, end=self.nobs+steps-1, **kwargs)
+        if isinstance(steps, int):
+            end = self.nobs+steps-1
+        else:
+            end = steps
+        return self.get_prediction(start=self.nobs, end=end, **kwargs)
+
+    def predict(self, start=None, end=None, dynamic=False, **kwargs):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        dynamic : boolean, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict x k_endog) array.
+        """
+        if start is None:
+            start = 0
+
+        # Handle start and end (e.g. dates)
+        start = self.model._get_predict_start(start)
+        end, out_of_sample = self.model._get_predict_end(end)
+
+        # Handle string dynamic
+        dates = self.data.dates
+        if isinstance(dynamic, str):
+            if dates is None:
+                raise ValueError("Got a string for dynamic and dates is None")
+            dtdynamic = self.model._str_to_date(dynamic)
+            try:
+                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
+
+                dynamic = dynamic_start - start
+            except KeyError:
+                raise ValueError("Dynamic must be in dates. Got %s | %s" %
+                                 (str(dynamic), str(dtdynamic)))
+
+        # Perform the prediction
+        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # case of npredictions = 1
+        prediction_results = self.filter_results.predict(
+            start, end+out_of_sample+1, dynamic, **kwargs
+        )
+        predicted_mean = prediction_results.forecasts
+        if predicted_mean.shape[0] == 1:
+            predicted_mean = predicted_mean[0,:]
+        else:
+            predicted_mean = predicted_mean.T
+        return predicted_mean
+
+    def forecast(self, steps=1, **kwargs):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, str, or datetime, optional
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency, steps
+            must be an integer. Default
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts. A (steps x k_endog) array.
+        """
+        if isinstance(steps, int):
+            end = self.nobs+steps-1
+        else:
+            end = steps
+        return self.predict(start=self.nobs, end=end, **kwargs)
+
+    def simulate(self, nsimulations, measurement_shocks=None,
+                 state_shocks=None, initial_state=None):
+        """
+        Simulate a new time series following the state space model
+
+        Parameters
+        ----------
+        nsimulations : int
+            The number of observations to simulate. If the model is
+            time-invariant this can be any number. If the model is
+            time-varying, then this number must be less than or equal to the
+            number
+        measurement_shocks : array_like, optional
+            If specified, these are the shocks to the measurement equation,
+            :math:`\varepsilon_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_endog`, where `k_endog` is the
+            same as in the state space model.
+        state_shocks : array_like, optional
+            If specified, these are the shocks to the state equation,
+            :math:`\eta_t`. If unspecified, these are automatically
+            generated using a pseudo-random number generator. If specified,
+            must be shaped `nsimulations` x `k_posdef` where `k_posdef` is the
+            same as in the state space model.
+        initial_state : array_like, optional
+            If specified, this is the state vector at time zero, which should
+            be shaped (`k_states` x 1), where `k_states` is the same as in the
+            state space model. If unspecified, but the model has been
+            initialized, then that initialization is used. If unspecified and
+            the model has not been initialized, then a vector of zeros is used.
+            Note that this is not included in the returned `simulated_states`
+            array.
+
+        Returns
+        -------
+        simulated_obs : array
+            An (nsimulations x k_endog) array of simulated observations.
+        """
+        return self.model.simulate(self.params, nsimulations,
+            measurement_shocks, state_shocks, initial_state)
+
+    def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
+                          cumulative=False, **kwargs):
+        """
+        Impulse response function
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of steps for which impulse responses are calculated.
+            Default is 1. Note that the initial impulse is not counted as a
+            step, so if `steps=1`, the output will have 2 entries.
+        impulse : int or array_like
+            If an integer, the state innovation to pulse; must be between 0
+            and `k_posdef-1`. Alternatively, a custom impulse vector may be
+            provided; must be shaped `k_posdef x 1`.
+        orthogonalized : boolean, optional
+            Whether or not to perform impulse using orthogonalized innovations.
+            Note that this will also affect custum `impulse` vectors. Default
+            is False.
+        cumulative : boolean, optional
+            Whether or not to return cumulative impulse responses. Default is
+            False.
+        **kwargs
+            If the model is time-varying and `steps` is greater than the number
+            of observations, any of the state space representation matrices
+            that are time-varying must have updated values provided for the
+            out-of-sample steps.
+            For example, if `design` is a time-varying component, `nobs` is 10,
+            and `steps` is 15, a (`k_endog` x `k_states` x 5) matrix must be
+            provided with the new design matrix values.
+
+        Returns
+        -------
+        impulse_responses : array
+            Responses for each endogenous variable due to the impulse
+            given by the `impulse` argument. A (steps + 1 x k_endog) array.
+
+        Notes
+        -----
+        Intercepts in the measurement and state equation are ignored when
+        calculating impulse responses.
+
+        """
+        return self.model.impulse_responses(self.params, steps, impulse,
+            orthogonalized, cumulative, **kwargs)
 
     def summary(self, alpha=.05, start=None, model_name=None):
         """
@@ -1327,17 +1648,124 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
 
 class MLEResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {}
+    _attrs = {
+        'zvalues': 'columns',
+        'cov_params_cs': 'cov',
+        'cov_params_default': 'cov',
+        'cov_params_delta': 'cov',
+        'cov_params_oim': 'cov',
+        'cov_params_opg': 'cov',
+        'cov_params_robust': 'cov',
+        'cov_params_robust_cs': 'cov',
+        'cov_params_robust_oim': 'cov',
+    }
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
-    # TODO right now, predict with full_results=True can return something other
-    # than a time series, so the `attach_dates` call will fail if we have
-    # 'predict': 'dates' here. In the future, remove `full_results` and replace
-    # it with new methods, e.g. get_prediction, get_forecast, and likely will
-    # want those to be a subclass of FilterResults with e.g. confidence
-    # intervals calculated and dates attached.
-    # Also, need to modify `attach_dates` to account for DataFrames.
-    _methods = {'predict': None}
-    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
-                                     _methods)
+
+    _methods = {
+        'forecast': 'dates',
+        'simulate': 'ynames',
+        'impulse_responses': 'ynames'
+    }
+    _wrap_methods = wrap.union_dicts(
+        tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
+
+
+class PredictionResults(pred.PredictionResults):
+    """
+
+    Parameters
+    ----------
+    prediction_results : kalman_filter.PredictionResults instance
+        Results object from prediction after fitting or filtering a state space
+        model.
+    row_labels : iterable
+        Row labels for the predicted data.
+
+    Attributes
+    ----------
+
+    """
+    def __init__(self, model, prediction_results, row_labels=None):
+        self.model = Bunch(data=model.data.__class__(
+            endog=prediction_results.endog.T,
+            predict_dates=getattr(model.data, 'predict_dates', None))
+        )
+        self.prediction_results = prediction_results
+
+        # Get required values
+        predicted_mean = self.prediction_results.forecasts
+        if predicted_mean.shape[0] == 1:
+            predicted_mean = predicted_mean[0, :]
+        else:
+            predicted_mean = predicted_mean.transpose()
+
+        var_pred_mean = self.prediction_results.forecasts_error_cov
+        if var_pred_mean.shape[0] == 1:
+            var_pred_mean = var_pred_mean[0, 0, :]
+        else:
+            var_pred_mean = var_pred_mean.transpose()
+
+        # Initialize
+        super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
+                                                dist='norm',
+                                                row_labels=row_labels,
+                                                link=identity())
+
+    def conf_int(self, method='endpoint', alpha=0.05, **kwds):
+        # TODO: this performs metadata wrapping, and that should be handled
+        #       by attach_* methods. However, they don't currently support
+        #       this use case.
+        conf_int = super(PredictionResults, self).conf_int(
+            method, alpha, **kwds)
+
+        if self.model.data.predict_dates is not None:
+            conf_int = pd.DataFrame(conf_int,
+                                    index=self.model.data.predict_dates)
+
+        return conf_int
+
+    def summary_frame(self, endog=0, what='all', alpha=0.05):
+        # TODO: finish and cleanup
+        # import pandas as pd
+        from statsmodels.compat.collections import OrderedDict
+        #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
+        ci_mean = self.conf_int(alpha=alpha)
+        to_include = OrderedDict()
+        if self.predicted_mean.ndim == 1:
+            yname = self.model.data.ynames
+            to_include['mean'] = self.predicted_mean
+            to_include['mean_se'] = self.se_mean
+            k_endog = 1
+        else:
+            yname = self.model.data.ynames[endog]
+            to_include['mean'] = self.predicted_mean[:, endog]
+            to_include['mean_se'] = self.se_mean[:, endog]
+            k_endog = self.predicted_mean.shape[1]
+        to_include['mean_ci_lower'] = ci_mean[:, endog]
+        to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
+
+
+        self.table = to_include
+        #OrderedDict doesn't work to preserve sequence
+        # pandas dict doesn't handle 2d_array
+        #data = np.column_stack(list(to_include.values()))
+        #names = ....
+        res = pd.DataFrame(to_include, index=self.row_labels,
+                           columns=to_include.keys())
+        res.columns.name = yname
+        return res
+
+
+class PredictionResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {
+        'predicted_mean': 'dates',
+        'se_mean': 'dates',
+        't_values': 'dates',
+    }
+    _wrap_attrs = wrap.union_dicts(_attrs)
+
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(_methods)
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)

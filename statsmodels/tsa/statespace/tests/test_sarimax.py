@@ -728,14 +728,14 @@ class TestFriedmanPredict(Friedman):
 
     def test_predict(self):
         assert_almost_equal(
-            self.result.predict()[0],
+            self.result.predict(),
             self.true['predict'], 3
         )
 
     def test_dynamic_predict(self):
         dynamic = len(self.true['data']['consump'])-15-1
         assert_almost_equal(
-            self.result.predict(dynamic=dynamic)[0],
+            self.result.predict(dynamic=dynamic),
             self.true['dynamic_predict'], 3
         )
 
@@ -790,7 +790,7 @@ class TestFriedmanForecast(Friedman):
         end = len(self.true['data']['consump'])+15-1
         exog = add_constant(self.true['forecast_data']['m2'])
         assert_almost_equal(
-            self.result.predict(end=end, exog=exog)[0],
+            self.result.predict(end=end, exog=exog),
             self.true['forecast'], 3
         )
 
@@ -799,7 +799,7 @@ class TestFriedmanForecast(Friedman):
         dynamic = len(self.true['data']['consump'])-1
         exog = add_constant(self.true['forecast_data']['m2'])
         assert_almost_equal(
-            self.result.predict(end=end, dynamic=dynamic, exog=exog)[0],
+            self.result.predict(end=end, dynamic=dynamic, exog=exog),
             self.true['dynamic_forecast'], 3
         )
 
@@ -897,35 +897,35 @@ class SARIMAXCoverageTest(object):
         # Test predict does not throw exceptions, and produces the right shaped
         # output
         predict = result.predict()
-        assert_equal(predict.shape, (1, self.model.nobs))
+        assert_equal(predict.shape, (self.model.nobs,))
 
         predict = result.predict(start=10, end=20)
-        assert_equal(predict.shape, (1, 11))
+        assert_equal(predict.shape, (11,))
 
         predict = result.predict(start=10, end=20, dynamic=10)
-        assert_equal(predict.shape, (1, 11))
+        assert_equal(predict.shape, (11,))
 
         # Test forecasts
         if self.model.k_exog == 0:
             predict = result.predict(start=self.model.nobs,
                                  end=self.model.nobs+10, dynamic=-10)
-            assert_equal(predict.shape, (1, 11))
+            assert_equal(predict.shape, (11,))
 
             predict = result.predict(start=self.model.nobs,
                                      end=self.model.nobs+10, dynamic=-10)
 
             forecast = result.forecast()
-            assert_equal(forecast.shape, (1, 1))
+            assert_equal(forecast.shape, (1,))
 
             forecast = result.forecast(10)
-            assert_equal(forecast.shape, (1, 10))
+            assert_equal(forecast.shape, (10,))
         else:
             exog = np.r_[[0]*self.model.k_exog*11].reshape(11, self.model.k_exog)
 
             predict = result.predict(start=self.model.nobs,
                                      end=self.model.nobs+10, dynamic=-10,
                                      exog=exog)
-            assert_equal(predict.shape, (1, 11))
+            assert_equal(predict.shape, (11,))
 
             predict = result.predict(start=self.model.nobs,
                                      end=self.model.nobs+10, dynamic=-10,
@@ -933,7 +933,7 @@ class SARIMAXCoverageTest(object):
 
             exog = np.r_[[0]*self.model.k_exog].reshape(1, self.model.k_exog)
             forecast = result.forecast(exog=exog)
-            assert_equal(forecast.shape, (1, 1))
+            assert_equal(forecast.shape, (1,))
 
     def test_init_keys_replicate(self):
         mod1 = self.model
