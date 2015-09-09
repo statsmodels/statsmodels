@@ -65,7 +65,7 @@ class TestStatesAR3(object):
 
     def test_predict_obs(self):
         assert_almost_equal(
-            self.results.filter_results.predict()[0],
+            self.results.filter_results.predict().forecasts[0],
             self.stata.ix[1:, 'dep1'], 4
         )
 
