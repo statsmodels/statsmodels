@@ -146,6 +146,162 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Other dimensions, now that `ssm` is available
         self.k_endog = self.ssm.k_endog
 
+    def __setitem__(self, key, value):
+        return self.ssm.__setitem__(key, value)
+
+    def __getitem__(self, key):
+        return self.ssm.__getitem__(key)
+
+    def set_filter_method(self, filter_method=None, **kwargs):
+        """
+        Set the filtering method
+
+        The filtering method controls aspects of which Kalman filtering
+        approach will be used.
+
+        Parameters
+        ----------
+        filter_method : integer, optional
+            Bitmask value to set the filter method to. See notes for details.
+        **kwargs
+            Keyword arguments may be used to influence the filter method by
+            setting individual boolean flags. See notes for details.
+
+        Notes
+        -----
+        This method is rarely used. See the corresponding function in the
+        `KalmanFilter` class for details.
+        """
+        self.ssm.set_filter_method(filter_method, **kwargs)
+
+    def set_inversion_method(self, inversion_method=None, **kwargs):
+        """
+        Set the inversion method
+
+        The Kalman filter may contain one matrix inversion: that of the
+        forecast error covariance matrix. The inversion method controls how and
+        if that inverse is performed.
+
+        Parameters
+        ----------
+        inversion_method : integer, optional
+            Bitmask value to set the inversion method to. See notes for
+            details.
+        **kwargs
+            Keyword arguments may be used to influence the inversion method by
+            setting individual boolean flags. See notes for details.
+
+        Notes
+        -----
+        This method is rarely used. See the corresponding function in the
+        `KalmanFilter` class for details.
+        """
+        self.ssm.set_inversion_method(inversion_method, **kwargs)
+
+    def set_stability_method(self, stability_method=None, **kwargs):
+        """
+        Set the numerical stability method
+
+        The Kalman filter is a recursive algorithm that may in some cases
+        suffer issues with numerical stability. The stability method controls
+        what, if any, measures are taken to promote stability.
+
+        Parameters
+        ----------
+        stability_method : integer, optional
+            Bitmask value to set the stability method to. See notes for
+            details.
+        **kwargs
+            Keyword arguments may be used to influence the stability method by
+            setting individual boolean flags. See notes for details.
+
+        Notes
+        -----
+        This method is rarely used. See the corresponding function in the
+        `KalmanFilter` class for details.
+        """
+        self.ssm.set_stability_method(stability_method, **kwargs)
+
+    def set_conserve_memory(self, conserve_memory=None, **kwargs):
+        """
+        Set the memory conservation method
+
+        By default, the Kalman filter computes a number of intermediate
+        matrices at each iteration. The memory conservation options control
+        which of those matrices are stored.
+
+        Parameters
+        ----------
+        conserve_memory : integer, optional
+            Bitmask value to set the memory conservation method to. See notes
+            for details.
+        **kwargs
+            Keyword arguments may be used to influence the memory conservation
+            method by setting individual boolean flags.
+
+        Notes
+        -----
+        This method is rarely used. See the corresponding function in the
+        `KalmanFilter` class for details.
+        """
+        self.ssm.set_conserve_memory(conserve_memory, **kwargs)
+
+    def set_smoother_output(self, smoother_output=None, **kwargs):
+        """
+        Set the smoother output
+
+        The smoother can produce several types of results. The smoother output
+        variable controls which are calculated and returned.
+
+        Parameters
+        ----------
+        smoother_output : integer, optional
+            Bitmask value to set the smoother output to. See notes for details.
+        **kwargs
+            Keyword arguments may be used to influence the smoother output by
+            setting individual boolean flags.
+
+        Notes
+        -----
+        This method is rarely used. See the corresponding function in the
+        `KalmanSmoother` class for details.
+        """
+        self.ssm.set_smoother_output(smoother_output, **kwargs)
+
+    def initialize_known(self, initial_state, initial_state_cov):
+        self.ssm.initialize_known(initial_state, initial_state_cov)
+
+    def initialize_approximate_diffuse(self, variance=None):
+        self.ssm.initialize_approximate_diffuse(variance)
+
+    def initialize_stationary(self):
+        self.ssm.initialize_stationary()
+
+    @property
+    def initialization(self):
+        return self.ssm.initialization
+
+    @property
+    def initial_variance(self):
+        return self.ssm.initial_variance
+    @initial_variance.setter
+    def initial_variance(self, value):
+        self.ssm.initial_variance = value
+
+    @property
+    def loglikelihood_burn(self):
+        return self.ssm.loglikelihood_burn
+    @loglikelihood_burn.setter
+    def loglikelihood_burn(self, value):
+        self.ssm.loglikelihood_burn = value
+
+    @property
+    def tolerance(self):
+        return self.ssm.tolerance
+    @tolerance.setter
+    def tolerance(self, value):
+        self.ssm.tolerance = value
+
     def fit(self, start_params=None, transformed=True, cov_type='opg',
             cov_kwds=None, method='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, return_params=False,
@@ -998,6 +1154,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.cov_kwds['cov_type'] = (
                 'Covariance matrix could not be calculated: singular.'
                 ' information matrix.')
+
+        # References of filter and smoother output
+        for name in ['filtered_state', 'filtered_state_cov', 'predicted_state',
+                     'predicted_state_cov', 'forecasts', 'forecasts_error',
+                     'forecasts_error_cov', 'smoothed_state',
+                     'smoothed_state_cov', 'smoothed_measurement_disturbance',
+                     'smoothed_state_disturbance',
+                     'smoothed_measurement_disturbance_cov',
+                     'smoothed_state_disturbance_cov']:
+            setattr(self, name, getattr(self.filter_results, name, None))
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
