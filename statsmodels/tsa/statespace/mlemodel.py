@@ -1335,6 +1335,245 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
+    def test_normality(self, method):
+        """
+        Test for normality of standardized residuals.
+
+        Null hypothesis is normality.
+
+        Parameters
+        ----------
+        method : string {'jarquebera'} or None
+            The statistical test for normality. Must be 'jarquebera' for
+            Jarque-Bera normality test. If None, an attempt is made to select
+            an appropriate test.
+
+        Notes
+        -----
+        If the first `d` loglikelihood values were burned (i.e. in the
+        specified model, `loglikelihood_burn=d`), then this test is calculated
+        ignoring the first `d` residuals.
+
+        See Also
+        --------
+        statsmodels.stats.stattools.jarque_bera
+
+        """
+        if method is None:
+            method = 'jarquebera'
+
+        if method == 'jarquebera':
+            from statsmodels.stats.stattools import jarque_bera
+            d = self.loglikelihood_burn
+            output = np.array(jarque_bera(
+                self.filter_results.standardized_forecasts_error[:, d:],
+                axis=1
+            )).transpose()
+        else:
+            raise NotImplementedError('Invalid normality test method.')
+
+        return output
+
+    def test_heteroskedasticity(self, method, alternative='two-sided',
+                                use_f=True):
+        """
+        Test for heteroskedasticity of standardized residuals
+
+        Tests whether the sum-of-squares in the first third of the sample is
+        significantly different than the sum-of-squares in the last third
+        of the sample. Analogous to a Goldfeld-Quandt test.
+
+        Parameters
+        ----------
+        method : string {'breakvar'} or None
+            The statistical test for heteroskedasticity. Must be 'breakvar'
+            for test of a break in the variance. If None, an attempt is
+            made to select an appropriate test.
+        alternative : string, 'increasing', 'decreasing' or 'two-sided'
+            This specifies the alternative for the p-value calculation. Default
+            is two-sided.
+        use_f : boolean, optional
+            Whether or not to compare against the asymptotic distribution
+            (chi-squared) or the approximate small-sample distribution (F).
+            Default is True (i.e. default is to compare against an F
+            distribution).
+
+        Notes
+        -----
+        The null hypothesis is of no heteroskedasticity. That means different
+        things depending on which alternative is selected:
+
+        - Increasing: Null hypothesis is that the variance is not increasing
+          throughout the sample; that the sum-of-squares in the later
+          subsample is *not* greater than the sum-of-squares in the earlier
+          subsample.
+        - Decreasing: Null hypothesis is that the variance is not decreasing
+          throughout the sample; that the sum-of-squares in the earlier
+          subsample is *not* greater than the sum-of-squares in the later
+          subsample.
+        - Two-sided: Null hypothesis is that the variance is not changing
+          throughout the sample. Both that the sum-of-squares in the earlier
+          subsample is not greater than the sum-of-squares in the later
+          subsample *and* that the sum-of-squares in the later subsample is
+          not greater than the sum-of-squares in the earlier subsample.
+
+        For :math:`h = [T/3]`, the test statistic is:
+
+        .. math::
+
+            H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
+            \left / \sum_{t=d+1}^{d+1+h} \tilde v_t^2 \right .
+
+        where :math:`d` is the number of periods in which the loglikelihood was
+        burned in the parent model (usually corresponding to diffuse
+        initialization).
+
+        This statistic can be tested against an :math:`F(h,h)` distribution.
+        Alternatively, :math:`h H(h)` is asymptotically distributed according
+        to :math:`\chi_h^2`; this second test can be applied by passing
+        `asymptotic=True` as an argument.
+
+        See section 5.4 of [1]_ for the above formula and discussion, as well
+        as additional details.
+
+        TODO
+
+        - Allow specification of :math:`h`
+
+        Returns
+        -------
+        output : array
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable. The array is then sized `(k_endog, 2)`. If the method is
+            called as `het = res.test_heteroskedasticity()`, then `het[0]` is
+            an array of size 2 corresponding to the first endogenous variable,
+            where `het[0][0]` is the test statistic, and `het[0][1]` is the
+            p-value.
+
+        References
+        ----------
+        .. [1] Harvey, Andrew C. 1990.
+           Forecasting, Structural Time Series Models and the Kalman Filter.
+           Cambridge University Press.
+
+        """
+        if method is None:
+            method = 'breakvar'
+
+        if method == 'breakvar':
+            # Store some values
+            squared_resid = self.filter_results.standardized_forecasts_error**2
+            d = self.loglikelihood_burn
+            h = int(np.round((self.nobs - d) / 3))
+
+            # Calculate the test statistics for each endogenous variable
+            test_statistics = np.array([
+                np.sum(squared_resid[i][-h:]) / np.sum(squared_resid[i][d:d+h])
+                for i in range(self.model.k_endog)
+            ])
+
+            # Setup functions to calculate the p-values
+            if use_f:
+                from scipy.stats import f
+                pval_lower = lambda test_statistics: f.cdf(test_statistics, h, h)
+                pval_upper = lambda test_statistics: f.sf(test_statistics, h, h)
+            else:
+                from scipy.stats import chi2
+                pval_lower = lambda test_statistics: chi2.cdf(h*test_statistics, h)
+                pval_upper = lambda test_statistics: chi2.sf(h*test_statistics, h)
+
+            # Calculate the one- or two-sided p-values
+            alternative = alternative.lower()
+            if alternative in ['i', 'inc', 'increasing']:
+                p_values = pval_upper(test_statistics)
+            elif alternative in ['d', 'dec', 'decreasing']:
+                test_statistics = 1. / test_statistics
+                p_values = pval_upper(test_statistics)
+            elif alternative in ['2', '2-sided', 'two-sided']:
+                p_values = 2 * np.minimum(
+                    pval_lower(test_statistics),
+                    pval_upper(test_statistics)
+                )
+            else:
+                raise ValueError('Invalid alternative.')
+
+            output = np.c_[test_statistics, p_values]
+        else:
+            raise NotImplementedError('Invalid heteroskedasticity test'
+                                      ' method.')
+
+        return output
+
+    def test_serial_correlation(self, method, lags=None):
+        """
+        Ljung-box test for no serial correlation of standardized residuals
+
+        Null hypothesis is no serial correlation.
+
+        Parameters
+        ----------
+        method : string {'ljungbox','boxpierece'} or None
+            The statistical test for serial correlation. If None, an attempt is
+            made to select an appropriate test.
+        lags : None, int or array_like
+            If lags is an integer then this is taken to be the largest lag
+            that is included, the test result is reported for all smaller lag
+            length.
+            If lags is a list or array, then all lags are included up to the
+            largest lag in the list, however only the tests for the lags in the
+            list are reported.
+            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+
+        Returns
+        -------
+        output : array
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable and each lag. The array is then sized
+            `(k_endog, 2, lags)`. If the method is called as
+            `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
+            holds the results of the Ljung-Box test (as would be returned by
+            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i`th
+            endogenous variable.
+
+        Notes
+        -----
+        If the first `d` loglikelihood values were burned (i.e. in the
+        specified model, `loglikelihood_burn=d`), then this test is calculated
+        ignoring the first `d` residuals.
+
+        See Also
+        --------
+        statsmodels.stats.diagnostic.acorr_ljungbox
+
+        """
+        if method is None:
+            method = 'ljungbox'
+
+        if method == 'ljungbox' or method == 'boxpierce':
+            from statsmodels.stats.diagnostic import acorr_ljungbox
+            d = self.loglikelihood_burn
+            output = []
+
+            # Default lags for acorr_ljungbox is 40, but may not always have
+            # that many observations
+            if lags is None:
+                lags = min(40, self.nobs - d - 1)
+
+            for i in range(self.model.k_endog):
+                results = acorr_ljungbox(
+                    self.filter_results.standardized_forecasts_error[i][d:],
+                    lags=lags, boxpierce=(method == 'boxpierce'))
+                if method == 'ljungbox':
+                    output.append(results[0:2])
+                else:
+                    output.append(results[2:])
+                
+            output = np.c_[output]
+        else:
+            raise NotImplementedError('Invalid serial correlation test'
+                                      ' method.')
+        return output
+
     def get_prediction(self, start=None, end=None, dynamic=False, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
@@ -1614,6 +1853,91 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.model.impulse_responses(self.params, steps, impulse,
             orthogonalized, cumulative, **kwargs)
 
+    def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
+        """
+        Diagnostic plots for standardized residuals of one endogenous variable
+
+        Parameters
+        ----------
+        variable : integer, optional
+            Index of the endogenous variable for which the diagnostic plots
+            should be created. Default is 0.
+        lags : integer, optional
+            Number of lags to include in the correlogram. Default is 10.
+        fig : Matplotlib Figure instance, optional
+            If given, subplots are created in this figure instead of in a new
+            figure. Note that the 2x2 grid will be created in the provided
+            figure using `fig.add_subplot()`.
+        figsize : tuple, optional
+            If a figure is created, this argument allows specifying a size.
+            The tuple is (width, height).
+
+        Notes
+        -----
+        Produces a 2x2 plot grid with the following plots (ordered clockwise
+        from top left):
+
+        1. Standardized residuals over time
+        2. Histogram plus estimated density of standardized residulas, along
+           with a Normal(0,1) density plotted for reference.
+        3. Normal Q-Q plot, with Normal reference line.
+        4. Correlogram
+
+        See Also
+        --------
+        statsmodels.graphics.gofplots.qqplot
+        statsmodels.graphics.tsaplots.plot_acf
+        """
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+        _import_mpl()
+        fig = create_mpl_fig(fig, figsize)
+        # Eliminate residuals associated with burned likelihoods
+        d = self.loglikelihood_burn
+        resid = self.filter_results.standardized_forecasts_error[variable, d:]
+
+        # Top-left: residuals vs time
+        ax = fig.add_subplot(221)
+        if hasattr(self.data, 'dates') and self.data.dates is not None:
+            x = self.data.dates[self.loglikelihood_burn:]._mpl_repr()
+        else:
+            x = np.arange(len(resid))
+        ax.plot(x, resid)
+        ax.hlines(0, x[0], x[-1], alpha=0.5)
+        ax.set_xlim(x[0], x[-1])
+        ax.set_title('Standardized residual')
+
+        # Top-right: histogram, Gaussian kernel density, Normal density
+        # Can only do histogram and Gaussian kernel density on the non-null
+        # elements
+        resid_nonmissing = resid[~(np.isnan(resid))]
+        ax = fig.add_subplot(222)
+        ax.hist(resid_nonmissing, normed=True, label='Hist')
+        from scipy.stats import gaussian_kde, norm
+        kde = gaussian_kde(resid_nonmissing)
+        xlim = (-1.96*2, 1.96*2)
+        x = np.linspace(xlim[0], xlim[1])
+        ax.plot(x, kde(x), label='KDE')
+        ax.plot(x, norm.pdf(x), label='N(0,1)')
+        ax.set_xlim(xlim)
+        ax.legend()
+        ax.set_title('Histogram plus estimated density')
+
+        # Bottom-left: QQ plot
+        ax = fig.add_subplot(223)
+        from statsmodels.graphics.gofplots import qqplot
+        qqplot(resid, line='s', ax=ax)
+        ax.set_title('Normal Q-Q')
+
+        # Bottom-right: Correlogram
+        ax = fig.add_subplot(224)
+        from statsmodels.graphics.tsaplots import plot_acf
+        plot_acf(resid, ax=ax, lags=lags)
+        ax.set_title('Correlogram')
+
+        ax.set_ylim(-1,1)
+
+        return fig
+
     def summary(self, alpha=.05, start=None, model_name=None):
         """
         Summarize the Model
@@ -1638,6 +1962,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.iolib.summary.Summary
         """
         from statsmodels.iolib.summary import Summary
+
+        # Model specification results
         model = self.model
         title = 'Statespace Model Results'
 
@@ -1654,6 +1980,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if model_name is None:
             model_name = model.__class__.__name__
+
+        # Diagnostic tests results
+        het = self.test_heteroskedasticity(method='breakvar')
+        lb = self.test_serial_correlation(method='ljungbox')
+        jb = self.test_normality(method='jarquebera')
+
+        # Create the tables
 
         top_left = [
             ('Dep. Variable:', None),
@@ -1675,12 +2008,29 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))
 
+        format_str = lambda array: [
+            ', '.join(['{0:.2f}'.format(i) for i in array])
+        ]
+        diagn_left = [('Ljung-Box (Q):', format_str(lb[:,0,-1])),
+                      ('Prob(Q):', format_str(lb[:,1,-1])),
+                      ('Heteroskedasticity (H):', format_str(het[:,0])),
+                      ('Prob(H) (two-sided):', format_str(het[:,1]))
+                      ]
+
+        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:,0])),
+                       ('Prob(JB):', format_str(jb[:,1])),
+                       ('Skew:', format_str(jb[:,2])),
+                       ('Kurtosis:', format_str(jb[:,3]))
+                       ]
+
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right,
                                 title=title)
         if len(self.params) > 0:
             summary.add_table_params(self, alpha=alpha,
                                      xname=self.data.param_names, use_t=False)
+        summary.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+                                title="")
 
         # Add warnings/notes, added to text format only
         etext = []
@@ -1714,7 +2064,6 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                    _attrs)
-
     _methods = {
         'forecast': 'dates',
         'simulate': 'ynames',
