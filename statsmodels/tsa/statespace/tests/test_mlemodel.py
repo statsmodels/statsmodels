@@ -251,8 +251,8 @@ def test_forecast():
 
 
 def test_summary():
-    dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='AS')
-    endog = pd.TimeSeries([1,2], index=dates)
+    dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
+    endog = pd.TimeSeries([1,2,3,4,5], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
 
@@ -261,7 +261,7 @@ def test_summary():
 
     # Test res.summary when the model has dates
     assert_equal(re.search('Sample:\s+01-01-1980', txt) is not None, True)
-    assert_equal(re.search('\s+- 01-01-1981', txt) is not None, True)
+    assert_equal(re.search('\s+- 01-01-1984', txt) is not None, True)
 
     # Test res.summary when `model_name` was not provided
     assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
@@ -472,6 +472,22 @@ def test_pandas_endog():
     mod = check_endog(endog, k_endog=2, **kwargs2)
     mod.filter([])
 
+def test_diagnostics():
+    mod, res = get_dummy_mod()
+
+    # Make sure method=None selects the appropriate test
+    actual = res.test_normality(method=None)
+    desired = res.test_normality(method='jarquebera')
+    assert_allclose(actual, desired)
+
+    actual = res.test_heteroskedasticity(method=None)
+    desired = res.test_heteroskedasticity(method='breakvar')
+    assert_allclose(actual, desired)
+
+    actual = res.test_serial_correlation(method=None)
+    desired = res.test_serial_correlation(method='ljungbox')
+    assert_allclose(actual, desired)
+
 def test_diagnostics_nile_eviews():
     # Test the diagnostic tests using the Nile dataset. Results are from 
     # "Fitting State Space Models with EViews" (Van den Bossche 2011,
@@ -532,5 +548,5 @@ def test_diagnostics_nile_durbinkoopman():
 
     # Test Heteroskedasticity
     # Note: only 2 digits provided in the book
-    actual = res.test_heteroskedasticity(method='sumsquares')[0, 0]
+    actual = res.test_heteroskedasticity(method='breakvar')[0, 0]
     assert_allclose(actual, [0.61], atol=1e-2)

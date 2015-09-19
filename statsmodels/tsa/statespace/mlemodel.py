@@ -1343,9 +1343,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : string {'jb'}
+        method : string {'jarquebera'} or None
             The statistical test for normality. Must be 'jarquebera' for
-            Jarque-Bera normality test.
+            Jarque-Bera normality test. If None, an attempt is made to select
+            an appropriate test.
 
         Notes
         -----
@@ -1358,6 +1359,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.stats.stattools.jarque_bera
 
         """
+        if method is None:
+            method = 'jarquebera'
+
         if method == 'jarquebera':
             from statsmodels.stats.stattools import jarque_bera
             d = self.loglikelihood_burn
@@ -1370,8 +1374,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return output
 
-    def test_heteroskedasticity(self, method='', alternative='two-sided',
-                                asymptotic=False):
+    def test_heteroskedasticity(self, method, alternative='two-sided',
+                                use_f=True):
         """
         Test for heteroskedasticity of standardized residuals
 
@@ -1381,16 +1385,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : string {'sumsquares'}
-            The statistical test for heteroskedasticity. Must be 'sumsquares'
-            for a sum-of-squares test.
+        method : string {'breakvar'} or None
+            The statistical test for heteroskedasticity. Must be 'breakvar'
+            for test of a break in the variance. If None, an attempt is
+            made to select an appropriate test.
         alternative : string, 'increasing', 'decreasing' or 'two-sided'
             This specifies the alternative for the p-value calculation. Default
             is two-sided.
-        asymptotic : boolean, optional
+        use_f : boolean, optional
             Whether or not to compare against the asymptotic distribution
             (chi-squared) or the approximate small-sample distribution (F).
-            Default is False (i.e. default is to compare against an F
+            Default is True (i.e. default is to compare against an F
             distribution).
 
         Notes
@@ -1452,7 +1457,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
            Cambridge University Press.
 
         """
-        if method == 'sumsquares':
+        if method is None:
+            method = 'breakvar'
+
+        if method == 'breakvar':
             # Store some values
             squared_resid = self.filter_results.standardized_forecasts_error**2
             d = self.loglikelihood_burn
@@ -1465,7 +1473,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ])
 
             # Setup functions to calculate the p-values
-            if not asymptotic:
+            if use_f:
                 from scipy.stats import f
                 pval_lower = lambda test_statistics: f.cdf(test_statistics, h, h)
                 pval_upper = lambda test_statistics: f.sf(test_statistics, h, h)
@@ -1496,7 +1504,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return output
 
-    def test_serial_correlation(self, method, lags=None, boxpierce=False):
+    def test_serial_correlation(self, method, lags=None):
         """
         Ljung-box test for no serial correlation of standardized residuals
 
@@ -1504,8 +1512,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : string {'ljungbox'}
-            The statistical test for serial correlation.
+        method : string {'ljungbox','boxpierece'} or None
+            The statistical test for serial correlation. If None, an attempt is
+            made to select an appropriate test.
         lags : None, int or array_like
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
@@ -1514,9 +1523,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             largest lag in the list, however only the tests for the lags in the
             list are reported.
             If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
-        boxpierce : {False, True}
-            If true, then additional to the results of the Ljung-Box test also
-            the Box-Pierce test results are returned.
 
         Returns
         -------
@@ -1540,16 +1546,29 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.stats.diagnostic.acorr_ljungbox
 
         """
-        if method == 'ljungbox':
+        if method is None:
+            method = 'ljungbox'
+
+        if method == 'ljungbox' or method == 'boxpierce':
             from statsmodels.stats.diagnostic import acorr_ljungbox
             d = self.loglikelihood_burn
-            output = np.c_[[
-                acorr_ljungbox(
+            output = []
+
+            # Default lags for acorr_ljungbox is 40, but may not always have
+            # that many observations
+            if lags is None:
+                lags = min(40, self.nobs - d - 1)
+
+            for i in range(self.model.k_endog):
+                results = acorr_ljungbox(
                     self.filter_results.standardized_forecasts_error[i][d:],
-                    lags=lags, boxpierce=boxpierce
-                )
-                for i in range(self.model.k_endog)
-            ]]
+                    lags=lags, boxpierce=(method == 'boxpierce'))
+                if method == 'ljungbox':
+                    output.append(results[0:2])
+                else:
+                    output.append(results[2:])
+                
+            output = np.c_[output]
         else:
             raise NotImplementedError('Invalid serial correlation test'
                                       ' method.')
@@ -1963,7 +1982,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             model_name = model.__class__.__name__
 
         # Diagnostic tests results
-        het = self.test_heteroskedasticity(method='sumsquares')
+        het = self.test_heteroskedasticity(method='breakvar')
         lb = self.test_serial_correlation(method='ljungbox')
         jb = self.test_normality(method='jarquebera')
 
