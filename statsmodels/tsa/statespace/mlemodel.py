@@ -425,7 +425,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             return self.transform_params(mlefit.params)
         # Otherwise construct the results class if desired
         else:
-            res = self.filter(mlefit.params, transformed=False,
+            res = self.smooth(mlefit.params, transformed=False,
                               cov_type=cov_type, cov_kwds=cov_kwds)
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
