@@ -1031,6 +1031,10 @@ class UnobservedComponentsResults(MLEResults):
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
+                          the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1039,10 +1043,14 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.level:
             offset = 0
-            res = self.filter_results
-            out = Bunch(filtered=res.filtered_state[offset],
-                        filtered_cov=res.filtered_state_cov[offset, offset],
+            out = Bunch(filtered=self.filtered_state[offset],
+                        filtered_cov=self.filtered_state_cov[offset, offset],
+                        smoothed=None, smoothed_cov=None,
                         offset=offset)
+            if self.smoothed_state is not None:
+                out.smoothed = self.smoothed_state[offset]
+            if self.smoothed_state_cov is not None:
+                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
         return out
 
     @property
@@ -1059,6 +1067,10 @@ class UnobservedComponentsResults(MLEResults):
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
+                          the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1068,10 +1080,14 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.trend:
             offset = int(spec.level)
-            res = self.filter_results
-            out = Bunch(filtered=res.filtered_state[offset],
-                        filtered_cov=res.filtered_state_cov[offset, offset],
+            out = Bunch(filtered=self.filtered_state[offset],
+                        filtered_cov=self.filtered_state_cov[offset, offset],
+                        smoothed=None, smoothed_cov=None,
                         offset=offset)
+            if self.smoothed_state is not None:
+                out.smoothed = self.smoothed_state[offset]
+            if self.smoothed_state_cov is not None:
+                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
         return out
 
     @property
@@ -1088,6 +1104,10 @@ class UnobservedComponentsResults(MLEResults):
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
+                          the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1099,10 +1119,14 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.seasonal:
             offset = int(spec.trend + spec.level)
-            res = self.filter_results
-            out = Bunch(filtered=res.filtered_state[offset],
-                        filtered_cov=res.filtered_state_cov[offset, offset],
+            out = Bunch(filtered=self.filtered_state[offset],
+                        filtered_cov=self.filtered_state_cov[offset, offset],
+                        smoothed=None, smoothed_cov=None,
                         offset=offset)
+            if self.smoothed_state is not None:
+                out.smoothed = self.smoothed_state[offset]
+            if self.smoothed_state_cov is not None:
+                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
         return out
 
     @property
@@ -1119,6 +1143,10 @@ class UnobservedComponentsResults(MLEResults):
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
+                          the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1132,10 +1160,14 @@ class UnobservedComponentsResults(MLEResults):
         if spec.cycle:
             offset = int(spec.trend + spec.level +
                          spec.seasonal * (spec.seasonal_period - 1))
-            res = self.filter_results
-            out = Bunch(filtered=res.filtered_state[offset],
-                        filtered_cov=res.filtered_state_cov[offset, offset],
+            out = Bunch(filtered=self.filtered_state[offset],
+                        filtered_cov=self.filtered_state_cov[offset, offset],
+                        smoothed=None, smoothed_cov=None,
                         offset=offset)
+            if self.smoothed_state is not None:
+                out.smoothed = self.smoothed_state[offset]
+            if self.smoothed_state_cov is not None:
+                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
         return out
 
     @property
@@ -1152,6 +1184,10 @@ class UnobservedComponentsResults(MLEResults):
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
+                          the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1164,10 +1200,14 @@ class UnobservedComponentsResults(MLEResults):
             offset = int(spec.trend + spec.level +
                          spec.seasonal * (spec.seasonal_period - 1) +
                          2 * spec.cycle)
-            res = self.filter_results
-            out = Bunch(filtered=res.filtered_state[offset],
-                        filtered_cov=res.filtered_state_cov[offset, offset],
+            out = Bunch(filtered=self.filtered_state[offset],
+                        filtered_cov=self.filtered_state_cov[offset, offset],
+                        smoothed=None, smoothed_cov=None,
                         offset=offset)
+            if self.smoothed_state is not None:
+                out.smoothed = self.smoothed_state[offset]
+            if self.smoothed_state_cov is not None:
+                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
         return out
 
     @property
@@ -1183,6 +1223,10 @@ class UnobservedComponentsResults(MLEResults):
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
+                          the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
                           the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
@@ -1204,17 +1248,22 @@ class UnobservedComponentsResults(MLEResults):
                              spec.seasonal * (spec.seasonal_period - 1) +
                              spec.cycle * (1 + spec.stochastic_cycle) +
                              spec.ar_order)
-                res = self.filter_results
                 start = offset
                 end = offset + spec.k_exog
                 out = Bunch(
-                    filtered=res.filtered_state[start:end],
-                    filtered_cov=res.filtered_state_cov[start:end, start:end],
+                    filtered=self.filtered_state[start:end],
+                    filtered_cov=self.filtered_state_cov[start:end, start:end],
+                    smoothed=None, smoothed_cov=None,
                     offset=offset
                 )
+                if self.smoothed_state is not None:
+                    out.smoothed = self.smoothed_state[start:end]
+                if self.smoothed_state_cov is not None:
+                    out.smoothed_cov = (
+                        self.smoothed_state_cov[start:end, start:end])
         return out
 
-    def plot_components(self, which='filtered', alpha=0.05,
+    def plot_components(self, which=None, alpha=0.05,
                         observed=True, level=True, trend=True,
                         seasonal=True, cycle=True, autoregressive=True,
                         legend_loc='upper right', fig=None, figsize=None):
@@ -1223,8 +1272,9 @@ class UnobservedComponentsResults(MLEResults):
 
         Parameters
         ----------
-        which : {'filtered'}, optional
-            Type of state estimate to plot. Default is 'filtered'.
+        which : {'filtered', 'smoothed'}, or None, optional
+            Type of state estimate to plot. Default is 'smoothed' if smoothed
+            results are available otherwise 'filtered'.
         alpha : float, optional
             The confidence intervals for the components are (1 - alpha) %
         level : boolean, optional
@@ -1272,6 +1322,10 @@ class UnobservedComponentsResults(MLEResults):
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         plt = _import_mpl()
         fig = create_mpl_fig(fig, figsize)
+
+        # Determine which results we have
+        if which is None:
+            which = 'filtered' if self.smoothed_state is None else 'smoothed'
 
         # Determine which plots we have
         spec = self.specification
@@ -1348,19 +1402,25 @@ class UnobservedComponentsResults(MLEResults):
             if which not in component_bunch:
                 raise ValueError('Invalid type of state estimate.')
 
-            # Get the predicted values and confidence intervals
+            which_cov = '%s_cov' % which
+
+            # Get the predicted values
             value = component_bunch[which]
-            std_errors = np.sqrt(component_bunch['%s_cov' % which])
-            ci_lower = value - critical_value * std_errors
-            ci_upper = value + critical_value * std_errors
 
             # Plot
             state_label = '%s (%s)' % (component.title(), which)
             ax.plot(dates[llb:], value[llb:], label=state_label)
-            ci_poly = ax.fill_between(
-                dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
-            )
-            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
+
+            # Get confidence intervals
+            if which_cov in component_bunch:
+                std_errors = np.sqrt(component_bunch['%s_cov' % which])
+                ci_lower = value - critical_value * std_errors
+                ci_upper = value + critical_value * std_errors
+                ci_poly = ax.fill_between(
+                    dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+                )
+                ci_label = ('$%.3g \\%%$ confidence interval'
+                            % ((1 - alpha)*100))
 
             # Legend
             ax.legend(loc=legend_loc)
