@@ -515,6 +515,24 @@ class UnobservedComponents(MLEModel):
             2*np.pi / cycle_period_bounds[1], 2*np.pi / cycle_period_bounds[0]
         )
 
+        # update _init_keys attached by super
+        self._init_keys += ['level', 'trend', 'seasonal', 'cycle',
+                            'autoregressive', 'exog', 'irregular',
+                            'stochastic_level', 'stochastic_trend',
+                            'stochastic_seasonal', 'stochastic_cycle',
+                            'damped_cycle', 'cycle_period_bounds',
+                            'mle_regression'] + list(kwargs.keys())
+        # TODO: I think the kwargs or not attached, need to recover from ???
+
+    def _get_init_kwds(self):
+        kwds = super(UnobservedComponents, self)._get_init_kwds()
+
+        for key, value in kwds.items():
+            if value is None and hasattr(self.ssm, key):
+                kwds[key] = getattr(self.ssm, key)
+
+        return kwds
+
     def setup(self):
         """
         Setup the structural time series representation
@@ -992,6 +1010,9 @@ class UnobservedComponentsResults(MLEResults):
 
         self.df_resid = np.inf  # attribute required for wald tests
 
+        # Save _init_kwds
+        self._init_kwds = self.model._get_init_kwds()
+
         # Save the model specification
         self.specification = Bunch(**{
             # Model options
@@ -1434,6 +1455,126 @@ class UnobservedComponentsResults(MLEResults):
             fig.text(0.1, 0.01, text % llb, fontsize='large');
 
         return fig
+
+    def predict(self, start=None, end=None, exog=None, dynamic=False,
+                **kwargs):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        exog : array_like, optional
+            If the model includes exogenous regressors, you must provide
+            exactly enough out-of-sample values for the exogenous variables if
+            end is beyond the last observation in the sample.
+        dynamic : boolean, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        full_results : boolean, optional
+            If True, returns a FilterResults instance; if False returns a
+            tuple with forecasts, the forecast errors, and the forecast error
+            covariance matrices. Default is False.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        """
+        if start is None:
+            start = 0
+
+        # Handle end (e.g. date)
+        _start = self.model._get_predict_start(start)
+        _end, _out_of_sample = self.model._get_predict_end(end)
+
+        # Handle exogenous parameters
+        if _out_of_sample and self.model.k_exog > 0:
+            # Create a new faux model for the extended dataset
+            nobs = self.model.data.orig_endog.shape[0] + _out_of_sample
+            endog = np.zeros((nobs, self.model.k_endog))
+
+            if self.model.k_exog > 0:
+                if exog is None:
+                    raise ValueError('Out-of-sample forecasting in a model'
+                                     ' with a regression component requires'
+                                     ' additional exogenous values via the'
+                                     ' `exog` argument.')
+                exog = np.array(exog)
+                required_exog_shape = (_out_of_sample, self.model.k_exog)
+                if not exog.shape == required_exog_shape:
+                    raise ValueError('Provided exogenous values are not of the'
+                                     ' appropriate shape. Required %s, got %s.'
+                                     % (str(required_exog_shape),
+                                        str(exog.shape)))
+                exog = np.c_[self.model.data.orig_exog.T, exog.T].T
+
+            model_kwargs = self._init_kwds.copy()
+            model_kwargs['exog'] = exog
+            model = UnobservedComponents(endog, **model_kwargs)
+            model.update(self.params)
+
+            # Set the kwargs with the update time-varying state space
+            # representation matrices
+            for name in self.filter_results.shapes.keys():
+                if name == 'obs':
+                    continue
+                mat = getattr(model.ssm, name)
+                if mat.shape[-1] > 1:
+                    if len(mat.shape) == 2:
+                        kwargs[name] = mat[:, -_out_of_sample:]
+                    else:
+                        kwargs[name] = mat[:, :, -_out_of_sample:]
+        elif self.model.k_exog == 0 and exog is not None:
+            warn('Exogenous array provided to predict, but additional data not'
+                 ' required. `exog` argument ignored.')
+
+        return super(UnobservedComponentsResults, self).predict(
+            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        )
+
+    def forecast(self, steps=1, exog=None, **kwargs):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of out of sample forecasts from the end of the
+            sample. Default is 1.
+        exog : array_like, optional
+            If the model includes exogenous regressors, you must provide
+            exactly enough out-of-sample values for the exogenous variables for
+            each step forecasted.
+        **kwargs
+            Additional arguments may required for forecasting beyond the end
+            of the sample. See `FilterResults.predict` for more details.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        """
+        return super(UnobservedComponentsResults, self).forecast(
+            steps, exog=exog, **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name

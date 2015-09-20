@@ -275,3 +275,14 @@ def test_start_params():
     # but that would slow down the test for no real gain)
     mod = UnobservedComponents(endog, exog=exog, autoregressive=2)
     assert_allclose(mod.start_params, [1., 0.5, 0.1, 10, -2], atol=1e-1)
+
+def test_forecast():
+    endog = np.arange(50) + 10
+    exog = np.arange(50)
+
+    mod = UnobservedComponents(endog, exog=exog, level='dconstant')
+    res = mod.smooth([1e-15, 1])
+
+    actual = res.forecast(10, exog=np.arange(50,60)[:,np.newaxis])
+    desired = np.arange(50,60) + 10
+    assert_allclose(actual, desired)

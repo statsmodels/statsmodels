@@ -1924,7 +1924,9 @@ class SARIMAXResults(MLEResults):
                                         str(exog.shape)))
                 exog = np.c_[self.model.data.orig_exog.T, exog.T].T
 
-            model = SARIMAX(endog, exog=exog, **self._init_kwds)
+            model_kwargs = self._init_kwds.copy()
+            model_kwargs['exog'] = exog
+            model = SARIMAX(endog, **model_kwargs)
             model.update(self.params)
 
             # Set the kwargs with the update time-varying state space
