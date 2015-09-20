@@ -1740,6 +1740,10 @@ class SARIMAXResults(MLEResults):
 
         self.df_resid = np.inf  # attribute required for wald tests
 
+        # Save _init_kwds
+        self._init_kwds = self.model._get_init_kwds()
+
+        # Save model specification
         self.specification = Bunch(**{
             # Set additional model parameters
             'k_seasons': self.model.k_seasons,
@@ -1920,21 +1924,7 @@ class SARIMAXResults(MLEResults):
                                         str(exog.shape)))
                 exog = np.c_[self.model.data.orig_exog.T, exog.T].T
 
-            # TODO replace with init_kwds or specification or similar
-            model = SARIMAX(
-                endog,
-                exog=exog,
-                order=self.model.order,
-                seasonal_order=self.model.seasonal_order,
-                trend=self.model.trend,
-                measurement_error=self.model.measurement_error,
-                time_varying_regression=self.model.time_varying_regression,
-                mle_regression=self.model.mle_regression,
-                simple_differencing=self.model.simple_differencing,
-                enforce_stationarity=self.model.enforce_stationarity,
-                enforce_invertibility=self.model.enforce_invertibility,
-                hamilton_representation=self.model.hamilton_representation
-            )
+            model = SARIMAX(endog, exog=exog, **self._init_kwds)
             model.update(self.params)
 
             # Set the kwargs with the update time-varying state space
