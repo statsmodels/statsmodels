@@ -833,8 +833,10 @@ class UnobservedComponents(MLEModel):
             elif key == 'ar_var':
                 param_names.append('sigma2.ar')
             elif key == 'reg_coeff':
-                for i in range(self.k_exog):
-                    param_names.append('beta.%d' % (i+1))
+                param_names += [
+                    'beta.%s' % self.exog_names[i]
+                    for i in range(self.k_exog)
+                ]
             else:
                 param_names.append(key)
         return param_names
