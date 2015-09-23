@@ -868,6 +868,29 @@ class SARIMAX(MLEModel):
 
         return result
 
+    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        params = np.array(params, ndmin=1)
+
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(SARIMAX, self).smooth(params, transformed, cov_type,
+                       return_ssm=True, **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = SARIMAXResultsWrapper(
+                SARIMAXResults(self, params, result, **result_kwargs)
+            )
+
+        return result
 
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
@@ -1717,6 +1740,10 @@ class SARIMAXResults(MLEResults):
 
         self.df_resid = np.inf  # attribute required for wald tests
 
+        # Save _init_kwds
+        self._init_kwds = self.model._get_init_kwds()
+
+        # Save model specification
         self.specification = Bunch(**{
             # Set additional model parameters
             'k_seasons': self.model.k_seasons,
@@ -1897,21 +1924,9 @@ class SARIMAXResults(MLEResults):
                                         str(exog.shape)))
                 exog = np.c_[self.model.data.orig_exog.T, exog.T].T
 
-            # TODO replace with init_kwds or specification or similar
-            model = SARIMAX(
-                endog,
-                exog=exog,
-                order=self.model.order,
-                seasonal_order=self.model.seasonal_order,
-                trend=self.model.trend,
-                measurement_error=self.model.measurement_error,
-                time_varying_regression=self.model.time_varying_regression,
-                mle_regression=self.model.mle_regression,
-                simple_differencing=self.model.simple_differencing,
-                enforce_stationarity=self.model.enforce_stationarity,
-                enforce_invertibility=self.model.enforce_invertibility,
-                hamilton_representation=self.model.hamilton_representation
-            )
+            model_kwargs = self._init_kwds.copy()
+            model_kwargs['exog'] = exog
+            model = SARIMAX(endog, **model_kwargs)
             model.update(self.params)
 
             # Set the kwargs with the update time-varying state space

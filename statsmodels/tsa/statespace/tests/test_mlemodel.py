@@ -12,7 +12,7 @@ import os
 import re
 
 import warnings
-from statsmodels.tsa.statespace import sarimax, kalman_filter
+from statsmodels.tsa.statespace import sarimax, kalman_filter, kalman_smoother
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
@@ -56,6 +56,120 @@ def get_dummy_mod(fit=True, pandas=False):
         res = None
     
     return mod, res
+
+
+def test_wrapping():
+    # Test the wrapping of various Representation / KalmanFilter /
+    # KalmanSmoother methods / attributes
+    mod, _ = get_dummy_mod(fit=False)
+
+    # Test that we can get the design matrix
+    assert_equal(mod['design', 0, 0], 2.0 * np.arange(100))
+
+    # Test that we can set individual elements of the design matrix
+    mod['design', 0, 0, :] = 2
+    assert_equal(mod.ssm['design', 0, 0, :], 2)
+    assert_equal(mod.ssm['design'].shape, (1, 1, 100))
+
+    # Test that we can set the entire design matrix
+    mod['design'] = [[3.]]
+    assert_equal(mod.ssm['design', 0, 0], 3.)
+    # (Now it's no longer time-varying, so only 2-dim)
+    assert_equal(mod.ssm['design'].shape, (1, 1))
+
+    # Test that we can change the following properties: loglikelihood_burn,
+    # initial_variance, tolerance
+    assert_equal(mod.loglikelihood_burn, 1)
+    mod.loglikelihood_burn = 0
+    assert_equal(mod.ssm.loglikelihood_burn, 0)
+
+    assert_equal(mod.tolerance, mod.ssm.tolerance)
+    mod.tolerance = 0.123
+    assert_equal(mod.ssm.tolerance, 0.123)
+
+    assert_equal(mod.initial_variance, 1e10)
+    mod.initial_variance = 1e12
+    assert_equal(mod.ssm.initial_variance, 1e12)
+
+    # Test that we can use the following wrappers: initialization,
+    # initialize_known, initialize_stationary, initialize_approximate_diffuse
+
+    # Initialization starts off as none
+    assert_equal(mod.initialization, None)
+
+    # Since the SARIMAX model may be fully stationary or may have diffuse
+    # elements, it uses a custom initialization by default, but it can be
+    # overridden by users
+    mod.initialize_state()
+    # (The default initialization in this case is known because there is a non-
+    # stationary state corresponding to the time-varying regression parameter)
+    assert_equal(mod.initialization, 'known')
+
+    mod.initialize_approximate_diffuse(1e5)
+    assert_equal(mod.initialization, 'approximate_diffuse')
+    assert_equal(mod.ssm._initial_variance, 1e5)
+
+    mod.initialize_known([5.], [[40]])
+    assert_equal(mod.initialization, 'known')
+    assert_equal(mod.ssm._initial_state, [5.])
+    assert_equal(mod.ssm._initial_state_cov, [[40]])
+
+    mod.initialize_stationary()
+    assert_equal(mod.initialization, 'stationary')
+
+    # Test that we can use the following wrapper methods: set_filter_method,
+    # set_stability_method, set_conserve_memory, set_smoother_output
+
+    # The defaults are as follows:
+    assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    assert_equal(mod.ssm.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
+    assert_equal(mod.ssm.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
+    assert_equal(mod.ssm.smoother_output, kalman_smoother.SMOOTHER_ALL)
+
+    # Now, create the Cython filter object and assert that they have
+    # transferred correctly
+    mod.ssm._initialize_filter()
+    kf = mod.ssm._kalman_filter
+    assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
+    assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
+    # (the smoother object is so far not in Cython, so there is no
+    # transferring)
+
+    # Change the attributes in the model class
+    mod.set_filter_method(100)
+    mod.set_stability_method(101)
+    mod.set_conserve_memory(102)
+    mod.set_smoother_output(103)
+
+    # Assert that the changes have occurred in the ssm class
+    assert_equal(mod.ssm.filter_method, 100)
+    assert_equal(mod.ssm.stability_method, 101)
+    assert_equal(mod.ssm.conserve_memory, 102)
+    assert_equal(mod.ssm.smoother_output, 103)
+
+    # Assert that the changes have *not yet* occurred in the filter object
+    assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
+    assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
+
+    # Re-initialize the filter object (this would happen automatically anytime
+    # loglike, filter, etc. were called)
+    # In this case, an error will be raised since filter_method=100 is not
+    # valid
+    assert_raises(NotImplementedError, mod.ssm._initialize_filter)
+
+    # Now, test the setting of the other two methods by resetting the
+    # filter method to a valid value
+    mod.set_filter_method(1)
+    mod.ssm._initialize_filter()
+    # Retrieve the new kalman filter object (a new object had to be created
+    # due to the changing filter method)
+    kf = mod.ssm._kalman_filter
+
+    assert_equal(kf.filter_method, 1)
+    assert_equal(kf.stability_method, 101)
+    assert_equal(kf.conserve_memory, 102)
 
 
 def test_fit_misc():

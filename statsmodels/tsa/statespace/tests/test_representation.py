@@ -1052,6 +1052,19 @@ def test_impulse_responses():
 
     assert_allclose(actual, desired)
 
+    # Random walk: 2-unit impulse response (i.e. non-orthogonalized irf) is 2
+    # for all periods
+    mod = KalmanFilter(k_endog=1, k_states=1)
+    mod['design', 0, 0] = 1.
+    mod['transition', 0, 0] = 1.
+    mod['selection', 0, 0] = 1.
+    mod['state_cov', 0, 0] = 2.
+
+    actual = mod.impulse_responses(steps=10, impulse=[2])
+    desired = np.ones((11, 1)) * 2
+
+    assert_allclose(actual, desired)
+
     # Random walk: 1-standard-deviation response (i.e. orthogonalized irf) is
     # sigma for all periods (here sigma^2 = 2)
     mod = KalmanFilter(k_endog=1, k_states=1)
@@ -1074,6 +1087,10 @@ def test_impulse_responses():
     mod['state_cov', 0, 0] = 2.
 
     actual = mod.impulse_responses(steps=10, orthogonalized=True,
+                                   cumulative=True)
+    desired = np.cumsum(np.ones((11, 1)) * 2**0.5)[:, np.newaxis]
+
+    actual = mod.impulse_responses(steps=10, impulse=[1], orthogonalized=True,
                                    cumulative=True)
     desired = np.cumsum(np.ones((11, 1)) * 2**0.5)[:, np.newaxis]
 
@@ -1113,11 +1130,23 @@ def test_impulse_responses():
     actual = mod.impulse_responses(steps=10, impulse=0)
     assert_allclose(actual, desired)
 
+    actual = mod.impulse_responses(steps=10, impulse=[1,0])
+    assert_allclose(actual, desired)
+
     actual = mod.impulse_responses(steps=10, impulse=1)
+    assert_allclose(actual, desired)
+
+    actual = mod.impulse_responses(steps=10, impulse=[0,1])
     assert_allclose(actual, desired)
 
     # In this case (with sigma=sigma^2=1), orthogonalized is the same as not
     actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
+    assert_allclose(actual, desired)
+
+    actual = mod.impulse_responses(steps=10, impulse=[1,0], orthogonalized=True)
+    assert_allclose(actual, desired)
+
+    actual = mod.impulse_responses(steps=10, impulse=[0,1], orthogonalized=True)
     assert_allclose(actual, desired)
 
     # Univariate model with two correlated shocks
