@@ -18,7 +18,7 @@ TYPES = {
 }
 
 BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "scal"]
-LAPACK_FUNCTIONS = ["getrf", "getri", "getrs", "potrf", "potri", "potrs"]
+LAPACK_FUNCTIONS = ["getrf", "getri", "getrs", "potrf", "potri", "potrs", "trtrs"]
 
 }}
 
@@ -1754,5 +1754,364 @@ cdef class {{prefix}}KalmanFilter(object):
             # Predicted: 2 -> 1
             {{prefix}}copy(&self.k_states, &self.predicted_state[0, 2], &inc, &self.predicted_state[0, 1], &inc)
             {{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 2], &inc, &self.predicted_state_cov[0, 0, 1], &inc)
+
+cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::1,:] partial_autocorrelations,
+                                                             {{cython_type}} [::1,:] error_variance,
+                                                             int transform_variance,
+                                                             int order, int k_endog):
+    """
+    Notes
+    -----
+
+    This uses the ?trmm BLAS functions which are not available in
+    Scipy v0.11.0
+    """
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+        int k_endog2 = k_endog**2
+        int k_endog_order = k_endog * order
+        int k_endog_order1 = k_endog * (order+1)
+        int info, s, k
+    # Local variables
+    cdef:
+        np.npy_intp dim2[2]
+        {{cython_type}} [::1, :] initial_variance
+        {{cython_type}} [::1, :] forward_variance
+        {{cython_type}} [::1, :] backward_variance
+        {{cython_type}} [::1, :] autocovariances
+        {{cython_type}} [::1, :] forwards1
+        {{cython_type}} [::1, :] forwards2
+        {{cython_type}} [::1, :] backwards1
+        {{cython_type}} [::1, :] backwards2
+        {{cython_type}} [::1, :] forward_factors
+        {{cython_type}} [::1, :] backward_factors
+        {{cython_type}} [::1, :] tmp
+        {{cython_type}} [::1, :] tmp2
+    # Pointers
+    cdef:
+        {{cython_type}} * forwards
+        {{cython_type}} * prev_forwards
+        {{cython_type}} * backwards
+        {{cython_type}} * prev_backwards
+    # ?trmm
+    cdef {{prefix}}trmm_t *{{prefix}}trmm = <{{prefix}}trmm_t*>Capsule_AsVoidPtr(blas.{{prefix}}trmm._cpointer)
+    
+    # dim2[0] = self.k_endog; dim2[1] = storage;
+    # self.forecast = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    # If we want to keep the provided variance but with the constrained
+    # coefficient matrices, we need to make a copy here, and then after the
+    # main loop we will transform the coefficients to match the passed variance
+    if not transform_variance:
+        initial_variance = np.asfortranarray(error_variance.copy())
+        # Need to make the input variance large enough that the recursions
+        # don't lead to zero-matrices due to roundoff error, which would case
+        # exceptions from the Cholesky decompositions.
+        # Note that this will still not always ensure positive definiteness,
+        # and for k_endog, order large enough an exception may still be raised
+        error_variance = np.asfortranarray(np.eye(k_endog, dtype={{dtype}}) * (order + k_endog)**10)
+
+    # Initialize matrices
+    dim2[0] = k_endog; dim2[1] = k_endog;
+    forward_variance = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    backward_variance = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    forward_factors = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    backward_factors = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    tmp2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    dim2[0] = k_endog; dim2[1] = k_endog_order;
+    # \phi_{s,k}, s = 1, ..., p
+    #             k = 1, ..., s+1
+    forwards1 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    forwards2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    # \phi_{s,k}^*
+    backwards1 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    backwards2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    dim2[0] = k_endog; dim2[1] = k_endog_order1;
+    autocovariances = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &forward_variance[0,0], &inc)   # \Sigma_s
+    {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &backward_variance[0,0], &inc)  # \Sigma_s^*,  s = 0, ..., p
+    {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &autocovariances[0,0], &inc)  # \Gamma_s
+    
+    # error_variance_factor = linalg.cholesky(error_variance, lower=True)
+    {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &forward_factors[0,0], &inc)
+    {{prefix}}potrf("L", &k_endog, &forward_factors[0,0], &k_endog, &info)
+    {{prefix}}copy(&k_endog2, &forward_factors[0,0], &inc, &backward_factors[0,0], &inc)
+
+    # We fill in the entries as follows:
+    # [1,1]
+    # [2,2], [2,1]
+    # [3,3], [3,1], [3,2]
+    # ...
+    # [p,p], [p,1], ..., [p,p-1]
+    # the last row, correctly ordered, is then used as the coefficients
+    for s in range(order):  # s = 0, ..., p-1
+        if s % 2 == 0:
+            forwards = &forwards1[0, 0]
+            prev_forwards = &forwards2[0, 0]
+            backwards = &backwards1[0, 0]
+            prev_backwards = &backwards2[0, 0]
+        else:
+            forwards = &forwards2[0, 0]
+            prev_forwards = &forwards1[0, 0]
+            backwards = &backwards2[0, 0]
+            prev_backwards = &backwards1[0, 0]
+
+        # Create the "last" (k = s+1) matrix
+        # Note: this is for k = s+1. However, below we then have to fill
+        # in for k = 1, ..., s in order.
+        # P L*^{-1} = x
+        # x L* = P
+        # L*' x' = P'
+        # forwards[:, s*k_endog:(s+1)*k_endog] = np.dot(
+        #     forward_factors,
+        #     linalg.solve_triangular(
+        #         backward_factors, partial_autocorrelations[:, s*k_endog:(s+1)*k_endog].T,
+        #         lower=True, trans='T').T
+        # )
+        for k in range(k_endog):
+            {{prefix}}copy(&k_endog, &partial_autocorrelations[k,s*k_endog], &k_endog, &tmp[0, k], &inc)
+        {{prefix}}trtrs("L", "T", "N", &k_endog, &k_endog, &backward_factors[0,0], &k_endog,
+                                                           &tmp[0, 0], &k_endog, &info)
+        # {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
+        #   &alpha, &forward_factors[0,0], &k_endog,
+        #           &tmp[0, 0], &k_endog,
+        #   &beta, &forwards[s*k_endog2], &k_endog)
+        {{prefix}}trmm("R", "L", "T", "N", &k_endog, &k_endog,
+          &alpha, &forward_factors[0,0], &k_endog,
+                  &tmp[0, 0], &k_endog)
+        for k in range(k_endog):
+            {{prefix}}copy(&k_endog, &tmp[k,0], &k_endog, &forwards[s*k_endog2 + k*k_endog], &inc)
+
+        # P' L^{-1} = x
+        # x L = P'
+        # L' x' = P
+        # backwards[:, s*k_endog:(s+1)*k_endog] = np.dot(
+        #     backward_factors,
+        #     linalg.solve_triangular(
+        #         forward_factors, partial_autocorrelations[:, s*k_endog:(s+1)*k_endog],
+        #         lower=True, trans='T').T
+        # )
+        {{prefix}}copy(&k_endog2, &partial_autocorrelations[0, s*k_endog], &inc, &tmp[0, 0], &inc)
+        {{prefix}}trtrs("L", "T", "N", &k_endog, &k_endog, &forward_factors[0, 0], &k_endog,
+                                                           &tmp[0, 0], &k_endog, &info)
+        # {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
+        #   &alpha, &backward_factors[0, 0], &k_endog,
+        #           &tmp[0, 0], &k_endog,
+        #   &beta, &backwards[s * k_endog2], &k_endog)
+        {{prefix}}trmm("R", "L", "T", "N", &k_endog, &k_endog,
+          &alpha, &backward_factors[0,0], &k_endog,
+                  &tmp[0, 0], &k_endog)
+        for k in range(k_endog):
+            {{prefix}}copy(&k_endog, &tmp[k,0], &k_endog, &backwards[s*k_endog2 + k*k_endog], &inc)
+
+        # Update the variance
+        # Note: if s >= 1, this will be further updated in the for loop
+        # below
+        # Also, this calculation will be re-used in the forward variance
+        # tmp = np.dot(forwards[:, s*k_endog:(s+1)*k_endog], backward_variance)
+        # tmpT = np.dot(backward_variance.T, forwards[:, s*k_endog:(s+1)*k_endog].T)
+        {{prefix}}gemm("T", "T", &k_endog, &k_endog, &k_endog,
+          &alpha, &backward_variance[0, 0], &k_endog,
+                  &forwards[s * k_endog2], &k_endog,
+          &beta, &tmp[0, 0], &k_endog)
+        # autocovariances[:, (s+1)*k_endog:(s+2)*k_endog] = tmp.copy().T
+        {{prefix}}copy(&k_endog2, &tmp[0, 0], &inc, &autocovariances[0, (s+1)*k_endog], &inc)
+
+        # Create the remaining k = 1, ..., s matrices,
+        # only has an effect if s >= 1
+        for k in range(s):
+            # forwards[:, k*k_endog:(k+1)*k_endog] = (
+            #     prev_forwards[:, k*k_endog:(k+1)*k_endog] -
+            #     np.dot(
+            #         forwards[:, s*k_endog:(s+1)*k_endog],
+            #         prev_backwards[:, (s-k-1)*k_endog:(s-k)*k_endog]
+            #     )
+            # )
+            {{prefix}}copy(&k_endog2, &prev_forwards[k * k_endog2], &inc, &forwards[k * k_endog2], &inc)
+            {{prefix}}gemm("N", "N", &k_endog, &k_endog, &k_endog,
+              &gamma, &forwards[s * k_endog2], &k_endog,
+                      &prev_backwards[(s - k - 1) * k_endog2], &k_endog,
+              &alpha, &forwards[k * k_endog2], &k_endog)
+
+            # backwards[:, k*k_endog:(k+1)*k_endog] = (
+            #     prev_backwards[:, k*k_endog:(k+1)*k_endog] -
+            #     np.dot(
+            #         backwards[:, s*k_endog:(s+1)*k_endog],
+            #         prev_forwards[:, (s-k-1)*k_endog:(s-k)*k_endog]
+            #     )
+            # )
+            {{prefix}}copy(&k_endog2, &prev_backwards[k * k_endog2], &inc, &backwards[k * k_endog2], &inc)
+            {{prefix}}gemm("N", "N", &k_endog, &k_endog, &k_endog,
+              &gamma, &backwards[s * k_endog2], &k_endog,
+                      &prev_forwards[(s - k - 1) * k_endog2], &k_endog,
+              &alpha, &backwards[k * k_endog2], &k_endog)
+
+            # autocovariances[:, (s+1)*k_endog:(s+2)*k_endog] += np.dot(
+            #     autocovariances[:, (k+1)*k_endog:(k+2)*k_endog],
+            #     prev_forwards[:, (s-k-1)*k_endog:(s-k)*k_endog].T
+            # )
+            {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
+              &alpha, &autocovariances[0, (k+1)*k_endog], &k_endog,
+                      &prev_forwards[(s - k - 1) * k_endog2], &k_endog,
+              &alpha, &autocovariances[0, (s+1)*k_endog], &k_endog)
+
+        # Create forward and backwards variances
+        # backward_variance = (
+        #     backward_variance -
+        #     np.dot(
+        #         np.dot(backwards[:, s*k_endog:(s+1)*k_endog], forward_variance),
+        #         backwards[:, s*k_endog:(s+1)*k_endog].T
+        #     )
+        # )
+        {{prefix}}gemm("N", "N", &k_endog, &k_endog, &k_endog,
+          &alpha, &backwards[s * k_endog2], &k_endog,
+                  &forward_variance[0, 0], &k_endog,
+          &beta, &tmp2[0, 0], &k_endog)
+        {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
+          &gamma, &tmp2[0, 0], &k_endog,
+                  &backwards[s * k_endog2], &k_endog,
+          &alpha, &backward_variance[0, 0], &k_endog)
+        # forward_variance = (
+        #     forward_variance -
+        #     np.dot(tmp, forwards[:, s*k_endog:(s+1)*k_endog].T)
+        # )
+        # forward_variance = (
+        #     forward_variance -
+        #     np.dot(tmpT.T, forwards[:, s*k_endog:(s+1)*k_endog].T)
+        # )
+        {{prefix}}gemm("T", "T", &k_endog, &k_endog, &k_endog,
+          &gamma, &tmp[0, 0], &k_endog,
+                  &forwards[s * k_endog2], &k_endog,
+          &alpha, &forward_variance[0, 0], &k_endog)
+
+        # Cholesky factors
+        # forward_factors = linalg.cholesky(forward_variance, lower=True)
+        # backward_factors =  linalg.cholesky(backward_variance, lower=True)
+        {{prefix}}copy(&k_endog2, &forward_variance[0,0], &inc, &forward_factors[0,0], &inc)
+        {{prefix}}potrf("L", &k_endog, &forward_factors[0,0], &k_endog, &info)
+        {{prefix}}copy(&k_endog2, &backward_variance[0,0], &inc, &backward_factors[0,0], &inc)
+        {{prefix}}potrf("L", &k_endog, &backward_factors[0,0], &k_endog, &info)
+
+
+    # If we do not want to use the transformed variance, we need to
+    # adjust the constrained matrices, as presented in Lemma 2.3, see above
+    if not transform_variance:
+        if order % 2 == 0:
+            forwards = &forwards2[0,0]
+        else:
+            forwards = &forwards1[0,0]
+
+        # Here, we need to construct T such that:
+        # variance = T * initial_variance * T'
+        # To do that, consider the Cholesky of variance (L) and
+        # input_variance (M) to get:
+        # L L' = T M M' T' = (TM) (TM)'
+        # => L = T M
+        # => L M^{-1} = T
+        # initial_variance_factor = np.linalg.cholesky(initial_variance)
+        # L'
+        {{prefix}}potrf("U", &k_endog, &initial_variance[0,0], &k_endog, &info)
+        # transformed_variance_factor = np.linalg.cholesky(variance)
+        # M'
+        {{prefix}}copy(&k_endog2, &forward_variance[0,0], &inc, &tmp[0,0], &inc)
+        {{prefix}}potrf("U", &k_endog, &tmp[0,0], &k_endog, &info)
+        # {{prefix}}potri("L", &k_endog, &tmp[0,0], &k_endog, &info)
+
+        # We need to zero out the lower triangle of L', because ?trtrs only
+        # knows that M' is upper triangular
+        for s in range(k_endog - 1):          # column
+            for k in range(s+1, k_endog):     # row
+                initial_variance[k, s] = 0
+
+        # Note that T is lower triangular
+        # L M^{-1} = T
+        # M' T' = L'
+        # transform = np.dot(initial_variance_factor,
+        #                    np.linalg.inv(transformed_variance_factor))
+        {{prefix}}trtrs("U", "N", "N", &k_endog, &k_endog, &tmp[0,0], &k_endog,
+                                                           &initial_variance[0, 0], &k_endog, &info)
+        # Now:
+        # initial_variance = T'
+
+        for s in range(order):
+            # forwards[:, s*k_endog:(s+1)*k_endog] = (
+            #     np.dot(
+            #         np.dot(transform, forwards[:, s*k_endog:(s+1)*k_endog]),
+            #         inv_transform
+            #     )
+            # )
+            # TF T^{-1} = x
+            # TF = x T
+            # (TF)' = T' x'
+
+            # Get TF
+            {{prefix}}copy(&k_endog2, &forwards[s * k_endog2], &inc, &tmp2[0,0], &inc)
+            {{prefix}}trmm("L", "U", "T", "N", &k_endog, &k_endog,
+              &alpha, &initial_variance[0, 0], &k_endog,
+                      &tmp2[0, 0], &k_endog)
+            for k in range(k_endog):
+                {{prefix}}copy(&k_endog, &tmp2[k,0], &k_endog, &tmp[0, k], &inc)
+            # Get x'
+            {{prefix}}trtrs("U", "N", "N", &k_endog, &k_endog, &initial_variance[0,0], &k_endog,
+                                                               &tmp[0, 0], &k_endog, &info)
+            # Get x
+            for k in range(k_endog):
+                {{prefix}}copy(&k_endog, &tmp[k,0], &k_endog, &forwards[s * k_endog2 + k*k_endog], &inc)
+
+
+    if order % 2 == 0:
+        return forwards2, forward_variance
+    else:
+        return forwards1, forward_variance
+
+cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstrained, int order, int k_endog):
+    """
+    Transform arbitrary matrices to matrices with singular values less than
+    one.
+
+    Corresponds to Lemma 2.2 in Ansley and Kohn (1986). See
+    `constrain_stationary_multivariate` for more details.
+    """
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        int k_endog2 = k_endog**2
+        int info, i
+    # Local variables
+    cdef:
+        np.npy_intp dim2[2]
+        {{cython_type}} [::1, :] constrained
+        {{cython_type}} [::1, :] tmp
+        {{cython_type}} [::1, :] eye
+
+    dim2[0] = k_endog; dim2[1] = k_endog * order;
+    constrained = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    dim2[0] = k_endog; dim2[1] = k_endog;
+    tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    eye = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    eye = np.asfortranarray(np.eye(k_endog, dtype={{dtype}}))
+    for i in range(order):
+        {{prefix}}copy(&k_endog2, &eye[0, 0], &inc, &tmp[0, 0], &inc)
+        {{prefix}}gemm("N", "T", &k_endog, &k_endog, &k_endog,
+          &alpha, &unconstrained[0, i*k_endog], &k_endog,
+                  &unconstrained[0, i*k_endog], &k_endog,
+          &alpha, &tmp[0, 0], &k_endog)
+        {{prefix}}potrf("L", &k_endog, &tmp[0, 0], &k_endog, &info)
+        
+        {{prefix}}copy(&k_endog2, &unconstrained[0, i*k_endog], &inc, &constrained[0, i*k_endog], &inc)
+        # constrained.append(linalg.solve_triangular(B, A, lower=lower))
+        {{prefix}}trtrs("L", "N", "N", &k_endog, &k_endog, &tmp[0, 0], &k_endog,
+                                                           &constrained[0, i*k_endog], &k_endog, &info)
+    return constrained
 
 {{endfor}}

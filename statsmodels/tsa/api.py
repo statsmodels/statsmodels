@@ -19,3 +19,5 @@ from .x13 import x13_arima_analysis
 from .statespace import api as statespace
 from .statespace.sarimax import SARIMAX
 from .statespace.structural import UnobservedComponents
+from .statespace.varmax import VARMAX
+from .statespace.dynamic_factor import DynamicFactor
