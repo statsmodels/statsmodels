@@ -1012,6 +1012,10 @@ class DynamicFactorResults(MLEResults):
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+                          the component
+            - `smoothed_cov`: a time series array with the smoothed estimate of
+                          the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1025,7 +1029,12 @@ class DynamicFactorResults(MLEResults):
             out = Bunch(
                 filtered=res.filtered_state[offset:end],
                 filtered_cov=res.filtered_state_cov[offset:end, offset:end],
-                offset=offset)
+                smoothed=None, smoothed_cov=None,
+                        offset=offset)
+            if self.smoothed_state is not None:
+                out.smoothed = self.smoothed_state[offset]
+            if self.smoothed_state_cov is not None:
+                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
         return out
 
     @cache_readonly
@@ -1061,9 +1070,10 @@ class DynamicFactorResults(MLEResults):
         from statsmodels.tools import add_constant
         spec = self.specification
         coefficients = np.zeros((spec.k_endog, spec.k_factors))
+        which = 'filtered' if self.smoothed_state is None else 'smoothed'
 
         for i in range(spec.k_factors):
-            exog = add_constant(self.factors['filtered'][i])
+            exog = add_constant(self.factors[which][i])
             for j in range(spec.k_endog):
                 endog = self.filter_results.endog[j]
                 coefficients[j, i] = OLS(endog, exog).fit().rsquared
