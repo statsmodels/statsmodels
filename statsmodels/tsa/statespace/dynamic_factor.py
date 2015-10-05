@@ -1061,10 +1061,9 @@ class DynamicFactorResults(MLEResults):
         from statsmodels.tools import add_constant
         spec = self.specification
         coefficients = np.zeros((spec.k_endog, spec.k_factors))
-        factors = self.factors.filtered
 
         for i in range(spec.k_factors):
-            exog = add_constant(factors[i])
+            exog = add_constant(self.factors['filtered'][i])
             for j in range(spec.k_endog):
                 endog = self.filter_results.endog[j]
                 coefficients[j, i] = OLS(endog, exog).fit().rsquared
