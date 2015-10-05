@@ -109,14 +109,14 @@ class CheckVARMAX(object):
         # Tests predict + forecast
         assert_allclose(
             self.results.predict(end=end, **kwargs),
-            self.true['predict'].T,
+            self.true['predict'],
             atol=atol)
 
     def test_dynamic_predict(self, end, dynamic, atol=1e-6, **kwargs):
         # Tests predict + dynamic predict + forecast
         assert_allclose(
             self.results.predict(end=end, dynamic=dynamic, **kwargs),
-            self.true['dynamic_predict'].T,
+            self.true['dynamic_predict'],
             atol=atol)
 
 
@@ -168,7 +168,7 @@ class TestVAR(CheckLutkepohl):
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
-            table = tables[i+1]
+            table = tables[i+2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -212,7 +212,7 @@ class TestVAR_diagonal(CheckLutkepohl):
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
-            table = tables[i+1]
+            table = tables[i+2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -307,7 +307,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
-            table = tables[i+1]
+            table = tables[i+2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -394,13 +394,13 @@ class TestVAR_exog(CheckLutkepohl):
 
         # Test it through the results class wrapper
         desired = self.results.forecast(steps=16, exog=exog)
-        assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
+        assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
         # Test it directly
         beta = self.results.params[-9:-6]
         state_intercept = np.concatenate([exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
         desired = super(varmax.VARMAXResultsWrapper, self.results).predict(start=75, end=75+15, state_intercept=state_intercept)
-        assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
+        assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
     def test_summary(self):
         summary = self.results.summary()
@@ -413,7 +413,7 @@ class TestVAR_exog(CheckLutkepohl):
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
-            table = tables[i+1]
+            table = tables[i+2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -477,7 +477,7 @@ class TestVAR_exog2(CheckLutkepohl):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 3)[:, np.newaxis]]
 
         desired = self.results.forecast(steps=16, exog=exog)
-        assert_allclose(desired, self.true['fcast'].T, atol=1e-6)
+        assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
 
 class TestVAR2(CheckLutkepohl):
@@ -505,7 +505,7 @@ class TestVAR2(CheckLutkepohl):
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog * self.model.k_ar
-            table = tables[i+1]
+            table = tables[i+2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -604,7 +604,7 @@ class TestVARMA(CheckFREDManufacturing):
         for i in range(self.model.k_endog):
             offset_ar = i * self.model.k_endog
             offset_ma = self.model.k_endog**2 * self.model.k_ar + i * self.model.k_endog
-            table = tables[i+1]
+            table = tables[i+2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]

@@ -121,14 +121,14 @@ class CheckDynamicFactor(object):
         # Tests predict + forecast
         assert_allclose(
             self.results.predict(end='1982-10-01', **kwargs),
-            self.true['predict'].T,
+            self.true['predict'],
             atol=1e-6)
 
     def test_dynamic_predict(self, **kwargs):
         # Tests predict + dynamic predict + forecast
         assert_allclose(
             self.results.predict(end='1982-10-01', dynamic='1961-01-01', **kwargs),
-            self.true['dynamic_predict'].T,
+            self.true['dynamic_predict'],
             atol=1e-6)
 
 class TestDynamicFactor(CheckDynamicFactor):
@@ -179,7 +179,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         params = self.true['params']
 
         # Make sure we have the right number of tables
-        assert_equal(len(tables), 1 + self.model.k_endog + self.model.k_factors + 1)
+        assert_equal(len(tables), 2 + self.model.k_endog + self.model.k_factors + 1)
 
         # Check the model overview table
         assert_equal(re.search(r'Model:.*DynamicFactor\(factors=2, order=1\)', tables[0]) is None, False)
@@ -188,7 +188,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             offset_loading = self.model.k_factors * i
             offset_var = self.model.k_factors * self.model.k_endog
-            table = tables[i + 1]
+            table = tables[i + 2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -204,7 +204,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         # For each factor, check the output
         for i in range(self.model.k_factors):
             offset = self.model.k_endog * (self.model.k_factors + 1) + i * self.model.k_factors
-            table = tables[self.model.k_endog + i + 1]
+            table = tables[self.model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -218,7 +218,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
             assert_equal(re.search('L1.f2 +' + forg(params[offset + 1], prec=4), table) is None, False)
 
         # Check the Error covariance matrix output
-        table = tables[1 + self.model.k_endog + self.model.k_factors]
+        table = tables[2 + self.model.k_endog + self.model.k_factors]
 
         # -> Make sure we have the right table / table name
         name = self.model.endog_names[i]
@@ -279,7 +279,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         params = self.true['params']
 
         # Make sure we have the right number of tables
-        assert_equal(len(tables), 1 + self.model.k_endog + self.model.k_factors + 1)
+        assert_equal(len(tables), 2 + self.model.k_endog + self.model.k_factors + 1)
 
         # Check the model overview table
         assert_equal(re.search(r'Model:.*DynamicFactor\(factors=1, order=1\)', tables[0]) is None, False)
@@ -289,7 +289,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             offset_loading = self.model.k_factors * i
             offset_exog = self.model.k_factors * self.model.k_endog
-            table = tables[i + 1]
+            table = tables[i + 2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -306,7 +306,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         # For each factor, check the output
         for i in range(self.model.k_factors):
             offset = self.model.k_endog * (self.model.k_factors + 3) + i * self.model.k_factors
-            table = tables[self.model.k_endog + i + 1]
+            table = tables[self.model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -319,7 +319,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             assert_equal(re.search('L1.f1 +' + forg(params[offset + 0], prec=4), table) is None, False)
 
         # Check the Error covariance matrix output
-        table = tables[1 + self.model.k_endog + self.model.k_factors]
+        table = tables[2 + self.model.k_endog + self.model.k_factors]
 
         # -> Make sure we have the right table / table name
         name = self.model.endog_names[i]
@@ -374,7 +374,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         params = self.true['params']
 
         # Make sure we have the right number of tables
-        assert_equal(len(tables), 1 + self.model.k_endog + self.model.k_factors + self.model.k_endog + 1)
+        assert_equal(len(tables), 2 + self.model.k_endog + self.model.k_factors + self.model.k_endog + 1)
 
         # Check the model overview table
         assert_equal(re.search(r'Model:.*DynamicFactor\(factors=1, order=1\)', tables[0]) is None, False)
@@ -383,7 +383,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
             offset_loading = self.model.k_factors * i
-            table = tables[i + 1]
+            table = tables[i + 2]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -398,7 +398,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # For each factor, check the output
         for i in range(self.model.k_factors):
             offset = self.model.k_endog * self.model.k_factors + 6 + i * self.model.k_factors
-            table = tables[1 + self.model.k_endog + i]
+            table = tables[2 + self.model.k_endog + i]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -413,7 +413,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # For each error equation, check the output
         for i in range(self.model.k_endog):
             offset = self.model.k_endog * (self.model.k_factors + i) + 6 + self.model.k_factors
-            table = tables[1 + self.model.k_endog + self.model.k_factors + i]
+            table = tables[2 + self.model.k_endog + self.model.k_factors + i]
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
@@ -428,7 +428,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
                 assert_equal(re.search('L1.e\(%s\) +%s' % (name, forg(params[offset + j], prec=4)), table) is None, False)
 
         # Check the Error covariance matrix output
-        table = tables[1 + self.model.k_endog + self.model.k_factors + self.model.k_endog]
+        table = tables[2 + self.model.k_endog + self.model.k_factors + self.model.k_endog]
 
         # -> Make sure we have the right table / table name
         name = self.model.endog_names[i]
