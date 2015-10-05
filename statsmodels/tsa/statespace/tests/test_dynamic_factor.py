@@ -19,6 +19,12 @@ from numpy.testing import assert_equal, assert_almost_equal, assert_raises, asse
 from nose.exc import SkipTest
 from statsmodels.iolib.summary import forg
 
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except ImportError:
+    have_matplotlib = False
+
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 output_path = 'results' + os.sep + 'results_dynamic_factor_stata.csv'
@@ -28,7 +34,7 @@ output_results = pd.read_csv(current_path + os.sep + output_path)
 class CheckDynamicFactor(object):
     def __init__(self, true, k_factors, factor_order, cov_type='oim',
                  included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
-                 demean=False, **kwargs):
+                 demean=False, filter=True, **kwargs):
         self.true = true
         # 1960:Q1 - 1982:Q4
         dta = pd.DataFrame(
@@ -48,7 +54,8 @@ class CheckDynamicFactor(object):
                                                   factor_order=factor_order,
                                                   **kwargs)
 
-        self.results = self.model.filter(true['params'], cov_type=cov_type)
+        if filter:
+            self.results = self.model.filter(true['params'], cov_type=cov_type)
 
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
@@ -69,11 +76,9 @@ class CheckDynamicFactor(object):
         # Smoke test for creating the summary
         self.results.summary()
 
-        return
-
         # Test cofficient matrix creation (via a different, more direct, method)
         if self.model.factor_order > 0:
-            coefficients = np.array(self.results.params[self.model._params_transition]).reshape(self.model.k_factors, self.model.k_factors * self.model.factor_order)
+            coefficients = np.array(self.results.params[self.model._params_factor_transition]).reshape(self.model.k_factors, self.model.k_factors * self.model.factor_order)
             coefficient_matrices = np.array([
                 coefficients[:self.model.k_factors, i*self.model.k_factors:(i+1)*self.model.k_factors]
                 for i in range(self.model.factor_order)
@@ -81,6 +86,11 @@ class CheckDynamicFactor(object):
             assert_equal(self.results.coefficient_matrices_var, coefficient_matrices)
         else:
             assert_equal(self.results.coefficient_matrices_var, None)
+
+        # Smoke test for plot_coefficients_of_determination
+        if have_matplotlib:
+            fig = self.results.plot_coefficients_of_determination();
+            plt.close(fig)
 
     def test_no_enforce(self):
         return
@@ -446,6 +456,27 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert_equal(re.search('sqrt.cov.dln_inc.dln_consump +' + forg(params[offset + 4], prec=4), table) is None, False)
         assert_equal(re.search('sqrt.var.dln_consump +' + forg(params[offset + 5], prec=4), table) is None, False)
 
+class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
+    """
+    Test for a dynamic factor model where errors are as general as possible,
+    meaning:
+
+    - Errors are vector autocorrelated, VAR(1)
+    - Innovations are correlated
+    """
+    def __init__(self):
+        true = results_dynamic_factor.lutkepohl_dfm_ar2.copy()
+        true['predict'] = output_results.ix[1:, ['predict_dfm_ar2_1', 'predict_dfm_ar2_2', 'predict_dfm_ar2_3']]
+        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_ar2_1', 'dyn_predict_dfm_ar2_2', 'dyn_predict_dfm_ar2_3']]
+        super(TestDynamicFactor_ar2_errors, self).__init__(true, k_factors=1, factor_order=1, error_order=2)
+
+    def test_mle(self):
+        with warnings.catch_warnings(record=True) as w:
+            mod = self.model
+            res = mod.fit(method='lbfgs', maxiter=10000, disp=-1)
+            res = mod.fit(res.params, method='nm', maxiter=10000, maxfev=10000, disp=False)
+            assert_allclose(res.llf, self.results.llf, atol=1e-3)
+
 class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     """
     Test for a dynamic factor model where innovations are uncorrelated and
@@ -538,3 +569,10 @@ def test_misspecification():
 
     # Bad error_cov_type specification
     assert_raises(ValueError, dynamic_factor.DynamicFactor, endog, k_factors=1, factor_order=1, order=(1,0), error_cov_type='')
+
+def test_miscellaneous():
+    # Initialization with 1-dimensional exog array
+    exog = np.arange(75)
+    mod = CheckDynamicFactor(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
+    exog = pd.Series(np.arange(75), index=pd.date_range(start='1960-04-01', end='1978-10-01', freq='QS'))
+    mod = CheckDynamicFactor(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)

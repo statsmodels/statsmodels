@@ -114,6 +114,28 @@ lutkepohl_dfm_gen = {
     'bic': -1133.511,
 }
 
+lutkepohl_dfm_ar2 = {
+    'params': [
+        .00419132, .0044007, .00422976,    # Factor loadings
+        .00188101, .0000786, .0000418,     # Idiosyncratic variance
+        .97855802,                         # Factor transition
+        -.28856258, -.14910552,            # Error transition parameters
+        -.41544832, -.26706536,
+        -.72661178, -.27278821,
+    ],
+    'var_oim': [
+        1.176e-06, 7.304e-07, 6.726e-07,   # Factor loadings
+        9.517e-08, 2.300e-10, 1.389e-10,   # Idiosyncratic variance
+        .00041159,                         # Factor transition
+        .0131511, .01296008,               # Error transition parameters
+        .01748435, .01616862,
+        .03262051, .02546648,
+    ],
+    'loglike': 607.4203109232711,
+    'aic': -1188.841,
+    'bic': -1158.713,
+}
+
 lutkepohl_dfm_scalar = {
     'params': [
         .04424851, .00114077, .00275081,  # Factor loadings

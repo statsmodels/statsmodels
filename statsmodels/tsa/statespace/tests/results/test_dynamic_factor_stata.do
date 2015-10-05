@@ -81,6 +81,19 @@ predict dyn_predict_dfm_gen_1, dynamic(tq(1961q1)) equation(dln_inv)
 predict dyn_predict_dfm_gen_2, dynamic(tq(1961q1)) equation(dln_inc)
 predict dyn_predict_dfm_gen_3, dynamic(tq(1961q1)) equation(dln_consump)
 
+// Dynamic factors, with AR(2) errors
+dfactor (dln_inv dln_inc dln_consump = , noconstant ar(1/2))  (f = , ar(1)) if qtr<=tq(1978q4)
+
+// predict + forecast, see above
+predict predict_dfm_ar2_1, dynamic(tq(1979q1)) equation(dln_inv)
+predict predict_dfm_ar2_2, dynamic(tq(1979q1)) equation(dln_inc)
+predict predict_dfm_ar2_3, dynamic(tq(1979q1)) equation(dln_consump)
+
+// predict + dynamic predict + forecast, see above
+predict dyn_predict_dfm_ar2_1, dynamic(tq(1961q1)) equation(dln_inv)
+predict dyn_predict_dfm_ar2_2, dynamic(tq(1961q1)) equation(dln_inc)
+predict dyn_predict_dfm_ar2_3, dynamic(tq(1961q1)) equation(dln_consump)
+
 // Dynamic factors, with scalar error covariance + constant (1 exog)
 // Note: estimation does not converge w/o constant term
 dfactor (dln_inv dln_inc dln_consump = c, noconstant covstructure(dscalar))  (f = , ar(1)) if qtr<=tq(1978q4)
