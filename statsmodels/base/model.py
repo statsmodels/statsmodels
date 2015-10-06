@@ -1,5 +1,7 @@
 from __future__ import print_function
-from statsmodels.compat.python import iterkeys, lzip, range, reduce
+import warnings
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.compat.python import lzip, range, reduce
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
@@ -474,6 +476,7 @@ class LikelihoodModel(Model):
         return mlefit
 
 
+
 #TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
     """
@@ -573,7 +576,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         #Initialize is called by
         #statsmodels.model.LikelihoodModel.__init__
         #and should contain any preprocessing that needs to be done for a model
-        from statsmodels.tools import tools
         if self.exog is not None:
             # assume constant
             self.df_model = float(np_matrix_rank(self.exog) - 1)
@@ -1310,6 +1312,129 @@ class LikelihoodModelResults(Results):
         res = self.wald_test(r_matrix, cov_p=cov_p, scale=scale,
                              invcov=invcov, use_f=True)
         return res
+
+    @staticmethod
+    def _is_lr_test_invalid(model, attribute, expected_value):
+        """
+        Likelihood test is not valid when:
+            1) cov_type of model is set to nonrobust
+            2) .fit(method=REML) in case of MixedLM
+
+        Parameters
+        ----------
+        model: Result instance
+
+        attribute: string
+            Attribute to be looked up in the input model.
+
+        expected_value: string
+            Expected value of the input attribute.
+
+        Returns
+        -------
+        True if the test is invalid
+        """
+        if getattr(model, attribute, expected_value) != expected_value:
+            return True
+        return False
+
+    def compare_lr_test(self, restricted, large_sample=False):
+        """
+        Likelihood ratio test to test whether restricted model is correct
+
+        Parameters
+        ----------
+        restricted : Result instance
+            The restricted model is assumed to be nested in the current model.
+            The result instance of the restricted model is required to have two
+            attributes, residual sum of squares, `ssr`, residual degrees of
+            freedom, `df_resid`.
+
+        large_sample : bool
+            Flag indicating whether to use a heteroskedasticity robust version
+            of the LR test, which is a modified LM test.
+
+        Returns
+        -------
+        lr_stat : float
+            likelihood ratio, chisquare distributed with df_diff degrees of
+            freedom
+        p_value : float
+            p-value of the test statistic
+        df_diff : int
+            degrees of freedom of the restriction, i.e. difference in df between
+            models
+
+        Notes
+        -----
+
+        The exact likelihood ratio is valid for homoskedastic data, and is
+        defined as
+
+        .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
+           {\\mathcal{L}_{alternative}}\\right)
+
+        where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
+        distributed as chisquare with df equal to difference in number of
+        parameters or equivalently difference in residual degrees of freedom.
+
+        The large sample version of the likelihood ratio is defined as
+
+        .. math:: D=n s^{\\prime}S^{-1}s
+
+        where :math:`s=n^{-1}\\sum_{i=1}^{n} s_{i}`
+
+        .. math:: s_{i} = x_{i,alternative} \\epsilon_{i,null}
+
+        is the average score of the model evaluated using the residuals from
+        null model and the regressors from the alternative model and :math:`S`
+        is the covariance of the scores, :math:`s_{i}`.  The covariance of the
+        scores is estimated using the same estimator as in the alternative model.
+
+        This test compares the loglikelihood of the two models.
+        This may not be a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results without taking unspecified
+        heteroscedasticity or correlation into account.
+
+        TODO: put into separate function, needs tests
+        """
+
+        if large_sample:
+            return self.compare_lm_test(restricted, use_lr=True)
+
+        if self._is_lr_test_invalid(self, 'cov_type', 'nonrobust') or self._is_lr_test_invalid(restricted, 'cov_type', 'nonrobust'):
+            warnings.warn('Likelihood Ratio test is likely invalid with ' +
+                          'robust covariance, proceeding anyway',
+                          InvalidTestWarning)
+
+        if self._is_lr_test_invalid(self, 'method', 'ML') or self._is_lr_test_invalid(restricted, 'method', 'ML'):
+            warnings.warn('Likelihood Ratio test is likely invalid with ' +
+                          '.fit(REML=True), proceeding anyway',
+                          InvalidTestWarning)
+
+        llf_full = self.llf
+        llf_restr = restricted.llf
+        df_full = None
+        df_restr = None
+        # Hack df_modelwc is not defined for all models, such as the OLS
+        # which has an existing use case for compare_lr_test
+        try:
+            df_full = self.df_modelwc
+            df_restr= restricted.df_modelwc
+        except AttributeError:
+            df_full = self.df_resid
+            df_restr = restricted.df_resid
+
+
+        lrdf = (df_restr - df_full)
+        ## Hack for MixedLM
+        if hasattr(self, 'k_re'):
+            lrdf = -lrdf
+
+        lrstat = -2*(llf_restr - llf_full)
+        lr_pvalue = stats.chi2.sf(lrstat, lrdf)
+        return lrstat, lr_pvalue, lrdf
 
     #TODO: untested for GLMs?
     def wald_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None,
