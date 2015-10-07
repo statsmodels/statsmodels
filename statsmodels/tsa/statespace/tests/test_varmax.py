@@ -139,7 +139,7 @@ class CheckLutkepohl(CheckVARMAX):
         self.model = varmax.VARMAX(endog, order=order, trend=trend,
                                    error_cov_type=error_cov_type, **kwargs)
 
-        self.results = self.model.filter(true['params'], cov_type=cov_type)
+        self.results = self.model.smooth(true['params'], cov_type=cov_type)
 
     def test_predict(self, **kwargs):
         super(CheckLutkepohl, self).test_predict(end='1982-10-01', **kwargs)
@@ -261,7 +261,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         # Create another filter results with positive measurement errors
         self.true_measurement_error_variances = [1., 2., 3.]
         params = np.r_[true['params'][:-3], self.true_measurement_error_variances]
-        self.results2 = self.model.filter(params)
+        self.results2 = self.model.smooth(params)
 
     def test_mle(self):
         # With the additional measurment error parameters, this wouldn't be
@@ -549,7 +549,7 @@ class CheckFREDManufacturing(CheckVARMAX):
             self.model = varmax.VARMAX(endog, order=order, trend=trend,
                                        error_cov_type=error_cov_type, **kwargs)
 
-        self.results = self.model.filter(true['params'], cov_type=cov_type)
+        self.results = self.model.smooth(true['params'], cov_type=cov_type)
 
 
 class TestVARMA(CheckFREDManufacturing):
