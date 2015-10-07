@@ -304,7 +304,32 @@ class VARMAX(MLEModel):
             )
 
         return result
-        filter.__doc__ = MLEModel.filter.__doc__
+    filter.__doc__ = MLEModel.filter.__doc__
+
+    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        params = np.array(params, ndmin=1)
+
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(VARMAX, self).smooth(params, transformed,
+                       cov_type, return_ssm=True, **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = VARMAXResultsWrapper(
+                VARMAXResults(self, params, result, **result_kwargs)
+            )
+
+        return result
+    smooth.__doc__ = MLEModel.smooth.__doc__
 
     @property
     def start_params(self):
