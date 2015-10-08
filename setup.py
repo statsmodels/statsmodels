@@ -90,7 +90,7 @@ def generate_cython():
 
 
 def strip_rc(version):
-    return re.sub(r"rc\d+$", "", version)
+    return re.sub(r"(rc|post|dev)\d+$", "", version)
 
 
 def check_dependency_versions(min_versions):

@@ -3,7 +3,8 @@
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
 language: python
-
+sudo: false
+cache: pip
 env:
   # Default values for common packages, override as needed
   global:
@@ -14,7 +15,7 @@ env:
 matrix:
   fast_finish: true
   include:
-  - python: 2.7
+  - python: 2.6
     env:
     - PYTHON=2.6
     - NUMPY="1.6.2=py26_4"
@@ -29,18 +30,32 @@ matrix:
     - COVERAGE=true
   - python: 2.7
     env:
+    - PYTHON=2.7
+    - NUMPY=1.9.3
+    - SCIPY=0.16.0
+    - MATPLOTLIB=1.4.3
+    - PANDAS=0.16.2
+  - python: 3.3
+    env:
     - PYTHON=3.3
     - NUMPY=1.8
     - SCIPY=0.13
     - MATPLOTLIB=1.3
     - PANDAS=0.13
-  - python: 2.7
+  - python: 3.4
     env:
     - PYTHON=3.4
     - NUMPY=1.9
     - SCIPY=0.14
     - PANDAS=0.14
     - MATPLOTLIB=1.4
+  - python: 3.4
+    env:
+    - PYTHON=3.4
+    - NUMPY=1.9.3
+    - SCIPY=0.16.0
+    - PANDAS=0.16.2
+    - MATPLOTLIB=1.4.3
   - python: 2.7
     env:
     - PYTHON=2.7
