@@ -316,7 +316,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
 ##        cm = np.sum(np.arange(len(pvals)))
 ##        ecdffactor = ecdf(pvals_sorted)/cm
     else:
-        raise ValueError('only indep and necorr implemented')
+        raise ValueError('only indep and negcorr implemented')
     reject = pvals_sorted <= ecdffactor*alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
