@@ -255,6 +255,18 @@ class Mediation(object):
 
 
     def fit(self, method="parametric", n_rep=1000):
+        """
+        Fit a regression model to assess mediation.
+
+        Arguments
+        ---------
+        method : string
+            Either 'parametric' or 'bootstrap'.
+        n_rep : integer
+            The number of simulation replications.
+
+        Returns a MediationResults object.
+        """
 
         if method.startswith("para"):
             # Initial fit to unperturbed data.
@@ -319,6 +331,14 @@ def _pvalue(vec):
 
 
 class MediationResults(object):
+    """
+    A class for holding the results of a mediation analysis.
+
+    The following terms are used in the summary output:
+
+    ACME : average causal mediated effect
+    ADE : average direct effect
+    """
 
     def __init__(self, indirect_effects, direct_effects):
 
@@ -346,6 +366,9 @@ class MediationResults(object):
 
 
     def summary(self, alpha=0.05):
+        """
+        Provide a summary of a mediation analysis.
+        """
 
         columns = ["Estimate", "Lower CI bound", "Upper CI bound", "P-value"]
         index = ["ACME (control)", "ACME (treated)", "ADE (control)", "ADE (treated)",
