@@ -454,38 +454,7 @@ class SquareTable(Table):
 
 
     def homogeneity(self, method="stuart_maxwell"):
-        """
-        Compare row and column marginal distributions.
-
-        Parameters
-        ----------
-        method : string
-            Either 'stuart_maxwell' or 'bhapkar', leading to two different
-            estimates of the covariance matrix for the estimated
-            difference between the row margins and the column margins.
-
-        Returns a bunch with attributes:
-
-        statistic : float
-            The chi^2 test statistic
-        pvalue : float
-            The p-value of the test statistic
-        df : integer
-            The degrees of freedom of the reference distribution
-
-        Notes
-        -----
-        This test is based on a sampling model in which the units are
-        independent and identically distributed, with each unit being
-        classified with respect to two categorical variables.
-
-        For a 2x2 table this is equivalent to McNemar's test.  More
-        generally the procedure tests the null hypothesis that the
-        marginal distribution of the row factor is equal to the
-        marginal distribution of the column factor.  For this to be
-        meaningful, the two factors must have the same sample space
-        (i.e. the same categories).
-        """
+        # docstring below
 
         if self.table.shape[0] < 1:
             raise ValueError('table is empty')
@@ -559,6 +528,7 @@ class SquareTable(Table):
 
         return tab
 
+
 SquareTable.symmetry.__doc__ = """
 Test for symmetry of a joint distribution.
 
@@ -598,6 +568,38 @@ mcnemar
 homogeneity
 """ % {'sampling_model' : _iid_sampling}
 
+
+
+SquareTable.homogeneity.__doc__ = """
+Compare row and column marginal distributions.
+
+Parameters
+----------
+method : string
+    Either 'stuart_maxwell' or 'bhapkar', leading to two different
+    estimates of the covariance matrix for the estimated
+    difference between the row margins and the column margins.
+
+Returns a bunch with attributes:
+
+statistic : float
+    The chi^2 test statistic
+pvalue : float
+    The p-value of the test statistic
+df : integer
+    The degrees of freedom of the reference distribution
+
+Notes
+-----
+%(sampling_model)s
+
+For a 2x2 table this is equivalent to McNemar's test.  More
+generally the procedure tests the null hypothesis that the
+marginal distribution of the row factor is equal to the
+marginal distribution of the column factor.  For this to be
+meaningful, the two factors must have the same sample space
+(i.e. the same categories).
+""" % {'sampling_model' : _iid_sampling}
 
 
 class Table2x2(SquareTable):
