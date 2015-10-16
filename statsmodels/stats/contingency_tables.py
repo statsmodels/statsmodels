@@ -1,22 +1,28 @@
 """
-Methods for analyzing contingency tables.
+Methods for analyzing two-way contingency tables (i.e. frequency
+tables for observed units that are classified with respect to either
+one or two categorical variables).
 
 The main classes are:
 
-Table : implements methods that can be applied to any two-way
-contingency table.
+  * Table : implements methods that can be applied to any two-way
+  contingency table.
 
-SquareTable : implements methods that can be applied to a square
-two-way contingency table.
+  * SquareTable : implements methods that can be applied to a square
+  two-way contingency table.
 
-Table2x2 : implements methods that can be applied to a 2x2 contingency
-table.
+  * Table2x2 : implements methods that can be applied to a 2x2
+  contingency table.
 
-StratifiedTables : implements methods that can be applied to a
-collection of contingency tables.
+  * StratifiedTables : implements methods that can be applied to a
+  collection of contingency tables.
 
 Also contains functions for conducting Mcnemar's test and Cochran's q
 test.
+
+Note that the inference procedures may depend on how the data were
+sampled.  In general the observed units are independent and
+identically distributed.
 """
 
 from __future__ import division
@@ -27,10 +33,22 @@ import pandas as pd
 from statsmodels import iolib
 
 
-def _handle_pandas_square(table):
+_iid_sampling = """\
+This result is based on a sampling model in which the units are
+independent and identically distributed, with each unit being
+classified with respect to two categorical variables."""
+
+
+_stratified_iid_sampling = """\
+This result is based on a sampling model in which the units are
+independent within and between strata."""
+
+
+def _make_df_square(table):
     """
-    Reindex a pandas table so that it becomes square (extending the
-    row and column index as needed).
+    Reindex a pandas DataFrame so that it becomes square, meaning that
+    the row and column indices contain the same values, in the same
+    order.  The row and column index are extended to achieve this.
     """
 
     if not isinstance(table, pd.DataFrame):
@@ -42,13 +60,13 @@ def _handle_pandas_square(table):
         table = table.reindex(ix, axis=0)
         table = table.reindex(ix, axis=1)
 
-    # Ensures that the roes and columns are in the same order.
+    # Ensures that the rows and columns are in the same order.
     table = table.reindex(table.columns)
 
     return table
 
 
-class _bunch(object):
+class _Bunch(object):
     pass
 
 
@@ -63,6 +81,11 @@ class Table(object):
     shift_zeros : boolean
         If True and any cell count is zero, add 0.5 to all values
         in the table.
+
+    Attributes
+    ----------
+    table_orig : array-like
+        The original table is cached as `table_orig`.
 
     See also
     --------
@@ -80,15 +103,18 @@ class Table(object):
 
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data, shift_zeros=True):
         """
         Construct a Table object from data.
 
         Parameters
         ----------
         data : array-like
-            The raw data, from which a cross-table is constructed
+            The raw data, from which a contingency table is constructed
             using the first two columns.
+        shift_zeros : boolean
+            If True and any cell count is zero, add 0.5 to all values
+            in the table.
 
         Returns
         -------
@@ -100,66 +126,25 @@ class Table(object):
         else:
             table = pd.crosstab(data[:, 0], data[:, 1])
 
-        return cls(table)
+        return cls(table, shift_zeros)
 
 
     @cache_readonly
     def nominal_association(self):
-        """
-        Assess independence between rows and columns using chi^2 test.
+        # docstring below
 
-        Returns
-        -------
-        stat : float
-            The chi^2 test statistic.
-        df : integer
-            The degrees of freedom of the reference distribution
-        pvalue : float
-            The p-value for the test.
-        """
-        stat = np.asarray(self.chi2_contribs).sum()
+        statistic = np.asarray(self.chi2_contribs).sum()
         df = np.prod(np.asarray(self.table.shape) - 1)
-        pvalue = 1 - stats.chi2.cdf(stat, df)
-        b = _bunch()
-        b.stat = stat
+        pvalue = 1 - stats.chi2.cdf(statistic, df)
+        b = _Bunch()
+        b.statistic = statistic
         b.df = df
         b.pvalue = pvalue
         return b
 
 
     def ordinal_association(self, row_scores=None, col_scores=None):
-        """
-        Assess independence between rows and columns for ordinal factors.
-
-        This is the 'linear by linear' association test.
-
-        Parameters
-        ----------
-        row_scores : array-like
-            An array of numeric row scores
-        col_scores : array-like
-            An array of numeric column scores
-
-        Returns a bunch with the following attributes:
-
-        stat : float
-            The test statistic.
-        stat_e0 : float
-            The expected value of the test statistic under the null
-            hypothesis.
-        stat_sd0 : float
-            The standard deviation of the test statistic under the
-            null hypothesis.
-        zscore : float
-            The Z-score for the test statistic.
-        pvalue : float
-            The p-value for the test.
-
-        Notes
-        -----
-        Using the default row and column scores for the linear-by-linear
-        association test gives the Cochran-Armitage trend test.
-        """
+        # docstring below
 
         if row_scores is None:
             row_scores = np.arange(self.table.shape[0])
@@ -174,7 +159,7 @@ class Table(object):
             raise ValueError("The length of `col_scores` must match the second dimension of `table`.")
 
         # The test statistic
-        stat = np.dot(row_scores, np.dot(self.table, col_scores))
+        statistic = np.dot(row_scores, np.dot(self.table, col_scores))
 
         # Some needed quantities
         n_obs = self.table.sum()
@@ -190,13 +175,13 @@ class Table(object):
         v_stat = (u2m - um**2 / n_obs) * (v2n - vn**2 / n_obs) / (n_obs - 1)
         sd_stat = np.sqrt(v_stat)
 
-        zscore = (stat - e_stat) / sd_stat
+        zscore = (statistic - e_stat) / sd_stat
         pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
 
-        b = _bunch()
-        b.stat = stat
-        b.stat_e0 = e_stat
-        b.stat_sd0 = sd_stat
+        b = _Bunch()
+        b.statistic = statistic
+        b.null_mean = e_stat
+        b.null_sd = sd_stat
         b.zscore = zscore
         b.pvalue = pvalue
         return b
@@ -256,7 +241,7 @@ class Table(object):
     @cache_readonly
     def standardized_resids(self):
         """
-        Residuals with unit variance.
+        Residuals with approximately unit variance.
         """
         row, col = self.marginal_probabilities
         sresids = self.resids / np.sqrt(np.outer(1 - row, 1 - col))
@@ -315,7 +300,11 @@ class Table(object):
 
         The cumulative log odds ratio at a given pair of thresholds is
         calculated by reducing the table to a 2x2 table based on
-        dichotomizing the rows and columns.
+        dichotomizing the rows and columns at the given thresholds.
+
+        The table of cumulative log odds ratios presents all possible
+        cumulative log odds ratios that can be formed from a given
+        table.
         """
 
         ta = self.table.cumsum(0).cumsum(1)
@@ -345,8 +334,69 @@ class Table(object):
         The cumulative odds ratios are calculated by reducing the
         table to a 2x2 table based on cutting the rows and columns at
         a given point.
+
+        The table of cumulative odds ratios presents all possible
+        cumulative odds ratios that can be formed from a given table.
         """
         return np.exp(self.cumulative_log_oddsratios)
+
+
+Table.nominal_association.__doc__ = """
+Assess independence between rows and columns using chi^2 test.
+
+Returns
+-------
+A bunch with the following fields:
+
+statistic : float
+    The chi^2 test statistic.
+df : integer
+    The degrees of freedom of the reference distribution
+pvalue : float
+    The p-value for the test.
+
+Notes
+-----
+%(sampling_model)s
+""" % { 'sampling_model' : _iid_sampling }
+
+
+Table.ordinal_association.__doc__ = """
+Assess independence between rows and columns for ordinal factors.
+
+This is the 'linear by linear' association test.
+
+Parameters
+----------
+row_scores : array-like
+    An array of numeric row scores
+col_scores : array-like
+    An array of numeric column scores
+
+Returns a bunch with the following attributes:
+
+statistic : float
+    The test statistic.
+null_mean : float
+    The expected value of the test statistic under the null
+    hypothesis.
+null_sd : float
+    The standard deviation of the test statistic under the
+    null hypothesis.
+zscore : float
+    The Z-score for the test statistic.
+pvalue : float
+    The p-value for the test.
+
+Notes
+-----
+The scores define the trend to which the test is most sensitive.
+
+Using the default row and column scores gives the
+Cochran-Armitage trend test.
+
+%(sampling_model)s
+""" % {'sampling_model' : _iid_sampling}
 
 
 class SquareTable(Table):
@@ -356,21 +406,22 @@ class SquareTable(Table):
     Parameters
     ----------
     table : array-like
-        A square contingency table.
+        A square contingency table, or DataFrame that is converted
+        to a square form.
     shift_zeros : boolean
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
     These methods should only be used when the rows and columns of the
     table have the same categories.  If `table` is provided as a
-    Pandas array, the row and column indices will be extended to
+    Pandas DataFrame, the row and column indices will be extended to
     create a square table.  Otherwise the table should be provided in
     a square form, with the (implicit) row and column categories
     appearing in the same order.
     """
 
     def __init__(self, table, shift_zeros=True):
-        table = _handle_pandas_square(table)
+        table = _make_df_square(table) # Non-pandas passes through
         k1, k2 = table.shape
         if k1 != k2:
             raise ValueError('table must be square')
@@ -379,42 +430,7 @@ class SquareTable(Table):
 
 
     def symmetry(self, method="bowker"):
-        """
-        Test for symmetry of a joint distribution.
-
-        This procedure tests the null hypothesis that the joint
-        distribution is symmetric around the main diagonal, that is
-
-        .. math::
-
-        p_{i, j} = p_{j, i}  for all i, j
-
-        Returns
-        -------
-        statistic : float
-            chisquare test statistic
-        p-value : float
-            p-value of the test statistic based on chisquare distribution
-        df : int
-            degrees of freedom of the chisquare distribution
-
-        Notes
-        -----
-        The implementation is based on the SAS documentation. R includes
-        it in `mcnemar.test` if the table is not 2 by 2.  However a more
-        direct generalization of the McNemar test to larger tables is
-        provided by the homogeneity test (TableSymmetry.homogeneity).
-
-        The p-value is based on the chi-square distribution which requires
-        that the sample size is not very small to be a good approximation
-        of the true distribution. For 2x2 contingency tables the exact
-        distribution can be obtained with `mcnemar`
-
-        See Also
-        --------
-        mcnemar
-        homogeneity
-        """
+        # docstring below
 
         if method.lower() != "bowker":
             raise ValueError("method for symmetry testing must be 'bowker'")
@@ -425,11 +441,16 @@ class SquareTable(Table):
         tril = self.table.T[upp_idx]   # lower triangle in column order
         triu = self.table[upp_idx]     # upper triangle in row order
 
-        stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
+        statistic = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
         df = k * (k-1) / 2.
-        pval = stats.chi2.sf(stat, df)
+        pvalue = stats.chi2.sf(statistic, df)
 
-        return stat, pval, df
+        b = _Bunch()
+        b.statistic = statistic
+        b.pvalue = pvalue
+        b.df = df
+
+        return b
 
 
     def homogeneity(self, method="stuart_maxwell"):
@@ -443,9 +464,9 @@ class SquareTable(Table):
             estimates of the covariance matrix for the estimated
             difference between the row margins and the column margins.
 
-        Returns
-        -------
-        stat : float
+        Returns a bunch with attributes:
+
+        statistic : float
             The chi^2 test statistic
         pvalue : float
             The p-value of the test statistic
@@ -454,17 +475,26 @@ class SquareTable(Table):
 
         Notes
         -----
+        This test is based on a sampling model in which the units are
+        independent and identically distributed, with each unit being
+        classified with respect to two categorical variables.
+
         For a 2x2 table this is equivalent to McNemar's test.  More
         generally the procedure tests the null hypothesis that the
-        marginal distribution of the row factor is equal to the marginal
-        distribution of the column factor.  For this to be meaningful, the
-        two factors must have the same sample space.
+        marginal distribution of the row factor is equal to the
+        marginal distribution of the column factor.  For this to be
+        meaningful, the two factors must have the same sample space
+        (i.e. the same categories).
         """
 
         if self.table.shape[0] < 1:
             raise ValueError('table is empty')
         elif self.table.shape[0] == 1:
-            return 0., 1., 0
+            b = _Bunch()
+            b.statistic = 0
+            b.pvalue = 1
+            b.df = 0
+            return b
 
         method = method.lower()
         if method not in ["bhapkar", "stuart_maxwell"]:
@@ -495,14 +525,23 @@ class SquareTable(Table):
             np.fill_diagonal(vmat, dv)
 
         try:
-            stat = n_obs * np.dot(d, np.linalg.solve(vmat, d))
+            statistic = n_obs * np.dot(d, np.linalg.solve(vmat, d))
         except np.linalg.LinAlgError:
             warnings.warn("Unable to invert covariance matrix")
-            return np.nan, np.nan, df
+            b = _Bunch()
+            b.statistic = np.nan
+            b.pvalue = np.nan
+            b.df = df
+            return b
 
-        pvalue = 1 - stats.chi2.cdf(stat, df)
+        pvalue = 1 - stats.chi2.cdf(statistic, df)
 
-        return stat, pvalue, df
+        b = _Bunch()
+        b.statistic = statistic
+        b.pvalue = pvalue
+        b.df = df
+
+        return b
 
 
     def summary(self, alpha=0.05, float_format="%.3f"):
@@ -511,24 +550,59 @@ class SquareTable(Table):
 
         headers = ["Statistic", "P-value", "DF"]
         stubs = ["Symmetry", "Homogeneity"]
-        stat1, pvalue1, df1 = self.symmetry()
-        stat2, pvalue2, df2 = self.homogeneity()
-        data = [[fmt % stat1, fmt % pvalue1, '%d' % df1],
-                [fmt % stat2, fmt % pvalue2, '%d' % df2]]
+        sy = self.symmetry()
+        hm = self.homogeneity()
+        data = [[fmt % sy.statistic, fmt % sy.pvalue, '%d' % sy.df],
+                [fmt % hm.statistic, fmt % hm.pvalue, '%d' % hm.df]]
         tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
                                  table_dec_above='')
 
         return tab
 
+SquareTable.symmetry.__doc__ = """
+Test for symmetry of a joint distribution.
+
+This procedure tests the null hypothesis that the joint
+distribution is symmetric around the main diagonal, that is
+
+.. math::
+
+p_{i, j} = p_{j, i}  for all i, j
+
+Returns a bunch with attributes:
+
+statistic : float
+    chisquare test statistic
+p-value : float
+    p-value of the test statistic based on chisquare distribution
+df : int
+    degrees of freedom of the chisquare distribution
+
+Notes
+-----
+%(sampling_model)s
+
+The implementation is based on the SAS documentation. R includes
+it in `mcnemar.test` if the table is not 2 by 2.  However a more
+direct generalization of the McNemar test to larger tables is
+provided by the homogeneity test (TableSymmetry.homogeneity).
+
+The p-value is based on the chi-square distribution which requires
+that the sample size is not very small to be a good approximation
+of the true distribution. For 2x2 contingency tables the exact
+distribution can be obtained with `mcnemar`
+
+See Also
+--------
+mcnemar
+homogeneity
+""" % {'sampling_model' : _iid_sampling}
+
+
 
 class Table2x2(SquareTable):
     """
     Analyses that can be performed on a 2x2 contingency table.
-
-    Note that for the risk ratio, the analysis is not symmetric with
-    respect to the rows and columns of the contingency table.  The two
-    rows define population subgroups, column 0 is the number of
-    'events', and column 1 is the number of 'non-events'.
 
     Parameters
     ----------
@@ -537,6 +611,13 @@ class Table2x2(SquareTable):
     shift_zeros : boolean
         If true, 0.5 is added to all cells of the table if any cell is
         equal to zero.
+
+    Notes
+    -----
+    Note that for the risk ratio, the analysis is not symmetric with
+    respect to the rows and columns of the contingency table.  The two
+    rows define population subgroups, column 0 is the number of
+    'events', and column 1 is the number of 'non-events'.
     """
 
     def __init__(self, table, shift_zeros=True):
@@ -594,25 +675,20 @@ class Table2x2(SquareTable):
         return np.sqrt(np.sum(1 / self.table))
 
 
-    @cache_readonly
-    def oddsratio_pvalue(self):
-        """
-        P-value for the null hypothesis that the odds ratio equals 1.
-        """
-        zscore = self.log_oddsratio / self.log_oddsratio_se
+    def oddsratio_pvalue(self, null=1):
+        # docstring below
+        return self.log_oddsratio_pvalue(np.log(null))
+
+
+    def log_oddsratio_pvalue(self, null=0):
+        # docstring below
+
+        zscore = (self.log_oddsratio - null) / self.log_oddsratio_se
         pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
         return pvalue
 
 
-    @cache_readonly
-    def log_oddsratio_pvalue(self):
-        """
-        P-value for the null hypothesis that the log odds ratio equals zero.
-        """
-        return self.oddsratio_pvalue
-
-
-    def log_oddsratio_confint(self, alpha):
+    def log_oddsratio_confint(self, alpha=0.05):
         """
         A confidence level for the log odds ratio.
 
@@ -630,7 +706,7 @@ class Table2x2(SquareTable):
         return lcb, ucb
 
 
-    def oddsratio_confint(self, alpha):
+    def oddsratio_confint(self, alpha=0.05):
         """
         A confidence interval for the odds ratio.
 
@@ -676,25 +752,20 @@ class Table2x2(SquareTable):
         return np.sqrt(va)
 
 
-    @cache_readonly
-    def riskratio_pvalue(self):
-        """
-        p-value for the null hypothesis that the risk ratio equals 1.
-        """
-        zscore = self.log_riskratio / self.log_riskratio_se
+    def riskratio_pvalue(self, null=1):
+        # docstring below
+        return self.log_riskratio_pvalue(np.log(null))
+
+
+    def log_riskratio_pvalue(self, null=0):
+        # docstring below
+
+        zscore = (self.log_riskratio - null) / self.log_riskratio_se
         pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
         return pvalue
 
 
-    @cache_readonly
-    def log_riskratio_pvalue(self):
-        """
-        p-value for the null hypothesis that the log risk ratio equals 0.
-        """
-        return self.riskratio_pvalue
-
-
-    def log_riskratio_confint(self, alpha):
+    def log_riskratio_confint(self, alpha=0.05):
         """
         A confidence interval for the log risk ratio.
 
@@ -712,7 +783,7 @@ class Table2x2(SquareTable):
         return lcb, ucb
 
 
-    def riskratio_confint(self, alpha):
+    def riskratio_confint(self, alpha=0.05):
         """
         A confidence interval for the risk ratio.
 
@@ -749,16 +820,71 @@ class Table2x2(SquareTable):
         lcb2, ucb2 = self.log_oddsratio_confint(alpha)
         lcb3, ucb3 = self.riskratio_confint(alpha)
         lcb4, ucb4 = self.log_riskratio_confint(alpha)
-        data = [[fmt(x) for x in [self.oddsratio, "", lcb1, ucb1, self.oddsratio_pvalue]],
+        data = [[fmt(x) for x in [self.oddsratio, "", lcb1, ucb1, self.oddsratio_pvalue()]],
                 [fmt(x) for x in [self.log_oddsratio, self.log_oddsratio_se, lcb2, ucb2,
-                                  self.oddsratio_pvalue]],
-                [fmt(x) for x in [self.riskratio, "", lcb2, ucb2, self.riskratio_pvalue]],
+                                  self.oddsratio_pvalue()]],
+                [fmt(x) for x in [self.riskratio, "", lcb2, ucb2, self.riskratio_pvalue()]],
                 [fmt(x) for x in [self.log_riskratio, self.log_riskratio_se, lcb4, ucb4,
-                                  self.riskratio_pvalue]]]
+                                  self.riskratio_pvalue()]]]
         tab = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
                                 table_dec_above='')
         return tab
 
+
+Table2x2.oddsratio_pvalue.__doc__ = """
+P-value for a hypothesis test about the odds ratio.
+
+Arguments
+---------
+null : float
+    The null value of the odds ratio.
+
+Notes
+-----
+%(sampling_model)s
+""" % {'sampling_model' : _iid_sampling}
+
+
+Table2x2.log_oddsratio_pvalue.__doc__ = """
+P-value for a hypothesis test about the log odds ratio.
+
+Arguments
+---------
+null : float
+    The null value of the log odds ratio.
+
+Notes
+-----
+%(sampling_model)s
+""" % {'sampling_model' : _iid_sampling}
+
+
+Table2x2.riskratio_pvalue.__doc__ = """
+p-value for a hypothesis test about the risk ratio.
+
+Arguments
+---------
+null : float
+    The null value of the risk ratio.
+
+Notes
+-----
+%(sampling_model)s
+""" % {'sampling_model' : _iid_sampling}
+
+
+Table2x2.log_riskratio_pvalue.__doc__ = """
+p-value for a hypothesis test about the log risk ratio.
+
+Arguments
+---------
+null : float
+    The null value of the log risk ratio.
+
+Notes
+-----
+%(sampling_model)s
+""" % {'sampling_model' : _iid_sampling}
 
 
 class StratifiedTables(object):
@@ -839,7 +965,7 @@ class StratifiedTables(object):
             data1.loc[:, var2] = data[:, var2]
             data1.loc[:, strata] = data[:, strata]
         else:
-            data1 = data
+            data1 = data[[var1, var2, strata]]
 
         gb = data1.groupby(strata).groups
         tables = []
@@ -851,40 +977,28 @@ class StratifiedTables(object):
 
 
     def test_null_odds(self, correction=False):
-        """
-        Test that all tables have odds ratio equal to 1.
+        # docstring below
 
-        This is the 'Mantel-Haenszel' test.
-
-        Parameters
-        ----------
-        correction : boolean
-            If True, use the continuity correction when calculating the
-            test statistic.
-
-        Returns the chi^2 test statistic and p-value.
-        """
-
-        stat = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
-        stat = np.abs(stat)
+        statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
+        statistic = np.abs(statistic)
         if correction:
-            stat -= 0.5
-        stat = stat**2
+            statistic -= 0.5
+        statistic = statistic**2
         denom = self._apb * self._apc * self._bpd * self._cpd
         denom /= (self._n**2 * (self._n - 1))
         denom = np.sum(denom)
-        stat /= denom
+        statistic /= denom
 
         # df is always 1
-        pvalue = 1 - stats.chi2.cdf(stat, 1)
+        pvalue = 1 - stats.chi2.cdf(statistic, 1)
 
-        return stat, pvalue
+        return statistic, pvalue
 
 
     @cache_readonly
-    def common_odds(self):
+    def oddsratio_pooled(self):
         """
-        An estimate of the common odds ratio.
+        An estimate of the pooled odds ratio.
 
         This is the Mantel-Haenszel estimate of an odds ratio that is
         common to all tables.
@@ -895,21 +1009,21 @@ class StratifiedTables(object):
 
 
     @cache_readonly
-    def common_logodds(self):
+    def logodds_pooled(self):
         """
-        An estimate of the common log odds ratio.
+        An estimate of the pooled log odds ratio.
 
         This is the Mantel-Haenszel estimate of a risk ratio that is
         common to all the tables.
         """
 
-        return np.log(self.common_odds)
+        return np.log(self.oddsratio_pooled)
 
 
     @cache_readonly
-    def common_risk(self):
+    def risk_pooled(self):
         """
-        An estimate of the common risk ratio.
+        An estimate of the pooled risk ratio.
 
         This is an estimate of a risk ratio that is common to all the
         tables.
@@ -923,9 +1037,9 @@ class StratifiedTables(object):
 
 
     @cache_readonly
-    def common_logodds_se(self):
+    def logodds_pooled_se(self):
         """
-        The estimated standard error of the common log odds ratio.
+        The estimated standard error of the pooled log odds ratio.
 
         References
         ----------
@@ -946,9 +1060,9 @@ class StratifiedTables(object):
         return lor_se
 
 
-    def common_logodds_confint(self, alpha=0.05):
+    def logodds_pooled_confint(self, alpha=0.05):
         """
-        A confidence interval for the common log odds ratio.
+        A confidence interval for the pooled log odds ratio.
 
         Parameters
         ----------
@@ -964,8 +1078,8 @@ class StratifiedTables(object):
             The upper confidence limit.
         """
 
-        lor = np.log(self.common_odds)
-        lor_se = self.common_logodds_se
+        lor = np.log(self.oddsratio_pooled)
+        lor_se = self.logodds_pooled_se
 
         f = -stats.norm.ppf(alpha / 2)
 
@@ -975,9 +1089,9 @@ class StratifiedTables(object):
         return lcb, ucb
 
 
-    def common_odds_confint(self, alpha=0.05):
+    def oddsratio_pooled_confint(self, alpha=0.05):
         """
-        A confidence interval for the common odds ratio.
+        A confidence interval for the pooled odds ratio.
 
         Parameters
         ----------
@@ -993,30 +1107,18 @@ class StratifiedTables(object):
             The upper confidence limit.
         """
 
-        lcb, ucb = self.common_logodds_confint(alpha)
+        lcb, ucb = self.logodds_pooled_confint(alpha)
         lcb = np.exp(lcb)
         ucb = np.exp(ucb)
         return lcb, ucb
 
 
     def test_equal_odds(self, adjust=False):
-        """
-        Test that all odds ratios are identical.
-
-        This is the 'Breslow-Day' testing procedure.
-
-        Parameters
-        ----------
-        adjust : boolean
-            Use the 'Tarone' adjustment to achieve the chi^2
-            asymptotic distribution.
-
-        Returns the test statistic and p-value.
-        """
+        # docstring below
 
         table = self.table
 
-        r = self.common_odds
+        r = self.oddsratio_pooled
         a = 1 - r
         b = r * (self._apb + self._apc) + self._dma
         c = -r * self._apb * self._apc
@@ -1028,17 +1130,17 @@ class StratifiedTables(object):
         v11 = 1 / e11 + 1 / (self._apc - e11) + 1 / (self._apb - e11) + 1 / (self._dma + e11)
         v11 = 1 / v11
 
-        stat = np.sum((table[0, 0, :] - e11)**2 / v11)
+        statistic = np.sum((table[0, 0, :] - e11)**2 / v11)
 
         if adjust:
             adj = table[0, 0, :].sum() - e11.sum()
             adj = adj**2
             adj /= np.sum(v11)
-            stat -= adj
+            statistic -= adj
 
-        pvalue = 1 - stats.chi2.cdf(stat, table.shape[2] - 1)
+        pvalue = 1 - stats.chi2.cdf(statistic, table.shape[2] - 1)
 
-        return stat, pvalue
+        return statistic, pvalue
 
 
     def summary(self, alpha=0.05, float_format="%.3f"):
@@ -1051,13 +1153,13 @@ class StratifiedTables(object):
                 return x
             return float_format % x
 
-        co_lcb, co_ucb = self.common_odds_confint(alpha=alpha)
-        clo_lcb, clo_ucb = self.common_logodds_confint(alpha=alpha)
+        co_lcb, co_ucb = self.oddsratio_pooled_confint(alpha=alpha)
+        clo_lcb, clo_ucb = self.logodds_pooled_confint(alpha=alpha)
         headers = ["Estimate", "LCB", "UCB"]
-        stubs = ["Common odds", "Common log odds", "Common risk ratio", ""]
-        data = [[fmt(x) for x in [self.common_odds, co_lcb, co_ucb]],
-                [fmt(x) for x in [self.common_logodds, clo_lcb, clo_ucb]],
-                [fmt(x) for x in [self.common_risk, "", ""]],
+        stubs = ["Pooled odds", "Pooled log odds", "Pooled risk ratio", ""]
+        data = [[fmt(x) for x in [self.oddsratio_pooled, co_lcb, co_ucb]],
+                [fmt(x) for x in [self.logodds_pooled, clo_lcb, clo_ucb]],
+                [fmt(x) for x in [self.risk_pooled, "", ""]],
                 ['', '', '']]
         tab1 = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
                                  table_dec_above='')
@@ -1087,6 +1189,45 @@ class StratifiedTables(object):
         return tab1
 
 
+
+StratifiedTables.test_equal_odds.__doc__ =  """
+Test that all odds ratios are identical.
+
+This is the 'Breslow-Day' testing procedure.
+
+Parameters
+----------
+adjust : boolean
+    Use the 'Tarone' adjustment to achieve the chi^2
+    asymptotic distribution.
+
+Returns the test statistic and p-value.
+
+Notes
+-----
+%(sampling_model)s
+""" % {'sampling_model' : _stratified_iid_sampling}
+
+
+StratifiedTables.test_null_odds.__doc__ =  """
+Test that all tables have odds ratio equal to 1.
+
+This is the 'Mantel-Haenszel' test.
+
+Parameters
+----------
+correction : boolean
+    If True, use the continuity correction when calculating the
+    test statistic.
+
+Returns the chi^2 test statistic and p-value.
+
+Notes
+-----
+%(sampling_model)s
+""" % {'sampling_model' : _stratified_iid_sampling}
+
+
 def mcnemar(table, exact=True, correction=True):
     """
     McNemar test of homogeneity.
@@ -1104,9 +1245,9 @@ def mcnemar(table, exact=True, correction=True):
         If true, then a continuity correction is used for the chisquare
         distribution (if exact is false.)
 
-    Returns
-    -------
-    stat : float or int, array
+    Returns a bunch with attributes
+
+    statistic : float or int, array
         The test statistic is the chisquare statistic if exact is
         false. If the exact binomial distribution is used, then this
         contains the min(n1, n2), where n1, n2 are cases that are zero
@@ -1121,21 +1262,25 @@ def mcnemar(table, exact=True, correction=True):
     identical, except for continuity correction.
     """
 
-    table = _handle_pandas_square(table)
+    table = _make_df_square(table)
     table = np.asarray(table, dtype=np.float64)
     n1, n2 = table[0, 1], table[1, 0]
 
     if exact:
-        stat = np.minimum(n1, n2)
+        statistic = np.minimum(n1, n2)
         # binom is symmetric with p=0.5
-        pval = stats.binom.cdf(stat, n1 + n2, 0.5) * 2
-        pval = np.minimum(pval, 1)  # limit to 1 if n1==n2
+        pvalue = stats.binom.cdf(statistic, n1 + n2, 0.5) * 2
+        pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
         corr = int(correction) # convert bool to 0 or 1
-        stat = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
+        statistic = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
         df = 1
-        pval = stats.chi2.sf(stat, df)
-    return stat, pval
+        pvalue = stats.chi2.sf(statistic, df)
+
+    b = _Bunch()
+    b.statistic = statistic
+    b.pvalue = pvalue
+    return b
 
 
 def cochrans_q(x, return_object=True):
@@ -1154,7 +1299,7 @@ def cochrans_q(x, return_object=True):
     Returns a bunch containing the following attributes, or the
     individual values according to the value of `return_object`.
 
-    q_stat : float
+    statistic : float
        test statistic
     pvalue : float
        pvalue from the chisquare distribution
@@ -1206,8 +1351,8 @@ def cochrans_q(x, return_object=True):
     pvalue = stats.chi2.sf(q_stat, df)
 
     if return_object:
-        b = _bunch()
-        b.stat = q_stat
+        b = _Bunch()
+        b.statistic = q_stat
         b.df = df
         b.pvalue = pvalue
         return b

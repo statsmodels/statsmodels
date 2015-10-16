@@ -33,13 +33,13 @@ def test_homogeneity():
 
     for k,table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
-        stat, pvalue, df = st.homogeneity()
-        assert_allclose(stat, r_results.loc[k, "homog_stat"])
-        assert_allclose(df, r_results.loc[k, "homog_df"])
+        hm = st.homogeneity()
+        assert_allclose(hm.statistic, r_results.loc[k, "homog_stat"])
+        assert_allclose(hm.df, r_results.loc[k, "homog_df"])
 
         # Test Bhapkar via its relationship to Stuart_Maxwell.
-        stat1, pvalue, df = st.homogeneity(method="bhapkar")
-        assert_allclose(stat1, stat / (1 - stat / table.sum()))
+        hmb = st.homogeneity(method="bhapkar")
+        assert_allclose(hmb.statistic, hm.statistic / (1 - hm.statistic / table.sum()))
 
 
 def test_SquareTable_from_data():
@@ -99,17 +99,17 @@ def test_ordinal_association():
 
         # First set of scores
         rslt = ctab.Table(table, shift_zeros=False).ordinal_association(row_scores, col_scores)
-        assert_allclose(rslt.stat, r_results.loc[k, "lbl_stat"])
-        assert_allclose(rslt.stat_e0, r_results.loc[k, "lbl_expval"])
-        assert_allclose(rslt.stat_sd0**2, r_results.loc[k, "lbl_var"])
+        assert_allclose(rslt.statistic, r_results.loc[k, "lbl_stat"])
+        assert_allclose(rslt.null_mean, r_results.loc[k, "lbl_expval"])
+        assert_allclose(rslt.null_sd**2, r_results.loc[k, "lbl_var"])
         assert_allclose(rslt.zscore**2, r_results.loc[k, "lbl_chi2"], rtol=1e-5, atol=1e-5)
         assert_allclose(rslt.pvalue, r_results.loc[k, "lbl_pvalue"], rtol=1e-5, atol=1e-5)
 
         # Second set of scores
         rslt = ctab.Table(table, shift_zeros=False).ordinal_association(row_scores, col_scores**2)
-        assert_allclose(rslt.stat, r_results.loc[k, "lbl2_stat"])
-        assert_allclose(rslt.stat_e0, r_results.loc[k, "lbl2_expval"])
-        assert_allclose(rslt.stat_sd0**2, r_results.loc[k, "lbl2_var"])
+        assert_allclose(rslt.statistic, r_results.loc[k, "lbl2_stat"])
+        assert_allclose(rslt.null_mean, r_results.loc[k, "lbl2_expval"])
+        assert_allclose(rslt.null_sd**2, r_results.loc[k, "lbl2_var"])
         assert_allclose(rslt.zscore**2, r_results.loc[k, "lbl2_chi2"])
         assert_allclose(rslt.pvalue, r_results.loc[k, "lbl2_pvalue"], rtol=1e-5, atol=1e-5)
 
@@ -125,7 +125,7 @@ def test_chi2_association():
 
     b = ctab.Table(table).nominal_association
 
-    assert_allclose(b.stat, rslt_scipy[0])
+    assert_allclose(b.statistic, rslt_scipy[0])
     assert_allclose(b.pvalue, rslt_scipy[1])
 
 
@@ -133,31 +133,29 @@ def test_symmetry():
 
     for k,table in enumerate(tables):
         st = sm.stats.SquareTable(table, shift_zeros=False)
-        stat, pvalue, df = st.symmetry()
-        assert_allclose(stat, r_results.loc[k, "bowker_stat"])
-        assert_equal(df, r_results.loc[k, "bowker_df"])
-        assert_allclose(pvalue, r_results.loc[k, "bowker_pvalue"])
+        b = st.symmetry()
+        assert_allclose(b.statistic, r_results.loc[k, "bowker_stat"])
+        assert_equal(b.df, r_results.loc[k, "bowker_df"])
+        assert_allclose(b.pvalue, r_results.loc[k, "bowker_pvalue"])
 
 
 def test_mcnemar():
 
     # Use chi^2 without continuity correction
-    stat1, pvalue1 = ctab.mcnemar(tables[0], exact=False,
-                                  correction=False)
+    b1 = ctab.mcnemar(tables[0], exact=False, correction=False)
 
     st = sm.stats.SquareTable(tables[0])
-    stat2, pvalue2, df = st.homogeneity()
-    assert_allclose(stat1, stat2)
-    assert_equal(df, 1)
+    b2 = st.homogeneity()
+    assert_allclose(b1.statistic, b2.statistic)
+    assert_equal(b2.df, 1)
 
     # Use chi^2 with continuity correction
-    stat, pvalue = ctab.mcnemar(tables[0], exact=False,
-                                correction=True)
-    assert_allclose(pvalue, r_results.loc[0, "homog_cont_p"])
+    b3 = ctab.mcnemar(tables[0], exact=False, correction=True)
+    assert_allclose(b3.pvalue, r_results.loc[0, "homog_cont_p"])
 
     # Use binomial reference distribution
-    stat3, pvalue3 = ctab.mcnemar(tables[0], exact=True)
-    assert_allclose(pvalue3, r_results.loc[0, "homog_binom_p"])
+    b4 = ctab.mcnemar(tables[0], exact=True)
+    assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
 
 def test_cochranq():
@@ -218,10 +216,10 @@ def test_cochranq():
     # Cochran's q and Mcnemar are equivalent for 2x2 tables
     data = table[:, 0:2]
     xtab = np.asarray(pd.crosstab(data[:, 0], data[:, 1]))
-    stat1, pvalue1, df1 = ctab.cochrans_q(data, return_object=False)
-    stat2, pvalue2 = ctab.mcnemar(xtab, exact=False, correction=False)
-    assert_allclose(stat1, stat2)
-    assert_allclose(pvalue1, pvalue2)
+    b1 = ctab.cochrans_q(data, return_object=True)
+    b2 = ctab.mcnemar(xtab, exact=False, correction=False)
+    assert_allclose(b1.statistic, b2.statistic)
+    assert_allclose(b1.pvalue, b2.pvalue)
 
 
 
@@ -234,13 +232,13 @@ class CheckStratifiedMixin(object):
         self.rslt_pandas = ctab.StratifiedTables(tables_pandas)
 
 
-    def test_common_odds(self):
-        assert_allclose(self.rslt.common_odds, self.common_odds,
+    def test_oddsratio_pooled(self):
+        assert_allclose(self.rslt.oddsratio_pooled, self.oddsratio_pooled,
                         rtol=1e-4, atol=1e-4)
 
 
-    def test_common_logodds(self):
-        assert_allclose(self.rslt.common_logodds, self.common_logodds,
+    def test_logodds_pooled(self):
+        assert_allclose(self.rslt.logodds_pooled, self.logodds_pooled,
                         rtol=1e-4, atol=1e-4)
 
 
@@ -250,14 +248,14 @@ class CheckStratifiedMixin(object):
         assert_allclose(pvalue, self.mh_pvalue, rtol=1e-4, atol=1e-4)
 
 
-    def test_common_odds_confint(self):
-        lcb, ucb = self.rslt.common_odds_confint()
+    def test_oddsratio_pooled_confint(self):
+        lcb, ucb = self.rslt.oddsratio_pooled_confint()
         assert_allclose(lcb, self.or_lcb, rtol=1e-4, atol=1e-4)
         assert_allclose(ucb, self.or_ucb, rtol=1e-4, atol=1e-4)
 
 
-    def test_common_logodds_confint(self):
-        lcb, ucb = self.rslt.common_logodds_confint()
+    def test_logodds_pooled_confint(self):
+        lcb, ucb = self.rslt.logodds_pooled_confint()
         assert_allclose(lcb, np.log(self.or_lcb), rtol=1e-4,
                         atol=1e-4)
         assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4,
@@ -321,8 +319,8 @@ class TestStratified1(CheckStratifiedMixin):
 
         self.initialize(tables)
 
-        self.common_odds = 7
-        self.common_logodds = np.log(7)
+        self.oddsratio_pooled = 7
+        self.logodds_pooled = np.log(7)
         self.mh_stat = 3.9286
         self.mh_pvalue = 0.04747
         self.or_lcb = 1.026713
@@ -350,8 +348,8 @@ class TestStratified2(CheckStratifiedMixin):
 
         self.initialize(tables)
 
-        self.common_odds = 3.5912
-        self.common_logodds = np.log(3.5912)
+        self.oddsratio_pooled = 3.5912
+        self.logodds_pooled = np.log(3.5912)
 
         self.mh_stat = 11.8852
         self.mh_pvalue = 0.0005658
@@ -384,8 +382,8 @@ class TestStratified3(CheckStratifiedMixin):
 
         self.initialize(tables)
 
-        self.common_odds = 1.101879
-        self.common_logodds = np.log(1.101879)
+        self.oddsratio_pooled = 1.101879
+        self.logodds_pooled = np.log(1.101879)
 
         self.mh_stat = 1.3368
         self.mh_pvalue = 0.2476
@@ -416,7 +414,7 @@ class Check2x2Mixin(object):
 
 
     def test_oddsratio_pvalue(self):
-        assert_allclose(self.tbl_obj.oddsratio_pvalue, self.oddsratio_pvalue)
+        assert_allclose(self.tbl_obj.oddsratio_pvalue(), self.oddsratio_pvalue)
 
 
     def test_oddsratio_confint(self):
@@ -439,7 +437,7 @@ class Check2x2Mixin(object):
 
 
     def test_riskratio_pvalue(self):
-        assert_allclose(self.tbl_obj.riskratio_pvalue, self.riskratio_pvalue)
+        assert_allclose(self.tbl_obj.riskratio_pvalue(), self.riskratio_pvalue)
 
 
     def test_riskratio_confint(self):
