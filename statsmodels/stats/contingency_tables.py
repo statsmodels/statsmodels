@@ -33,16 +33,6 @@ import pandas as pd
 from statsmodels import iolib
 
 
-_iid_sampling = """\
-This result is based on a sampling model in which the units are
-independent and identically distributed, with each unit being
-classified with respect to two categorical variables."""
-
-
-_stratified_iid_sampling = """\
-This result is based on a sampling model in which the units are
-independent within and between strata."""
-
 
 def _make_df_square(table):
     """
@@ -86,11 +76,60 @@ class Table(object):
     ----------
     table_orig : array-like
         The original table is cached as `table_orig`.
+    nominal_association : bunch
+        Assessment of independence between rows and columns using chi^2
+        testing.  The rows and columns are treated as nominal (unordered)
+        categorical ariables.  The returned bunch includes the following
+        attributes:
+            statistic : float
+                The chi^2 test statistic.
+            df : integer
+                The degrees of freedom of the reference distribution
+            pvalue : float
+                The p-value for the test.
+    marginal_probabilities : tuple of two arrays
+        The estimated row and column marginal distributions.
+    independence_probabilities : array-like
+        Estimated cell probabilities under independence.
+    fittedvalues : array-like
+        Fitted values under independence.
+    pearson_resids : array-like
+        The Pearson residuals.
+    standardized_resids : array-like
+        Residuals with approximately unit variance.
+    chi2_contribs : array-like
+        The contribution of each cell to the chi^2 statistic.
+    local_logodds_ratios : array-like
+        The local log odds ratios are calculated for each 2x2 subtable
+        formed from adjacent rows and columns.
+    local_oddsratios : array-like
+        The local odds ratios are calculated from each 2x2 subtable
+        formed from adjacent rows and columns.
+    cumulative_log_oddsratios : array-like
+        The cumulative log odds ratio at a given pair of thresholds is
+        calculated by reducing the table to a 2x2 table based on
+        dichotomizing the rows and columns at the given thresholds.
+        The table of cumulative log odds ratios presents all possible
+        cumulative log odds ratios that can be formed from a given
+        table.
+    cumulative_oddsratios : array-like
+        The cumulative odds ratios are calculated by reducing the
+        table to a 2x2 table based on cutting the rows and columns at
+        a given point.  The table of cumulative odds ratios presents
+        all possible cumulative odds ratios that can be formed from a
+        given table.
 
     See also
     --------
     statsmodels.graphics.mosaicplot.mosaic
     scipy.stats.chi2_contingency
+
+    Notes
+    -----
+    The inference procedures used here are all based on a sampling
+    model in which the units are independent and identically
+    distributed, with each unit being classified with respect to two
+    categorical variables.
     """
 
     def __init__(self, table, shift_zeros=True):
@@ -131,7 +170,7 @@ class Table(object):
 
     @cache_readonly
     def nominal_association(self):
-        # docstring below
+        # docstring for cached attributes in init above
 
         statistic = np.asarray(self.chi2_contribs).sum()
         df = np.prod(np.asarray(self.table.shape) - 1)
@@ -144,7 +183,42 @@ class Table(object):
 
 
     def ordinal_association(self, row_scores=None, col_scores=None):
-        # docstring below
+        """
+        Assess independence between two ordinal variables.
+
+        This is the 'linear by linear' association test, which uses
+        weights or scores to target the test to have more power
+        against ordered alternatives.
+
+        Parameters
+        ----------
+        row_scores : array-like
+            An array of numeric row scores
+        col_scores : array-like
+            An array of numeric column scores
+
+        Returns a bunch with the following attributes:
+
+        statistic : float
+            The test statistic.
+        null_mean : float
+            The expected value of the test statistic under the null
+            hypothesis.
+        null_sd : float
+            The standard deviation of the test statistic under the
+            null hypothesis.
+        zscore : float
+            The Z-score for the test statistic.
+        pvalue : float
+            The p-value for the test.
+
+        Notes
+        -----
+        The scores define the trend to which the test is most sensitive.
+
+        Using the default row and column scores gives the
+        Cochran-Armitage trend test.
+        """
 
         if row_scores is None:
             row_scores = np.arange(self.table.shape[0])
@@ -189,9 +263,8 @@ class Table(object):
 
     @cache_readonly
     def marginal_probabilities(self):
-        """
-        Return the estimated row and column marginal distributions.
-        """
+        # docstring for cached attributes in init above
+
         n = self.table.sum()
         row = self.table.sum(1) / n
         col = self.table.sum(0) / n
@@ -205,9 +278,8 @@ class Table(object):
 
     @cache_readonly
     def independence_probabilities(self):
-        """
-        Estimated cell probabilities under independence.
-        """
+        # docstring for cached attributes in init above
+
         row, col = self.marginal_probabilities
         itab = np.outer(row, col)
 
@@ -220,9 +292,8 @@ class Table(object):
 
     @cache_readonly
     def fittedvalues(self):
-        """
-        Fitted values under independence.
-        """
+        # docstring for cached attributes in init above
+
         probs = self.independence_probabilities
         fit = self.table.sum() * probs
         return fit
@@ -230,9 +301,8 @@ class Table(object):
 
     @cache_readonly
     def pearson_resids(self):
-        """
-        The Pearson residuals.
-        """
+        # docstring for cached attributes in init above
+
         fit = self.fittedvalues
         resids = (self.table - fit) / np.sqrt(fit)
         return resids
@@ -240,9 +310,8 @@ class Table(object):
 
     @cache_readonly
     def standardized_resids(self):
-        """
-        Residuals with approximately unit variance.
-        """
+        # docstring for cached attributes in init above
+
         row, col = self.marginal_probabilities
         sresids = self.resids / np.sqrt(np.outer(1 - row, 1 - col))
         return sresids
@@ -250,20 +319,14 @@ class Table(object):
 
     @cache_readonly
     def chi2_contribs(self):
-        """
-        The contribution of each cell to the chi^2 statistic.
-        """
+        # docstring for cached attributes in init above
+
         return self.pearson_resids**2
 
 
     @cache_readonly
     def local_log_oddsratios(self):
-        """
-        Returns the local log odds ratios.
-
-        The local log odds ratios are calculated for each 2x2 subtable
-        formed from adjacent rows and columns.
-        """
+        # docstring for cached attributes in init above
 
         ta = self.table.copy()
         a = ta[0:-1, 0:-1]
@@ -284,28 +347,14 @@ class Table(object):
 
     @cache_readonly
     def local_oddsratios(self):
-        """
-        Returns the local log odds ratios.
+        # docstring for cached attributes in init above
 
-        The local odds ratios are calculated from each 2x2 subtable
-        formed from adjacent rows and columns.
-        """
         return np.exp(self.local_log_oddsratios)
 
 
     @cache_readonly
     def cumulative_log_oddsratios(self):
-        """
-        Returns the cumulative log odds ratios.
-
-        The cumulative log odds ratio at a given pair of thresholds is
-        calculated by reducing the table to a 2x2 table based on
-        dichotomizing the rows and columns at the given thresholds.
-
-        The table of cumulative log odds ratios presents all possible
-        cumulative log odds ratios that can be formed from a given
-        table.
-        """
+        # docstring for cached attributes in init above
 
         ta = self.table.cumsum(0).cumsum(1)
 
@@ -328,75 +377,10 @@ class Table(object):
 
     @cache_readonly
     def cumulative_oddsratios(self):
-        """
-        Returns the cumulative odds ratios.
+        # docstring for cached attributes in init above
 
-        The cumulative odds ratios are calculated by reducing the
-        table to a 2x2 table based on cutting the rows and columns at
-        a given point.
-
-        The table of cumulative odds ratios presents all possible
-        cumulative odds ratios that can be formed from a given table.
-        """
         return np.exp(self.cumulative_log_oddsratios)
 
-
-Table.nominal_association.__doc__ = """
-Assess independence between rows and columns using chi^2 test.
-
-Returns
--------
-A bunch with the following fields:
-
-statistic : float
-    The chi^2 test statistic.
-df : integer
-    The degrees of freedom of the reference distribution
-pvalue : float
-    The p-value for the test.
-
-Notes
------
-%(sampling_model)s
-""" % { 'sampling_model' : _iid_sampling }
-
-
-Table.ordinal_association.__doc__ = """
-Assess independence between rows and columns for ordinal factors.
-
-This is the 'linear by linear' association test.
-
-Parameters
-----------
-row_scores : array-like
-    An array of numeric row scores
-col_scores : array-like
-    An array of numeric column scores
-
-Returns a bunch with the following attributes:
-
-statistic : float
-    The test statistic.
-null_mean : float
-    The expected value of the test statistic under the null
-    hypothesis.
-null_sd : float
-    The standard deviation of the test statistic under the
-    null hypothesis.
-zscore : float
-    The Z-score for the test statistic.
-pvalue : float
-    The p-value for the test.
-
-Notes
------
-The scores define the trend to which the test is most sensitive.
-
-Using the default row and column scores gives the
-Cochran-Armitage trend test.
-
-%(sampling_model)s
-""" % {'sampling_model' : _iid_sampling}
 
 
 class SquareTable(Table):
@@ -430,7 +414,42 @@ class SquareTable(Table):
 
 
     def symmetry(self, method="bowker"):
-        # docstring below
+        """
+        Test for symmetry of a joint distribution.
+
+        This procedure tests the null hypothesis that the joint
+        distribution is symmetric around the main diagonal, that is
+
+        .. math::
+
+        p_{i, j} = p_{j, i}  for all i, j
+
+        Returns a bunch with attributes:
+
+        statistic : float
+            chisquare test statistic
+        p-value : float
+            p-value of the test statistic based on chisquare distribution
+        df : int
+            degrees of freedom of the chisquare distribution
+
+        Notes
+        -----
+        The implementation is based on the SAS documentation. R includes
+        it in `mcnemar.test` if the table is not 2 by 2.  However a more
+        direct generalization of the McNemar test to larger tables is
+        provided by the homogeneity test (TableSymmetry.homogeneity).
+
+        The p-value is based on the chi-square distribution which requires
+        that the sample size is not very small to be a good approximation
+        of the true distribution. For 2x2 contingency tables the exact
+        distribution can be obtained with `mcnemar`
+
+        See Also
+        --------
+        mcnemar
+        homogeneity
+        """
 
         if method.lower() != "bowker":
             raise ValueError("method for symmetry testing must be 'bowker'")
@@ -454,7 +473,34 @@ class SquareTable(Table):
 
 
     def homogeneity(self, method="stuart_maxwell"):
-        # docstring below
+        """
+        Compare row and column marginal distributions.
+
+        Parameters
+        ----------
+        method : string
+            Either 'stuart_maxwell' or 'bhapkar', leading to two different
+            estimates of the covariance matrix for the estimated
+            difference between the row margins and the column margins.
+
+        Returns a bunch with attributes:
+
+        statistic : float
+            The chi^2 test statistic
+        pvalue : float
+            The p-value of the test statistic
+        df : integer
+            The degrees of freedom of the reference distribution
+
+        Notes
+        -----
+        For a 2x2 table this is equivalent to McNemar's test.  More
+        generally the procedure tests the null hypothesis that the
+        marginal distribution of the row factor is equal to the
+        marginal distribution of the column factor.  For this to be
+        meaningful, the two factors must have the same sample space
+        (i.e. the same categories).
+        """
 
         if self.table.shape[0] < 1:
             raise ValueError('table is empty')
@@ -529,78 +575,6 @@ class SquareTable(Table):
         return tab
 
 
-SquareTable.symmetry.__doc__ = """
-Test for symmetry of a joint distribution.
-
-This procedure tests the null hypothesis that the joint
-distribution is symmetric around the main diagonal, that is
-
-.. math::
-
-p_{i, j} = p_{j, i}  for all i, j
-
-Returns a bunch with attributes:
-
-statistic : float
-    chisquare test statistic
-p-value : float
-    p-value of the test statistic based on chisquare distribution
-df : int
-    degrees of freedom of the chisquare distribution
-
-Notes
------
-%(sampling_model)s
-
-The implementation is based on the SAS documentation. R includes
-it in `mcnemar.test` if the table is not 2 by 2.  However a more
-direct generalization of the McNemar test to larger tables is
-provided by the homogeneity test (TableSymmetry.homogeneity).
-
-The p-value is based on the chi-square distribution which requires
-that the sample size is not very small to be a good approximation
-of the true distribution. For 2x2 contingency tables the exact
-distribution can be obtained with `mcnemar`
-
-See Also
---------
-mcnemar
-homogeneity
-""" % {'sampling_model' : _iid_sampling}
-
-
-
-SquareTable.homogeneity.__doc__ = """
-Compare row and column marginal distributions.
-
-Parameters
-----------
-method : string
-    Either 'stuart_maxwell' or 'bhapkar', leading to two different
-    estimates of the covariance matrix for the estimated
-    difference between the row margins and the column margins.
-
-Returns a bunch with attributes:
-
-statistic : float
-    The chi^2 test statistic
-pvalue : float
-    The p-value of the test statistic
-df : integer
-    The degrees of freedom of the reference distribution
-
-Notes
------
-%(sampling_model)s
-
-For a 2x2 table this is equivalent to McNemar's test.  More
-generally the procedure tests the null hypothesis that the
-marginal distribution of the row factor is equal to the
-marginal distribution of the column factor.  For this to be
-meaningful, the two factors must have the same sample space
-(i.e. the same categories).
-""" % {'sampling_model' : _iid_sampling}
-
 
 class Table2x2(SquareTable):
     """
@@ -614,8 +588,31 @@ class Table2x2(SquareTable):
         If true, 0.5 is added to all cells of the table if any cell is
         equal to zero.
 
+    Attributes
+    ----------
+    log_oddsratio : float
+        The log odds ratio of the table.
+    log_oddsratio_se : float
+        The asymptotic standard error of the estimated log odds ratio.
+    oddsratio : float
+        The odds ratio of the table.
+    riskratio : float
+        The ratio between the risk in the first row and the risk in
+        the second row.  Column 0 is interpreted as containing the
+        number of occurences of the event of interest.
+    log_riskratio : float
+        The estimated log risk ratio for the table.
+    log_riskratio_se : float
+        The standard error of the estimated log risk ratio for the
+        table.
+
     Notes
     -----
+    The inference procedures used here are all based on a sampling
+    model in which the units are independent and identically
+    distributed, with each unit being classified with respect to two
+    categorical variables.
+
     Note that for the risk ratio, the analysis is not symmetric with
     respect to the rows and columns of the contingency table.  The two
     rows define population subgroups, column 0 is the number of
@@ -654,36 +651,48 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_oddsratio(self):
-        """
-        The log odds ratio of the table.
-        """
+        # docstring for cached attributes in init above
+
         f = self.table.flatten()
         return np.dot(np.log(f), np.r_[1, -1, -1, 1])
 
 
     @cache_readonly
     def oddsratio(self):
-        """
-        The odds ratio of the table.
-        """
+        # docstring for cached attributes in init above
+
         return self.table[0, 0] * self.table[1, 1] / (self.table[0, 1] * self.table[1, 0])
 
 
     @cache_readonly
     def log_oddsratio_se(self):
-        """
-        The asymptotic standard error of the estimated log odds ratio.
-        """
+        # docstring for cached attributes in init above
+
         return np.sqrt(np.sum(1 / self.table))
 
 
     def oddsratio_pvalue(self, null=1):
-        # docstring below
+        """
+        P-value for a hypothesis test about the odds ratio.
+
+        Arguments
+        ---------
+        null : float
+            The null value of the odds ratio.
+        """
+
         return self.log_oddsratio_pvalue(np.log(null))
 
 
     def log_oddsratio_pvalue(self, null=0):
-        # docstring below
+        """
+        P-value for a hypothesis test about the log odds ratio.
+
+        Arguments
+        ---------
+        null : float
+            The null value of the log odds ratio.
+        """
 
         zscore = (self.log_oddsratio - null) / self.log_oddsratio_se
         pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
@@ -700,6 +709,7 @@ class Table2x2(SquareTable):
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         """
+
         f = -stats.norm.ppf(alpha / 2)
         lor = self.log_oddsratio
         se = self.log_oddsratio_se
@@ -724,30 +734,23 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def riskratio(self):
-        """
-        The estimated risk ratio for the table.
+        # docstring for cached attributes in init above
 
-        Returns the ratio between the risk in the first row and the
-        risk in the second row.  Column 0 is interpreted as containing
-        the number of occurances of the event of interest.
-        """
         p = self.table[:, 0] / self.table.sum(1)
         return p[0] / p[1]
 
 
     @cache_readonly
     def log_riskratio(self):
-        """
-        The estimated log risk ratio for the table.
-        """
+        # docstring for cached attributes in init above
+
         return np.log(self.riskratio)
 
 
     @cache_readonly
     def log_riskratio_se(self):
-        """
-        The standard error of the estimated log risk ratio for the table.
-        """
+        # docstring for cached attributes in init above
+
         n = self.table.sum(1)
         p = self.table[:, 0] / n
         va = np.sum((1 - p) / (n*p))
@@ -755,12 +758,27 @@ class Table2x2(SquareTable):
 
 
     def riskratio_pvalue(self, null=1):
-        # docstring below
+        """
+        p-value for a hypothesis test about the risk ratio.
+
+        Arguments
+        ---------
+        null : float
+            The null value of the risk ratio.
+        """
+
         return self.log_riskratio_pvalue(np.log(null))
 
 
     def log_riskratio_pvalue(self, null=0):
-        # docstring below
+        """
+        p-value for a hypothesis test about the log risk ratio.
+
+        Arguments
+        ---------
+        null : float
+            The null value of the log risk ratio.
+        """
 
         zscore = (self.log_riskratio - null) / self.log_riskratio_se
         pvalue = 2 * stats.norm.cdf(-np.abs(zscore))
@@ -833,61 +851,6 @@ class Table2x2(SquareTable):
         return tab
 
 
-Table2x2.oddsratio_pvalue.__doc__ = """
-P-value for a hypothesis test about the odds ratio.
-
-Arguments
----------
-null : float
-    The null value of the odds ratio.
-
-Notes
------
-%(sampling_model)s
-""" % {'sampling_model' : _iid_sampling}
-
-
-Table2x2.log_oddsratio_pvalue.__doc__ = """
-P-value for a hypothesis test about the log odds ratio.
-
-Arguments
----------
-null : float
-    The null value of the log odds ratio.
-
-Notes
------
-%(sampling_model)s
-""" % {'sampling_model' : _iid_sampling}
-
-
-Table2x2.riskratio_pvalue.__doc__ = """
-p-value for a hypothesis test about the risk ratio.
-
-Arguments
----------
-null : float
-    The null value of the risk ratio.
-
-Notes
------
-%(sampling_model)s
-""" % {'sampling_model' : _iid_sampling}
-
-
-Table2x2.log_riskratio_pvalue.__doc__ = """
-p-value for a hypothesis test about the log risk ratio.
-
-Arguments
----------
-null : float
-    The null value of the log risk ratio.
-
-Notes
------
-%(sampling_model)s
-""" % {'sampling_model' : _iid_sampling}
-
 
 class StratifiedTables(object):
     """
@@ -901,6 +864,29 @@ class StratifiedTables(object):
     ----------
     tables : list
         A list containing 2x2 contingency tables.
+
+    Attributes
+    ----------
+    logodds_pooled : float
+        An estimate of the pooled log odds ratio.  This is the
+        Mantel-Haenszel estimate of an odds ratio that is common to
+        all the tables.
+    log_oddsratio_se : float
+        The estimated standard error of the pooled log odds ratio,
+        following Robins, Breslow and Greenland (Biometrics
+        42:311-323)
+    oddsratio_pooled : float
+        An estimate of the pooled odds ratio.  This is the
+        Mantel-Haenszel estimate of an odds ratio that is common to
+        all tables.
+    risk_pooled : float
+        An estimate of the pooled risk ratio.  This is an estimate of
+        a risk ratio that is common to all the tables.
+
+    Notes
+    -----
+    This results are based on a sampling model in which the units are
+    independent within and between strata.
     """
 
     def __init__(self, tables, shift_zeros=False):
@@ -979,7 +965,19 @@ class StratifiedTables(object):
 
 
     def test_null_odds(self, correction=False):
-        # docstring below
+        """
+        Test that all tables have odds ratio equal to 1.
+
+        This is the 'Mantel-Haenszel' test.
+
+        Parameters
+        ----------
+        correction : boolean
+            If True, use the continuity correction when calculating the
+            test statistic.
+
+        Returns the chi^2 test statistic and p-value.
+        """
 
         statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
         statistic = np.abs(statistic)
@@ -999,12 +997,7 @@ class StratifiedTables(object):
 
     @cache_readonly
     def oddsratio_pooled(self):
-        """
-        An estimate of the pooled odds ratio.
-
-        This is the Mantel-Haenszel estimate of an odds ratio that is
-        common to all tables.
-        """
+        # doc for cached attributes in init above
 
         odds_ratio = np.sum(self._ad / self._n) / np.sum(self._bc / self._n)
         return odds_ratio
@@ -1012,24 +1005,14 @@ class StratifiedTables(object):
 
     @cache_readonly
     def logodds_pooled(self):
-        """
-        An estimate of the pooled log odds ratio.
-
-        This is the Mantel-Haenszel estimate of a risk ratio that is
-        common to all the tables.
-        """
+        # doc for cached attributes in init above
 
         return np.log(self.oddsratio_pooled)
 
 
     @cache_readonly
     def risk_pooled(self):
-        """
-        An estimate of the pooled risk ratio.
-
-        This is an estimate of a risk ratio that is common to all the
-        tables.
-        """
+        # doc for cached attributes in init above
 
         acd = self.table[0, 0, :] * self._cpd
         cab = self.table[1, 0, :] * self._apb
@@ -1040,13 +1023,7 @@ class StratifiedTables(object):
 
     @cache_readonly
     def logodds_pooled_se(self):
-        """
-        The estimated standard error of the pooled log odds ratio.
-
-        References
-        ----------
-        Robins, Breslow and Greenland (Biometrics 42:311-323)
-        """
+        # doc for pooled attributes in init above
 
         adns = np.sum(self._ad / self._n)
         bcns = np.sum(self._bc / self._n)
@@ -1116,7 +1093,19 @@ class StratifiedTables(object):
 
 
     def test_equal_odds(self, adjust=False):
-        # docstring below
+        """
+        Test that all odds ratios are identical.
+
+        This is the 'Breslow-Day' testing procedure.
+
+        Parameters
+        ----------
+        adjust : boolean
+            Use the 'Tarone' adjustment to achieve the chi^2
+            asymptotic distribution.
+
+        Returns the test statistic and p-value.
+        """
 
         table = self.table
 
@@ -1189,45 +1178,6 @@ class StratifiedTables(object):
         tab1.extend(tab3)
 
         return tab1
-
-
-
-StratifiedTables.test_equal_odds.__doc__ =  """
-Test that all odds ratios are identical.
-
-This is the 'Breslow-Day' testing procedure.
-
-Parameters
-----------
-adjust : boolean
-    Use the 'Tarone' adjustment to achieve the chi^2
-    asymptotic distribution.
-
-Returns the test statistic and p-value.
-
-Notes
------
-%(sampling_model)s
-""" % {'sampling_model' : _stratified_iid_sampling}
-
-
-StratifiedTables.test_null_odds.__doc__ =  """
-Test that all tables have odds ratio equal to 1.
-
-This is the 'Mantel-Haenszel' test.
-
-Parameters
-----------
-correction : boolean
-    If True, use the continuity correction when calculating the
-    test statistic.
-
-Returns the chi^2 test statistic and p-value.
-
-Notes
------
-%(sampling_model)s
-""" % {'sampling_model' : _stratified_iid_sampling}
 
 
 def mcnemar(table, exact=True, correction=True):
