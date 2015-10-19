@@ -244,7 +244,7 @@ def _data_has_constant(data):
 
 def _series_add_constant(data, prepend, has_constant):
     const = np.ones_like(data)
-    if data.var() == 0:
+    if _data_has_constant(data.values):
         if has_constant == 'raise':
             raise ValueError("data already contains a constant.")
         elif has_constant == 'skip':
@@ -264,7 +264,8 @@ def _series_add_constant(data, prepend, has_constant):
 
 def _dataframe_add_constant(data, prepend, has_constant):
     # check for const.
-    if np.any(data.var(0) == 0):
+
+    if _data_has_constant(data.as_matrix()):
         if has_constant == 'raise':
             raise ValueError("data already contains a constant.")
         elif has_constant == 'skip':
@@ -319,8 +320,7 @@ def add_constant(data, prepend=True, has_constant='skip'):
     else:
         data = np.asarray(data)
     if not data.dtype.names:
-        var0 = data.var(0) == 0
-        if np.any(var0):
+        if _data_has_constant(data):
             if has_constant == 'raise':
                 raise ValueError("data already contains a constant.")
             elif has_constant == 'skip':
