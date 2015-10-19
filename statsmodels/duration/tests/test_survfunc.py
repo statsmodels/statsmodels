@@ -3,6 +3,7 @@ from statsmodels.duration.survfunc import SurvfuncRight, survdiff, plot_survfunc
 from numpy.testing import assert_allclose
 from numpy.testing import dec
 import pandas as pd
+import os
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False
@@ -50,7 +51,9 @@ surv_prob2 = np.r_[0.8888889, 0.5925926, 0.2962963, 0.0000000]
 surv_prob_se2 = np.r_[0.1047566, 0.2518034, 0.2444320, np.nan]
 
 
-bmt = pd.read_csv("bmt.csv")
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+fp = os.path.join(cur_dir, 'bmt.csv')
+bmt = pd.read_csv(fp)
 
 
 def test_survfunc1():
@@ -123,7 +126,9 @@ def test_bmt():
 
     dfa = bmt[bmt.Group == "ALL"]
 
-    rslt = pd.read_csv("bmt_results.csv")
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    fp = os.path.join(cur_dir, 'bmt_results.csv')
+    rslt = pd.read_csv(fp)
 
     sf = SurvfuncRight(dfa["T"].values, dfa.Status.values)
 
