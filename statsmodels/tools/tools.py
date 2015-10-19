@@ -19,7 +19,7 @@ def _make_dictnames(tmp_arr, offset=0):
     """
     col_map = {}
     for i, col_name in enumerate(tmp_arr):
-        col_map.update({i+offset : col_name})
+        col_map.update({i + offset: col_name})
     return col_map
 
 
@@ -184,7 +184,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
                     tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
-                dt = lzip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
+                dt = lzip(tmp_arr, [tmp_dummy.dtype.str] * len(tmp_arr))
                 # preserve array type
                 return np.array(lmap(tuple, tmp_dummy.tolist()),
                                 dtype=dt).view(type(data))
@@ -202,7 +202,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise NotImplementedError("Array-like objects are not supported")
 
         if isinstance(col, int):
-            offset = data.shape[1]          # need error catching here?
+            offset = data.shape[1]  # need error catching here?
             tmp_arr = np.unique(data[:, col])
             tmp_dummy = (tmp_arr[:, np.newaxis] == data[:, col]).astype(float)
             tmp_dummy = tmp_dummy.swapaxes(1, 0)
@@ -258,7 +258,7 @@ def _series_add_constant(data, prepend, has_constant):
         columns = [data.name, 'const']
     else:
         columns = ['const', data.name]
-    results = DataFrame({data.name : data, 'const' : const}, columns=columns)
+    results = DataFrame({data.name: data, 'const': const}, columns=columns)
     return results
 
 
@@ -403,7 +403,7 @@ def pinv_extended(X, rcond=1e-15):
     cutoff = rcond * np.maximum.reduce(s)
     for i in range(min(n, m)):
         if s[i] > cutoff:
-            s[i] = 1./s[i]
+            s[i] = 1. / s[i]
         else:
             s[i] = 0.
     res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis],
@@ -435,7 +435,7 @@ def clean0(matrix):
     """
     Erase columns of zeros: can save some time in pseudoinverse.
     """
-    colsum = np.add.reduce(matrix**2, 0)
+    colsum = np.add.reduce(matrix ** 2, 0)
     val = [matrix[:, i] for i in np.flatnonzero(colsum)]
     return np.array(np.transpose(val))
 
@@ -562,9 +562,11 @@ class Bunch(dict):
     """
     Returns a dict-like object with keys accessible via attribute lookup.
     """
+
     def __init__(self, **kw):
         dict.__init__(self, kw)
         self.__dict__ = self
+
 
 webuse = np.deprecate(webuse,
                       old_name='statsmodels.tools.tools.webuse',
