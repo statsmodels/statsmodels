@@ -52,7 +52,7 @@ surv_prob_se2 = np.r_[0.1047566, 0.2518034, 0.2444320, np.nan]
 
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-fp = os.path.join(cur_dir, 'bmt.csv')
+fp = os.path.join(cur_dir, 'results', 'bmt.csv')
 bmt = pd.read_csv(fp)
 
 
@@ -127,7 +127,7 @@ def test_bmt():
     dfa = bmt[bmt.Group == "ALL"]
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    fp = os.path.join(cur_dir, 'bmt_results.csv')
+    fp = os.path.join(cur_dir, 'results', 'bmt_results.csv')
     rslt = pd.read_csv(fp)
 
     sf = SurvfuncRight(dfa["T"].values, dfa.Status.values)
