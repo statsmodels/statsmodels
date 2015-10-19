@@ -233,6 +233,15 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise IndexError("The index %s is not understood" % col)
 
 
+def _data_has_constant(data):
+    # if max-min (ptp) is zero, all rows are identical
+    ptp_is_zero = (np.ptp(data, axis=0) == 0)
+
+    # zero columns aren't constants
+    first_row_is_not_zero = (data[0] != 0)
+    return np.any(ptp_is_zero & first_row_is_not_zero)
+
+
 def _series_add_constant(data, prepend, has_constant):
     const = np.ones_like(data)
     if data.var() == 0:
