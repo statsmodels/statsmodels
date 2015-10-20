@@ -48,6 +48,11 @@ class TestTools(TestCase):
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.column_stack((np.ones(4), x)))
 
+    def test_add_constant_has_zero_column(self):
+        x = np.asarray([[1, 2, 3, 4.], [0, 0, 0, 0.]]).T
+        assert_equal(tools.add_constant(x),
+                     np.column_stack((np.ones(4), x)))
+
     def test_recipr(self):
         X = np.array([[2,1],[-1,0]])
         Y = tools.recipr(X)
