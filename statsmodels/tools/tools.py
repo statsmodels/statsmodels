@@ -436,7 +436,7 @@ def clean0(matrix):
     """
     Erase columns of zeros: can save some time in pseudoinverse.
     """
-    colsum = np.add.reduce(matrix ** 2, 0)
+    colsum = np.add.reduce(matrix**2, 0)
     val = [matrix[:, i] for i in np.flatnonzero(colsum)]
     return np.array(np.transpose(val))
 
