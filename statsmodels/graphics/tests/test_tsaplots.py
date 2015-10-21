@@ -1,4 +1,4 @@
-from statsmodels.compat.python import lmap, lzip, map
+from statsmodels.compat.python import lmap, map
 import numpy as np
 import pandas as pd
 from numpy.testing import dec
@@ -51,8 +51,8 @@ def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index('YEAR').T.unstack()
-    dates = lmap(lambda x : pd.datetools.parse('1 '+' '.join(x)),
-                                            dta.index.values)
+    dates = lmap(lambda x : pd.datetools.parse_time_string('1 '+' '.join(x))[0],
+                                                           dta.index.values)
 
     # test dates argument
     fig = month_plot(dta.values, dates=dates, ylabel='el nino')

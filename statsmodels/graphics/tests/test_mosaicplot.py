@@ -113,7 +113,7 @@ def test_mosaic():
     # sort by the marriage quality and give meaningful name
     # [rate_marriage, age, yrs_married, children,
     # religious, educ, occupation, occupation_husb]
-    datas = datas.sort(['rate_marriage', 'religious'])
+    datas = datas.sort_values(by=['rate_marriage', 'religious'])
     num_to_desc = {1: 'awful', 2: 'bad', 3: 'intermediate',
                       4: 'good', 5: 'wonderful'}
     datas['rate_marriage'] = datas['rate_marriage'].map(num_to_desc)
