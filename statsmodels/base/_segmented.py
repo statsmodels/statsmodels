@@ -244,7 +244,8 @@ class Segmented(object):
         bounds_all = []
         for k in range(1, len(bounds)):
             low, upp = bounds[k : k+2]
-            bounds = sorted(list(bounds) + [(low + upp) / 2])
+            #bounds = sorted(list(bounds) + [(low + upp) / 2])
+            bounds = list(bounds) + [(low + upp) / 2]
             objvalue = seg._fit_all(bounds, maxiter=maxiter)
             res.append(objvalue)
             bounds_all.append(bounds)
