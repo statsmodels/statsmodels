@@ -243,27 +243,36 @@ class Segmented(object):
         seg = Segmented(mod_new, self.exog_source, target_indices, copy_data=False)
 
 
-        import copy
-        bounds = list(copy.copy(self.bounds))
+        #import copy
+        #bounds = list(copy.copy(self.bounds))
+        bounds = self.bounds
+        bounds = list(bounds[:-1]) + [0, bounds[-1]]
+        bounds_sorted = sorted(bounds)
         # try each inner segment
         res = []
         bounds_all = []
-        for k in range(1, len(bounds)):
-            low, upp = bounds[k : k+2]
+        target_idx = target_indices[-1]
+        for k in range(0, len(bounds) - 1):
+            low, upp = bounds_sorted[k : k+2]
             #bounds = sorted(list(bounds) + [(low + upp) / 2])
-            bounds = list(bounds) + [(low + upp) / 2]
-            objvalue = seg._fit_all(bounds, maxiter=maxiter)
+            bounds[-2] = (low + upp) / 2
+            seg.exog[:, target_idx] = self.transform(self.exog_source,
+                                                 bounds[-2], self.degree)
+            seg.bounds = bounds
+            objvalue = seg._fit_all(maxiter=maxiter)
             res.append(objvalue)
-            bounds_all.append(bounds)
+            bounds_all.append(bounds.copy())
 
         # get best
         bidx = np.argmin(res)
         seg._fit_all(bounds_all[bidx], maxiter=maxiter)
+        #raise
         return seg, (res, bounds_all)
 
     def segmented(model, idx, k_segments=1):
         """segmented regression with a single knot or break point
 
+        old version
         """
 
         exog_k = np.asarray(model.exog[:, idx], order='F')
@@ -286,4 +295,3 @@ class Segmented(object):
         # attach extra result
         res_best.knot_location = res_optim
         return res_best
-

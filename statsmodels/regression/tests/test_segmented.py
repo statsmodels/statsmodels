@@ -108,6 +108,7 @@ class TestSegmentedOLS(CheckSegmented):
 
 
     def test_add3(self):
+        # add knot from 2 to 3
         x0 = self.x0
         seg = Segmented.from_model(self.mod_base0, x0, k_knots=2, degree=1)
         seg._fit_all(maxiter=10)
@@ -116,3 +117,17 @@ class TestSegmentedOLS(CheckSegmented):
         res_fitted_p1 = seg_p1.get_results()
 
         compare_results_segmented(res_fitted_p1, self.result_expected3_it)
+
+    def test_add1_3(self):
+        # add knots twice to get to three, start with one knot
+        x0 = self.x0
+        seg = Segmented.from_model(self.mod_base0, x0, k_knots=1, degree=1)
+        seg._fit_all(maxiter=10)
+        res_fitted = seg.get_results()
+        seg_p1, r = seg.add_knot(maxiter=10)
+        res_fitted_p1 = seg_p1.get_results()
+
+        seg_p2, r = seg_p1.add_knot(maxiter=10)
+        res_fitted_p2 = seg_p2.get_results()
+
+        compare_results_segmented(res_fitted_p2, self.result_expected3_it)
