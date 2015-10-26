@@ -85,11 +85,13 @@ class TestSegmentedOLS(CheckSegmented):
         q = np.percentile(x0, [10, 25, 60, 85, 90])
         seg._fit_all(q, maxiter=10)
         res_fitted_it2 = seg.get_results()
+        # this converges to a bad local minimum
+        # regression test
+        result_expected3_bad = _Bunch(ssr=12.65665,
+                                      knot_locations=np.array([ 0.534805,
+                                                -0.471663,  0.228336]))
+        #compare_results_segmented(res_fitted_it2, result_expected3_bad)
         compare_results_segmented(res_fitted_it2, self.result_expected3_it)
-
-
-        seg_p1, r = seg.add_knot(maxiter=3)
-        res_fitted_p1 = seg_p1.get_results()
 
 
     def test_from_model3(self):
@@ -97,11 +99,13 @@ class TestSegmentedOLS(CheckSegmented):
 
         seg = Segmented.from_model(self.mod_base0, x0, k_knots=3, degree=1)
         #q = np.percentile(x0, [10, 25, 60, 85, 90])
+        assert self.mod_base0.exog.shape[1] == 1 # check we still have original
         seg_bounds0 = seg.bounds.copy()
         seg_exog_var0 = seg.exog.var(0)
         seg._fit_all(maxiter=10)
         res_fitted = seg.get_results()
         compare_results_segmented(res_fitted, self.result_expected3_it)
+
 
     def test_add3(self):
         x0 = self.x0

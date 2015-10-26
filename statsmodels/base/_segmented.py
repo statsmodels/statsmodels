@@ -132,6 +132,7 @@ class Segmented(object):
 
         # we want bounds to be interior
         perc = np.linspace(0, 100, k_knots + 2)
+        #perc = np.linspace(0, 100, k_knots + 4)[1:-1]
         n_min = k_vars + degree + k_knots + 2  # 2 higher than perfect fit
         p_min = np.ceil(n_min) * 100 / nobs
         q = np.percentile(exog_add, np.clip(perc, p_min, 100 - p_min))
@@ -185,18 +186,23 @@ class Segmented(object):
                 bounds = self.bounds
             else:
                 raise ValueError('bounds not specified')
-
+        #bounds = list(bounds) + [exog_k.max()]
         for it in range(maxiter):
             for k in range(self.k_cols):
+                # Note: bounds have a leading element, kth knot is bounds[k+1]
                 obj = self.get_objective(exog_k, self.target_indices[k])
-
+                # get brackets assuming knots are not sorted
+                bounds_sorted = np.sort(bounds)
+                k_sidx = np.searchsorted(bounds_sorted, bounds[k + 1], side='left') -1
                 if method == 'brent':
                     # Note: brent with 2 value brackets uses it for (a, b), not for (a,c)
-                    brack = bounds[k : k+2]
+                    #brack = bounds[k : k+2]
+                    brack = bounds_sorted[k_sidx : k_sidx + 2 ]
                     #brack = bounds[k],  bounds[k+2]
                     res_optim = optimize.brent(obj, brack=brack)
                 else:
-                    brack = bounds[k],  bounds[k+2]
+                    #brack = bounds[k],  bounds[k+2]
+                    brack = bounds_sorted[k_sidx],  bounds_sorted[k_sidx+2]
                     res_optim = optimize.fminbound(obj, *brack)
                 tparam = res_optim   # we will want more returns, check convergence
                 # note self.exog is supposed to be modified inplace
