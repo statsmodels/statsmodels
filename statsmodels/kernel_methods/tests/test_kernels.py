@@ -332,7 +332,7 @@ class TestKernelsnd(object):
             yield self.rfft2d, k
             yield self.rfft3d, k
 
-    def test_cdt(self):
+    def test_dct(self):
         for k in kde_utils.kernelsnd:
             yield self.dct2d, k
             yield self.dct3d, k

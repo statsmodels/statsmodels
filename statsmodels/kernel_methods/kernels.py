@@ -827,7 +827,9 @@ class KernelnD(object):
         else:
             pdf *= np.prod(dx)
         if out is None:
-            out = np.empty(N, dtype=float)
+            out = pdf.copy()
+        else:
+            out[...] = pdf
         for a in range(out.ndim):
             out[:] = fftpack.dct(out, axis=a)
         return out
