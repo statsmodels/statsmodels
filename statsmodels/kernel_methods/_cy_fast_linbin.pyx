@@ -24,7 +24,7 @@ cdef object bin_type_map = dict(B=BOUNDED,
                                 C=CYCLIC,
                                 D=DISCRETE)
 
-DEF bin_type_error="Error, letter '{0}' is invalid: must be one of 'B', 'C', 'R' or 'D'"
+DEF bin_type_error=str("Error, letter '{0}' is invalid: must be one of 'B', 'C', 'R' or 'D'")
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
