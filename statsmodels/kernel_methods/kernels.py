@@ -800,6 +800,7 @@ class KernelnD(object):
         FFT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
+        dx = np.asarray(dx)
         samples = fftnsamples(N, dx, sparse=False)
         samples = np.concatenate([s[..., None] for s in samples], axis=-1)
         pdf = self.pdf(samples)
@@ -817,6 +818,7 @@ class KernelnD(object):
         DCT of the kernel on the points of ``z``. The points will always be provided as a regular grid spanning the
         frequency range to be explored.
         """
+        dx = np.asarray(dx)
         samples = dctnsamples(N, dx, sparse=False)
         samples = np.concatenate([s[..., None] for s in samples], axis=-1)
         pdf = self.pdf(samples)
