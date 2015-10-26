@@ -13,27 +13,27 @@ from scipy import optimize
 from statsmodels.regression.linear_model import OLS
 
 
-def segmented(model, idx):
+def segmented(model, source_idx, target_idx=-1):
     """segmented regression with a single knot or break point
 
     """
 
-    exog_k = np.asarray(model.exog[:, idx], order='F')
+    exog_k = np.asarray(model.exog[:, source_idx], order='F')
     exog = model.exog.copy(order='F')
 
     # TODO: generalize, option for objective, callback
     def ssr(a):
-        exog[:, -1] = np.clip(exog_k - a, 0, np.inf)
+        exog[:, target_idx] = np.clip(exog_k - a, 0, np.inf)
         ssr_ = OLS(model.endog, exog).fit().ssr
         return ssr_
 
-    brack = np.percentile(exog_k, [70, 85])
+    brack = np.percentile(exog_k, [15, 85])
     print('brack', brack)
     res_optim = optimize.brent(ssr, brack=brack)
     # TODO check convergence
 
     # redo, don't rely on having the correct last estimate in the loop:
-    exog[:, -1] = np.clip(exog_k - res_optim, 0, np.inf)
+    exog[:, target_idx] = np.clip(exog_k - res_optim, 0, np.inf)
     res_best = OLS(model.endog, exog).fit()
     # attach extra result
     res_best.knot_location = res_optim

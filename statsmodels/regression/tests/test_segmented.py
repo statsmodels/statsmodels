@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.base._segmented import Segmented
+from statsmodels.base._segmented import Segmented, segmented
 
 
 class _Bunch(object):
@@ -131,3 +131,67 @@ class TestSegmentedOLS(CheckSegmented):
         res_fitted_p2 = seg_p2.get_results()
 
         compare_results_segmented(res_fitted_p2, self.result_expected3_it)
+
+
+class TestSegmentedOLSOracle(CheckSegmented):
+
+
+    def test_oracle(cls):
+        nobs = 500
+        sig_e = 0.05
+
+        bp_true = -0.5
+        beta1 = 0.1
+        beta_diff = 0.2
+        for bp_true in [-0.5, 0, 0.5]:
+            for beta_diff in [0.4, 0.5, 1]:
+
+                beta = [1, beta1, beta1 + beta_diff]
+
+                np.random.seed(9999)
+                x0 = np.sort(np.random.uniform(-2, 2, size=nobs))
+                exog1 = np.column_stack((np.ones(nobs), x0,
+                                         np.maximum(x0 - bp_true, 0)))
+                y_true = exog1.dot(beta)
+                y = y_true + sig_e * np.random.randn(nobs)
+                mod_base0 = OLS(y, np.ones(nobs))
+                res_oracle = OLS(y, exog1).fit()
+
+                seg = Segmented.from_model(mod_base0, x0, k_knots=1, degree=1)
+                seg._fit_all(maxiter=10)
+                res_fitted = seg.get_results()
+                assert_allclose(res_fitted.ssr, res_oracle.ssr, rtol=1e-2)
+                # knot location difference looks large ?
+                assert_allclose(res_fitted.knot_locations, bp_true,
+                                rtol=1e-3, atol=0.2)
+
+                assert_allclose(res_fitted.params, res_oracle.params, rtol=0.1)
+                assert_allclose(res_fitted.bse, res_oracle.bse, rtol=0.03)
+                # pvalues are tiny, not informative
+                assert_allclose(res_fitted.pvalues, res_oracle.pvalues,
+                                rtol=1e-3, atol=1e-15)
+
+                # test original function
+                mod_base1 = OLS(y, exog1.copy())
+                mod_base1.exog[:, -1] += 0.1   # mess up the column we estimate
+                res_best = segmented(mod_base1, 1)
+
+                assert_allclose(res_best.ssr, res_oracle.ssr, rtol=1e-2)
+                # knot location difference looks large ?
+                assert_allclose(res_best.knot_location, bp_true,
+                                rtol=1e-3, atol=0.2)
+
+                assert_allclose(res_best.params, res_oracle.params, rtol=0.1)
+                assert_allclose(res_fitted.bse, res_oracle.bse, rtol=0.03)
+                # pvalues are tiny, not informative
+                assert_allclose(res_best.pvalues, res_oracle.pvalues,
+                                rtol=1e-3, atol=1e-15)
+
+                # test source target indices
+                exog10 = np.column_stack((np.ones(nobs),
+                                          np.maximum(x0 - bp_true, 0),
+                                          x0))
+                mod_base1 = OLS(y, exog10)
+                mod_base1.exog[:, 1] += 0.1   # mess up the column we estimate
+                res_best2 = segmented(mod_base1, 2, 1)
+                assert_allclose(res_best2.ssr, res_best.ssr, rtol=1e-8)
