@@ -2,7 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import numpy as np
 from ..compat.python import range
-
+from numpy import newaxis
 
 def _bootstrap(fitted_kde, nb_samples, eval_fct, CIs):
     if CIs is not None:
@@ -17,7 +17,7 @@ def _bootstrap(fitted_kde, nb_samples, eval_fct, CIs):
     for i in range(nb_samples):
         fitted.exog = exog[sampling[i]]
         results.append(eval_fct(fitted))
-    results = np.concatenate([r[..., np.newaxis] for r in results], axis=-1)
+    results = np.concatenate([r[..., newaxis] for r in results], axis=-1)
     results.sort(axis=-1)
     if CIs is not None:
         med_CIs = CIs / 2
@@ -34,10 +34,11 @@ def _bootstrap(fitted_kde, nb_samples, eval_fct, CIs):
         # Compute CIs
         low_CIs = results[..., lower_low_CIs] * (1-ratio_low_CIs) + results[..., upper_low_CIs] * ratio_low_CIs
         high_CIs = results[..., lower_high_CIs] * (1-ratio_high_CIs) + results[..., upper_high_CIs] * ratio_high_CIs
-        return np.concatenate((low_CIs[..., np.newaxis], high_CIs[..., np.newaxis]), axis=-1)
+        return np.concatenate((low_CIs[..., newaxis], high_CIs[..., newaxis]), axis=-1)
     return results
 
-def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None, fct_args={}):
+def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
+                   adjust_bw=1., fct_args={}):
     """
     Compute the confidence interval on the fitted KDE using bootstrapping.
 
@@ -47,7 +48,7 @@ def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
         Result of fitting a KDE object
     nb_samples: int
         Number of sampling to perform for the bootstrapping
-    CIs: list of int or None
+    CIs: list of float or None
         If not None, this is the list of confidence intervals to return (e.g. values
         between 0 and 1). See the return values for details on the output.
     bootstrapped_function: None or string or callable
@@ -55,6 +56,12 @@ def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
         a string is given, the corresponding method will be used. At last, if
         another callable is used, it should accept as first argument the
         fitted_kde object and return two values: the mesh and the values.
+    adjust_bw: float or ndarray or callable
+        If a float or an ndarray of same size and shape as the fitted KDE
+        bandwidth, the bandwidth of the fitted kde will be scaled by the given value.
+        If a callable, it accepts the fitted_kde and the function to bootstrap
+        as arguments and returns the scaling of the bandwidth, either as a
+        float or an ndarray.
     fct_args: dictionnary
         Dictionnary of arguments given to the bootstrapped function.
 
@@ -76,12 +83,17 @@ def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
         bootstrapped_function = type(fitted_kde).grid
     elif isinstance(bootstrapped_function, str):
         bootstrapped_function = getattr(type(fitted_kde), bootstrapped_function)
-    grid, _ = bootstrapped_function(fitted_kde, **fct_args)
     def eval_fct(fitted):
         return bootstrapped_function(fitted, **fct_args)[1]
-    return grid, _bootstrap(fitted_kde, nb_samples, eval_fct, CIs)
+    if callable(adjust_bw):
+        adjust_bw = adjust_bw(fitted_kde, eval_fct)
+    grid, _ = bootstrapped_function(fitted_kde, **fct_args)
+    adjusted_kde = fitted_kde.copy()
+    adjusted_kde.bandwidth *= adjust_bw
+    return grid, _bootstrap(adjusted_kde, nb_samples, eval_fct, CIs)
 
-def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_function=None, fct_args={}):
+def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_function=None,
+              adjust_bw=1., fct_args={}):
     """
     Compute the confidence interval on the fitted KDE using bootstrapping.
 
@@ -94,7 +106,7 @@ def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_functi
         method of the ``fitted_kde`` object.
     nb_samples: int
         Number of sampling to perform for the bootstrapping
-    CIs: list of int or None
+    CIs: list of float or None
         If not None, this is the list of confidence intervals to return (e.g. values
         between 0 and 1). See the return values for details on the output.
     bootstrapped_function: None or string or callable
@@ -103,6 +115,12 @@ def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_functi
         another callable is used, it should accept as first argument the
         fitted_kde object, as second a 1D or 2D array of points and return a
         ndarray with as many values as points given as input.
+    adjust_bw: float or ndarray or callable
+        If a float or an ndarray of same size and shape as the fitted KDE
+        bandwidth, the bandwidth of the fitted kde will be scaled by the given value.
+        if a callable, it accepts the fitted_kde and the bootstrap function as
+        arguments and returns the scaling of the bandwidth, either as a float
+        or an ndarray.
     fct_args: dictionnary
         Dictionnary of arguments given to the bootstrapped function.
 
@@ -110,7 +128,7 @@ def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_functi
     -------
     intervals: ndarray
         If ``CIs`` is None, this returns a ndarray of dimensions
-        `(nb_samples, len(eval_points.shape))`, where for each point position, we
+        `(len(eval_points.shape), nb_samples)`, where for each point position, we
         obtain the ordered list of possible values.
         If ``CIs`` is specified, this returns a ndarray of dimensions
         `(len(eval_points.shape), len(CIs), 2)`, where for each grid position, and each
@@ -121,7 +139,10 @@ def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_functi
         bootstrapped_function = type(fitted_kde).__call__
     elif isinstance(bootstrapped_function, str):
         bootstrapped_function = getattr(type(fitted_kde), bootstrapped_function)
-    grid, _ = bootstrapped_function(fitted_kde, **fct_args)
     def eval_fct(fitted):
-        return bootstrapped_function(fitted, eval_points, **fct_args)[1]
-    return _bootstrap(fitted_kde, nb_samples, eval_fct, CIs)
+        return bootstrapped_function(fitted, eval_points, **fct_args)
+    if callable(adjust_bw):
+        adjust_bw = adjust_bw(fitted_kde, eval_fct)
+    adjusted_kde = fitted_kde.copy()
+    adjusted_kde.bandwidth *= adjust_bw
+    return _bootstrap(adjusted_kde, nb_samples, eval_fct, CIs)
