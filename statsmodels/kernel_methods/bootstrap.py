@@ -22,8 +22,9 @@ def _bootstrap(fitted_kde, nb_samples, eval_fct, CIs):
     if CIs is not None:
         med_CIs = CIs / 2
         # Compute exact position of the CI
-        low_CIs = nb_samples*(.5 - med_CIs)
-        high_CIs = nb_samples*(.5 + med_CIs)
+        max_index = nb_samples-1
+        low_CIs = max_index*(.5 - med_CIs)
+        high_CIs = max_index*(.5 + med_CIs)
         # Compute integer positions
         lower_low_CIs = np.floor(low_CIs).astype(int)
         upper_low_CIs = np.ceil(low_CIs).astype(int)

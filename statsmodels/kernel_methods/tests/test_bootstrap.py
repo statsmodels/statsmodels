@@ -24,12 +24,12 @@ class TestPDFBootstrap(object):
     @classmethod
     def setUpClass(cls):
         dst = stats.norm(0, 1)
-        cls.data = dst.rvs(2000)
+        cls.data = dst.rvs(200)
         cls.ks = kde.KDE(cls.data).fit()
         cls.grid, cls.values = cls.ks.grid()
         cls.eval_points = np.r_[-2:2:64j]
         cls.point_values = cls.ks(cls.eval_points)
-        cls.nb_samples = 256
+        cls.nb_samples = 64
 
     def test_grid_between(self):
         """
