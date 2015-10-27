@@ -10,12 +10,29 @@ from __future__ import division
 import numpy as np
 from scipy import optimize
 
-from statsmodels.regression.linear_model import OLS
-
 
 def segmented(model, source_idx, target_idx=-1):
     """segmented regression with a single knot or break point
 
+    Parameters
+    ----------
+    model : instance of a model
+    source_idx : int
+        index to column of original exog variable
+    target_idx : int
+        index of column with spline basis to be optimized
+
+    Returns
+    -------
+    res_best : results instance
+        The results is based on the model fit with the optimized knot location.
+        The only extra attribute is `knot_location`
+
+    Notes
+    -----
+    This returns a regular instance returned by calling the `fit` method of
+    the class of the `model`. Inference in the results does not take into
+    account that the knot location is estimated from the data.
     """
 
     exog_k = np.asarray(model.exog[:, source_idx], order='F')
@@ -24,17 +41,16 @@ def segmented(model, source_idx, target_idx=-1):
     # TODO: generalize, option for objective, callback
     def ssr(a):
         exog[:, target_idx] = np.clip(exog_k - a, 0, np.inf)
-        ssr_ = OLS(model.endog, exog).fit().ssr
+        ssr_ = model.__class__(model.endog, exog).fit().ssr
         return ssr_
 
     brack = np.percentile(exog_k, [15, 85])
-    print('brack', brack)
     res_optim = optimize.brent(ssr, brack=brack)
     # TODO check convergence
 
     # redo, don't rely on having the correct last estimate in the loop:
     exog[:, target_idx] = np.clip(exog_k - res_optim, 0, np.inf)
-    res_best = OLS(model.endog, exog).fit()
+    res_best = model.__class__(model.endog, exog).fit()
     # attach extra result
     res_best.knot_location = res_optim
     return res_best
@@ -100,9 +116,6 @@ class Segmented(object):
         self.degree = degree
         self.bounds = bounds
 
-        # to initialize splines
-        perc = np.linspace(1, 100, self.k_cols + 2)
-        self.quantiles = np.percentile(exog_source, perc)
 
     @classmethod
     def from_model(cls, model, exog_add, k_knots=1, degree=1):
@@ -132,7 +145,6 @@ class Segmented(object):
 
         # we want bounds to be interior
         perc = np.linspace(0, 100, k_knots + 2)
-        #perc = np.linspace(0, 100, k_knots + 4)[1:-1]
         n_min = k_vars + degree + k_knots + 2  # 2 higher than perfect fit
         p_min = np.ceil(n_min) * 100 / nobs
         q = np.percentile(exog_add, np.clip(perc, p_min, 100 - p_min))
@@ -153,8 +165,15 @@ class Segmented(object):
 
 
     def get_objective(self, exog_k, target_idx):
+        """return the objective function (ssr) as function of the knot location
+
+        ssr is currently hard coded.
+
+        This needs to create a new instance of the model, until models support
+        changing the exog inplace.
+        """
         endog = self.endog
-        exog = self.exog  #.copy() no copy, use inplacce
+        exog = self.exog  #no copy, use inplacce
         def ssr(tparam):
             exog[:, target_idx] = self.transform(exog_k,  tparam, self.degree)
             # TODO: Refactor OLS, or cheat to not create new model
@@ -165,7 +184,17 @@ class Segmented(object):
 
     @staticmethod
     def transform(exog_k,  tparam, degree):
-        """linear spline
+        """returns column of power spline basis function
+
+        Parameters
+        ----------
+        exog_k : ndarray
+            original explanatory variable
+        tparam : float
+            knot location, parameter for transform
+        degree : int
+            degree of power spline, linear spline has degree=1
+
 
         We call this from class method so we cannot have instance attributes
         """
@@ -175,18 +204,34 @@ class Segmented(object):
             return np.maximum((exog_k - tparam)**degree, 0)
 
 
-    def _fit_one(self, bounds):
-        pass
-
-
     def _fit_all(self, bounds=None, maxiter=1, method='brent'):
+        """minimize objective function with respect to all knot locations
+
+        Parameters
+        ----------
+        bounds : array_like
+            Warning: This may be removed, purpose is currently not well defined.
+        maxiter : int
+            defines how often it cycles through all columns or knots. There
+            is currently no convergence criterion to stop early.
+        method : string
+            Uses either brent or fminbound from scipy.optimize
+
+        Returns
+        -------
+        The main effect is inplace modification of `bounds` and `exog`.
+        objvalue : float
+            value of the objective function (`ssr`) at the best solution found.
+
+
+        """
         exog_k = self.exog_source
         if bounds is None:
             if self.bounds is not None:
                 bounds = self.bounds
             else:
                 raise ValueError('bounds not specified')
-        #bounds = list(bounds) + [exog_k.max()]
+
         for it in range(maxiter):
             for k in range(self.k_cols):
                 # Note: bounds have a leading element, kth knot is bounds[k+1]
@@ -214,6 +259,13 @@ class Segmented(object):
         return objvalue
 
     def get_results(self):
+        """fit and return results instance based on curren `exog` and `bounds`.
+
+        Returns
+        -------
+        res : results instance
+
+        """
         endog = self.endog
         exog = self.exog
         res = self.model_class(endog, exog).fit()
@@ -221,7 +273,7 @@ class Segmented(object):
         return res
 
 
-    def add_knot(self, maxiter=1):
+    def add_knot(self, maxiter=1, method='brent'):
         """insert knot and reoptimize
 
         This only insert into interior segments and needs at least 3 segments
@@ -254,44 +306,16 @@ class Segmented(object):
         target_idx = target_indices[-1]
         for k in range(0, len(bounds) - 1):
             low, upp = bounds_sorted[k : k+2]
-            #bounds = sorted(list(bounds) + [(low + upp) / 2])
             bounds[-2] = (low + upp) / 2
             seg.exog[:, target_idx] = self.transform(self.exog_source,
                                                  bounds[-2], self.degree)
             seg.bounds = bounds
-            objvalue = seg._fit_all(maxiter=maxiter)
+            objvalue = seg._fit_all(maxiter=maxiter, method=method)
             res.append(objvalue)
             bounds_all.append(bounds.copy())
 
         # get best
         bidx = np.argmin(res)
         seg._fit_all(bounds_all[bidx], maxiter=maxiter)
-        #raise
+
         return seg, (res, bounds_all)
-
-    def segmented(model, idx, k_segments=1):
-        """segmented regression with a single knot or break point
-
-        old version
-        """
-
-        exog_k = np.asarray(model.exog[:, idx], order='F')
-        exog = model.exog.copy(order='F')
-
-        # TODO: generalize, option for objective, callback
-        def ssr(a):
-            exog[:, -1] = np.clip(exog_k - a, 0, np.inf)
-            ssr_ = OLS(model.endog, exog).fit().ssr
-            return ssr_
-
-        brack = np.percentile(exog_k, [70, 85])
-        print('brack', brack)
-        res_optim = optimize.brent(ssr, brack=brack)
-        # TODO check convergence
-
-        # redo, don't rely on having the correct last estimate in the loop:
-        exog[:, -1] = np.clip(exog_k - res_optim, 0, np.inf)
-        res_best = OLS(model.endog, exog).fit()
-        # attach extra result
-        res_best.knot_location = res_optim
-        return res_best
