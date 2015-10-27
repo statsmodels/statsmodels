@@ -10,6 +10,8 @@ from __future__ import division
 import numpy as np
 from scipy import optimize
 
+from statsmodels.compat.numpy import np_percentile
+
 
 def segmented(model, source_idx, target_idx=-1):
     """segmented regression with a single knot or break point
@@ -44,7 +46,7 @@ def segmented(model, source_idx, target_idx=-1):
         ssr_ = model.__class__(model.endog, exog).fit().ssr
         return ssr_
 
-    brack = np.percentile(exog_k, [15, 85])
+    brack = np_percentile(exog_k, [15, 85])
     res_optim = optimize.brent(ssr, brack=brack)
     # TODO check convergence
 
@@ -147,7 +149,7 @@ class Segmented(object):
         perc = np.linspace(0, 100, k_knots + 2)
         n_min = k_vars + degree + k_knots + 2  # 2 higher than perfect fit
         p_min = np.ceil(n_min) * 100 / nobs
-        q = np.percentile(exog_add, np.clip(perc, p_min, 100 - p_min))
+        q = np_percentile(exog_add, np.clip(perc, p_min, 100 - p_min))
         # the following part needs to be used for predict given q = bounds[1:-1]
         if degree == 1:
             vander = exog_add

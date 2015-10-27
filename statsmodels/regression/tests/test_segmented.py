@@ -9,6 +9,8 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
+from statsmodels.compat.numpy import np_percentile
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.base._segmented import Segmented, segmented
 
@@ -66,7 +68,7 @@ class TestSegmentedOLS(CheckSegmented):
 
         #res_fitted2 = segmented(mod_base2, 1, k_segments=1)
 
-        q = np.percentile(x0, [25, 60, 85])
+        q = np_percentile(x0, [25, 60, 85])
 
         mod_base2 = OLS(endog, np.column_stack((np.ones(nobs), x0,
                                                 np.maximum(x0 - q[0], 0),
@@ -76,13 +78,13 @@ class TestSegmentedOLS(CheckSegmented):
         #res_base = mod_base2.fit()
 
         seg = Segmented(mod_base2, x0, [2, 3, 4])
-        q = np.percentile(x0, [10, 25, 60, 85, 90])
+        q = np_percentile(x0, [10, 25, 60, 85, 90])
         seg._fit_all(q, maxiter=1)
         res_fitted2 = seg.get_results()
         compare_results_segmented(res_fitted2, self.result_expected3_it1)
 
         seg = Segmented(mod_base2, x0, [2, 3, 4])
-        q = np.percentile(x0, [10, 25, 60, 85, 90])
+        q = np_percentile(x0, [10, 25, 60, 85, 90])
         seg._fit_all(q, maxiter=10)
         res_fitted_it2 = seg.get_results()
         # this converges to a bad local minimum
@@ -98,7 +100,7 @@ class TestSegmentedOLS(CheckSegmented):
         x0 = self.x0
 
         seg = Segmented.from_model(self.mod_base0, x0, k_knots=3, degree=1)
-        #q = np.percentile(x0, [10, 25, 60, 85, 90])
+        #q = np_percentile(x0, [10, 25, 60, 85, 90])
         assert self.mod_base0.exog.shape[1] == 1 # check we still have original
         seg_bounds0 = seg.bounds.copy()
         seg_exog_var0 = seg.exog.var(0)
