@@ -62,7 +62,7 @@ def _show_versions_only():
 
     try:
         import pandas
-        print("pandas: %s" % safe_version(pandas, ['version', 'version'], '__version__'))
+        print("pandas: %s" % safe_version(pandas))
     except ImportError:
         print("pandas: Not installed")
 
