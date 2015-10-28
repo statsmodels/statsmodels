@@ -134,7 +134,10 @@ def check_dependency_versions(min_versions):
                               (spversion, min_versions['scipy']))
 
     try:
-        from pandas.version import short_version as pversion
+        import pandas
+        #FIXME: this will break for pandas 1.0.0.  Needs elaborate parsing now,
+        # due to pandas removing version.short_version
+        pversion = pandas.__version__[:6]
     except ImportError:
         install_requires.append('pandas')
     else:

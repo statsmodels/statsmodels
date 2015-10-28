@@ -16,10 +16,8 @@ def strip_rc(version):
 
 
 def is_pandas_min_version(min_version):
-    '''check whether pandas is at least min_version
-    '''
-    from pandas.version import short_version as pversion
-    return StrictVersion(strip_rc(pversion)) >= min_version
+    '''check whether pandas is at least min_version '''
+    return StrictVersion((pandas.__version__[:6])) >= min_version
 
 
 # local copies, all unchanged
