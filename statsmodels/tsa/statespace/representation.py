@@ -262,7 +262,7 @@ class Representation(object):
             endog = k_endog
             # If so, assume that it is either column-ordered and in wide format
             # or row-ordered and in long format
-            if endog.flags['C_CONTIGUOUS']:
+            if not endog.flags['F_CONTIGUOUS']:
                 endog = endog.T
             k_endog = endog.shape[0]
 

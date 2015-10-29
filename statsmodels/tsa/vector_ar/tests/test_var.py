@@ -85,9 +85,9 @@ class CheckVAR(object):
 def get_macrodata():
     data = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
     names = data.dtype.names
-    nd = data.view((float,3))
+    nd = data.view((float,3), type=np.ndarray)
     nd = np.diff(np.log(nd), axis=0)
-    return nd.ravel().view(data.dtype)
+    return nd.ravel().view(data.dtype, type=np.ndarray)
 
 def generate_var():
     from rpy2.robjects import r
@@ -110,8 +110,8 @@ class RResults(object):
         data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
-        self.params = data['coefs'].view((float, len(self.names)))
-        self.stderr = data['stderr'].view((float, len(self.names)))
+        self.params = data['coefs'].view((float, len(self.names)), type=np.ndarray)
+        self.stderr = data['stderr'].view((float, len(self.names)), type=np.ndarray)
 
         self.irf = data['irf'].item()
         self.orth_irf = data['orthirf'].item()
@@ -173,7 +173,7 @@ class CheckIRF(object):
 
     def _check_irfs(self, py_irfs, r_irfs):
         for i, name in enumerate(self.res.names):
-            ref_irfs = r_irfs[name].view((float, self.k))
+            ref_irfs = r_irfs[name].view((float, self.k), type=np.ndarray)
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
@@ -252,7 +252,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_constructor(self):
         # make sure this works with no names
-        ndarr = self.data.view((float, 3))
+        ndarr = self.data.view((float, 3), type=np.ndarray)
         model = VAR(ndarr)
         res = model.fit(self.p)
 
@@ -420,7 +420,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_reorder(self):
         #manually reorder
-        data = self.data.view((float,3))
+        data = self.data.view((float,3), type=np.ndarray)
         names = self.names
         data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
         names2 = []
@@ -579,7 +579,7 @@ def test_var_constant():
 
 def test_var_trend():
     # see 2271
-    data = get_macrodata().view((float,3))
+    data = get_macrodata().view((float,3), type=np.ndarray)
 
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
@@ -596,7 +596,7 @@ def test_irf_trend():
     # test for irf with different trend see #1636
     # this is a rough comparison by adding trend or subtracting mean to data
     # to get similar AR coefficients and IRF
-    data = get_macrodata().view((float,3))
+    data = get_macrodata().view((float,3), type=np.ndarray)
 
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')

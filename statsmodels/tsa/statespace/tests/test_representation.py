@@ -624,11 +624,12 @@ def test_bind():
     mod.bind(np.arange(10).reshape(10,1))
     assert_equal(mod.nobs, 10)
 
+    # As with numpy >= 0.10 these arrays are both C anf F continuous, they both work ...
     # Test invalid F-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(10,1))))
+    # assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(10,1))))
 
     # Test invalid C-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
+    # assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
 
 
 def test_initialization():
@@ -733,7 +734,7 @@ def test_cython():
 def test_filter():
     # Tests of invalid calls to the filter function
 
-    endog = np.ones((10,1))
+    endog = np.ones((1,10))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
     mod['selection', :] = 1
@@ -771,7 +772,7 @@ def test_predict():
 
     warnings.simplefilter("always")
 
-    endog = np.ones((10,1))
+    endog = np.ones((1,10))
     mod = KalmanFilter(endog, k_states=1, initialization='approximate_diffuse')
     mod['design', :] = 1
     mod['obs_intercept'] = np.zeros((1,10))
