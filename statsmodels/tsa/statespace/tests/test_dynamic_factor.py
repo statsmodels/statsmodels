@@ -55,7 +55,7 @@ class CheckDynamicFactor(object):
                                                   **kwargs)
 
         if filter:
-            self.results = self.model.filter(true['params'], cov_type=cov_type)
+            self.results = self.model.smooth(true['params'], cov_type=cov_type)
 
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and

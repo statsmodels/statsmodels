@@ -461,6 +461,31 @@ class DynamicFactor(MLEModel):
         return result
     filter.__doc__ = MLEModel.filter.__doc__
 
+    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
+               **kwargs):
+        params = np.array(params, ndmin=1)
+
+        # Transform parameters if necessary
+        if not transformed:
+            params = self.transform_params(params)
+            transformed = True
+
+        # Get the state space output
+        result = super(DynamicFactor, self).smooth(params, transformed,
+                       cov_type, return_ssm=True, **kwargs)
+
+        # Wrap in a results object
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            result = DynamicFactorResultsWrapper(
+                DynamicFactorResults(self, params, result, **result_kwargs)
+            )
+
+        return result
+    smooth.__doc__ = MLEModel.smooth.__doc__
+
     @property
     def start_params(self):
         params = np.zeros(self.k_params, dtype=np.float64)
@@ -1032,9 +1057,10 @@ class DynamicFactorResults(MLEResults):
                 smoothed=None, smoothed_cov=None,
                         offset=offset)
             if self.smoothed_state is not None:
-                out.smoothed = self.smoothed_state[offset]
+                out.smoothed = self.smoothed_state[offset:end]
             if self.smoothed_state_cov is not None:
-                out.smoothed_cov = self.smoothed_state_cov[offset, offset]
+                out.smoothed_cov = (
+                    self.smoothed_state_cov[offset:end, offset:end])
         return out
 
     @cache_readonly
