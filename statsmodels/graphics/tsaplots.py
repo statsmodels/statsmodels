@@ -202,10 +202,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     ticks = []
     for season, df in grouped_x:
         df = df.copy() # or sort balks for series. may be better way
-        if is_pandas_min_version(StrictVersion('0.17.0')):
-            df.sort_values(inplace=True)
-        else:
-            df.sort()
+        df.sort(inplace=True)
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())

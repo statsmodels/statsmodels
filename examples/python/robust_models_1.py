@@ -7,6 +7,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
+from statsmodels.compat.pandas import sort_values
 
 
 # * An M-estimator minimizes the function 
@@ -232,12 +233,12 @@ print(infl.summary_frame().ix['minister'])
 
 
 sidak = ols_model.outlier_test('sidak')
-sidak.sort('unadj_p', inplace=True)
+sort_values(sidak, 'unadj_p', inplace=True)
 print(sidak)
 
 
 fdr = ols_model.outlier_test('fdr_bh')
-fdr.sort('unadj_p', inplace=True)
+sort_values(fdr, 'unadj_p', inplace=True)
 print(fdr)
 
 
@@ -299,12 +300,12 @@ hat_diag.ix[hat_diag > h_bar]
 
 
 sidak2 = ols_model.outlier_test('sidak')
-sidak2.sort('unadj_p', inplace=True)
+sort_values(sidak2, 'unadj_p', inplace=True)
 print(sidak2)
 
 
 fdr2 = ols_model.outlier_test('fdr_bh')
-fdr2.sort('unadj_p', inplace=True)
+sort_values(fdr2, 'unadj_p', inplace=True)
 print(fdr2)
 
 
