@@ -54,6 +54,7 @@ contingency table cell counts:
     df = sm.datasets.get_rdataset("Arthritis", "vcd").data
 
     tab = pd.crosstab(df['Treatment'], df['Improved'])
+    tab = tab.loc[:, ["None", "Some", "Marked"]]
     table = sm.stats.Table(tab)
 
 Alternatively, we can pass the raw data and let the Table class

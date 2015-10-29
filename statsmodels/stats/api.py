@@ -58,4 +58,4 @@ from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   SquareTable,
                                                   Table2x2,
                                                   Table,
-                                                  StratifiedTables)
+                                                  StratifiedTable)

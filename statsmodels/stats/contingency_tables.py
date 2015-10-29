@@ -1,7 +1,7 @@
 """
 Methods for analyzing two-way contingency tables (i.e. frequency
-tables for observed units that are classified with respect to either
-one or two categorical variables).
+tables for observations that are cross-classified with respect to two
+categorical variables).
 
 The main classes are:
 
@@ -14,7 +14,7 @@ The main classes are:
   * Table2x2 : implements methods that can be applied to a 2x2
   contingency table.
 
-  * StratifiedTables : implements methods that can be applied to a
+  * StratifiedTable : implements methods that can be applied to a
   collection of contingency tables.
 
 Also contains functions for conducting Mcnemar's test and Cochran's q
@@ -57,7 +57,9 @@ def _make_df_square(table):
 
 
 class _Bunch(object):
-    pass
+
+    def __repr__(self):
+        return "<bunch object containing statsmodels results>"
 
 
 class Table(object):
@@ -76,43 +78,33 @@ class Table(object):
     ----------
     table_orig : array-like
         The original table is cached as `table_orig`.
-    nominal_association : bunch
-        Assessment of independence between rows and columns using chi^2
-        testing.  The rows and columns are treated as nominal (unordered)
-        categorical ariables.  The returned bunch includes the following
-        attributes:
-            statistic : float
-                The chi^2 test statistic.
-            df : integer
-                The degrees of freedom of the reference distribution
-            pvalue : float
-                The p-value for the test.
-    marginal_probabilities : tuple of two arrays
+    marginal_probabilities : tuple of two ndarrays
         The estimated row and column marginal distributions.
-    independence_probabilities : array-like
-        Estimated cell probabilities under independence.
-    fittedvalues : array-like
+    independence_probabilities : ndarray
+        Estimated cell probabilities under row/column independence.
+    fittedvalues : ndarray
         Fitted values under independence.
-    pearson_resids : array-like
-        The Pearson residuals.
-    standardized_resids : array-like
-        Residuals with approximately unit variance.
-    chi2_contribs : array-like
+    resid_pearson : ndarray
+        The Pearson residuals under row/column independence.
+    standardized_resids : ndarray
+        Residuals for the independent row/column model with approximate
+        unit variance.
+    chi2_contribs : ndarray
         The contribution of each cell to the chi^2 statistic.
-    local_logodds_ratios : array-like
+    local_logodds_ratios : ndarray
         The local log odds ratios are calculated for each 2x2 subtable
         formed from adjacent rows and columns.
-    local_oddsratios : array-like
+    local_oddsratios : ndarray
         The local odds ratios are calculated from each 2x2 subtable
         formed from adjacent rows and columns.
-    cumulative_log_oddsratios : array-like
+    cumulative_log_oddsratios : ndarray
         The cumulative log odds ratio at a given pair of thresholds is
         calculated by reducing the table to a 2x2 table based on
         dichotomizing the rows and columns at the given thresholds.
         The table of cumulative log odds ratios presents all possible
         cumulative log odds ratios that can be formed from a given
         table.
-    cumulative_oddsratios : array-like
+    cumulative_oddsratios : ndarray
         The cumulative odds ratios are calculated by reducing the
         table to a 2x2 table based on cutting the rows and columns at
         a given point.  The table of cumulative odds ratios presents
@@ -130,6 +122,11 @@ class Table(object):
     model in which the units are independent and identically
     distributed, with each unit being classified with respect to two
     categorical variables.
+
+    References
+    ---------
+    Definitions of residuals:
+        https://onlinecourses.science.psu.edu/stat504/node/86
     """
 
     def __init__(self, table, shift_zeros=True):
@@ -168,9 +165,25 @@ class Table(object):
         return cls(table, shift_zeros)
 
 
-    @cache_readonly
-    def nominal_association(self):
-        # docstring for cached attributes in init above
+    def test_nominal_association(self):
+        """
+        Assess independence for nominal factors.
+
+        Assessment of independence between rows and columns using
+        chi^2 testing.  The rows and columns are treated as nominal
+        (unordered) categorical variables.
+
+        Returns
+        -------
+        A bunch containing the following attributes:
+
+        statistic : float
+            The chi^2 test statistic.
+        df : integer
+            The degrees of freedom of the reference distribution
+        pvalue : float
+            The p-value for the test.
+        """
 
         statistic = np.asarray(self.chi2_contribs).sum()
         df = np.prod(np.asarray(self.table.shape) - 1)
@@ -182,7 +195,7 @@ class Table(object):
         return b
 
 
-    def ordinal_association(self, row_scores=None, col_scores=None):
+    def test_ordinal_association(self, row_scores=None, col_scores=None):
         """
         Assess independence between two ordinal variables.
 
@@ -197,7 +210,9 @@ class Table(object):
         col_scores : array-like
             An array of numeric column scores
 
-        Returns a bunch with the following attributes:
+        Returns
+        -------
+        A bunch with the following attributes:
 
         statistic : float
             The test statistic.
@@ -300,7 +315,7 @@ class Table(object):
 
 
     @cache_readonly
-    def pearson_resids(self):
+    def resid_pearson(self):
         # docstring for cached attributes in init above
 
         fit = self.fittedvalues
@@ -313,7 +328,7 @@ class Table(object):
         # docstring for cached attributes in init above
 
         row, col = self.marginal_probabilities
-        sresids = self.resids / np.sqrt(np.outer(1 - row, 1 - col))
+        sresids = self.resid_pearson / np.sqrt(np.outer(1 - row, 1 - col))
         return sresids
 
 
@@ -321,7 +336,7 @@ class Table(object):
     def chi2_contribs(self):
         # docstring for cached attributes in init above
 
-        return self.pearson_resids**2
+        return self.resid_pearson**2
 
 
     @cache_readonly
@@ -424,7 +439,9 @@ class SquareTable(Table):
 
         p_{i, j} = p_{j, i}  for all i, j
 
-        Returns a bunch with attributes:
+        Returns
+        -------
+        A bunch with attributes:
 
         statistic : float
             chisquare test statistic
@@ -852,7 +869,7 @@ class Table2x2(SquareTable):
 
 
 
-class StratifiedTables(object):
+class StratifiedTable(object):
     """
     Analyses for a collection of 2x2 stratified contingency tables.
 
@@ -862,8 +879,9 @@ class StratifiedTables(object):
 
     Parameters
     ----------
-    tables : list
-        A list containing 2x2 contingency tables.
+    tables : list or ndarray
+        Either a list containing 2x2 contingency tables, or a 2x2xk
+        ndarray in which each slice is a contingency table.
 
     Attributes
     ----------
@@ -891,15 +909,22 @@ class StratifiedTables(object):
 
     def __init__(self, tables, shift_zeros=False):
 
-        # Create a data cube
-        tables = [np.asarray(x) for x in tables]
-        table = [x[:, :, None] for x in tables]
-        table = np.concatenate(table, axis=2).astype(np.float64)
+        if isinstance(tables, np.ndarray):
+            sp = tables.shape
+            if (len(sp) != 3) or (sp[0] != 2) or (sp[1] != 2):
+                raise ValueError("If an ndarray, argument must be 2x2xn")
+            table = tables
+        else:
+            # Create a data cube
+            tables = [np.asarray(x) for x in tables]
+            table = [x[:, :, None] for x in tables]
+            table = np.concatenate(table, axis=2).astype(np.float64)
 
         if shift_zeros:
             zx = (table == 0).sum(0).sum(0)
             ix = np.flatnonzero(zx > 0)
             if len(ix) > 0:
+                table = table.copy()
                 table[:, :, ix] += 0.5
 
         self.table = table
@@ -923,7 +948,7 @@ class StratifiedTables(object):
     @classmethod
     def from_data(cls, var1, var2, strata, data):
         """
-        Construct a StratifiedTables object from data.
+        Construct a StratifiedTable object from data.
 
         Parameters
         ----------
@@ -944,7 +969,7 @@ class StratifiedTables(object):
 
         Returns
         -------
-        A StratifiedTables instance.
+        A StratifiedTable instance.
         """
 
         if not isinstance(data, pd.DataFrame):
@@ -976,7 +1001,9 @@ class StratifiedTables(object):
             If True, use the continuity correction when calculating the
             test statistic.
 
-        Returns the chi^2 test statistic and p-value.
+        Returns
+        -------
+        A bunch containing the chi^2 test statistic and p-value.
         """
 
         statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
@@ -992,7 +1019,11 @@ class StratifiedTables(object):
         # df is always 1
         pvalue = 1 - stats.chi2.cdf(statistic, 1)
 
-        return statistic, pvalue
+        b = _Bunch()
+        b.statistic = statistic
+        b.pvalue = pvalue
+
+        return b
 
 
     @cache_readonly
@@ -1104,7 +1135,14 @@ class StratifiedTables(object):
             Use the 'Tarone' adjustment to achieve the chi^2
             asymptotic distribution.
 
-        Returns the test statistic and p-value.
+        Returns
+        -------
+        A bunch containing the following attributes:
+
+        statistic : float
+            The chi^2 test statistic.
+        p-value : float
+            The p-value for the test.
         """
 
         table = self.table
@@ -1131,7 +1169,11 @@ class StratifiedTables(object):
 
         pvalue = 1 - stats.chi2.cdf(statistic, table.shape[2] - 1)
 
-        return statistic, pvalue
+        b = _Bunch()
+        b.statistic = statistic
+        b.pvalue = pvalue
+
+        return b
 
 
     def summary(self, alpha=0.05, float_format="%.3f"):
@@ -1157,17 +1199,15 @@ class StratifiedTables(object):
 
         headers = ["Statistic", "P-value", ""]
         stubs = ["Test of OR=1", "Test constant OR"]
-        stat1, pvalue1 = self.test_null_odds()
-        stat2, pvalue2 = self.test_equal_odds()
-        data = [[fmt(x) for x in [stat1, pvalue1, ""]],
-                [fmt(x) for x in [stat2, pvalue2, ""]]]
+        rslt1 = self.test_null_odds()
+        rslt2 = self.test_equal_odds()
+        data = [[fmt(x) for x in [rslt1.statistic, rslt1.pvalue, ""]],
+                [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, ""]]]
         tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab2)
 
         headers = ["", "", ""]
         stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
-        stat1, pvalue1 = self.test_null_odds()
-        stat2, pvalue2 = self.test_equal_odds()
         ss = self.table.sum(0).sum(0)
         data = [["%d" % self.table.shape[2], '', ''],
                 ["%d" % min(ss), '', ''],
@@ -1197,7 +1237,9 @@ def mcnemar(table, exact=True, correction=True):
         If true, then a continuity correction is used for the chisquare
         distribution (if exact is false.)
 
-    Returns a bunch with attributes
+    Returns
+    -------
+    A bunch with attributes:
 
     statistic : float or int, array
         The test statistic is the chisquare statistic if exact is
