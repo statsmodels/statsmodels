@@ -871,17 +871,19 @@ class Table2x2(SquareTable):
 
 class StratifiedTable(object):
     """
-    Analyses for a collection of 2x2 stratified contingency tables.
+    Analyses for a collection of 2x2 contingency tables.
 
-    This class implements the 'Cochran-Mantel-Haenszel' and
-    'Breslow-Day' procedures for analyzing collections of 2x2
-    contingency tables.
+    Such a collection may arise by stratifying a single 2x2 table with
+    respect to another factor.  This class implements the
+    'Cochran-Mantel-Haenszel' and 'Breslow-Day' procedures for
+    analyzing collections of 2x2 contingency tables.
 
     Parameters
     ----------
     tables : list or ndarray
-        Either a list containing 2x2 contingency tables, or a 2x2xk
-        ndarray in which each slice is a contingency table.
+        Either a list containing several 2x2 contingency tables, or
+        a 2x2xk ndarray in which each slice along the third axis is a
+        2x2 contingency table.
 
     Attributes
     ----------
@@ -892,7 +894,7 @@ class StratifiedTable(object):
     log_oddsratio_se : float
         The estimated standard error of the pooled log odds ratio,
         following Robins, Breslow and Greenland (Biometrics
-        42:311-323)
+        42:311-323).
     oddsratio_pooled : float
         An estimate of the pooled odds ratio.  This is the
         Mantel-Haenszel estimate of an odds ratio that is common to
@@ -904,7 +906,7 @@ class StratifiedTable(object):
     Notes
     -----
     This results are based on a sampling model in which the units are
-    independent within and between strata.
+    independent both within and between strata.
     """
 
     def __init__(self, tables, shift_zeros=False):
@@ -1052,7 +1054,7 @@ class StratifiedTable(object):
 
     @cache_readonly
     def logodds_pooled_se(self):
-        # doc for pooled attributes in init above
+        # doc for cached attributes in init above
 
         adns = np.sum(self._ad / self._n)
         bcns = np.sum(self._bc / self._n)
