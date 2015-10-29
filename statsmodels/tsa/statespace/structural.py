@@ -793,6 +793,14 @@ class UnobservedComponents(MLEModel):
                 _start_params['cycle_freq'] = 2 * np.pi / 12
             elif freq == 'M':
                 _start_params['cycle_freq'] = 2 * np.pi / 36
+            else:
+                if not np.any(np.isinf(self.cycle_frequency_bound)):
+                    _start_params['cycle_freq'] = (
+                        np.mean(self.cycle_frequency_bound))
+                elif np.isinf(self.cycle_frequency_bound[1]):
+                    _start_params['cycle_freq'] = self.cycle_frequency_bound[0]
+                else:
+                    _start_params['cycle_freq'] = self.cycle_frequency_bound[1]
 
         # Irregular
         if self.irregular:
