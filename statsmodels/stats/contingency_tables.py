@@ -916,9 +916,7 @@ class StratifiedTable(object):
             table = tables
         else:
             # Create a data cube
-            tables = [np.asarray(x) for x in tables]
-            table = [x[:, :, None] for x in tables]
-            table = np.concatenate(table, axis=2).astype(np.float64)
+            table = np.dstack(tables).astype(np.float64)
 
         if shift_zeros:
             zx = (table == 0).sum(0).sum(0)
