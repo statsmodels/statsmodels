@@ -577,6 +577,19 @@ class SquareTable(Table):
 
 
     def summary(self, alpha=0.05, float_format="%.3f"):
+        """
+        Produce a summary of the analysis.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the interval.
+        float_format : string
+            Used to format numeric values in the table.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
+        """
 
         fmt = float_format
 
@@ -716,7 +729,7 @@ class Table2x2(SquareTable):
         return pvalue
 
 
-    def log_oddsratio_confint(self, alpha=0.05):
+    def log_oddsratio_confint(self, alpha=0.05, method="normal"):
         """
         A confidence level for the log odds ratio.
 
@@ -725,6 +738,9 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
         """
 
         f = -stats.norm.ppf(alpha / 2)
@@ -735,7 +751,7 @@ class Table2x2(SquareTable):
         return lcb, ucb
 
 
-    def oddsratio_confint(self, alpha=0.05):
+    def oddsratio_confint(self, alpha=0.05, method="normal"):
         """
         A confidence interval for the odds ratio.
 
@@ -744,8 +760,11 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
         """
-        lcb, ucb = self.log_oddsratio_confint(alpha)
+        lcb, ucb = self.log_oddsratio_confint(alpha, method=method)
         return np.exp(lcb), np.exp(ucb)
 
 
@@ -802,7 +821,7 @@ class Table2x2(SquareTable):
         return pvalue
 
 
-    def log_riskratio_confint(self, alpha=0.05):
+    def log_riskratio_confint(self, alpha=0.05, method="normal"):
         """
         A confidence interval for the log risk ratio.
 
@@ -811,6 +830,9 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
         """
         f = -stats.norm.ppf(alpha / 2)
         lrr = self.log_riskratio
@@ -820,7 +842,7 @@ class Table2x2(SquareTable):
         return lcb, ucb
 
 
-    def riskratio_confint(self, alpha=0.05):
+    def riskratio_confint(self, alpha=0.05, method="normal"):
         """
         A confidence interval for the risk ratio.
 
@@ -829,12 +851,15 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
         """
-        lcb, ucb = self.log_riskratio_confint(alpha)
+        lcb, ucb = self.log_riskratio_confint(alpha, method=method)
         return np.exp(lcb), np.exp(ucb)
 
 
-    def summary(self, alpha=0.05, float_format="%.3f"):
+    def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
         Summarizes results for a 2x2 table analysis.
 
@@ -843,6 +868,11 @@ class Table2x2(SquareTable):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the confidence
             intervals.
+        float_format : string
+            Used to format the numeric values in the table.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
         """
 
         def fmt(x):
@@ -853,10 +883,10 @@ class Table2x2(SquareTable):
         headers = ["Estimate", "SE", "LCB", "UCB", "p-value"]
         stubs = ["Odds ratio", "Log odds ratio", "Risk ratio", "Log risk ratio"]
 
-        lcb1, ucb1 = self.oddsratio_confint(alpha)
-        lcb2, ucb2 = self.log_oddsratio_confint(alpha)
-        lcb3, ucb3 = self.riskratio_confint(alpha)
-        lcb4, ucb4 = self.log_riskratio_confint(alpha)
+        lcb1, ucb1 = self.oddsratio_confint(alpha, method)
+        lcb2, ucb2 = self.log_oddsratio_confint(alpha, method)
+        lcb3, ucb3 = self.riskratio_confint(alpha, method)
+        lcb4, ucb4 = self.log_riskratio_confint(alpha, method)
         data = [[fmt(x) for x in [self.oddsratio, "", lcb1, ucb1, self.oddsratio_pvalue()]],
                 [fmt(x) for x in [self.log_oddsratio, self.log_oddsratio_se, lcb2, ucb2,
                                   self.oddsratio_pvalue()]],
@@ -1070,7 +1100,7 @@ class StratifiedTable(object):
         return lor_se
 
 
-    def logodds_pooled_confint(self, alpha=0.05):
+    def logodds_pooled_confint(self, alpha=0.05, method="normal"):
         """
         A confidence interval for the pooled log odds ratio.
 
@@ -1079,6 +1109,9 @@ class StratifiedTable(object):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             interval.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
 
         Returns
         -------
@@ -1099,7 +1132,7 @@ class StratifiedTable(object):
         return lcb, ucb
 
 
-    def oddsratio_pooled_confint(self, alpha=0.05):
+    def oddsratio_pooled_confint(self, alpha=0.05, method="normal"):
         """
         A confidence interval for the pooled odds ratio.
 
@@ -1108,6 +1141,9 @@ class StratifiedTable(object):
         alpha : float
             `1 - alpha` is the nominal coverage probability of the
             interval.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
 
         Returns
         -------
@@ -1117,7 +1153,7 @@ class StratifiedTable(object):
             The upper confidence limit.
         """
 
-        lcb, ucb = self.logodds_pooled_confint(alpha)
+        lcb, ucb = self.logodds_pooled_confint(alpha, method=method)
         lcb = np.exp(lcb)
         ucb = np.exp(ucb)
         return lcb, ucb
@@ -1176,9 +1212,20 @@ class StratifiedTable(object):
         return b
 
 
-    def summary(self, alpha=0.05, float_format="%.3f"):
+    def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
         A summary of all the main results.
+
+        Parameters
+        ----------
+        alpha : float
+            `1 - alpha` is the nominal coverage probability of the
+            confidence intervals.
+        float_format : string
+            Used for formatting numeric values in the summary.
+        method : string
+            The method for producing the confidence interval.  Currently
+            must be 'normal' which uses the normal approximation.
         """
 
         def fmt(x):
@@ -1186,8 +1233,8 @@ class StratifiedTable(object):
                 return x
             return float_format % x
 
-        co_lcb, co_ucb = self.oddsratio_pooled_confint(alpha=alpha)
-        clo_lcb, clo_ucb = self.logodds_pooled_confint(alpha=alpha)
+        co_lcb, co_ucb = self.oddsratio_pooled_confint(alpha=alpha, method=method)
+        clo_lcb, clo_ucb = self.logodds_pooled_confint(alpha=alpha, method=method)
         headers = ["Estimate", "LCB", "UCB"]
         stubs = ["Pooled odds", "Pooled log odds", "Pooled risk ratio", ""]
         data = [[fmt(x) for x in [self.oddsratio_pooled, co_lcb, co_ucb]],
