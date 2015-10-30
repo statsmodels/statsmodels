@@ -69,7 +69,9 @@ def run_ucm(name):
 
         # Check that the cycle bounds were computed correctly
         freqstr = freq[0] if freq is not None else values.index.freqstr[0]
-        if freqstr == 'A':
+        if 'cycle_period_bounds' in kwargs:
+            cycle_period_bounds = kwargs['cycle_period_bounds']
+        elif freqstr == 'A':
             cycle_period_bounds = (1.5, 12)
         elif freqstr == 'Q':
             cycle_period_bounds = (1.5*4, 12*4)
