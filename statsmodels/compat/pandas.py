@@ -1,7 +1,9 @@
 import pandas
-from ..tools.testing import is_pandas_min_version
+from distutils.version import LooseVersion
 
-if is_pandas_min_version('0.17.0'):
+version = LooseVersion(pandas.__version__)
+
+if version >= '0.17.0':
     def sort_values(df, *args, **kwargs):
         return df.sort_values(*args, **kwargs)
 else:

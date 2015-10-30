@@ -181,7 +181,7 @@ class DynamicFactor(MLEModel):
 
         # We need to have an array or pandas at this point
         if not _is_using_pandas(endog, None):
-            endog = np.asanyarray(endog)
+            endog = np.asanyarray(endog, order='C')
 
         # Save some useful model orders, internally used
         k_endog = endog.shape[1] if endog.ndim > 1 else 1

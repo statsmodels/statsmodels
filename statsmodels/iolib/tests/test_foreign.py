@@ -17,9 +17,8 @@ from statsmodels.iolib.foreign import (StataWriter, genfromdta,
 from statsmodels.datasets import macrodata
 
 
-import pandas
-pandas_old = int(pandas.__version__.split('.')[1]) < 9
-
+from statsmodels.compat.pandas import version as pandas_version
+pandas_old = pandas_version < '0.9'
 
 # Test precisions
 DECIMAL_4 = 4

@@ -6,7 +6,6 @@ import pandas
 
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
-from statsmodels.tools.testing import is_pandas_min_version, StrictVersion
 
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
             fft=False, **kwargs):

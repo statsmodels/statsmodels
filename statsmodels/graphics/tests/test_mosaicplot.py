@@ -18,8 +18,8 @@ try:
 except:
     have_matplotlib = False
 
-import pandas
-pandas_old = int(pandas.__version__.split('.')[1]) < 9
+from statsmodels.compat.pandas import version as pandas_version
+pandas_old = pandas_version < '0.9'
 
 # the main drawing function
 from statsmodels.graphics.mosaicplot import mosaic

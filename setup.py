@@ -12,7 +12,7 @@ from os.path import relpath, join as pjoin
 import sys
 import subprocess
 import re
-from distutils.version import StrictVersion
+from distutils.version import StrictVersion, LooseVersion
 
 
 # temporarily redirect config directory to prevent matplotlib importing
@@ -116,7 +116,7 @@ def check_dependency_versions(min_versions):
         setup_requires.append('numpy')
         install_requires.append('numpy')
     else:
-        if not (StrictVersion(strip_rc(npversion)) >= min_versions['numpy']):
+        if not (LooseVersion(npversion) >= min_versions['numpy']):
             raise ImportError("Numpy version is %s. Requires >= %s" %
                               (npversion, min_versions['numpy']))
 
@@ -129,7 +129,7 @@ def check_dependency_versions(min_versions):
             from scipy.version import short_version as spversion
         except ImportError:
             from scipy.version import version as spversion  # scipy 0.7.0
-        if not (StrictVersion(strip_rc(spversion)) >= min_versions['scipy']):
+        if not (LooseVersion(spversion) >= min_versions['scipy']):
             raise ImportError("Scipy version is %s. Requires >= %s" %
                               (spversion, min_versions['scipy']))
 
@@ -138,7 +138,7 @@ def check_dependency_versions(min_versions):
     except ImportError:
         install_requires.append('pandas')
     else:
-        if not (StrictVersion(strip_rc(pversion)) >= min_versions['pandas']):
+        if not (LooseVersion(pversion) >= min_versions['pandas']):
             ImportError("Pandas version is %s. Requires >= %s" %
                         (pversion, min_versions['pandas']))
 
@@ -149,7 +149,7 @@ def check_dependency_versions(min_versions):
     else:
         # patsy dev looks like 0.1.0+dev
         pversion = re.match("\d*\.\d*\.\d*", patsy_version).group()
-        if not (StrictVersion(pversion) >= min_versions['patsy']):
+        if not (LooseVersion(pversion) >= min_versions['patsy']):
             raise ImportError("Patsy version is %s. Requires >= %s" %
                               (pversion, min_versions["patsy"]))
 
