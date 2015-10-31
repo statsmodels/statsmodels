@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import pandas
 from distutils.version import LooseVersion
 
