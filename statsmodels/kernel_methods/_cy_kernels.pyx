@@ -6,7 +6,6 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport exp, sqrt, M_PI, pow, sin, cos, fabs
 from numpy.math cimport isfinite, copysign
-from cpython.version cimport PY_MAJOR_VERSION, PY_MINOR_VERSION
 
 np.import_array()
 

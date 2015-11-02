@@ -591,9 +591,9 @@ class Reflection(KDEnDMethod):
 
     def fit(self, kde, compute_bandwidth=True):
         if kde.ndim == 1:
-            cyc = Cyclic1D()
+            cyc = Reflection1D()
             return cyc.fit(kde, compute_bandwidth)
-        return super(Cyclic, self).fit(kde, compute_bandwidth)
+        return super(Reflection, self).fit(kde, compute_bandwidth)
 
     @property
     def bin_type(self):
