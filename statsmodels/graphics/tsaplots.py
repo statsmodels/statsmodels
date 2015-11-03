@@ -2,8 +2,8 @@
 
 
 import numpy as np
-import pandas
 
+from statsmodels.compat.pandas import sort_values
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
 
@@ -201,7 +201,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     ticks = []
     for season, df in grouped_x:
         df = df.copy() # or sort balks for series. may be better way
-        df.sort(inplace=True)
+        sort_values(df, inplace=True)
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())
