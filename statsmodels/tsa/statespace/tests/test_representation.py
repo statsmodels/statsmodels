@@ -25,6 +25,7 @@ from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
+from statsmodels.compat.numpy import NumpyVersion
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -601,34 +602,47 @@ def test_representation():
 def test_bind():
     # Test binding endogenous data to Kalman filter
 
-    mod = Representation(1, k_states=2)
+    mod = Representation(2, k_states=2)
 
     # Test invalid endogenous array (it must be ndarray)
     assert_raises(ValueError, lambda: mod.bind([1,2,3,4]))
 
     # Test valid (nobs x 1) endogenous array
-    mod.bind(np.arange(10)*1.)
-    assert_equal(mod.nobs, 10)
+    mod.bind(np.arange(10).reshape((5,2))*1.)
+    assert_equal(mod.nobs, 5)
 
     # Test valid (k_endog x 0) endogenous array
-    mod.bind(np.zeros(0,dtype=np.float64))
+    mod.bind(np.zeros((0,2),dtype=np.float64))
 
     # Test invalid (3-dim) endogenous array
     assert_raises(ValueError, lambda: mod.bind(np.arange(12).reshape(2,2,3)*1.))
 
     # Test valid F-contiguous
-    mod.bind(np.asfortranarray(np.arange(10).reshape(1,10)))
-    assert_equal(mod.nobs, 10)
+    mod.bind(np.asfortranarray(np.arange(10).reshape(2,5)))
+    assert_equal(mod.nobs, 5)
 
     # Test valid C-contiguous
-    mod.bind(np.arange(10).reshape(10,1))
-    assert_equal(mod.nobs, 10)
+    mod.bind(np.arange(10).reshape(5,2))
+    assert_equal(mod.nobs, 5)
 
     # Test invalid F-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(10,1))))
+    assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(5,2))))
 
     # Test invalid C-contiguous
-    assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
+    assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(2,5)))
+
+    if NumpyVersion(np.__version__) < '0.10.0':
+        mod = Representation(1, k_states=2)
+        # Test valid F-contiguous
+        mod.bind(np.asfortranarray(np.arange(10).reshape(1,10)))
+        assert_equal(mod.nobs, 10)
+        # Test valid C-contiguous
+        mod.bind(np.arange(10).reshape(10,1))
+        assert_equal(mod.nobs, 10)
+        # Test invalid F-contiguous
+        assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(10,1))))
+        # Test invalid C-contiguous
+        assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
 
 
 def test_initialization():

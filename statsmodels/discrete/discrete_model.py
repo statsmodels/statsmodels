@@ -3145,7 +3145,7 @@ if __name__=="__main__":
     endog = data2['doctorco']
     exog = data2[['sex','age','agesq','income','levyplus','freepoor',
             'freerepa','illness','actdays','hscore','chcond1',
-            'chcond2']].view(float).reshape(len(data2),-1)
+            'chcond2']].view(float, np.ndarray).reshape(len(data2),-1)
     exog = sm.add_constant(exog, prepend=True)
     poisson_mod = Poisson(endog, exog)
     poisson_res = poisson_mod.fit()

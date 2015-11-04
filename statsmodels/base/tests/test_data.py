@@ -161,8 +161,8 @@ class TestRecarrays(TestArrays):
         cls.ynames = 'y_1'
 
     def test_endogexog(self):
-        np.testing.assert_equal(self.data.endog, self.endog.view(float))
-        np.testing.assert_equal(self.data.exog, self.exog.view((float,3)))
+        np.testing.assert_equal(self.data.endog, self.endog.view(float, type=np.ndarray))
+        np.testing.assert_equal(self.data.exog, self.exog.view((float, 3), type=np.ndarray))
 
 
 class TestStructarrays(TestArrays):
@@ -180,8 +180,8 @@ class TestStructarrays(TestArrays):
         cls.ynames = 'y_1'
 
     def test_endogexog(self):
-        np.testing.assert_equal(self.data.endog, self.endog.view(float))
-        np.testing.assert_equal(self.data.exog, self.exog.view((float,3)))
+        np.testing.assert_equal(self.data.endog, self.endog.view(float, type=np.ndarray))
+        np.testing.assert_equal(self.data.exog, self.exog.view((float,3), type=np.ndarray))
 
 
 class TestListDataFrame(TestDataFrames):

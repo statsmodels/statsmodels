@@ -82,8 +82,8 @@ class MLEModel(tsbase.TimeSeriesModel):
                  **kwargs):
         # Initialize the model base
         super(MLEModel, self).__init__(endog=endog, exog=exog,
-                                              dates=dates, freq=freq,
-                                              missing='none')
+                                       dates=dates, freq=freq,
+                                       missing='none')
 
         # Store kwargs to recreate model
         self._init_kwargs = kwargs
@@ -102,7 +102,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(self.data.orig_endog)
+        endog = np.array(self.data.orig_endog, order='C')
         exog = self.data.orig_exog
         if exog is not None:
             exog = np.array(exog)
@@ -110,16 +110,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Base class may allow 1-dim data, whereas we need 2-dim
         if endog.ndim == 1:
             endog.shape = (endog.shape[0], 1)  # this will be C-contiguous
-
-        # Base classes data may be either C-ordered or F-ordered - we want it
-        # to be C-ordered since it will also be in shape (nobs, k_endog), and
-        # then we can just transpose it.
-        if not endog.flags['C_CONTIGUOUS']:
-            # TODO this breaks the reference link between the model endog
-            # variable and the original object - do we need a warn('')?
-            # This will happen often with Pandas DataFrames, which are often
-            # Fortran-ordered and in the long format
-            endog = np.ascontiguousarray(endog)
 
         return endog, exog
 

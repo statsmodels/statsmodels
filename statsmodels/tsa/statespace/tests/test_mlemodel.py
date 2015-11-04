@@ -475,7 +475,8 @@ def test_numpy_endog():
     endog = np.array([1., 2.]).reshape(2, 1)
     assert_equal(endog.ndim, 2)
     assert_equal(endog.flags['C_CONTIGUOUS'], True)
-    assert_equal(endog.flags['F_CONTIGUOUS'], False)
+    # On newer numpy (>= 0.10), this array is (rightly) both C and F contiguous
+    # assert_equal(endog.flags['F_CONTIGUOUS'], False)
     assert_equal(endog.shape, (2, 1))
     mod = check_endog(endog, **kwargs)
     mod.filter([])
@@ -484,7 +485,8 @@ def test_numpy_endog():
     endog = np.array([1., 2.]).reshape(1, 2)
     assert_equal(endog.ndim, 2)
     assert_equal(endog.flags['C_CONTIGUOUS'], True)
-    assert_equal(endog.flags['F_CONTIGUOUS'], False)
+    # On newer numpy (>= 0.10), this array is (rightly) both C and F contiguous
+    # assert_equal(endog.flags['F_CONTIGUOUS'], False)
     assert_equal(endog.shape, (1, 2))
     # raises error because arrays are always interpreted as
     # (nobs, k_endog), which means that k_endog=2 is incompatibile with shape
@@ -494,7 +496,8 @@ def test_numpy_endog():
     # Example : 2-dim array, F-contiguous, long-shaped (nobs, k_endog)
     endog = np.array([1., 2.]).reshape(1, 2).transpose()
     assert_equal(endog.ndim, 2)
-    assert_equal(endog.flags['C_CONTIGUOUS'], False)
+    # On newer numpy (>= 0.10), this array is (rightly) both C and F contiguous
+    # assert_equal(endog.flags['C_CONTIGUOUS'], False)
     assert_equal(endog.flags['F_CONTIGUOUS'], True)
     assert_equal(endog.shape, (2, 1))
     mod = check_endog(endog, **kwargs)
@@ -503,7 +506,8 @@ def test_numpy_endog():
     # Example : 2-dim array, F-contiguous, wide-shaped (k_endog, nobs)
     endog = np.array([1., 2.]).reshape(2, 1).transpose()
     assert_equal(endog.ndim, 2)
-    assert_equal(endog.flags['C_CONTIGUOUS'], False)
+    # On newer numpy (>= 0.10), this array is (rightly) both C and F contiguous
+    # assert_equal(endog.flags['C_CONTIGUOUS'], False)
     assert_equal(endog.flags['F_CONTIGUOUS'], True)
     assert_equal(endog.shape, (1, 2))
     # raises error because arrays are always interpreted as

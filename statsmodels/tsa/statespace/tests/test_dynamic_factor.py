@@ -473,8 +473,8 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
     def test_mle(self):
         with warnings.catch_warnings(record=True) as w:
             mod = self.model
-            res = mod.fit(method='lbfgs', maxiter=10000, disp=-1)
-            res = mod.fit(res.params, method='nm', maxiter=10000, maxfev=10000, disp=False)
+            res1 = mod.fit(method='lbfgs', maxiter=10000, disp=-1)
+            res = mod.fit(res1.params, method='nm', maxiter=10000, maxfev=10000, disp=False)
             assert_allclose(res.llf, self.results.llf, atol=1e-3)
 
 class TestDynamicFactor_scalar_error(CheckDynamicFactor):

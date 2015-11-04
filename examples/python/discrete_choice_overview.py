@@ -81,7 +81,7 @@ print(mlogit_res.params)
 # Load the Rand data. Note that this example is similar to Cameron and Trivedi's `Microeconometrics` Table 20.5, but it is slightly different because of minor changes in the data. 
 
 rand_data = sm.datasets.randhie.load()
-rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+rand_exog = rand_data.exog.view(float, type=np.ndarray).reshape(len(rand_data.exog), -1)
 rand_exog = sm.add_constant(rand_exog, prepend=False)
 
 

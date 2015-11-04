@@ -5,12 +5,14 @@ import sys
 from os.path import dirname
 
 
-def safe_version(module, attr='__version__'):
+def safe_version(module, attr='__version__', *others):
     if not isinstance(attr, list):
         attr = [attr]
     try:
         return reduce(getattr, [module] + attr)
     except AttributeError:
+        if others:
+            return safe_version(module, others[0], *others[1:])
         return "Cannot detect version"
 
 
@@ -60,7 +62,7 @@ def _show_versions_only():
 
     try:
         import pandas
-        print("pandas: %s" % safe_version(pandas, ['version', 'version']))
+        print("pandas: %s" % safe_version(pandas))
     except ImportError:
         print("pandas: Not installed")
 
@@ -184,8 +186,8 @@ def show_versions(show_dirs=True):
 
     try:
         import pandas
-        print("pandas: %s (%s)" % (safe_version(pandas, ['version',
-                                                         'version']),
+        print("pandas: %s (%s)" % (safe_version(pandas, ['version', 'version'],
+                                                '__version__'),
                                    dirname(pandas.__file__)))
     except ImportError:
         print("pandas: Not installed")
