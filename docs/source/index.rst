@@ -117,6 +117,7 @@ Table of Contents
    stats
    nonparametric
    gmm
+   contingency_tables
    emplike
    miscmodels
    distributions

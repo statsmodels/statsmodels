@@ -23,7 +23,7 @@ from __future__ import print_function
 import numpy as np
 from scipy import stats
 from scipy.misc import comb
-
+import warnings
 
 class Runs(object):
     '''class for runs in a binary sequence
@@ -436,6 +436,7 @@ def median_test_ksample(x, groups):
 
 
 
+
 def cochrans_q(x):
     '''Cochran's Q test for identical effect of k treatments
 
@@ -472,6 +473,9 @@ def cochrans_q(x):
     SAS Manual for NPAR TESTS
 
     '''
+
+    warnings.warn("Deprecated, use stats.cochrans_q instead", DeprecationWarning)
+
     x = np.asarray(x)
     gruni = np.unique(x)
     N, k = x.shape
@@ -531,6 +535,8 @@ def mcnemar(x, y=None, exact=True, correction=True):
     distribution is used are identical, except for continuity correction.
 
     '''
+
+    warnings.warn("Deprecated, use stats.TableSymmetry instead", DeprecationWarning)
 
     x = np.asarray(x)
     if y is None and x.shape[0] == x.shape[1]:
@@ -596,6 +602,8 @@ def symmetry_bowker(table):
 
     '''
 
+    warnings.warn("Deprecated, use stats.TableSymmetry instead", DeprecationWarning)
+
     table = np.asarray(table)
     k, k2 = table.shape
     if k != k2:
@@ -612,6 +620,7 @@ def symmetry_bowker(table):
     pval = stats.chi2.sf(stat, df)
 
     return stat, pval, df
+
 
 if __name__ == '__main__':
 
