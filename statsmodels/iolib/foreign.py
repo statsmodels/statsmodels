@@ -10,7 +10,7 @@ See also
 numpy.lib.io
 """
 from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
-                                asbytes, asstr, range)
+                                       asbytes, asstr, range)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -1160,7 +1160,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
             import gzip
             fh = gzip.open(fname, 'wb')
         else:
-            fh = file(fname, 'w')
+            fh = open(fname, 'w')
     elif hasattr(fname, 'seek'):
         fh = fname
     else:
