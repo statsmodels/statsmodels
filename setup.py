@@ -347,6 +347,7 @@ ext_data = dict(
                  "depends" : [],
                  "sources" : []},
         _cy_kernels = {"name" : "statsmodels/kernel_methods/_cy_kernels.c",
+                 "depends" : ["statsmodels/kernel_merhods/erf.h"],
                  "include_dirs": npymath_info['include_dirs'],
                  "libraries": npymath_info['libraries'],
                  "library_dirs": npymath_info['library_dirs']},

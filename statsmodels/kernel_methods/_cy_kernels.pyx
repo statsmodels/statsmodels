@@ -7,82 +7,14 @@ cimport numpy as np
 from libc.math cimport exp, sqrt, M_PI, pow, sin, cos, fabs
 from numpy.math cimport isfinite, copysign
 
+cdef extern from "erf.h" nogil:
+    double _sm_erf(double)
+    double _sm_erfc(double)
+
 np.import_array()
 
-IF UNAME_SYSNAME == "Windows":
-    DEF _erf_c = 564189583547756
-    DEF _erf_a1 = .771058495001320e-04
-    DEF _erf_a2 = -.133733772997339e-02
-    DEF _erf_a3 = .323076579225834e-01
-    DEF _erf_a4 = .479137145607681e-01
-    DEF _erf_a5 = .128379167095513
-    DEF _erf_b1 = .301048631703895e-02
-    DEF _erf_b2 = .538971687740286e-01
-    DEF _erf_b3 = .375795757275549
-    DEF _erf_p1 = -1.36864857382717e-07
-    DEF _erf_p2 = 5.64195517478974e-01
-    DEF _erf_p3 = 7.21175825088309
-    DEF _erf_p4 = 4.31622272220567e+01
-    DEF _erf_p5 = 1.52989285046940e+02
-    DEF _erf_p6 = 3.39320816734344e+02
-    DEF _erf_p7 = 4.51918953711873e+02
-    DEF _erf_p8 = 3.00459261020162e+02
-    DEF _erf_q1 = 1.00000000000000
-    DEF _erf_q2 = 1.27827273196294e+01
-    DEF _erf_q3 = 7.70001529352295e+01
-    DEF _erf_q4 = 2.77585444743988e+02
-    DEF _erf_q5 = 6.38980264465631e+02
-    DEF _erf_q6 = 9.31354094850610e+02
-    DEF _erf_q7 = 7.90950925327898e+02
-    DEF _erf_q8 = 3.00459260956983e+02
-    DEF _erf_r1 = 2.10144126479064
-    DEF _erf_r2 = 2.62370141675169e+01
-    DEF _erf_r3 = 2.13688200555087e+01
-    DEF _erf_r4 = 4.65807828718470e+00
-    DEF _erf_r5 = 2.82094791773523e-01
-    DEF _erf_s1 = 9.41537750555460e+01
-    DEF _erf_s2 = 1.87114811799590e+02
-    DEF _erf_s3 = 9.90191814623914e+01
-    DEF _erf_s4 = 1.80124575948747e+01
-
-    cdef double erf(double x):
-        cdef double ax,bot,t,top,x2,erf
-        ax = abs(x)
-        if ax <= 0.5:
-            t = x*x
-            top = ((((_erf_a1*t+_erf_a2)*t+_erf_a3)*t+_erf_a4)*t+_erf_a5) + 1.0
-            bot = ((_erf_b1*t+_erf_b2)*t+_erf_b3)*t + 1.0
-            erf = x*(top/bot)
-            return erf
-
-        if ax <= 4.:
-            top = ((((((_erf_p1*ax+_erf_p2)*ax+_erf_p3)*ax+_erf_p4)*ax+_erf_p5)*ax+_erf_p6)*ax+
-                   _erf_p7)*ax + _erf_p8
-            bot = ((((((_erf_q1*ax+_erf_q2)*ax+_erf_q3)*ax+_erf_q4)*ax+_erf_q5)*ax+_erf_q6)*ax+
-                   _erf_q7)*ax + _erf_q8
-            erf = 0.5 + (0.5-exp(-x*x)*top/bot)
-            if x < 0:
-                return -erf
-            return erf
-
-        if ax < 5.8:
-            x2 = x*x
-            t = 1./x2
-            top = (((_erf_r1*t+_erf_r2)*t+_erf_r3)*t+_erf_r4)*t + _erf_r5
-            bot = (((_erf_s1*t+_erf_s2)*t+_erf_s3)*t+_erf_s4)*t + 1.0
-            erf = (_erf_c-top/ (x2*bot))/ax
-            erf = 0.5 + (0.5-exp(-x2)*erf)
-            if x < 0:
-                return -erf
-            return erf
-        if x > 0:
-            return 1
-        return -1
-ELSE:
-    from math cimport erf
-
 def sm_erf(double a):
-    return erf(a)
+    return _sm_erf(a)
 
 ctypedef np.npy_float64 float64_t
 ctypedef np.npy_complex128 complex128_t
@@ -151,7 +83,7 @@ def norm1d_convolution(object z, object out = None):
     return vectorize(z, out, _norm1d_convolution)
 
 cdef float64_t _norm1d_cdf(float64_t z):
-    return erf(z/S2) / 2 + 0.5
+    return _sm_erf(z/S2) / 2 + 0.5
 
 def norm1d_cdf(object z, object out = None):
     return vectorize(z, out, _norm1d_cdf)
@@ -164,8 +96,8 @@ def norm1d_pm1(object z, object out = None):
 
 cdef float64_t _norm1d_pm2(float64_t z):
     if isfinite(z):
-        return 0.5*erf(z/S2) + 0.5 - z/S2PI*exp(-z*z/2)
-    return 0.5*erf(z/S2)+0.5
+        return 0.5*_sm_erf(z/S2) + 0.5 - z/S2PI*exp(-z*z/2)
+    return 0.5*_sm_erf(z/S2)+0.5
 
 def norm1d_pm2(object z, object out = None):
     return vectorize(z, out, _norm1d_pm2)
