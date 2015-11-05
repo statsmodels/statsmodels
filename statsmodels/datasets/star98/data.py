@@ -93,14 +93,15 @@ def _get_data():
             "PCTCHRT","PCTYRRND","PERMINTE_AVYRSEXP","PERMINTE_AVSAL",
             "AVYRSEXP_AVSAL","PERSPEN_PTRATIO","PERSPEN_PCTAF","PTRATIO_PCTAF",
             "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"]
-    data = recfromtxt(open(filepath + '/star98.csv',"rb"), delimiter=",",
-            names=names, skip_header=1, dtype=float)
+    with open(filepath + '/star98.csv',"rb") as f:
+        data = recfromtxt(f, delimiter=",",
+                          names=names, skip_header=1, dtype=float)
 
-    # careful now
-    nabove = data['NABOVE'].copy()
-    nbelow = data['NBELOW'].copy()
+        # careful now
+        nabove = data['NABOVE'].copy()
+        nbelow = data['NBELOW'].copy()
 
-    data['NABOVE'] = nbelow # successes
-    data['NBELOW'] = nabove - nbelow # now failures
+        data['NABOVE'] = nbelow # successes
+        data['NBELOW'] = nabove - nbelow # now failures
 
-    return data
+        return data

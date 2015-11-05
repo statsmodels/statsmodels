@@ -57,9 +57,10 @@ def load():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/copper.csv', 'rb'), delimiter=",",
-                      names=True, dtype=float, usecols=(1,2,3,4,5,6))
-    return data
+    with open(filepath + '/copper.csv', 'rb') as f:
+        data = recfromtxt(f, delimiter=",",
+                          names=True, dtype=float, usecols=(1,2,3,4,5,6))
+        return data
 
 def load_pandas():
     """

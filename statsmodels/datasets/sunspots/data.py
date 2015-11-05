@@ -27,7 +27,7 @@ NOTE        = """::
     The data file contains a 'YEAR' variable that is not returned by load.
 """
 
-from numpy import recfromtxt, column_stack, array
+from numpy import recfromtxt, array
 from pandas import Series, DataFrame
 
 from statsmodels.datasets.utils import Dataset
@@ -65,6 +65,7 @@ def load_pandas():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/sunspots.csv', 'rb'), delimiter=",",
-            names=True, dtype=float)
-    return data
+    with open(filepath + '/sunspots.csv', 'rb') as f:
+        data = recfromtxt(f, delimiter=",",
+                          names=True, dtype=float)
+        return data

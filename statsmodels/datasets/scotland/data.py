@@ -81,6 +81,7 @@ def load_pandas():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = np.recfromtxt(open(filepath + '/scotvote.csv',"rb"), delimiter=",",
-                         names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
-    return data
+    with open(filepath + '/scotvote.csv',"rb") as f:
+        data = np.recfromtxt(f, delimiter=",",
+                             names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
+        return data

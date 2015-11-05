@@ -26,7 +26,7 @@ NOTE        = """::
                                 variables.
 """
 
-from numpy import recfromtxt, column_stack, array
+from numpy import recfromtxt
 from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
@@ -54,6 +54,6 @@ def load_pandas():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/ccard.csv', 'rb'), delimiter=",",
-            names=True, dtype=float)
-    return data
+    with open(filepath + "/ccard.csv", 'rb') as f:
+        data = recfromtxt(f, delimiter=",", names=True, dtype=float)
+        return data
