@@ -1,6 +1,20 @@
 '''Helper files for pickling'''
 from statsmodels.compat.python import cPickle
 
+class EmptyContextManager(object):
+    """
+    This class is needed to allow file-like object to be used as
+    context manager, but without getting closed.
+    """
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __enter__(self):
+        return self._obj
+
+    def __exit__(self, *args):
+        return False
+
 def _get_file_obj(fname, mode):
     """
     Light wrapper to handle strings and let files (anything else) pass through
@@ -8,7 +22,7 @@ def _get_file_obj(fname, mode):
     try:
         fh = open(fname, mode)
     except (IOError, TypeError):
-        fh = fname
+        fh = EmptyContextManager(fname)
     return fh
 
 def save_pickle(obj, fname):
