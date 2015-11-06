@@ -66,7 +66,7 @@ def gendat():
     return df
 
 
-class Test_MICEData(object):
+class TestMICEData(object):
 
     def test_default(self):
         """
@@ -267,7 +267,7 @@ class Test_MICEData(object):
 
 
 
-class Test_MICE(object):
+class TestMICE(object):
 
 
     def test_MICE(self):
