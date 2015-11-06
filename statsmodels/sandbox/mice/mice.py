@@ -110,8 +110,9 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 import pandas as pd
 import numpy as np
 import patsy
-import statsmodels.api as sm
 import statsmodels
+from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.regression.linear_model import OLS
 from collections import defaultdict
 
 
@@ -324,7 +325,7 @@ class MICEData(object):
             self.conditional_formula[endog_name] = fml
 
         if model_class is None:
-            self.model_class[endog_name] = sm.OLS
+            self.model_class[endog_name] = OLS
         else:
             self.model_class[endog_name] = model_class
 
@@ -1236,7 +1237,7 @@ class MICE(object):
         return results
 
 
-class MICEResults(statsmodels.base.model.LikelihoodModelResults):
+class MICEResults(LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params):
 
