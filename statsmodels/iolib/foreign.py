@@ -10,7 +10,7 @@ See also
 numpy.lib.io
 """
 from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
-                                       asbytes, asstr, range)
+                                       asbytes, asstr, range, PY3)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -19,14 +19,7 @@ import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
 import statsmodels.tools.data as data_util
 from pandas import isnull
-
-
-def is_py3():
-    import sys
-    if sys.version_info[0] == 3:
-        return True
-    return False
-PY3 = is_py3()
+from statsmodels.iolib.openfile import get_file_obj
 
 _date_formats = ["%tc", "%tC", "%td", "%tw", "%tm", "%tq", "%th", "%ty"]
 
@@ -546,15 +539,6 @@ class StataReader(object):
                 self._file.read(self._col_size(i))),
                 lrange(self._header['nvar']))
 
-def _open_file_binary_write(fname, encoding):
-    if hasattr(fname, 'write'):
-        #if 'b' not in fname.mode:
-        return fname
-    if PY3:
-        return open(fname, "wb", encoding=encoding)
-    else:
-        return open(fname, "wb")
-
 def _set_endianness(endianness):
     if endianness.lower() in ["<", "little"]:
         return "<"
@@ -755,7 +739,7 @@ class StataWriter(object):
             byteorder = sys.byteorder
         self._byteorder = _set_endianness(byteorder)
         self._encoding = encoding
-        self._file = _open_file_binary_write(fname, encoding)
+        self._file = get_file_obj(fname, 'wb', encoding)
 
     def _write(self, to_write):
         """
@@ -1001,10 +985,10 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     """
     if isinstance(fname, string_types):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
-                encoding=encoding)
+                          encoding=encoding)
     elif not hasattr(fname, 'read'):
         raise TypeError("The input should be a string or a filehandle. "\
-                "(got %s instead)" % type(fname))
+                        "(got %s instead)" % type(fname))
     else:
         fhd = StataReader(fname, missing_values=False, encoding=encoding)
 #    validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
@@ -1155,56 +1139,46 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
     """
 
-    if _is_string_like(fname):
-        if fname.endswith('.gz'):
-            import gzip
-            fh = gzip.open(fname, 'wb')
+    with get_file_obj(fname, 'w') as fh:
+        X = np.asarray(X)
+
+        # Handle 1-dimensional arrays
+        if X.ndim == 1:
+            # Common case -- 1d array of numbers
+            if X.dtype.names is None:
+                X = np.atleast_2d(X).T
+                ncol = 1
+
+            # Complex dtype -- each field indicates a separate column
+            else:
+                ncol = len(X.dtype.descr)
         else:
-            fh = open(fname, 'w')
-    elif hasattr(fname, 'seek'):
-        fh = fname
-    else:
-        raise ValueError('fname must be a string or file handle')
+            ncol = X.shape[1]
 
-    X = np.asarray(X)
-
-    # Handle 1-dimensional arrays
-    if X.ndim == 1:
-        # Common case -- 1d array of numbers
-        if X.dtype.names is None:
-            X = np.atleast_2d(X).T
-            ncol = 1
-
-        # Complex dtype -- each field indicates a separate column
-        else:
-            ncol = len(X.dtype.descr)
-    else:
-        ncol = X.shape[1]
-
-    # `fmt` can be a string with multiple insertion points or a list of formats.
-    # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
-    if isinstance(fmt, (list, tuple)):
-        if len(fmt) != ncol:
-            raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
-        format = delimiter.join(fmt)
-    elif isinstance(fmt, string_types):
-        if fmt.count('%') == 1:
-            fmt = [fmt, ]*ncol
+        # `fmt` can be a string with multiple insertion points or a list of formats.
+        # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
+        if isinstance(fmt, (list, tuple)):
+            if len(fmt) != ncol:
+                raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
             format = delimiter.join(fmt)
-        elif fmt.count('%') != ncol:
-            raise AttributeError('fmt has wrong number of %% formats.  %s'
-                                 % fmt)
-        else:
-            format = fmt
+        elif isinstance(fmt, string_types):
+            if fmt.count('%') == 1:
+                fmt = [fmt, ]*ncol
+                format = delimiter.join(fmt)
+            elif fmt.count('%') != ncol:
+                raise AttributeError('fmt has wrong number of %% formats.  %s'
+                                     % fmt)
+            else:
+                format = fmt
 
-    # handle names
-    if names is None and X.dtype.names:
-        names = X.dtype.names
-    if names is not None:
-        fh.write(delimiter.join(names) + '\n')
+        # handle names
+        if names is None and X.dtype.names:
+            names = X.dtype.names
+        if names is not None:
+            fh.write(delimiter.join(names) + '\n')
 
-    for row in X:
-        fh.write(format % tuple(row) + '\n')
+        for row in X:
+            fh.write(format % tuple(row) + '\n')
 
 if __name__ == "__main__":
     import os
