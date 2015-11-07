@@ -327,13 +327,13 @@ class TestMICE(object):
         mi = mice.MICE("y ~ x1 + x2", sm.OLS, idata, n_skip=20)
         result = mi.fit(10, 20)
 
-        fmi = np.asarray([0.24771511,  0.29129309,  0.24865246])
+        fmi = np.asarray([ 0.27801405,  0.24294936,  0.32755807])
         assert_allclose(result.frac_miss_info, fmi, atol=1e-5)
 
-        params = np.asarray([-0.05883389,  0.97487158,  1.00977228])
+        params = np.asarray([-0.04137508,  0.97679137,  1.02327551])
         assert_allclose(result.params, params, atol=1e-5)
 
-        tvalues = np.asarray([ -0.88614249,  13.79467977,  14.30386482])
+        tvalues = np.asarray([ -0.61210573,  14.28685762,  13.70339703])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 

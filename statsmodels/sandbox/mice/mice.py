@@ -3,8 +3,8 @@ Overview
 --------
 
 This module implements the Multiple Imputation through Chained
-Equations (MICE) approach to handling missing data. The approach has
-the following steps:
+Equations (MICE) approach to handling missing data in statistical data
+analyses. The approach has the following steps:
 
 0. Impute each missing value with the mean of the observed values of
 the same variable.
@@ -12,29 +12,33 @@ the same variable.
 1. For each variable in the data set with missing values (termed the
 'focus variable'), do the following:
 
-1a. Fit a regression model using only the observed values of the focus
-variable, regressed against the observed and current imputed values of
-some or all of the remaining variables.  Then impute the missing
-values for the focus variable.  The only currently implemented
-procedure for doing the imputation is the 'predictive mean matching'
-(pmm) procedure.
+1a. Fit an 'imputation model', which is a regression model for the
+focus variable, regressed on the observed and (current) imputed values
+of some or all of the other variables.
 
-2. Once all variables have been imputed, fit the analysis model to the
-data set.
+1b. Impute the missing values for the focus variable.  Currently this
+imputation must use the 'predictive mean matching' (pmm) procedure.
+
+2. Once all variables have been imputed, fit the 'analysis model' to
+the data set.
 
 3. Repeat steps 1-2 multiple times and combine the results using a
-combining rule.
+'combining rule' to produce point estimates of all parameters in the
+analysis model and standard errors for them.
 
-The specific way that each variable is imputed is specified using a
-conditional model and formula for each variable.  The default model is
-OLS, with a formula specifying main effects for all other variables.
+The imputations for each variable are based on an imputation model
+that is specified via a model class and a formula for the regression
+relationship.  The default model is OLS, with a formula specifying
+main effects for all other variables.
 
-If the goal is only to produce imputed data sets, the MICEData
-class can be used to wrap a data frame, providing facilities for doing
-the imputation.  Summary plots are available for assessing the
-performance of the imputation.
+The MICE procedure can be used in one of two ways:
 
-If the imputed data sets are to be used to specify an additional
+* If the goal is only to produce imputed data sets, the MICEData class
+can be used to wrap a data frame, providing facilities for doing the
+imputation.  Summary plots are available for assessing the performance
+of the imputation.
+
+* If the imputed data sets are to be used to fit an additional
 'analysis model', a MICE instance can be used.  After specifying the
 MICE instance and running it, the results are combined using the
 `combine` method.  Results and various summary plots are then
@@ -43,14 +47,18 @@ available.
 Terminology
 -----------
 
-The MICE procedure is determined by a family of conditional models.
-There is one conditional model for each variable with missing values.
-A conditional model may be conditioned on all or a subset of the
+The primary goal of the analysis is usually to fit and perform
+inference using an 'analysis model'. If an analysis model is not
+specified, then imputed datasets are produced for later use.
+
+The MICE procedure involves a family of imputation models.  There is
+one imputation model for each variable with missing values.  An
+imputation model may be conditioned on all or a subset of the
 remaining variables, using main effects, transformations,
 interactions, etc. as desired.
 
 A 'perturbation method' is a method for setting the parameter estimate
-in a conditional model.  The 'gaussian' perturbation method first fits
+in an imputation model.  The 'gaussian' perturbation method first fits
 the model (usually using maximum likelihood, but it could use any
 statsmodels fit procedure), then sets the parameter vector equal to a
 draw from the Gaussian approximation to the sampling distribution for
@@ -64,7 +72,7 @@ Class structure
 There are two main classes in the module:
 
 * 'MICEData' wraps a Pandas dataframe, incorporating information about
-  the conditional models for each variable with missing values. It can
+  the imputation model for each variable with missing values. It can
   be used to produce multiply imputed data sets that are to be further
   processed or distributed to other researchers.  A number of plotting
   procedures are provided to visualize the imputation results and
@@ -121,16 +129,14 @@ _mice_data_example_1 = """
     >>> imp.set_imputer('x1', formula='x2 + np.square(x2) + x3')
     >>> for j in range(20):
             imp.update_all()
-            imp.data.to_csv('data%02d.csv' % j)
-"""
+            imp.data.to_csv('data%02d.csv' % j)"""
 
 _mice_data_example_2 = """
     >>> imp = mice.MICEData(data)
     >>> j = 0
     >>> for data in imp:
             imp.data.to_csv('data%02d.csv' % j)
-            j += 1
-"""
+            j += 1"""
 
 
 class PatsyFormula(object):
@@ -174,6 +180,7 @@ class MICEData(object):
     Impute using default models, using the MICEData object as an
     iterator.
     %(_mice_data_example_2)s
+
     Notes
     -----
     Allowed perturbation methods are 'gaussian' (the model parameters
@@ -251,16 +258,17 @@ class MICEData(object):
     def _initial_imputation(self):
         """
         Use a PMM-like procedure for initial imputed values.
+
+        For each variable, missing values are imputed as the observed
+        value that is closest to the mean over all observed values.
         """
 
-        def f(vec):
-            vec = vec.dropna()
-            mn = vec.mean()
-            ix = np.argmin(vec - mn)
-            return vec[ix]
-
-        imp = self.data.apply(f, axis=0)
-        self.data = self.data.fillna(imp)
+        for col in self.data.columns:
+            di = self.data[col] - self.data[col].mean()
+            di = np.abs(di)
+            ix = di.idxmin()
+            imp = di.loc[ix]
+            self.data[col].fillna(imp, inplace=True)
 
 
     def _split_indices(self, vec):
@@ -943,7 +951,6 @@ class MICEData(object):
 
         cov = self.results[vname].cov_params()
         mu = self.results[vname].params
-        np.linalg.cholesky(cov) #!!!!!!!
         self.params[vname] = np.random.multivariate_normal(mean=mu, cov=cov)
 
 
