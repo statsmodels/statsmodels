@@ -83,6 +83,6 @@ def load_pandas():
     return du.process_recarray_pandas(data, endog_idx=0)
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(PATH, "rb"), delimiter=",", names=True, dtype=float)
-    return data
+    with open(PATH, "rb") as f:
+        data = recfromtxt(f, delimiter=",", names=True, dtype=float)
+        return data

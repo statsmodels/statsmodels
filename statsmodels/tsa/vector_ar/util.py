@@ -118,7 +118,8 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import re
 
     regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
-    lines = deque(open(path, 'rb'))
+    with open(path, 'rb') as f:
+        lines = deque(f)
 
     to_skip = 0
     while asbytes('*/') not in lines.popleft():

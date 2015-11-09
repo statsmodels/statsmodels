@@ -68,6 +68,7 @@ def load_pandas():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/elnino.csv', 'rb'), delimiter=",",
-                      names=True, dtype=float)
-    return data
+    with open(filepath + '/elnino.csv', 'rb') as f:
+        data = recfromtxt(f, delimiter=",",
+                          names=True, dtype=float)
+        return data
