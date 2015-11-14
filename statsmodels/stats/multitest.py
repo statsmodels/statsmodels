@@ -478,11 +478,11 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
 
     Examples
     --------
-    Basic use:
+    Basic use (the null Z-scores are taken to be standard normal):
 
     >>> fdr = local_fdr(zscores)
 
-    Example using an empirical null distribution estimated from the data:
+    Use an empirical null distribution estimated from the data:
 
     >>> null = EmpiricalNull(zscores)
     >>> fdr = local_fdr(zscores, null_density=null.pdf)
@@ -547,7 +547,7 @@ class EmpiricalNull(object):
         The observed Z-scores.
     null_lb : float
         Z-scores between `null_lb` and `null_lb` are all considered to be
-        from the true null hypotheses.
+        true null hypotheses.
     null_ub : float
         See `null_lb`.
     estimate_mean : bool
@@ -576,6 +576,12 @@ class EmpiricalNull(object):
     ----------
     B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
     Model.  Statistical Science 23:1, 1-22.
+
+    Notes
+    -----
+    See also:
+
+    http://nipy.org/nipy/labs/enn.html#nipy.algorithms.statistics.empirical_pvalue.NormalEmpiricalNull.fdr
     """
 
     def __init__(self, zscores, null_lb=-1, null_ub=1, estimate_mean=True,
@@ -607,11 +613,18 @@ class EmpiricalNull(object):
 
         from scipy.stats.distributions import norm
 
+
         def fun(params):
             """
-            Negative likelihood of z-scores, parameterized as mean, scale
-            of Gaussian family, and proportion of true nulls.  Follows
-            section 4 of Efron 2008.
+            Negative log-likelihood of z-scores.
+
+            The function has three arguments, packed into a vector:
+
+            mean : location parameter
+            logscale : log of the scale parameter
+            logitprop : logit of the proportion of true nulls
+
+            The implementation follows section 4 from Efron 2008.
             """
 
             d0, s0, p0 = xform(params)
