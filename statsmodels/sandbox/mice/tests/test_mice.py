@@ -10,7 +10,7 @@ try:
 except:
     have_matplotlib = False
 
-pdf_output = False
+pdf_output = True
 
 
 if pdf_output:
@@ -137,8 +137,7 @@ class TestMICEData(object):
 
         for pert_meth in "gaussian", "boot":
 
-            imp_data = mice.MICEData(df,
-                                     perturbation_method=pert_meth)
+            imp_data = mice.MICEData(df, perturbation_method=pert_meth)
 
             for k in range(2):
                 imp_data.update_all()
@@ -234,7 +233,7 @@ class TestMICEData(object):
 
 
     @dec.skipif(not have_matplotlib)
-    def test_bivariate_scatterplot(self):
+    def test_plot_bivariate(self):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -242,13 +241,13 @@ class TestMICEData(object):
 
         plt.clf()
         for plot_points in False, True:
-            fig = imp_data.bivariate_scatterplot('x2', 'x4', plot_points=plot_points)
-            fig.get_axes()[0].set_title('bivariate_scatterplot')
+            fig = imp_data.plot_bivariate('x2', 'x4', plot_points=plot_points)
+            fig.get_axes()[0].set_title('plot_bivariate')
             close_or_save(pdf, fig)
 
 
     @dec.skipif(not have_matplotlib)
-    def test_fit_scatterplot(self):
+    def test_fit_obs(self):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -256,14 +255,27 @@ class TestMICEData(object):
 
         plt.clf()
         for plot_points in False, True:
-            fig = imp_data.fit_scatterplot('x4', plot_points=plot_points)
-            fig.get_axes()[0].set_title('fit_scatterplot')
+            fig = imp_data.plot_fit_obs('x4', plot_points=plot_points)
+            fig.get_axes()[0].set_title('plot_fit_scatterplot')
+            close_or_save(pdf, fig)
+
+
+    @dec.skipif(not have_matplotlib)
+    def test_plot_imputed_hist(self):
+
+        df = gendat()
+        imp_data = mice.MICEData(df)
+        imp_data.update_all()
+
+        plt.clf()
+        for plot_points in False, True:
+            fig = imp_data.plot_imputed_hist('x4')
+            fig.get_axes()[0].set_title('plot_imputed_hist')
             close_or_save(pdf, fig)
 
 
 
 class TestMICE(object):
-
 
     def test_MICE(self):
 

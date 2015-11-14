@@ -631,11 +631,15 @@ class MICEData(object):
         return fig
 
 
-    def bivariate_scatterplot(self, col1_name, col2_name,
-                              lowess_args=None, lowess_min_n=40,
-                              jitter=None, plot_points=True, ax=None):
+    def plot_bivariate(self, col1_name, col2_name,
+                       lowess_args=None, lowess_min_n=40,
+                       jitter=None, plot_points=True, ax=None):
         """
-        Show missing data pattern of two variables as a scatterplot.
+        Plot observed and imputed values for two variables.
+
+        Displays a scatterplot of one variable against another.  The
+        points are colored according to whether the values are
+        observed or imputed.
 
         Parameters:
         -----------
@@ -739,11 +743,11 @@ class MICEData(object):
         return fig
 
 
-    def fit_scatterplot(self, col_name, lowess_args=None,
-                        lowess_min_n=40, jitter=None,
-                        plot_points=True, ax=None):
+    def plot_fit_obs(self, col_name, lowess_args=None,
+                     lowess_min_n=40, jitter=None,
+                     plot_points=True, ax=None):
         """
-        Display imputed and observed values as a scatterplot.
+        Plot fitted versus imputed or observed values as a scatterplot.
 
         Parameters:
         -----------
@@ -836,10 +840,10 @@ class MICEData(object):
         return fig
 
 
-    def hist(self, col_name, ax=None, imp_hist_args=None,
-             obs_hist_args=None, all_hist_args=None):
+    def plot_imputed_hist(self, col_name, ax=None, imp_hist_args=None,
+                          obs_hist_args=None, all_hist_args=None):
         """
-        Visualize imputed values for one variable as a histogram.
+        Display imputed values for one variable as a histogram.
 
         Parameters:
         -----------
@@ -1239,11 +1243,12 @@ class MICE(object):
         # Extract a few things from the models that were fit to
         # imputed data sets.
         params_list = []
-        cov_list = []
+        cov_within = 0.
         scale_list = []
         for results in self.results_list:
-            params_list.append(np.asarray(results.params))
-            cov_list.append(np.asarray(results.cov_params()))
+            results_uw = results._results
+            params_list.append(results_uw.params)
+            cov_within += results_uw.cov_params()
             scale_list.append(results.scale)
         params_list = np.asarray(params_list)
         scale_list = np.asarray(scale_list)
@@ -1252,7 +1257,7 @@ class MICE(object):
         params = params_list.mean(0)
 
         # The average of the within-imputation covariances
-        cov_within = sum(cov_list) / len(cov_list)
+        cov_within /= len(self.results_list)
 
         # The between-imputation covariance
         cov_between = np.cov(params_list.T)
