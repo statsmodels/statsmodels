@@ -10,7 +10,7 @@ try:
 except:
     have_matplotlib = False
 
-pdf_output = True
+pdf_output = False
 
 
 if pdf_output:
@@ -285,6 +285,9 @@ class TestMICE(object):
         result = mi.fit(1, 3)
 
         assert(issubclass(result.__class__, mice.MICEResults))
+
+        # Smoke test for results
+        smr = result.summary()
 
 
     def test_MICE1(self):
