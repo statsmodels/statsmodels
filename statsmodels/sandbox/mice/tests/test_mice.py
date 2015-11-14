@@ -109,23 +109,17 @@ class TestMICEData(object):
         assert_equal(exog_miss.shape, [10, 6])
 
 
-    def test_iterator(self):
-        """
-        Test using the class as an iterator.
-        """
+    def test_next_sample(self):
 
         df = gendat()
         imp_data = mice.MICEData(df)
 
-        j = 0
         all_x = []
-        for x in imp_data:
-            if j == 2:
-                break
+        for j in range(2):
+            x = imp_data.next_sample()
             assert(isinstance(x, pd.DataFrame))
             assert_equal(df.shape, x.shape)
             all_x.append(x)
-            j += 1
 
         # The returned dataframes are all the same object
         assert(all_x[0] is all_x[1])
@@ -178,7 +172,8 @@ class TestMICEData(object):
                           init_kwds={"status": mice.PatsyFormula("status")},
                           predict_kwds={"pred_type": "hr"})
 
-        x = next(idata)
+        x = idata.next_sample()
+        assert(isinstance(x, pd.DataFrame))
 
 
     def test_set_imputer(self):
@@ -280,7 +275,7 @@ class TestMICE(object):
         assert(issubclass(result.__class__, mice.MICEResults))
 
 
-    def test_MICE_iterator_1(self):
+    def test_MICE1(self):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -288,15 +283,12 @@ class TestMICE(object):
 
         from statsmodels.regression.linear_model import RegressionResultsWrapper
 
-        j = 0
-        for x in mi:
+        for j in range(3):
+            x = mi.next_sample()
             assert(issubclass(x.__class__, RegressionResultsWrapper))
-            j += 1
-            if j == 3:
-                break
 
 
-    def test_MICE_iterator_2(self):
+    def test_MICE2(self):
 
         from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 
@@ -305,13 +297,10 @@ class TestMICE(object):
         mi = mice.MICE("x3 ~ x1 + x2", sm.GLM, imp_data,
                        init_kwds={"family": sm.families.Binomial()})
 
-        j = 0
-        for x in mi:
+        for j in range(3):
+            x = mi.next_sample()
             assert(isinstance(x, GLMResultsWrapper))
             assert(isinstance(x.family, sm.families.Binomial))
-            j += 1
-            if j == 3:
-                break
 
 
     def test_combine(self):
@@ -327,13 +316,13 @@ class TestMICE(object):
         mi = mice.MICE("y ~ x1 + x2", sm.OLS, idata, n_skip=20)
         result = mi.fit(10, 20)
 
-        fmi = np.asarray([ 0.27801405,  0.24294936,  0.32755807])
+        fmi = np.asarray([ 0.1920533 ,  0.1587287 ,  0.33174032])
         assert_allclose(result.frac_miss_info, fmi, atol=1e-5)
 
-        params = np.asarray([-0.04137508,  0.97679137,  1.02327551])
+        params = np.asarray([-0.05397474,  0.97273307,  1.01652293])
         assert_allclose(result.params, params, atol=1e-5)
 
-        tvalues = np.asarray([ -0.61210573,  14.28685762,  13.70339703])
+        tvalues = np.asarray([ -0.84781698,  15.10491582,  13.59998039])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 

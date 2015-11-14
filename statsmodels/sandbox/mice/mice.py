@@ -155,7 +155,7 @@ class MICEData(object):
     Parameters
     ----------
     data : Pandas data frame
-        The data set.
+        The data set, whch is copied internally.
     perturbation_method : string
         The default perturbation method
     k_pmm : int
@@ -255,6 +255,29 @@ class MICEData(object):
         self.k_pmm = k_pmm
 
 
+    def next_sample(self):
+        """
+        Returns the next imputed dataset in the imputation process.
+
+        Returns
+        -------
+        data : array-like
+            An imputed dataset from the MICE chain.
+
+        Notes
+        -----
+        `MICEData` does not have a `skip` parameter.  Consecutive
+        values returned by `next_sample` are immediately consecutive
+        in the imputation chain.
+
+        The returned value is a reference to the data attribute of
+        the class and should be copied before making any changes.
+        """
+
+        self.update_all(1)
+        return self.data
+
+
     def _initial_imputation(self):
         """
         Use a PMM-like procedure for initial imputed values.
@@ -309,8 +332,8 @@ class MICEData(object):
             to randomly sample when using predictive mean matching.
         perturbation_method : string
             Either 'gaussian' or 'bootstrap'. Determines the method
-            for perturbing parameters in the conditional model.  If
-            None, uses the default specified in init.
+            for perturbing parameters in the imputation model.  If
+            None, uses the default specified at class initialization.
 
         Notes
         -----
@@ -361,7 +384,7 @@ class MICEData(object):
         col : string
             Name of variable to be filled in.
         vals : array
-            Array of imputed values to use in filling in missing values.
+            Array of imputed values to use for filling-in missing values.
         """
 
         ix = self.ix_miss[col]
@@ -369,7 +392,7 @@ class MICEData(object):
             self.data[col].iloc[ix] = vals
 
 
-    def update_all(self, n_iter=10):
+    def update_all(self, n_iter=1):
         """
         Perform a specified number of MICE iterations.
 
@@ -381,7 +404,7 @@ class MICEData(object):
 
         Notes
         -----
-        The imputed values are stored in the parent dataset.
+        The imputed values are stored in the class attribute `self.data`.
         """
 
         for k in range(n_iter):
@@ -504,19 +527,6 @@ class MICEData(object):
         fit_kwds = self._process_kwds(self.fit_kwds[vname], ix)
 
         return endog, exog, init_kwds, fit_kwds
-
-
-    def __iter__(self):
-        return self
-
-
-    def __next__(self):
-        self.update_all(1)
-        return self.data
-
-
-    def next(self):
-        return self.__next__()
 
 
     def plot_missing_pattern(self, ax=None, row_order="pattern",
@@ -733,7 +743,7 @@ class MICEData(object):
                         lowess_min_n=40, jitter=None,
                         plot_points=True, ax=None):
         """
-        Show imputed and observed values of one variable as a scatterplot.
+        Display imputed and observed values as a scatterplot.
 
         Parameters:
         -----------
@@ -1088,10 +1098,9 @@ _mice_example_2 = """
     >>> fml = 'y ~ x1 + x2 + x3 + x4'
     >>> mice = mice.MICE(fml, sm.OLS, imp)
     >>> results = []
-    >>> for x in mice:
+    >>> for k in range(10):
+    >>>     x = mice.next_sample()
     >>>     results.append(x)
-    >>>     if len(results) > 10:
-    >>>         break
 """
 
 class MICE(object):
@@ -1100,14 +1109,17 @@ class MICE(object):
     Multiple Imputation with Chained Equations.
 
     This class can be used to fit most Statsmodels models to data sets
-    with missing values.
+    with missing values using the 'multiple imputation with chained
+    equations' (MICE) approach..
 
     Parameters
     ----------
     model_formula : string
-        The model formula to be fit to the imputed data sets.
+        The model formula to be fit to the imputed data sets.  This
+        formula is for the 'analysis model'.
     model_class : statsmodels model
-        The model to be fit to the imputed data sets.
+        The model to be fit to the imputed data sets.  This model
+        class if for the 'analysis model'.
     data : MICEData instance
         MICEData object containing the data set for which
         missing values will be imputed
@@ -1123,10 +1135,11 @@ class MICE(object):
 
     Examples
     --------
-    Simple example using defaults:
+    Run all MICE steps and obtain results:
     %(mice_example_1)s
 
-    Example using an iterator:
+    Obtain a sequence of fitted analysis models without combining
+    to obtain summary:
     %(mice_example_2)s
     """ % {'mice_example_1' : _mice_example_1,
            'mice_example_2' : _mice_example_2}
@@ -1145,20 +1158,39 @@ class MICE(object):
         self.fit_kwds = fit_kwds if fit_kwds is not None else {}
 
 
-    def __iter__(self):
-        return self
+    def next_sample(self):
+        """
+        Perform one complete MICE iteration.
 
+        A single MICE iteration updates all missing values using their
+        respective imputation models, then fits the analysis model to
+        the imputed data.
 
-    def next(self):
-        return self.__next__()
+        Returns
+        -------
+        params : array-like
+            The model parameters for the analysis model.
 
+        Notes
+        -----
+        This function fits the analysis model and returns its
+        parameter estimate.  The parameter vector is not stored by the
+        class and is not used in any subsequent calls to `combine`.
+        Use `fit` to run all MICE steps together and obtain summary
+        results.
 
-    def __next__(self):
+        The complete cycle of missing value imputation followed by
+        fitting the analysis model is repeated `n_skip + 1` times and
+        the analysis model parameters from the final fit are returned.
+        """
 
-        self.data.update_all(self.n_skip)
+        # Impute missing values
+        self.data.update_all(self.n_skip + 1)
         start_params = None
         if len(self.results_list) > 0:
             start_params = self.results_list[-1].params
+
+        # Fit the analysis model.
         model = self.model_class.from_formula(self.model_formula,
                                               self.data.data,
                                               **self.init_kwds)
@@ -1184,7 +1216,7 @@ class MICE(object):
         self.data.update_all(n_burnin)
 
         for j in range(n_imputations):
-            result = next(self)
+            result = self.next_sample()
             self.results_list.append(result)
 
         self.endog_names = result.model.endog_names
