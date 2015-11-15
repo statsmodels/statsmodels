@@ -32,8 +32,8 @@ class Holder(object):
 class CheckExternalMixin(object):
 
     @classmethod
-    def get_descriptives(cls):
-        cls.descriptive = DescrStatsW(cls.data, cls.weights)
+    def get_descriptives(cls, ddof=0):
+        cls.descriptive = DescrStatsW(cls.data, cls.weights, ddof)
 
 
     @classmethod
@@ -69,6 +69,15 @@ class CheckExternalMixin(object):
         # Use vardef=wgt option in SAS to match
         std = self.descriptive.std
         assert_allclose(std, self.std, rtol=1e-4)
+
+
+    def test_sem(self):
+        # Use default vardef in SAS to match; only makes sense if
+        # weights sum to n.
+        if not hasattr(self, "sem"):
+            return
+        sem = self.descriptive.std_mean
+        assert_allclose(sem, self.sem, rtol=1e-4)
 
 
     def test_quantiles(self):
@@ -114,6 +123,28 @@ class TestSim1t(CheckExternalMixin):
         cls.weights = np.random.uniform(0, 3, size=20)
         cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
         cls.get_descriptives()
+
+
+class TestSim1n(CheckExternalMixin):
+    # 1d data with weights summing to n so we can check the standard
+    # error of the mean
+
+    # Taken from SAS
+    mean = -0.3131058
+    sum = -6.2621168
+    var = 0.49722696
+    std = 0.70514322
+    sem = 0.15767482
+    quantiles = np.r_[-1.61593, -1.45576, -0.24356, 0.16770, 1.18791]
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(4342)
+        cls.data = np.random.normal(size=20)
+        cls.weights = np.random.uniform(0, 3, size=20)
+        cls.weights *= 20 / cls.weights.sum()
+        cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
+        cls.get_descriptives(1)
 
 
 class TestSim2(CheckExternalMixin):
