@@ -446,7 +446,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
         return rej, pvalscorr, ntests - ri, alpha_stages
 
 
-def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
+def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
               nbins=30):
     """
     Calculate local FDR values for a list of Z-scores.
@@ -455,9 +455,9 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     ---------
     zscores : array-like
         A vector of Z-scores
-    p0 : float
+    null_proportion : float
         The assumed proportion of true null hypotheses
-    null_density : function mapping reals to positive reals
+    null_pdf : function mapping reals to positive reals
         The density of null Z-scores; if None, use standard normal
     deg : integer
         The maximum exponent in the polynomial expansion of the
@@ -485,7 +485,7 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     Use an empirical null distribution estimated from the data:
 
     >>> null = EmpiricalNull(zscores)
-    >>> fdr = local_fdr(zscores, null_density=null.pdf)
+    >>> fdr = local_fdr(zscores, null_pdf=null.pdf)
     """
 
     from statsmodels.genmod.generalized_linear_model import GLM
@@ -520,13 +520,13 @@ def local_fdr(zscores, p0=1.0, null_density=None, deg=7,
     fz = md.predict(dmat_full) / (len(zscores) * (bins[1] - bins[0]))
 
     # The null density.
-    if null_density is None:
+    if null_pdf is None:
         f0 = np.exp(-0.5 * zscores**2) / np.sqrt(2 * np.pi)
     else:
-        f0 = null_density(zscores)
+        f0 = null_pdf(zscores)
 
     # The local FDR values
-    fdr = p0 * f0 / fz
+    fdr = null_proportion * f0 / fz
 
     fdr = np.clip(fdr, 0, 1)
 
@@ -561,16 +561,14 @@ class EmpiricalNull(object):
         the proportion of z-scores with expected value zero).  If False,
         the probability parameter is fixed at 1.
 
-    Returns
-    -------
+    Attributes
+    ----------
     mean0 : float
         The estimated mean of the empirical null distribution
-    scale0 : float
+    sd0 : float
         The estimated standard deviation of the empirical null distribution
     prob0 : float
         The estimated proportion of true null hypotheses
-    null_density : function (from reals to positive reals)
-        The fitted empirical null density function
 
     References
     ----------
@@ -600,15 +598,21 @@ class EmpiricalNull(object):
         # parameters fixed as specified.
         def xform(params):
 
-            mean0, logscale0, logitp0 = tuple(params)
-            scale0 = np.exp(logscale0)
-            prob0 = 1 / (1 + np.exp(-logitp0))
+            mean0 = 0.
+            sd0 = 1.
+            prob0 = 1.
 
-            mean0 = mean0 if estimate_mean else 0.
-            scale0 = scale0 if estimate_scale else 1.
-            prob0 = prob0 if estimate_prob else 1.
+            ii = 0
+            if estimate_mean:
+                mean0 = params[ii]
+                ii += 1
+            if estimate_scale:
+                sd0 = np.exp(params[ii])
+                ii += 1
+            if estimate_prob:
+                prob0 = 1 / (1 + np.exp(-params[ii]))
 
-            return mean0, scale0, prob0
+            return mean0, sd0, prob0
 
 
         from scipy.stats.distributions import norm
@@ -651,17 +655,17 @@ class EmpiricalNull(object):
         from scipy.optimize import minimize
         # starting values are mean = 0, scale = 1, p0 ~ 1
         mz = minimize(fun, np.r_[0., 0, 3], method="Nelder-Mead")
-        mean0, scale0, prob0 = xform(mz['x'])
+        mean0, sd0, prob0 = xform(mz['x'])
 
         self.mean0 = mean0
-        self.scale0 = scale0
+        self.sd0 = sd0
         self.prob0 = prob0
 
 
     # The fitted null density function
     def pdf(self, zscores):
         """
-        Evaluate the fitted emirical null Z-score density.
+        Evaluates the fitted emirical null Z-score density.
 
         Parameters
         ----------
@@ -675,6 +679,6 @@ class EmpiricalNull(object):
         points.
         """
 
-        zval = (zscores - self.mean0) / self.scale0
-        return np.exp(-0.5*zval**2 - np.log(self.scale0) - 0.5*np.log(2*np.pi))
+        zval = (zscores - self.mean0) / self.sd0
+        return np.exp(-0.5*zval**2 - np.log(self.sd0) - 0.5*np.log(2*np.pi))
 

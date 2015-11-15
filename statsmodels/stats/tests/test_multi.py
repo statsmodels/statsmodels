@@ -383,10 +383,40 @@ def test_empirical_null():
     emp_null = EmpiricalNull(zs, estimate_prob=True)
 
     assert_allclose(emp_null.mean0, 0, atol=1e-5, rtol=1e-5)
-    assert_allclose(emp_null.scale0, 1, atol=1e-5, rtol=1e-2)
+    assert_allclose(emp_null.sd0, 1, atol=1e-5, rtol=1e-2)
     assert_allclose(emp_null.prob0, 0.98, atol=1e-5, rtol=1e-2)
 
-    # smoke tests
-    emp_null.pdf(0.)
-    emp_null.pdf(np.r_[-1, 0, 1])
+    # consistency check
+    assert_allclose(emp_null.pdf(np.r_[-1, 0, 1]),
+                    norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean0, scale=emp_null.sd0),
+                    rtol=1e-13)
 
+
+def test_empirical_null_constrained():
+
+    # Create a mixed population of Z-scores: 1000 standard normal and
+    # 20 uniformly distributed between 3 and 4.
+    grid = np.linspace(0.001, 0.999, 1000)
+    z0 = norm.ppf(grid)
+    z1 = np.linspace(3, 4, 20)
+    zs = np.concatenate((z0, z1))
+
+    for estimate_mean in False,True:
+        for estimate_scale in False,True:
+            for estimate_prob in False,True:
+
+                emp_null = EmpiricalNull(zs, estimate_mean=estimate_mean,
+                                         estimate_scale=estimate_scale,
+                                         estimate_prob=estimate_prob)
+
+                if not estimate_mean:
+                    assert_allclose(emp_null.mean0, 0, atol=1e-5, rtol=1e-5)
+                if not estimate_scale:
+                    assert_allclose(emp_null.sd0, 1, atol=1e-5, rtol=1e-2)
+                if not estimate_prob:
+                    assert_allclose(emp_null.prob0, 1, atol=1e-5, rtol=1e-2)
+
+                # consistency check
+                assert_allclose(emp_null.pdf(np.r_[-1, 0, 1]),
+                                norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean0, scale=emp_null.sd0),
+                                rtol=1e-13)
