@@ -234,7 +234,7 @@ class DescrStatsW(object):
         ----------
         probs : array-like
             A vector of probability points at which to calculate the
-            quantiles.  Each element of `p` should fall in [0, 1].
+            quantiles.  Each element of `probs` should fall in [0, 1].
 
         Returns
         -------
