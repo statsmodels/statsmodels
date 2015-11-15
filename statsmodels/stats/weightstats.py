@@ -226,6 +226,79 @@ class DescrStatsW(object):
         return std / np.sqrt(self.sum_weights - 1)
 
 
+    def quantile(self, p):
+        """
+        Calculated quantiles from a weighted sample.
+
+        Parameters
+        ----------
+        p : array-like
+            A vector of probability points at which to calculated
+            quantiles.  Each element of `p` should fall in [0, 1].
+
+        Returns
+        -------
+        If the data are 1d, returns a pandas Series indexed by the
+        probability points, containing the quantiles.  If the data are
+        2d, returns a pandas DataFrame indexed by the probability
+        points, with each column containing the quantiles for the
+        corresponding column of the data.
+
+        References
+        ----------
+        SAS documentation for weighted quantiles:
+
+        https://support.sas.com/documentation/cdl/en/procstat/63104/HTML/default/viewer.htm#procstat_univariate_sect028.htm
+        """
+
+        import pandas as pd
+
+        p = np.asarray(p)
+        p = np.atleast_1d(p)
+
+        if self.data.ndim == 1:
+            wq = self._quantile(self.data, p)
+            rslt = pd.Series(wq, index=p)
+        else:
+            rslt = pd.DataFrame(index=p)
+            for j,vec in enumerate(self.data.T):
+                vname = "col%d" % j
+                rslt[vname] = self._quantile(vec, p)
+
+        rslt.index.name = "p"
+
+        return rslt
+
+
+    def _quantile(self, vec, p):
+        # Helper function to calculate weighted quantiles for one column.
+        # Follows definition from SAS documentation.
+
+        import pandas as pd
+
+        # Aggregate over ties
+        df = pd.DataFrame(index=np.arange(len(self.weights)))
+        df["weights"] = self.weights
+        df["vec"] = vec
+        dfg = df.groupby("vec").agg(np.sum)
+        weights = dfg.values[:, 0]
+        values = np.asarray(dfg.index)
+
+        cweights = np.cumsum(weights)
+        totwt = cweights[-1]
+        targets = p * totwt
+        ii = np.searchsorted(cweights, targets)
+
+        rslt = values[ii]
+
+        # Exact hits
+        jj = np.flatnonzero(np.abs(targets - cweights[ii]) < 1e-10)
+        jj = jj[ii[jj] < len(cweights) - 1]
+        rslt[jj] = (values[ii[jj]] + values[ii[jj]+1]) / 2
+
+        return rslt
+
+
     def tconfint_mean(self, alpha=0.05, alternative='two-sided'):
         '''two-sided confidence interval for weighted mean of data
 
