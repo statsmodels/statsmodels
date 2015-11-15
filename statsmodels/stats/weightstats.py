@@ -226,14 +226,14 @@ class DescrStatsW(object):
         return std / np.sqrt(self.sum_weights - 1)
 
 
-    def quantile(self, p):
+    def quantile(self, probs):
         """
         Quantiles from a weighted sample.
 
         Parameters
         ----------
-        p : array-like
-            A vector of probability points at which to calculated
+        probs : array-like
+            A vector of probability points at which to calculate the
             quantiles.  Each element of `p` should fall in [0, 1].
 
         Returns
@@ -253,24 +253,24 @@ class DescrStatsW(object):
 
         import pandas as pd
 
-        p = np.asarray(p)
-        p = np.atleast_1d(p)
+        probs = np.asarray(probs)
+        probs = np.atleast_1d(probs)
 
         if self.data.ndim == 1:
-            wq = self._quantile(self.data, p)
-            rslt = pd.Series(wq, index=p)
+            wq = self._quantile(self.data, probs)
+            rslt = pd.Series(wq, index=probs)
         else:
-            rslt = pd.DataFrame(index=p)
+            rslt = pd.DataFrame(index=probs)
             for j,vec in enumerate(self.data.T):
                 vname = "col%d" % j
-                rslt[vname] = self._quantile(vec, p)
+                rslt[vname] = self._quantile(vec, probs)
 
         rslt.index.name = "p"
 
         return rslt
 
 
-    def _quantile(self, vec, p):
+    def _quantile(self, vec, probs):
         # Helper function to calculate weighted quantiles for one column.
         # Follows definition from SAS documentation.
 
@@ -286,7 +286,7 @@ class DescrStatsW(object):
 
         cweights = np.cumsum(weights)
         totwt = cweights[-1]
-        targets = p * totwt
+        targets = probs * totwt
         ii = np.searchsorted(cweights, targets)
 
         rslt = values[ii]
