@@ -228,7 +228,7 @@ class DescrStatsW(object):
 
     def quantile(self, p):
         """
-        Calculated quantiles from a weighted sample.
+        Quantiles from a weighted sample.
 
         Parameters
         ----------
