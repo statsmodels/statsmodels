@@ -81,8 +81,12 @@ class CheckExternalMixin(object):
 
 
     def test_quantiles(self):
-        qtl = self.descriptive.quantile(self.quantile_probs)
-        assert_allclose(qtl.values, self.quantiles, rtol=1e-4)
+        for return_pandas in False, True:
+            qtl = self.descriptive.quantile(self.quantile_probs, return_pandas=return_pandas)
+            if return_pandas:
+                assert_allclose(qtl.values, self.quantiles, rtol=1e-4)
+            else:
+                assert_allclose(qtl, self.quantiles, rtol=1e-4)
 
 
 class TestSim1(CheckExternalMixin):

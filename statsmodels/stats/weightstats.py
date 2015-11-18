@@ -226,23 +226,41 @@ class DescrStatsW(object):
         return std / np.sqrt(self.sum_weights - 1)
 
 
-    def quantile(self, probs):
+    def quantile(self, probs, return_pandas=True):
         """
-        Quantiles from a weighted sample.
+        Compute quantiles for a weighted sample.
 
         Parameters
         ----------
         probs : array-like
             A vector of probability points at which to calculate the
             quantiles.  Each element of `probs` should fall in [0, 1].
+        return_pandas : bool
+            If True, return value is a Pandas DataFrame or Series.
+            Otherwise returns a ndarray.
 
         Returns
         -------
-        If the data are 1d, returns a pandas Series indexed by the
-        probability points, containing the quantiles.  If the data are
-        2d, returns a pandas DataFrame indexed by the probability
-        points, with each column containing the quantiles for the
-        corresponding column of the data.
+        quantiles : Series, DataFrame, or ndarray
+            If `return_pandas`=True, returns one of the following:
+            * data are 1d, `return_pandas`=True: a Series indexed by
+              the probability points.
+            * data are 2d, `return_pandas`=True: a DataFrame with
+              the probability points as row index and the variables
+              as column index.
+        If `return_pandas`=False, returns an ndarray containing the
+        same values as the Series/DataFrame.
+
+        Notes
+        -----
+        To compute the quantiles, first, the weights are summed over
+        exact ties yielding distinct data values y_1 < y_2 < ..., and
+        corresponding weights w_1, w_2, ....  Let s_j denote the sum
+        of the first j weights, and let W denote the sum of all the
+        weights.  For a probability point p, if pW falls strictly
+        between s_j and s_{j+1} then the estimated quantile is
+        y_{j+1}.  If pW = s_j then the estimated quantile is (y_j +
+        y_{j+1})/2.  If pW < p_1 then the estimated quantile is y_1.
 
         References
         ----------
@@ -257,15 +275,20 @@ class DescrStatsW(object):
         probs = np.atleast_1d(probs)
 
         if self.data.ndim == 1:
-            wq = self._quantile(self.data, probs)
-            rslt = pd.Series(wq, index=probs)
+            rslt = self._quantile(self.data, probs)
+            if return_pandas:
+                rslt = pd.Series(rslt, index=probs)
         else:
-            rslt = pd.DataFrame(index=probs)
-            for j,vec in enumerate(self.data.T):
-                vname = "col%d" % j
-                rslt[vname] = self._quantile(vec, probs)
+            rslt = []
+            for vec in self.data.T:
+                rslt.append(self._quantile(vec, probs))
+            rslt = np.column_stack(rslt)
+            if return_pandas:
+                columns = ["col%d" % (j+1) for j in range(rslt.shape[1])]
+                rslt = pd.DataFrame(data=rslt, columns=columns, index=probs)
 
-        rslt.index.name = "p"
+        if return_pandas:
+            rslt.index.name = "p"
 
         return rslt
 
@@ -273,6 +296,7 @@ class DescrStatsW(object):
     def _quantile(self, vec, probs):
         # Helper function to calculate weighted quantiles for one column.
         # Follows definition from SAS documentation.
+        # Returns ndarray
 
         import pandas as pd
 
