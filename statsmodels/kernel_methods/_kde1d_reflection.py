@@ -7,6 +7,7 @@ import numpy as np
 from .kde_utils import numpy_trans1d_method, finite
 from ._kde1d_methods import KDE1DMethod, dctdensity, dctdensity_from_binned
 
+
 class Reflection1D(KDE1DMethod):
     r"""
     This method consist in simulating the reflection of the data left and

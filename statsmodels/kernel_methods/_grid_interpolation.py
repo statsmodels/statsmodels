@@ -2,6 +2,7 @@ import numpy as np
 from . import _cy_grid_interpolation
 from ._grid import Grid
 
+
 class GridInterpolator(object):
     def __init__(self, grid, values):
         """

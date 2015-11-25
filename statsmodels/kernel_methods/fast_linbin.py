@@ -8,6 +8,7 @@ import numpy as np
 from . import _cy_fast_linbin
 from .kde_utils import Grid
 
+
 def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
     r"""
 
@@ -72,6 +73,7 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
 
     return Grid(mesh, bounds, bin_type), out
 
+
 def fast_linbin(X, bounds, M, weights=1., bin_type='B', out=None):
     return _fast_bin(_cy_fast_linbin.fast_linbin, X, bounds, M, weights, bin_type, out)
 
@@ -105,6 +107,7 @@ def fast_bin(X, bounds, M, weights=1., bin_type='B', out=None):
 fast_bin.__doc__ = """
     Fast Binning on regular grid
     """ + _fast_bin.__doc__
+
 
 def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     r"""
@@ -188,6 +191,7 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     mesh, bounds = fct(X, bounds[:, 0], bounds[:, 1], out, weights, bin_type)
     return Grid(mesh, bounds, bin_type), out
 
+
 def fast_linbin_nd(X, bounds, M, weights=1., bin_type='B', out=None):
     X = np.atleast_2d(X).astype(np.float)
     if X.shape[1] == 2:
@@ -218,6 +222,7 @@ fast_linbin_nd.__doc__ = r"""
     If cyclic is true, then the bins are placed at :math:`\{a, \ldots, a+k \delta, \ldots, b-\delta\}` with
     :math:`\delta = \frac{M}{b-a}` and there is a virtual bin in :math:`b` which is fused with :math:`a`.
     """
+
 
 def fast_bin_nd(X, bounds, M, weights=1., bin_type='B', out=None):
     return _fast_bin_nd(_cy_fast_linbin.fast_bin_nd, X, bounds, M, weights, bin_type, out)

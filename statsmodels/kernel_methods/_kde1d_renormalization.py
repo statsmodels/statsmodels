@@ -8,6 +8,7 @@ from .kde_utils import numpy_trans1d_method, finite, Grid
 from ._kde1d_cyclic import Cyclic1D
 from ._kde1d_methods import KDE1DMethod, fftdensity
 
+
 class Renormalization(Cyclic1D):
     r"""
     This method consists in using the normal kernel method, but renormalize

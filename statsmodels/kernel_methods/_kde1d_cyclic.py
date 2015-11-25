@@ -7,6 +7,7 @@ import numpy as np
 from .kde_utils import numpy_trans1d_method, finite
 from ._kde1d_methods import KDE1DMethod, fftdensity, fftdensity_from_binned
 
+
 class Cyclic1D(KDE1DMethod):
     r"""
     This method assumes cyclic boundary conditions and works only for closed

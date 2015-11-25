@@ -5,6 +5,7 @@ from operator import itemgetter as _itemgetter
 from ..compat.ordereddict import OrderedDict
 import sys
 
+
 def namedtuple(typename, field_names, verbose=False, rename=False, doc="", field_docs=None):
     """Returns a new subclass of tuple with named fields.
 
@@ -131,5 +132,3 @@ def namedtuple(typename, field_names, verbose=False, rename=False, doc="", field
         pass
 
     return result
-
-

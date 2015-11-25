@@ -4,6 +4,7 @@ from numpy.lib.stride_tricks import broadcast_arrays
 from ..compat.python import range, zip
 from ..compat.numpy import np_meshgrid
 
+
 class Grid(object):
     """
     Object representing a grid.

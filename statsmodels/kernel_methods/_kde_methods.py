@@ -9,6 +9,7 @@ import numpy as np
 from .kde_utils import atleast_2df, AxesType
 from . import bandwidths
 
+
 def _array_arg(value, value_name, ndim, dtype=float):
     """
     Simple function returning an array with ndim values.
@@ -22,6 +23,7 @@ def _array_arg(value, value_name, ndim, dtype=float):
     if value.shape != (ndim,):
         raise ValueError("Error, '{0}' must be a scalar or a 1D array with {1} elements".format(value_name, ndim))
     return value
+
 
 def filter_exog(kde, bin_type):
     """
@@ -65,6 +67,7 @@ def filter_exog(kde, bin_type):
             raise ValueError("The adjustments must be either a single value or an array of shape (npts,)")
         k.adjust = kde.adjust[sel]
     return k
+
 
 class KDEMethod(object):
     """

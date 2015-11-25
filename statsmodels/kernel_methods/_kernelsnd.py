@@ -1,1 +1,1 @@
-from .kernels import KernelnD
+from .kernels import KernelnD  # noqa

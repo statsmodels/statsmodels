@@ -21,6 +21,7 @@ elif hasattr(np, 'float96'):
 else:
     large_float = np.float64
 
+
 def finite(val):
     return val is not None and np.isfinite(val)
 
@@ -41,6 +42,7 @@ def atleast_2df(*arys):
         return res[0]
     return res
 
+
 def make_ufunc(nin=None, nout=1):
     """
     Decorator used to create a ufunc using `np.frompyfunc`. Note that the
@@ -58,6 +60,7 @@ def make_ufunc(nin=None, nout=1):
             Nin = nin
         return np.frompyfunc(fct, Nin, nout)
     return f
+
 
 def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
     """
@@ -111,6 +114,7 @@ def _process_trans_args(z, out, input_dim, output_dim, in_dtype, out_dtype):
         z = z.T
     return z, write_out, out
 
+
 def numpy_trans(input_dim, output_dim, out_dtype=None, in_dtype=float):
     """
     Decorator to create a function taking a single array-like argument and return a numpy array with the same number of
@@ -149,6 +153,7 @@ def numpy_trans(input_dim, output_dim, out_dtype=None, in_dtype=float):
         in_dtype = np.dtype(in_dtype)
     if output_dim <= 0:
         raise ValueError("Error, the number of output dimension must be strictly more than 0.")
+
     def decorator(fct):
         @functools.wraps(fct)
         def f(z, out=None):
@@ -158,6 +163,7 @@ def numpy_trans(input_dim, output_dim, out_dtype=None, in_dtype=float):
             return out
         return f
     return decorator
+
 
 def _process_trans1d_args(z, out, in_dtype, out_dtype):
     z = np.asarray(z)
@@ -175,6 +181,7 @@ def _process_trans1d_args(z, out, in_dtype, out_dtype):
             dtype = np.float64
         out = np.empty(z.shape, dtype=dtype)
     return z, out, out
+
 
 def numpy_trans1d(out_dtype=None, in_dtype=None):
     """
@@ -210,6 +217,7 @@ def numpy_trans1d(out_dtype=None, in_dtype=None):
             return out
         return f
     return decorator
+
 
 def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
     """
@@ -277,6 +285,7 @@ def numpy_trans_method(input_dim, output_dim, out_dtype=None, in_dtype=float):
         return f
     return decorator
 
+
 def numpy_trans1d_method(out_dtype=None, in_dtype=None):
     '''
     This is the method equivalent to :py:func:`numpy_trans1d`
@@ -294,6 +303,7 @@ def numpy_trans1d_method(out_dtype=None, in_dtype=None):
             return real_out
         return f
     return decorator
+
 
 class AxesType(object):
     """

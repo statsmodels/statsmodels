@@ -2,6 +2,7 @@ from .kernels import Kernel1D, rfftfreq, dctfreq
 from . import _cy_kernels
 import numpy as np
 
+
 class tricube(Kernel1D):
     r"""
     Return the kernel corresponding to a tri-cube distribution, whose expression is.
@@ -226,6 +227,7 @@ class Epanechnikov(Kernel1D):
     def dct(self, N, dx, out=None):
         z = dctfreq(N, dx)
         return _cy_kernels.epanechnikov_fft(z, out)
+
 
 class Epanechnikov_order4(Kernel1D):
     r"""

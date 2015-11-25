@@ -12,6 +12,7 @@ from copy import copy as shallow_copy
 from ._kde_methods import KDEMethod, filter_exog
 from . import kernels
 
+
 def _compute_bandwidth(kde):
     """
     Compute the bandwidth and covariance for the estimated model, based of its exog attribute
@@ -309,6 +310,7 @@ class Unordered(KDEMethod):
     transform_axis = None
     restore_axis = None
     transform_bins = None
+
 
 class Ordered(Unordered):
     """

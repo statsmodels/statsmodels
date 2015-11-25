@@ -4,6 +4,7 @@ import numpy as np
 from ..compat.python import range
 from numpy import newaxis
 
+
 def _bootstrap(fitted_kde, nb_samples, eval_fct, CIs):
     if CIs is not None:
         CIs = np.asarray(CIs)
@@ -37,6 +38,7 @@ def _bootstrap(fitted_kde, nb_samples, eval_fct, CIs):
         high_CIs = results[..., lower_high_CIs] * (1-ratio_high_CIs) + results[..., upper_high_CIs] * ratio_high_CIs
         return np.concatenate((low_CIs[..., newaxis], high_CIs[..., newaxis]), axis=-1)
     return results
+
 
 def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
                    adjust_bw=1., fct_args={}):
@@ -84,6 +86,7 @@ def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
         bootstrapped_function = type(fitted_kde).grid
     elif isinstance(bootstrapped_function, str):
         bootstrapped_function = getattr(type(fitted_kde), bootstrapped_function)
+
     def eval_fct(fitted):
         return bootstrapped_function(fitted, **fct_args)[1]
     if callable(adjust_bw):
@@ -92,6 +95,7 @@ def bootstrap_grid(fitted_kde, nb_samples, CIs=None, bootstrapped_function=None,
     adjusted_kde = fitted_kde.copy()
     adjusted_kde.bandwidth *= adjust_bw
     return grid, _bootstrap(adjusted_kde, nb_samples, eval_fct, CIs)
+
 
 def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_function=None,
               adjust_bw=1., fct_args={}):
@@ -140,6 +144,7 @@ def bootstrap(fitted_kde, eval_points, nb_samples, CIs=None, bootstrapped_functi
         bootstrapped_function = type(fitted_kde).__call__
     elif isinstance(bootstrapped_function, str):
         bootstrapped_function = getattr(type(fitted_kde), bootstrapped_function)
+
     def eval_fct(fitted):
         return bootstrapped_function(fitted, eval_points, **fct_args)
     if callable(adjust_bw):

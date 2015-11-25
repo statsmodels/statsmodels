@@ -8,7 +8,7 @@ from __future__ import division, absolute_import, print_function
 
 from ._kde_methods import KDEMethod, filter_exog  # noqa
 
-from ._kde1d_methods import KDE1DMethod # noqa
+from ._kde1d_methods import KDE1DMethod  # noqa
 from ._kde1d_linear_combination import LinearCombination  # noqa
 from ._kde1d_cyclic import Cyclic1D  # noqa
 from ._kde1d_reflection import Reflection1D  # noqa

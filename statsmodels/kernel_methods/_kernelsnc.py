@@ -10,6 +10,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from ..compat.numpy import np_sum
 
+
 class AitchisonAitken(object):
     r"""
     The Aitchison-Aitken kernel, used for unordered discrete random variables [KM2]_.
@@ -87,6 +88,7 @@ class AitchisonAitken(object):
         result = bins*(1-bw)
         result += (all_vals - bins) * bw / (num_levels-1)
         return result
+
 
 class WangRyzin(object):
     r"""

@@ -17,6 +17,7 @@ from .fast_linbin import fast_linbin_nd as fast_bin_nd
 
 AxesMethods = namedtuple("AxesMethods", ["methods", "kernels"])
 
+
 def _compute_bandwidth(kde, default):
     """
     Compute the bandwidth and covariance for the estimated model, based of its
@@ -43,6 +44,7 @@ def _compute_bandwidth(kde, default):
     if bw.shape != (n,):
         raise ValueError("Error, there must be one bandwidth per variable")
     return bw
+
 
 class Multivariate(KDEMethod):
     """

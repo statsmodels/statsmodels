@@ -15,6 +15,7 @@ from ._kde_methods import KDEMethod, _array_arg, filter_exog
 from ._kde1d_reflection import Reflection1D
 from ._kde1d_cyclic import Cyclic1D
 
+
 def generate_grid(kde, N=None, cut=None):
     r"""
     Helper method returning a regular grid on the domain of the KDE.
@@ -58,6 +59,7 @@ def generate_grid(kde, N=None, cut=None):
         axes[i] = np.linspace(lower[i], upper[i], N[i])
     return Grid(axes)
 
+
 def _compute_bandwidth(kde, default):
     """
     Compute the bandwidth and covariance for the estimated model, based of its exog attribute
@@ -69,6 +71,7 @@ def _compute_bandwidth(kde, default):
     if callable(bw):
         bw = bw(kde)
     return bw
+
 
 def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weights):
     """
@@ -463,6 +466,7 @@ class KDEnDMethod(KDEMethod):
             return 2 ** p2
         return N
 
+
 class Cyclic(KDEnDMethod):
 
     name = "cyclic"
@@ -585,6 +589,7 @@ class Cyclic(KDEnDMethod):
         weights = self.weights
 
         return fftdensity(exog, self.kernel.rfft, bw_inv, lower, upper, N, weights, self.total_weights)
+
 
 class Reflection(KDEnDMethod):
 

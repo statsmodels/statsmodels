@@ -9,6 +9,7 @@ from scipy import fftpack, optimize, linalg
 from .kde_utils import large_float, finite, atleast_2df, AxesType
 from ..compat.python import range
 
+
 def _spread(X):
     """
     Returns the smaller of std(X, ddof=1) or normalized IQR(X) over axis 0.
@@ -20,6 +21,7 @@ def _spread(X):
     Q1, Q3 = np.percentile(X, [25, 75], axis=0)
     IQR = (Q3 - Q1) / 1.349
     return np.minimum(np.std(X, axis=0, ddof=1), IQR)
+
 
 def full_variance(factor, exog):
     r"""
@@ -39,6 +41,7 @@ def full_variance(factor, exog):
         spread = np.atleast_2d(linalg.sqrtm(np.cov(exog, rowvar=0, bias=False)))
     return spread * factor
 
+
 def diagonal_variance(factor, exog):
     r"""
     Return the diagonal covariance matrix according to Silverman's rule. The
@@ -53,6 +56,7 @@ def diagonal_variance(factor, exog):
     range of X.
     """
     return _spread(exog) * factor
+
 
 def silverman(model):
     r"""
@@ -73,6 +77,7 @@ def silverman(model):
     n, d = exog.shape
     return diagonal_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
 
+
 def silverman_full(model):
     r"""
     Silverman bandwidths, based on covariance only, and returning a full matrix
@@ -91,6 +96,7 @@ def silverman_full(model):
     exog = atleast_2df(model.exog)
     n, d = exog.shape
     return full_variance(0.9 * (n ** (-1. / (d + 4.))), exog)
+
 
 def scotts(model):
     r"""
@@ -111,6 +117,7 @@ def scotts(model):
     n, d = exog.shape
     return diagonal_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
 
+
 def scotts_full(model):
     r"""
     Scotts bandwidths, based on covariance only, and returning a full matrix
@@ -129,6 +136,7 @@ def scotts_full(model):
     exog = atleast_2df(model.exog)
     n, d = exog.shape
     return full_variance((n * (d + 2.) / 4.) ** (-1. / (d + 4.)), exog)
+
 
 def _botev_fixed_point(t, M, I, a2):
     l = 7
@@ -201,6 +209,7 @@ class botev(object):
 
         return np.sqrt(t_star) * span
 
+
 class KDE1DAdaptor(object):
     """
     Adaptor class to view a nD KDE estimator as a 1D estimator for a given dimension
@@ -238,6 +247,7 @@ class KDE1DAdaptor(object):
 
     _constant_attributes = ['weights', 'adjust', 'total_weights', 'npts']
 
+
 def _add_fwd_list_attr(cls, attr):
     def getter(self):
         value = getattr(self._kde, attr)
@@ -246,6 +256,7 @@ def _add_fwd_list_attr(cls, attr):
         except:
             return value
     setattr(cls, attr, property(getter))
+
 
 def _add_fwd_attr(cls, attr):
     def getter(self):

@@ -18,6 +18,7 @@ Transform = namedtuple('Transform', ['__call__', 'inv', 'Dinv'],
                        doc=_Transform_doc,
                        field_docs=_Transform_field_docs)
 
+
 def _inverse(x, out=None):
     return np.divide(1, x, out)
 
@@ -25,6 +26,7 @@ def _inverse(x, out=None):
 LogTransform = Transform(np.log, np.exp, np.exp)
 #: Transform object for an exp-transform mapping [-oo, +oo] to [o, +oo]
 ExpTransform = Transform(np.exp, np.log, _inverse)
+
 
 def transform_distribution(xs, ys, Dinv, out):
     r"""
@@ -62,6 +64,7 @@ def transform_distribution(xs, ys, Dinv, out):
     _inverse(di, out=di)
     np.multiply(di, ys, out=out)
     return out
+
 
 def create_transform(obj, inv=None, Dinv=None):
     """
@@ -121,6 +124,7 @@ class _transKDE(object):
 
     def fit(self):
         return self.method.fit(self)
+
 
 class Transform1D(KDE1DMethod):
     r"""

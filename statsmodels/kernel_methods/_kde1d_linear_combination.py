@@ -10,6 +10,7 @@ from ._kde1d_cyclic import Cyclic1D
 from ._kde1d_methods import KDE1DMethod, fftdensity
 from .kernels import Kernel1D
 
+
 class _LinearCombinationKernel(Kernel1D):
     def __init__(self, ker):
         self._kernel = ker
@@ -36,6 +37,7 @@ class _LinearCombinationKernel(Kernel1D):
         return out
 
     __call__ = pdf
+
 
 class LinearCombination(Cyclic1D):
     r"""

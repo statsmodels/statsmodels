@@ -77,6 +77,7 @@ def generate_grid1d(kde, N=None, cut=None, span=None):
     mesh += step / 2
     return Grid(mesh, bounds=[lower, upper])
 
+
 def _compute_bandwidth(kde, default):
     """
     Compute the bandwidth for the estimated model, based of its exog attribute
@@ -90,6 +91,7 @@ def _compute_bandwidth(kde, default):
     else:
         bw = float(bw)
     return bw
+
 
 def convolve(exog, point, fct, out=None, scaling=1., weights=1., factor=1., dim=-1):
     """
@@ -903,6 +905,7 @@ class KDE1DMethod(KDEMethod):
             return 2 ** 10
         return N
 
+
 def fftdensity_from_binned(mesh, bins, kernel_rfft, bw, normed=False, total_weights=None, dim=-1):
     """
     Parameters
@@ -942,6 +945,7 @@ def fftdensity_from_binned(mesh, bins, kernel_rfft, bw, normed=False, total_weig
         density /= total_weights * mesh.start_interval[dim]
     return density
 
+
 def fftdensity(exog, kernel_rfft, bw, lower, upper, N, weights, total_weights):
     """
     Compute the density estimate using a FFT approximation.
@@ -979,6 +983,7 @@ def fftdensity(exog, kernel_rfft, bw, lower, upper, N, weights, total_weights):
     mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='C')
     DataHist /= total_weights
     return mesh, fftdensity_from_binned(mesh, DataHist, kernel_rfft, bw)
+
 
 def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weights=None, dim=-1):
     """
@@ -1020,6 +1025,7 @@ def dctdensity_from_binned(mesh, bins, kernel_dct, bw, normed=False, total_weigh
             total_weights = bins.sum()
         density /= total_weights
     return density
+
 
 def dctdensity(exog, kernel_dct, bw, lower, upper, N, weights, total_weights):
     """

@@ -18,6 +18,7 @@ S2PI = np.sqrt(2 * np.pi)
 
 S2 = np.sqrt(2)
 
+
 def rfftfreq(n, d=1.0):
     """
     Return the Discrete Fourier Transform sample frequencies
@@ -74,17 +75,20 @@ def rfftfreq(n, d=1.0):
     results = np.arange(0, N, dtype=int)
     return results * val
 
+
 def rfftsize(N):
     """
     Returns the number of elements in the result of :py:func:`numpy.fft.rfft`.
     """
     return (N//2)+1
 
+
 def rfftnsize(Ns):
     """
     Returns the number of elements in the result of :py:func:`numpy.fft.rfft`.
     """
     return tuple(Ns[:-1]) + ((Ns[-1]//2)+1,)
+
 
 def rfftnfreq(Ns, dx=None, sparse=True):
     """
@@ -133,6 +137,7 @@ def rfftnfreq(Ns, dx=None, sparse=True):
     grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
     return np.tensordot(trans, grid, axes=([1], [0]))
 
+
 def fftsamples(N, dx=1.0):
     """
     Returns the array of sample positions needed to comput the FFT with N samples.
@@ -156,6 +161,7 @@ def fftsamples(N, dx=1.0):
     else:
         n = N//2
         return dx*np.concatenate([np.arange(n), np.arange(-n, 0)])
+
 
 def fftnsamples(Ns, dx=None, sparse=True):
     """
@@ -217,6 +223,7 @@ def dctfreq(N, dx=1.0):
     dz = 1/(2*N*dx)
     return np.arange(N)*dz
 
+
 def dctnfreq(Ns, dx=None, sparse=True):
     """
     Return the Discrete Cosine Transform sample frequencies
@@ -249,6 +256,7 @@ def dctnfreq(Ns, dx=None, sparse=True):
     fs = [dctfreq(Ns[d], dx[d]) for d in range(ndim)]
     return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
 
+
 def dctsamples(N, dx=1.0):
     """
     Returns the array of sample positions needed to comput the DCT with N samples.
@@ -267,6 +275,7 @@ def dctsamples(N, dx=1.0):
         Array of positions
     """
     return np.arange(0.5, N)*dx
+
 
 def dctnsamples(Ns, dx=None, sparse=True):
     """
@@ -299,6 +308,7 @@ def dctnsamples(Ns, dx=None, sparse=True):
                              "so only a diagonal transformation is possible")
     fs = [dctsamples(Ns[d], dx[d]) for d in range(ndim)]
     return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
+
 
 class Kernel1D(object):
     r"""
@@ -524,6 +534,7 @@ class Kernel1D(object):
             self._convolve_kernel = from1DPDF(self._convolution)
         return self._convolve_kernel
 
+
 class from1DPDF(Kernel1D):
     """
     This class creates a kernel from a single function computing the PDF.
@@ -538,6 +549,7 @@ class from1DPDF(Kernel1D):
         return self._pdf(z, out)
 
     __call__ = pdf
+
 
 class normal1d(Kernel1D):
     """
@@ -708,6 +720,7 @@ class normal1d(Kernel1D):
         out += 0.5
         return out
 
+
 class KernelnD(object):
     """
     This class is the base class for nD kernels.
@@ -834,6 +847,7 @@ class KernelnD(object):
             out[:] = fftpack.dct(out, axis=a)
         return out
 
+
 class fromNDPDF(KernelnD):
     """
     This class creates a kernel from a single function computing the PDF.
@@ -849,6 +863,7 @@ class fromNDPDF(KernelnD):
         return self._pdf(z, out)
 
     __call__ = pdf
+
 
 class normal(KernelnD):
     """
