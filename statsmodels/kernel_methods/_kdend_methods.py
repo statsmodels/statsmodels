@@ -12,7 +12,8 @@ from . import kernels
 from copy import copy as shallow_copy
 from .fast_linbin import fast_linbin_nd as fast_bin_nd
 from ._kde_methods import KDEMethod, _array_arg, filter_exog
-from ._kde1d_methods import Reflection1D, Cyclic1D
+from ._kde1d_reflection import Reflection1D
+from ._kde1d_cyclic import Cyclic1D
 
 def generate_grid(kde, N=None, cut=None):
     r"""

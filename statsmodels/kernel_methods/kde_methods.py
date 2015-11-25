@@ -8,24 +8,15 @@ from __future__ import division, absolute_import, print_function
 
 from ._kde_methods import KDEMethod, filter_exog  # noqa
 
-def _import_methods(module):
-    module_variables = globals()
-    for name in dir(module):
-        obj = getattr(module, name)
-        if isinstance(obj, type) and issubclass(obj, KDEMethod):
-            module_variables[name] = obj
-
-from . import _kde1d_methods
-from . import _kdenc_methods
-from . import _kdend_methods
-from . import _kde_multivariate
-
-_import_methods(_kde1d_methods)
-_import_methods(_kdenc_methods)
-_import_methods(_kdend_methods)
-_import_methods(_kde_multivariate)
-
-from ._kde1d_methods import (LogTransform, ExpTransform, Transform, create_transform,  # noqa
-                             convolve, generate_grid1d)  # noqa
-
+from ._kde1d_linear_combination import LinearCombination  # noqa
+from ._kde1d_cyclic import Cyclic1D  # noqa
+from ._kde1d_reflection import Reflection1D  # noqa
+from ._kde1d_renormalization import Renormalization  # noqa
+from ._kde1d_transform import Transform1D  # noqa
+from ._kde1d_methods import KDE1DMethod, Unbounded1D  # noqa
+from ._kde_multivariate import Multivariate  # noqa
+from ._kdenc_methods import Unordered, Ordered  # noqa
+from ._kdend_methods import KDEnDMethod, Cyclic, Reflection  # noqa
+from ._kde1d_transform import LogTransform, ExpTransform, Transform, create_transform  # noqa
+from ._kde1d_methods import convolve, generate_grid1d  # noqa
 from ._kdend_methods import generate_grid  # noqa
