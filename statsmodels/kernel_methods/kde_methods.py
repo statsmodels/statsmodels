@@ -8,12 +8,12 @@ from __future__ import division, absolute_import, print_function
 
 from ._kde_methods import KDEMethod, filter_exog  # noqa
 
+from ._kde1d_methods import KDE1DMethod # noqa
 from ._kde1d_linear_combination import LinearCombination  # noqa
 from ._kde1d_cyclic import Cyclic1D  # noqa
 from ._kde1d_reflection import Reflection1D  # noqa
 from ._kde1d_renormalization import Renormalization  # noqa
 from ._kde1d_transform import Transform1D  # noqa
-from ._kde1d_methods import KDE1DMethod, Unbounded1D  # noqa
 from ._kde_multivariate import Multivariate  # noqa
 from ._kdenc_methods import Unordered, Ordered  # noqa
 from ._kdend_methods import KDEnDMethod, Cyclic, Reflection  # noqa
