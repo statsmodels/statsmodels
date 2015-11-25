@@ -315,7 +315,7 @@ class KDE1DMethod(KDEMethod):
         """
         return self.lower > -np.inf or self.upper < np.inf
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def pdf(self, points, out):
         """
         Compute the PDF of the estimated distribution.
@@ -342,7 +342,7 @@ class KDE1DMethod(KDEMethod):
         """
         return self.pdf(points, out)
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def cdf(self, points, out):
         r"""
         Compute the CDF of the estimated distribution, defined as:
@@ -386,7 +386,7 @@ class KDE1DMethod(KDEMethod):
 
         return out
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def icdf(self, points, out):
         r"""
         Compute the inverse cumulative distribution (quantile) function,
@@ -448,7 +448,7 @@ class KDE1DMethod(KDEMethod):
 
         return find_inverse(points, coarse_result, out=out)
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def sf(self, points, out):
         r"""
         Compute the survival function, defined as:
@@ -478,7 +478,7 @@ class KDE1DMethod(KDEMethod):
         out *= -1
         return out
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def isf(self, points, out):
         r"""
         Compute the inverse survival function, defined as:
@@ -505,7 +505,7 @@ class KDE1DMethod(KDEMethod):
         """
         return self.icdf(1 - points, out)
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def hazard(self, points, out):
         r"""
         Compute the hazard function evaluated on the points.
@@ -540,7 +540,7 @@ class KDE1DMethod(KDEMethod):
         out /= sf
         return out
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def cumhazard(self, points, out):
         r"""
         Compute the cumulative hazard function evaluated on the points.
@@ -849,7 +849,7 @@ class KDE1DMethod(KDEMethod):
         """
         return self.name
 
-    @numpy_trans1d_method()
+    @numpy_trans1d_method(in_dtype=float)
     def numeric_cdf(self, points, out):
         """
         Provide a numeric approximation of the CDF based on integrating the pdf
