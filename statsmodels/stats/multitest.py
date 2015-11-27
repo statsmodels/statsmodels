@@ -482,7 +482,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
 
     >>> fdr = local_fdr(zscores)
 
-    Use an empirical null distribution estimated from the data:
+    Use a Gaussian null distribution estimated from the data:
 
     >>> null = EmpiricalNull(zscores)
     >>> fdr = local_fdr(zscores, null_pdf=null.pdf)
@@ -533,13 +533,13 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     return fdr
 
 
-class EmpiricalNull(object):
+class NullDistribution(object):
     """
-    Estimate empirical distribution of null Z-scores.
+    Estimate a Gaussian distribution for the null Z-scores.
 
     The observed Z-scores consist of both null and non-null values.
-    The fitted distribution is Gaussian, but may have non-zero mean
-    and/or non-unit scale.
+    The fitted distribution of null Z-scores is Gaussian, but may have
+    non-zero mean and/or non-unit scale.
 
     Parameters
     ----------
@@ -556,19 +556,19 @@ class EmpiricalNull(object):
     estimate_scale : bool
         If True, estimate the scale of the distribution.  If False, the
         scale parameter is fixed at 1.
-    estimate_prob : bool
+    estimate_null_proportion : bool
         If True, estimate the proportion of true null hypotheses (i.e.
         the proportion of z-scores with expected value zero).  If False,
-        the probability parameter is fixed at 1.
+        this parameter is fixed at 1.
 
     Attributes
     ----------
-    mean0 : float
+    mean : float
         The estimated mean of the empirical null distribution
-    sd0 : float
+    sd : float
         The estimated standard deviation of the empirical null distribution
-    prob0 : float
-        The estimated proportion of true null hypotheses
+    null_proportion : float
+        The estimated proportion of true null hypotheses among all hypotheses
 
     References
     ----------
@@ -583,7 +583,7 @@ class EmpiricalNull(object):
     """
 
     def __init__(self, zscores, null_lb=-1, null_ub=1, estimate_mean=True,
-                 estimate_scale=True, estimate_prob=False):
+                 estimate_scale=True, estimate_null_proportion=False):
 
         # Extract the null z-scores
         ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
@@ -598,21 +598,21 @@ class EmpiricalNull(object):
         # parameters fixed as specified.
         def xform(params):
 
-            mean0 = 0.
-            sd0 = 1.
-            prob0 = 1.
+            mean = 0.
+            sd = 1.
+            prob = 1.
 
             ii = 0
             if estimate_mean:
-                mean0 = params[ii]
+                mean = params[ii]
                 ii += 1
             if estimate_scale:
-                sd0 = np.exp(params[ii])
+                sd = np.exp(params[ii])
                 ii += 1
-            if estimate_prob:
-                prob0 = 1 / (1 + np.exp(-params[ii]))
+            if estimate_null_proportion:
+                prob = 1 / (1 + np.exp(-params[ii]))
 
-            return mean0, sd0, prob0
+            return mean, sd, prob
 
 
         from scipy.stats.distributions import norm
@@ -631,21 +631,21 @@ class EmpiricalNull(object):
             The implementation follows section 4 from Efron 2008.
             """
 
-            d0, s0, p0 = xform(params)
+            d, s, p = xform(params)
 
             # Mass within the central region
-            central_mass = (norm.cdf((null_ub - d0) / s0) -
-                            norm.cdf((null_lb - d0) / s0))
+            central_mass = (norm.cdf((null_ub - d) / s) -
+                            norm.cdf((null_lb - d) / s))
 
             # Probability that a Z-score is null and is in the central region
-            cp = p0 * central_mass
+            cp = p * central_mass
 
             # Binomial term
             rval = n_zs0 * np.log(cp) + (n_zs - n_zs0) * np.log(1 - cp)
 
             # Truncated Gaussian term for null Z-scores
-            zv = (zscores0 - d0) / s0
-            rval += np.sum(-zv**2 / 2) - n_zs0 * np.log(s0)
+            zv = (zscores0 - d) / s
+            rval += np.sum(-zv**2 / 2) - n_zs0 * np.log(s)
             rval -= n_zs0 * np.log(central_mass)
 
             return -rval
@@ -655,11 +655,11 @@ class EmpiricalNull(object):
         from scipy.optimize import minimize
         # starting values are mean = 0, scale = 1, p0 ~ 1
         mz = minimize(fun, np.r_[0., 0, 3], method="Nelder-Mead")
-        mean0, sd0, prob0 = xform(mz['x'])
+        mean, sd, prob = xform(mz['x'])
 
-        self.mean0 = mean0
-        self.sd0 = sd0
-        self.prob0 = prob0
+        self.mean = mean
+        self.sd = sd
+        self.null_proportion = prob
 
 
     # The fitted null density function
@@ -679,6 +679,6 @@ class EmpiricalNull(object):
         points.
         """
 
-        zval = (zscores - self.mean0) / self.sd0
-        return np.exp(-0.5*zval**2 - np.log(self.sd0) - 0.5*np.log(2*np.pi))
+        zval = (zscores - self.mean) / self.sd
+        return np.exp(-0.5*zval**2 - np.log(self.sd) - 0.5*np.log(2*np.pi))
 

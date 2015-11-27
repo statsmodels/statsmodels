@@ -19,7 +19,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_,
 
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage,
-                                         EmpiricalNull,
+                                         NullDistribution,
                                          local_fdr)
 from statsmodels.stats.multicomp import tukeyhsd
 from scipy.stats.distributions import norm
@@ -372,7 +372,7 @@ def test_local_fdr():
     assert_allclose(f1, fdr1, rtol=0.05, atol=0.1)
 
 
-def test_empirical_null():
+def test_null_distribution():
 
     # Create a mixed population of Z-scores: 1000 standard normal and
     # 20 uniformly distributed between 3 and 4.
@@ -380,19 +380,19 @@ def test_empirical_null():
     z0 = norm.ppf(grid)
     z1 = np.linspace(3, 4, 20)
     zs = np.concatenate((z0, z1))
-    emp_null = EmpiricalNull(zs, estimate_prob=True)
+    emp_null = NullDistribution(zs, estimate_null_proportion=True)
 
-    assert_allclose(emp_null.mean0, 0, atol=1e-5, rtol=1e-5)
-    assert_allclose(emp_null.sd0, 1, atol=1e-5, rtol=1e-2)
-    assert_allclose(emp_null.prob0, 0.98, atol=1e-5, rtol=1e-2)
+    assert_allclose(emp_null.mean, 0, atol=1e-5, rtol=1e-5)
+    assert_allclose(emp_null.sd, 1, atol=1e-5, rtol=1e-2)
+    assert_allclose(emp_null.null_proportion, 0.98, atol=1e-5, rtol=1e-2)
 
     # consistency check
     assert_allclose(emp_null.pdf(np.r_[-1, 0, 1]),
-                    norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean0, scale=emp_null.sd0),
+                    norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean, scale=emp_null.sd),
                     rtol=1e-13)
 
 
-def test_empirical_null_constrained():
+def test_null_constrained():
 
     # Create a mixed population of Z-scores: 1000 standard normal and
     # 20 uniformly distributed between 3 and 4.
@@ -405,18 +405,19 @@ def test_empirical_null_constrained():
         for estimate_scale in False,True:
             for estimate_prob in False,True:
 
-                emp_null = EmpiricalNull(zs, estimate_mean=estimate_mean,
-                                         estimate_scale=estimate_scale,
-                                         estimate_prob=estimate_prob)
+                emp_null = NullDistribution(zs, estimate_mean=estimate_mean,
+                                            estimate_scale=estimate_scale,
+                                            estimate_null_proportion=estimate_prob)
 
                 if not estimate_mean:
-                    assert_allclose(emp_null.mean0, 0, atol=1e-5, rtol=1e-5)
+                    assert_allclose(emp_null.mean, 0, atol=1e-5, rtol=1e-5)
                 if not estimate_scale:
-                    assert_allclose(emp_null.sd0, 1, atol=1e-5, rtol=1e-2)
+                    assert_allclose(emp_null.sd, 1, atol=1e-5, rtol=1e-2)
                 if not estimate_prob:
-                    assert_allclose(emp_null.prob0, 1, atol=1e-5, rtol=1e-2)
+                    assert_allclose(emp_null.null_proportion, 1, atol=1e-5, rtol=1e-2)
 
                 # consistency check
                 assert_allclose(emp_null.pdf(np.r_[-1, 0, 1]),
-                                norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean0, scale=emp_null.sd0),
+                                norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean,
+                                         scale=emp_null.sd),
                                 rtol=1e-13)
