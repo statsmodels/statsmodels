@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/statsmodels/statsmodels.svg?branch=master
+    :target: https://travis-ci.org/statsmodels/statsmodels
+
 What Statsmodels is
 ===================
 
