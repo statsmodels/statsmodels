@@ -7,7 +7,8 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
+from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
+                           assert_allclose)
 
 from statsmodels.stats.proportion import proportion_confint
 import statsmodels.stats.proportion as smprop
@@ -37,6 +38,26 @@ def test_confint_proportion():
 
             assert_almost_equal(ci, [res_low, res_upp], decimal=6,
                                 err_msg=repr(case) + method)
+
+
+def test_confint_proportion_blaker():
+
+    # x, n, ci from article Somerville and Brown 2013 Pharmaceutical Statistics
+    cases = [( 0, 10, (0., 0.283)),
+             ( 1, 10, (0.005, 0.444)),
+             ( 4, 10, (0.150, 0.717)),
+             ( 0, 50, (0., 0.064)),
+             ( 5, 50, (0.040, 0.215)),
+             #( 20, 50, (0.266, 0.541)),  # fail at low
+             ( 0, 200, (0., 0.018)),
+             ( 20, 200, (0.063, 0.148)),
+             #( 80, 200, (0.332, 0.470))  # fail at low
+             ]
+
+    for x, n, ci2 in cases:
+        ci1 = smprop.proportion_confint_baker(x, n, alpha=0.05)[:2]
+        assert_allclose(ci1, ci2, rtol=0, atol=5e-3)
+
 
 def test_samplesize_confidenceinterval_prop():
     #consistency test for samplesize to achieve confidence_interval
