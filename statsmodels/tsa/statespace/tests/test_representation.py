@@ -1236,7 +1236,7 @@ def test_missing():
     endog_post_na = np.c_[
         endog, endog, endog.copy() * np.nan, endog.copy() * np.nan]
     endog_inject_na = np.c_[
-        endog, endog.copy() * np.nan, endog, endog.copy() * np.nan, endog]
+        endog, endog.copy() * np.nan, endog, endog.copy() * np.nan]
 
     # Base model
     mod = KalmanFilter(np.c_[endog, endog], k_states=1,
@@ -1271,3 +1271,15 @@ def test_missing():
     llf_post_na = mod.loglike()
 
     assert_allclose(llf_post_na, llf)
+
+    # Model with injected nans
+    mod = KalmanFilter(endog_inject_na, k_states=1,
+                       initialization='approximate_diffuse')
+    mod['design', :, :] = 1
+    mod['obs_cov', :, :] = np.eye(mod.k_endog)*0.5
+    mod['transition', :, :] = 0.5
+    mod['selection', :, :] = 1
+    mod['state_cov', :, :] = 0.5
+    llf_inject_na = mod.loglike()
+
+    assert_allclose(llf_inject_na, llf)
