@@ -29,6 +29,8 @@ def close_or_save(pdf, fig):
 
 
 def teardown_module():
+    if not have_matplotlib:
+        return
     plt.close('all')
     if pdf_output:
         pdf.close()
