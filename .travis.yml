@@ -3,7 +3,13 @@
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
 language: python
-sudo: false
+sudo: required
+
+services:
+    - docker
+
+before_install:
+    - docker pull ubuntu:14.04
 
 env:
   # Default values for common packages, override as needed
