@@ -3,14 +3,14 @@ from __future__ import division
 __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 
 from abc import ABCMeta, abstractmethod
-#from statsmodels.compat.python import with_metaclass
+from statsmodels.compat.python import with_metaclass
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.gam.smooth_basis import GenericSmoothers, UnivariateGenericSmoother
 
 
-class BaseCV(metaclass=ABCMeta):
+class BaseCV(with_metaclass(ABCMeta)):
     """
     BaseCV class. It computes the cross validation error of a given model.
     All the cross validation classes can be derived by this one (e.g. GamCV, LassoCV,...)
@@ -93,7 +93,7 @@ class MultivariateGAMCV(BaseCV):
         return self.cost(y_test, y_est)
 
 
-class BasePenaltiesPathCV(metaclass=ABCMeta):
+class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
     """
     Base class for cross validation over a grid of parameters.
     The best parameter is saved in alpha_cv_

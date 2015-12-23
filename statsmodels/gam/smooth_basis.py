@@ -8,7 +8,7 @@ Created on Fri Jun  5 16:32:00 2015
 from __future__ import division
 ## import usefull only for development ##
 from abc import ABCMeta, abstractmethod
-#from statsmodels.compat.python import with_metaclass # ImportError: cannot import name 'with_metaclass'
+from statsmodels.compat.python import with_metaclass
 
 from patsy import dmatrix
 import numpy as np
@@ -309,7 +309,7 @@ class BS(object):
 # plt.plot(result.T)
 # plt.show()
 
-class UnivariateGamSmoother(metaclass=ABCMeta):
+class UnivariateGamSmoother(with_metaclass(ABCMeta)):
     def __init__(self, x, variable_name='x'):
         self.x = x
         self.variable_name = variable_name
@@ -383,7 +383,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
         return basis, der_basis, der2_basis, cov_der2
 
 
-class MultivariateGamSmoother(metaclass=ABCMeta):
+class MultivariateGamSmoother(with_metaclass(ABCMeta)):
     def __init__(self, x, variables_name=None):
 
         if x.ndim == 1:
