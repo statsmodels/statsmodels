@@ -345,7 +345,7 @@ class TestKernelnc(object):
         cls.ds = dist.rvs(10)
         cls.xs = np.arange(0, cls.ds.max()+1)[:, None]
         cls.num_levels = cls.ds.max()+1
-        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels], cls.num_levels, bin_type='D')
+        cls.mesh, cls.bins = fast_linbin(cls.ds, [0, cls.num_levels], cls.num_levels, bin_type='d')
 
     def pdf(self, kernel):
         k = kernel.cls()

@@ -61,12 +61,12 @@ class Multivariate(KDEMethod):
         self.base_p2 = 16
         self._methods = {}
         self._kernels = {}
-        self._kernels_type = dict(C=kernels.normal1d(),
-                                  O=kernels.WangRyzin(),
-                                  U=kernels.AitchisonAitken())
-        self._methods_type = dict(C=_kde1d_reflection.Reflection1D(),
-                                  O=_kdenc_methods.Ordered(),
-                                  U=_kdenc_methods.Unordered())
+        self._kernels_type = dict(c=kernels.normal1d(),
+                                  o=kernels.WangRyzin(),
+                                  u=kernels.AitchisonAitken())
+        self._methods_type = dict(c=_kde1d_reflection.Reflection1D(),
+                                  o=_kdenc_methods.Ordered(),
+                                  u=_kdenc_methods.Unordered())
         for k in kwords:
             if hasattr(self, k):
                 setattr(self, k, kwords[k])
@@ -94,33 +94,33 @@ class Multivariate(KDEMethod):
         """
         Default method for continuous axes
         """
-        return self._methods_type['C']
+        return self._methods_type['c']
 
     @continuous_method.setter
     def continuous_method(self, m):
-        self._methods_type['C'] = m
+        self._methods_type['c'] = m
 
     @property
     def ordered_method(self):
         """
         Default method for ordered axes
         """
-        return self._methods_type['O']
+        return self._methods_type['o']
 
     @ordered_method.setter
     def ordered_method(self, m):
-        self._methods_type['O'] = m
+        self._methods_type['o'] = m
 
     @property
     def unordered_method(self):
         """
         Default method for unordered axes
         """
-        return self._methods_type['U']
+        return self._methods_type['u']
 
     @unordered_method.setter
     def unordered_method(self, m):
-        self._methods_type['U'] = m
+        self._methods_type['u'] = m
 
     @property
     def adjust(self):
@@ -222,9 +222,9 @@ class Multivariate(KDEMethod):
         if ndim == 1:
             if kde.bandwidth is None:
                 kde = kde.copy()
-                if methods[0].axis_type == 'O':
+                if methods[0].axis_type == 'o':
                     kde.bandwidth = self.bandwidth.ordered
-                elif methods[0].axis_type == 'U':
+                elif methods[0].axis_type == 'u':
                     kde.bandwidth = self.bandwidth.unordered
                 else:
                     kde.bandwidth = self.bandwidth.continuous

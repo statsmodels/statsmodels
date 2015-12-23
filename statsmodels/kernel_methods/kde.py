@@ -66,46 +66,61 @@ class KDE(object):
     ----------
     exog: ndarray
         2D array DxN with the N input points in D dimension.
-    kwords: dict
-        setting attributes at construction time.
-        Any named argument will be equivalent to setting the property
-        after the fact. For example::
-
-            >>> xs = [1,2,3]
-            >>> k = KDE1D(xs, lower=0)
-
-        will be equivalent to::
-
-            >>> k = KDE1D(xs)
-            >>> k.lower = 0
+    lower: float or list of float
+        Lower bound(s) of the domain. If a single value is given, it will be used
+        for all dimensions. Otherwise, there must be a value per dimension.
+    upper: float or list of float
+        Upper bound(s) of the domain. If a single value is given, it will be used
+        for all dimensions. Otherwise, there must be a value per dimension.
+    method: `kde_methods.KDEMethod` or None
+        This is the method used to estimate the KDE. It should be a class
+        inheriting `kde_methods.KDEMethod` or an instance of such a class. If
+        None, the method specified by the `default_method` module variable will
+        be used.
+    bandwidth: float or list of float or callable
+        If a callable, it should accept a single argument (the model for which the
+        bandwidth is estimated) and return a float or list of floats.
+        If the value is a float, it will be used for all dimensions. Otherwise, it should
+        return a value per dimension.
+    axis_type: `kde_utils.AxesType` or str
+        Type of each axis. If a string, it should have either a single
+        character, or a character per dimension. The acceptable characters are
+        'c' for continuous, 'o' for discrete ordered and 'u' for discrete unordered.
+    weights: float or ndarray of float
+        Weights to use for the data points. If a single value is specified, it
+        is equivalent to specify 1. for each data point.
+    adjust: float or ndarray of float
+        Multiplicative factor for the bandwidth. If an array is specified, it
+        should contain a value per data point. In that case, the bandwdith will
+        be different for each point. Note that fast computation methods cannot
+        be used in this case.
+    kernel: kernel or list of kernels
+        Kernel to be used. It can be either a single kernel object or one
+        kernel object per dimension. Note that multi-dimensional methods will
+        require a single nD kernel.
 
     Notes
     -----
 
-    This is the object from which you define and prepare your model. Once prepared, the model needs to be fitted, which
-    returns an estimator object.
+    This is the object from which you define and prepare your model. Once
+    prepared, the model needs to be fitted, which returns an estimator object.
 
-    The model knows about a set number of parameters that all methods must account for. However, check on the method's
-    documentation to make sure if there aren't other parameters.
+    The model knows about a set number of parameters that all methods must
+    account for. However, check on the method's documentation to make sure if
+    there aren't other parameters.
     """
-    def __init__(self, exog, **kwords):
+    def __init__(self, exog, lower=-np.inf, upper=np.inf, method=None, bandwidth=None,
+                 axis_type=AxesType(), weights=1., adjust=1., kernel=None):
         self._exog = None
-        self._lower = -np.inf
-        self._upper = np.inf
-        self._method = None
-        self._axis_type = AxesType()
-        self._weights = np.array(1.)
-        self._adjust = np.array(1.)
-        self._bandwidth = None
-        self._kernel = None
-
         self.exog = exog
-
-        for n in kwords:
-            if hasattr(self, n):
-                setattr(self, n, kwords[n])
-            else:
-                raise AttributeError("Error, unknown attribute: '{}'".format(n))
+        self.lower = lower
+        self.upper = upper
+        self.method = method
+        self.axis_type = axis_type
+        self.weights = weights
+        self.adjust = adjust
+        self.bandwidth = bandwidth
+        self.kernel = kernel
 
         if self._method is None:
             self._method = default_method()
@@ -124,13 +139,17 @@ class KDE(object):
     @property
     def lower(self):
         """
-        List with the lower bound for the domain on each dimension. None for automatic computation of the bound.
+        List with the lower bound for the domain on each dimension. None for
+        automatic computation of the bound.
         """
         return self._lower
 
     @lower.setter
     def lower(self, val):
         self._lower = val
+
+    def set_lower(self, val):
+        self.lower = val
 
     @lower.deleter
     def lower(self):
@@ -139,13 +158,17 @@ class KDE(object):
     @property
     def upper(self):
         """
-        List with the upper bound for the domain on each dimension. None for automatic computation of the bound.
+        List with the upper bound for the domain on each dimension. None for
+        automatic computation of the bound.
         """
         return self._upper
 
     @upper.setter
     def upper(self, val):
         self._upper = val
+
+    def set_upper(self, val):
+        self.upper = val
 
     @upper.deleter
     def upper(self):
@@ -154,7 +177,8 @@ class KDE(object):
     @property
     def exog(self):
         """
-        2D array with exogenous data. The array has shape NxD for N points in D dimension.
+        2D array with exogenous data. The array has shape NxD for N points in D
+        dimension.
         """
         return self._exog
 
@@ -163,7 +187,7 @@ class KDE(object):
         value = atleast_2df(value).astype(float)
         ndim = value.shape[1]
         if ndim != self.ndim:
-            self._axis_type = AxesType('C' * ndim)
+            self._axis_type = AxesType('c' * ndim)
             if ndim == 1:
                 self._lower = -np.inf
                 self._upper = np.inf
@@ -171,6 +195,9 @@ class KDE(object):
                 self._lower = [-np.inf] * ndim
                 self._upper = [np.inf] * ndim
         self._exog = value
+
+    def set_exog(self, value):
+        self.exog = value
 
     @property
     def ndim(self):
@@ -186,6 +213,8 @@ class KDE(object):
         """
         Number of points in the problem.
         """
+        if self._exog is None:
+            return 0
         return self._exog.shape[0]
 
     @property
@@ -198,6 +227,9 @@ class KDE(object):
     @axis_type.setter
     def axis_type(self, value):
         self._axis_type = value
+
+    def set_axis_type(self, value):
+        self.axis_type = value
 
     @axis_type.deleter
     def axis_type(self):
@@ -217,6 +249,9 @@ class KDE(object):
         else:
             self._method = m
 
+    def set_method(self, m):
+        self.method = m
+
     @property
     def weights(self):
         """
@@ -233,6 +268,9 @@ class KDE(object):
             del self.weights
         else:
             self._weights = value
+
+    def set_weights(self, value):
+        self.weights = value
 
     @weights.deleter
     def weights(self):
@@ -252,6 +290,9 @@ class KDE(object):
             raise ValueError("Error, adjust must be a 1D array")
         self._adjust = value
 
+    def set_adjust(self, value):
+        self.adjust = value
+
     @adjust.deleter
     def adjust(self):
         self._adjust = np.array(1.)
@@ -267,6 +308,9 @@ class KDE(object):
     def bandwidth(self, value):
         self._bandwidth = value
 
+    def set_bandwidth(self, value):
+        self.bandwidth = value
+
     @property
     def kernel(self):
         """
@@ -278,9 +322,17 @@ class KDE(object):
     def kernel(self, value):
         self._kernel = value
 
-    def fit(self):
+    def set_kernel(self, value):
+        self.kernel = value
+
+    def fit(self, **kwargs):
         """
         Compute the bandwidths and find the proper KDE method for the current dataset.
+
+        Parameters
+        ----------
+        kwargs: dict
+            Any parameter of the `__init__` method can be used.
 
         Returns
         -------
@@ -295,6 +347,14 @@ class KDE(object):
         However, the data are not (always) copied either, so modifying the data in place
         may modify the returned object.
         """
+        if kwargs:
+            k = self.copy()
+            for name in kwargs:
+                if hasattr(k, "set_" + name):
+                    setattr(k, name, kwargs[name])
+                else:
+                    raise AttributeError("Cannot set attribute: {}".format(name))
+            return k.method.fit(k)
         return self.method.fit(self)
 
     @property

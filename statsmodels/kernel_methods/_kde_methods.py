@@ -40,8 +40,8 @@ def filter_exog(kde, bin_type):
     -------
     Either the kde object itself, or a copy with modified exog, weights and adjust properties
     """
-    if any(b not in 'CRBD' for b in bin_type):
-        raise ValueError("bin_type must be one of 'C', 'R', 'B' or 'D'. Current value: {}".format(bin_type))
+    if any(b not in 'crbd' for b in bin_type):
+        raise ValueError("bin_type must be one of 'c', 'r', 'b' or 'd'. Current value: {}".format(bin_type))
     exog = atleast_2df(kde.exog)
     sel = np.ones(exog.shape[0], dtype=bool)
     ndim = exog.shape[1]
@@ -52,7 +52,7 @@ def filter_exog(kde, bin_type):
     if len(bin_type) == 1:
         bin_type = bin_type * ndim
     for i in range(ndim):
-        if bin_type[i] == 'B' or bin_type[i] == 'D':
+        if bin_type[i] == 'b' or bin_type[i] == 'd':
             sel &= (exog[:, i] >= lower[i]) & (exog[:, i] <= upper[i])
     if np.all(sel):
         return kde
@@ -152,9 +152,9 @@ class KDEMethod(object):
         """
         AxesType
             Type of each axis. Each axis type is defined by a letter:
-                - C for continuous
-                - U for unordered (discrete)
-                - O for ordered (discrete)
+                - c for continuous
+                - u for unordered (discrete)
+                - o for ordered (discrete)
         """
         return self._axis_type
 
@@ -164,7 +164,7 @@ class KDEMethod(object):
 
     @axis_type.deleter
     def axis_type(self):
-        self._axis_type[:] = 'C'
+        self._axis_type[:] = 'c'
 
     @property
     def bandwidth(self):

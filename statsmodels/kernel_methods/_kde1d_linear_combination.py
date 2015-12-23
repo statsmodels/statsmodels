@@ -118,7 +118,7 @@ class LinearCombination(Cyclic1D):
         """
         Type of the bins adapted for the method
         """
-        return 'B'
+        return 'b'
 
     def cdf(self, points, out=None):
         r"""

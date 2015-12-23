@@ -45,7 +45,7 @@ class Reflection1D(KDE1DMethod):
         """
         Type of the bins adapted for the method
         """
-        return 'R'
+        return 'r'
 
     @numpy_trans1d_method()
     def pdf(self, points, out):

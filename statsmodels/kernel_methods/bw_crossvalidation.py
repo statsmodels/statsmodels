@@ -341,6 +341,7 @@ class CV_IMSE(CVFunc):
             L += np.sum(vals)
         return F - 2 * L / self.LSO.nb_tests
 
+
 class CV_LogLikelihood(CVFunc):
     """
     Compute the log-likelihood of the data by cross-validation

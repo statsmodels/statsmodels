@@ -37,16 +37,16 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
     -----
 
     The bin can be:
-        - Bounded ('B')
-        - Reflected ('R')
-        - Cyclic ('C')
-        - Discrete ('D')
+        - Bounded ('b')
+        - Reflected ('r')
+        - Cyclic ('c')
+        - Discrete ('d')
     """
     X = np.atleast_1d(X).astype(float)
     if X.ndim != 1:
         raise ValueError("Error, X must be a 1D array")
-    if bin_type not in ('C', 'R', 'B', 'D'):
-        raise ValueError("Error, bin_type must be one of 'C', 'R', 'B' or 'D'")
+    if bin_type not in ('c', 'r', 'b', 'd'):
+        raise ValueError("Error, bin_type must be one of 'c', 'r', 'b' or 'd'")
     try:
         float(weights)
     except TypeError:
@@ -55,7 +55,7 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
             raise ValueError("Weights must be a single value or an array of the same shape as X")
     else:
         weights = np.empty((0,), dtype=float)
-    if bin_type == 'D':
+    if bin_type == 'd':
         M = int(bounds[1] - bounds[0]) + 1
     else:
         M = int(M)
@@ -74,7 +74,7 @@ def _fast_bin(fct, X, bounds, M, weights, bin_type, out):
     return Grid(mesh, bounds, bin_type), out
 
 
-def fast_linbin(X, bounds, M, weights=1., bin_type='B', out=None):
+def fast_linbin(X, bounds, M, weights=1., bin_type='b', out=None):
     return _fast_bin(_cy_fast_linbin.fast_linbin, X, bounds, M, weights, bin_type, out)
 
 fast_linbin.__doc__ = """
@@ -101,7 +101,7 @@ fast_linbin.__doc__ = """
     """
 
 
-def fast_bin(X, bounds, M, weights=1., bin_type='B', out=None):
+def fast_bin(X, bounds, M, weights=1., bin_type='b', out=None):
     return _fast_bin(_cy_fast_linbin.fast_bin, X, bounds, M, weights, bin_type, out)
 
 fast_bin.__doc__ = """
@@ -139,10 +139,10 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     -----
 
     The bin can be:
-        - Bounded ('B')
-        - Reflected ('R')
-        - Cyclic ('C')
-        - Non-Continuous ('N')
+        - Bounded ('b')
+        - Reflected ('r')
+        - Cyclic ('c')
+        - Discrete ('d')
     """
     M = np.asarray(M).astype(int)
     X = np.atleast_2d(X).astype(np.float)
@@ -179,7 +179,7 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
         weights = np.empty((0,), dtype=float)
 
     for d in range(D):
-        if bin_type[d] == 'D':
+        if bin_type[d] == 'd':
             M[d] = int(bounds[d, 1] - bounds[d, 0]) + 1
     tM = tuple(M)
 
@@ -192,7 +192,7 @@ def _fast_bin_nd(fct, X, bounds, M, weights, bin_type, out):
     return Grid(mesh, bounds, bin_type), out
 
 
-def fast_linbin_nd(X, bounds, M, weights=1., bin_type='B', out=None):
+def fast_linbin_nd(X, bounds, M, weights=1., bin_type='b', out=None):
     X = np.atleast_2d(X).astype(np.float)
     if X.shape[1] == 2:
         return _fast_bin_nd(_cy_fast_linbin.fast_linbin_2d, X, bounds, M, weights, bin_type, out)
@@ -224,7 +224,7 @@ fast_linbin_nd.__doc__ = r"""
     """
 
 
-def fast_bin_nd(X, bounds, M, weights=1., bin_type='B', out=None):
+def fast_bin_nd(X, bounds, M, weights=1., bin_type='b', out=None):
     return _fast_bin_nd(_cy_fast_linbin.fast_bin_nd, X, bounds, M, weights, bin_type, out)
 
 fast_bin_nd.__doc__ = r"""

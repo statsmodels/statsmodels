@@ -19,12 +19,12 @@ DEF REFLECTED = 1
 DEF CYCLIC = 2
 DEF DISCRETE = 3
 
-cdef object bin_type_map = dict(B=BOUNDED,
-                                R=REFLECTED,
-                                C=CYCLIC,
-                                D=DISCRETE)
+cdef object bin_type_map = dict(b=BOUNDED,
+                                r=REFLECTED,
+                                c=CYCLIC,
+                                d=DISCRETE)
 
-DEF bin_type_error=str("Error, letter '{0}' is invalid: must be one of 'B', 'C', 'R' or 'D'")
+DEF bin_type_error=str("Error, letter '{0}' is invalid: must be one of 'b', 'c', 'r' or 'd'")
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

@@ -105,7 +105,7 @@ def fftdensity(exog, kernel_rfft, bw_inv, lower, upper, N, weights, total_weight
     -----
     No checks are made to ensure the consistency of the input!
     """
-    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='C')
+    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='c')
     DataHist /= total_weights * mesh.start_volume
     FFTData = np.fft.rfftn(DataHist)
 
@@ -154,7 +154,7 @@ def dctdensity(exog, kernel_dct, bw_inv, lower, upper, N, weights, total_weights
     -----
     No checks are made to ensure the consistency of the input!
     """
-    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='R')
+    mesh, DataHist = fast_bin_nd(exog, np.c_[lower, upper], N, weights=weights, bin_type='r')
     DataHist /= total_weights * mesh.start_volume
     FFTData = fftpack.dct(DataHist, axis=0)
     for a in range(1, DataHist.ndim):
@@ -232,7 +232,7 @@ class KDEnDMethod(KDEMethod):
         fitted._exog = kde.exog
         fitted._upper = _array_arg(kde.upper, 'upper', ndim)
         fitted._lower = _array_arg(kde.lower, 'lower', ndim)
-        if np.any(kde.axis_type != 'C') or np.any(fitted.axis_type != kde.axis_type):
+        if np.any(kde.axis_type != 'c') or np.any(fitted.axis_type != kde.axis_type):
             raise ValueError("Error, all axis must be continuous")
         if kde.kernel is not None:
             fitted._kernel = kde.kernel.for_ndim(ndim)
@@ -255,12 +255,12 @@ class KDEnDMethod(KDEMethod):
     @property
     def axis_type(self):
         if len(self._axis_type) != self.ndim:
-            self._axis_type.set('C' * self.ndim)
+            self._axis_type.set('c' * self.ndim)
         return self._axis_type
 
     @property
     def bin_type(self):
-        return 'B'*self.ndim
+        return 'b'*self.ndim
 
     @property
     def bandwidth(self):
@@ -479,7 +479,7 @@ class Cyclic(KDEnDMethod):
 
     @property
     def bin_type(self):
-        return 'C'*self.ndim
+        return 'c'*self.ndim
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):
@@ -603,7 +603,7 @@ class Reflection(KDEnDMethod):
 
     @property
     def bin_type(self):
-        return 'C'*self.ndim
+        return 'c'*self.ndim
 
     @numpy_trans_method('ndim', 1)
     def pdf(self, points, out):

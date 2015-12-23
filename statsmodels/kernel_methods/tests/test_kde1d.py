@@ -8,7 +8,8 @@ from . import kde_utils as kde_utils
 from nose.plugins.attrib import attr
 from ...tools.testing import assert_allclose, assert_equal
 from nose.tools import raises
-from ..kde_utils import GridInterpolator, numpy_trans1d_method
+from ..kde_utils import GridInterpolator
+
 
 class FakeModel(object):
     lower = -np.inf
@@ -17,6 +18,7 @@ class FakeModel(object):
 
     def __init__(self, exog):
         self.exog = exog
+
 
 @attr('kernel_methods')
 class TestBandwidth(object):
@@ -46,6 +48,7 @@ class TestBandwidth(object):
         assert_allclose(sum((rati - rati[0]) ** 2), 0, rtol=1e-6, atol=1e-6)
         rati = bws / bws[0]
         assert_allclose(sum((rati - self.ratios) ** 2), 0, rtol=1e-6, atol=1e-6)
+
 
 class KDETester(object):
     def createKDE(self, data, method, **args):
@@ -117,6 +120,7 @@ class KDETester(object):
     def test_grid_kernels(self):
         for k in kde_utils.kernels1d:
             yield self.grid_kernel_works_, k
+
 
 @attr('kernel_methods')
 class TestKDE1D(KDETester):
@@ -195,10 +199,10 @@ class TestKDE1D(KDETester):
 
     @raises(ValueError)
     def bad_set_axis(self, k, m, name):
-        k.method.axis_type = 'O'
+        k.method.axis_type = 'o'
 
     def set_axis(self, k, m, name):
-        k.method.axis_type = 'C'
+        k.method.axis_type = 'c'
 
     def test_set_axis(self):
         for m in self.methods:
@@ -238,7 +242,7 @@ class TestKDE1D(KDETester):
 
     @raises(ValueError)
     def test_bad_axis_type(self):
-        k = kde.KDE(self.vs[0], method=kde_methods.Reflection1D, axis_type='O')
+        k = kde.KDE(self.vs[0], method=kde_methods.Reflection1D, axis_type='o')
         k.fit()  # should raise a ValueError
 
     def test_change_exog(self):
@@ -306,6 +310,7 @@ class TestKDE1D(KDETester):
             yield self.bad_update_inputs2, k, m, str(k.method) + "_bad2"
             yield self.bad_update_inputs3, k, m, str(k.method) + "_bad3"
 
+
 @attr('kernel_methods')
 class TestLogKDE1D(TestKDE1D):
     @classmethod
@@ -337,6 +342,7 @@ class TestLogKDE1D(TestKDE1D):
     def test_bad_transform1(self):
         kde_methods.create_transform(np.log)
 
+
 @attr('kernel_methods')
 class TestSF(KDETester):
     @classmethod
@@ -363,12 +369,14 @@ class TestSF(KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
+
 @attr('kernel_methods')
 class TestLogSF(TestSF):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
+
 
 @attr('kernel_methods')
 class TestISF(KDETester):
@@ -400,12 +408,14 @@ class TestISF(KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
+
 @attr('kernel_methods')
 class TestLogISF(TestISF):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
+
 
 @attr('kernel_methods')
 class TestICDF(KDETester):
@@ -437,12 +447,14 @@ class TestICDF(KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
+
 @attr('kernel_methods')
 class TestLogICDF(TestICDF):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
+
 
 @attr('kernel_methods')
 class TestHazard(KDETester):
@@ -480,12 +492,14 @@ class TestHazard(KDETester):
     def grid_kernel_works(self, ker, name):
         pass
 
+
 @attr('kernel_methods')
 class TestLogHazard(TestHazard):
     @classmethod
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
+
 
 @attr('kernel_methods')
 class TestCumHazard(KDETester):
@@ -519,6 +533,7 @@ class TestCumHazard(KDETester):
 
     def grid_kernel_works(self, ker, name):
         pass
+
 
 @attr('kernel_methods')
 class TestLogCumHazard(TestCumHazard):

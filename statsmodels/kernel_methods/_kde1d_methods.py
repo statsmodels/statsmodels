@@ -163,21 +163,21 @@ class KDE1DMethod(KDEMethod):
     @property
     def axis_type(self):
         """
-        Instance of AxesType describing the axis (e.g. always 'C')
+        Instance of AxesType describing the axis (e.g. always 'c')
         """
-        return AxesType('C')
+        return AxesType('c')
 
     @axis_type.setter
     def axis_type(self, value):
-        if value != 'C':
+        if value != 'c':
             raise ValueError('Error, this method can only be used for 1D continuous axis')
 
     @property
     def bin_type(self):
         """
-        Type of the bins adapted for the method (default: 'B')
+        Type of the bins adapted for the method (default: 'b')
         """
-        return 'B'
+        return 'b'
 
     def fit(self, kde, compute_bandwidth=True):
         """
@@ -980,7 +980,7 @@ def fftdensity(exog, kernel_rfft, bw, lower, upper, N, weights, total_weights):
     -----
     No checks are made to ensure the consistency of the input!
     """
-    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='C')
+    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='c')
     DataHist /= total_weights
     return mesh, fftdensity_from_binned(mesh, DataHist, kernel_rfft, bw)
 
@@ -1060,7 +1060,7 @@ def dctdensity(exog, kernel_dct, bw, lower, upper, N, weights, total_weights):
     No checks are made to ensure the consistency of the input!
     """
     # Histogram the data to get a crude first approximation of the density
-    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='R')
+    mesh, DataHist = fast_bin(exog, [lower, upper], N, weights=weights, bin_type='r')
 
     DataHist /= total_weights
     return mesh, dctdensity_from_binned(mesh, DataHist, kernel_dct, bw)

@@ -275,9 +275,9 @@ class Multivariate(object):
     Object computing the bandwidth for each axis of a multi-variate dataset.
     """
     def __init__(self):
-        self._defaults = dict(C=scotts,
-                              O=0.1,
-                              U=0.1)
+        self._defaults = dict(c=scotts,
+                              o=0.1,
+                              u=0.1)
         self._bandwidths = {}
 
     @property
@@ -285,42 +285,42 @@ class Multivariate(object):
         """
         Default bandwidth for a continuous axis (Default: :py:func:`scotts`)
         """
-        return self._defaults['C']
+        return self._defaults['c']
 
     @continuous.setter
     def continuous(self, val):
         if not callable(val):
-            self._defaults['C'] = float(val)
+            self._defaults['c'] = float(val)
         else:
-            self._defaults['C'] = val
+            self._defaults['c'] = val
 
     @property
     def ordered(self):
         """
         Default bandwidth for an ordered axis (Default: 0.1)
         """
-        return self._defaults['O']
+        return self._defaults['o']
 
     @ordered.setter
     def ordered(self, val):
         if not callable(val):
-            self._defaults['O'] = float(val)
+            self._defaults['o'] = float(val)
         else:
-            self._defaults['O'] = val
+            self._defaults['o'] = val
 
     @property
     def unordered(self):
         """
         Default bandwidth for an unordered axis (Default: 0.1)
         """
-        return self._defaults['U']
+        return self._defaults['u']
 
     @unordered.setter
     def unordered(self, val):
         if not callable(val):
-            self._defaults['U'] = float(val)
+            self._defaults['u'] = float(val)
         else:
-            self._defaults['U'] = val
+            self._defaults['u'] = val
 
     @property
     def bandwidths(self):

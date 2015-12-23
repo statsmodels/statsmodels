@@ -35,10 +35,10 @@ cdef np.npy_intp binary_search(double value,
             sup = cur
     return inf - 1
 
-cdef object bin_type_map = dict(B=BOUNDED,
-                                R=REFLECTED,
-                                C=CYCLIC,
-                                D=DISCRETE)
+cdef object bin_type_map = dict(b=BOUNDED,
+                                r=REFLECTED,
+                                c=CYCLIC,
+                                d=DISCRETE)
 
 
 @cython.boundscheck(False)

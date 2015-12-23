@@ -311,16 +311,16 @@ class AxesType(object):
 
     The type of each axis is defined as a single letter. The basic types are:
 
-        'C'
+        'c'
             Continuous axis
-        'U'
+        'u'
             Discrete, un-ordered, axis
-        'O'
+        'o'
             Discrete, ordered, axis
     """
     _dtype = np.dtype(np.str_).char + '1'
 
-    def __init__(self, value='C'):
+    def __init__(self, value='c'):
         self._types = np.empty((), dtype=self._dtype)
         self.set(value)
 
@@ -358,7 +358,7 @@ class AxesType(object):
     def __delitem__(self, idx):
         del self._types[idx]
 
-    def resize(self, nl, default='C'):
+    def resize(self, nl, default='c'):
         cur_l = len(self)
         if nl < cur_l:
             self._types = self._types[nl:]

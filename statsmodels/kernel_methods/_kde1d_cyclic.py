@@ -42,7 +42,7 @@ class Cyclic1D(KDE1DMethod):
         """
         Type of the bins adapted for the method
         """
-        return 'C'
+        return 'c'
 
     @numpy_trans1d_method()
     def pdf(self, points, out):

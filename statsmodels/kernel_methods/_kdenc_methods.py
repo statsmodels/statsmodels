@@ -44,16 +44,16 @@ class Unordered(KDEMethod):
 
     @property
     def axis_type(self):
-        return 'U'
+        return 'u'
 
     @axis_type.setter
     def axis_type(self, value):
-        if value != 'U':
+        if value != 'u':
             raise ValueError('Error, this method can only be used for discrete unordered axis')
 
     @property
     def bin_type(self):
-        return 'D'
+        return 'd'
 
     @property
     def to_bin(self):
@@ -295,7 +295,7 @@ class Unordered(KDEMethod):
         if self.adjust.ndim:
             raise NotImplemented("This method cannot handle adjustments")
         weights = self.weights
-        mesh, bins = fast_bin(self._exog, [self.lower, self.upper], self.num_levels, weights=weights, bin_type='D')
+        mesh, bins = fast_bin(self._exog, [self.lower, self.upper], self.num_levels, weights=weights, bin_type='d')
         return mesh, self.from_binned(mesh, bins, True)
 
     def cut(self):
@@ -324,16 +324,16 @@ class Ordered(Unordered):
 
     @property
     def axis_type(self):
-        return 'O'
+        return 'o'
 
     @axis_type.setter
     def axis_type(self, value):
-        if value != 'O':
+        if value != 'o':
             raise ValueError('Error, this method can only be used for discrete ordered axis')
 
     @property
     def bin_type(self):
-        return 'D'
+        return 'd'
 
     def grid_cdf(self, N=None, cut=None):
         """

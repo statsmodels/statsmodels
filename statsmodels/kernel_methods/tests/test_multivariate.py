@@ -23,7 +23,7 @@ class KDETester(object):
             method_instance = m.instance()
             mv.methods[i] = method_instance
             axis_type += str(method_instance.axis_type)
-            if method_instance.axis_type != 'C':
+            if method_instance.axis_type != 'c':
                 d[:, i] = np.round(d[:, i])
             if m.bound_low:
                 lower[i] = self.lower[i]
@@ -83,7 +83,7 @@ class TestMultivariate(KDETester):
         est = k.fit()
         bt = est.bin_type
         bounds = [None, None]
-        if est.methods[0].bin_type == 'D':
+        if est.methods[0].bin_type == 'd':
             bounds[0] = [est.lower[0], est.upper[0]]
         else:
             if methods[0].bound_low:
@@ -95,7 +95,7 @@ class TestMultivariate(KDETester):
             else:
                 high = est.exog[:, 0].max() + 5*est.bandwidth[0]
             bounds[0] = [low, high]
-        if est.methods[1].bin_type == 'D':
+        if est.methods[1].bin_type == 'd':
             bounds[1] = [est.lower[1], est.upper[1]]
         else:
             if methods[1].bound_low:

@@ -81,7 +81,7 @@ class Renormalization(Cyclic1D):
         """
         Type of the bins adapted for the method
         """
-        return 'B'
+        return 'b'
 
     @numpy_trans1d_method()
     def cdf(self, points, out):

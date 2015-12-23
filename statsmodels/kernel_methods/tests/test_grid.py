@@ -21,7 +21,7 @@ class TestBasics(object):
         cls.axes_def = [g.squeeze() for g in cls.sparse_grid]
         cls.full_grid_c = np.array(np_meshgrid(*cls.sparse_grid, indexing='ij'))
         cls.full_grid_f = np.concatenate([g[..., None] for g in np_meshgrid(*cls.sparse_grid, indexing='ij')], axis=-1)
-        cls.bin_type = 'DBRC'
+        cls.bin_type = 'dbrc'
         cls.ndim = 4
         cls.shape = cls.full_grid_c.shape[1:]
         cls.bounds = np.asarray([[-.5, 10.5],
@@ -146,20 +146,20 @@ class TestBasics(object):
         assert_equal(g2.edges, edges)
 
     def test_build_from_grid_bin_type(self):
-        g2 = Grid(self.reference, bin_type='CCRR')
-        assert_equal(g2.bin_type, 'CCRR')
+        g2 = Grid(self.reference, bin_type='ccrr')
+        assert_equal(g2.bin_type, 'ccrr')
 
     def test_build_from_grid_bin_type_1(self):
-        g2 = Grid(self.reference, bin_type='C')
-        assert_equal(g2.bin_type, 'CCCC')
+        g2 = Grid(self.reference, bin_type='c')
+        assert_equal(g2.bin_type, 'cccc')
 
     @raises(ValueError)
     def test_build_from_grid_bin_type_err1(self):
-        Grid(self.reference, bin_type='CR')
+        Grid(self.reference, bin_type='cr')
 
     @raises(ValueError)
     def test_build_from_grid_bin_type_err2(self):
-        Grid(self.reference, bin_type='CCRX')
+        Grid(self.reference, bin_type='ccrx')
 
     def test_build_from_grid_bounds(self):
         bnds = [[-1, 1], [-2, 2], [-3, 3], [-4, 4]]
@@ -193,7 +193,7 @@ class TestBasics(object):
         assert g1 != self.reference
 
     def test_unequal_bintype(self):
-        g1 = Grid(self.axes_def, bounds=self.bounds + 1, bin_type='CCCC',
+        g1 = Grid(self.axes_def, bounds=self.bounds + 1, bin_type='cccc',
                   edges=self.edges)
         assert g1 != self.reference
 
@@ -239,7 +239,7 @@ class TestInterpolation(object):
         sg = cls.grid2.sparse()
         cls.val2 = np.cos(sg[0]) + np.sin(sg[1] * np.pi / 180)
         ax3 = np.r_[0:20]
-        cls.grid3 = Grid([ax1, ax3], bin_type='BD')
+        cls.grid3 = Grid([ax1, ax3], bin_type='bd')
         sg = cls.grid3.sparse()
         cls.val3 = np.cos(sg[0]) + sg[1]
 
@@ -249,7 +249,7 @@ class TestInterpolation(object):
 
     @raises(ValueError)
     def test_bad_pts_1d(self):
-        self.grid1.bin_type = 'B'
+        self.grid1.bin_type = 'b'
         interp = GridInterpolator(self.grid1.sparse(), self.val1)
         test_values = np.array([[1.]])
         interp_test = interp(test_values)
@@ -259,33 +259,33 @@ class TestInterpolation(object):
 
     @raises(ValueError)
     def test_bad_pts_2d_1(self):
-        self.grid3.bin_type = 'BB'
+        self.grid3.bin_type = 'bb'
         interp = GridInterpolator(self.grid3.sparse(), self.val3)
         test_values = np.array([[[1., 1., 1.]]])
         interp(test_values)
 
     @raises(ValueError)
     def test_bad_pts_2d_2(self):
-        self.grid3.bin_type = 'BB'
+        self.grid3.bin_type = 'bb'
         interp = GridInterpolator(self.grid3.sparse(), self.val3)
         test_values = np.array([[1., 1., 1., 1., 1.]])
         interp(test_values)
 
     def test_0d_pts(self):
-        self.grid1.bin_type = 'B'
+        self.grid1.bin_type = 'b'
         interp = GridInterpolator(self.grid1.sparse(), self.val1)
         test_values = np.array(1.)
         interp(test_values)
 
     def test_1d_pts(self):
         grid = self.grid3
-        grid.bin_type = 'BB'
+        grid.bin_type = 'bb'
         interp = GridInterpolator(grid.sparse(), self.val3)
         test_values = np.array([1., 1.])
         interp(test_values)
 
     def test_1d_bounded_from_array(self):
-        self.grid1.bin_type = 'B'
+        self.grid1.bin_type = 'b'
         interp = GridInterpolator(self.grid1.sparse(), self.val1)
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         interp_test = interp(test_values)
@@ -294,7 +294,7 @@ class TestInterpolation(object):
         np.testing.assert_allclose(interp_test, interp_comp)
 
     def test_1d_bounded(self):
-        self.grid1.bin_type = 'B'
+        self.grid1.bin_type = 'b'
         interp = GridInterpolator(self.grid1, self.val1)
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         interp_test = interp(test_values)
@@ -303,7 +303,7 @@ class TestInterpolation(object):
         np.testing.assert_allclose(interp_test, interp_comp)
 
     def test_1d_cyclic(self):
-        self.grid1.bin_type = 'C'
+        self.grid1.bin_type = 'c'
         interp = GridInterpolator(self.grid1, self.val1)
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         # Compute equivalent values
@@ -314,7 +314,7 @@ class TestInterpolation(object):
         np.testing.assert_allclose(interp_test, interp_comp)
 
     def test_1d_reflection(self):
-        self.grid1.bin_type = 'R'
+        self.grid1.bin_type = 'r'
         interp = GridInterpolator(self.grid1, self.val1)
         test_values = np.random.rand(256) * 3 * np.pi - np.pi / 2
         # Compute equivalent values
@@ -338,7 +338,7 @@ class TestInterpolation(object):
         if not can_use_inter2p:
             return
         grid = self.grid2
-        grid.bin_type = 'B'
+        grid.bin_type = 'b'
         interp = GridInterpolator(grid, self.val2)
         N = 1024
         test_values = np.c_[np.random.rand(N) * 3 * np.pi - np.pi / 2,
@@ -361,7 +361,7 @@ class TestInterpolation(object):
         if not can_use_inter2p:
             return
         grid = self.grid2
-        grid.bin_type = 'C'
+        grid.bin_type = 'c'
         interp = GridInterpolator(grid, self.val2)
         N = 1024
         test_values = np.c_[np.random.rand(N) * 3 * np.pi - np.pi / 2,
