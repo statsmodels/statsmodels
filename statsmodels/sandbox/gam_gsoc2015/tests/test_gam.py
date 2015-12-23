@@ -312,7 +312,7 @@ def test_partial_values():
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs') # TODO: if IRLS is used res_glm_gam has not partial_values.
 
     univ_bsplines = bsplines.smoothers_[0]
-    hat_y, se = res_glm_gam.partial_values(bsplines, mask=np.array([True]*univ_bsplines.dim_basis))
+    hat_y, se = res_glm_gam.partial_values(bsplines, 0)
 
     assert_allclose(se, se_from_mgcv, rtol=0, atol=0.008)
 
@@ -735,6 +735,29 @@ def test_spl_s():
     assert_allclose(spl_s_R, spl_s, atol=4.e-10)
 
 
+def test_partial_values():
+
+    np.random.seed(0)
+    n = 1000
+    x = np.random.uniform(0, 1, (n, 2))
+    x = x - x.mean()
+    y = x[:, 0] * x[:, 0] + np.random.normal(0, .01, n)
+    y -= y.mean()
+
+    bsplines = BSplines(x, degree=[3] * 2, df=[10]*2)
+    alpha = 0.001
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
+    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
+                                disp=0, maxiter=5000, maxfun=5000)
+
+    y_est = res_glm_gam.predict(bsplines.basis_)
+    y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
+
+    assert_allclose(y_est, y_partial_est, atol=0.05)
+    assert se.min() < 100 # TODO: sometimes the SE reported by partial_values is very large. This should be double checked
+
+    return
+
 
 # test_approximation() # Computationally demanding # TODO: It is not working
 # test_gam_hessian()
@@ -758,6 +781,7 @@ def test_spl_s():
 # test_glm_pirls_compatibility() # TODO: this test will be upddated in the future
 # test_zero_penalty()
 # test_spl_s()
+#test_partial_values()
 
 # print('finish')
 

@@ -146,59 +146,40 @@ class PenalizedMixin(object):
 
 class GLMGAMResults(GLMResults):
 
-    def partial_values(self, smoother, mask):
-
-        y = np.dot(smoother.basis_, self.params[mask])
+    def partial_values(self, smoother, variable):
+        mask = smoother.mask[variable]
+        y = np.dot(smoother.basis_[:, mask], self.params[mask])
         # select the submatrix corresponding to a single variable
         partial_normalized_cov_params = self.normalized_cov_params[mask, :]
         partial_normalized_cov_params = partial_normalized_cov_params[:, mask]
 
-        var = np.diag(smoother.basis_.dot(partial_normalized_cov_params).dot(smoother.basis_.T))
+        var = np.diag(smoother.basis_[:, mask].dot(partial_normalized_cov_params).dot(smoother.basis_[:, mask].T))
         se = np.sqrt(var)
         return y, se
 
-    def plot_partial(self, multivariate_smoother, plot_se=True):
+    def plot_partial(self, smoother, variable, plot_se=True):
         """just to try a method in overridden Results class
         """
         import matplotlib.pyplot as plt
-        # TODO: This function will be available when we will have the self.model.x variable
-        # if x_values is None:
-        #     plt.plot(self.model.x, self.model.endog, '.')
-        #     plt.plot(self.model.x, self.predict())
-        # else:
+        y_est, se = self.partial_values(smoother, variable)
 
-        for i, smoother in enumerate(multivariate_smoother.smoothers_):
-            y_est, se = self.partial_values(smoother, multivariate_smoother.mask[i])
+        x = smoother.smoothers_[variable].x
+        sort_index = np.argsort(x)
+        x = x[sort_index]
+        y_est = y_est[sort_index]
 
-            plt.figure()
-            plt.plot(smoother.x, y_est, '.')
-            if plot_se:
-                plt.plot(smoother.x, y_est + 1.96 * se, '.')
-                plt.plot(smoother.x, y_est - 1.96 * se, '.')
-            plt.xlabel(smoother.variable_name)
+        plt.figure()
+        plt.plot(x, y_est, c='blue')
+        if plot_se:
+            plt.plot(smoother.x, y_est + 1.96 * se, '--', c='blue')
+            plt.plot(smoother.x, y_est - 1.96 * se, '--', c='blue')
 
+        plt.xlabel(smoother.smoothers_[variable].variable_name)
 
         return
 
     def significance_test(self, basis=None, y=None, alpha=None):
-        # v = basis.dot(self.normalized_cov_params).dot(basis.T)
-        # p_inv_v = pinv(v)
-        # hat_y = self.predict(basis)
-        # tr = hat_y.T.dot(p_inv_v).dot(hat_y)
-        #
-        # # TODO: FIRST WAY TO COMPUTE DF
-        # lin_pred = self.predict(basis)
-        # mu = self.family.fitted(lin_pred)
-        # mu = self.family.link(mu)
-        #
-        # weights = self._data_weights*self.family.weights(mu)
-        # weights /= len(weights) # A normalization is probably required
-        #
-        #
-        # f = self.normalized_cov_params.dot(basis.T * weights).dot(basis) / self.scale
-        # rank = np.trace(2 * f - np.dot(f, f))
-
-        # TODO: Second way to estimate the significance
+        # TODO: this is not working
         n_samples, k_var = basis.shape
         r = np.linalg.qr(basis, 'r')
 
@@ -243,7 +224,6 @@ class GLMGam(PenalizedMixin, GLM):
             return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
                                            scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
                                            full_output=full_output, disp=disp, max_start_irls=max_start_irls, **kwargs)
-
 
         return
 
@@ -313,16 +293,17 @@ class GLMGam(PenalizedMixin, GLM):
                 break
         self.mu = mu
 
-        glm_results = GLMResults(self, wls_results.params,
-                                 wls_results.normalized_cov_params,
-                                 self.scale,
-                                 cov_type=cov_type, cov_kwds=cov_kwds,
-                                 use_t=use_t)
+        glm_results = GLMGAMResults(self, wls_results.params,
+                                    wls_results.normalized_cov_params,
+                                    self.scale,
+                                    cov_type=cov_type, cov_kwds=cov_kwds,
+                                    use_t=use_t)
 
         glm_results.method = "PIRLS"
         history['iteration'] = iteration + 1
         glm_results.fit_history = history
         glm_results.converged = converged
+
         return GLMResultsWrapper(glm_results)
 
 
