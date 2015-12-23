@@ -301,6 +301,7 @@ class GLM(base.LikelihoodModel):
 
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
+
             import warnings
             warnings.warn(("The %s link function does not respect the domain "
                            "of the %s family.") %
@@ -1060,11 +1061,12 @@ class GLM(base.LikelihoodModel):
         else:
             cov_p = rslt.normalized_cov_params / scale
 
-        glm_results = GLMResults(self, rslt.params,
-                                 cov_p,
-                                 scale,
-                                 cov_type=cov_type, cov_kwds=cov_kwds,
-                                 use_t=use_t)
+        results_class = getattr(self, '_results_class', GLMResults)
+        glm_results = results_class(self, rslt.params,
+                                    cov_p,
+                                    scale,
+                                    cov_type=cov_type, cov_kwds=cov_kwds,
+                                    use_t=use_t)
 
         # TODO: iteration count is not always available
         history = {'iteration': 0}

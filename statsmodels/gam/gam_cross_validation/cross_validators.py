@@ -3,11 +3,11 @@ from __future__ import division
 __author__ = 'Luca Puggini: <lucapuggio@gmail.com>'
 
 from abc import ABCMeta, abstractmethod
-#from statsmodels.compat.python import with_metaclass
+from statsmodels.compat.python import with_metaclass
 import numpy as np
 
 
-class BaseCrossValidator(metaclass=ABCMeta):
+class BaseCrossValidator(with_metaclass(ABCMeta)):
     """
     The BaseCrossValidator class is a base class for all the iterators that split the data in train and test as for
     example KFolds or LeavePOut
