@@ -150,10 +150,10 @@ class GLMGAMResults(GLMResults):
         mask = smoother.mask[variable]
         y = np.dot(smoother.basis_[:, mask], self.params[mask])
         # select the submatrix corresponding to a single variable
-        partial_normalized_cov_params = self.normalized_cov_params[mask, :]
-        partial_normalized_cov_params = partial_normalized_cov_params[:, mask]
+        partial_cov_params = self.cov_params()[mask, :]
+        partial_cov_params = partial_cov_params[:, mask]
 
-        var = np.diag(smoother.basis_[:, mask].dot(partial_normalized_cov_params).dot(smoother.basis_[:, mask].T))
+        var = np.diag(smoother.basis_[:, mask].dot(partial_cov_params).dot(smoother.basis_[:, mask].T))
         se = np.sqrt(var)
         return y, se
 
@@ -167,12 +167,13 @@ class GLMGAMResults(GLMResults):
         sort_index = np.argsort(x)
         x = x[sort_index]
         y_est = y_est[sort_index]
+        se = se[sort_index]
 
         plt.figure()
         plt.plot(x, y_est, c='blue')
         if plot_se:
-            plt.plot(smoother.x, y_est + 1.96 * se, '--', c='blue')
-            plt.plot(smoother.x, y_est - 1.96 * se, '--', c='blue')
+            plt.plot(smoother.x, y_est + 1.96 * se, '.', c='blue')
+            plt.plot(smoother.x, y_est - 1.96 * se, '.', c='blue')
 
         plt.xlabel(smoother.smoothers_[variable].variable_name)
 
@@ -223,7 +224,6 @@ class GLMGam(PenalizedMixin, GLM):
             return super(GLMGam, self).fit(start_params=start_params, maxiter=maxiter, method=method, tol=tol,
                                            scale=scale, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
                                            full_output=full_output, disp=disp, max_start_irls=max_start_irls, **kwargs)
-
         return
 
     # pag 165 4.3 # pag 136 PIRLS
