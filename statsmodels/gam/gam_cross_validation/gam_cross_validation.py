@@ -6,8 +6,13 @@ from abc import ABCMeta, abstractmethod
 from statsmodels.compat.python import with_metaclass
 import itertools
 import numpy as np
-import matplotlib.pyplot as plt
 from statsmodels.gam.smooth_basis import GenericSmoothers, UnivariateGenericSmoother
+
+try:
+    import matplotlib.pyplot as plt
+    have_matplotlib = True
+except:
+    have_matplotlib = False
 
 
 class BaseCV(with_metaclass(ABCMeta)):
@@ -107,15 +112,18 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
         return
 
     def plot_path(self):
-        plt.plot(self.alphas, self.cv_error_, c='black')
-        plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, c='blue')
-        plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, c='blue')
+        if not have_matplotlib:
+            return
+        else:
+            plt.plot(self.alphas, self.cv_error_, c='black')
+            plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, c='blue')
+            plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, c='blue')
 
-        plt.plot(self.alphas, self.cv_error_, 'o', c='black')
-        plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, 'o', c='blue')
-        plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, 'o', c='blue')
+            plt.plot(self.alphas, self.cv_error_, 'o', c='black')
+            plt.plot(self.alphas, self.cv_error_ + 1.96 * self.cv_std_, 'o', c='blue')
+            plt.plot(self.alphas, self.cv_error_ - 1.96 * self.cv_std_, 'o', c='blue')
 
-        return
+            return
 
 
 class MultivariateGAMCVPath:
