@@ -448,7 +448,7 @@ class BSplines(MultivariateGamSmoother):
     def __init__(self, x, df, degree, variables_name=None):
         self.degrees = degree
         self.dfs = df
-        super().__init__(x, variables_name)
+        super(BSplines, self).__init__(x, variables_name)
         return
 
     def _make_smoothers_list(self):
@@ -612,7 +612,7 @@ class CyclicCubicSplines(MultivariateGamSmoother):
 #         warnings.warn("This class is still not tested and it is probably not working properly. "
 #                       "I suggest to use another smoother", Warning)
 #
-#         super().__init__(x, df)
+#         super(CubicRegressionSplines, self).__init__(x, df)
 #
 #         self.basis_ = dmatrix("cc(x, df=" + str(df) + ") - 1", {"x": x})
 #         n_inner_knots = df - 2 + 1 # +n_constraints # TODO: ACcording to CubicRegressionSplines class this should be
