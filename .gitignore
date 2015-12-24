@@ -48,7 +48,8 @@ marks.bzr
 # Mac droppings
 .DS_Store
 help
-
+# Idea IDE
+.idea/
 # Project specific
 statsmodels/version.py
 cythonize.dat

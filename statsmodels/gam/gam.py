@@ -145,6 +145,7 @@ class PenalizedMixin(object):
 
 
 class GLMGAMResults(GLMResults):
+
     def partial_values(self, smoother, variable):
         mask = smoother.mask[variable]
         y = np.dot(smoother.basis_[:, mask], self.params[mask])
