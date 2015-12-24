@@ -667,14 +667,16 @@ def test_partial_values2():
     bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2)
     alpha = 0.001
     glm_gam = GLMGam(y, bsplines, alpha=alpha)
-    res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
+    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000, maxfun=5000)
 
     y_est = res_glm_gam.predict(bsplines.basis_)
     y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
 
     assert_allclose(y_est, y_partial_est, atol=0.05)
-    # assert se.min() < 100 # TODO: sometimes the SE reported by partial_values is very large. This should be double checked
+
+    print(se)
+    assert se.min() < 100 # TODO: sometimes the SE reported by partial_values is very large. This should be double checked
 
     return
 
@@ -728,8 +730,11 @@ def test_partial_plot():
     res_glm_gam = glm_gam.fit(maxiter=10000, method='bfgs')
 
     # Uncomment to visualize the plot
-    # res_glm_gam.plot_partial(bsplines)
+    # import matplotlib.pyplot as plt
+    # res_glm_gam.plot_partial(bsplines, 0)
     # plt.plot(x, y, '.')
     # plt.show()
 
     return
+
+test_partial_values2()
