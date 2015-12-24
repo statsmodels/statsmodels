@@ -58,6 +58,9 @@ help
 .coverage
 coverage_html_report/
 
+# Idea IDE
+.idea/
+
 # Project specific
 statsmodels/version.py
 cythonize.dat
