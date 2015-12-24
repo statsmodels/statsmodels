@@ -665,10 +665,12 @@ def test_partial_values2():
     y -= y.mean()
 
     bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2)
-    alpha = 0.001
+    alpha = 0.0
     glm_gam = GLMGam(y, bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
                               disp=0, maxiter=5000, maxfun=5000)
+    glm = GLM(y, bsplines.basis_)
+
 
     y_est = res_glm_gam.predict(bsplines.basis_)
     y_partial_est, se = res_glm_gam.partial_values(bsplines, 0)
@@ -737,4 +739,31 @@ def test_partial_plot():
 
     return
 
-test_partial_values2()
+
+def test_cov_params():
+
+    np.random.seed(0)
+    n = 1000
+    x = np.random.uniform(0, 1, (n, 2))
+    x = x - x.mean()
+    y = x[:, 0] * x[:, 0] + np.random.normal(0, .01, n)
+    y -= y.mean()
+
+    bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2)
+    alpha = 0
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
+    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
+                              disp=0, maxiter=5000, maxfun=5000)
+    glm = GLM(y, bsplines.basis_)
+    res_glm = glm.fit()
+
+    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params()) # test passed
+
+    alpha = 1.e-16
+    glm_gam = GLMGam(y, bsplines, alpha=alpha)
+    res_glm_gam = glm_gam.fit(method='pirls', max_start_irls=0,
+                              disp=0, maxiter=5000, maxfun=5000)
+
+    assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params()) # test not passed
+
+    return
