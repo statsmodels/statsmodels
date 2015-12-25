@@ -153,8 +153,12 @@ class GLMGAMResults(GLMResults):
         partial_cov_params = self.cov_params()[mask, :]
         partial_cov_params = partial_cov_params[:, mask]
 
-        var = np.diag(smoother.basis_[:, mask].dot(partial_cov_params).dot(smoother.basis_[:, mask].T))
+        # var = np.diag(smoother.basis_[:, mask].dot(partial_cov_params).dot(smoother.basis_[:, mask].T))
+        exog = smoother.basis_[:, mask]
+        covb = partial_cov_params
+        var = (exog * np.dot(covb, exog.T).T).sum(1)
         se = np.sqrt(var)
+
         return y, se
 
     def plot_partial(self, smoother, variable, plot_se=True):
