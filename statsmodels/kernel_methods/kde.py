@@ -353,7 +353,7 @@ class KDE(object):
                 if hasattr(k, "set_" + name):
                     setattr(k, name, kwargs[name])
                 else:
-                    raise AttributeError("Cannot set attribute: {}".format(name))
+                    raise AttributeError("Cannot set attribute: {0}".format(name))
             return k.method.fit(k)
         return self.method.fit(self)
 
