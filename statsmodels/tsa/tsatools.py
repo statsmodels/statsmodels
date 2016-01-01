@@ -652,6 +652,8 @@ def freq_to_period(freq):
         return 12
     elif freq == 'B' or freq == 'W' or freq.startswith('W-'):
         return 52
+    elif freq == 'D' or freq.startswith(('D-', 'DS-')):
+        return 365
     else:  # pragma : no cover
         raise ValueError("freq {} not understood. Please report if you "
                          "think this in error.".format(freq))
