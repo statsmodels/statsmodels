@@ -444,3 +444,241 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
         return reject, pvalscorr_, ntests - ri, alpha_stages
     else:
         return rej, pvalscorr, ntests - ri, alpha_stages
+
+
+def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
+              nbins=30):
+    """
+    Calculate local FDR values for a list of Z-scores.
+
+    Arguments
+    ---------
+    zscores : array-like
+        A vector of Z-scores
+    null_proportion : float
+        The assumed proportion of true null hypotheses
+    null_pdf : function mapping reals to positive reals
+        The density of null Z-scores; if None, use standard normal
+    deg : integer
+        The maximum exponent in the polynomial expansion of the
+        density of non-null Z-scores
+    nbins : integer
+        The number of bins for estimating the marginal density
+        of Z-scores.
+
+    Returns
+    -------
+    fdr : array-like
+        A vector of FDR values
+
+    References
+    ----------
+    B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
+    Model.  Statistical Science 23:1, 1-22.
+
+    Examples
+    --------
+    Basic use (the null Z-scores are taken to be standard normal):
+
+    >>> fdr = local_fdr(zscores)
+
+    Use a Gaussian null distribution estimated from the data:
+
+    >>> null = EmpiricalNull(zscores)
+    >>> fdr = local_fdr(zscores, null_pdf=null.pdf)
+    """
+
+    from statsmodels.genmod.generalized_linear_model import GLM
+    from statsmodels.genmod.generalized_linear_model import families
+    from statsmodels.regression.linear_model import OLS
+
+    # Bins for Poisson modeling of the marginal Z-score density
+    minz = min(zscores)
+    maxz = max(zscores)
+    bins = np.linspace(minz, maxz, nbins)
+
+    # Bin counts
+    zhist = np.histogram(zscores, bins)[0]
+
+    # Bin centers
+    zbins = (bins[:-1] + bins[1:]) / 2
+
+    # The design matrix at bin centers
+    dmat = np.vander(zbins, deg + 1)
+
+    # Use this to get starting values for Poisson regression
+    md = OLS(np.log(1 + zhist), dmat).fit()
+
+    # Poisson regression
+    md = GLM(zhist, dmat, family=families.Poisson()).fit(start_params=md.params)
+
+    # The design matrix for all Z-scores
+    dmat_full = np.vander(zscores, deg + 1)
+
+    # The height of the estimated marginal density of Z-scores,
+    # evaluated at every observed Z-score.
+    fz = md.predict(dmat_full) / (len(zscores) * (bins[1] - bins[0]))
+
+    # The null density.
+    if null_pdf is None:
+        f0 = np.exp(-0.5 * zscores**2) / np.sqrt(2 * np.pi)
+    else:
+        f0 = null_pdf(zscores)
+
+    # The local FDR values
+    fdr = null_proportion * f0 / fz
+
+    fdr = np.clip(fdr, 0, 1)
+
+    return fdr
+
+
+class NullDistribution(object):
+    """
+    Estimate a Gaussian distribution for the null Z-scores.
+
+    The observed Z-scores consist of both null and non-null values.
+    The fitted distribution of null Z-scores is Gaussian, but may have
+    non-zero mean and/or non-unit scale.
+
+    Parameters
+    ----------
+    zscores : array-like
+        The observed Z-scores.
+    null_lb : float
+        Z-scores between `null_lb` and `null_lb` are all considered to be
+        true null hypotheses.
+    null_ub : float
+        See `null_lb`.
+    estimate_mean : bool
+        If True, estimate the mean of the distribution.  If False, the
+        mean is fixed at zero.
+    estimate_scale : bool
+        If True, estimate the scale of the distribution.  If False, the
+        scale parameter is fixed at 1.
+    estimate_null_proportion : bool
+        If True, estimate the proportion of true null hypotheses (i.e.
+        the proportion of z-scores with expected value zero).  If False,
+        this parameter is fixed at 1.
+
+    Attributes
+    ----------
+    mean : float
+        The estimated mean of the empirical null distribution
+    sd : float
+        The estimated standard deviation of the empirical null distribution
+    null_proportion : float
+        The estimated proportion of true null hypotheses among all hypotheses
+
+    References
+    ----------
+    B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
+    Model.  Statistical Science 23:1, 1-22.
+
+    Notes
+    -----
+    See also:
+
+    http://nipy.org/nipy/labs/enn.html#nipy.algorithms.statistics.empirical_pvalue.NormalEmpiricalNull.fdr
+    """
+
+    def __init__(self, zscores, null_lb=-1, null_ub=1, estimate_mean=True,
+                 estimate_scale=True, estimate_null_proportion=False):
+
+        # Extract the null z-scores
+        ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
+        if len(ii) == 0:
+            raise RunTimeError("No Z-scores fall between null_lb and null_ub")
+        zscores0 = zscores[ii]
+
+        # Number of Z-scores, and null Z-scores
+        n_zs, n_zs0 = len(zscores), len(zscores0)
+
+        # Unpack and transform the parameters to the natural scale, hold
+        # parameters fixed as specified.
+        def xform(params):
+
+            mean = 0.
+            sd = 1.
+            prob = 1.
+
+            ii = 0
+            if estimate_mean:
+                mean = params[ii]
+                ii += 1
+            if estimate_scale:
+                sd = np.exp(params[ii])
+                ii += 1
+            if estimate_null_proportion:
+                prob = 1 / (1 + np.exp(-params[ii]))
+
+            return mean, sd, prob
+
+
+        from scipy.stats.distributions import norm
+
+
+        def fun(params):
+            """
+            Negative log-likelihood of z-scores.
+
+            The function has three arguments, packed into a vector:
+
+            mean : location parameter
+            logscale : log of the scale parameter
+            logitprop : logit of the proportion of true nulls
+
+            The implementation follows section 4 from Efron 2008.
+            """
+
+            d, s, p = xform(params)
+
+            # Mass within the central region
+            central_mass = (norm.cdf((null_ub - d) / s) -
+                            norm.cdf((null_lb - d) / s))
+
+            # Probability that a Z-score is null and is in the central region
+            cp = p * central_mass
+
+            # Binomial term
+            rval = n_zs0 * np.log(cp) + (n_zs - n_zs0) * np.log(1 - cp)
+
+            # Truncated Gaussian term for null Z-scores
+            zv = (zscores0 - d) / s
+            rval += np.sum(-zv**2 / 2) - n_zs0 * np.log(s)
+            rval -= n_zs0 * np.log(central_mass)
+
+            return -rval
+
+
+        # Estimate the parameters
+        from scipy.optimize import minimize
+        # starting values are mean = 0, scale = 1, p0 ~ 1
+        mz = minimize(fun, np.r_[0., 0, 3], method="Nelder-Mead")
+        mean, sd, prob = xform(mz['x'])
+
+        self.mean = mean
+        self.sd = sd
+        self.null_proportion = prob
+
+
+    # The fitted null density function
+    def pdf(self, zscores):
+        """
+        Evaluates the fitted emirical null Z-score density.
+
+        Parameters
+        ----------
+        zscores : scalar or array-like
+            The point or points at which the density is to be
+            evaluated.
+
+        Returns
+        -------
+        The empirical null Z-score density evaluated at the given
+        points.
+        """
+
+        zval = (zscores - self.mean) / self.sd
+        return np.exp(-0.5*zval**2 - np.log(self.sd) - 0.5*np.log(2*np.pi))
+
