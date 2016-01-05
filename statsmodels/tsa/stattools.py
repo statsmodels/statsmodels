@@ -1145,8 +1145,8 @@ def kpss(x, null_hypo="level", lshort=True):
     elif p_value == tablep[0]:
         warn("p-value greater than printed p-value")
 
-    return kpss_stat, p_value, l, nobs, {'10%' : crit[0], '5%' : crit[1],
-                                         '2.5%' : crit[2], '1%' : crit[3]}
+    return kpss_stat, p_value, l, nobs, {"10%" : crit[0], "5%" : crit[1],
+                                         "2.5%" : crit[2], "1%" : crit[3]}
 
 
 def _pp_sum(e, n, l, s):
