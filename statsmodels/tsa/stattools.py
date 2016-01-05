@@ -1084,9 +1084,9 @@ def kpss(x, null_hypo="level", lshort=True):
         The truncation lag parameter
     nobs : int
         The number of observations used in the test
-    crit : list
-        The critical values at 10%, 5%, 2.5% and 1%, respectively. Based
-        on Kwiatkowski et al. (1992).
+    crit : dict
+        The critical values at 10%, 5%, 2.5% and 1%. Based on
+        Kwiatkowski et al. (1992).
 
     Notes
     -----
@@ -1145,7 +1145,8 @@ def kpss(x, null_hypo="level", lshort=True):
     elif p_value == tablep[0]:
         warn("p-value greater than printed p-value")
 
-    return kpss_stat, p_value, l, nobs, crit
+    return kpss_stat, p_value, l, nobs, {'10%' : crit[0], '5%' : crit[1],
+                                         '2.5%' : crit[2], '1%' : crit[3]}
 
 
 def _pp_sum(e, n, l, s):
