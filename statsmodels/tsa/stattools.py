@@ -15,7 +15,7 @@ from statsmodels.compat.scipy import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller']
+           'adfuller', 'kpss']
 
 
 #NOTE: now in two places to avoid circular import
@@ -1055,6 +1055,114 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     return Bunch(**res)
 
 
+def kpss(x, null_hypo="level", lags=None):
+    """
+    Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
+
+    Computes the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test for the null
+    hypothesis that x is level or trend stationary.
+
+    Parameters
+    ----------
+    x : array_like, 1d
+        Data series
+    null_hypo : str{"level", "trend"}
+        Indicates the null hypothesis for the KPSS test
+        * "level" : The data is level stationary (default)
+        * "trend" : The data is trend stationary
+    lags : int
+        Indicates the number of lags to be used. If None (default),
+        lags is set to int(12 * (n / 100) ** (1 / 4)), as outlined in
+        Schwert (1989).
+
+    Returns
+    -------
+    kpss_stat : float
+        The KPSS test statistic
+    p_value : float
+        The p-value of the test
+    lags : int
+        The truncation lag parameter
+    flag: int
+        * -1 : the p-value is smaller than the indicated p-value.
+        * 0 : the p-value is the indicated p-value.
+        * 1 : the p-value is greater than the indicated p-value.
+    crit : dict
+        The critical values at 10%, 5%, 2.5% and 1%. Based on
+        Kwiatkowski et al. (1992).
+
+    Notes
+    -----
+    To estimate sigma^2 the Newey-West estimator is used. If lags is None,
+    the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
+    as outlined in Schwert (1989). The p-values are interpolated from
+    Table 1 of Kwiatkowski et al. (1992).
+
+    Missing values are not handled.
+
+    References
+    ----------
+    D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing
+    the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
+    `Journal of Econometrics` 54, 159–178.
+    """
+    nobs = len(x)
+    x = np.asarray(x)
+    hypo = null_hypo.lower()
+
+    # reshape as column vector: if m is not one, 1 * n != m * n
+    if nobs != x.reshape((-1, 1)).shape[0]:
+        raise ValueError("x of shape {} not understood".format(x.shape))
+
+    if hypo == "trend":
+        # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
+        # where beta is the trend, r_t a random walk and e_t a stationary
+        # error term.
+        resids = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
+        crit = [0.119, 0.146, 0.176, 0.216]
+    elif hypo == "level":
+        # special case of the model above, where beta = 0 (so the null
+        # hypothesis is that the data is stationary around r_0).
+        resids = OLS(x, np.ones(nobs)).fit().resid
+        crit = [0.347, 0.463, 0.574, 0.739]
+    else:
+        raise ValueError("hypothesis '{}' not understood".format(hypo))
+
+    if lags is None:
+        # from Kwiatkowski et al. referencing Schwert (1989)
+        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+
+    pvals = [0.10, 0.05, 0.025, 0.01]
+
+    eta = sum(resids.cumsum() ** 2) / (nobs ** 2)  # eq. 11, p. 165
+    s_hat = _sigma_est_kpss(resids, nobs, lags)
+
+    kpss_stat = eta / s_hat
+    p_value = np.interp(kpss_stat, crit, pvals)
+
+    if p_value == pvals[-1]:
+        flag = -1
+    elif p_value == pvals[0]:
+        flag = 1
+    else:
+        flag = 0
+
+    return kpss_stat, p_value, lags, flag, {'10%' : crit[0], '5%' : crit[1],
+                                            '2.5%' : crit[2], '1%' : crit[3]}
+
+
+def _sigma_est_kpss(resids, nobs, lags):
+    """
+    Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
+    consistent estimator used for the variance.
+    """
+    s_hat = sum(resids ** 2)
+    for i in range(1, lags + 1):
+        resids_prod = sum([resids[j] * resids[j - i] for j in range(i, nobs)])
+        s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
+    return s_hat / nobs
+
+
 if __name__ == "__main__":
     import statsmodels.api as sm
     data = sm.datasets.macrodata.load().data
@@ -1066,12 +1174,12 @@ if __name__ == "__main__":
     adftstat = adfuller(x, autolag="t-stat")
 
 # acf is tested now
-    acf1, ci1, Q, pvalue = acf(x, nlags=40, confint=95, qstat=True)
-    acf2, ci2, Q2, pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
-    acf3, ci3, Q3, pvalue3 = acf(x, nlags=40, confint=95, qstat=True,
-                                 unbiased=True)
-    acf4, ci4, Q4, pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
-                                 unbiased=True)
+#    acf1, ci1, Q, pvalue = acf(x, nlags=40, confint=95, qstat=True)
+#    acf2, ci2, Q2, pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
+#    acf3, ci3, Q3, pvalue3 = acf(x, nlags=40, confint=95, qstat=True,
+#                                 unbiased=True)
+#    acf4, ci4, Q4, pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
+#                                 unbiased=True)
 
 # pacf is tested now
 #    pacf1 = pacorr(x)
