@@ -1127,17 +1127,16 @@ def kpss(x, null_hypo="level", lshort=True):
         crit = [0.347, 0.463, 0.574, 0.739]
 
     tablep = [0.10, 0.05, 0.025, 0.01]
-    s = e.cumsum()
-    eta = sum(s ** 2) / (nobs ** 2)
-    s2 = sum(e ** 2) / nobs
+
+    eta = sum(e.cumsum() ** 2) / (nobs ** 2)
+    s = sum(e ** 2) / nobs
 
     if lshort:
         l = int(3 * np.sqrt(nobs) / 13)
     else:
         l = int(10 * np.sqrt(nobs) / 14)
 
-    s2 = _pp_sum(e, nobs, l, s2)
-    kpss_stat = eta / s2
+    kpss_stat = eta / _pp_sum(e, nobs, l, s)
     p_value = np.interp(kpss_stat, crit, tablep)
 
     if p_value == tablep[-1]:
