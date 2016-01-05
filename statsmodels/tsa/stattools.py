@@ -1104,8 +1104,8 @@ def kpss(x, null_hypo="level", lshort=True):
 
     References
     ----------
-    D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing the
-    Null Hypothesis of Stationarity against the Alternative of a Unit Root.
+    D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing
+    the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
     `Journal of Econometrics` 54, 159–178.
     """
     import warnings
@@ -1117,7 +1117,7 @@ def kpss(x, null_hypo="level", lshort=True):
     if nobs != x.reshape((-1, 1)).shape[0]:
         raise ValueError("x is not a column vector or univariate time series")
     if hypo not in ["level", "trend"]:
-        raise ValueError("null hypothesis must be one of 'Level' (default) or 'Trend'")
+        raise ValueError("null hypothesis must be one of 'level' or 'trend'")
 
     if hypo == "trend":
         e = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
