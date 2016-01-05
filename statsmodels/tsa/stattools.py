@@ -1108,7 +1108,8 @@ def kpss(x, null_hypo="level", lshort=True):
     the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
     `Journal of Econometrics` 54, 159–178.
     """
-    import warnings
+    from warnings import warn
+
     nobs = len(x)
     x = np.asarray(x)
     hypo = null_hypo.lower()
@@ -1140,9 +1141,9 @@ def kpss(x, null_hypo="level", lshort=True):
     p_value = np.interp(kpss_stat, crit, tablep)
 
     if p_value == tablep[-1]:
-        warnings.warn("p-value smaller than printed p-value")
+        warn("p-value smaller than printed p-value")
     elif p_value == tablep[0]:
-        warnings.warn("p-value greater than printed p-value")
+        warn("p-value greater than printed p-value")
 
     return kpss_stat, p_value, l, nobs, crit
 
