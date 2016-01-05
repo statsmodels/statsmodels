@@ -1098,15 +1098,15 @@ def kpss(x, null_hypo="level", lshort=True):
 
     Missing values are not handled.
 
+    Authors
+    -------
+    Original R implementation by A. Trapletti. Ported to Python by N. Wouda.
+
     References
     ----------
     D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing the
     Null Hypothesis of Stationarity against the Alternative of a Unit Root.
     `Journal of Econometrics` 54, 159–178.
-    
-    Authors
-    -------
-        Original R implementation by A. Trapletti. Ported to Python by N. Wouda.
     """
     import warnings
     nobs = len(x)
