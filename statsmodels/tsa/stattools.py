@@ -15,7 +15,7 @@ from statsmodels.compat.scipy import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller']
+           'adfuller', 'kpss']
 
 
 #NOTE: now in two places to avoid circular import
