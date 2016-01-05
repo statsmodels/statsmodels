@@ -1173,8 +1173,7 @@ def _pp_sum(e, n, l, s):
         for j in range(i, n):
             tmp2 += e[j] * e[j - i]
         tmp1 += tmp2 * (1.0 - (i / (l + 1.0)))
-    tmp1 /= n
-    return s + (tmp1 * 2)
+    return s + (tmp1 * 2) / n
 
 
 if __name__ == "__main__":
