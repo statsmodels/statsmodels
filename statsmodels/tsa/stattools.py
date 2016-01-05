@@ -1121,6 +1121,7 @@ def kpss(x, null_hypo="level", lshort=True):
     else:  # hypo value check guarantees hypo == "level" at this point
         e = OLS(x, [1] * nobs).fit().resid
         crit = [0.347, 0.463, 0.574, 0.739]
+
     tablep = [0.10, 0.05, 0.025, 0.01]
     s = e.cumsum()
     eta = sum(s ** 2) / (nobs ** 2)
