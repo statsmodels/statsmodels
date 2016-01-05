@@ -1055,6 +1055,124 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     return Bunch(**res)
 
 
+def kpss(x, null_hypo="level", lshort=True):
+    """
+    Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
+
+    Computes the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test for the null
+    hypothesis that x is level or trend stationary.
+
+    Parameters
+    ----------
+    x : array_like, 1d
+        data series
+    null_hypo : str{"level", "trend"}
+        Indicates the null hypothesis for the KPSS test
+        * "level" : The data is level stationary (default)
+        * "trend" : The data is trend stationary
+    lshort : bool
+        Logical indicating whether the short or long version of the truncation
+        lag parameter is used.
+
+    Returns
+    -------
+    kpss_stat : float
+        The KPSS test statistic
+    p_value : float
+        The p-value of the test
+    l : int
+        The truncation lag parameter
+    nobs : int
+        The number of observations used in the test
+    crit : list
+        The critical values at 10%, 5%, 2.5% and 1%, respectively. Based
+        on Kwiatkowski et al. (1992).
+
+    Notes
+    -----
+    To estimate sigma^2 the Newey-West estimator is used. If lshort is True,
+    then the truncation lag parameter is set to int(3 * sqrt(n) / 13), otherwise
+    int(10 * sqrt(n) / 14) is used. The p-values are interpolated from Table 1
+    of Kwiatkowski et al. (1992). If the computed statistic is outside the table
+    of critical values, then a warning message is generated.
+
+    Missing values are not handled.
+
+    References
+    ----------
+    D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing the
+    Null Hypothesis of Stationarity against the Alternative of a Unit Root.
+    `Journal of Econometrics` 54, 159–178.
+    """
+    import warnings
+    nobs = len(x)
+    x = np.asarray(x)
+    hypo = null_hypo.lower()
+
+    # reshape as column vector: if m is not 1, n != m * n
+    if nobs != x.reshape((-1, 1)).shape[0]:
+        raise ValueError("x is not a column vector or univariate time series")
+    if hypo not in ["level", "trend"]:
+        raise ValueError("null hypothesis must be one of 'Level' (default) or 'Trend'")
+
+    if hypo == "trend":
+        e = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
+        crit = [0.119, 0.146, 0.176, 0.216]
+    else:  # hypo value check guarantees hypo == "level" at this point
+        e = OLS(x, [1] * nobs).fit().resid
+        crit = [0.347, 0.463, 0.574, 0.739]
+    tablep = [0.10, 0.05, 0.025, 0.01]
+    s = e.cumsum()
+    eta = sum(s ** 2) / (nobs ** 2)
+    s2 = sum(e ** 2) / nobs
+
+    if lshort:
+        l = int(3 * np.sqrt(nobs) / 13)
+    else:
+        l = int(10 * np.sqrt(nobs) / 14)
+
+    s2 = _pp_sum(e, nobs, l, s2)
+    kpss_stat = eta / s2
+    p_value = np.interp(kpss_stat, crit, tablep)
+
+    if p_value == tablep[-1]:
+        warnings.warn("p-value smaller than printed p-value")
+    elif p_value == tablep[0]:
+        warnings.warn("p-value greater than printed p-value")
+
+    return kpss_stat, p_value, l, nobs, crit
+
+
+def _pp_sum(e, n, l, s):
+    """
+    Computation of the sums involved in the Phillips-Perron tests.
+
+    Parameters
+    ----------
+    e : 1d array
+        Regression residuals.
+    n : int
+        Number of observations.
+    l : int
+        Number of lags.
+    s : float
+        Sum in KPSS/PP test.
+
+    Returns
+    -------
+    s : float
+        Adjusted sum.
+    """
+    tmp1 = 0.0
+    for i in range(1, l + 1):
+        tmp2 = 0.0
+        for j in range(i, n):
+            tmp2 += e[j] * e[j - i]
+        tmp1 += tmp2 * (1.0 - (i / (l + 1.0)))
+    tmp1 /= n
+    return s + (tmp1 * 2)
+
+
 if __name__ == "__main__":
     import statsmodels.api as sm
     data = sm.datasets.macrodata.load().data
@@ -1066,12 +1184,12 @@ if __name__ == "__main__":
     adftstat = adfuller(x, autolag="t-stat")
 
 # acf is tested now
-    acf1, ci1, Q, pvalue = acf(x, nlags=40, confint=95, qstat=True)
-    acf2, ci2, Q2, pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
-    acf3, ci3, Q3, pvalue3 = acf(x, nlags=40, confint=95, qstat=True,
-                                 unbiased=True)
-    acf4, ci4, Q4, pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
-                                 unbiased=True)
+#    acf1, ci1, Q, pvalue = acf(x, nlags=40, confint=95, qstat=True)
+#    acf2, ci2, Q2, pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
+#    acf3, ci3, Q3, pvalue3 = acf(x, nlags=40, confint=95, qstat=True,
+#                                 unbiased=True)
+#    acf4, ci4, Q4, pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
+#                                 unbiased=True)
 
 # pacf is tested now
 #    pacf1 = pacorr(x)
@@ -1079,3 +1197,9 @@ if __name__ == "__main__":
 #    pacfyw = pacf_yw(x, nlags=40, method="mle")
     y = np.random.normal(size=(100, 2))
     grangercausalitytests(y, 2)
+
+# kpss is tested now.
+    kpss1, pval1, lags1, nobs1, crit1 = kpss(x, "level", True)
+    kpss2, pval2, lags2, nobs2, crit2 = kpss(x, "level", False)
+    kpss3, pval3, lags3, nobs3, crit3 = kpss(x, "trend", True)
+    kpss4, pval4, lags4, nobs4, crit4 = kpss(x, "trend", False)
