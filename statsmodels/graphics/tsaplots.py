@@ -94,7 +94,7 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     return fig
 
-def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
+def plot_pacf(x, ax=None, lags=None,title=None, alpha=.05, method='ywm',
                 use_vlines=True, **kwargs):
     """Plot the partial autocorrelation function
 
@@ -177,7 +177,12 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
     kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
-    ax.set_title("Partial Autocorrelation")
+
+    if title is None:
+
+        ax.set_title("Partial Autocorrelation")
+    else:
+        ax.set_title(title)
 
     if confint is not None:
         # center the confidence interval TODO: do in acf?
