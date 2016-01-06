@@ -1080,7 +1080,7 @@ def kpss(x, null_hypo="level", lshort=True):
         The KPSS test statistic
     p_value : float
         The p-value of the test
-    l : int
+    lags : int
         The truncation lag parameter
     nobs : int
         The number of observations used in the test
@@ -1133,11 +1133,11 @@ def kpss(x, null_hypo="level", lshort=True):
     s = sum(e ** 2) / nobs
 
     if lshort:
-        l = int(3 * np.sqrt(nobs) / 13)
+        lags = int(3 * np.sqrt(nobs) / 13)
     else:
-        l = int(10 * np.sqrt(nobs) / 14)
+        lags = int(10 * np.sqrt(nobs) / 14)
 
-    kpss_stat = eta / _pp_sum(e, nobs, l, s)
+    kpss_stat = eta / _pp_sum(e, nobs, lags, s)
     p_value = np.interp(kpss_stat, crit, tablep)
 
     if p_value == tablep[-1]:
@@ -1145,7 +1145,7 @@ def kpss(x, null_hypo="level", lshort=True):
     elif p_value == tablep[0]:
         warn("p-value greater than printed p-value")
 
-    return kpss_stat, p_value, l, nobs, {"10%" : crit[0], "5%" : crit[1],
+    return kpss_stat, p_value, lags, nobs, {"10%" : crit[0], "5%" : crit[1],
                                          "2.5%" : crit[2], "1%" : crit[3]}
 
 
