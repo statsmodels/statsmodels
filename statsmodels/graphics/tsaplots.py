@@ -7,7 +7,7 @@ from statsmodels.compat.pandas import sort_values
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
 
-def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
+def plot_acf(x, ax=None, lags=None, title=None,alpha=.05, use_vlines=True, unbiased=False,
             fft=False, **kwargs):
     """Plot the autocorrelation function
 
@@ -86,7 +86,11 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
-    ax.set_title("Autocorrelation")
+    
+    if title is None:
+        ax.set_title("Autocorrelation")
+    else :
+        ax.set_title(title)
 
     if confint is not None:
         # center the confidence interval TODO: do in acf?
@@ -94,7 +98,7 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     return fig
 
-def plot_pacf(x, ax=None, lags=None,title=None, alpha=.05, method='ywm',
+def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
                 use_vlines=True, **kwargs):
     """Plot the partial autocorrelation function
 
@@ -177,11 +181,8 @@ def plot_pacf(x, ax=None, lags=None,title=None, alpha=.05, method='ywm',
     kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
-
-    if title is None:
-        ax.set_title("Partial Autocorrelation")
-    else :
-        ax.set_title(title)
+    ax.set_title("Partial Autocorrelation")
+    
     
     if confint is not None:
         # center the confidence interval TODO: do in acf?
