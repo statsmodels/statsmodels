@@ -636,6 +636,69 @@ class CompareMeans(object):
 #            d1.nobs1 = d1.sum_weights.astype(float)  #float just to make sure
 #        self.nobs2 = d2.sum_weights.astype(float)
 
+    @classmethod
+    def from_data(cls, data1, data2, weights1=None, weights2=None, 
+            ddof1=0, ddof2=0):
+        '''construct a CompareMeans object from data
+
+        Parameters
+        ----------
+        data1, data2 : array-like, 1-D or 2-D
+            compared datasets
+        weights1, weights2 : None or 1-D ndarray
+            weights for each observation of data1 and data2 respectively,
+            with same length as zero axis of corresponding dataset.
+        ddof1, ddof2 : int
+            default ddof1=0, ddof2=0, degrees of freedom for data1,
+            data2 respectively.
+
+        Returns
+        _______
+        A CompareMeans instance.
+        
+        '''
+        return cls(DescrStatsW(data1, weights=weights1, ddof=ddof1), 
+                DescrStatsW(data2, weights=weights2, ddof=ddof2))
+
+    def summary(self, use_t=True, alpha=0.05, usevar='pooled', value=0):
+        '''summarize the results of the hypothesis test
+
+        Parameters
+        ----------
+
+        use_t : bool, optional
+            if use_t is True, then t test results are returned
+            if use_t is False, then z test results are returned
+        alpha : float
+            significance level for the confidence interval, coverage is
+            ``1-alpha``
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+        value : float
+            difference between the means under the Null hypothesis.
+
+        Returns
+        -------
+        smry : string
+
+        '''
+
+        confint_percents = 100 - alpha*100
+        if use_t:
+            tstat, pvalue, df = self.ttest_ind(usevar=usevar, value=value)
+            lower, upper = self.tconfint_diff(alpha=alpha, usevar=usevar)
+            return '<t test: t=%s, df=%s, p-value=%s, %s percent confident \
+                    interval: %s %s>' % (tstat, df, pvalue, confint_percents,
+                            lower, upper)
+        else:
+            tstat, pvalue = self.ztest_ind(usevar=usevar, value=value)
+            lower, upper = self.zconfint_diff(alpha=alpha, usevar=usevar)
+            return '<z test: z=%s, p-value=%s, %s percent confident \
+                    interval: %s %s>' % (tstat, pvalue, confint_percents,
+                            lower, upper)
+
     @OneTimeProperty
     def std_meandiff_separatevar(self):
         #this uses ``_var`` to use ddof=0 for formula
