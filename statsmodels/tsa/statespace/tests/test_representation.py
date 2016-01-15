@@ -1246,7 +1246,7 @@ def test_missing():
     mod['transition', :, :] = 0.5
     mod['selection', :, :] = 1
     mod['state_cov', :, :] = 0.5
-    llf = mod.loglike()
+    llf = mod.loglikeobs()
 
     # Model with prepended nans
     mod = KalmanFilter(endog_pre_na, k_states=1,
@@ -1256,7 +1256,7 @@ def test_missing():
     mod['transition', :, :] = 0.5
     mod['selection', :, :] = 1
     mod['state_cov', :, :] = 0.5
-    llf_pre_na = mod.loglike()
+    llf_pre_na = mod.loglikeobs()
 
     assert_allclose(llf_pre_na, llf)
 
@@ -1268,7 +1268,7 @@ def test_missing():
     mod['transition', :, :] = 0.5
     mod['selection', :, :] = 1
     mod['state_cov', :, :] = 0.5
-    llf_post_na = mod.loglike()
+    llf_post_na = mod.loglikeobs()
 
     assert_allclose(llf_post_na, llf)
 
@@ -1280,6 +1280,6 @@ def test_missing():
     mod['transition', :, :] = 0.5
     mod['selection', :, :] = 1
     mod['state_cov', :, :] = 0.5
-    llf_inject_na = mod.loglike()
+    llf_inject_na = mod.loglikeobs()
 
     assert_allclose(llf_inject_na, llf)
