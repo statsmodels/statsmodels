@@ -686,18 +686,37 @@ class CompareMeans(object):
         '''
 
         confint_percents = 100 - alpha*100
+        
         if use_t:
-            tstat, pvalue, df = self.ttest_ind(usevar=usevar, value=value)
+            tstat, pvalue, _ = self.ttest_ind(usevar=usevar, value=value)
             lower, upper = self.tconfint_diff(alpha=alpha, usevar=usevar)
-            return '<t test: t=%s, df=%s, p-value=%s, %s percent confident \
-                    interval: %s %s>' % (tstat, df, pvalue, confint_percents,
-                            lower, upper)
         else:
             tstat, pvalue = self.ztest_ind(usevar=usevar, value=value)
             lower, upper = self.zconfint_diff(alpha=alpha, usevar=usevar)
-            return '<z test: z=%s, p-value=%s, %s percent confident \
-                    interval: %s %s>' % (tstat, pvalue, confint_percents,
-                            lower, upper)
+        
+        if usevar == 'pooled':
+            std_err = self.std_meandiff_pooledvar
+        else:
+            std_err = self.std_meandiff_separatevar
+        
+        std_err = np.atleast_1d(std_err)
+        tstat = np.atleast_1d(tstat)
+        pvalue = np.atleast_1d(pvalue)
+        lower = np.atleast_1d(lower)
+        upper = np.atleast_1d(upper)
+        conf_int = np.hstack((
+                            lower.reshape((-1, 1)),
+                            upper.reshape((-1, 1))))
+        value = value*np.ones(tstat.shape)
+        
+        title = 'A test for means equility'
+        yname = 'y' # not used in params_frame
+        xname = ['subset #%d'%(ii + 1) for ii in range(tstat.shape[0])]
+
+        from statsmodels.iolib.summary import summary_params
+        return summary_params((None, value, std_err, tstat, pvalue, conf_int),
+                alpha=alpha, use_t=use_t, yname=yname, xname=xname,
+                title=title)
 
     @OneTimeProperty
     def std_meandiff_separatevar(self):
