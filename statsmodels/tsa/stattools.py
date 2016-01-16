@@ -1055,7 +1055,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     return Bunch(**res)
 
 
-def kpss(x, null_hypo="level", lags=None):
+def kpss(x, regression='c', lags=None, store=False):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1066,37 +1066,44 @@ def kpss(x, null_hypo="level", lags=None):
     ----------
     x : array_like, 1d
         Data series
-    null_hypo : str{"level", "trend"}
+    regression : str{'c', 'ct'}
         Indicates the null hypothesis for the KPSS test
-        * "level" : The data is level stationary (default)
-        * "trend" : The data is trend stationary
+        * 'c' : The data is stationary around a constant (default)
+        * 'ct' : The data is stationary around a trend
     lags : int
         Indicates the number of lags to be used. If None (default),
-        lags is set to int(12 * (n / 100) ** (1 / 4)), as outlined in
+        lags is set to int(12 * (n / 100)**(1 / 4)), as outlined in
         Schwert (1989).
+    store : bool
+        If True, then a result instance is returned additionally to
+        the KPSS statistic (default is False).
 
     Returns
     -------
     kpss_stat : float
         The KPSS test statistic
     p_value : float
-        The p-value of the test
+        The p-value of the test. The p-value is interpolated from
+        Table 1 in Kwiatkowski et al. (1992), and a boundary point
+        is returned if the test statistic is outside the table of
+        critical values, that is, if the p-value is outside the
+        interval (0.01, 0.1).
     lags : int
         The truncation lag parameter
-    flag: int
-        * -1 : the p-value is smaller than the indicated p-value.
-        * 0 : the p-value is the indicated p-value.
-        * 1 : the p-value is greater than the indicated p-value.
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
+    resstore : (optional) instance of ResultStore
+        An instance of a dummy class with results attached as attributes
 
     Notes
     -----
     To estimate sigma^2 the Newey-West estimator is used. If lags is None,
     the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
-    Table 1 of Kwiatkowski et al. (1992).
+    Table 1 of Kwiatkowski et al. (1992). If the computed statistic is
+    outside the table of critical values, then a warning message is
+    generated.
 
     Missing values are not handled.
 
@@ -1106,27 +1113,29 @@ def kpss(x, null_hypo="level", lags=None):
     the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
     `Journal of Econometrics` 54, 159–178.
     """
+    from warnings import warn
+
     nobs = len(x)
     x = np.asarray(x)
-    hypo = null_hypo.lower()
+    hypo = regression.lower()
 
-    # reshape as column vector: if m is not one, 1 * n != m * n
-    if nobs != x.reshape((-1, 1)).shape[0]:
-        raise ValueError("x of shape {} not understood".format(x.shape))
+    # if m is not one, n != m * n
+    if nobs != x.size:
+        raise ValueError("x of shape {0} not understood".format(x.shape))
 
-    if hypo == "trend":
+    if hypo == 'ct':
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
         # where beta is the trend, r_t a random walk and e_t a stationary
         # error term.
-        resids = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
+        resids = OLS(x, add_constant(np.arange(1, nobs + 1))).fit().resid
         crit = [0.119, 0.146, 0.176, 0.216]
-    elif hypo == "level":
+    elif hypo == 'c':
         # special case of the model above, where beta = 0 (so the null
         # hypothesis is that the data is stationary around r_0).
-        resids = OLS(x, np.ones(nobs)).fit().resid
+        resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
     else:
-        raise ValueError("hypothesis '{}' not understood".format(hypo))
+        raise ValueError("hypothesis '{0}' not understood".format(hypo))
 
     if lags is None:
         # from Kwiatkowski et al. referencing Schwert (1989)
@@ -1134,33 +1143,44 @@ def kpss(x, null_hypo="level", lags=None):
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
-    eta = sum(resids.cumsum() ** 2) / (nobs ** 2)  # eq. 11, p. 165
+    eta = sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
     s_hat = _sigma_est_kpss(resids, nobs, lags)
 
     kpss_stat = eta / s_hat
     p_value = np.interp(kpss_stat, crit, pvals)
 
     if p_value == pvals[-1]:
-        flag = -1
+        warn("p-value is smaller than the indicated p-value")
     elif p_value == pvals[0]:
-        flag = 1
-    else:
-        flag = 0
+        warn("p-value is greater than the indicated p-value")
 
-    return kpss_stat, p_value, lags, flag, {'10%' : crit[0], '5%' : crit[1],
-                                            '2.5%' : crit[2], '1%' : crit[3]}
+    crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
+
+    if store:
+        rstore = ResultsStore()
+        rstore.lags = lags
+        rstore.nobs = nobs
+
+        stationary_type = "level" if hypo == 'c' else "trend"
+        rstore.H0 = "The series is {0} stationary".format(stationary_type)
+        rstore.HA = "The series is not {0} stationary".format(stationary_type)
+
+        return kpss_stat, p_value, crit_dict, rstore
+    else:
+        return kpss_stat, p_value, lags, crit_dict
 
 
 def _sigma_est_kpss(resids, nobs, lags):
     """
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
-    consistent estimator used for the variance.
+    consistent estimator for the variance.
     """
-    s_hat = sum(resids ** 2)
+    s_hat = sum(resids**2)
     for i in range(1, lags + 1):
-        resids_prod = sum([resids[j] * resids[j - i] for j in range(i, nobs)])
+        resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
+
 
 
 if __name__ == "__main__":

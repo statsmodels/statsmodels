@@ -71,6 +71,7 @@ Descriptive Statistics and Tests
    stattools.ccf
    stattools.periodogram
    stattools.adfuller
+   stattools.kpss
    stattools.q_stat
    stattools.grangercausalitytests
    stattools.levinson_durbin
