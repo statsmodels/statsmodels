@@ -1726,11 +1726,6 @@ cdef class {{prefix}}KalmanFilter(object):
                 {{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, predicted_t], &inc, self._converged_predicted_state_cov, &inc)
                 # $|F_t|$
                 self.converged_determinant = self.determinant
-        elif self.period_converged > 0:
-            # This is here so that the filter's state is reset to converged = 1
-            # even if it was set to converged = 0 for the current iteration
-            # due to missing values
-            self.converged = 1
 
     cdef void migrate_storage(self):
         cdef int inc = 1
