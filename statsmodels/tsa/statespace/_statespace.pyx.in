@@ -1416,7 +1416,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Advance the time
         self.t += 1
 
-    cdef void initialize_statespace_object_pointers(self) except *:
+    cpdef initialize_statespace_object_pointers(self):
         cdef:
             int t = self.t
         # Indices for possibly time-varying arrays
@@ -1455,7 +1455,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self._initial_state = &self.model.initial_state[0]
         self._initial_state_cov = &self.model.initial_state_cov[0,0]
 
-    cdef void initialize_filter_object_pointers(self):
+    cpdef initialize_filter_object_pointers(self):
         cdef:
             int t = self.t
             int inc = 1
@@ -1534,7 +1534,7 @@ cdef class {{prefix}}KalmanFilter(object):
         else:
             self._selected_state_cov = &self.model.selected_state_cov[0, 0, 0]
 
-    cdef void select_missing(self):
+    cpdef select_missing(self):
         # ### Perform missing selections
         # In Durbin and Koopman (2012), these are represented as matrix
         # multiplications, i.e. $Z_t^* = W_t Z_t$ where $W_t$ is a row

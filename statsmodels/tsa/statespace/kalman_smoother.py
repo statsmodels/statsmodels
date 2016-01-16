@@ -36,6 +36,7 @@ class _kalman_smoother(object):
         # Save values
         self.model = model
         self.kfilter = kfilter
+        self._kfilter = model._kalman_filter
         self.smoother_output = smoother_output
 
         # Create storage
@@ -105,9 +106,10 @@ class _kalman_smoother(object):
         if not self.t >= 0:
             raise StopIteration
 
-        # Get local copies
+        # Get local copies of variables
         t = self.t
         kfilter = self.kfilter
+        _kfilter = self._kfilter
         model = self.model
         smoother_output = self.smoother_output
 
@@ -123,6 +125,17 @@ class _kalman_smoother(object):
             self.smoothed_measurement_disturbance_cov)
         tmp_L = self.tmp_L
 
+        # Seek the Cython Kalman filter to the appropriate place, setup matrices
+        _kfilter.seek(t, False)
+        _kfilter.initialize_statespace_object_pointers()
+        _kfilter.initialize_filter_object_pointers()
+        _kfilter.select_missing()
+
+        missing_entire_obs = (
+            _kfilter.model.nmissing[t] == _kfilter.model.k_endog)
+        missing_partial_obs = (
+            not missing_entire_obs and _kfilter.model.nmissing[t] > 0)
+
         # Get the appropriate (possibly time-varying) indices
         design_t = 0 if kfilter.design.shape[2] == 1 else t
         obs_cov_t = 0 if kfilter.obs_cov.shape[2] == 1 else t
@@ -131,8 +144,15 @@ class _kalman_smoother(object):
         state_cov_t = 0 if kfilter.state_cov.shape[2] == 1 else t
 
         # Get references to representation matrices and Kalman filter output
-        design = model.design[:, :, design_t]
-        obs_cov = model.obs_cov[:, :, obs_cov_t]
+        if missing_entire_obs or missing_partial_obs:
+            # TODO can this np.array call be done just once at the beginning?
+            design = np.array(_kfilter.selected_design).reshape(model.design[:,:,design_t].shape)
+        else:
+            design = model.design[:, :, design_t]
+        if missing_partial_obs:
+            obs_cov = np.array(_kfilter.selected_obs_cov)
+        else:
+            obs_cov = model.obs_cov[:, :, obs_cov_t]
         transition = model.transition[:, :, transition_t]
         selection = model.selection[:, :, selection_t]
         state_cov = model.state_cov[:, :, state_cov_t]
@@ -150,23 +170,37 @@ class _kalman_smoother(object):
         # Perform the recursion
 
         # Intermediate values
-        F_inv = np.linalg.inv(forecasts_error_cov)
+        if not missing_entire_obs:
+            F_inv = np.linalg.inv(forecasts_error_cov)
         if smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
-            smoothing_error[:, t] = (
-                F_inv.dot(forecasts_error) -
-                kalman_gain.transpose().dot(scaled_smoothed_estimator[:, t])
-            )
-            scaled_smoothed_estimator[:, t - 1] = (
-                design.transpose().dot(smoothing_error[:, t]) +
-                transition.transpose().dot(scaled_smoothed_estimator[:, t])
-            )
+            if missing_entire_obs:
+                # smoothing_error is undefined here, keep it as zeros
+                scaled_smoothed_estimator[:, t - 1] = (
+                    transition.transpose().dot(scaled_smoothed_estimator[:, t])
+                )
+            else:
+                smoothing_error[:, t] = (
+                    F_inv.dot(forecasts_error) -
+                    kalman_gain.transpose().dot(scaled_smoothed_estimator[:, t])
+                )
+                scaled_smoothed_estimator[:, t - 1] = (
+                    design.transpose().dot(smoothing_error[:, t]) +
+                    transition.transpose().dot(scaled_smoothed_estimator[:, t])
+                )
         if smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
-            scaled_smoothed_estimator_cov[:, :, t - 1] = (
-                design.transpose().dot(F_inv).dot(design) +
-                L.transpose().dot(
-                    scaled_smoothed_estimator_cov[:, :, t]
-                ).dot(L)
-            )
+            if missing_entire_obs:
+                scaled_smoothed_estimator_cov[:, :, t - 1] = (
+                    L.transpose().dot(
+                        scaled_smoothed_estimator_cov[:, :, t]
+                    ).dot(L)
+                )
+            else:
+                scaled_smoothed_estimator_cov[:, :, t - 1] = (
+                    design.transpose().dot(F_inv).dot(design) +
+                    L.transpose().dot(
+                        scaled_smoothed_estimator_cov[:, :, t]
+                    ).dot(L)
+                )
 
         # State smoothing
         if smoother_output & SMOOTHER_STATE:
@@ -190,9 +224,12 @@ class _kalman_smoother(object):
             smoothed_state_disturbance[:, t] = (
                 QR.dot(scaled_smoothed_estimator[:, t])
             )
-            smoothed_measurement_disturbance[:, t] = (
-                obs_cov.dot(smoothing_error[:, t])
-            )
+            # measurement disturbance is set to zero when all missing
+            # (unconditional distribution)
+            if not missing_entire_obs:
+                smoothed_measurement_disturbance[:, t] = (
+                    obs_cov.dot(smoothing_error[:, t])
+                )
 
         if smoother_output & SMOOTHER_DISTURBANCE_COV:
             smoothed_state_disturbance_cov[:, :, t] = (
@@ -202,13 +239,16 @@ class _kalman_smoother(object):
                 ).dot(QR.transpose())
             )
 
-            smoothed_measurement_disturbance_cov[:, :, t] = (
-                obs_cov - obs_cov.dot(
-                    F_inv + kalman_gain.transpose().dot(
-                        scaled_smoothed_estimator_cov[:, :, t]
-                    ).dot(kalman_gain)
-                ).dot(obs_cov)
-            )
+            if missing_entire_obs:
+                smoothed_measurement_disturbance_cov[:, :, t] = obs_cov
+            else:
+                smoothed_measurement_disturbance_cov[:, :, t] = (
+                    obs_cov - obs_cov.dot(
+                        F_inv + kalman_gain.transpose().dot(
+                            scaled_smoothed_estimator_cov[:, :, t]
+                        ).dot(kalman_gain)
+                    ).dot(obs_cov)
+                )
 
         # Advance the smoother
         self.t -= 1
@@ -395,11 +435,6 @@ class KalmanSmoother(KalmanFilter):
         results.update_representation(self, only_options=not create_statespace)
         if new_results or create_filter:
             results.update_filter(kfilter)
-
-        # For now we can't handle missing observations
-        if np.sum(results.nmissing) > 0:
-            raise RuntimeError('Kalman smoother does not currently support'
-                               ' smoothing with missing values.')
 
         # Run the smoother and update the output
         smoother = _kalman_smoother(self, results, smoother_output)
