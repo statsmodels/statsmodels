@@ -5,7 +5,6 @@ Tests for smoothing and estimation of unobserved states and disturbances
 - Filtered states: :math:`E(\alpha_t | Y_t)`
 - Smoothed states: :math:`E(\alpha_t | Y_n)`
 - Smoothed disturbances :math:`E(\varepsilon_t | Y_n), E(\eta_t | Y_n)`
-- Simulation smoothing
 
 Tested against R (FKF, KalmanRun / KalmanSmooth), Stata (sspace), and
 MATLAB (ssm toolbox)
@@ -181,16 +180,6 @@ class TestStatesMissingAR3(object):
                 cls.results.predicted_state_cov[:,:,i])
             cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
                 cls.results.smoothed_state_cov[:,:,i])
-
-        # Perform simulation smoothing
-        n_disturbance_variates = (
-            (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
-        )
-        cls.sim = cls.model.simulation_smoother()
-        cls.sim.simulate(
-            disturbance_variates=np.zeros(n_disturbance_variates),
-            initial_state_variates=np.zeros(cls.model.k_states)
-        )
 
     def test_predicted_states(self):
         assert_almost_equal(
