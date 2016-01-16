@@ -1231,15 +1231,15 @@ def test_impulse_responses():
 def test_missing():
     # Datasets
     endog = np.arange(10).reshape(10,1)
-    endog_pre_na = np.c_[
-        endog.copy() * np.nan, endog.copy() * np.nan, endog, endog]
-    endog_post_na = np.c_[
-        endog, endog, endog.copy() * np.nan, endog.copy() * np.nan]
-    endog_inject_na = np.c_[
-        endog, endog.copy() * np.nan, endog, endog.copy() * np.nan]
+    endog_pre_na = np.ascontiguousarray(np.c_[
+        endog.copy() * np.nan, endog.copy() * np.nan, endog, endog])
+    endog_post_na = np.ascontiguousarray(np.c_[
+        endog, endog, endog.copy() * np.nan, endog.copy() * np.nan])
+    endog_inject_na = np.ascontiguousarray(np.c_[
+        endog, endog.copy() * np.nan, endog, endog.copy() * np.nan])
 
     # Base model
-    mod = KalmanFilter(np.c_[endog, endog], k_states=1,
+    mod = KalmanFilter(np.ascontiguousarray(np.c_[endog, endog]), k_states=1,
                        initialization='approximate_diffuse')
     mod['design', :, :] = 1
     mod['obs_cov', :, :] = np.eye(mod.k_endog)*0.5
