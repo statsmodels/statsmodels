@@ -1055,7 +1055,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     return Bunch(**res)
 
 
-def kpss(x, null_hypo="level", lshort=True):
+def kpss(x, null_hypo="level", lags=None):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1065,14 +1065,15 @@ def kpss(x, null_hypo="level", lshort=True):
     Parameters
     ----------
     x : array_like, 1d
-        data series
+        Data series
     null_hypo : str{"level", "trend"}
         Indicates the null hypothesis for the KPSS test
         * "level" : The data is level stationary (default)
         * "trend" : The data is trend stationary
-    lshort : bool
-        Logical indicating whether the short or long version of the truncation
-        lag parameter is used.
+    lags : int
+        Indicates the number of lags to be used. If None (default),
+        lags is set to int(12 * (n / 100) ** (1 / 4)), as outlined in
+        Schwert (1989).
 
     Returns
     -------
@@ -1082,25 +1083,22 @@ def kpss(x, null_hypo="level", lshort=True):
         The p-value of the test
     lags : int
         The truncation lag parameter
-    nobs : int
-        The number of observations used in the test
+    flag: int
+        * -1 : the p-value is smaller than the indicated p-value.
+        * 0 : the p-value is the indicated p-value.
+        * 1 : the p-value is greater than the indicated p-value.
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
 
     Notes
     -----
-    To estimate sigma^2 the Newey-West estimator is used. If lshort is True,
-    then the truncation lag parameter is set to int(3 * sqrt(n) / 13), otherwise
-    int(10 * sqrt(n) / 14) is used. The p-values are interpolated from Table 1
-    of Kwiatkowski et al. (1992). If the computed statistic is outside the table
-    of critical values, then a warning message is generated.
+    To estimate sigma^2 the Newey-West estimator is used. If lags is None,
+    the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
+    as outlined in Schwert (1989). The p-values are interpolated from
+    Table 1 of Kwiatkowski et al. (1992).
 
     Missing values are not handled.
-
-    Authors
-    -------
-    Original R implementation by A. Trapletti. Ported to Python by N. Wouda.
 
     References
     ----------
@@ -1108,74 +1106,60 @@ def kpss(x, null_hypo="level", lshort=True):
     the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
     `Journal of Econometrics` 54, 159–178.
     """
-    from warnings import warn
-
     nobs = len(x)
     x = np.asarray(x)
     hypo = null_hypo.lower()
 
-    # reshape as column vector: if m is not 1, n != m * n
+    # reshape as column vector: if m is not one, 1 * n != m * n
     if nobs != x.reshape((-1, 1)).shape[0]:
-        raise ValueError("x is not a column vector or univariate time series")
-    if hypo not in ["level", "trend"]:
-        raise ValueError("null hypothesis must be one of 'level' or 'trend'")
+        raise ValueError("x of shape {} not understood".format(x.shape))
 
     if hypo == "trend":
-        e = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
+        # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
+        # where beta is the trend, r_t a random walk and e_t a stationary
+        # error term.
+        resids = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
         crit = [0.119, 0.146, 0.176, 0.216]
-    else:  # hypo value check guarantees hypo == "level" at this point
-        e = OLS(x, [1] * nobs).fit().resid
+    elif hypo == "level":
+        # special case of the model above, where beta = 0 (so the null
+        # hypothesis is that the data is stationary around r_0).
+        resids = OLS(x, np.ones(nobs)).fit().resid
         crit = [0.347, 0.463, 0.574, 0.739]
-
-    tablep = [0.10, 0.05, 0.025, 0.01]
-
-    eta = sum(e.cumsum() ** 2) / (nobs ** 2)
-    s = sum(e ** 2) / nobs
-
-    if lshort:
-        lags = int(3 * np.sqrt(nobs) / 13)
     else:
-        lags = int(10 * np.sqrt(nobs) / 14)
+        raise ValueError("hypothesis '{}' not understood".format(hypo))
 
-    kpss_stat = eta / _pp_sum(e, nobs, lags, s)
-    p_value = np.interp(kpss_stat, crit, tablep)
+    if lags is None:
+        # from Kwiatkowski et al. referencing Schwert (1989)
+        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
 
-    if p_value == tablep[-1]:
-        warn("p-value smaller than printed p-value")
-    elif p_value == tablep[0]:
-        warn("p-value greater than printed p-value")
+    pvals = [0.10, 0.05, 0.025, 0.01]
 
-    return kpss_stat, p_value, lags, nobs, {"10%" : crit[0], "5%" : crit[1],
-                                         "2.5%" : crit[2], "1%" : crit[3]}
+    eta = sum(resids.cumsum() ** 2) / (nobs ** 2)  # eq. 11, p. 165
+    s_hat = _sigma_est_kpss(resids, nobs, lags)
 
+    kpss_stat = eta / s_hat
+    p_value = np.interp(kpss_stat, crit, pvals)
 
-def _pp_sum(e, n, l, s):
+    if p_value == pvals[-1]:
+        flag = -1
+    elif p_value == pvals[0]:
+        flag = 1
+    else:
+        flag = 0
+
+    return kpss_stat, p_value, lags, flag, {'10%' : crit[0], '5%' : crit[1],
+                                            '2.5%' : crit[2], '1%' : crit[3]}
+
+def _sigma_est_kpss(resids, nobs, lags):
     """
-    Computation of the sums involved in the Phillips-Perron tests.
-
-    Parameters
-    ----------
-    e : 1d array
-        Regression residuals.
-    n : int
-        Number of observations.
-    l : int
-        Number of lags.
-    s : float
-        Sum in KPSS/PP test.
-
-    Returns
-    -------
-    s : float
-        Adjusted sum.
+    Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
+    consistent estimator used for the variance.
     """
-    tmp1 = 0.0
-    for i in range(1, l + 1):
-        tmp2 = 0.0
-        for j in range(i, n):
-            tmp2 += e[j] * e[j - i]
-        tmp1 += tmp2 * (1.0 - (i / (l + 1.0)))
-    return s + (tmp1 * 2) / n
+    s_hat = sum(resids ** 2)
+    for i in range(1, lags + 1):
+        resids_prod = sum([resids[j] * resids[j - i] for j in range(i, nobs)])
+        s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
+    return s_hat / nobs
 
 
 if __name__ == "__main__":
@@ -1202,9 +1186,3 @@ if __name__ == "__main__":
 #    pacfyw = pacf_yw(x, nlags=40, method="mle")
     y = np.random.normal(size=(100, 2))
     grangercausalitytests(y, 2)
-
-# kpss is tested now.
-    kpss1, pval1, lags1, nobs1, crit1 = kpss(x, "level", True)
-    kpss2, pval2, lags2, nobs2, crit2 = kpss(x, "level", False)
-    kpss3, pval3, lags3, nobs3, crit3 = kpss(x, "trend", True)
-    kpss4, pval4, lags4, nobs4, crit4 = kpss(x, "trend", False)
