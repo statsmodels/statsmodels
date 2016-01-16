@@ -25,6 +25,7 @@ from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.tools import Bunch
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
+import warnings
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -415,8 +416,15 @@ class MLEModel(tsbase.TimeSeriesModel):
             return self.transform_params(mlefit.params)
         # Otherwise construct the results class if desired
         else:
-            res = self.smooth(mlefit.params, transformed=False,
-                              cov_type=cov_type, cov_kwds=cov_kwds)
+            try:
+                res = self.smooth(mlefit.params, transformed=False,
+                                  cov_type=cov_type, cov_kwds=cov_kwds)
+            except Exception as e:
+                warnings.warn('Could not perform smoothing; message was "%s".'
+                              ' Returning filtered results.' % e.message)
+                res = self.filter(mlefit.params, transformed=False,
+                                  cov_type=cov_type, cov_kwds=cov_kwds)
+
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
@@ -749,7 +757,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def score_obs(self, params, **kwargs):
         """
         Compute the score per observation, evaluated at params
- 
+
         Parameters
         ----------
         params : array_like
@@ -1723,7 +1731,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     output.append(results[0:2])
                 else:
                     output.append(results[2:])
-                
+
             output = np.c_[output]
         else:
             raise NotImplementedError('Invalid serial correlation test'
