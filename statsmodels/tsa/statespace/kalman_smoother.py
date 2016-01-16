@@ -30,63 +30,99 @@ _SmootherOutput = namedtuple('_SmootherOutput', (
 ))
 
 
-def _kalman_smooth(model, kfilter, smoother_output):
-    # Create storage
-    scaled_smoothed_estimator = None
-    scaled_smoothed_estimator_cov = None
-    smoothing_error = None
-    smoothed_state = None
-    smoothed_state_cov = None
-    smoothed_state_disturbance = None
-    smoothed_state_disturbance_cov = None
-    smoothed_measurement_disturbance = None
-    smoothed_measurement_disturbance_cov = None
+class _kalman_smoother(object):
 
-    # Intermediate values
-    tmp_L = np.zeros((model.k_states, model.k_states, model.nobs),
-                     dtype=kfilter.dtype)
+    def __init__(self, model, kfilter, smoother_output):
+        # Save values
+        self.model = model
+        self.kfilter = kfilter
+        self.smoother_output = smoother_output
 
-    if smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
-        scaled_smoothed_estimator = np.zeros((model.k_states, model.nobs + 1),
-                                             dtype=kfilter.dtype)
-        smoothing_error = np.zeros((model.k_endog, model.nobs),
-                                   dtype=kfilter.dtype)
-    if smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
-        scaled_smoothed_estimator_cov = (
-            np.zeros((model.k_states, model.k_states, model.nobs + 1),
-                     dtype=kfilter.dtype)
-        )
+        # Create storage
+        self.scaled_smoothed_estimator = None
+        self.scaled_smoothed_estimator_cov = None
+        self.smoothing_error = None
+        self.smoothed_state = None
+        self.smoothed_state_cov = None
+        self.smoothed_state_disturbance = None
+        self.smoothed_state_disturbance_cov = None
+        self.smoothed_measurement_disturbance = None
+        self.smoothed_measurement_disturbance_cov = None
 
-    # State smoothing
-    if smoother_output & SMOOTHER_STATE:
-        smoothed_state = np.zeros((model.k_states, model.nobs),
-                                  dtype=kfilter.dtype)
-    if smoother_output & SMOOTHER_STATE_COV:
-        smoothed_state_cov = (
-            np.zeros((model.k_states, model.k_states, model.nobs),
-                     dtype=kfilter.dtype)
-        )
+        # Intermediate values
+        self.tmp_L = np.zeros((model.k_states, model.k_states, model.nobs),
+                               dtype=kfilter.dtype)
 
-    # Disturbance smoothing
-    if smoother_output & SMOOTHER_DISTURBANCE:
-        smoothed_state_disturbance = np.zeros((model.k_posdef, model.nobs),
-                                              dtype=kfilter.dtype)
-        smoothed_measurement_disturbance = (
-            np.zeros((model.k_endog, model.nobs),
-                     dtype=kfilter.dtype)
-        )
-    if smoother_output & SMOOTHER_DISTURBANCE_COV:
-        smoothed_state_disturbance_cov = (
-            np.zeros((model.k_posdef, model.k_posdef, model.nobs),
-                     dtype=kfilter.dtype)
-        )
+        if smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
+            self.scaled_smoothed_estimator = (
+                np.zeros((model.k_states, model.nobs + 1), dtype=kfilter.dtype))
+            self.smoothing_error = (
+                np.zeros((model.k_endog, model.nobs), dtype=kfilter.dtype))
+        if smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
+            self.scaled_smoothed_estimator_cov = (
+                np.zeros((model.k_states, model.k_states, model.nobs + 1),
+                         dtype=kfilter.dtype))
+
+        # State smoothing
+        if smoother_output & SMOOTHER_STATE:
+            self.smoothed_state = np.zeros((model.k_states, model.nobs),
+                                           dtype=kfilter.dtype)
+        if smoother_output & SMOOTHER_STATE_COV:
+            self.smoothed_state_cov = (
+                np.zeros((model.k_states, model.k_states, model.nobs),
+                         dtype=kfilter.dtype))
+
+        # Disturbance smoothing
+        if smoother_output & SMOOTHER_DISTURBANCE:
+            self.smoothed_state_disturbance = (
+                np.zeros((model.k_posdef, model.nobs), dtype=kfilter.dtype))
+            self.smoothed_measurement_disturbance = (
+                np.zeros((model.k_endog, model.nobs), dtype=kfilter.dtype))
+        if smoother_output & SMOOTHER_DISTURBANCE_COV:
+            self.smoothed_state_disturbance_cov = (
+                np.zeros((model.k_posdef, model.k_posdef, model.nobs),
+                         dtype=kfilter.dtype))
+            self.smoothed_measurement_disturbance_cov = (
+                np.zeros((model.k_endog, model.k_endog, model.nobs),
+                         dtype=kfilter.dtype))
+
+    def seek(self, t):
+        if t >= self.model.nobs:
+            raise IndexError("Observation index out of range")
+        self.t = t
+
+    def __iter__(self):
+        return self
+
+    def __call__(self):
+        self.seek(self.model.nobs-1)
+        # Perform backwards smoothing iterations
+        for i in range(self.model.nobs-1,-1,-1):
+            next(self)
+
+    def next(self):
+        # Check for valid iteration
+        if not self.t >= 0:
+            raise StopIteration
+
+        # Get local copies
+        t = self.t
+        kfilter = self.kfilter
+        model = self.model
+        smoother_output = self.smoother_output
+
+        scaled_smoothed_estimator = self.scaled_smoothed_estimator
+        scaled_smoothed_estimator_cov = self.scaled_smoothed_estimator_cov
+        smoothing_error = self.smoothing_error
+        smoothed_state = self.smoothed_state
+        smoothed_state_cov = self.smoothed_state_cov
+        smoothed_state_disturbance = self.smoothed_state_disturbance
+        smoothed_state_disturbance_cov = self.smoothed_state_disturbance_cov
+        smoothed_measurement_disturbance = self.smoothed_measurement_disturbance
         smoothed_measurement_disturbance_cov = (
-            np.zeros((model.k_endog, model.k_endog, model.nobs),
-                     dtype=kfilter.dtype)
-        )
+            self.smoothed_measurement_disturbance_cov)
+        tmp_L = self.tmp_L
 
-    # Smoothing recursions
-    for t in range(model.nobs - 1, -1, -1):
         # Get the appropriate (possibly time-varying) indices
         design_t = 0 if kfilter.design.shape[2] == 1 else t
         obs_cov_t = 0 if kfilter.obs_cov.shape[2] == 1 else t
@@ -174,22 +210,8 @@ def _kalman_smooth(model, kfilter, smoother_output):
                 ).dot(obs_cov)
             )
 
-    output = _SmootherOutput(
-        tmp_L=tmp_L,
-        scaled_smoothed_estimator=scaled_smoothed_estimator,
-        scaled_smoothed_estimator_cov=scaled_smoothed_estimator_cov,
-        smoothing_error=smoothing_error,
-        smoothed_state=smoothed_state,
-        smoothed_state_cov=smoothed_state_cov,
-        smoothed_state_disturbance=smoothed_state_disturbance,
-        smoothed_state_disturbance_cov=smoothed_state_disturbance_cov,
-        smoothed_measurement_disturbance=smoothed_measurement_disturbance,
-        smoothed_measurement_disturbance_cov=(
-            smoothed_measurement_disturbance_cov
-        ),
-    )
-
-    return output
+        # Advance the smoother
+        self.t -= 1
 
 
 class KalmanSmoother(KalmanFilter):
@@ -380,7 +402,25 @@ class KalmanSmoother(KalmanFilter):
                                ' smoothing with missing values.')
 
         # Run the smoother and update the output
-        output = _kalman_smooth(self, results, smoother_output)
+        smoother = _kalman_smoother(self, results, smoother_output)
+        smoother()
+
+        output = _SmootherOutput(
+            tmp_L=smoother.tmp_L,
+            scaled_smoothed_estimator=smoother.scaled_smoothed_estimator,
+            scaled_smoothed_estimator_cov=(
+                smoother.scaled_smoothed_estimator_cov),
+            smoothing_error=smoother.smoothing_error,
+            smoothed_state=smoother.smoothed_state,
+            smoothed_state_cov=smoother.smoothed_state_cov,
+            smoothed_state_disturbance=smoother.smoothed_state_disturbance,
+            smoothed_state_disturbance_cov=(
+                smoother.smoothed_state_disturbance_cov),
+            smoothed_measurement_disturbance=(
+                smoother.smoothed_measurement_disturbance),
+            smoothed_measurement_disturbance_cov=(
+                smoother.smoothed_measurement_disturbance_cov),
+        )
         results.update_smoother(output)
 
         return results
