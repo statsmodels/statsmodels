@@ -249,13 +249,13 @@ class SetupKPSS(object):
 
 
 class TestKPSS(SetupKPSS):
-    def kpss_fail_nonvector_input(self):
+    def test_fail_nonvector_input(self):
         kpss(self.x)  # should be fine
 
         x = np.random.rand(20, 2)
         assert_raises(ValueError, kpss, x)
 
-    def kpss_fail_unclear_hypothesis(self):
+    def test_fail_unclear_hypothesis(self):
         hypo = "level"
         kpss(self.x, hypo)  # should be fine
 
