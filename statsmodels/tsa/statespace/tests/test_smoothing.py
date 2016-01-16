@@ -142,7 +142,7 @@ class TestStatesAR3(object):
 
 class TestStatesMissingAR3(object):
     @classmethod
-    def setup_class(cls, alternate_timing=True, *args, **kwargs):
+    def setup_class(cls, *args, **kwargs):
         # Dataset
         path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
         cls.stata = pd.read_csv(path)
@@ -169,7 +169,61 @@ class TestStatesMissingAR3(object):
         )
 
         # Parameters from from Stata's sspace MLE estimation
-        cls.params = np.r_[.5270715, .0952613, .2580355, .5307459]
-        
-    def test_missing_smooth(self):
-        assert_raises(RuntimeError, self.model.smooth, self.params)
+        params = np.r_[.5270715, .0952613, .2580355, .5307459]
+        cls.results = cls.model.smooth(params, return_ssm=True)
+
+        # Calculate the determinant of the covariance matrices (for easy
+        # comparison to other languages without having to store 2-dim arrays)
+        cls.results.det_predicted_state_cov = np.zeros((1, cls.model.nobs))
+        cls.results.det_smoothed_state_cov = np.zeros((1, cls.model.nobs))
+        for i in range(cls.model.nobs):
+            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
+                cls.results.predicted_state_cov[:,:,i])
+            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:,:,i])
+
+        # Perform simulation smoothing
+        n_disturbance_variates = (
+            (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
+        )
+        cls.sim = cls.model.simulation_smoother()
+        cls.sim.simulate(
+            disturbance_variates=np.zeros(n_disturbance_variates),
+            initial_state_variates=np.zeros(cls.model.k_states)
+        )
+
+    def test_predicted_states(self):
+        assert_almost_equal(
+            self.results.predicted_state[:,:-1].T,
+            self.matlab_ssm[['a1', 'a2', 'a3']], 4
+        )
+
+    def test_predicted_states_cov(self):
+        assert_almost_equal(
+            self.results.det_predicted_state_cov.T,
+            self.matlab_ssm[['detP']], 4
+        )
+
+    def test_smoothed_states(self):
+        assert_almost_equal(
+            self.results.smoothed_state.T,
+            self.matlab_ssm[['alphahat1', 'alphahat2', 'alphahat3']], 4
+        )
+
+    def test_smoothed_states_cov(self):
+        assert_almost_equal(
+            self.results.det_smoothed_state_cov.T,
+            self.matlab_ssm[['detV']], 4
+        )
+
+    def test_smoothed_measurement_disturbance(self):
+        assert_almost_equal(
+            self.results.smoothed_measurement_disturbance.T,
+            self.matlab_ssm[['eps']], 4
+        )
+
+    def test_smoothed_measurement_disturbance_cov(self):
+        assert_almost_equal(
+            self.results.smoothed_measurement_disturbance_cov[0].T,
+            self.matlab_ssm[['epsvar']], 4
+        )
