@@ -243,6 +243,47 @@ class TestGrangerCausality(object):
         assert_raises(ValueError, grangercausalitytests, X, 3, verbose=False)
 
 
+class SetupKPSS(object):
+    data = macrodata.load()
+    x = data.data['realgdp']
+
+
+class TestKPSS(SetupKPSS):
+
+    def kpss_fail_nonvector_input(self):
+        kpss(self.x)  # should be fine
+
+        x = np.random.rand(20, 2)
+        assert_raises(ValueError, kpss, x)
+
+    def kpss_fail_unclear_hypothesis(self):
+        hypo = "level"
+        kpss(self.x, hypo)  # should be fine
+
+        hypo = "trend"
+        kpss(self.x, hypo)  # should be fine also
+        assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
+
+    def test_teststat(self):
+        kpss_stat, *rest = kpss(self.x, "level", 3)
+        assert_almost_equal(kpss_stat, 5.0168, DECIMAL_4)
+
+        kpss_stat, *rest = kpss(self.x, "trend", 3)
+        assert_almost_equal(kpss_stat, 1.1827, DECIMAL_4)
+
+    def test_pval(self):
+        kpss_stat, pval, *rest = kpss(self.x, "level", 3)
+        assert_almost_equal(pval, 0.01, DECIMAL_2)
+
+        kpss_stat, pval, *rest = kpss(self.x, "trend", 3)
+        assert_almost_equal(pval, 0.01, DECIMAL_2)
+
+    def test_lags_and_flag(self):
+        kpss_stat, pval, lags, flag, crits = kpss(self.x, "level")
+        assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
+        assert_equal(flag, -1)
+
+
 
 def test_pandasacovf():
     s = Series(lrange(1, 11))
