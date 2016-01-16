@@ -1150,6 +1150,7 @@ def kpss(x, null_hypo="level", lags=None):
     return kpss_stat, p_value, lags, flag, {'10%' : crit[0], '5%' : crit[1],
                                             '2.5%' : crit[2], '1%' : crit[3]}
 
+
 def _sigma_est_kpss(resids, nobs, lags):
     """
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
