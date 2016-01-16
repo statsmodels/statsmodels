@@ -27,11 +27,12 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class TestStatesAR3(object):
-    def __init__(self, *args, **kwargs):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
         # Dataset / Stata comparison
         path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
-        self.stata = pd.read_csv(path)
-        self.stata.index = pd.date_range(start='1960-01-01', periods=124,
+        cls.stata = pd.read_csv(path)
+        cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
                                          freq='QS')
         # Matlab comparison
         path = current_path + os.sep+'results/results_wpi1_ar3_matlab_ssm.csv'
@@ -39,29 +40,29 @@ class TestStatesAR3(object):
             'a1','a2','a3','detP','alphahat1','alphahat2','alphahat3',
             'detV','eps','epsvar','eta','etavar'
         ]
-        self.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
+        cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # Regression tests data
         path = current_path + os.sep+'results/results_wpi1_ar3_regression.csv'
-        self.regression = pd.read_csv(path)
+        cls.regression = pd.read_csv(path)
 
-        self.model = sarimax.SARIMAX(
-            self.stata['wpi'], order=(3, 1, 0), simple_differencing=True,
+        cls.model = sarimax.SARIMAX(
+            cls.stata['wpi'], order=(3, 1, 0), simple_differencing=True,
             hamilton_representation=True, *args, **kwargs
         )
 
         # Parameters from from Stata's sspace MLE estimation
         params = np.r_[.5270715, .0952613, .2580355, .5307459]
-        self.results = self.model.smooth(params)
+        cls.results = cls.model.smooth(params)
 
         # Calculate the determinant of the covariance matrices (for easy
         # comparison to other languages without having to store 2-dim arrays)
-        self.results.det_predicted_state_cov = np.zeros((1, self.model.nobs))
-        self.results.det_smoothed_state_cov = np.zeros((1, self.model.nobs))
-        for i in range(self.model.nobs):
-            self.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                self.results.filter_results.predicted_state_cov[:,:,i])
-            self.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                self.results.smoother_results.smoothed_state_cov[:,:,i])
+        cls.results.det_predicted_state_cov = np.zeros((1, cls.model.nobs))
+        cls.results.det_smoothed_state_cov = np.zeros((1, cls.model.nobs))
+        for i in range(cls.model.nobs):
+            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
+                cls.results.filter_results.predicted_state_cov[:,:,i])
+            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
+                cls.results.smoother_results.smoothed_state_cov[:,:,i])
 
     def test_predict_obs(self):
         assert_almost_equal(
@@ -140,11 +141,12 @@ class TestStatesAR3(object):
 
 
 class TestStatesMissingAR3(object):
-    def __init__(self, alternate_timing=True, *args, **kwargs):
+    @classmethod
+    def setup_class(cls, alternate_timing=True, *args, **kwargs):
         # Dataset
         path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
-        self.stata = pd.read_csv(path)
-        self.stata.index = pd.date_range(start='1960-01-01', periods=124,
+        cls.stata = pd.read_csv(path)
+        cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
                                          freq='QS')
         # Matlab comparison
         path = current_path + os.sep+'results/results_wpi1_missing_ar3_matlab_ssm.csv'
@@ -152,22 +154,22 @@ class TestStatesMissingAR3(object):
             'a1','a2','a3','detP','alphahat1','alphahat2','alphahat3',
             'detV','eps','epsvar','eta','etavar'
         ]
-        self.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
+        cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # Regression tests data
         path = current_path + os.sep+'results/results_wpi1_missing_ar3_regression.csv'
-        self.regression = pd.read_csv(path)
+        cls.regression = pd.read_csv(path)
 
         # Create missing observations
-        self.stata['dwpi'] = self.stata['wpi'].diff()
-        self.stata.ix[10:21, 'dwpi'] = np.nan
+        cls.stata['dwpi'] = cls.stata['wpi'].diff()
+        cls.stata.ix[10:21, 'dwpi'] = np.nan
 
-        self.model = sarimax.SARIMAX(
-            self.stata.ix[1:,'dwpi'], order=(3, 0, 0),
+        cls.model = sarimax.SARIMAX(
+            cls.stata.ix[1:,'dwpi'], order=(3, 0, 0),
             hamilton_representation=True, *args, **kwargs
         )
 
         # Parameters from from Stata's sspace MLE estimation
-        self.params = np.r_[.5270715, .0952613, .2580355, .5307459]
+        cls.params = np.r_[.5270715, .0952613, .2580355, .5307459]
         
     def test_missing_smooth(self):
         assert_raises(RuntimeError, self.model.smooth, self.params)

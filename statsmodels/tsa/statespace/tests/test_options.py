@@ -41,15 +41,16 @@ from numpy.testing import assert_equal
 
 
 class Options(object):
-    def __init__(self, *args, **kwargs):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
 
         # Dummy data
         endog = np.arange(10)
         k_states = 1
 
-        self.model = KalmanSmoother(k_endog=1, k_states=k_states, *args,
-                                  **kwargs)
-        self.model.bind(endog)
+        cls.model = KalmanSmoother(k_endog=1, k_states=k_states, *args,
+                                   **kwargs)
+        cls.model.bind(endog)
 
 class TestOptions(Options):
     def test_filter_methods(self):
