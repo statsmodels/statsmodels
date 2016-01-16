@@ -1294,6 +1294,9 @@ class FilterResults(FrozenRepresentation):
             self._kalman_gain = np.zeros(
                 (self.k_states, self.k_endog, self.nobs), dtype=self.dtype)
             for t in range(self.nobs):
+                if self.nmissing[t] == self.k_endog:
+                    continue
+
                 design_t = 0 if self.design.shape[2] == 1 else t
                 transition_t = 0 if self.transition.shape[2] == 1 else t
                 self._kalman_gain[:, :, t] = np.dot(
