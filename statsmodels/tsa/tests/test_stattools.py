@@ -249,6 +249,17 @@ class SetupKPSS(object):
 
 
 class TestKPSS(SetupKPSS):
+    """
+    R-code
+    ------
+    library(tseries)
+    kpss.stat(x, "Level")
+    kpss.stat(x, "Trend")
+
+    In this context, x is the vector containing the
+    macrodata['realgdp'] series.
+    """
+
     def test_fail_nonvector_input(self):
         kpss(self.x)  # should be fine
 
@@ -256,11 +267,12 @@ class TestKPSS(SetupKPSS):
         assert_raises(ValueError, kpss, x)
 
     def test_fail_unclear_hypothesis(self):
-        hypo = "level"
-        kpss(self.x, hypo)  # should be fine
+        # these should be fine,
+        kpss(self.x, "level")
+        kpss(self.x, "LEVEL")
+        kpss(self.x, "trend")
+        kpss(self.x, "TREND")
 
-        hypo = "trend"
-        kpss(self.x, hypo)  # should be fine also
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
 
     def test_teststat(self):
