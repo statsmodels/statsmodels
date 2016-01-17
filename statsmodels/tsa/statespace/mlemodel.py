@@ -421,7 +421,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                   cov_type=cov_type, cov_kwds=cov_kwds)
             except Exception as e:
                 warnings.warn('Could not perform smoothing; message was "%s".'
-                              ' Returning filtered results.' % e.message)
+                              ' Returning filtered results.' % str(e))
                 res = self.filter(mlefit.params, transformed=False,
                                   cov_type=cov_type, cov_kwds=cov_kwds)
 
