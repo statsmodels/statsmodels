@@ -1093,8 +1093,7 @@ def kpss(x, null_hypo="level", lags=None):
     the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
     Table 1 of Kwiatkowski et al. (1992). If the computed statistic is 
-    outside the table of critical values, then a warning message is 
-    generated.
+    outside the table of critical values, a warning message is generated.
 
     Missing values are not handled.
 
