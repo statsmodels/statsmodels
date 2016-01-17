@@ -52,11 +52,11 @@ class _kalman_smoother(object):
 
         # Intermediate values
         self.tmp_L = np.zeros((model.k_states, model.k_states, model.nobs),
-                               dtype=kfilter.dtype)
+                              dtype=kfilter.dtype)
 
         if smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
             self.scaled_smoothed_estimator = (
-                np.zeros((model.k_states, model.nobs + 1), dtype=kfilter.dtype))
+                np.zeros((model.k_states, model.nobs+1), dtype=kfilter.dtype))
             self.smoothing_error = (
                 np.zeros((model.k_endog, model.nobs), dtype=kfilter.dtype))
         if smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
@@ -98,7 +98,7 @@ class _kalman_smoother(object):
     def __call__(self):
         self.seek(self.model.nobs-1)
         # Perform backwards smoothing iterations
-        for i in range(self.model.nobs-1,-1,-1):
+        for i in range(self.model.nobs-1, -1, -1):
             next(self)
 
     def next(self):
@@ -124,12 +124,13 @@ class _kalman_smoother(object):
         smoothed_state_cov = self.smoothed_state_cov
         smoothed_state_disturbance = self.smoothed_state_disturbance
         smoothed_state_disturbance_cov = self.smoothed_state_disturbance_cov
-        smoothed_measurement_disturbance = self.smoothed_measurement_disturbance
+        smoothed_measurement_disturbance = (
+            self.smoothed_measurement_disturbance)
         smoothed_measurement_disturbance_cov = (
             self.smoothed_measurement_disturbance_cov)
         tmp_L = self.tmp_L
 
-        # Seek the Cython Kalman filter to the appropriate place, setup matrices
+        # Seek the Cython Kalman filter to the right place, setup matrices
         _kfilter.seek(t, False)
         _kfilter.initialize_statespace_object_pointers()
         _kfilter.initialize_filter_object_pointers()
@@ -150,7 +151,8 @@ class _kalman_smoother(object):
         # Get references to representation matrices and Kalman filter output
         if missing_entire_obs or missing_partial_obs:
             # TODO can this np.array call be done just once at the beginning?
-            design = np.array(_kfilter.selected_design).reshape(model.design[:,:,design_t].shape)
+            design = np.array(_kfilter.selected_design).reshape(
+                model.design[:, :, design_t].shape)
         else:
             design = model.design[:, :, design_t]
         if missing_partial_obs:
@@ -185,7 +187,8 @@ class _kalman_smoother(object):
             else:
                 smoothing_error[:, t] = (
                     F_inv.dot(forecasts_error) -
-                    kalman_gain.transpose().dot(scaled_smoothed_estimator[:, t])
+                    kalman_gain.transpose().dot(
+                        scaled_smoothed_estimator[:, t])
                 )
                 scaled_smoothed_estimator[:, t - 1] = (
                     design.transpose().dot(smoothing_error[:, t]) +
