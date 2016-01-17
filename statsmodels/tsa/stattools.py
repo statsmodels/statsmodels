@@ -1110,8 +1110,8 @@ def kpss(x, null_hypo="level", lags=None):
     x = np.asarray(x)
     hypo = null_hypo.lower()
 
-    # reshape as column vector: if m is not one, 1 * n != m * n
-    if nobs != x.reshape((-1, 1)).shape[0]:
+    # if n != m * n
+    if nobs != x.size:
         raise ValueError("x of shape {} not understood".format(x.shape))
 
     if hypo == "trend":
@@ -1154,13 +1154,14 @@ def kpss(x, null_hypo="level", lags=None):
 def _sigma_est_kpss(resids, nobs, lags):
     """
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
-    consistent estimator used for the variance.
+    consistent estimator for the variance.
     """
     s_hat = sum(resids ** 2)
     for i in range(1, lags + 1):
         resids_prod = sum([resids[j] * resids[j - i] for j in range(i, nobs)])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
+
 
 
 if __name__ == "__main__":
