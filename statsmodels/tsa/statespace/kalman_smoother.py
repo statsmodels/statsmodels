@@ -102,6 +102,10 @@ class _kalman_smoother(object):
             next(self)
 
     def next(self):
+        # next() is required for compatibility with Python2.7.
+        return self.__next__()
+
+    def __next__(self):
         # Check for valid iteration
         if not self.t >= 0:
             raise StopIteration
