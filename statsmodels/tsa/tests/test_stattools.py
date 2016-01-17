@@ -5,8 +5,8 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                arma_order_select_ic)
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           dec, assert_)
+from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
+                           assert_raises, dec, assert_)
 from numpy import genfromtxt#, concatenate
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
@@ -288,9 +288,10 @@ class TestKPSS(SetupKPSS):
         kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
         assert_equal(pval, 0.01)
 
-    def test_lags(self):
+    def test_lags_and_warning(self):
         kpss_stat, pval, lags, crits = kpss(self.x, "level")
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
+        assert_warns(UserWarning, kpss, self.x)
 
 
 
