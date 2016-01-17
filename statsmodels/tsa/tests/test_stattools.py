@@ -288,7 +288,7 @@ class TestKPSS(SetupKPSS):
         kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
         assert_equal(pval, 0.01)
 
-    def test_lags_and_warning(self):
+    def test_lags(self):
         kpss_stat, pval, lags, crits = kpss(self.x, "level")
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
         # assert_warns(UserWarning, kpss, self.x)
