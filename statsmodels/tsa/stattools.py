@@ -1083,10 +1083,6 @@ def kpss(x, null_hypo="level", lags=None):
         The p-value of the test
     lags : int
         The truncation lag parameter
-    flag: int
-        * -1 : the p-value is smaller than the indicated p-value.
-        * 0 : the p-value is the indicated p-value.
-        * 1 : the p-value is greater than the indicated p-value.
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
@@ -1096,7 +1092,9 @@ def kpss(x, null_hypo="level", lags=None):
     To estimate sigma^2 the Newey-West estimator is used. If lags is None,
     the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
-    Table 1 of Kwiatkowski et al. (1992).
+    Table 1 of Kwiatkowski et al. (1992). If the computed statistic is 
+    outside the table of critical values, then a warning message is 
+    generated.
 
     Missing values are not handled.
 
@@ -1106,11 +1104,13 @@ def kpss(x, null_hypo="level", lags=None):
     the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
     `Journal of Econometrics` 54, 159–178.
     """
+    from warnings import warn
+
     nobs = len(x)
     x = np.asarray(x)
     hypo = null_hypo.lower()
 
-    # if n != m * n
+    # if m is not one, n != m * n
     if nobs != x.size:
         raise ValueError("x of shape {} not understood".format(x.shape))
 
@@ -1141,14 +1141,12 @@ def kpss(x, null_hypo="level", lags=None):
     p_value = np.interp(kpss_stat, crit, pvals)
 
     if p_value == pvals[-1]:
-        flag = -1
+        warn("p-value is smaller than the indicated p-value")
     elif p_value == pvals[0]:
-        flag = 1
-    else:
-        flag = 0
+        warn("p-value is greater than the indicated p-value")
 
-    return kpss_stat, p_value, lags, flag, {'10%' : crit[0], '5%' : crit[1],
-                                            '2.5%' : crit[2], '1%' : crit[3]}
+    return kpss_stat, p_value, lags, {'10%' : crit[0], '5%' : crit[1],
+                                      '2.5%' : crit[2], '1%' : crit[3]}
 
 
 def _sigma_est_kpss(resids, nobs, lags):
