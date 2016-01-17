@@ -252,7 +252,6 @@ class TestKPSS(SetupKPSS):
     """
     R-code
     ------
-    library(tseries)
     kpss.stat(x, "Level")
     kpss.stat(x, "Trend")
 
@@ -276,23 +275,22 @@ class TestKPSS(SetupKPSS):
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
 
     def test_teststat(self):
-        kpss_stat, pval, lags, flag, crits = kpss(self.x, "level", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, "level", 3)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
-        kpss_stat, pval, lags, flag, crits = kpss(self.x, "trend", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
-        kpss_stat, pval, lags, flag, crits = kpss(self.x, "level", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, "level", 3)
         assert_equal(pval, 0.01)
 
-        kpss_stat, pval, lags, flag, crits = kpss(self.x, "trend", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
         assert_equal(pval, 0.01)
 
-    def test_lags_and_flag(self):
-        kpss_stat, pval, lags, flag, crits = kpss(self.x, "level")
+    def test_lags(self):
+        kpss_stat, pval, lags, crits = kpss(self.x, "level")
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
-        assert_equal(flag, -1)
 
 
 
