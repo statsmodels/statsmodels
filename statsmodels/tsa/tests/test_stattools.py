@@ -289,7 +289,7 @@ class TestKPSS(SetupKPSS):
         assert_equal(pval, 0.01)
 
     def test_store(self):
-        kpss_stat, pval, crit, store = kpss(self.x, store=True)
+        kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
         assert isinstance(store, ResultsStore)
 
     def test_lags(self):
