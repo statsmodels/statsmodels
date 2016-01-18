@@ -267,25 +267,25 @@ class TestKPSS(SetupKPSS):
 
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
-        kpss(self.x, "level")
-        kpss(self.x, "LEVEL")
-        kpss(self.x, "trend")
-        kpss(self.x, "TREND")
+        kpss(self.x, 'c')
+        kpss(self.x, 'C')
+        kpss(self.x, 'ct')
+        kpss(self.x, 'CT')
 
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
 
     def test_teststat(self):
-        kpss_stat, pval, lags, crits = kpss(self.x, "level", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
-        kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
-        kpss_stat, pval, lags, crits = kpss(self.x, "level", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_equal(pval, 0.01)
 
-        kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
+        kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_equal(pval, 0.01)
 
     def test_store(self):
@@ -293,7 +293,7 @@ class TestKPSS(SetupKPSS):
         assert isinstance(store, ResultsStore)
 
     def test_lags(self):
-        kpss_stat, pval, lags, crits = kpss(self.x, "level")
+        kpss_stat, pval, lags, crits = kpss(self.x, 'c')
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
         # assert_warns(UserWarning, kpss, self.x)
 
