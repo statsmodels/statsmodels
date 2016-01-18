@@ -1055,7 +1055,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     return Bunch(**res)
 
 
-def kpss(x, null_hypo="level", lags=None):
+def kpss(x, null_hypo="level", lags=None, store=False):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1072,28 +1072,38 @@ def kpss(x, null_hypo="level", lags=None):
         * "trend" : The data is trend stationary
     lags : int
         Indicates the number of lags to be used. If None (default),
-        lags is set to int(12 * (n / 100) ** (1 / 4)), as outlined in
+        lags is set to int(12 * (n / 100)**(1 / 4)), as outlined in
         Schwert (1989).
+    store : bool
+        If True, then a result instance is returned additionally to
+        the KPSS statistic (default is False).
 
     Returns
     -------
     kpss_stat : float
         The KPSS test statistic
     p_value : float
-        The p-value of the test
+        The p-value of the test. The p-value is interpolated from
+        Table 1 in Kwiatkowski et al. (1992), and a boundary point
+        is returned if the test statistic is outside the table of
+        critical values, that is, if the p-value is outside the
+        interval (0.01, 0.1).
     lags : int
         The truncation lag parameter
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
+    resstore : (optional) instance of ResultStore
+        An instance of a dummy class with results attached as attributes
 
     Notes
     -----
     To estimate sigma^2 the Newey-West estimator is used. If lags is None,
     the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
-    Table 1 of Kwiatkowski et al. (1992). If the computed statistic is 
-    outside the table of critical values, a warning message is generated.
+    Table 1 of Kwiatkowski et al. (1992). If the computed statistic is
+    outside the table of critical values, then a warning message is
+    generated.
 
     Missing values are not handled.
 
@@ -1117,12 +1127,12 @@ def kpss(x, null_hypo="level", lags=None):
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
         # where beta is the trend, r_t a random walk and e_t a stationary
         # error term.
-        resids = OLS(x, add_constant(range(1, nobs + 1))).fit().resid
+        resids = OLS(x, add_constant(np.arange(1, nobs + 1))).fit().resid
         crit = [0.119, 0.146, 0.176, 0.216]
     elif hypo == "level":
         # special case of the model above, where beta = 0 (so the null
         # hypothesis is that the data is stationary around r_0).
-        resids = OLS(x, np.ones(nobs)).fit().resid
+        resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
     else:
         raise ValueError("hypothesis '{}' not understood".format(hypo))
@@ -1133,7 +1143,7 @@ def kpss(x, null_hypo="level", lags=None):
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
-    eta = sum(resids.cumsum() ** 2) / (nobs ** 2)  # eq. 11, p. 165
+    eta = sum(resids.cumsum()**2) / (nobs**2)  # eq. 11, p. 165
     s_hat = _sigma_est_kpss(resids, nobs, lags)
 
     kpss_stat = eta / s_hat
@@ -1144,8 +1154,17 @@ def kpss(x, null_hypo="level", lags=None):
     elif p_value == pvals[0]:
         warn("p-value is greater than the indicated p-value")
 
-    return kpss_stat, p_value, lags, {'10%' : crit[0], '5%' : crit[1],
-                                      '2.5%' : crit[2], '1%' : crit[3]}
+    crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
+
+    if store:
+        rstore = ResultsStore()
+        rstore.lags = lags
+        rstore.nobs = nobs
+        rstore.H0 = "The series is {} stationary".format(null_hypo)
+        rstore.HA = "The series is not {} stationary".format(null_hypo)
+        return kpss_stat, p_value, crit_dict, rstore
+    else:
+        return kpss_stat, p_value, lags, crit_dict
 
 
 def _sigma_est_kpss(resids, nobs, lags):
@@ -1155,7 +1174,7 @@ def _sigma_est_kpss(resids, nobs, lags):
     """
     s_hat = sum(resids ** 2)
     for i in range(1, lags + 1):
-        resids_prod = sum([resids[j] * resids[j - i] for j in range(i, nobs)])
+        resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
 
