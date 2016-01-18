@@ -1055,7 +1055,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     return Bunch(**res)
 
 
-def kpss(x, null_hypo="level", lags=None, store=False):
+def kpss(x, regression='c', lags=None, store=False):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1066,10 +1066,10 @@ def kpss(x, null_hypo="level", lags=None, store=False):
     ----------
     x : array_like, 1d
         Data series
-    null_hypo : str{"level", "trend"}
+    regression : str{'c', 'ct'}
         Indicates the null hypothesis for the KPSS test
-        * "level" : The data is level stationary (default)
-        * "trend" : The data is trend stationary
+        * 'c' : The data is stationary around a constant (default)
+        * 'ct' : The data is stationary around a trend
     lags : int
         Indicates the number of lags to be used. If None (default),
         lags is set to int(12 * (n / 100)**(1 / 4)), as outlined in
@@ -1117,19 +1117,19 @@ def kpss(x, null_hypo="level", lags=None, store=False):
 
     nobs = len(x)
     x = np.asarray(x)
-    hypo = null_hypo.lower()
+    hypo = regression.lower()
 
     # if m is not one, n != m * n
     if nobs != x.size:
         raise ValueError("x of shape {} not understood".format(x.shape))
 
-    if hypo == "trend":
+    if hypo == 'ct':
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
         # where beta is the trend, r_t a random walk and e_t a stationary
         # error term.
         resids = OLS(x, add_constant(np.arange(1, nobs + 1))).fit().resid
         crit = [0.119, 0.146, 0.176, 0.216]
-    elif hypo == "level":
+    elif hypo == 'c':
         # special case of the model above, where beta = 0 (so the null
         # hypothesis is that the data is stationary around r_0).
         resids = x - x.mean()
@@ -1160,8 +1160,11 @@ def kpss(x, null_hypo="level", lags=None, store=False):
         rstore = ResultsStore()
         rstore.lags = lags
         rstore.nobs = nobs
-        rstore.H0 = "The series is {} stationary".format(null_hypo)
-        rstore.HA = "The series is not {} stationary".format(null_hypo)
+
+        stationary_type = "level" if hypo == 'c' else "trend"
+        rstore.H0 = "The series is {} stationary".format(stationary_type)
+        rstore.HA = "The series is not {} stationary".format(stationary_type)
+
         return kpss_stat, p_value, crit_dict, rstore
     else:
         return kpss_stat, p_value, lags, crit_dict
