@@ -1,7 +1,7 @@
 from statsmodels.compat.python import lrange
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
-                                               coint, acovf, kpss,
+                                               coint, acovf, kpss, ResultsStore,
                                                arma_order_select_ic)
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
