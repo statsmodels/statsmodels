@@ -1175,7 +1175,7 @@ def _sigma_est_kpss(resids, nobs, lags):
     Computes equation 10, p. 164 of Kwiatkowski et al. (1992). This is the
     consistent estimator for the variance.
     """
-    s_hat = sum(resids ** 2)
+    s_hat = sum(resids**2)
     for i in range(1, lags + 1):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
