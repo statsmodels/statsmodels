@@ -1121,7 +1121,7 @@ def kpss(x, regression='c', lags=None, store=False):
 
     # if m is not one, n != m * n
     if nobs != x.size:
-        raise ValueError("x of shape {} not understood".format(x.shape))
+        raise ValueError("x of shape {0} not understood".format(x.shape))
 
     if hypo == 'ct':
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
@@ -1135,7 +1135,7 @@ def kpss(x, regression='c', lags=None, store=False):
         resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
     else:
-        raise ValueError("hypothesis '{}' not understood".format(hypo))
+        raise ValueError("hypothesis '{0}' not understood".format(hypo))
 
     if lags is None:
         # from Kwiatkowski et al. referencing Schwert (1989)
@@ -1162,8 +1162,8 @@ def kpss(x, regression='c', lags=None, store=False):
         rstore.nobs = nobs
 
         stationary_type = "level" if hypo == 'c' else "trend"
-        rstore.H0 = "The series is {} stationary".format(stationary_type)
-        rstore.HA = "The series is not {} stationary".format(stationary_type)
+        rstore.H0 = "The series is {0} stationary".format(stationary_type)
+        rstore.HA = "The series is not {0} stationary".format(stationary_type)
 
         return kpss_stat, p_value, crit_dict, rstore
     else:
