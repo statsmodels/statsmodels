@@ -288,6 +288,10 @@ class TestKPSS(SetupKPSS):
         kpss_stat, pval, lags, crits = kpss(self.x, "trend", 3)
         assert_equal(pval, 0.01)
 
+    def test_store(self):
+        kpss_stat, pval, crit, store = kpss(self.x, store=True)
+        assert isinstance(store, ResultsStore)
+
     def test_lags(self):
         kpss_stat, pval, lags, crits = kpss(self.x, "level")
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
