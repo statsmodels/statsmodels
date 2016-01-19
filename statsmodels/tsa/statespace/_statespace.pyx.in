@@ -758,7 +758,7 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
         # diagonals, in the Cholesky decomposition case)
         determinant = 1.0
         for i in range(kfilter.k_endog):
-            determinant = determinant * kfilter.forecast_error_fac[i, i]
+            determinant = determinant * kfilter._forecast_error_fac[i + i*kfilter.k_endog]
         determinant = determinant**2
 
     return determinant
@@ -802,9 +802,9 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cy
         determinant = 1
         for i in range(kfilter.k_endog):
             if not kfilter._forecast_error_ipiv[i] == i+1:
-                determinant *= -1*kfilter.forecast_error_fac[i, i]
+                determinant *= -1*kfilter._forecast_error_fac[i + i*kfilter.k_endog]
             else:
-                determinant *= kfilter.forecast_error_fac[i, i]
+                determinant *= kfilter._forecast_error_fac[i + i*kfilter.k_endog]
 
     return determinant
 
