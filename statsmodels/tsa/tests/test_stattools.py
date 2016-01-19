@@ -1,12 +1,12 @@
 from statsmodels.compat.python import lrange
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
-                                               coint, acovf,
+                                               coint, acovf, kpss, ResultsStore,
                                                arma_order_select_ic)
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           dec, assert_)
+from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
+                           assert_raises, dec, assert_)
 from numpy import genfromtxt#, concatenate
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
@@ -241,6 +241,62 @@ class TestGrangerCausality(object):
         X = np.random.rand(10, 2)
         grangercausalitytests(X, 2, verbose=False)  # This should pass.
         assert_raises(ValueError, grangercausalitytests, X, 3, verbose=False)
+
+
+class SetupKPSS(object):
+    data = macrodata.load()
+    x = data.data['realgdp']
+
+
+class TestKPSS(SetupKPSS):
+    """
+    R-code
+    ------
+    library(tseries)
+    kpss.stat(x, "Level")
+    kpss.stat(x, "Trend")
+
+    In this context, x is the vector containing the
+    macrodata['realgdp'] series.
+    """
+
+    def test_fail_nonvector_input(self):
+        kpss(self.x)  # should be fine
+
+        x = np.random.rand(20, 2)
+        assert_raises(ValueError, kpss, x)
+
+    def test_fail_unclear_hypothesis(self):
+        # these should be fine,
+        kpss(self.x, 'c')
+        kpss(self.x, 'C')
+        kpss(self.x, 'ct')
+        kpss(self.x, 'CT')
+
+        assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
+
+    def test_teststat(self):
+        kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
+        assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
+
+        kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
+        assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
+
+    def test_pval(self):
+        kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
+        assert_equal(pval, 0.01)
+
+        kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
+        assert_equal(pval, 0.01)
+
+    def test_store(self):
+        kpss_stat, pval, crit, store = kpss(self.x, store=True)
+        assert isinstance(store, ResultsStore)
+
+    def test_lags(self):
+        kpss_stat, pval, lags, crits = kpss(self.x, 'c')
+        assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
+        # assert_warns(UserWarning, kpss, self.x)
 
 
 
