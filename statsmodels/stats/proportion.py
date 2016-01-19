@@ -566,9 +566,12 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
     TODO: add continuity correction or other improvements for small samples.
 
     '''
-    count=np.asarray(count)
-    nobs=np.asarray(nobs)
+    count = np.asarray(count)
+    nobs = np.asarray(nobs)
     
+    if nobs.size == 1 :
+        nobs = nobs * np.ones(len(count))
+
     prop = count * 1. / nobs
     k_sample = np.size(prop)
     if k_sample == 1:
