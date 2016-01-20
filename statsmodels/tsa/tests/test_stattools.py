@@ -290,8 +290,11 @@ class TestKPSS(SetupKPSS):
         assert_equal(pval, 0.01)
 
     def test_store(self):
-        kpss_stat, pval, crit, store = kpss(self.x, store=True)
-        assert isinstance(store, ResultsStore)
+        kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
+
+        # assert attributes, and make sure they're correct
+        assert_equal(store.nobs, len(self.x))
+        assert_equal(store.lags, 3)
 
     def test_lags(self):
         kpss_stat, pval, lags, crits = kpss(self.x, 'c')
