@@ -653,7 +653,7 @@ class CompareMeans(object):
             data2 respectively.
 
         Returns
-        _______
+        -------
         A CompareMeans instance.
         
         '''
@@ -665,7 +665,6 @@ class CompareMeans(object):
 
         Parameters
         ----------
-
         use_t : bool, optional
             if use_t is True, then t test results are returned
             if use_t is False, then z test results are returned
@@ -673,15 +672,16 @@ class CompareMeans(object):
             significance level for the confidence interval, coverage is
             ``1-alpha``
         usevar : string, 'pooled' or 'unequal'
-            If ``pooled``, then the standard deviation of the samples is assumed to be
-            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
-            of freedom is used
+            If ``pooled``, then the standard deviation of the samples is
+            assumed to be the same. If ``unequal``, then the variance of
+            Welsh ttest will be used, and the degrees of freedom are those
+            of Satterthwaite if ``use_t`` is True.
         value : float
             difference between the means under the Null hypothesis.
 
         Returns
         -------
-        smry : string
+        smry : SimpleTable
 
         '''
 
