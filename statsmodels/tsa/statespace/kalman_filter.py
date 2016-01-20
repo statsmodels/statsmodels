@@ -1290,21 +1290,38 @@ class FilterResults(FrozenRepresentation):
             self._kalman_gain = np.zeros(
                 (self.k_states, self.k_endog, self.nobs), dtype=self.dtype)
             for t in range(self.nobs):
+                # In the case of entirely missing observations, let the Kalman
+                # gain be zeros.
                 if self.nmissing[t] == self.k_endog:
                     continue
 
                 design_t = 0 if self.design.shape[2] == 1 else t
                 transition_t = 0 if self.transition.shape[2] == 1 else t
-                self._kalman_gain[:, :, t] = np.dot(
-                    np.dot(
-                        self.transition[:, :, transition_t],
-                        self.predicted_state_cov[:, :, t]
-                    ),
-                    np.dot(
-                        np.transpose(self.design[:, :, design_t]),
-                        np.linalg.inv(self.forecasts_error_cov[:, :, t])
+                if self.nmissing[t] == 0:
+                    self._kalman_gain[:, :, t] = np.dot(
+                        np.dot(
+                            self.transition[:, :, transition_t],
+                            self.predicted_state_cov[:, :, t]
+                        ),
+                        np.dot(
+                            np.transpose(self.design[:, :, design_t]),
+                            np.linalg.inv(self.forecasts_error_cov[:, :, t])
+                        )
                     )
-                )
+                else:
+                    mask = ~self.missing[:, t].astype(bool)
+                    n = self.k_endog - self.nmissing[t]
+                    F = self.forecasts_error_cov[mask, mask, t]
+                    self._kalman_gain[:, mask, t] = np.dot(
+                        np.dot(
+                            self.transition[:, :, transition_t],
+                            self.predicted_state_cov[:, :, t]
+                        ),
+                        np.dot(
+                            np.transpose(self.design[mask, :, design_t]),
+                            np.linalg.inv(F.reshape(n,n))
+                        )
+                    )
         return self._kalman_gain
 
     @property
