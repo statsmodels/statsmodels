@@ -158,7 +158,13 @@ class PartialingSparse(object):
 
         """
         if self.method == 'lu':
-            return self.xtx_solve( self.xcond.T.dot(x))
+            # this fails in scipy < 0.14
+            try:
+                p = self.xtx_solve( self.xcond.T.dot(x))
+            except SystemError:
+                p =  np.column_stack([self.xtx_solve(xc) for
+                                      xc in self.xcond.T.dot(x).T])
+            return p
         else:
             return sparsela.lsqr(self.xcond, x)
 
