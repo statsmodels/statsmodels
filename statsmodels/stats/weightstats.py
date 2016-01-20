@@ -685,7 +685,10 @@ class CompareMeans(object):
 
         '''
 
-        confint_percents = 100 - alpha*100
+        d1 = self.d1
+        d2 = self.d2
+        
+        confint_percents = 100 - alpha * 100
         
         if use_t:
             tstat, pvalue, _ = self.ttest_ind(usevar=usevar, value=value)
@@ -704,17 +707,15 @@ class CompareMeans(object):
         pvalue = np.atleast_1d(pvalue)
         lower = np.atleast_1d(lower)
         upper = np.atleast_1d(upper)
-        conf_int = np.hstack((
-                            lower.reshape((-1, 1)),
-                            upper.reshape((-1, 1))))
-        value = value*np.ones(tstat.shape)
+        conf_int = np.column_stack((lower, upper))
+        params = d1.mean - d2.mean - value
         
-        title = 'A test for means equility'
+        title = 'Test for equality of means'
         yname = 'y' # not used in params_frame
         xname = ['subset #%d'%(ii + 1) for ii in range(tstat.shape[0])]
 
         from statsmodels.iolib.summary import summary_params
-        return summary_params((None, value, std_err, tstat, pvalue, conf_int),
+        return summary_params((None, params, std_err, tstat, pvalue, conf_int),
                 alpha=alpha, use_t=use_t, yname=yname, xname=xname,
                 title=title)
 
