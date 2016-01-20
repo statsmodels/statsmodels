@@ -636,6 +636,89 @@ class CompareMeans(object):
 #            d1.nobs1 = d1.sum_weights.astype(float)  #float just to make sure
 #        self.nobs2 = d2.sum_weights.astype(float)
 
+    @classmethod
+    def from_data(cls, data1, data2, weights1=None, weights2=None, 
+            ddof1=0, ddof2=0):
+        '''construct a CompareMeans object from data
+
+        Parameters
+        ----------
+        data1, data2 : array-like, 1-D or 2-D
+            compared datasets
+        weights1, weights2 : None or 1-D ndarray
+            weights for each observation of data1 and data2 respectively,
+            with same length as zero axis of corresponding dataset.
+        ddof1, ddof2 : int
+            default ddof1=0, ddof2=0, degrees of freedom for data1,
+            data2 respectively.
+
+        Returns
+        -------
+        A CompareMeans instance.
+        
+        '''
+        return cls(DescrStatsW(data1, weights=weights1, ddof=ddof1), 
+                DescrStatsW(data2, weights=weights2, ddof=ddof2))
+
+    def summary(self, use_t=True, alpha=0.05, usevar='pooled', value=0):
+        '''summarize the results of the hypothesis test
+
+        Parameters
+        ----------
+        use_t : bool, optional
+            if use_t is True, then t test results are returned
+            if use_t is False, then z test results are returned
+        alpha : float
+            significance level for the confidence interval, coverage is
+            ``1-alpha``
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is
+            assumed to be the same. If ``unequal``, then the variance of
+            Welsh ttest will be used, and the degrees of freedom are those
+            of Satterthwaite if ``use_t`` is True.
+        value : float
+            difference between the means under the Null hypothesis.
+
+        Returns
+        -------
+        smry : SimpleTable
+
+        '''
+
+        d1 = self.d1
+        d2 = self.d2
+        
+        confint_percents = 100 - alpha * 100
+        
+        if use_t:
+            tstat, pvalue, _ = self.ttest_ind(usevar=usevar, value=value)
+            lower, upper = self.tconfint_diff(alpha=alpha, usevar=usevar)
+        else:
+            tstat, pvalue = self.ztest_ind(usevar=usevar, value=value)
+            lower, upper = self.zconfint_diff(alpha=alpha, usevar=usevar)
+        
+        if usevar == 'pooled':
+            std_err = self.std_meandiff_pooledvar
+        else:
+            std_err = self.std_meandiff_separatevar
+        
+        std_err = np.atleast_1d(std_err)
+        tstat = np.atleast_1d(tstat)
+        pvalue = np.atleast_1d(pvalue)
+        lower = np.atleast_1d(lower)
+        upper = np.atleast_1d(upper)
+        conf_int = np.column_stack((lower, upper))
+        params = d1.mean - d2.mean - value
+        
+        title = 'Test for equality of means'
+        yname = 'y' # not used in params_frame
+        xname = ['subset #%d'%(ii + 1) for ii in range(tstat.shape[0])]
+
+        from statsmodels.iolib.summary import summary_params
+        return summary_params((None, params, std_err, tstat, pvalue, conf_int),
+                alpha=alpha, use_t=use_t, yname=yname, xname=xname,
+                title=title)
+
     @OneTimeProperty
     def std_meandiff_separatevar(self):
         #this uses ``_var`` to use ddof=0 for formula

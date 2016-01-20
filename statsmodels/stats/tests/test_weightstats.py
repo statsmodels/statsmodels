@@ -17,7 +17,7 @@ License: BSD (3-clause)
 
 import numpy as np
 from scipy import stats
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from numpy.testing import assert_, assert_almost_equal, assert_equal, assert_allclose
 from statsmodels.stats.weightstats import \
                 DescrStatsW, CompareMeans, ttest_ind, ztest, zconfint
 #import statsmodels.stats.weightstats as smws
@@ -158,7 +158,23 @@ class TestWeightstats(object):
         res2 = d1w_d2.tconfint_mean()
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
+    
+    def test_comparemeans_convenient_interface(self):
+        x1_2d, x2_2d = self.x1_2d, self.x2_2d
+        d1 = DescrStatsW(x1_2d)
+        d2 = DescrStatsW(x2_2d)
+        cm1 = CompareMeans(d1, d2)
+        
+        #smoke test for summary
+        from statsmodels.iolib.table import SimpleTable
+        for use_t in [True, False]:
+            for usevar in ['pooled', 'unequal']: 
+                smry = cm1.summary(use_t=use_t, usevar=usevar)
+                assert_(isinstance(smry, SimpleTable))
 
+        #test for from_data method
+        cm2 = CompareMeans.from_data(x1_2d, x2_2d)
+        assert_(str(cm1.summary()) == str(cm2.summary()))
 
 class CheckWeightstats1dMixin(object):
 
