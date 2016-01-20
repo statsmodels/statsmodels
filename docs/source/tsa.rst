@@ -24,7 +24,7 @@ the main classes will be made available in the statsmodels.tsa namespace. The mo
 structure is within statsmodels.tsa is
 
  - stattools : empirical properties and tests, acf, pacf, granger-causality,
-   adf unit root test, ljung-box test and others.
+   adf unit root test, kpss test, ljung-box test and others.
  - ar_model : univariate autoregressive process, estimation with conditional
    and exact maximum likelihood and conditional least-squares
  - arima_model : univariate ARMA process, estimation with conditional
@@ -71,6 +71,7 @@ Descriptive Statistics and Tests
    stattools.ccf
    stattools.periodogram
    stattools.adfuller
+   stattools.kpss
    stattools.q_stat
    stattools.grangercausalitytests
    stattools.levinson_durbin
