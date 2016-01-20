@@ -43,6 +43,68 @@ def generate_sample2():
     return y, exog
 
 
+from scipy import sparse
+
+def dummy_sparse(groups, dtype=np.float64):
+    '''create a sparse indicator from a group array with integer labels
+
+    Parameters
+    ----------
+    groups: ndarray, int, 1d (nobs,)
+        an array of group indicators for each observation. Group levels are assumed
+        to be defined as consecutive integers, i.e. range(n_groups) where
+        n_groups is the number of group levels.
+    dtype : numpy dtype
+        dtype of sparse matrix.
+        We need float64 for some applications with sparse linear algebra. For other
+        uses we can use an integer type which will use less memory.
+
+    Returns
+    -------
+    indi : ndarray, int8, 2d (nobs, n_groups)
+        an indicator array with one row per observation, that has 1 in the
+        column of the group level for that observation
+
+    Examples
+    --------
+
+    >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
+    >>> indi = dummy_sparse(g, dtype=np.int8)
+    >>> indi
+    <7x3 sparse matrix of type '<type 'numpy.int8'>'
+        with 7 stored elements in Compressed Sparse Row format>
+    >>> indi.todense()
+    matrix([[1, 0, 0],
+            [1, 0, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 0]], dtype=int8)
+
+
+    current behavior with missing groups
+    >>> g = np.array([0, 0, 2, 0, 2, 0])
+    >>> indi = dummy_sparse(g, dtype=np.int8)
+    >>> indi.todense()
+    matrix([[1, 0, 0],
+            [1, 0, 0],
+            [0, 0, 1],
+            [1, 0, 0],
+            [0, 0, 1],
+            [1, 0, 0]], dtype=int8)
+
+    '''
+
+    indptr = np.arange(len(groups)+1)
+    data = np.ones(len(groups), dtype=dtype)
+    indi = sparse.csr_matrix((data, groups, indptr))
+    #indi = sparse.csr_matrix((data, groups, indptr)).tocsc()
+    #TODO: construct csc directly
+
+    return indi
+
+
 class PartialingSparse(object):
     """class to condition an partial out a sparse matrix
 
@@ -73,6 +135,7 @@ class PartialingSparse(object):
         self.method = method.lower()
         if self.method == 'lu':
             self.xtx_solve = sparsela.factorized(x.T.dot(x))
+            # x.T.dot(x) should be csc for efficiency, warning if csr
         else:
             if self.method not in ['lsqr']:
                 raise ValueError('method can only be lu or lsqr')

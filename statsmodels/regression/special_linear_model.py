@@ -13,12 +13,14 @@ import pandas as pd
 
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools._sparse import PartialingSparse
+from statsmodels.tools._sparse import PartialingSparse, dummy_sparse
 
-def cat2dummy_sparse(xcat):
+def cat2dummy_sparse(xcat, use_pandas=False):
     """categorical to sparse dummy, use pandas for quick implementation
 
     xcat needs to be ndarray for now
+
+    use_pandas is currently only for testing purposes, it uses dense intermediat dummy
     """
     # prepare np array for column iteration
     if xcat.ndim == 1:
@@ -26,9 +28,14 @@ def cat2dummy_sparse(xcat):
     else:
         xcat_t = xcat.T
 
-    dfs = [pd.get_dummies(xc) for xc in xcat_t]
-    x = np.column_stack(dfs)[:, 1:]   # full rank
-    xsp = sparse.csc_matrix(x)  #.astype(int))  # int breaks in LU-solve
+    if use_pandas:
+        dfs = [pd.get_dummies(xc) for xc in xcat_t]
+        x = np.column_stack(dfs)[:, 1:]   # full rank
+        xsp = sparse.csc_matrix(x)  #.astype(int))  # int breaks in LU-solve
+    else:
+        ds = [dummy_sparse(xc) for xc in xcat_t]
+        xsp = sparse.hstack(ds, format='csr')[:, 1:]   # full rank
+
     return xsp
 
 
