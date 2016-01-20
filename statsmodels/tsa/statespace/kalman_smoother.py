@@ -730,7 +730,7 @@ class SmootherResults(FilterResults):
                 obs_intercept_t = 0 if self.obs_intercept.shape[1] == 1 else t
 
                 # For completely missing observations
-                if self.nmissing[t] == self.k_endog:
+                if self.nmissing[t] > 0:
                     # We can recover forecasts
                     self._smoothed_forecasts[:, t] = np.dot(
                         self.design[:, :, design_t], self.smoothed_state[:, t]
@@ -741,11 +741,6 @@ class SmootherResults(FilterResults):
                                self.smoothed_state_cov[:, :, t]),
                         self.design[:, :, design_t].T
                     ) + self.obs_cov[:, :, obs_cov_t]
-                # For partially missing observations
-                elif self.nmissing[t] > 0:
-                    self._smoothed_forecasts[:, t] = np.nan
-                    self._smoothed_forecasts_error[:, t] = np.nan
-                    self._smoothed_forecasts_error_cov[:, :, t] = np.nan
                 else:
                     self._smoothed_forecasts[:, t] = np.dot(
                         self.design[:, :, design_t], self.smoothed_state[:, t]
