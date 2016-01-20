@@ -1253,8 +1253,23 @@ class FilterResults(FrozenRepresentation):
                 # produce forecasts, but forecast errors and the forecast
                 # error covariance matrix will be zeros - make them nan to
                 # improve clarity of results.
-                if self.nmissing[t] == self.k_endog:
+                if self.nmissing[t] > 0:
                     # We can recover forecasts
+                    # For partially missing observations, the Kalman filter
+                    # will produce all elements (forecasts, forecast errors,
+                    # forecast error covariance matrices) as usual, but their
+                    # dimension will only be equal to the number of non-missing
+                    # elements, and their location in memory will be in the first
+                    # blocks (e.g. for the forecasts_error, the first
+                    # k_endog - nmissing[t] columns will be filled in), regardless
+                    # of which endogenous variables they refer to (i.e. the non-
+                    # missing endogenous variables for that observation).
+                    # Furthermore, the forecast error covariance matrix is only
+                    # valid for those elements. What is done is to set all elements
+                    # to nan for these observations so that they are flagged as
+                    # missing. The variables missing_forecasts, etc. then provide
+                    # the forecasts, etc. provided by the Kalman filter, from which
+                    # the data can be retrieved if desired.
                     self.forecasts[:, t] = np.dot(
                         self.design[:, :, design_t], self.predicted_state[:, t]
                     ) + self.obs_intercept[:, obs_intercept_t]
@@ -1264,25 +1279,6 @@ class FilterResults(FrozenRepresentation):
                                self.predicted_state_cov[:, :, t]),
                         self.design[:, :, design_t].T
                     ) + self.obs_cov[:, :, obs_cov_t]
-                # For partially missing observations, the Kalman filter
-                # will produce all elements (forecasts, forecast errors,
-                # forecast error covariance matrices) as usual, but their
-                # dimension will only be equal to the number of non-missing
-                # elements, and their location in memory will be in the first
-                # blocks (e.g. for the forecasts_error, the first
-                # k_endog - nmissing[t] columns will be filled in), regardless
-                # of which endogenous variables they refer to (i.e. the non-
-                # missing endogenous variables for that observation).
-                # Furthermore, the forecast error covariance matrix is only
-                # valid for those elements. What is done is to set all elements
-                # to nan for these observations so that they are flagged as
-                # missing. The variables missing_forecasts, etc. then provide
-                # the forecasts, etc. provided by the Kalman filter, from which
-                # the data can be retrieved if desired.
-                elif self.nmissing[t] > 0:
-                    self.forecasts[:, t] = np.nan
-                    self.forecasts_error[:, t] = np.nan
-                    self.forecasts_error_cov[:, :, t] = np.nan
 
     @property
     def kalman_gain(self):
