@@ -39,6 +39,66 @@ def cat2dummy_sparse(xcat, use_pandas=False):
     return xsp
 
 
+def _group_demean_iterative(exog_dense, groups, max_iter=10, atol=1e-8):
+    """iteratively demean an array for two-way fixed effects
+
+    This is intended for almost balanced panels. The data is converted
+    to a 3-dimensional array with nans for missing cells.
+
+    currently works only for two-way effects
+    groups have to be integers corresponding to range(k_cati)
+
+    no input error checking
+
+    This function will change as more options and special cases are
+    included.
+
+    Parameters
+    ----------
+    exog_dense : 2d ndarray
+        data with observations in rows and variables in columns.
+        This array will currently not be modified.
+    groups : 2d ndarray, int
+        groups labels specified as consecutive integers starting at zero
+    max_iter : int
+        maximum number of iterations
+    atol : float
+        tolerance for convergence. Convergence is achieved if the
+        maximum absolute change (np.ptp) is smaller than atol.
+
+    Returns
+    -------
+    ex_dm_w : ndarray
+        group demeaned exog_dense array in wide format
+    ex_dm : ndarray
+        group demeaned exog_dense array in long format
+    it : int
+        number of iterations used. If convergence has not been
+        achieved then it will be equal to max_iter - 1
+
+    """
+    # with unbalanced panel
+
+    k_cat = tuple((groups.max(0) + 1).tolist())
+    xm = np.empty(exog_dense.shape[1:] + k_cat)
+    xm.fill(np.nan)
+    xm[:, groups[:, 0], groups[:, 1]] = exog_dense.T
+    keep = ~np.isnan(xm[0]).ravel()
+    print(keep[:35])
+    finished = False
+    for it in range(max_iter):
+        for axis in range(1, xm.ndim):
+            group_mean = np.nanmean(xm, axis=axis, keepdims=True)
+            xm -= group_mean
+            if np.ptp(group_mean) < atol:
+                finished = True
+                break
+        if finished:
+            break
+
+    return xm, xm.reshape(exog_dense.shape[-1], -1).T[keep], it
+
+
 class OLSAbsorb(WLS):
     """OLS model that absorbs categorical explanatory variables
 
