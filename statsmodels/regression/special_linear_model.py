@@ -12,7 +12,7 @@ from scipy import sparse
 import pandas as pd
 
 
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.tools._sparse import PartialingSparse, dummy_sparse
 
 def cat2dummy_sparse(xcat, use_pandas=False):
@@ -39,7 +39,7 @@ def cat2dummy_sparse(xcat, use_pandas=False):
     return xsp
 
 
-class OLSAbsorb(OLS):
+class OLSAbsorb(WLS):
     """OLS model that absorbs categorical explanatory variables
 
     see docstring for OLS, the following only has the extra parameters for now
@@ -70,14 +70,14 @@ class OLSAbsorb(OLS):
         absorb = cat2dummy_sparse(exog_absorb)
         self.projector = PartialingSparse(absorb, method=absorb_method)
         super(OLSAbsorb, self).__init__(endog, exog, **kwds)
-        # projection is moved to whiten
-        #self.wendog = projector.partial_sparse(self.endog)[1]
-        #self.wexog = projector.partial_sparse(self.exog)[1]
+        # projection is in whiten
+
         self.k_absorb = absorb.shape[1]
         #self.df_resid -= self.k_absorb
         # inline doesn't work, df_resid is property
         self.df_resid = self.df_resid - self.k_absorb + 1
         #check this, why + 1
+        self.df_model = self.df_model + self.k_absorb - 1
 
 
         self.absorb = absorb   # mainly for checking

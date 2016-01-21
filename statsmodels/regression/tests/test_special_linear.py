@@ -10,18 +10,47 @@ import numpy as np
 from scipy import sparse
 import pandas as pd
 
-from statsmodels.regression.special_linear_model import OLS
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.special_linear_model import OLSAbsorb
 
 from numpy.testing import assert_allclose
 
 
 class CompareModels(object):
-    pass
+
+    def test_attributes(self):
+        res1 = self.res1
+        res2 = self.res2
+        slice_res1 = self.slice_res1
+        slice_res2 = self.slice_res2
+
+        good = ['HC0_se', 'HC1_se', '_data_attr', 'aic', 'bic', 'bse',
+                'centered_tss', 'df_model', 'df_resid', 'ess', 'f_pvalue',
+                'fvalue', 'k_constant', 'llf', 'mse_model', 'mse_resid',
+                'mse_total', 'nobs', 'params', 'pvalues', 'resid_pearson',
+                'rsquared', 'rsquared_adj', 'scale', 'ssr', 'tvalues',
+                'use_t', 'wresid']
+
+        known_fails = ['HC2_se', 'HC3_se', '_wexog_singular_values',
+                       'condition_number', 'eigenvals', 'fittedvalues',
+                       'resid', 'uncentered_tss']
+
+        for a in good:
+            a2 = getattr(res2, a)
+            a1 = getattr(res1, a)
+            alen = getattr(a2, '__len__', lambda:0)()
+            if alen > 0 and not alen == len(a1):
+                a1 = a1[slice_res1]
+                a2 = a2[slice_res2]
+            err_msg = a
+            # resid_pearson fails at tol=1e-13
+            assert_allclose(a1, a2, atol=1e-12, rtol=1e-12, err_msg=err_msg)
+
 
 class TestSparseAbsorb(CompareModels):
 
-    def test_temp(self):
+    @classmethod
+    def setup_class(self):
         #def generate_sample2():
         xcat1 = np.repeat(np.arange(5), 10)
         xcat2 = np.tile(np.arange(5), 10)
@@ -39,10 +68,6 @@ class TestSparseAbsorb(CompareModels):
         y = exogd.dot(betad) + exog.dot(beta) + 0.01 * np.random.randn(exog.shape[0])
 
         exog_full = np.column_stack((exogd, exog.toarray()))
-
-        #return y, exog
-
-
 
         res_ols = OLS(y, exog_full[:, :-1]).fit()
         #print(res_ols.params)
@@ -62,12 +87,19 @@ class TestSparseAbsorb(CompareModels):
         #      - res_absorb.params[0])
         # same as res_absorb.predict([1, 0, 0])
 
-        slice_res1 = slice(1, 3, None)
-        slice_res2 = slice(1, 3, None)
+        self.slice_res1 = slice(1, 3, None)
+        self.slice_res2 = slice(1, 3, None)
 
-        res1 = res_absorb
-        res2 = res_ols
+        self.res1 = res_absorb
+        self.res2 = res_ols
+
+    def test_temp(self):
+        res1 = self.res1
+        res2 = self.res2
+        slice_res1 = self.slice_res1
+        slice_res2 = self.slice_res2
+
         assert_allclose(res1.params[slice_res1], res2.params[slice_res2], rtol=1e-13)
         assert_allclose(res1.bse[slice_res1], res2.bse[slice_res2], rtol=1e-13)
         assert_allclose(res1.pvalues[slice_res1], res2.pvalues[slice_res2], rtol=1e-10)
-        assert_allclose(res_fe.params[1:], res_ols.params[3:], rtol=1e-13)
+        #assert_allclose(res_fe.params[1:], res_ols.params[3:], rtol=1e-13)
