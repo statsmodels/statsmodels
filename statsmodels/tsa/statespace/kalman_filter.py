@@ -1212,6 +1212,10 @@ class FilterResults(FrozenRepresentation):
             kalman_filter.predicted_state_cov, copy=True
         )
 
+        # Reset caches
+        self._kalman_gain = None
+        self._standardized_forecasts_error = None
+
         # Note: use forecasts rather than forecast, so as not to interfer
         # with the `forecast` methods in subclasses
         self.forecasts = np.array(kalman_filter.forecast, copy=True)
