@@ -159,8 +159,8 @@ class _kalman_smoother(object):
         predicted_state = kfilter.predicted_state[:, t]
         predicted_state_cov = kfilter.predicted_state_cov[:, :, t]
         
+        mask = ~kfilter.missing[:, t].astype(bool)
         if missing_partial_obs:
-            mask = ~kfilter.missing[:, t].astype(bool)
             # TODO can this np.array call be done just once at the beginning?
             design = np.array(_kfilter.selected_design).reshape(
                 model.design[:, :, design_t].shape)[:k_endog, :]
@@ -169,7 +169,8 @@ class _kalman_smoother(object):
             kalman_gain = kfilter.kalman_gain[:, mask, t]
                 
             forecasts_error_cov = np.array(
-                _kfilter.forecast_error_cov[:k_endog, :k_endog, t])
+                _kfilter.forecast_error_cov[:, :, t]
+                ).ravel(order='F')[:k_endog**2].reshape(k_endog, k_endog)
             forecasts_error = np.array(_kfilter.forecast_error[:k_endog, t])
             F_inv = np.linalg.inv(forecasts_error_cov)
             
