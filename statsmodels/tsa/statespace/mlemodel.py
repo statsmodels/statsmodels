@@ -347,6 +347,7 @@ class MLEModel(tsbase.TimeSeriesModel):
               method.
             - 'robust_cs' is the same as 'robust' except that the intermediate
               calculations use the 'cs' method.
+            - 'none' for no covariance matrix calculation.
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
@@ -1207,6 +1208,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
           method.
         - 'robust_cs' is the same as 'robust' except that the intermediate
           calculations use the 'cs' method.
+        - 'none' for no covariance matrix calculation.
         """
 
         import statsmodels.stats.sandwich_covariance as sw
@@ -1226,11 +1228,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         res.cov_kwds = {}
 
         # Calculate the new covariance matrix
-        if len(self.params) == 0:
+        k_params = len(self.params)
+        if k_params == 0:
             res.cov_params_default = np.zeros((0,0))
             res._rank = 0
-            res.cov_kwds['cov_type'] = (
+            res.cov_kwds['description'] = (
                 'No parameters estimated.')
+        elif cov_type == 'none':
+            res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
+            res._rank = np.nan
+            res.cov_kwds['description'] = (
+                'Covariance matrix not calculated.')
         elif self.cov_type == 'cs':
             res.cov_params_default = res.cov_params_cs
             res.cov_kwds['description'] = (
