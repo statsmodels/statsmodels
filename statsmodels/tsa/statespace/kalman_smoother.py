@@ -10,6 +10,7 @@ from collections import namedtuple
 import numpy as np
 from .representation import OptionWrapper
 from .kalman_filter import KalmanFilter, FilterResults
+import warnings
 
 SMOOTHER_STATE = 0x01          # Durbin and Koopman (2012), Chapter 4.4.2
 SMOOTHER_STATE_COV = 0x02      # ibid., Chapter 4.4.3
@@ -404,7 +405,8 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-    def smooth(self, smoother_output=None, results=None):
+    def smooth(self, smoother_output=None, results=None, run_filter=True,
+               prefix=None):
         """
         Apply the Kalman smoother to the statespace model.
 
@@ -419,6 +421,9 @@ class KalmanSmoother(KalmanFilter):
             If an object, then that object is updated with the smoothing data.
             If None, then a SmootherResults object is returned with both
             filtering and smoothing results.
+        run_filter : bool, optional
+            Whether or not to run the Kalman filter prior to smoothing. Default
+            is True.
         prefix : string
             The prefix of the datatype. Usually only used internally.
 
@@ -428,8 +433,6 @@ class KalmanSmoother(KalmanFilter):
         """
         if smoother_output is None:
             smoother_output = self.smoother_output
-
-        new_results = not isinstance(results, SmootherResults)
 
         # Set the class to be the default results class, if None provided
         if results is None:
@@ -441,22 +444,29 @@ class KalmanSmoother(KalmanFilter):
         )
 
         # Instantiate a new results object, if required
+        new_results = False
         if isinstance(results, type):
             if not issubclass(results, SmootherResults):
                 raise ValueError('Invalid results class provided.')
             results = results(self)
+            new_results = True
 
         # Run the filter
         kfilter = self._kalman_filters[prefix]
-        if not kfilter.t == self.nobs:
+        if not run_filter and (not kfilter.t == self.nobs or create_filter):
+            run_filter = True
+            warnings.warn('Despite `run_filter=False`, Kalman filtering was'
+                          ' performed because filtering was not complete.')
+        if run_filter:
             self._initialize_state()
             kfilter()
 
         # Update the results object with filtered output
         # Update the model features; unless we had to recreate the
         # statespace, only update the filter options
-        results.update_representation(self, only_options=not create_statespace)
-        if new_results or create_filter:
+        if not new_results:
+            results.update_representation(self)
+        if run_filter:
             results.update_filter(kfilter)
 
         # Run the smoother and update the output
