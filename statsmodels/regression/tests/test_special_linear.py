@@ -11,7 +11,9 @@ from scipy import sparse
 import pandas as pd
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.regression.special_linear_model import OLSAbsorb
+from statsmodels.regression.special_linear_model import (
+      OLSAbsorb, _group_demean_iterative, cat2dummy_sparse)
+from statsmodels.tools._sparse import PartialingSparse, dummy_sparse
 
 from numpy.testing import assert_allclose
 
@@ -93,6 +95,12 @@ class TestSparseAbsorb(CompareModels):
         self.res1 = res_absorb
         self.res2 = res_ols
 
+        # keep as attributes
+        self.endog = y
+        self.exog_absorb = exog_absorb
+        self.exog_dense = exogd
+
+
     def test_temp(self):
         res1 = self.res1
         res2 = self.res2
@@ -103,3 +111,58 @@ class TestSparseAbsorb(CompareModels):
         assert_allclose(res1.bse[slice_res1], res2.bse[slice_res2], rtol=1e-13)
         assert_allclose(res1.pvalues[slice_res1], res2.pvalues[slice_res2], rtol=1e-10)
         #assert_allclose(res_fe.params[1:], res_ols.params[3:], rtol=1e-13)
+
+    # the following test currently fails (len(y) is 25 instead of 50
+    # the example is not a pure two-way effect
+    def t_est_demean(self):
+        exog_absorb = self.exog_absorb
+        exog_dense = self.exog_dense
+        endog = self.endog
+
+        xm, xd, it = _group_demean_iterative(exog_dense, exog_absorb,
+                                             add_mean=True, max_iter=50)
+        ym, yd, it = _group_demean_iterative(endog[:,None], exog_absorb,
+                                             add_mean=True, max_iter=50)
+        mod_ols2 = OLS(yd, xd)
+        k_cat = (exog_absorb.max(0) + 1)
+        ddof = k_cat - 2
+        mod_ols2.df_resid = mod_ols2.df_resid - ddof
+        mod_ols2.df_model = mod_ols2.df_model + ddof
+        res1 = mod_ols2.fit()
+        res2 = self.res1   # compare with sparse OLSAbsorb
+
+        assert_allclose(res1.params, res2.params, rtol=1e-13)
+        assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+        assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-10)
+
+
+class TestAbsorb():
+
+    @classmethod
+    def setup_class(cls):
+        k_cat1, k_cat2 = 50, 10
+        k_vars = 3
+
+        np.random.seed(654)
+        keep = (np.random.rand(k_cat1 * k_cat2) > 0.1).astype(bool)
+
+        xcat1 = np.repeat(np.arange(k_cat1), k_cat2)[keep]
+        xcat2 = np.tile(np.arange(k_cat2), k_cat1)[keep]
+        exog_absorb = np.column_stack((xcat1, xcat2))
+        nobs = len(xcat1)
+        exog_dense = np.random.randn(nobs, k_vars)
+        xm, xd1, it = _group_demean_iterative(exog_dense, exog_absorb,
+                                             add_mean=True, max_iter=50)
+
+        absorb = cat2dummy_sparse(exog_absorb)
+        projector = PartialingSparse(absorb, method='lu')
+        exog_dense_mean = exog_dense.mean(0)
+        xd2 = projector.partial_sparse(exog_dense)[1] + exog_dense_mean
+
+        cls.res1 = xd1
+        cls.res2 = xd2
+
+
+    def test_absorb(self):
+        # Note: agreement (atol) depends on convergence tolerance
+        assert_allclose(self.res1, self.res2, atol=1e-9)

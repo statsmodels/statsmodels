@@ -39,7 +39,8 @@ def cat2dummy_sparse(xcat, use_pandas=False):
     return xsp
 
 
-def _group_demean_iterative(exog_dense, groups, max_iter=10, atol=1e-8):
+def _group_demean_iterative(exog_dense, groups, add_mean=True, max_iter=10,
+                            atol=1e-8):
     """iteratively demean an array for two-way fixed effects
 
     This is intended for almost balanced panels. The data is converted
@@ -60,6 +61,9 @@ def _group_demean_iterative(exog_dense, groups, max_iter=10, atol=1e-8):
         This array will currently not be modified.
     groups : 2d ndarray, int
         groups labels specified as consecutive integers starting at zero
+    add_mean : bool
+        If true (default), then the total variable means are added back into
+        the group demeand exog_dense
     max_iter : int
         maximum number of iterations
     atol : float
@@ -77,6 +81,7 @@ def _group_demean_iterative(exog_dense, groups, max_iter=10, atol=1e-8):
         achieved then it will be equal to max_iter - 1
 
     """
+
     # with unbalanced panel
 
     k_cat = tuple((groups.max(0) + 1).tolist())
@@ -84,7 +89,6 @@ def _group_demean_iterative(exog_dense, groups, max_iter=10, atol=1e-8):
     xm.fill(np.nan)
     xm[:, groups[:, 0], groups[:, 1]] = exog_dense.T
     keep = ~np.isnan(xm[0]).ravel()
-    print(keep[:35])
     finished = False
     for it in range(max_iter):
         for axis in range(1, xm.ndim):
@@ -96,7 +100,12 @@ def _group_demean_iterative(exog_dense, groups, max_iter=10, atol=1e-8):
         if finished:
             break
 
-    return xm, xm.reshape(exog_dense.shape[-1], -1).T[keep], it
+    xd = xm.reshape(exog_dense.shape[-1], -1).T[keep]
+    if add_mean:
+        xmean = exog_dense.mean(0)
+        xd += xmean
+        xm += xmean[:, None, None]
+    return xm, xd, it
 
 
 class OLSAbsorb(WLS):
