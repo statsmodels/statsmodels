@@ -1311,7 +1311,7 @@ class FilterResults(FrozenRepresentation):
                 else:
                     mask = ~self.missing[:, t].astype(bool)
                     n = self.k_endog - self.nmissing[t]
-                    F = self.forecasts_error_cov[mask, mask, t]
+                    F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
                     self._kalman_gain[:, mask, t] = np.dot(
                         np.dot(
                             self.transition[:, :, transition_t],
@@ -1319,7 +1319,7 @@ class FilterResults(FrozenRepresentation):
                         ),
                         np.dot(
                             np.transpose(self.design[mask, :, design_t]),
-                            np.linalg.inv(F.reshape(n,n))
+                            np.linalg.inv(F[:, :, 0])
                         )
                     )
         return self._kalman_gain
