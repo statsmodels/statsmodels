@@ -622,10 +622,12 @@ class KalmanFilter(Representation):
         kfilter = self._kalman_filters[prefix]
 
         # Instantiate a new results object, if required
+        new_results = False
         if isinstance(results, type):
             if not issubclass(results, FilterResults):
                 raise ValueError
             results = results(self)
+            new_results = True
 
         # Initialize the state
         self._initialize_state(prefix=prefix)
@@ -642,9 +644,8 @@ class KalmanFilter(Representation):
         else:
             # Update the model features; unless we had to recreate the
             # statespace, only update the filter options
-            results.update_representation(
-                self, only_options=not create_statespace
-            )
+            if not new_results:
+                results.update_representation(self)
             results.update_filter(kfilter)
 
         return results
