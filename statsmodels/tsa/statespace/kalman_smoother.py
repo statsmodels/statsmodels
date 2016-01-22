@@ -249,7 +249,7 @@ class _kalman_smoother(object):
             # measurement disturbance is set to zero when all missing
             # (unconditional distribution)
             if not missing_entire_obs:
-                smoothed_measurement_disturbance[:, t] = (
+                smoothed_measurement_disturbance[mask, t] = (
                     obs_cov.dot(smoothing_error[:k_endog, t])
                 )
 
@@ -264,13 +264,13 @@ class _kalman_smoother(object):
             if missing_entire_obs:
                 smoothed_measurement_disturbance_cov[:, :, t] = obs_cov
             else:
-                smoothed_measurement_disturbance_cov[:, :, t] = (
+                smoothed_measurement_disturbance_cov[np.ix_(mask, mask, [t])] = (
                     obs_cov - obs_cov.dot(
                         F_inv + kalman_gain.transpose().dot(
                             scaled_smoothed_estimator_cov[:, :, t]
                         ).dot(kalman_gain)
                     ).dot(obs_cov)
-                )
+                )[:, :, np.newaxis]
 
         # Advance the smoother
         self.t -= 1
