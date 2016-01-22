@@ -17,6 +17,12 @@ from statsmodels.tools._sparse import PartialingSparse, dummy_sparse
 
 from numpy.testing import assert_allclose
 
+# COMPAT: for numpy <= 1.7 until we increase minimum
+from statsmodels.compat.scipy import NumpyVersion
+np_smaller_108 = True if (NumpyVersion(np.__version__) < '1.8.0') else False
+from numpy.testing import dec
+from nose import SkipTest
+
 
 class CompareModels(object):
 
@@ -140,6 +146,8 @@ class TestAbsorb():
 
     @classmethod
     def setup_class(cls):
+        if np_smaller_108: raise SkipTest("numpy too old for nanmean")
+        # use decorator if we have more tests in here that need skipping
         k_cat1, k_cat2 = 50, 10
         k_vars = 3
 
@@ -162,7 +170,7 @@ class TestAbsorb():
         cls.res1 = xd1
         cls.res2 = xd2
 
-
+    #@dec.skipif(np_smaller_108)
     def test_absorb(self):
         # Note: agreement (atol) depends on convergence tolerance
         assert_allclose(self.res1, self.res2, atol=1e-9)
