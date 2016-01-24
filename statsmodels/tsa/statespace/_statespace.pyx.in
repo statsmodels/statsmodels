@@ -835,7 +835,7 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
         # by hand
         for i in range(kfilter.k_endog):
             for j in range(i):
-                kfilter.forecast_error_fac[i,j] = kfilter.forecast_error_fac[j,i]
+                kfilter._forecast_error_fac[i + j*kfilter.k_endog] = kfilter._forecast_error_fac[j + i*kfilter.k_endog]
 
 
     # Get `tmp2` and `tmp3` via matrix multiplications
