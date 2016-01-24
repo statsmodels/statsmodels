@@ -1498,7 +1498,7 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.filter_method & FILTER_CONVENTIONAL:
             self.forecasting = {{prefix}}forecast_conventional
 
-            if self.inversion_method & INVERT_UNIVARIATE and self.k_endog == 1:
+            if self.inversion_method & INVERT_UNIVARIATE and self.model.k_endog == 1:
                 self.inversion = {{prefix}}inverse_univariate
             elif self.inversion_method & SOLVE_CHOLESKY:
                 self.inversion = {{prefix}}solve_cholesky
