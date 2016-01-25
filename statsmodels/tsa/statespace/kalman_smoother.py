@@ -755,32 +755,22 @@ class SmootherResults(FilterResults):
                 obs_cov_t = 0 if self.obs_cov.shape[2] == 1 else t
                 obs_intercept_t = 0 if self.obs_intercept.shape[1] == 1 else t
 
-                # For completely missing observations
+                mask = ~self.missing[:, t].astype(bool)
+                # We can recover forecasts
+                self._smoothed_forecasts[:, t] = np.dot(
+                    self.design[:, :, design_t], self.smoothed_state[:, t]
+                ) + self.obs_intercept[:, obs_intercept_t]
                 if self.nmissing[t] > 0:
-                    # We can recover forecasts
-                    self._smoothed_forecasts[:, t] = np.dot(
-                        self.design[:, :, design_t], self.smoothed_state[:, t]
-                    ) + self.obs_intercept[:, obs_intercept_t]
                     self._smoothed_forecasts_error[:, t] = np.nan
-                    self._smoothed_forecasts_error_cov[:, :, t] = np.dot(
-                        np.dot(self.design[:, :, design_t],
-                               self.smoothed_state_cov[:, :, t]),
-                        self.design[:, :, design_t].T
-                    ) + self.obs_cov[:, :, obs_cov_t]
-                else:
-                    self._smoothed_forecasts[:, t] = np.dot(
-                        self.design[:, :, design_t], self.smoothed_state[:, t]
-                    ) + self.obs_intercept[:, obs_intercept_t]
+                self._smoothed_forecasts_error[mask, t] = (
+                    self.endog[mask, t] - self._smoothed_forecasts[mask, t]
+                )
+                self._smoothed_forecasts_error_cov[:, :, t] = np.dot(
+                    np.dot(self.design[:, :, design_t],
+                           self.smoothed_state_cov[:, :, t]),
+                    self.design[:, :, design_t].T
+                ) + self.obs_cov[:, :, obs_cov_t]
 
-                    self._smoothed_forecasts_error[:, t] = (
-                        self.endog[:, t] - self._smoothed_forecasts[:, t]
-                    )
-
-                    self._smoothed_forecasts_error_cov[:, :, t] = np.dot(
-                        np.dot(self.design[:, :, design_t],
-                               self.smoothed_state_cov[:, :, t]),
-                        self.design[:, :, design_t].T
-                    ) + self.obs_cov[:, :, obs_cov_t]
         return (
             self._smoothed_forecasts,
             self._smoothed_forecasts_error,

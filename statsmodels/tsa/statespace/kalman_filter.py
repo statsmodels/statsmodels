@@ -1259,6 +1259,7 @@ class FilterResults(FrozenRepresentation):
                 # error covariance matrix will be zeros - make them nan to
                 # improve clarity of results.
                 if self.nmissing[t] > 0:
+                    mask = ~self.missing[:, t].astype(bool)
                     # We can recover forecasts
                     # For partially missing observations, the Kalman filter
                     # will produce all elements (forecasts, forecast errors,
@@ -1279,6 +1280,7 @@ class FilterResults(FrozenRepresentation):
                         self.design[:, :, design_t], self.predicted_state[:, t]
                     ) + self.obs_intercept[:, obs_intercept_t]
                     self.forecasts_error[:, t] = np.nan
+                    self.forecasts_error[mask, t] = self.endog[mask, t] - self.forecasts[mask, t]
                     self.forecasts_error_cov[:, :, t] = np.dot(
                         np.dot(self.design[:, :, design_t],
                                self.predicted_state_cov[:, :, t]),
