@@ -1111,7 +1111,7 @@ def kpss(x, regression='c', lags=None, store=False):
     ----------
     D. Kwiatkowski, P. C. B. Phillips, P. Schmidt, and Y. Shin (1992): Testing
     the Null Hypothesis of Stationarity against the Alternative of a Unit Root.
-    `Journal of Econometrics` 54, 159–178.
+    `Journal of Econometrics` 54, 159-178.
     """
     from warnings import warn
 
