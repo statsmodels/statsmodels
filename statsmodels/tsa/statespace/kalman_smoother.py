@@ -721,16 +721,16 @@ class SmootherResults(FilterResults):
 
         # For r_t (and similarly for N_t), what was calculated was
         # r_T, ..., r_{-1}, and stored such that
-        # scaled_smoothed_estimator[0] == r_{-1}. We only want r_0, ..., r_T
-        # so exclude the zeroth element so that the time index is consistent
+        # scaled_smoothed_estimator[-1] == r_{-1}. We only want r_0, ..., r_T
+        # so exclude the last element so that the time index is consistent
         # with the other returned output
         if 'scaled_smoothed_estimator' in attributes:
             self.scaled_smoothed_estimator = (
-                self.scaled_smoothed_estimator[:, 1:]
+                self.scaled_smoothed_estimator[:, :-1]
             )
         if 'scaled_smoothed_estimator_cov' in attributes:
             self.scaled_smoothed_estimator_cov = (
-                self.scaled_smoothed_estimator_cov[:, 1:]
+                self.scaled_smoothed_estimator_cov[:, :, :-1]
             )
 
         # Clear the smoothed forecasts
