@@ -2239,9 +2239,15 @@ class PredictionResults(pred.PredictionResults):
 
     """
     def __init__(self, model, prediction_results, row_labels=None):
+        if model.model.k_endog == 1:
+            endog = pd.Series(prediction_results.endog[:,0],
+                              name=model.model.endog_names)
+        else:
+            endog = pd.DataFrame(prediction_results.endog.T,
+                                 columns=model.model.endog_names)
         self.model = Bunch(data=model.data.__class__(
-            endog=prediction_results.endog.T,
-            predict_dates=getattr(model.data, 'predict_dates', None))
+            endog=endog,
+            predict_dates=getattr(model.data, 'predict_dates', None)),
         )
         self.prediction_results = prediction_results
 
@@ -2266,7 +2272,11 @@ class PredictionResults(pred.PredictionResults):
 
     @property
     def se_mean(self):
-        return np.sqrt(self.var_pred_mean.T.diagonal())
+        if self.var_pred_mean.ndim == 1:
+            se_mean = np.sqrt(self.var_pred_mean)
+        else:
+            se_mean = np.sqrt(self.var_pred_mean.T.diagonal())
+        return se_mean
 
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         # TODO: this performs metadata wrapping, and that should be handled
@@ -2275,9 +2285,20 @@ class PredictionResults(pred.PredictionResults):
         conf_int = super(PredictionResults, self).conf_int(
             method, alpha, **kwds)
 
+        # Create a dataframe
         if self.model.data.predict_dates is not None:
             conf_int = pd.DataFrame(conf_int,
                                     index=self.model.data.predict_dates)
+        else:
+            conf_int = pd.DataFrame(conf_int)
+
+        # Attach the endog names
+        ynames = self.model.data.ynames
+        if not type(ynames) == list:
+            ynames = [ynames]
+        names = (['lower %s' % name for name in ynames] +
+                 ['upper %s' % name for name in ynames])
+        conf_int.columns = names
 
         return conf_int
 
@@ -2286,7 +2307,7 @@ class PredictionResults(pred.PredictionResults):
         # import pandas as pd
         from statsmodels.compat.collections import OrderedDict
         #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
-        ci_mean = self.conf_int(alpha=alpha)
+        ci_mean = self.conf_int(alpha=alpha).values
         to_include = OrderedDict()
         if self.predicted_mean.ndim == 1:
             yname = self.model.data.ynames
