@@ -1280,7 +1280,8 @@ class FilterResults(FrozenRepresentation):
                         self.design[:, :, design_t], self.predicted_state[:, t]
                     ) + self.obs_intercept[:, obs_intercept_t]
                     self.forecasts_error[:, t] = np.nan
-                    self.forecasts_error[mask, t] = self.endog[mask, t] - self.forecasts[mask, t]
+                    self.forecasts_error[mask, t] = (
+                        self.endog[mask, t] - self.forecasts[mask, t])
                     self.forecasts_error_cov[:, :, t] = np.dot(
                         np.dot(self.design[:, :, design_t],
                                self.predicted_state_cov[:, :, t]),

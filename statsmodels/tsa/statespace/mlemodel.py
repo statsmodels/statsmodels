@@ -275,6 +275,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def initial_variance(self):
         return self.ssm.initial_variance
+
     @initial_variance.setter
     def initial_variance(self, value):
         self.ssm.initial_variance = value
@@ -282,6 +283,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def loglikelihood_burn(self):
         return self.ssm.loglikelihood_burn
+
     @loglikelihood_burn.setter
     def loglikelihood_burn(self, value):
         self.ssm.loglikelihood_burn = value
@@ -289,6 +291,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def tolerance(self):
         return self.ssm.tolerance
+
     @tolerance.setter
     def tolerance(self, value):
         self.ssm.tolerance = value
@@ -406,11 +409,11 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Maximum likelihood estimation
         fargs = (False,)  # (sets transformed=False)
         mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                                  fargs=fargs,
-                                                  maxiter=maxiter,
-                                                  full_output=full_output,
-                                                  disp=disp, callback=callback,
-                                                  skip_hessian=True, **kwargs)
+                                           fargs=fargs,
+                                           maxiter=maxiter,
+                                           full_output=full_output,
+                                           disp=disp, callback=callback,
+                                           skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
@@ -688,7 +691,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                     )
                     information_matrix[i, j] += np.inner(
                         partials_forecasts_error[:, t, i],
-                        np.dot(inv_forecasts_error_cov[:,:,t],
+                        np.dot(inv_forecasts_error_cov[:, :, t],
                                partials_forecasts_error[:, t, j])
                     )
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
@@ -1019,7 +1022,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Simulated obs is (k_endog x nobs); don't want to squeeze in
         # case of npredictions = 1
         if simulated_obs.shape[0] == 1:
-            simulated_obs = simulated_obs[0,:]
+            simulated_obs = simulated_obs[0, :]
         else:
             simulated_obs = simulated_obs.T
         return simulated_obs
@@ -1230,7 +1233,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Calculate the new covariance matrix
         k_params = len(self.params)
         if k_params == 0:
-            res.cov_params_default = np.zeros((0,0))
+            res.cov_params_default = np.zeros((0, 0))
             res._rank = 0
             res.cov_kwds['description'] = (
                 'No parameters estimated.')
@@ -1441,7 +1444,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # forecast functions, but here also to maintain consistency)
         fittedvalues = self.filter_results.forecasts
         if fittedvalues.shape[0] == 1:
-            fittedvalues = fittedvalues[0,:]
+            fittedvalues = fittedvalues[0, :]
         else:
             fittedvalues = fittedvalues.T
         return fittedvalues
@@ -1495,7 +1498,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # forecast functions, but here also to maintain consistency)
         resid = self.filter_results.forecasts_error
         if resid.shape[0] == 1:
-            resid = resid[0,:]
+            resid = resid[0, :]
         else:
             resid = resid.T
         return resid
@@ -1647,12 +1650,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # Setup functions to calculate the p-values
             if use_f:
                 from scipy.stats import f
-                pval_lower = lambda test_statistics: f.cdf(test_statistics, h, h)
-                pval_upper = lambda test_statistics: f.sf(test_statistics, h, h)
+                pval_lower = lambda test_statistics: f.cdf(
+                    test_statistics, h, h)
+                pval_upper = lambda test_statistics: f.sf(
+                    test_statistics, h, h)
             else:
                 from scipy.stats import chi2
-                pval_lower = lambda test_statistics: chi2.cdf(h*test_statistics, h)
-                pval_upper = lambda test_statistics: chi2.sf(h*test_statistics, h)
+                pval_lower = lambda test_statistics: chi2.cdf(
+                    h * test_statistics, h)
+                pval_upper = lambda test_statistics: chi2.sf(
+                    h * test_statistics, h)
 
             # Calculate the one- or two-sided p-values
             alternative = alternative.lower()
@@ -1947,7 +1954,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             An (nsimulations x k_endog) array of simulated observations.
         """
         return self.model.simulate(self.params, nsimulations,
-            measurement_shocks, state_shocks, initial_state)
+                                   measurement_shocks, state_shocks,
+                                   initial_state)
 
     def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
@@ -1993,7 +2001,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         """
         return self.model.impulse_responses(self.params, steps, impulse,
-            orthogonalized, cumulative, **kwargs)
+                                            orthogonalized, cumulative,
+                                            **kwargs)
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """
@@ -2076,7 +2085,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         plot_acf(resid, ax=ax, lags=lags)
         ax.set_title('Correlogram')
 
-        ax.set_ylim(-1,1)
+        ax.set_ylim(-1, 1)
 
         return fig
 
@@ -2160,16 +2169,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         format_str = lambda array: [
             ', '.join(['{0:.2f}'.format(i) for i in array])
         ]
-        diagn_left = [('Ljung-Box (Q):', format_str(lb[:,0,-1])),
-                      ('Prob(Q):', format_str(lb[:,1,-1])),
-                      ('Heteroskedasticity (H):', format_str(het[:,0])),
-                      ('Prob(H) (two-sided):', format_str(het[:,1]))
+        diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
+                      ('Prob(Q):', format_str(lb[:, 1, -1])),
+                      ('Heteroskedasticity (H):', format_str(het[:, 0])),
+                      ('Prob(H) (two-sided):', format_str(het[:, 1]))
                       ]
 
-        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:,0])),
-                       ('Prob(JB):', format_str(jb[:,1])),
-                       ('Skew:', format_str(jb[:,2])),
-                       ('Kurtosis:', format_str(jb[:,3]))
+        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:, 0])),
+                       ('Prob(JB):', format_str(jb[:, 1])),
+                       ('Skew:', format_str(jb[:, 2])),
+                       ('Kurtosis:', format_str(jb[:, 3]))
                        ]
 
         summary = Summary()
@@ -2240,7 +2249,7 @@ class PredictionResults(pred.PredictionResults):
     """
     def __init__(self, model, prediction_results, row_labels=None):
         if model.model.k_endog == 1:
-            endog = pd.Series(prediction_results.endog[:,0],
+            endog = pd.Series(prediction_results.endog[:, 0],
                               name=model.model.endog_names)
         else:
             endog = pd.DataFrame(prediction_results.endog.T,
@@ -2306,7 +2315,7 @@ class PredictionResults(pred.PredictionResults):
         # TODO: finish and cleanup
         # import pandas as pd
         from statsmodels.compat.collections import OrderedDict
-        #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
+        # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = self.conf_int(alpha=alpha).values
         to_include = OrderedDict()
         if self.predicted_mean.ndim == 1:
@@ -2322,12 +2331,11 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
-
         self.table = to_include
-        #OrderedDict doesn't work to preserve sequence
+        # OrderedDict doesn't work to preserve sequence
         # pandas dict doesn't handle 2d_array
-        #data = np.column_stack(list(to_include.values()))
-        #names = ....
+        # data = np.column_stack(list(to_include.values()))
+        # names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,
                            columns=to_include.keys())
         res.columns.name = yname

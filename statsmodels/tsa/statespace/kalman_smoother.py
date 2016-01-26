@@ -159,7 +159,7 @@ class _kalman_smoother(object):
 
         predicted_state = kfilter.predicted_state[:, t]
         predicted_state_cov = kfilter.predicted_state_cov[:, :, t]
-        
+
         mask = ~kfilter.missing[:, t].astype(bool)
         if missing_partial_obs:
             design = np.array(
@@ -169,7 +169,7 @@ class _kalman_smoother(object):
                 _kfilter.selected_obs_cov[:k_endog**2].copy()
             ).reshape(k_endog, k_endog)
             kalman_gain = kfilter.kalman_gain[:, mask, t]
-                
+
             forecasts_error_cov = np.array(
                 _kfilter.forecast_error_cov[:, :, t].copy()
                 ).ravel(order='F')[:k_endog**2].reshape(k_endog, k_endog)
@@ -278,8 +278,8 @@ class _kalman_smoother(object):
                 # For missing portion, use unconditional distribution
                 ix = np.ix_(~mask, ~mask, [t])
                 mod_ix = np.ix_(~mask, ~mask, [0])
-                smoothed_measurement_disturbance_cov[ix] = (
-                    np.copy(model.obs_cov[:,:,obs_cov_t:obs_cov_t+1])[mod_ix])
+                smoothed_measurement_disturbance_cov[ix] = np.copy(
+                    model.obs_cov[:, :, obs_cov_t:obs_cov_t+1])[mod_ix]
 
         # Advance the smoother
         self.t -= 1
