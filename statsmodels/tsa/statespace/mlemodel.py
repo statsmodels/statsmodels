@@ -2264,6 +2264,10 @@ class PredictionResults(pred.PredictionResults):
                                                 row_labels=row_labels,
                                                 link=identity())
 
+    @property
+    def se_mean(self):
+        return np.sqrt(self.var_pred_mean.T.diagonal())
+
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         # TODO: this performs metadata wrapping, and that should be handled
         #       by attach_* methods. However, they don't currently support
