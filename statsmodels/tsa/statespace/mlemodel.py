@@ -1878,39 +1878,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
         """
-        if start is None:
-            start = 0
-
-        # Handle start and end (e.g. dates)
-        start = self.model._get_predict_start(start)
-        end, out_of_sample = self.model._get_predict_end(end)
-
-        # Handle string dynamic
-        dates = self.data.dates
-        if isinstance(dynamic, str):
-            if dates is None:
-                raise ValueError("Got a string for dynamic and dates is None")
-            dtdynamic = self.model._str_to_date(dynamic)
-            try:
-                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
-
-                dynamic = dynamic_start - start
-            except KeyError:
-                raise ValueError("Dynamic must be in dates. Got %s | %s" %
-                                 (str(dynamic), str(dtdynamic)))
-
         # Perform the prediction
-        # This is a (k_endog x npredictions) array; don't want to squeeze in
-        # case of npredictions = 1
-        prediction_results = self.filter_results.predict(
-            start, end+out_of_sample+1, dynamic, **kwargs
-        )
-        predicted_mean = prediction_results.forecasts
-        if predicted_mean.shape[0] == 1:
-            predicted_mean = predicted_mean[0,:]
-        else:
-            predicted_mean = predicted_mean.T
-        return predicted_mean
+        prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
+        return prediction_results.predicted_mean
 
     def forecast(self, steps=1, **kwargs):
         """
