@@ -163,18 +163,18 @@ class _kalman_smoother(object):
         mask = ~kfilter.missing[:, t].astype(bool)
         if missing_partial_obs:
             design = np.array(
-                _kfilter.selected_design[:k_endog*model.k_states].copy()
+                _kfilter.selected_design[:k_endog*model.k_states], copy=True
             ).reshape(k_endog, model.k_states, order='F')
             obs_cov = np.array(
-                _kfilter.selected_obs_cov[:k_endog**2].copy()
+                _kfilter.selected_obs_cov[:k_endog**2], copy=True
             ).reshape(k_endog, k_endog)
             kalman_gain = kfilter.kalman_gain[:, mask, t]
 
             forecasts_error_cov = np.array(
-                _kfilter.forecast_error_cov[:, :, t].copy()
+                _kfilter.forecast_error_cov[:, :, t], copy=True
                 ).ravel(order='F')[:k_endog**2].reshape(k_endog, k_endog)
             forecasts_error = np.array(
-                _kfilter.forecast_error[:k_endog, t].copy())
+                _kfilter.forecast_error[:k_endog, t], copy=True)
             F_inv = np.linalg.inv(forecasts_error_cov)
         else:
             if missing_entire_obs:
