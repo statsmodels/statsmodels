@@ -117,11 +117,6 @@ class Power(object):
         ii = np.flatnonzero(mu < 0)
         der[ii] *= -1
 
-        #from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
-        #return approx_fprime_cs(mu, self)  # TODO fix breaks in `fabs
-        # TODO: diag is workaround problem with numdiff for 1d
-        #dd = np.diag(approx_fprime(mu, self))
-
         return der
 
 
