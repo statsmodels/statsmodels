@@ -50,9 +50,7 @@ class VarianceFunction(object):
         """
         Derivative of the variance function v'(mu)
         """
-        from statsmodels.tools.numdiff import approx_fprime_cs
-        # TODO: diag workaround proplem with numdiff for 1d
-        return np.diag(approx_fprime_cs(mu, self))
+        return np.zeros_like(mu)
 
 
 constant = VarianceFunction()
@@ -111,11 +109,21 @@ class Power(object):
     def deriv(self, mu):
         """
         Derivative of the variance function v'(mu)
+
+        May be undefined at zero.
         """
-        from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
+
+        der = self.power * np.fabs(mu) ** (self.power - 1)
+        ii = np.flatnonzero(mu < 0)
+        der[ii] *= -1
+
+        #from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
         #return approx_fprime_cs(mu, self)  # TODO fix breaks in `fabs
         # TODO: diag is workaround problem with numdiff for 1d
-        return np.diag(approx_fprime(mu, self))
+        #dd = np.diag(approx_fprime(mu, self))
+
+        return der
+
 
 
 mu = Power()
@@ -201,9 +209,7 @@ class Binomial(object):
         """
         Derivative of the variance function v'(mu)
         """
-        from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
-        # TODO: diag workaround proplem with numdiff for 1d
-        return np.diag(approx_fprime_cs(mu, self))
+        return 1 - 2*mu
 
 
 binary = Binomial()
