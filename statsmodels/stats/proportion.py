@@ -93,15 +93,11 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         # TODO: check if we should round up or down, or interpolate
 
     elif method == 'beta':
-        if nobs == count:
-            ci_low = stats.beta.ppf(alpha_2 , count, nobs - count + 1)
-            ci_upp = 1.0
-        elif count == 0:
-            ci_low = 0.0
-            ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
-        else:
-            ci_low = stats.beta.ppf(alpha_2 , count, nobs - count + 1)
-            ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
+        ci_low = stats.beta.ppf(alpha_2 , count, nobs - count + 1)
+        ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
+        ci_low = np.nan_to_num(ci_low)
+        ci_upp = np.nan_to_num(ci_upp)
+        ci_upp = np.where(ci_upp == 0., 1., ci_upp)
 
     elif method == 'agresti_coull':
         crit = stats.norm.isf(alpha / 2.)
