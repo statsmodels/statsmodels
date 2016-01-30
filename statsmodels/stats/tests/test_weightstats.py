@@ -87,7 +87,9 @@ class CheckExternalMixin(object):
             if return_pandas:
                 assert_allclose(qtl.values, self.quantiles, rtol=1e-4)
             else:
-                assert_allclose(qtl, self.quantiles, rtol=1e-4)
+                qtl = np.asarray(qtl, dtype=np.float64)
+                quant = np.asarray(self.quantiles, dtype=np.float64)
+                assert_allclose(qtl, quant, rtol=1e-4)
 
 
 class TestSim1(CheckExternalMixin):
