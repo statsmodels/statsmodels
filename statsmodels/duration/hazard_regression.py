@@ -4,6 +4,7 @@ import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import brent
 from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.compat.numpy import np_new_unique
 
 """
 Implementation of proportional hazards regression models for duration
@@ -1432,14 +1433,9 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         Descriptive statistics of the groups.
         """
-        # better handled with np.unique(..., return_counts=True)
-        gsize = {}
-        for x in groups:
-            if x not in gsize:
-                gsize[x] = 0
-            gsize[x] += 1
-        gsize = np.asarray(list(gsize.values()))
-        return gsize.min(), gsize.max(), gsize.mean(), len(gsize)
+        gsizes = np_new_unique(groups, return_counts=True)
+        gsizes = gsizes[1]
+        return gsizes.min(), gsizes.max(), gsizes.mean()
 
     @cache_readonly
     def weighted_covariate_averages(self):
