@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Statistical tools for time series analysis
 """
@@ -9,13 +10,13 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant, Bunch
 from .tsatools import lagmat, lagmat2ds, add_trend
-from .adfvalues import mackinnonp, mackinnoncrit
+from .adfvalues import mackinnonp, mackinnoncrit, mackinnonp2, mackinnoncrit2
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.compat.scipy import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss']
+           'adfuller', 'kpss', 'phillipsPerron']
 
 
 #NOTE: now in two places to avoid circular import
@@ -1181,6 +1182,147 @@ def _sigma_est_kpss(resids, nobs, lags):
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
 
+
+def phillipsPerron(x,regression='c',lags=None,test_type='tau',store=False):
+    """
+    Phillips-Perron unit root test . 
+
+    Parameters
+    ----------
+    x : array_like, 1d
+        Data series
+    regression : str{'nc','c', 'ct'}
+        Indicates the null hypothesis for the Phillips-Perron test
+        * 'nc' - No trend components 
+        * 'c' : The data is stationary around a constant (default)
+        * 'ct' : The data is stationary around a trend
+    lags : int
+        Indicates the number of lags to be used. If None (default),
+        lags is set to int(12 * (n / 100)**(1 / 4)), as outlined in
+        Schwert (1989).
+    test_type : str{'tau','rho'}
+        * 'tau' - Test based on the t-stat .
+        * 'rho' - Test based on nobs times the re-centered regression coefficient .
+
+    Returns
+    -------
+    stat : float
+        The Phillips-Perron test statistic
+    p_value : float
+        The p-value of the test. The p-value is interpolated from
+        Table 1 in Kwiatkowski et al. (1992), and a boundary point
+        is returned if the test statistic is outside the table of
+        critical values, that is, if the p-value is outside the
+        interval (0.01, 0.1).
+    lags : int
+        The truncation lag parameter
+    crit : dict
+        The critical values at 10%, 5%, and 1%. Based on
+        Kwiatkowski et al. (1992).
+    rstore : (optional) instance of ResultStore
+        An instance of a dummy class with results attached as attributes
+
+    Notes
+    -----
+    The null hypothesis of the Phillips-Perron (PP) test is that there is a unit root, with the
+    alternative that there is no unit root. If the pvalue is above a critical size, then the null cannot
+    be rejected that there and the series appears to be a unit root.
+
+    Unlike the ADF test, the regression estimated includes only one lag of the dependant variable,
+    in addition to trend terms. Any serial correlation in the regression errors is accounted for using
+    a long-run variance estimator (currently Newey-West).
+
+    The p-values are obtained through regression surface approximation from MacKinnon (1994) 
+    using the updated 2010 tables. If the p-value is close to significant, then the critical values
+    should be used to judge whether to reject the null.
+
+    References
+    ----------
+    
+    Hamilton, J. D. 1994 .Time-series Analysis. Princeton: Princeton University Press.
+
+    Newey, W.K., and K.D. West.1987. A simple,postive semidefinite,heteroskedasticity and autocorrelation consistent
+    covariance matrix. Econometrica 55, 703-708.
+
+    Phillips, P. C. B., and P. Perron. 1988. Testing for a unit root in time series regression. Biometrika 75, 335-346.
+
+    P-Values (regression surface approximation) MacKinnon, J.G. 1994. “Approximate asymptotic distribution functions for 
+    unit-root and cointegration tests. Journal of Business and Economic Statistics 12, 167-76.
+
+    Critical values MacKinnon, J.G. 2010. “Critical Values for Cointegration Tests.” Queen’s University, Dept of Economics,
+    Working Papers. Available at http://ideas.repec.org/p/qed/wpaper/1227.html 
+
+    """
+
+    from warnings import warn
+
+    nobs = len(x)
+    x = np.asarray(x)
+
+    if regression not in ['c', 'nc', 'ct']:
+        raise ValueError("regression option %s not understood") % regression
+
+    if nobs != x.size:
+        raise ValueError("x of shape {0} not understood".format(x.shape))
+
+    hypo = regression.lower()
+
+    if lags is None:
+        # from Kwiatkowski et al. referencing Schwert (1989)
+        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+
+
+    rhs=x[:-1,None]
+    lhs=x[1:,None]
+
+    if hypo != 'nc' :
+        rhs = add_trend(rhs,hypo)
+
+    resols = OLS(lhs,rhs).fit()
+    k=rhs.shape[1]
+    n , u = resols.nobs , resols.resid
+    lam2 = _sigma_est_kpss(u,n,lags)
+    lam = np.sqrt(lam2)
+
+    s2 = u.dot(u) / (n - k) 
+    s = np.sqrt(s2)
+
+    gamma0 = s2 * (n - k) / n
+    sigma = resols.bse[0]
+    sigma2 = sigma ** 2.0
+    rho = resols.params[0]
+
+    stat_tau = np.sqrt(gamma0 / lam2) * ((rho - 1) / sigma ) - 0.5 * ((lam2 - gamma0) / lam) * (n * sigma / s)
+    stat_rho = n * (rho - 1) - 0.5 * (n ** 2.0 * sigma2 / s2) * (lam2 - gamma0)
+
+    nobs = int(resols.nobs)
+
+    if test_type == 'rho':
+        stat = stat_rho
+        dist_type = 'ADF-z'
+    else:
+        stat = stat_tau
+        dist_type = 'ADF-t'
+        
+
+    p_value = mackinnonp2(stat,regression=hypo,dist_type=dist_type)
+
+    crit = mackinnoncrit2(regression=hypo,nobs=n,dist_type=dist_type)
+
+    crit_dict = {'1%': crit[0], '5%': crit[1], '10%': crit[2]}
+
+    if store:
+        rstore = ResultsStore()
+        rstore.lags = lags
+        rstore.nobs = nobs
+
+        rstore.H0 = ("The coefficient on the lagged level equals 1 - "
+                       "unit root")
+        rstore.HA = "The coefficient on the lagged level < 1 - stationary"
+
+        return stat, p_value, crit_dict, rstore
+    else:
+        return stat, p_value, lags, crit_dict
 
 
 if __name__ == "__main__":
