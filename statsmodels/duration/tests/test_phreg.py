@@ -313,12 +313,16 @@ class TestPHReg(object):
     def test_get_distribution(self):
         # Smoke test
         np.random.seed(34234)
-        exog = np.random.normal(size=(200, 2))
+        n = 200
+        exog = np.random.normal(size=(n, 2))
         lin_pred = exog.sum(1)
         elin_pred = np.exp(-lin_pred)
-        time = -elin_pred * np.log(np.random.uniform(size=200))
+        time = -elin_pred * np.log(np.random.uniform(size=n))
+        status = np.ones(n)
+        status[0:20] = 0
+        strata = np.kron(range(5), np.ones(n // 5))
 
-        mod = PHReg(time, exog)
+        mod = PHReg(time, exog, status=status, strata=strata)
         rslt = mod.fit()
 
         dist = rslt.get_distribution()

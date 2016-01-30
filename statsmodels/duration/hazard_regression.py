@@ -1260,8 +1260,8 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        params : arrayh-like
-            The model proportional hazards model parameters.
+        params : array-like
+            The proportional hazards model parameters.
 
         Returns
         -------
@@ -1271,7 +1271,7 @@ class PHReg(model.LikelihoodModel):
         -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
-        failure times wihtin a stratum.
+        failure times within a stratum.
         """
 
         # TODO: this returns a Python list of rv_discrete objects, so
@@ -1306,8 +1306,8 @@ class PHReg(model.LikelihoodModel):
 
             # The individual survival functions.
             usurv = np.exp(-ichaz)
-            usurv = np.concatenate((usurv, np.zeros((usurv.shape[0], 1))),
-                                   axis=1)
+            z = np.zeros((usurv.shape[0], 1))
+            usurv = np.concatenate((usurv, z), axis=1)
 
             # The individual survival probability masses.
             probs = -np.diff(usurv, 1)
@@ -1319,15 +1319,15 @@ class PHReg(model.LikelihoodModel):
         mxc = max([x.shape[1] for x in xk])
         for k in range(self.surv.nstrat):
             if xk[k].shape[1] < mxc:
-                xk1 = np.zeros((xk.shape[0], mxc))
-                pk1 = np.zeros((pk.shape[0], mxc))
-                xk1[:, -mxc:] = xk
-                pk1[:, -mxc:] = pk
+                xk1 = np.zeros((xk[k].shape[0], mxc))
+                pk1 = np.zeros((pk[k].shape[0], mxc))
+                xk1[:, 0:xk[k].shape[1]] = xk[k]
+                pk1[:, 0:pk[k].shape[1]] = pk[k]
                 xk[k], pk[k] = xk1, pk1
 
-        xka = np.nan * np.zeros((len(self.endog), mxc), dtype=np.float64)
+        # Put the support points and probabilities into single matrices
+        xka = np.nan * np.ones((len(self.endog), mxc))
         pka = np.ones((len(self.endog), mxc), dtype=np.float64) / mxc
-
         for stx in range(self.surv.nstrat):
             ix = self.surv.stratum_rows[stx]
             xka[ix, :] = xk[stx]
