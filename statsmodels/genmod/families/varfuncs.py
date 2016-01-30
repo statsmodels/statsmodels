@@ -45,7 +45,6 @@ class VarianceFunction(object):
         mu = np.asarray(mu)
         return np.ones(mu.shape, np.float64)
 
-
     def deriv(self, mu):
         """
         Derivative of the variance function v'(mu)
@@ -105,7 +104,6 @@ class Power(object):
         """
         return np.power(np.fabs(mu), self.power)
 
-
     def deriv(self, mu):
         """
         Derivative of the variance function v'(mu)
@@ -116,9 +114,7 @@ class Power(object):
         der = self.power * np.fabs(mu) ** (self.power - 1)
         ii = np.flatnonzero(mu < 0)
         der[ii] *= -1
-
         return der
-
 
 
 mu = Power()
