@@ -711,7 +711,7 @@ class ARMA(tsbase.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
-    def predict(self, params, start=None, end=None, exog=None, dynamic=False):
+    def predict(self, params, start=None, end=None, exog=None, dynamic=False, **kwds):
         method = getattr(self, 'method', 'mle')  # don't assume fit
         #params = np.asarray(params)
 
@@ -1455,7 +1455,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False):
+    def predict(self, start=None, end=None, exog=None, dynamic=False, **kwds):
         return self.model.predict(self.params, start, end, exog, dynamic)
     predict.__doc__ = _arma_results_predict
 
