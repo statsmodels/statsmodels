@@ -711,7 +711,7 @@ class ARMA(tsbase.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
-    def predict(self, params, start=None, end=None, exog=None, dynamic=False, **kwds):
+    def predict(self, params, start=None, end=None, exog=None, dynamic=False):
         method = getattr(self, 'method', 'mle')  # don't assume fit
         #params = np.asarray(params)
 
