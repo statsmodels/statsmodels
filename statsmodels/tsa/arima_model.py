@@ -1456,7 +1456,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
     def predict(self, start=None, end=None, exog=None, dynamic=False, **kwds):
-        return self.model.predict(self.params, start, end, exog, dynamic)
+        if 'typ' in kwds or not kwds:
+             return self.model.predict(self.params, start, end, exog, dynamic)
+        else:
+            raise ValueError("Invalid extra arguments found in call to predict")
     predict.__doc__ = _arma_results_predict
 
     def _forecast_error(self, steps):
