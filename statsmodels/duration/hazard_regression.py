@@ -1698,7 +1698,7 @@ class PHRegResults(base.LikelihoodModelResults):
 
         dstrat = self.model.surv.nstrat_orig - self.model.surv.nstrat
         if dstrat > 0:
-            if dstrata == 1:
+            if dstrat == 1:
                 smry.add_text("1 stratum dropped for having no events")
             else:
                 smry.add_text("%d strata dropped for having no events" % dstrat)

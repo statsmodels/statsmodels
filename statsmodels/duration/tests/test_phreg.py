@@ -272,6 +272,20 @@ class TestPHReg(object):
         rslt = mod.fit()
         rslt.summary()
 
+        strata = np.kron(np.arange(50), np.ones(4))
+        mod = PHReg(time, exog, status, strata=strata)
+        rslt = mod.fit()
+        smry = rslt.summary()
+        msg = "3 strata dropped for having no events"
+        assert(msg in str(smry))
+
+        entry = np.random.uniform(0.1, 0.8, 200) * time
+        mod = PHReg(time, exog, status, entry=entry)
+        rslt = mod.fit()
+        smry = rslt.summary()
+        msg = "200 observations have positive entry times"
+        assert(msg in str(smry))
+
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr
         # tests into real tests against R.  There are many options to
