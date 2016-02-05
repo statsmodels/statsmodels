@@ -146,7 +146,7 @@ def test_survdiff():
     # used for non G-rho family tests but does not seem to support
     # stratification)
 
-    df = bmt[bmt.Group != "ALL"]
+    df = bmt[bmt.Group != "ALL"].copy()
 
     # Not stratified
     stat, p = survdiff(df["T"], df.Status, df.Group)
