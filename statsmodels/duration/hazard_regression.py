@@ -3,6 +3,7 @@ from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import brent
+from statsmodels.compat.numpy import np_matrix_rank
 
 """
 Implementation of proportional hazards regression models for duration
@@ -149,6 +150,7 @@ class PHSurvivalTime(object):
 
         # Remove strata with no events
         ix = [i for i,ix in enumerate(stratum_rows) if status[ix].sum() > 0]
+        self.nstrat_orig = len(stratum_rows)
         stratum_rows = [stratum_rows[i] for i in ix]
         stratum_names = [stratum_names[i] for i in ix]
 
@@ -324,11 +326,15 @@ class PHReg(model.LikelihoodModel):
             self.offset = np.asarray(self.offset)
 
         self.surv = PHSurvivalTime(self.endog, self.status,
-                                    self.exog, self.strata,
-                                    self.entry, self.offset)
+                                   self.exog, self.strata,
+                                   self.entry, self.offset)
 
         # TODO: not used?
         self.missing = missing
+
+        self.df_resid = (np.float(self.exog.shape[0] -
+                                  np_matrix_rank(self.exog)))
+        self.df_model = np.float(np_matrix_rank(self.exog) - 1)
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
@@ -388,13 +394,13 @@ class PHReg(model.LikelihoodModel):
         """
 
         # Allow array arguments to be passed by column name.
-        if type(status) is str:
+        if isinstance(status, str):
             status = data[status]
-        if type(entry) is str:
+        if isinstance(entry, str):
             entry = data[entry]
-        if type(strata) is str:
+        if isinstance(strata, str):
             strata = data[strata]
-        if type(offset) is str:
+        if isinstance(offset, str):
             offset = data[offset]
 
         mod = super(PHReg, cls).from_formula(formula, data,
@@ -1689,6 +1695,20 @@ class PHRegResults(base.LikelihoodModelResults):
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
         smry.add_text("Confidence intervals are for the hazard ratios")
+
+        dstrat = self.model.surv.nstrat_orig - self.model.surv.nstrat
+        if dstrat > 0:
+            if dstrata == 1:
+                smry.add_text("1 stratum dropped for having no events")
+            else:
+                smry.add_text("%d strata dropped for having no events" % dstrat)
+
+        if self.model.entry is not None:
+            n_entry = sum(self.model.entry != 0)
+            if n_entry == 1:
+                smry.add_text("1 observation has a positive entry time")
+            else:
+                smry.add_text("%d observations have positive entry times" % n_entry)
 
         if self.model.groups is not None:
             smry.add_text("Standard errors account for dependence within groups")

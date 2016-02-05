@@ -102,7 +102,7 @@ class TestPHReg(object):
         coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-3)
         assert_allclose(phrb.bse, se, rtol=1e-4)
-        
+
         #smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
