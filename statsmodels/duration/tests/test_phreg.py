@@ -2,7 +2,7 @@ import os
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
-                           assert_equal)
+                           assert_equal, assert_)
 import pandas as pd
 
 # TODO: Include some corner cases: data sets with empty strata, strata
@@ -277,14 +277,14 @@ class TestPHReg(object):
         rslt = mod.fit()
         smry = rslt.summary()
         msg = "3 strata dropped for having no events"
-        assert(msg in str(smry))
+        assert_(msg in str(smry))
 
         entry = np.random.uniform(0.1, 0.8, 200) * time
         mod = PHReg(time, exog, status, entry=entry)
         rslt = mod.fit()
         smry = rslt.summary()
         msg = "200 observations have positive entry times"
-        assert(msg in str(smry))
+        assert_(msg in str(smry))
 
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr

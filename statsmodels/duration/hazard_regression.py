@@ -334,7 +334,7 @@ class PHReg(model.LikelihoodModel):
 
         self.df_resid = (np.float(self.exog.shape[0] -
                                   np_matrix_rank(self.exog)))
-        self.df_model = np.float(np_matrix_rank(self.exog) - 1)
+        self.df_model = np.float(np_matrix_rank(self.exog))
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
