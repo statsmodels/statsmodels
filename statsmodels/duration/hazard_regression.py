@@ -1465,6 +1465,8 @@ class PHRegResults(base.LikelihoodModelResults):
     def __init__(self, model, params, cov_params, covariance_type="naive"):
 
         self.covariance_type = covariance_type
+        self.df_resid = model.df_resid
+        self.df_model = model.df_model
 
         super(PHRegResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
