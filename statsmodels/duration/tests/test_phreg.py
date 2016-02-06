@@ -270,7 +270,7 @@ class TestPHReg(object):
 
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
-        rslt.summary()
+        smry = rslt.summary()
 
         strata = np.kron(np.arange(50), np.ones(4))
         mod = PHReg(time, exog, status, strata=strata)
@@ -278,6 +278,11 @@ class TestPHReg(object):
         smry = rslt.summary()
         msg = "3 strata dropped for having no events"
         assert_(msg in str(smry))
+
+        groups = np.kron(np.arange(25), np.ones(8))
+        mod = PHReg(time, exog, status)
+        rslt = mod.fit(groups=groups)
+        smry = rslt.summary()
 
         entry = np.random.uniform(0.1, 0.8, 200) * time
         mod = PHReg(time, exog, status, entry=entry)

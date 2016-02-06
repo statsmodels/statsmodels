@@ -136,17 +136,13 @@ class PHSurvivalTime(object):
                              "after event or censoring times")
 
         # Get the row indices for the cases in each stratum
-        if strata is not None:
-            stu = np.unique(strata)
-            #sth = {x: [] for x in stu} # needs >=2.7
-            sth = dict([(x, []) for x in stu])
-            for i,k in enumerate(strata):
-                sth[k].append(i)
-            stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
-            stratum_names = stu
-        else:
-            stratum_rows = [np.arange(len(time)),]
-            stratum_names = [0,]
+        stu = np.unique(strata)
+        #sth = {x: [] for x in stu} # needs >=2.7
+        sth = dict([(x, []) for x in stu])
+        for i,k in enumerate(strata):
+            sth[k].append(i)
+        stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
+        stratum_names = stu
 
         # Remove strata with no events
         ix = [i for i,ix in enumerate(stratum_rows) if status[ix].sum() > 0]
@@ -426,6 +422,10 @@ class PHReg(model.LikelihoodModel):
 
         # TODO process for missing values
         if groups is not None:
+            if len(groups) != len(self.endog):
+                msg = ("len(groups) = %d and len(endog) = %d differ" %
+                       (len(groups), len(self.endog)))
+                raise ValueError(msg)
             self.groups = np.asarray(groups)
         else:
             self.groups = None
@@ -1523,13 +1523,14 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         Descriptive statistics of the groups.
         """
+        # better handled with np.unique(..., return_counts=True)
         gsize = {}
         for x in groups:
             if x not in gsize:
                 gsize[x] = 0
             gsize[x] += 1
-        gsize = np.asarray(gsize.values())
-        return gsize.min(), gsize.max(), gsize.mean()
+        gsize = np.asarray(list(gsize.values()))
+        return gsize.min(), gsize.max(), gsize.mean(), len(gsize)
 
     @cache_readonly
     def weighted_covariate_averages(self):
@@ -1677,10 +1678,18 @@ class PHRegResults(base.LikelihoodModelResults):
         info["Num. events:"] = str(int(sum(self.model.status)))
 
         if self.model.groups is not None:
-            mn, mx, avg = self._group_stats(self.model.groups)
-            info["Max. group size:"] = str(mx)
-            info["Min. group size:"] = str(mn)
-            info["Avg. group size:"] = str(avg)
+            mn, mx, avg, num = self._group_stats(self.model.groups)
+            info["Num groups:"] = "%.0f" % num
+            info["Min group size:"] = "%.0f" % mn
+            info["Max group size:"] = "%.0f" % mx
+            info["Avg group size:"] = "%.1f" % avg
+
+        if self.model.strata is not None:
+            mn, mx, avg, num = self._group_stats(self.model.strata)
+            info["Num strata:"] = "%.0f" % num
+            info["Min stratum size:"] = "%.0f" % mn
+            info["Max stratum size:"] = "%.0f" % mx
+            info["Avg stratum size:"] = "%.1f" % avg
 
         smry.add_dict(info, align='l', float_format=float_format)
 
