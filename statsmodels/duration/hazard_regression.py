@@ -29,9 +29,7 @@ _predict_docstring = """
     regression model.
 
     Parameters
-    ----------
-    params : array-like
-        The proportional hazards model parameters.
+    ----------%(params_doc)s
     exog : array-like
         Data to use as `exog` in forming predictions.  If not
         provided, the `exog` values from the model used to fit the
@@ -69,6 +67,10 @@ _predict_docstring = """
     Types `surv` and `cumhaz` require estimation of the cumulative
     hazard function.
 """
+
+_predict_params_doc = """
+    params : array-like
+        The proportional hazards model parameters."""
 
 _predict_cov_params_docstring = """
     cov_params : array-like
@@ -1254,7 +1256,8 @@ class PHReg(model.LikelihoodModel):
 
         return ret_val
 
-    predict.__doc__ = _predict_docstring % {'cov_params_doc': _predict_cov_params_docstring}
+    predict.__doc__ = _predict_docstring % {'params_doc': _predict_params_doc,
+                                            'cov_params_doc': _predict_cov_params_docstring}
 
     def get_distribution(self, params):
         """
@@ -1431,7 +1434,8 @@ class PHRegResults(base.LikelihoodModelResults):
                                                  offset=offset,
                                                  pred_type=pred_type)
 
-    predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
+    predict.__doc__ = _predict_docstring % {'params_doc': '',
+                                            'cov_params_doc': ''}
 
     def _group_stats(self, groups):
         """
