@@ -764,12 +764,6 @@ class GLM(base.LikelihoodModel):
         # family will need a reference to endog if this is to be removed from
         # preprocessing
         if isinstance(self.family, families.Binomial):
-            if self.data_weights is None:
-                if len(self.endog.shape) > 1 and self.endog.shape[1] == 2:
-                    data_weights = self.endog.sum(1)
-                else:
-                    data_weights = np.ones((self.endog.shape[0]))
-                self.data_weights = data_weights
             tmp = self.family.initialize(self.endog, self.data_weights)
             self.endog = tmp[0]
             self.data_weights = tmp[1]
@@ -1157,7 +1151,7 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def null_deviance(self):
-        return self.family.deviance(self._endog, self.null)
+        return self.family.deviance(self._endog, self.null, self._data_weights)
 
     @cache_readonly
     def llnull(self):
