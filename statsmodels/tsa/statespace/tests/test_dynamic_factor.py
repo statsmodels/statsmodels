@@ -12,6 +12,7 @@ import os
 import re
 
 import warnings
+from statsmodels.datasets import webuse
 from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
@@ -31,11 +32,10 @@ output_results = pd.read_csv(current_path + os.sep + output_path)
 
 
 class CheckDynamicFactor(object):
-    @classmethod
-    def setup_class(cls, true, k_factors, factor_order, cov_type='oim',
+    def __init__(self, true, k_factors, factor_order, cov_type='oim',
                  included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
                  demean=False, filter=True, **kwargs):
-        cls.true = true
+        self.true = true
         # 1960:Q1 - 1982:Q4
         dta = pd.DataFrame(
             results_varmax.lutkepohl_data, columns=['inv', 'inc', 'consump'],
@@ -50,12 +50,12 @@ class CheckDynamicFactor(object):
         if demean:
             endog -= dta.ix[1:, included_vars].mean()
 
-        cls.model = dynamic_factor.DynamicFactor(endog, k_factors=k_factors,
+        self.model = dynamic_factor.DynamicFactor(endog, k_factors=k_factors,
                                                   factor_order=factor_order,
                                                   **kwargs)
 
         if filter:
-            cls.results = cls.model.smooth(true['params'], cov_type=cov_type)
+            self.results = self.model.smooth(true['params'], cov_type=cov_type)
 
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
@@ -145,23 +145,21 @@ class TestDynamicFactor(CheckDynamicFactor):
     """
     Test for a dynamic factor model with 1 AR(2) factor
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm_1', 'predict_dfm_2', 'predict_dfm_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
-        super(TestDynamicFactor, cls).setup_class(true, k_factors=1, factor_order=2)
+        super(TestDynamicFactor, self).__init__(true, k_factors=1, factor_order=2)
 
 class TestDynamicFactor2(CheckDynamicFactor):
     """
     Test for a dynamic factor model with two VAR(1) factors
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm2.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm2_1', 'predict_dfm2_2', 'predict_dfm2_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm2_1', 'dyn_predict_dfm2_2', 'dyn_predict_dfm2_3']]
-        super(TestDynamicFactor2, cls).setup_class(true, k_factors=2, factor_order=1)
+        super(TestDynamicFactor2, self).__init__(true, k_factors=2, factor_order=1)
 
     def test_mle(self):
         # Stata's MLE on this model doesn't converge, so no reason to check
@@ -250,13 +248,12 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
     """
     Test for a dynamic factor model with 1 exogenous regressor: a constant
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm_exog1.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm_exog1_1', 'predict_dfm_exog1_2', 'predict_dfm_exog1_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_exog1_1', 'dyn_predict_dfm_exog1_2', 'dyn_predict_dfm_exog1_3']]
         exog = np.ones((75,1))
-        super(TestDynamicFactor_exog1, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
+        super(TestDynamicFactor_exog1, self).__init__(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_predict(self):
         exog = np.ones((16, 1))
@@ -271,13 +268,12 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
     Test for a dynamic factor model with 2 exogenous regressors: a constant
     and a time-trend
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm_exog2.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm_exog2_1', 'predict_dfm_exog2_2', 'predict_dfm_exog2_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_exog2_1', 'dyn_predict_dfm_exog2_2', 'dyn_predict_dfm_exog2_3']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestDynamicFactor_exog2, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
+        super(TestDynamicFactor_exog2, self).__init__(true, k_factors=1, factor_order=1, exog=exog)
 
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
@@ -355,12 +351,11 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
     - Errors are vector autocorrelated, VAR(1)
     - Innovations are correlated
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm_gen.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm_gen_1', 'predict_dfm_gen_2', 'predict_dfm_gen_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_gen_1', 'dyn_predict_dfm_gen_2', 'dyn_predict_dfm_gen_3']]
-        super(TestDynamicFactor_general_errors, cls).setup_class(true, k_factors=1, factor_order=1, error_var=True, error_order=1, error_cov_type='unstructured')
+        super(TestDynamicFactor_general_errors, self).__init__(true, k_factors=1, factor_order=1, error_var=True, error_order=1, error_cov_type='unstructured')
 
     def test_mle(self):
         raise SkipTest("Known failure, no sequence of optimizers has been"
@@ -469,12 +464,11 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
     - Errors are vector autocorrelated, VAR(1)
     - Innovations are correlated
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm_ar2.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm_ar2_1', 'predict_dfm_ar2_2', 'predict_dfm_ar2_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_ar2_1', 'dyn_predict_dfm_ar2_2', 'dyn_predict_dfm_ar2_3']]
-        super(TestDynamicFactor_ar2_errors, cls).setup_class(true, k_factors=1, factor_order=1, error_order=2)
+        super(TestDynamicFactor_ar2_errors, self).__init__(true, k_factors=1, factor_order=1, error_order=2)
 
     def test_mle(self):
         with warnings.catch_warnings(record=True) as w:
@@ -488,13 +482,12 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     Test for a dynamic factor model where innovations are uncorrelated and
     are forced to have the same variance.
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_dfm_scalar.copy()
         true['predict'] = output_results.ix[1:, ['predict_dfm_scalar_1', 'predict_dfm_scalar_2', 'predict_dfm_scalar_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_scalar_1', 'dyn_predict_dfm_scalar_2', 'dyn_predict_dfm_scalar_3']]
         exog = np.ones((75,1))
-        super(TestDynamicFactor_scalar_error, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog, error_cov_type='scalar')
+        super(TestDynamicFactor_scalar_error, self).__init__(true, k_factors=1, factor_order=1, exog=exog, error_cov_type='scalar')
 
     def test_predict(self):
         exog = np.ones((16, 1))
@@ -509,12 +502,11 @@ class TestStaticFactor(CheckDynamicFactor):
     """
     Test for a static factor model (i.e. factors are not autocorrelated).
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_sfm.copy()
         true['predict'] = output_results.ix[1:, ['predict_sfm_1', 'predict_sfm_2', 'predict_sfm_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sfm_1', 'dyn_predict_sfm_2', 'dyn_predict_sfm_3']]
-        super(TestStaticFactor, cls).setup_class(true, k_factors=1, factor_order=0)
+        super(TestStaticFactor, self).__init__(true, k_factors=1, factor_order=0)
 
     def test_bic(self):
         # Stata uses 5 df (i.e. 5 params) here instead of 6, because one param
@@ -527,13 +519,12 @@ class TestSUR(CheckDynamicFactor):
     Test for a seemingly unrelated regression model (i.e. no factors) with
     errors cross-sectionally, but not auto-, correlated
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_sur.copy()
         true['predict'] = output_results.ix[1:, ['predict_sur_1', 'predict_sur_2', 'predict_sur_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sur_1', 'dyn_predict_sur_2', 'dyn_predict_sur_3']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestSUR, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_cov_type='unstructured')
+        super(TestSUR, self).__init__(true, k_factors=0, factor_order=0, exog=exog, error_cov_type='unstructured')
 
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
@@ -550,13 +541,12 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     the errors are vector autocorrelated, but innovations are uncorrelated.
 
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_dynamic_factor.lutkepohl_sur_auto.copy()
         true['predict'] = output_results.ix[1:, ['predict_sur_auto_1', 'predict_sur_auto_2']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sur_auto_1', 'dyn_predict_sur_auto_2']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestSUR_autocorrelated_errors, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_order=1, error_var=True, error_cov_type='diagonal', included_vars=['dln_inv', 'dln_inc'])
+        super(TestSUR_autocorrelated_errors, self).__init__(true, k_factors=0, factor_order=0, exog=exog, error_order=1, error_var=True, error_cov_type='diagonal', included_vars=['dln_inv', 'dln_inc'])
 
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
@@ -583,8 +573,6 @@ def test_misspecification():
 def test_miscellaneous():
     # Initialization with 1-dimensional exog array
     exog = np.arange(75)
-    mod = CheckDynamicFactor()
-    mod.setup_class(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
+    mod = CheckDynamicFactor(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
     exog = pd.Series(np.arange(75), index=pd.date_range(start='1960-04-01', end='1978-10-01', freq='QS'))
-    mod = CheckDynamicFactor()
-    mod.setup_class(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
+    mod = CheckDynamicFactor(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)

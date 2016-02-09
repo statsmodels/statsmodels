@@ -25,7 +25,6 @@ from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.tools import Bunch
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
-import warnings
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -275,7 +274,6 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def initial_variance(self):
         return self.ssm.initial_variance
-
     @initial_variance.setter
     def initial_variance(self, value):
         self.ssm.initial_variance = value
@@ -283,7 +281,6 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def loglikelihood_burn(self):
         return self.ssm.loglikelihood_burn
-
     @loglikelihood_burn.setter
     def loglikelihood_burn(self, value):
         self.ssm.loglikelihood_burn = value
@@ -291,7 +288,6 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def tolerance(self):
         return self.ssm.tolerance
-
     @tolerance.setter
     def tolerance(self, value):
         self.ssm.tolerance = value
@@ -350,7 +346,6 @@ class MLEModel(tsbase.TimeSeriesModel):
               method.
             - 'robust_cs' is the same as 'robust' except that the intermediate
               calculations use the 'cs' method.
-            - 'none' for no covariance matrix calculation.
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
@@ -409,26 +404,19 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Maximum likelihood estimation
         fargs = (False,)  # (sets transformed=False)
         mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                           fargs=fargs,
-                                           maxiter=maxiter,
-                                           full_output=full_output,
-                                           disp=disp, callback=callback,
-                                           skip_hessian=True, **kwargs)
+                                                  fargs=fargs,
+                                                  maxiter=maxiter,
+                                                  full_output=full_output,
+                                                  disp=disp, callback=callback,
+                                                  skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
             return self.transform_params(mlefit.params)
         # Otherwise construct the results class if desired
         else:
-            try:
-                res = self.smooth(mlefit.params, transformed=False,
-                                  cov_type=cov_type, cov_kwds=cov_kwds)
-            except Exception as e:
-                warnings.warn('Could not perform smoothing; message was "%s".'
-                              ' Returning filtered results.' % str(e))
-                res = self.filter(mlefit.params, transformed=False,
-                                  cov_type=cov_type, cov_kwds=cov_kwds)
-
+            res = self.smooth(mlefit.params, transformed=False,
+                              cov_type=cov_type, cov_kwds=cov_kwds)
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
@@ -691,7 +679,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                     )
                     information_matrix[i, j] += np.inner(
                         partials_forecasts_error[:, t, i],
-                        np.dot(inv_forecasts_error_cov[:, :, t],
+                        np.dot(inv_forecasts_error_cov[:,:,t],
                                partials_forecasts_error[:, t, j])
                     )
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
@@ -761,7 +749,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def score_obs(self, params, **kwargs):
         """
         Compute the score per observation, evaluated at params
-
+ 
         Parameters
         ----------
         params : array_like
@@ -1022,7 +1010,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Simulated obs is (k_endog x nobs); don't want to squeeze in
         # case of npredictions = 1
         if simulated_obs.shape[0] == 1:
-            simulated_obs = simulated_obs[0, :]
+            simulated_obs = simulated_obs[0,:]
         else:
             simulated_obs = simulated_obs.T
         return simulated_obs
@@ -1211,7 +1199,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
           method.
         - 'robust_cs' is the same as 'robust' except that the intermediate
           calculations use the 'cs' method.
-        - 'none' for no covariance matrix calculation.
         """
 
         import statsmodels.stats.sandwich_covariance as sw
@@ -1231,17 +1218,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         res.cov_kwds = {}
 
         # Calculate the new covariance matrix
-        k_params = len(self.params)
-        if k_params == 0:
-            res.cov_params_default = np.zeros((0, 0))
+        if len(self.params) == 0:
+            res.cov_params_default = np.zeros((0,0))
             res._rank = 0
-            res.cov_kwds['description'] = (
+            res.cov_kwds['cov_type'] = (
                 'No parameters estimated.')
-        elif cov_type == 'none':
-            res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
-            res._rank = np.nan
-            res.cov_kwds['description'] = (
-                'Covariance matrix not calculated.')
         elif self.cov_type == 'cs':
             res.cov_params_default = res.cov_params_cs
             res.cov_kwds['description'] = (
@@ -1444,7 +1425,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # forecast functions, but here also to maintain consistency)
         fittedvalues = self.filter_results.forecasts
         if fittedvalues.shape[0] == 1:
-            fittedvalues = fittedvalues[0, :]
+            fittedvalues = fittedvalues[0,:]
         else:
             fittedvalues = fittedvalues.T
         return fittedvalues
@@ -1498,7 +1479,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # forecast functions, but here also to maintain consistency)
         resid = self.filter_results.forecasts_error
         if resid.shape[0] == 1:
-            resid = resid[0, :]
+            resid = resid[0,:]
         else:
             resid = resid.T
         return resid
@@ -1650,16 +1631,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # Setup functions to calculate the p-values
             if use_f:
                 from scipy.stats import f
-                pval_lower = lambda test_statistics: f.cdf(
-                    test_statistics, h, h)
-                pval_upper = lambda test_statistics: f.sf(
-                    test_statistics, h, h)
+                pval_lower = lambda test_statistics: f.cdf(test_statistics, h, h)
+                pval_upper = lambda test_statistics: f.sf(test_statistics, h, h)
             else:
                 from scipy.stats import chi2
-                pval_lower = lambda test_statistics: chi2.cdf(
-                    h * test_statistics, h)
-                pval_upper = lambda test_statistics: chi2.sf(
-                    h * test_statistics, h)
+                pval_lower = lambda test_statistics: chi2.cdf(h*test_statistics, h)
+                pval_upper = lambda test_statistics: chi2.sf(h*test_statistics, h)
 
             # Calculate the one- or two-sided p-values
             alternative = alternative.lower()
@@ -1746,7 +1723,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     output.append(results[0:2])
                 else:
                     output.append(results[2:])
-
+                
             output = np.c_[output]
         else:
             raise NotImplementedError('Invalid serial correlation test'
@@ -1885,9 +1862,39 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
         """
+        if start is None:
+            start = 0
+
+        # Handle start and end (e.g. dates)
+        start = self.model._get_predict_start(start)
+        end, out_of_sample = self.model._get_predict_end(end)
+
+        # Handle string dynamic
+        dates = self.data.dates
+        if isinstance(dynamic, str):
+            if dates is None:
+                raise ValueError("Got a string for dynamic and dates is None")
+            dtdynamic = self.model._str_to_date(dynamic)
+            try:
+                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
+
+                dynamic = dynamic_start - start
+            except KeyError:
+                raise ValueError("Dynamic must be in dates. Got %s | %s" %
+                                 (str(dynamic), str(dtdynamic)))
+
         # Perform the prediction
-        prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
-        return prediction_results.predicted_mean
+        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # case of npredictions = 1
+        prediction_results = self.filter_results.predict(
+            start, end+out_of_sample+1, dynamic, **kwargs
+        )
+        predicted_mean = prediction_results.forecasts
+        if predicted_mean.shape[0] == 1:
+            predicted_mean = predicted_mean[0,:]
+        else:
+            predicted_mean = predicted_mean.T
+        return predicted_mean
 
     def forecast(self, steps=1, **kwargs):
         """
@@ -1954,8 +1961,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             An (nsimulations x k_endog) array of simulated observations.
         """
         return self.model.simulate(self.params, nsimulations,
-                                   measurement_shocks, state_shocks,
-                                   initial_state)
+            measurement_shocks, state_shocks, initial_state)
 
     def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
@@ -2001,8 +2007,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         """
         return self.model.impulse_responses(self.params, steps, impulse,
-                                            orthogonalized, cumulative,
-                                            **kwargs)
+            orthogonalized, cumulative, **kwargs)
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """
@@ -2085,7 +2090,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         plot_acf(resid, ax=ax, lags=lags)
         ax.set_title('Correlogram')
 
-        ax.set_ylim(-1, 1)
+        ax.set_ylim(-1,1)
 
         return fig
 
@@ -2169,16 +2174,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         format_str = lambda array: [
             ', '.join(['{0:.2f}'.format(i) for i in array])
         ]
-        diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
-                      ('Prob(Q):', format_str(lb[:, 1, -1])),
-                      ('Heteroskedasticity (H):', format_str(het[:, 0])),
-                      ('Prob(H) (two-sided):', format_str(het[:, 1]))
+        diagn_left = [('Ljung-Box (Q):', format_str(lb[:,0,-1])),
+                      ('Prob(Q):', format_str(lb[:,1,-1])),
+                      ('Heteroskedasticity (H):', format_str(het[:,0])),
+                      ('Prob(H) (two-sided):', format_str(het[:,1]))
                       ]
 
-        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:, 0])),
-                       ('Prob(JB):', format_str(jb[:, 1])),
-                       ('Skew:', format_str(jb[:, 2])),
-                       ('Kurtosis:', format_str(jb[:, 3]))
+        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:,0])),
+                       ('Prob(JB):', format_str(jb[:,1])),
+                       ('Skew:', format_str(jb[:,2])),
+                       ('Kurtosis:', format_str(jb[:,3]))
                        ]
 
         summary = Summary()
@@ -2248,15 +2253,9 @@ class PredictionResults(pred.PredictionResults):
 
     """
     def __init__(self, model, prediction_results, row_labels=None):
-        if model.model.k_endog == 1:
-            endog = pd.Series(prediction_results.endog[:, 0],
-                              name=model.model.endog_names)
-        else:
-            endog = pd.DataFrame(prediction_results.endog.T,
-                                 columns=model.model.endog_names)
         self.model = Bunch(data=model.data.__class__(
-            endog=endog,
-            predict_dates=getattr(model.data, 'predict_dates', None)),
+            endog=prediction_results.endog.T,
+            predict_dates=getattr(model.data, 'predict_dates', None))
         )
         self.prediction_results = prediction_results
 
@@ -2279,14 +2278,6 @@ class PredictionResults(pred.PredictionResults):
                                                 row_labels=row_labels,
                                                 link=identity())
 
-    @property
-    def se_mean(self):
-        if self.var_pred_mean.ndim == 1:
-            se_mean = np.sqrt(self.var_pred_mean)
-        else:
-            se_mean = np.sqrt(self.var_pred_mean.T.diagonal())
-        return se_mean
-
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         # TODO: this performs metadata wrapping, and that should be handled
         #       by attach_* methods. However, they don't currently support
@@ -2294,20 +2285,9 @@ class PredictionResults(pred.PredictionResults):
         conf_int = super(PredictionResults, self).conf_int(
             method, alpha, **kwds)
 
-        # Create a dataframe
         if self.model.data.predict_dates is not None:
             conf_int = pd.DataFrame(conf_int,
                                     index=self.model.data.predict_dates)
-        else:
-            conf_int = pd.DataFrame(conf_int)
-
-        # Attach the endog names
-        ynames = self.model.data.ynames
-        if not type(ynames) == list:
-            ynames = [ynames]
-        names = (['lower %s' % name for name in ynames] +
-                 ['upper %s' % name for name in ynames])
-        conf_int.columns = names
 
         return conf_int
 
@@ -2315,8 +2295,8 @@ class PredictionResults(pred.PredictionResults):
         # TODO: finish and cleanup
         # import pandas as pd
         from statsmodels.compat.collections import OrderedDict
-        # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
-        ci_mean = self.conf_int(alpha=alpha).values
+        #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
+        ci_mean = self.conf_int(alpha=alpha)
         to_include = OrderedDict()
         if self.predicted_mean.ndim == 1:
             yname = self.model.data.ynames
@@ -2331,11 +2311,12 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
+
         self.table = to_include
-        # OrderedDict doesn't work to preserve sequence
+        #OrderedDict doesn't work to preserve sequence
         # pandas dict doesn't handle 2d_array
-        # data = np.column_stack(list(to_include.values()))
-        # names = ....
+        #data = np.column_stack(list(to_include.values()))
+        #names = ....
         res = pd.DataFrame(to_include, index=self.row_labels,
                            columns=to_include.keys())
         res.columns.name = yname

@@ -121,11 +121,10 @@ class CheckVARMAX(object):
 
 
 class CheckLutkepohl(CheckVARMAX):
-    @classmethod
-    def setup_class(cls, true, order, trend, error_cov_type, cov_type='oim',
+    def __init__(self, true, order, trend, error_cov_type, cov_type='oim',
              included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
              **kwargs):
-        cls.true = true
+        self.true = true
         # 1960:Q1 - 1982:Q4
         dta = pd.DataFrame(
             results_varmax.lutkepohl_data, columns=['inv', 'inc', 'consump'],
@@ -137,10 +136,10 @@ class CheckLutkepohl(CheckVARMAX):
 
         endog = dta.ix['1960-04-01':'1978-10-01', included_vars]
 
-        cls.model = varmax.VARMAX(endog, order=order, trend=trend,
+        self.model = varmax.VARMAX(endog, order=order, trend=trend,
                                    error_cov_type=error_cov_type, **kwargs)
 
-        cls.results = cls.model.smooth(true['params'], cov_type=cov_type)
+        self.results = self.model.smooth(true['params'], cov_type=cov_type)
 
     def test_predict(self, **kwargs):
         super(CheckLutkepohl, self).test_predict(end='1982-10-01', **kwargs)
@@ -150,12 +149,11 @@ class CheckLutkepohl(CheckVARMAX):
 
 
 class TestVAR(CheckLutkepohl):
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var1.copy()
         true['predict'] = var_results.ix[1:, ['predict_1', 'predict_2', 'predict_3']]
         true['dynamic_predict'] = var_results.ix[1:, ['dyn_predict_1', 'dyn_predict_2', 'dyn_predict_3']]
-        super(TestVAR, cls).setup_class(
+        super(TestVAR, self).__init__(
             true,  order=(1,0), trend='nc',
             error_cov_type="unstructured")
 
@@ -195,12 +193,11 @@ class TestVAR(CheckLutkepohl):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 class TestVAR_diagonal(CheckLutkepohl):
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var1_diag.copy()
         true['predict'] = var_results.ix[1:, ['predict_diag1', 'predict_diag2', 'predict_diag3']]
         true['dynamic_predict'] = var_results.ix[1:, ['dyn_predict_diag1', 'dyn_predict_diag2', 'dyn_predict_diag3']]
-        super(TestVAR_diagonal, cls).setup_class(
+        super(TestVAR_diagonal, self).__init__(
             true,  order=(1,0), trend='nc',
             error_cov_type="diagonal")
 
@@ -253,19 +250,18 @@ class TestVAR_measurement_error(CheckLutkepohl):
     It also checks that the state-space representation with positive
     measurement errors is correct.
     """
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var1_diag_meas.copy()
         true['predict'] = var_results.ix[1:, ['predict_diag1', 'predict_diag2', 'predict_diag3']]
         true['dynamic_predict'] = var_results.ix[1:, ['dyn_predict_diag1', 'dyn_predict_diag2', 'dyn_predict_diag3']]
-        super(TestVAR_measurement_error, cls).setup_class(
+        super(TestVAR_measurement_error, self).__init__(
             true,  order=(1,0), trend='nc',
             error_cov_type="diagonal", measurement_error=True)
 
         # Create another filter results with positive measurement errors
-        cls.true_measurement_error_variances = [1., 2., 3.]
-        params = np.r_[true['params'][:-3], cls.true_measurement_error_variances]
-        cls.results2 = cls.model.smooth(params)
+        self.true_measurement_error_variances = [1., 2., 3.]
+        params = np.r_[true['params'][:-3], self.true_measurement_error_variances]
+        self.results2 = self.model.smooth(params)
 
     def test_mle(self):
         # With the additional measurment error parameters, this wouldn't be
@@ -337,12 +333,11 @@ class TestVAR_measurement_error(CheckLutkepohl):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 class TestVAR_obs_intercept(CheckLutkepohl):
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var1_obs_intercept.copy()
         true['predict'] = var_results.ix[1:, ['predict_int1', 'predict_int2', 'predict_int3']]
         true['dynamic_predict'] = var_results.ix[1:, ['dyn_predict_int1', 'dyn_predict_int2', 'dyn_predict_int3']]
-        super(TestVAR_obs_intercept, cls).setup_class(
+        super(TestVAR_obs_intercept, self).__init__(
             true, order=(1,0), trend='nc',
             error_cov_type="diagonal", obs_intercept=true['obs_intercept'])
 
@@ -360,14 +355,13 @@ class TestVAR_obs_intercept(CheckLutkepohl):
 class TestVAR_exog(CheckLutkepohl):
     # Note: unlike the other tests in this file, this is against the Stata
     # var function rather than the Stata dfactor function
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var1_exog.copy()
         true['predict'] = var_results.ix[1:75, ['predict_exog1_1', 'predict_exog1_2', 'predict_exog1_3']]
         true['predict'].iloc[0, :] = 0
         true['fcast'] = var_results.ix[76:, ['fcast_exog1_dln_inv', 'fcast_exog1_dln_inc', 'fcast_exog1_dln_consump']]
         exog = np.arange(75) + 3
-        super(TestVAR_exog, cls).setup_class(
+        super(TestVAR_exog, self).__init__(
             true, order=(1,0), trend='nc', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse', loglikelihood_burn=1)
 
@@ -449,14 +443,13 @@ class TestVAR_exog2(CheckLutkepohl):
     # works correctly. The params are from Stata, but the loglike is from
     # this model. Likely the small discrepancy (see the results file) is from
     # the approximate diffuse initialization.
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var1_exog2.copy()
         true['predict'] = var_results.ix[1:75, ['predict_exog2_1', 'predict_exog2_2', 'predict_exog2_3']]
         true['predict'].iloc[0, :] = 0
         true['fcast'] = var_results.ix[76:, ['fcast_exog2_dln_inv', 'fcast_exog2_dln_inc', 'fcast_exog2_dln_consump']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 3)[:, np.newaxis]]
-        super(TestVAR_exog2, cls).setup_class(
+        super(TestVAR_exog2, self).__init__(
             true, order=(1,0), trend='nc', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse', loglikelihood_burn=1)
 
@@ -488,12 +481,11 @@ class TestVAR_exog2(CheckLutkepohl):
 
 
 class TestVAR2(CheckLutkepohl):
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.lutkepohl_var2.copy()
         true['predict'] = var_results.ix[1:, ['predict_var2_1', 'predict_var2_2']]
         true['dynamic_predict'] = var_results.ix[1:, ['dyn_predict_var2_1', 'dyn_predict_var2_2']]
-        super(TestVAR2, cls).setup_class(
+        super(TestVAR2, self).__init__(
             true, order=(2,0), trend='nc', error_cov_type='unstructured',
             included_vars=['dln_inv', 'dln_inc'])
 
@@ -540,10 +532,9 @@ class TestVAR2(CheckLutkepohl):
 
 
 class CheckFREDManufacturing(CheckVARMAX):
-    @classmethod
-    def setup_class(cls, true, order, trend, error_cov_type, cov_type='oim',
+    def __init__(self, true, order, trend, error_cov_type, cov_type='oim',
                  **kwargs):
-        cls.true = true
+        self.true = true
         # 1960:Q1 - 1982:Q4
         dta = webuse('manufac', 'http://www.stata-press.com/data/r12/')
 
@@ -555,10 +546,10 @@ class CheckFREDManufacturing(CheckVARMAX):
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
-            cls.model = varmax.VARMAX(endog, order=order, trend=trend,
+            self.model = varmax.VARMAX(endog, order=order, trend=trend,
                                        error_cov_type=error_cov_type, **kwargs)
 
-        cls.results = cls.model.smooth(true['params'], cov_type=cov_type)
+        self.results = self.model.smooth(true['params'], cov_type=cov_type)
 
 
 class TestVARMA(CheckFREDManufacturing):
@@ -566,12 +557,11 @@ class TestVARMA(CheckFREDManufacturing):
     Test against the sspace VARMA example with some params set to zeros.
     """
 
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.fred_varma11.copy()
         true['predict'] = varmax_results.ix[1:, ['predict_varma11_1', 'predict_varma11_2']]
         true['dynamic_predict'] = varmax_results.ix[1:, ['dyn_predict_varma11_1', 'dyn_predict_varma11_2']]
-        super(TestVARMA, cls).setup_class(
+        super(TestVARMA, self).__init__(
               true, order=(1,1), trend='nc', error_cov_type='diagonal')
 
     def test_mle(self):
@@ -645,12 +635,11 @@ class TestVMA1(CheckFREDManufacturing):
     Test against the sspace VARMA example with some params set to zeros.
     """
 
-    @classmethod
-    def setup_class(cls):
+    def __init__(self):
         true = results_varmax.fred_vma1.copy()
         true['predict'] = varmax_results.ix[1:, ['predict_vma1_1', 'predict_vma1_2']]
         true['dynamic_predict'] = varmax_results.ix[1:, ['dyn_predict_vma1_1', 'dyn_predict_vma1_2']]
-        super(TestVMA1, cls).setup_class(
+        super(TestVMA1, self).__init__(
               true, order=(0,1), trend='nc', error_cov_type='diagonal')
 
     def test_mle(self):

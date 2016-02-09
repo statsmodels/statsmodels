@@ -2,7 +2,7 @@ import os
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
-                           assert_equal, assert_)
+                           assert_equal)
 import pandas as pd
 
 # TODO: Include some corner cases: data sets with empty strata, strata
@@ -102,7 +102,7 @@ class TestPHReg(object):
         coef, se, time_r, hazard_r = get_results(n, p, "et_st", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-3)
         assert_allclose(phrb.bse, se, rtol=1e-4)
-
+        
         #smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
@@ -270,26 +270,7 @@ class TestPHReg(object):
 
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
-        smry = rslt.summary()
-
-        strata = np.kron(np.arange(50), np.ones(4))
-        mod = PHReg(time, exog, status, strata=strata)
-        rslt = mod.fit()
-        smry = rslt.summary()
-        msg = "3 strata dropped for having no events"
-        assert_(msg in str(smry))
-
-        groups = np.kron(np.arange(25), np.ones(8))
-        mod = PHReg(time, exog, status)
-        rslt = mod.fit(groups=groups)
-        smry = rslt.summary()
-
-        entry = np.random.uniform(0.1, 0.8, 200) * time
-        mod = PHReg(time, exog, status, entry=entry)
-        rslt = mod.fit()
-        smry = rslt.summary()
-        msg = "200 observations have positive entry times"
-        assert_(msg in str(smry))
+        rslt.summary()
 
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr

@@ -835,7 +835,7 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
         # by hand
         for i in range(kfilter.k_endog):
             for j in range(i):
-                kfilter._forecast_error_fac[i + j*kfilter.k_endog] = kfilter._forecast_error_fac[j + i*kfilter.k_endog]
+                kfilter.forecast_error_fac[i,j] = kfilter.forecast_error_fac[j,i]
 
 
     # Get `tmp2` and `tmp3` via matrix multiplications
@@ -1416,7 +1416,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Advance the time
         self.t += 1
 
-    cpdef initialize_statespace_object_pointers(self):
+    cdef void initialize_statespace_object_pointers(self) except *:
         cdef:
             int t = self.t
         # Indices for possibly time-varying arrays
@@ -1455,7 +1455,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self._initial_state = &self.model.initial_state[0]
         self._initial_state_cov = &self.model.initial_state_cov[0,0]
 
-    cpdef initialize_filter_object_pointers(self):
+    cdef void initialize_filter_object_pointers(self):
         cdef:
             int t = self.t
             int inc = 1
@@ -1498,7 +1498,7 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.filter_method & FILTER_CONVENTIONAL:
             self.forecasting = {{prefix}}forecast_conventional
 
-            if self.inversion_method & INVERT_UNIVARIATE and self.model.k_endog == 1:
+            if self.inversion_method & INVERT_UNIVARIATE and self.k_endog == 1:
                 self.inversion = {{prefix}}inverse_univariate
             elif self.inversion_method & SOLVE_CHOLESKY:
                 self.inversion = {{prefix}}solve_cholesky
@@ -1534,7 +1534,7 @@ cdef class {{prefix}}KalmanFilter(object):
         else:
             self._selected_state_cov = &self.model.selected_state_cov[0, 0, 0]
 
-    cpdef select_missing(self):
+    cdef void select_missing(self):
         # ### Perform missing selections
         # In Durbin and Koopman (2012), these are represented as matrix
         # multiplications, i.e. $Z_t^* = W_t Z_t$ where $W_t$ is a row
@@ -1726,6 +1726,11 @@ cdef class {{prefix}}KalmanFilter(object):
                 {{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, predicted_t], &inc, self._converged_predicted_state_cov, &inc)
                 # $|F_t|$
                 self.converged_determinant = self.determinant
+        elif self.period_converged > 0:
+            # This is here so that the filter's state is reset to converged = 1
+            # even if it was set to converged = 0 for the current iteration
+            # due to missing values
+            self.converged = 1
 
     cdef void migrate_storage(self):
         cdef int inc = 1
