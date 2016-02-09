@@ -119,7 +119,7 @@ class Family(object):
         """
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
         """
         Deviance of (endog,mu) pair.
 
@@ -152,7 +152,7 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, data_weights, scale=1.):
         """
         The deviance residuals
 
@@ -211,7 +211,7 @@ class Family(object):
         """
         return self.link(mu)
 
-    def loglike(self, endog, mu, scale=1.):
+    def loglike(self, endog, mu, data_weights, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -297,7 +297,7 @@ class Poisson(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, data_weights, scale=1.):
         """Poisson deviance residual
 
         Parameters
@@ -319,11 +319,11 @@ class Poisson(Family):
         resid_dev = sign(endog-mu)*sqrt(2*endog*log(endog/mu)-2*(endog-mu))
         """
         endog_mu = self._clean(endog/mu)
-        return np.sign(endog - mu) * np.sqrt(2 * endog *
+        return np.sign(endog - mu) * np.sqrt(2 * data_weights * (endog *
                                              np.log(endog_mu) -
-                                             2 * (endog - mu))/scale
+                                             (endog - mu)))/scale
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
         '''
         Poisson deviance function
 
@@ -348,9 +348,9 @@ class Poisson(Family):
         :math:`deviance = 2*\\sum_{i}(Y*\\log(Y/\\mu))`
         '''
         endog_mu = self._clean(endog/mu)
-        return 2*np.sum(endog*np.log(endog_mu))/scale
+        return 2*np.sum(endog * data_weights * np.log(endog_mu))/scale
 
-    def loglike(self, endog, mu, scale=1.):
+    def loglike(self, endog, mu, data_weights, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -374,7 +374,9 @@ class Poisson(Family):
         llf = scale * sum(-mu + endog*log(mu) - gammaln(endog+1))
         where gammaln is the log gamma function
         """
-        return scale * np.sum(-mu + endog*np.log(mu)-special.gammaln(endog+1))
+        loglike = np.sum(np.log(data_weights) - mu + endog * np.log(mu) -
+                         special.gammaln(endog+1))
+        return scale * loglike
 
     def resid_anscombe(self, endog, mu):
         """
@@ -436,7 +438,7 @@ class Gaussian(Family):
         self.variance = Gaussian.variance
         self.link = link()
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, data_weights, scale=1.):
         """
         Gaussian deviance residuals
 
@@ -459,9 +461,9 @@ class Gaussian(Family):
         `resid_dev` = (`endog` - `mu`)/sqrt(variance(`mu`))
         """
 
-        return (endog - mu) / np.sqrt(self.variance(mu))/scale
+        return (data_weights * (endog - mu) / np.sqrt(self.variance(mu))/scale)
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
         """
         Gaussian deviance function
 
@@ -483,9 +485,9 @@ class Gaussian(Family):
         --------
         `deviance` = sum((endog-mu)**2)
         """
-        return np.sum((endog-mu)**2)/scale
+        return np.sum((data_weights * (endog-mu)**2))/scale
 
-    def loglike(self, endog, mu, scale=1.):
+    def loglike(self, endog, mu, data_weights, scale=1.):
         """
         The log-likelihood in terms of the fitted mean response.
 
@@ -525,8 +527,8 @@ class Gaussian(Family):
             return llf
         else:
             # Return the loglikelihood for Gaussian GLM
-            return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
-                          - .5*np.log(2 * np.pi * scale))
+            return np.sum((np.log(data_weights) + endog * mu - mu**2/2)/scale - 
+                          endog**2/(2 * scale) - .5*np.log(2 * np.pi * scale))
 
     def resid_anscombe(self, endog, mu):
         """
@@ -596,7 +598,7 @@ class Gamma(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
         """
         Gamma deviance function
 
@@ -619,9 +621,9 @@ class Gamma(Family):
         `deviance` = 2*sum((endog - mu)/mu - log(endog/mu))
         """
         endog_mu = self._clean(endog/mu)
-        return 2 * np.sum((endog - mu)/mu - np.log(endog_mu))
+        return 2 * np.sum(data_weights * ((endog - mu)/mu - np.log(endog_mu)))
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, data_weights, scale=1.):
         r"""
         Gamma deviance residuals
 
@@ -648,10 +650,11 @@ class Gamma(Family):
            sign(endog - \mu) * \sqrt{-2*(-(endog-\mu)/\mu + \log(endog/\mu))}
         """
         endog_mu = self._clean(endog/mu)
-        return np.sign(endog - mu) * np.sqrt(-2 * (-(endog - mu)/mu +
-                                                   np.log(endog_mu)))
+        return np.sign(endog - mu) * np.sqrt(-2 * data_weights *
+                                             (-(endog - mu)/mu + 
+                                             np.log(endog_mu)))
 
-    def loglike(self, endog, mu, scale=1.):
+    def loglike(self, endog, mu, data_weights, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -676,8 +679,9 @@ class Gamma(Family):
               log(scale) + scale*gammaln(1/scale))
         where gammaln is the log gamma function.
         """
-        return - 1./scale * np.sum(endog/mu + np.log(mu) + (scale - 1) *
-                                   np.log(endog) + np.log(scale) + scale *
+        return - 1./scale * np.sum(np.log(data_weights) + endog/mu +
+                                   np.log(mu) + (scale - 1) * np.log(endog) +
+                                   np.log(scale) + scale *
                                    special.gammaln(1./scale))
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
@@ -760,7 +764,7 @@ class Binomial(Family):
         """
         return (y + .5)/2
 
-    def initialize(self, endog):
+    def initialize(self, endog, data_weights):
         '''
         Initialize the response variable.
 
@@ -778,14 +782,16 @@ class Binomial(Family):
         successes/(success + failures) is returned.  And n is set to
         successes + failures.
         '''
+        self.variance = V.Binomial(n=data_weights)
         if (endog.ndim > 1 and endog.shape[1] > 1):
             y = endog[:, 0]
-            self.n = endog.sum(1)  # overwrite self.n for deviance below
-            return y*1./self.n
+            # overwrite self.data_weights for deviance below
+            self.data_weights = endog.sum(1)
+            return y*1./self.data_weights, data_weights
         else:
-            return endog
+            return endog, data_weights
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
         '''
         Deviance function for either Bernoulli or Binomial data.
 
@@ -819,18 +825,19 @@ class Binomial(Family):
         `deviance` = 2*sum(log(endog/mu) + (n-endog)*log((n-endog)/(n-mu)))
         where endog and n are as defined in Binomial.initialize.
         '''
-        if np.shape(self.n) == () and self.n == 1:
+        if np.shape(data_weights) == () and data_weights == 1:
             one = np.equal(endog, 1)
             return -2 * np.sum(one * np.log(mu + 1e-200) + (1-one) *
                                np.log(1 - mu + 1e-200))
 
         else:
-            return 2 * np.sum(self.n * (endog * np.log(endog/mu + 1e-200) +
-                                        (1 - endog) * np.log((1 - endog) /
-                                                             (1 - mu) +
-                                                             1e-200)))
+            return 2 * np.sum(data_weights * (endog *
+                                              np.log(endog/mu + 1e-200) +
+                                              (1 - endog) *
+                                              np.log((1 - endog) /
+                                                     (1 - mu) + 1e-200)))
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, data_weights, scale=1.):
         """
         Binomial deviance residuals
 
@@ -866,17 +873,18 @@ class Binomial(Family):
         """
 
         mu = self.link._clean(mu)
-        if np.shape(self.n) == () and self.n == 1:
+        if np.shape(data_weights) == () and data_weights == 1:
             one = np.equal(endog, 1)
             return np.sign(endog-mu)*np.sqrt(-2 * np.log(one * mu + (1 - one) *
                                                          (1 - mu)))/scale
         else:
             return (np.sign(endog - mu) *
-                    np.sqrt(2 * self.n * (endog * np.log(endog/mu + 1e-200) +
-                            (1 - endog) * np.log((1 - endog)/(1 - mu) +
-                                                 1e-200)))/scale)
+                    np.sqrt(2 * data_weights *
+                            (endog * np.log(endog/mu + 1e-200) +
+                             (1 - endog) * np.log((1 - endog)/(1 - mu) +
+                                                  1e-200)))/scale)
 
-    def loglike(self, endog, mu, scale=1.):
+    def loglike(self, endog, mu, data_weights, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -909,15 +917,16 @@ class Binomial(Family):
         original number of successes.
         """
 
-        if np.shape(self.n) == () and self.n == 1:
-            return scale * np.sum(endog * np.log(mu/(1 - mu) + 1e-200) +
+        if np.shape(data_weights) == () and data_weights == 1:
+            return scale * np.sum(np.log(data_weights) +
+                                  endog * np.log(mu/(1 - mu) + 1e-200) +
                                   np.log(1 - mu))
         else:
-            y = endog * self.n  # convert back to successes
-            return scale * np.sum(special.gammaln(self.n + 1) -
+            y = endog * data_weights  # convert back to successes
+            return scale * np.sum(special.gammaln(data_weights + 1) -
                                   special.gammaln(y + 1) -
-                                  special.gammaln(self.n - y + 1) + y *
-                                  np.log(mu/(1 - mu)) + self.n *
+                                  special.gammaln(data_weights - y + 1) + y *
+                                  np.log(mu/(1 - mu)) + data_weights *
                                   np.log(1 - mu))
 
     def resid_anscombe(self, endog, mu):
@@ -963,8 +972,8 @@ class Binomial(Family):
         '''
         cox_snell = lambda x: (special.betainc(2/3., 2/3., x)
                                * special.beta(2/3., 2/3.))
-        return np.sqrt(self.n) * ((cox_snell(endog) - cox_snell(mu)) /
-                                  (mu**(1/6.) * (1 - mu)**(1/6.)))
+        return (np.sqrt(self.data_weights) * ((cox_snell(endog) -
+                cox_snell(mu)) / (mu**(1/6.) * (1 - mu)**(1/6.))))
 
 
 class InverseGaussian(Family):
@@ -1006,7 +1015,7 @@ class InverseGaussian(Family):
         self.variance = InverseGaussian.variance
         self.link = link()
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, data_weights, scale=1.):
         """
         Returns the deviance residuals for the inverse Gaussian family.
 
@@ -1028,9 +1037,10 @@ class InverseGaussian(Family):
         -----
         `dev_resid` = sign(endog-mu)*sqrt((endog-mu)**2/(endog*mu**2))
         """
-        return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2))/scale
+        return np.sign(endog-mu) * np.sqrt(data_weights *
+                                           (endog-mu)**2/(endog*mu**2))/scale
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
         """
         Inverse Gaussian deviance function
 
@@ -1052,9 +1062,9 @@ class InverseGaussian(Family):
         -----
         `deviance` = sum((endog=mu)**2/(endog*mu**2))
         """
-        return np.sum((endog-mu)**2/(endog*mu**2))/scale
+        return np.sum(data_weights*(endog-mu)**2/(endog*mu**2))/scale
 
-    def loglike(self, endog, mu, scale=1.):
+    def loglike(self, endog, mu, data_weights, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1078,8 +1088,9 @@ class InverseGaussian(Family):
         `llf` = -(1/2.)*sum((endog-mu)**2/(endog*mu**2*scale)
                  + log(scale*endog**3) + log(2*pi))
         """
-        return -.5 * np.sum((endog - mu)**2/(endog * mu**2 * scale)
-                            + np.log(scale * endog**3) + np.log(2 * np.pi))
+        return -.5 * np.sum(np.log(data_weights) + ((endog - mu)**2 /
+                                                    (endog * mu**2 * scale)) +
+                            np.log(scale * endog**3) + np.log(2 * np.pi))
 
     def resid_anscombe(self, endog, mu):
         """
@@ -1164,7 +1175,8 @@ class NegativeBinomial(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def deviance(self, endog, mu, scale=1.):
+    def deviance(self, endog, mu, data_weights, scale=1.):
+        # TODO: Data weights are incomplete
         r"""
         Returns the value of the deviance function.
 
@@ -1256,7 +1268,8 @@ class NegativeBinomial(Family):
                                  (1 + self.alpha * mu)))
         return np.sign(endog - mu) * np.sqrt(tmp)/scale
 
-    def loglike(self, endog, mu, scale):
+    def loglike(self, endog, mu, data_weights, scale):
+        # TODO: Check weights
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1289,7 +1302,8 @@ class NegativeBinomial(Family):
         constant = special.gammaln(endog + 1/self.alpha) - special.gammaln(endog+1)\
                     -special.gammaln(1/self.alpha)
         exp_lin_pred = np.exp(lin_pred)
-        return (np.sum(endog * np.log(self.alpha * exp_lin_pred /
+        return (np.sum(np.log(data_weights) +
+                       endog * np.log(self.alpha * exp_lin_pred /
                                       (1 + self.alpha * exp_lin_pred)) -
                 np.log(1 + self.alpha * exp_lin_pred)/self.alpha + constant))
 
