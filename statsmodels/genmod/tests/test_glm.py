@@ -88,7 +88,7 @@ class CheckModelResultsMixin(object):
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                    self.res1.mu, self.res1.model.data_weights, scale=1)
+                    self.res1.mu, self.res1.model.freq_weights, scale=1)
             aic = (-2*llf+2*(self.res1.df_model+1))/self.res1.nobs
         else:
             aic = self.res1.aic/self.res1.nobs
@@ -111,7 +111,7 @@ class CheckModelResultsMixin(object):
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                    self.res1.mu, self.res1.model.data_weights, scale=1)
+                    self.res1.mu, self.res1.model.freq_weights, scale=1)
         else:
             llf = self.res1.llf
         assert_almost_equal(llf, self.res2.llf, self.decimal_loglike)
