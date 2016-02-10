@@ -402,7 +402,7 @@ class Poisson(Family):
 
            (3/2.)*(endog^{2/3.} - \\mu**(2/3.))/\\mu^{1/6.}
         """
-        return (3 / 2.) * (endog ** (2/3.) - mu ** (2 / 3.)) / mu ** (1 / 6.)
+        return (3 / 2.) * (endog**(2/3.) - mu**(2 / 3.)) / mu**(1 / 6.)
 
 
 class Gaussian(Family):
@@ -485,7 +485,7 @@ class Gaussian(Family):
         --------
         `deviance` = sum((endog-mu)**2)
         """
-        return np.sum((freq_weights * (endog - mu) ** 2)) / scale
+        return np.sum((freq_weights * (endog - mu)**2)) / scale
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         """
@@ -521,7 +521,7 @@ class Gaussian(Family):
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
             nobs2 = endog.shape[0] / 2.
-            SSR = np.sum((endog - self.fitted(mu)) ** 2, axis=0)
+            SSR = np.sum((endog - self.fitted(mu))**2, axis=0)
             llf = -np.log(SSR) * nobs2
             llf -= (1 + np.log(np.pi / nobs2)) * nobs2
             return llf
@@ -707,7 +707,7 @@ class Gamma(Family):
         -----
         resid_anscombe = 3*(endog**(1/3.)-mu**(1/3.))/mu**(1/3.)
         """
-        return 3 * (endog ** (1/3.) - mu ** (1/3.)) / mu ** (1/3.)
+        return 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.)
 
 
 class Binomial(Family):
@@ -977,8 +977,8 @@ class Binomial(Family):
         else:
             freq_weights = self.freq_weights
         return (np.sqrt(freq_weights) * ((cox_snell(endog) -
-                                         cox_snell(mu)) / (mu ** (1 / 6.) *
-                                         (1 - mu) ** (1 / 6.))))
+                                         cox_snell(mu)) / (mu**(1 / 6.) *
+                                         (1 - mu)**(1 / 6.))))
 
 
 class InverseGaussian(Family):
@@ -1093,8 +1093,8 @@ class InverseGaussian(Family):
         `llf` = -(1/2.)*sum((endog-mu)**2/(endog*mu**2*scale)
                  + log(scale*endog**3) + log(2*pi))
         """
-        return -.5 * np.sum((endog - mu) ** 2 / (endog * mu ** 2 * scale) +
-                            np.log(scale * endog ** 3) + np.log(2 * np.pi) -
+        return -.5 * np.sum((endog - mu)**2 / (endog * mu**2 * scale) +
+                            np.log(scale * endog**3) + np.log(2 * np.pi) -
                             2 * np.log(freq_weights))
 
     def resid_anscombe(self, endog, mu):
@@ -1339,5 +1339,5 @@ class NegativeBinomial(Family):
 
         hyp2f1 = lambda x : special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
         return ((hyp2f1(-self.alpha * endog) - hyp2f1(-self.alpha * mu) +
-                 1.5 * ( endog ** (2 / 3.) - mu ** (2 / 3.))) /
-                (mu + self.alpha * mu ** 2) ** (1 / 6.))
+                 1.5 * ( endog**(2 / 3.) - mu**(2 / 3.))) /
+                (mu + self.alpha * mu**2)**(1 / 6.))
