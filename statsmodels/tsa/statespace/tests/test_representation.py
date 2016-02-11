@@ -91,7 +91,7 @@ class Clark1987(object):
     @classmethod
     def run_filter(cls):
         # Filter the data
-        cls.results = cls.model.filter()
+        return cls.model.filter()
 
     def test_loglike(self):
         assert_almost_equal(
@@ -124,7 +124,7 @@ class TestClark1987Single(Clark1987):
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987Double(Clark1987):
@@ -136,7 +136,7 @@ class TestClark1987Double(Clark1987):
         super(TestClark1987Double, cls).setup_class(
             dtype=float, conserve_memory=0
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987SingleComplex(Clark1987):
@@ -150,7 +150,7 @@ class TestClark1987SingleComplex(Clark1987):
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987DoubleComplex(Clark1987):
@@ -163,7 +163,7 @@ class TestClark1987DoubleComplex(Clark1987):
         super(TestClark1987DoubleComplex, cls).setup_class(
             dtype=complex, conserve_memory=0
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987Conserve(Clark1987):
@@ -175,7 +175,7 @@ class TestClark1987Conserve(Clark1987):
         super(TestClark1987Conserve, cls).setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class Clark1987Forecast(Clark1987):
@@ -218,7 +218,7 @@ class TestClark1987ForecastDouble(Clark1987Forecast):
     @classmethod
     def setup_class(cls):
         super(TestClark1987ForecastDouble, cls).setup_class()
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987ForecastDoubleComplex(Clark1987Forecast):
@@ -231,7 +231,7 @@ class TestClark1987ForecastDoubleComplex(Clark1987Forecast):
         super(TestClark1987ForecastDoubleComplex, cls).setup_class(
             dtype=complex
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987ForecastConserve(Clark1987Forecast):
@@ -244,7 +244,7 @@ class TestClark1987ForecastConserve(Clark1987Forecast):
         super(TestClark1987ForecastConserve, cls).setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1987ConserveAll(Clark1987):
@@ -258,7 +258,7 @@ class TestClark1987ConserveAll(Clark1987):
             dtype=float, conserve_memory=0x01 | 0x02 | 0x04 | 0x08
         )
         cls.model.loglikelihood_burn = cls.true['start']
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
     def test_loglike(self):
         assert_almost_equal(
@@ -345,7 +345,7 @@ class Clark1989(object):
     @classmethod
     def run_filter(cls):
         # Filter the data
-        cls.results = cls.model.filter()
+        return cls.model.filter()
 
     def test_loglike(self):
         assert_almost_equal(
@@ -381,7 +381,7 @@ class TestClark1989(Clark1989):
     @classmethod
     def setup_class(cls):
         super(TestClark1989, cls).setup_class(dtype=float, conserve_memory=0)
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
     def test_kalman_gain(self):
         assert_allclose(self.results.kalman_gain.sum(axis=1).sum(axis=0),
@@ -398,7 +398,7 @@ class TestClark1989Conserve(Clark1989):
         super(TestClark1989Conserve, cls).setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class Clark1989Forecast(Clark1989):
@@ -423,7 +423,7 @@ class Clark1989Forecast(Clark1989):
         )
         cls.model.nobs = cls.model.endog.shape[1]
 
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
     def test_filtered_state(self):
         assert_almost_equal(
@@ -451,7 +451,7 @@ class TestClark1989ForecastDouble(Clark1989Forecast):
     @classmethod
     def setup_class(cls):
         super(TestClark1989ForecastDouble, cls).setup_class()
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1989ForecastDoubleComplex(Clark1989Forecast):
@@ -464,7 +464,7 @@ class TestClark1989ForecastDoubleComplex(Clark1989Forecast):
         super(TestClark1989ForecastDoubleComplex, cls).setup_class(
             dtype=complex
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1989ForecastConserve(Clark1989Forecast):
@@ -477,7 +477,7 @@ class TestClark1989ForecastConserve(Clark1989Forecast):
         super(TestClark1989ForecastConserve, cls).setup_class(
             dtype=float, conserve_memory=0x01 | 0x02
         )
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
 
 class TestClark1989ConserveAll(Clark1989):
@@ -492,7 +492,7 @@ class TestClark1989ConserveAll(Clark1989):
         )
         # cls.model.loglikelihood_burn = cls.true['start']
         cls.model.loglikelihood_burn = 0
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
     def test_loglike(self):
         assert_almost_equal(
@@ -527,7 +527,7 @@ class TestClark1989PartialMissing(Clark1989):
         endog[1,-51:] = np.NaN
         cls.model.bind(endog)
 
-        cls.run_filter()
+        cls.results = cls.run_filter()
 
     def test_loglike(self):
         assert_allclose(self.results.llf_obs[0:].sum(), 1232.113456)
