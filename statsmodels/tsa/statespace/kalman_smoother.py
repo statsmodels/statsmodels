@@ -31,7 +31,7 @@ _SmootherOutput = namedtuple('_SmootherOutput', (
 ))
 
 
-class _kalman_smoother(object):
+class _KalmanSmoother(object):
 
     def __init__(self, model, kfilter, smoother_output):
         # Save values
@@ -477,7 +477,7 @@ class KalmanSmoother(KalmanFilter):
             results.update_filter(kfilter)
 
         # Run the smoother and update the output
-        smoother = _kalman_smoother(self, results, smoother_output)
+        smoother = _KalmanSmoother(self, results, smoother_output)
         smoother()
 
         output = _SmootherOutput(
