@@ -574,8 +574,9 @@ class GLM(base.LikelihoodModel):
                 return 1.
             else:
                 resid = self.endog - mu
-                return ((np.power(resid, 2) / self.family.variance(mu)).sum()
-                        / self.df_resid)
+                return ((self.freq_weights * (np.power(resid, 2) /
+                         self.family.variance(mu))).sum() /
+                        (self.freq_weights.sum() - self.df_model - 1))
 
         if isinstance(self.scaletype, float):
             return np.array(self.scaletype)
@@ -583,12 +584,13 @@ class GLM(base.LikelihoodModel):
         if isinstance(self.scaletype, str):
             if self.scaletype.lower() == 'x2':
                 resid = self.endog - mu
-                return ((np.power(resid, 2) / self.family.variance(mu)).sum()
-                        / self.df_resid)
+                return ((self.freq_weights * (np.power(resid, 2) /
+                         self.family.variance(mu))).sum() /
+                        (self.freq_weights.sum() - self.df_model - 1))
             elif self.scaletype.lower() == 'dev':
                 return (self.family.deviance(self.endog, mu,
                                              self.freq_weights) /
-                        self.df_resid)
+                        self.freq_weights.sum() - self.df_model - 1)
             else:
                 raise ValueError("Scale %s with type %s not understood" %
                                  (self.scaletype, type(self.scaletype)))

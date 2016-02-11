@@ -693,12 +693,9 @@ class Gamma(Family):
               log(scale) + scale*gammaln(1/scale))
         where gammaln is the log gamma function.
         """
-        return -1./scale * np.sum((freq_weights * endog / mu) +
-                                  (freq_weights *
-                                   np.log((mu*scale)/(freq_weights*endog))) +
-                                  (scale * np.log(endog)) +
-                                  (scale *
-                                   (special.gammaln(freq_weights / scale))))
+        return - 1./scale * np.sum((endog/mu + np.log(mu) + (scale - 1) *
+                                    np.log(endog) + np.log(scale) + scale *
+                                   special.gammaln(1./scale)) * freq_weights)
 
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
@@ -1110,10 +1107,9 @@ class InverseGaussian(Family):
         `llf` = -(1/2.)*sum((endog-mu)**2/(endog*mu**2*scale)
                  + log(scale*endog**3) + log(2*pi))
         """
-        return -.5 * np.sum((freq_weights *
-                             (endog - mu)**2/(endog * mu**2 * scale)) +
-                            np.log(scale * endog**3 / freq_weights) +
-                            np.log(2 * np.pi))
+        return -.5 * np.sum(((endog - mu)**2/(endog * mu**2 * scale) +
+                             np.log(scale * endog**3) + np.log(2 * np.pi)) *
+                            freq_weights)
 
     def resid_anscombe(self, endog, mu):
         """
