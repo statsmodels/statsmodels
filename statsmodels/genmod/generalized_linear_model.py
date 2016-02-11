@@ -1444,6 +1444,7 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
 
     #res1 = GLM(endog, exog, family=sm.families.Poisson(),
     #                        offset=offset).fit(tol=1e-12, maxiter=250)
+    #exposuremod = GLM(endog, exog, family=sm.families.Poisson(),
     #                        exposure = data.exog[:,-1]).fit(tol=1e-12,
     #                                                        maxiter=250)
     #assert(np.all(res1.params == exposuremod.params))

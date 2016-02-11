@@ -374,8 +374,8 @@ class Poisson(Family):
         llf = scale * sum(-mu + endog*log(mu) - gammaln(endog+1))
         where gammaln is the log gamma function
         """
-        loglike = np.sum(np.log(freq_weights) - mu + endog * np.log(mu) -
-                         special.gammaln(endog + 1))
+        loglike = np.sum(freq_weights * (endog * np.log(mu) - mu -
+                         special.gammaln(endog + 1)))
         return scale * loglike
 
     def resid_anscombe(self, endog, mu):
@@ -461,7 +461,8 @@ class Gaussian(Family):
         `resid_dev` = (`endog` - `mu`)/sqrt(variance(`mu`))
         """
 
-        return (freq_weights*(endog-mu)/np.sqrt(self.variance(mu))/scale)
+        return (np.sqrt(freq_weights) * (endog - mu) / 
+                np.sqrt(self.variance(mu)) / scale)
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         """
@@ -518,17 +519,30 @@ class Gaussian(Family):
         llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
             (1/2.)*log(2*pi*`scale`))
         """
+        """
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
-            nobs2 = endog.shape[0] / 2.
-            SSR = np.sum((endog - self.fitted(mu))**2, axis=0)
+            nobs2 = endog.shape[0]/2.
+            SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
             llf = -np.log(SSR) * nobs2
-            llf -= (1 + np.log(np.pi / nobs2)) * nobs2
+            llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
             # Return the loglikelihood for Gaussian GLM
-            return np.sum((np.log(freq_weights)+endog*mu-mu**2/2)/scale-
-                          endog**2/(2*scale)-.5*np.log(2*np.pi*scale))
+            return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
+                          - .5*np.log(2 * np.pi * scale))
+        """
+        if isinstance(self.link, L.Power) and self.link.power == 1:
+            # This is just the loglikelihood for classical OLS
+            nobs2 = np.sum(freq_weights, axis=0) / 2.
+            SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
+            llf = -np.log(SSR) * nobs2
+            llf -= (1+np.log(np.pi/nobs2))*nobs2
+            return llf
+        else:
+            return -0.5 * np.sum(freq_weights * ((endog - mu)**2 / scale +
+                                 np.log(scale / freq_weights) +
+                                 np.log(2 * np.pi)))
 
     def resid_anscombe(self, endog, mu):
         """
@@ -651,8 +665,8 @@ class Gamma(Family):
         """
         endog_mu = self._clean(endog / mu)
         return np.sign(endog - mu) * np.sqrt(-2 * freq_weights *
-                                             (-(endog - mu)/mu + 
-                                             np.log(endog_mu)))
+                                             (-(endog - mu)/mu +
+                                              np.log(endog_mu)))
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         """
@@ -679,10 +693,13 @@ class Gamma(Family):
               log(scale) + scale*gammaln(1/scale))
         where gammaln is the log gamma function.
         """
-        return - 1./scale * np.sum(np.log(freq_weights) + endog/mu +
-                                   np.log(mu) + (scale - 1) * np.log(endog) +
-                                   np.log(scale) + scale *
-                                   special.gammaln(1. / scale))
+        return -1./scale * np.sum((freq_weights * endog / mu) +
+                                  (freq_weights *
+                                   np.log((mu*scale)/(freq_weights*endog))) +
+                                  (scale * np.log(endog)) +
+                                  (scale *
+                                   (special.gammaln(freq_weights / scale))))
+
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
         # our results due to an assumed difference in implementation
@@ -1093,9 +1110,10 @@ class InverseGaussian(Family):
         `llf` = -(1/2.)*sum((endog-mu)**2/(endog*mu**2*scale)
                  + log(scale*endog**3) + log(2*pi))
         """
-        return -.5 * np.sum((endog - mu)**2 / (endog * mu**2 * scale) +
-                            np.log(scale * endog**3) + np.log(2 * np.pi) -
-                            2 * np.log(freq_weights))
+        return -.5 * np.sum((freq_weights *
+                             (endog - mu)**2/(endog * mu**2 * scale)) +
+                            np.log(scale * endog**3 / freq_weights) +
+                            np.log(2 * np.pi))
 
     def resid_anscombe(self, endog, mu):
         """
@@ -1307,8 +1325,7 @@ class NegativeBinomial(Family):
         constant = (special.gammaln(endog +  1 / self.alpha) -
                     special.gammaln(endog+1)-special.gammaln(1/self.alpha))
         exp_lin_pred = np.exp(lin_pred)
-        return (np.sum(np.log(freq_weights) +
-                       endog * np.log(self.alpha * exp_lin_pred /
+        return (np.sum(endog * np.log(self.alpha * exp_lin_pred /
                                       (1 + self.alpha * exp_lin_pred)) -
                 np.log(1 + self.alpha * exp_lin_pred) / self.alpha + constant))
 

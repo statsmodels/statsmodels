@@ -1020,6 +1020,26 @@ def test_gradient_irls():
                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
 
                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
+                   
+class TestWtdGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
+    def __init__(self):
+        '''
+        Tests Poisson family with canonical log link.
+
+        Test results were obtained by R.
+        '''
+        from .results.results_glm import Cpunish
+        from statsmodels.datasets.cpunish import load
+        self.data = load()
+        self.data.exog[:,3] = np.log(self.data.exog[:,3])
+        self.data.exog = add_constant(self.data.exog, prepend=False)
+        self.res1 = GLM(self.data.endog, self.data.exog,
+                    family=sm.families.Poisson()).fit()
+        self.res2 = Cpunish()
+        # compare with discrete, start close to save time
+        modd = discrete.Poisson(self.data.endog, self.data.exog)
+        self.resd = modd.fit(start_params=self.res1.params * 0.9, disp=False)
+
 
 
 if __name__=="__main__":
