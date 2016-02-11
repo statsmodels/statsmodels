@@ -1020,26 +1020,191 @@ def test_gradient_irls():
                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
 
                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
-                   
-class TestWtdGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
+
+
+class CheckWtdDuplicationMixin(object):
+    decimal_params = DECIMAL_4
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params,
+                self.decimal_params)
+
+    decimal_bse = DECIMAL_4
+    def test_standard_errors(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, self.decimal_bse)
+
+    decimal_resids = DECIMAL_4
+    def test_residuals(self):
+        resids1 = np.column_stack((self.res1.resid_pearson,
+                  self.res1.resid_deviance, self.res1.resid_working,
+                  self.res1.resid_anscombe, self.res1.resid_response))
+        resids2 = np.column_stack((self.res1.resid_pearson,
+                  self.res2.resid_deviance, self.res2.resid_working,
+                  self.res2.resid_anscombe, self.res2.resid_response))
+        assert_almost_equal(resids1, resids2, self.decimal_resids)
+
+    decimal_aic = DECIMAL_4
+    def test_aic(self):
+        # R includes the estimation of the scale as a lost dof
+        # Doesn't with Gamma though
+
+        assert_almost_equal(self.res1.aic, self.res2.aic,
+                self.decimal_aic)
+
+    decimal_deviance = DECIMAL_4
+    def test_deviance(self):
+        assert_almost_equal(self.res1.deviance, self.res2.deviance,
+                self.decimal_deviance)
+
+    decimal_scale = DECIMAL_4
+    def test_scale(self):
+        assert_almost_equal(self.res1.scale, self.res2.scale,
+                self.decimal_scale)
+
+    decimal_loglike = DECIMAL_4
+    def test_loglike(self):
+        # Stata uses the below llf for these families
+        # We differ with R for them
+        assert_almost_equal(self.res1.llf, self.res2.llf, self.decimal_loglike)
+
+    decimal_null_deviance = DECIMAL_4
+    def test_null_deviance(self):
+        assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
+                    self.decimal_null_deviance)
+
+    decimal_bic = DECIMAL_4
+    def test_bic(self):
+        assert_almost_equal(self.res1.bic, self.res2.bic,
+                self.decimal_bic)
+
+    def test_degrees(self):
+        assert_equal(self.res1.model.df_resid, self.res2.df_resid)
+
+    decimal_fittedvalues = DECIMAL_4
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
+                self.decimal_fittedvalues)
+
+    def test_tpvalues(self):
+        # test comparing tvalues and pvalues with normal implementation
+        # make sure they use normal distribution (inherited in results class)
+        assert_almost_equal(self.res1.tvalues, self.res2.tvalues)
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues)
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int())
+
+
+class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
         Tests Poisson family with canonical log link.
-
-        Test results were obtained by R.
         '''
-        from .results.results_glm import Cpunish
-        from statsmodels.datasets.cpunish import load
-        self.data = load()
-        self.data.exog[:,3] = np.log(self.data.exog[:,3])
-        self.data.exog = add_constant(self.data.exog, prepend=False)
-        self.res1 = GLM(self.data.endog, self.data.exog,
-                    family=sm.families.Poisson()).fit()
-        self.res2 = Cpunish()
-        # compare with discrete, start close to save time
-        modd = discrete.Poisson(self.data.endog, self.data.exog)
-        self.resd = modd.fit(start_params=self.res1.params * 0.9, disp=False)
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                         self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        self.res1 = GLM(self.y, self.X, 
+                        freq_weight=self.data['data']['Holders'],
+                        family=sm.families.Poisson()).fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.Poisson()).fit()
 
+
+class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Binomial family with canonical logit link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                         self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        self.res1 = GLM(self.y, self.X, 
+                        freq_weight=self.data['data']['Holders'],
+                        family=sm.families.Binomial()).fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.Binomial()).fit()
+
+
+class TestWtdGlmNegativeBinomial(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Negative Binomial family with canonical link 
+        g(u) = log(u/k * (1 - u/k)) 
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                         self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        self.res1 = GLM(self.y, self.X, 
+                        freq_weight=self.data['data']['Holders'],
+                        family=sm.families.NegativeBinomial()).fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.NegativeBinomial()).fit()
+
+
+class TestWtdGlmGamma(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Gamma family with canonical inverse link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                         self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        self.res1 = GLM(self.y, self.X, 
+                        freq_weight=self.data['data']['Holders'],
+                        family=sm.families.Gamma()).fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.Gamma()).fit()
+
+
+class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Gaussian family with canonical identity link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                         self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        self.res1 = GLM(self.y, self.X, 
+                        freq_weight=self.data['data']['Holders'],
+                        family=sm.families.Gaussian()).fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.Gaussian()).fit()
+
+
+class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests InverseGuassian family with canonical inverse power link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                         self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        self.res1 = GLM(self.y, self.X, 
+                        freq_weight=self.data['data']['Holders'],
+                        family=sm.families.InverseGaussian()).fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.InverseGaussian()).fit()
 
 
 if __name__=="__main__":
