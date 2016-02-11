@@ -1026,13 +1026,12 @@ class CheckWtdDuplicationMixin(object):
     decimal_params = DECIMAL_4
 
     def test_params(self):
-        assert_allclose(self.res1.params, self.res2.params,
-                        self.decimal_params)
+        assert_allclose(self.res1.params, self.res2.params, 1e-6)
 
     decimal_bse = DECIMAL_4
 
     def test_standard_errors(self):
-        assert_allclose(self.res1.bse, self.res2.bse, self.decimal_bse)
+        assert_allclose(self.res1.bse, self.res2.bse, 1e-6)
 
     decimal_resids = DECIMAL_4
 
