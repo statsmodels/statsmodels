@@ -982,11 +982,12 @@ class SARIMAX(MLEModel):
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
         if np.any(np.isnan(endog)):
-            endog = endog[~np.isnan(endog)]
+            mask = ~np.isnan(endog)
+            endog = endog[mask]
             if exog is not None:
-                exog = exog[~np.isnan(endog)]
+                exog = exog[mask]
             if trend_data is not None:
-                trend_data = trend_data[~np.isnan(endog)]
+                trend_data = trend_data[mask]
 
         # Regression effects via OLS
         params_exog = []
