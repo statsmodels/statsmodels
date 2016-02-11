@@ -43,8 +43,8 @@ def get_dummy_mod(fit=True, pandas=False):
 
     if pandas:
         index = pd.date_range('1960-01-01', periods=100, freq='MS')
-        endog = pd.TimeSeries(endog, index=index)
-        exog = pd.TimeSeries(exog, index=index)
+        endog = pd.Series(endog, index=index)
+        exog = pd.Series(exog, index=index)
 
     mod = sarimax.SARIMAX(endog, exog=exog, order=(0,0,0), time_varying_regression=True, mle_regression=False)
 
@@ -327,7 +327,7 @@ def test_results(pandas=False):
 
 def test_predict():
     dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='AS')
-    endog = pd.TimeSeries([1,2], index=dates)
+    endog = pd.Series([1,2], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
 
@@ -368,7 +368,7 @@ def test_forecast():
 
 def test_summary():
     dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
-    endog = pd.TimeSeries([1,2,3,4,5], index=dates)
+    endog = pd.Series([1,2,3,4,5], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
 
@@ -552,8 +552,8 @@ def test_pandas_endog():
     # raises error due to direct type casting check in Statsmodels base classes
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
-    # Example : pandas.TimeSeries
-    endog = pd.TimeSeries([1., 2.], index=dates)
+    # Example : pandas.Series
+    endog = pd.Series([1., 2.], index=dates)
     mod = check_endog(endog, **kwargs)
     mod.filter([])
 
