@@ -622,10 +622,12 @@ class KalmanFilter(Representation):
         kfilter = self._kalman_filters[prefix]
 
         # Instantiate a new results object, if required
+        new_results = False
         if isinstance(results, type):
             if not issubclass(results, FilterResults):
                 raise ValueError
             results = results(self)
+            new_results = True
 
         # Initialize the state
         self._initialize_state(prefix=prefix)
@@ -642,9 +644,8 @@ class KalmanFilter(Representation):
         else:
             # Update the model features; unless we had to recreate the
             # statespace, only update the filter options
-            results.update_representation(
-                self, only_options=not create_statespace
-            )
+            if not new_results:
+                results.update_representation(self)
             results.update_filter(kfilter)
 
         return results
@@ -1212,6 +1213,10 @@ class FilterResults(FrozenRepresentation):
             kalman_filter.predicted_state_cov, copy=True
         )
 
+        # Reset caches
+        self._kalman_gain = None
+        self._standardized_forecasts_error = None
+
         # Note: use forecasts rather than forecast, so as not to interfer
         # with the `forecast` methods in subclasses
         self.forecasts = np.array(kalman_filter.forecast, copy=True)
@@ -1253,36 +1258,35 @@ class FilterResults(FrozenRepresentation):
                 # produce forecasts, but forecast errors and the forecast
                 # error covariance matrix will be zeros - make them nan to
                 # improve clarity of results.
-                if self.nmissing[t] == self.k_endog:
+                if self.nmissing[t] > 0:
+                    mask = ~self.missing[:, t].astype(bool)
                     # We can recover forecasts
+                    # For partially missing observations, the Kalman filter
+                    # will produce all elements (forecasts, forecast errors,
+                    # forecast error covariance matrices) as usual, but their
+                    # dimension will only be equal to the number of non-missing
+                    # elements, and their location in memory will be in the first
+                    # blocks (e.g. for the forecasts_error, the first
+                    # k_endog - nmissing[t] columns will be filled in), regardless
+                    # of which endogenous variables they refer to (i.e. the non-
+                    # missing endogenous variables for that observation).
+                    # Furthermore, the forecast error covariance matrix is only
+                    # valid for those elements. What is done is to set all elements
+                    # to nan for these observations so that they are flagged as
+                    # missing. The variables missing_forecasts, etc. then provide
+                    # the forecasts, etc. provided by the Kalman filter, from which
+                    # the data can be retrieved if desired.
                     self.forecasts[:, t] = np.dot(
                         self.design[:, :, design_t], self.predicted_state[:, t]
                     ) + self.obs_intercept[:, obs_intercept_t]
                     self.forecasts_error[:, t] = np.nan
+                    self.forecasts_error[mask, t] = (
+                        self.endog[mask, t] - self.forecasts[mask, t])
                     self.forecasts_error_cov[:, :, t] = np.dot(
                         np.dot(self.design[:, :, design_t],
                                self.predicted_state_cov[:, :, t]),
                         self.design[:, :, design_t].T
                     ) + self.obs_cov[:, :, obs_cov_t]
-                # For partially missing observations, the Kalman filter
-                # will produce all elements (forecasts, forecast errors,
-                # forecast error covariance matrices) as usual, but their
-                # dimension will only be equal to the number of non-missing
-                # elements, and their location in memory will be in the first
-                # blocks (e.g. for the forecasts_error, the first
-                # k_endog - nmissing[t] columns will be filled in), regardless
-                # of which endogenous variables they refer to (i.e. the non-
-                # missing endogenous variables for that observation).
-                # Furthermore, the forecast error covariance matrix is only
-                # valid for those elements. What is done is to set all elements
-                # to nan for these observations so that they are flagged as
-                # missing. The variables missing_forecasts, etc. then provide
-                # the forecasts, etc. provided by the Kalman filter, from which
-                # the data can be retrieved if desired.
-                elif self.nmissing[t] > 0:
-                    self.forecasts[:, t] = np.nan
-                    self.forecasts_error[:, t] = np.nan
-                    self.forecasts_error_cov[:, :, t] = np.nan
 
     @property
     def kalman_gain(self):
@@ -1294,18 +1298,38 @@ class FilterResults(FrozenRepresentation):
             self._kalman_gain = np.zeros(
                 (self.k_states, self.k_endog, self.nobs), dtype=self.dtype)
             for t in range(self.nobs):
+                # In the case of entirely missing observations, let the Kalman
+                # gain be zeros.
+                if self.nmissing[t] == self.k_endog:
+                    continue
+
                 design_t = 0 if self.design.shape[2] == 1 else t
                 transition_t = 0 if self.transition.shape[2] == 1 else t
-                self._kalman_gain[:, :, t] = np.dot(
-                    np.dot(
-                        self.transition[:, :, transition_t],
-                        self.predicted_state_cov[:, :, t]
-                    ),
-                    np.dot(
-                        np.transpose(self.design[:, :, design_t]),
-                        np.linalg.inv(self.forecasts_error_cov[:, :, t])
+                if self.nmissing[t] == 0:
+                    self._kalman_gain[:, :, t] = np.dot(
+                        np.dot(
+                            self.transition[:, :, transition_t],
+                            self.predicted_state_cov[:, :, t]
+                        ),
+                        np.dot(
+                            np.transpose(self.design[:, :, design_t]),
+                            np.linalg.inv(self.forecasts_error_cov[:, :, t])
+                        )
                     )
-                )
+                else:
+                    mask = ~self.missing[:, t].astype(bool)
+                    n = self.k_endog - self.nmissing[t]
+                    F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
+                    self._kalman_gain[:, mask, t] = np.dot(
+                        np.dot(
+                            self.transition[:, :, transition_t],
+                            self.predicted_state_cov[:, :, t]
+                        ),
+                        np.dot(
+                            np.transpose(self.design[mask, :, design_t]),
+                            np.linalg.inv(F[:, :, 0])
+                        )
+                    )
         return self._kalman_gain
 
     @property
@@ -1321,13 +1345,13 @@ class FilterResults(FrozenRepresentation):
             for t in range(self.forecasts_error_cov.shape[2]):
                 if self.nmissing[t] > 0:
                     self._standardized_forecasts_error[:, t] = np.nan
-                else:
-                    upper, _ = linalg.cho_factor(
-                        self.forecasts_error_cov[:, :, t]
-                    )
-                    self._standardized_forecasts_error[:, t] = (
+                if self.nmissing[t] < self.k_endog:
+                    mask = ~self.missing[:, t].astype(bool)
+                    F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
+                    upper, _ = linalg.cho_factor(F[:, :, 0])
+                    self._standardized_forecasts_error[mask, t] = (
                         linalg.solve_triangular(
-                            upper, self.forecasts_error[:, t]
+                            upper, self.forecasts_error[mask, t]
                         )
                     )
 

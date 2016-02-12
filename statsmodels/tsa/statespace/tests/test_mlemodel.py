@@ -215,6 +215,8 @@ def test_cov_params():
     # Smoke test for each of the covariance types
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
+        res = mod.fit(res.params, disp=-1, cov_type='none')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix not calculated.')
         res = mod.fit(res.params, disp=-1, cov_type='cs')
         assert_equal(res.cov_type, 'cs')
         assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using numerical (complex-step) differentiation.')
