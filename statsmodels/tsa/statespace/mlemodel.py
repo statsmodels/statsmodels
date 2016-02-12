@@ -1529,6 +1529,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         specified model, `loglikelihood_burn=d`), then this test is calculated
         ignoring the first `d` residuals.
 
+        In the case of missing data, the maintained hypothesis is that the
+        data are missing completely at random. This test is then run on the
+        standardized residuals excluding those corresponding to missing
+        observations.
+
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
@@ -1540,14 +1545,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if method == 'jarquebera':
             from statsmodels.stats.stattools import jarque_bera
             d = self.loglikelihood_burn
-            output = np.array(jarque_bera(
-                self.filter_results.standardized_forecasts_error[:, d:],
-                axis=1
-            )).transpose()
+            output = []
+            for i in range(self.model.k_endog):
+                resid = self.filter_results.standardized_forecasts_error[i, d:]
+                mask = ~np.isnan(resid)
+                output.append(jarque_bera(resid[mask]))
         else:
             raise NotImplementedError('Invalid normality test method.')
 
-        return output
+        return np.array(output)
 
     def test_heteroskedasticity(self, method, alternative='two-sided',
                                 use_f=True):
