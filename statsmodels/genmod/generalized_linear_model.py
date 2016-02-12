@@ -1173,7 +1173,9 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bic(self):
-        return self.deviance - self.df_resid*np.log(self.nobs)
+        return (self.deviance -
+                (self.model.freq_weights.sum() - self.df_model - 1) * 
+                np.log(self.model.freq_weights.sum()))
 
 
     def get_prediction(self, exog=None, exposure=None, offset=None,

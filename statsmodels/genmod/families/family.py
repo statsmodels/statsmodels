@@ -1239,9 +1239,9 @@ class NegativeBinomial(Family):
                           (1 + self.alpha * endog) *
                           np.log((1 + self.alpha * endog) /
                                  (1 + self.alpha * mu)))
-        return np.sum(tmp) / scale
+        return np.sum(freq_weights * tmp) / scale
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, freq_weights=1, scale=1.):
         r'''
         Negative Binomial Deviance Residual
 
@@ -1285,7 +1285,7 @@ class NegativeBinomial(Family):
                           (1 + self.alpha * endog) *
                           np.log((1 + self.alpha * endog) /
                                  (1 + self.alpha * mu)))
-        return np.sign(endog - mu) * np.sqrt(tmp) / scale
+        return np.sign(endog - mu) * np.sqrt(freq_weights * tmp) / scale
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         # TODO: Check weights
@@ -1318,12 +1318,13 @@ class NegativeBinomial(Family):
                       gammaln(1/alpha)
         """
         lin_pred = self._link(mu)
-        constant = (special.gammaln(endog +  1 / self.alpha) -
+        constant = (special.gammaln(endog + 1 / self.alpha) -
                     special.gammaln(endog+1)-special.gammaln(1/self.alpha))
         exp_lin_pred = np.exp(lin_pred)
-        return (np.sum(endog * np.log(self.alpha * exp_lin_pred /
+        return np.sum((endog * np.log(self.alpha * exp_lin_pred /
                                       (1 + self.alpha * exp_lin_pred)) -
-                np.log(1 + self.alpha * exp_lin_pred) / self.alpha + constant))
+                      np.log(1 + self.alpha * exp_lin_pred) /
+                      self.alpha + constant) * freq_weights)
 
     def resid_anscombe(self, endog, mu):
         """
