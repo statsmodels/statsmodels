@@ -1645,42 +1645,61 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # Store some values
             squared_resid = self.filter_results.standardized_forecasts_error**2
             d = self.loglikelihood_burn
-            h = int(np.round((self.nobs - d) / 3))
 
-            # Calculate the test statistics for each endogenous variable
-            test_statistics = np.array([
-                np.sum(squared_resid[i][-h:]) / np.sum(squared_resid[i][d:d+h])
-                for i in range(self.model.k_endog)
-            ])
+            test_statistics = []
+            p_values = []
+            for i in range(self.model.k_endog):
+                h = int(np.round((self.nobs - d) / 3))
+                numer_resid = squared_resid[i, -h:]
+                numer_resid = numer_resid[~np.isnan(numer_resid)]
+                numer_dof = len(numer_resid)
 
-            # Setup functions to calculate the p-values
-            if use_f:
-                from scipy.stats import f
-                pval_lower = lambda test_statistics: f.cdf(
-                    test_statistics, h, h)
-                pval_upper = lambda test_statistics: f.sf(
-                    test_statistics, h, h)
-            else:
-                from scipy.stats import chi2
-                pval_lower = lambda test_statistics: chi2.cdf(
-                    h * test_statistics, h)
-                pval_upper = lambda test_statistics: chi2.sf(
-                    h * test_statistics, h)
+                denom_resid = squared_resid[i, d:d+h]
+                denom_resid = denom_resid[~np.isnan(denom_resid)]
+                denom_dof = len(denom_resid)
 
-            # Calculate the one- or two-sided p-values
-            alternative = alternative.lower()
-            if alternative in ['i', 'inc', 'increasing']:
-                p_values = pval_upper(test_statistics)
-            elif alternative in ['d', 'dec', 'decreasing']:
-                test_statistics = 1. / test_statistics
-                p_values = pval_upper(test_statistics)
-            elif alternative in ['2', '2-sided', 'two-sided']:
-                p_values = 2 * np.minimum(
-                    pval_lower(test_statistics),
-                    pval_upper(test_statistics)
-                )
-            else:
-                raise ValueError('Invalid alternative.')
+                if numer_dof < 2:
+                    raise RuntimeError('Early subset of data has too few'
+                                       ' non-missing observations to'
+                                       ' calculate test statistic.')
+                if denom_dof < 2:
+                    raise RuntimeError('Later subset of data has too few'
+                                       ' non-missing observations to'
+                                       ' calculate test statistic.')
+
+                test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
+
+                # Setup functions to calculate the p-values
+                if use_f:
+                    from scipy.stats import f
+                    pval_lower = lambda test_statistics: f.cdf(
+                        test_statistics, numer_dof, denom_dof)
+                    pval_upper = lambda test_statistics: f.sf(
+                        test_statistics, numer_dof, denom_dof)
+                else:
+                    from scipy.stats import chi2
+                    pval_lower = lambda test_statistics: chi2.cdf(
+                        numer_dof * test_statistics, denom_dof)
+                    pval_upper = lambda test_statistics: chi2.sf(
+                        numer_dof * test_statistics, denom_dof)
+
+                # Calculate the one- or two-sided p-values
+                alternative = alternative.lower()
+                if alternative in ['i', 'inc', 'increasing']:
+                    p_value = pval_upper(test_statistic)
+                elif alternative in ['d', 'dec', 'decreasing']:
+                    test_statistic = 1. / test_statistic
+                    p_value = pval_upper(test_statistic)
+                elif alternative in ['2', '2-sided', 'two-sided']:
+                    p_value = 2 * np.minimum(
+                        pval_lower(test_statistic),
+                        pval_upper(test_statistic)
+                    )
+                else:
+                    raise ValueError('Invalid alternative.')
+
+                test_statistics.append(test_statistic)
+                p_values.append(p_value)
 
             output = np.c_[test_statistics, p_values]
         else:
