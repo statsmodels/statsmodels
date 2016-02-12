@@ -765,16 +765,17 @@ class GLM(base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
+        self.n = np.ones((self.endog.shape[0]))  # For binomial
         if isinstance(self.family, families.Binomial):
-            tmp = self.family.initialize(self.endog, self.freq_weights)
+            tmp = self.family.initialize(self.endog)
             self.endog = tmp[0]
-            self.freq_weights = tmp[1]
-
+            self.n = tmp[1]
         if self.freq_weights is None:
             self.freq_weights = np.ones((self.endog.shape[0]))
         if np.shape(self.freq_weights) == () and self.freq_weights > 1:
             self.freq_weights = (self.freq_weights *
                                  np.ones((self.endog.shape[0])))
+        self.freq_weights = self.n * self.freq_weights
         self.scaletype = scale
 
         # Construct a combined offset/exposure term.  Note that
@@ -1063,7 +1064,8 @@ class GLMResults(base.LikelihoodModelResults):
         self._endog = model.endog
         self.nobs = model.endog.shape[0]
         self.mu = model.mu
-        self._freq_weights = model.freq_weights
+        # Divide by n for binom
+        self._freq_weights = model.freq_weights / model.n
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.pinv_wexog = model.pinv_wexog
@@ -1148,7 +1150,6 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def deviance(self):
-        # TODO: Data weights?
         return self.family.deviance(self._endog, self.mu, self._freq_weights)
 
     @cache_readonly
@@ -1174,8 +1175,8 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def bic(self):
         return (self.deviance -
-                (self.model.freq_weights.sum() - self.df_model - 1) * 
-                np.log(self.model.freq_weights.sum()))
+                (self._freq_weights.sum() - self.df_model - 1) * 
+                np.log(self._freq_weights.sum()))
 
 
     def get_prediction(self, exog=None, exposure=None, offset=None,

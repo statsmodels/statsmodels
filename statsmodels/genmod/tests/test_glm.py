@@ -1123,6 +1123,8 @@ class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
         self.data = get_rdataset('Insurance', 'MASS')
         self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
                                    self.data['data'])
+        self.y = (self.y.transpose() / 
+                  self.data['data']['Holders'].values).transpose()
         self.y_big = np.repeat(self.y, self.data['data']['Holders'])
         self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
         self.res1 = GLM(self.y, self.X,
