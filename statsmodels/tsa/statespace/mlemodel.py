@@ -1745,6 +1745,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         specified model, `loglikelihood_burn=d`), then this test is calculated
         ignoring the first `d` residuals.
 
+        Output is nan for any endogenous variable which has missing values.
+
         See Also
         --------
         statsmodels.stats.diagnostic.acorr_ljungbox
