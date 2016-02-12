@@ -3,6 +3,7 @@ from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import brent
+from statsmodels.compat.numpy import np_matrix_rank
 
 """
 Implementation of proportional hazards regression models for duration
@@ -135,20 +136,17 @@ class PHSurvivalTime(object):
                              "after event or censoring times")
 
         # Get the row indices for the cases in each stratum
-        if strata is not None:
-            stu = np.unique(strata)
-            #sth = {x: [] for x in stu} # needs >=2.7
-            sth = dict([(x, []) for x in stu])
-            for i,k in enumerate(strata):
-                sth[k].append(i)
-            stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
-            stratum_names = stu
-        else:
-            stratum_rows = [np.arange(len(time)),]
-            stratum_names = [0,]
+        stu = np.unique(strata)
+        #sth = {x: [] for x in stu} # needs >=2.7
+        sth = dict([(x, []) for x in stu])
+        for i,k in enumerate(strata):
+            sth[k].append(i)
+        stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
+        stratum_names = stu
 
         # Remove strata with no events
         ix = [i for i,ix in enumerate(stratum_rows) if status[ix].sum() > 0]
+        self.nstrat_orig = len(stratum_rows)
         stratum_rows = [stratum_rows[i] for i in ix]
         stratum_names = [stratum_names[i] for i in ix]
 
@@ -324,11 +322,15 @@ class PHReg(model.LikelihoodModel):
             self.offset = np.asarray(self.offset)
 
         self.surv = PHSurvivalTime(self.endog, self.status,
-                                    self.exog, self.strata,
-                                    self.entry, self.offset)
+                                   self.exog, self.strata,
+                                   self.entry, self.offset)
 
         # TODO: not used?
         self.missing = missing
+
+        self.df_resid = (np.float(self.exog.shape[0] -
+                                  np_matrix_rank(self.exog)))
+        self.df_model = np.float(np_matrix_rank(self.exog))
 
         ties = ties.lower()
         if ties not in ("efron", "breslow"):
@@ -388,13 +390,13 @@ class PHReg(model.LikelihoodModel):
         """
 
         # Allow array arguments to be passed by column name.
-        if type(status) is str:
+        if isinstance(status, str):
             status = data[status]
-        if type(entry) is str:
+        if isinstance(entry, str):
             entry = data[entry]
-        if type(strata) is str:
+        if isinstance(strata, str):
             strata = data[strata]
-        if type(offset) is str:
+        if isinstance(offset, str):
             offset = data[offset]
 
         mod = super(PHReg, cls).from_formula(formula, data,
@@ -420,6 +422,10 @@ class PHReg(model.LikelihoodModel):
 
         # TODO process for missing values
         if groups is not None:
+            if len(groups) != len(self.endog):
+                msg = ("len(groups) = %d and len(endog) = %d differ" %
+                       (len(groups), len(self.endog)))
+                raise ValueError(msg)
             self.groups = np.asarray(groups)
         else:
             self.groups = None
@@ -1459,6 +1465,8 @@ class PHRegResults(base.LikelihoodModelResults):
     def __init__(self, model, params, cov_params, covariance_type="naive"):
 
         self.covariance_type = covariance_type
+        self.df_resid = model.df_resid
+        self.df_model = model.df_model
 
         super(PHRegResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
@@ -1515,13 +1523,14 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         Descriptive statistics of the groups.
         """
+        # better handled with np.unique(..., return_counts=True)
         gsize = {}
         for x in groups:
             if x not in gsize:
                 gsize[x] = 0
             gsize[x] += 1
-        gsize = np.asarray(gsize.values())
-        return gsize.min(), gsize.max(), gsize.mean()
+        gsize = np.asarray(list(gsize.values()))
+        return gsize.min(), gsize.max(), gsize.mean(), len(gsize)
 
     @cache_readonly
     def weighted_covariate_averages(self):
@@ -1669,10 +1678,18 @@ class PHRegResults(base.LikelihoodModelResults):
         info["Num. events:"] = str(int(sum(self.model.status)))
 
         if self.model.groups is not None:
-            mn, mx, avg = self._group_stats(self.model.groups)
-            info["Max. group size:"] = str(mx)
-            info["Min. group size:"] = str(mn)
-            info["Avg. group size:"] = str(avg)
+            mn, mx, avg, num = self._group_stats(self.model.groups)
+            info["Num groups:"] = "%.0f" % num
+            info["Min group size:"] = "%.0f" % mn
+            info["Max group size:"] = "%.0f" % mx
+            info["Avg group size:"] = "%.1f" % avg
+
+        if self.model.strata is not None:
+            mn, mx, avg, num = self._group_stats(self.model.strata)
+            info["Num strata:"] = "%.0f" % num
+            info["Min stratum size:"] = "%.0f" % mn
+            info["Max stratum size:"] = "%.0f" % mx
+            info["Avg stratum size:"] = "%.1f" % avg
 
         smry.add_dict(info, align='l', float_format=float_format)
 
@@ -1689,6 +1706,20 @@ class PHRegResults(base.LikelihoodModelResults):
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
         smry.add_text("Confidence intervals are for the hazard ratios")
+
+        dstrat = self.model.surv.nstrat_orig - self.model.surv.nstrat
+        if dstrat > 0:
+            if dstrat == 1:
+                smry.add_text("1 stratum dropped for having no events")
+            else:
+                smry.add_text("%d strata dropped for having no events" % dstrat)
+
+        if self.model.entry is not None:
+            n_entry = sum(self.model.entry != 0)
+            if n_entry == 1:
+                smry.add_text("1 observation has a positive entry time")
+            else:
+                smry.add_text("%d observations have positive entry times" % n_entry)
 
         if self.model.groups is not None:
             smry.add_text("Standard errors account for dependence within groups")
