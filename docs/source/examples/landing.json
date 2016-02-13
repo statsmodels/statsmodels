@@ -159,6 +159,11 @@
             "img": "../_static/images/statespace_sarimax_internet.png"
         },
         {
+            "text": "Trends and cycles in unemployment",
+            "target": "notebooks/generated/statespace_cycles.html",
+            "img": "../_static/images/statespace_cycles.png"
+        },
+        {
             "text": "State space modeling: Local Linear Trends",
             "target": "notebooks/generated/statespace_local_linear_trend.html",
             "img": "../_static/images/statespace_local_linear_trend.png"
