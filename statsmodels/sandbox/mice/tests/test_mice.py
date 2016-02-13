@@ -161,10 +161,10 @@ class TestMICEData(object):
         time = np.where(event_time < obs_time, event_time, obs_time)
         status = np.where(time == event_time, 1, 0)
         df = pd.DataFrame({"time": time, "status": status, "x1": x1, "x2": x2})
-        df.time.iloc[10:40] = np.nan
-        df.status.iloc[10:40] = np.nan
-        df.x1.iloc[30:50] = np.nan
-        df.x2.iloc[40:60] = np.nan
+        df.loc[10:40, 'time'] = np.nan
+        df.loc[10:40, 'status'] = np.nan
+        df.loc[30:50, 'x1'] = np.nan
+        df.loc[40:60, 'x2'] = np.nan
 
         from statsmodels.duration.hazard_regression import PHReg
 
