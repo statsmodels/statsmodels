@@ -159,6 +159,11 @@
             "img": "../_static/images/statespace_sarimax_internet.png"
         },
         {
+            "text": "VARMAX: introduction",
+            "target": "notebooks/generated/statespace_varmax.html",
+            "img": "../_static/images/statespace_varmax.png"
+        },
+        {
             "text": "Trends and cycles in unemployment",
             "target": "notebooks/generated/statespace_cycles.html",
             "img": "../_static/images/statespace_cycles.png"
