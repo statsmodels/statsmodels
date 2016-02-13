@@ -164,12 +164,12 @@
             "img": "../_static/images/statespace_varmax.png"
         },
         {
-            "text": "Dynamic Factor Models: Application to coincident indices",
+            "text": "Dynamic Factor Models: Application",
             "target": "notebooks/generated/statespace_dfm_coincident.html",
             "img": "../_static/images/statespace_dfm_coincident.png"
         },
         {
-            "text": "Unobserved Components: Detrending, Stylized Facts and the Business Cycle",
+            "text": "Unobserved Components: Application",
             "target": "notebooks/generated/statespace_structural_harvey_jaeger.html",
             "img": "../_static/images/statespace_structural_harvey_jaeger.png"
         },
