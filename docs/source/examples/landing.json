@@ -169,6 +169,11 @@
             "img": "../_static/images/statespace_dfm_coincident.png"
         },
         {
+            "text": "Unobserved Components: Detrending, Stylized Facts and the Business Cycle",
+            "target": "notebooks/generated/statespace_structural_harvey_jaeger.html",
+            "img": "../_static/images/statespace_structural_harvey_jaeger.png"
+        },
+        {
             "text": "Trends and cycles in unemployment",
             "target": "notebooks/generated/statespace_cycles.html",
             "img": "../_static/images/statespace_cycles.png"
