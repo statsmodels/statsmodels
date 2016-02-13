@@ -17,13 +17,160 @@ License: BSD (3-clause)
 
 import numpy as np
 from scipy import stats
-from numpy.testing import assert_, assert_almost_equal, assert_equal, assert_allclose
-from statsmodels.stats.weightstats import \
-                DescrStatsW, CompareMeans, ttest_ind, ztest, zconfint
+import pandas as pd
+from numpy.testing import (assert_, assert_almost_equal, assert_equal,
+                           assert_allclose)
+
+from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
+    ttest_ind, ztest, zconfint)
 #import statsmodels.stats.weightstats as smws
 
 class Holder(object):
     pass
+
+
+# Mixin for tests against other packages.
+class CheckExternalMixin(object):
+
+    @classmethod
+    def get_descriptives(cls, ddof=0):
+        cls.descriptive = DescrStatsW(cls.data, cls.weights, ddof)
+
+
+    @classmethod
+    def save_data(cls, fname="data.csv"):
+        # Utility to get data into another package.
+        df = pd.DataFrame(index=np.arange(len(cls.weights)))
+        df["weights"] = cls.weights
+        if cls.data.ndim == 1:
+            df["data1"] = cls.data
+        else:
+            for k in range(cls.data.shape[1]):
+                df["data%d" % (k + 1)] = cls.data[:, k]
+        df.to_csv(fname)
+
+
+    def test_mean(self):
+        mn = self.descriptive.mean
+        assert_allclose(mn, self.mean, rtol=1e-4)
+
+
+    def test_sum(self):
+        sm = self.descriptive.sum
+        assert_allclose(sm, self.sum, rtol=1e-4)
+
+
+    def test_var(self):
+        # Use vardef=wgt option in SAS to match
+        var = self.descriptive.var
+        assert_allclose(var, self.var, rtol=1e-4)
+
+
+    def test_std(self):
+        # Use vardef=wgt option in SAS to match
+        std = self.descriptive.std
+        assert_allclose(std, self.std, rtol=1e-4)
+
+
+    def test_sem(self):
+        # Use default vardef in SAS to match; only makes sense if
+        # weights sum to n.
+        if not hasattr(self, "sem"):
+            return
+        sem = self.descriptive.std_mean
+        assert_allclose(sem, self.sem, rtol=1e-4)
+
+
+    def test_quantiles(self):
+        quant = np.asarray(self.quantiles, dtype=np.float64)
+        for return_pandas in False, True:
+            qtl = self.descriptive.quantile(self.quantile_probs, return_pandas=return_pandas)
+            qtl = np.asarray(qtl, dtype=np.float64)
+            assert_allclose(qtl, quant, rtol=1e-4)
+
+
+class TestSim1(CheckExternalMixin):
+    # 1d data
+
+    # Taken from SAS
+    mean = 0.401499
+    sum = 12.9553441
+    var = 1.08022
+    std = 1.03933
+    quantiles = np.r_[-1.81098, -0.84052, 0.32859, 0.77808, 2.93431]
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(9876789)
+        cls.data = np.random.normal(size=20)
+        cls.weights = np.random.uniform(0, 3, size=20)
+        cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
+        cls.get_descriptives()
+
+
+class TestSim1t(CheckExternalMixin):
+    # 1d data with ties
+
+    # Taken from SAS
+    mean = 5.05103296
+    sum = 156.573464
+    var = 9.9711934
+    std = 3.15771965
+    quantiles = np.r_[0, 1, 5, 8, 9]
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(9876789)
+        cls.data = np.random.randint(0, 10, size=20)
+        cls.data[15:20] = cls.data[0:5]
+        cls.data[18:20] = cls.data[15:17]
+        cls.weights = np.random.uniform(0, 3, size=20)
+        cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
+        cls.get_descriptives()
+
+
+class TestSim1n(CheckExternalMixin):
+    # 1d data with weights summing to n so we can check the standard
+    # error of the mean
+
+    # Taken from SAS
+    mean = -0.3131058
+    sum = -6.2621168
+    var = 0.49722696
+    std = 0.70514322
+    sem = 0.15767482
+    quantiles = np.r_[-1.61593, -1.45576, -0.24356, 0.16770, 1.18791]
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(4342)
+        cls.data = np.random.normal(size=20)
+        cls.weights = np.random.uniform(0, 3, size=20)
+        cls.weights *= 20 / cls.weights.sum()
+        cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
+        cls.get_descriptives(1)
+
+
+class TestSim2(CheckExternalMixin):
+    # 2d data
+
+    # Taken from SAS
+    mean = [-0.2170406, -0.2387543]
+    sum = [-6.8383999, -7.5225444]
+    var = [1.77426344, 0.61933542]
+    std = [1.3320148, 0.78697867]
+    quantiles = np.column_stack(
+        (np.r_[-2.55277, -1.40479, -0.61040, 0.52740, 2.66246],
+         np.r_[-1.49263, -1.15403, -0.16231, 0.16464, 1.83062]))
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(2249)
+        cls.data = np.random.normal(size=(20, 2))
+        cls.weights = np.random.uniform(0, 3, size=20)
+        cls.quantile_probs = np.r_[0, 0.1, 0.5, 0.75, 1]
+        cls.get_descriptives()
+
 
 class TestWeightstats(object):
 
@@ -158,17 +305,17 @@ class TestWeightstats(object):
         res2 = d1w_d2.tconfint_mean()
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
-    
+
     def test_comparemeans_convenient_interface(self):
         x1_2d, x2_2d = self.x1_2d, self.x2_2d
         d1 = DescrStatsW(x1_2d)
         d2 = DescrStatsW(x2_2d)
         cm1 = CompareMeans(d1, d2)
-        
+
         #smoke test for summary
         from statsmodels.iolib.table import SimpleTable
         for use_t in [True, False]:
-            for usevar in ['pooled', 'unequal']: 
+            for usevar in ['pooled', 'unequal']:
                 smry = cm1.summary(use_t=use_t, usevar=usevar)
                 assert_(isinstance(smry, SimpleTable))
 
