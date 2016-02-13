@@ -236,17 +236,17 @@ estimated using only the following code::
                                      initialization='stationary')
 
            # Setup the fixed components of the state space representation
-           self.ssm['design'] = [1, 0]
-           self.ssm['transition'] = [[0, 0],
+           self['design'] = [1, 0]
+           self['transition'] = [[0, 0],
                                      [1, 0]]
-           self.ssm['selection', 0, 0] = 1
+           self['selection', 0, 0] = 1
 
        # Describe how parameters enter the model
        def update(self, params, transformed=True):
            params = super(AR2, self).update(params, transformed)
-           
-           self.ssm['transition', 0, :] = params[:2]
-           self.ssm['state_cov', 0, 0] = params[2]
+
+           self['transition', 0, :] = params[:2]
+           self['state_cov', 0, 0] = params[2]
 
        # Specify start parameters and parameter names
        @property
@@ -264,18 +264,23 @@ This results in the following summary table::
    ==============================================================================
    Dep. Variable:                      y   No. Observations:                 1000
    Model:                            AR2   Log Likelihood               -1389.437
-   Date:                Thu, 09 Jul 2015   AIC                           2784.874
-   Time:                        01:24:46   BIC                           2799.598
+   Date:                Sat, 13 Feb 2016   AIC                           2784.874
+   Time:                        00:25:30   BIC                           2799.598
    Sample:                             0   HQIC                          2790.470
                                   - 1000                                         
    Covariance Type:                  opg                                         
    ==============================================================================
-                    coef    std err          z      P>|z|      [95.0% Conf. Int.]
+                    coef    std err          z      P>|z|      [0.025      0.975]
    ------------------------------------------------------------------------------
-   var_0          0.4395      0.030     14.729      0.000         0.381     0.498
-   var_1         -0.2055      0.032     -6.523      0.000        -0.267    -0.144
-   var_2          0.9425      0.042     22.413      0.000         0.860     1.025
-   ==============================================================================
+   param.0        0.4395      0.030     14.729      0.000       0.381       0.498
+   param.1       -0.2055      0.032     -6.523      0.000      -0.267      -0.144
+   param.2        0.9425      0.042     22.413      0.000       0.860       1.025
+   ===================================================================================
+   Ljung-Box (Q):                       24.25   Jarque-Bera (JB):                 0.22
+   Prob(Q):                              0.98   Prob(JB):                         0.90
+   Heteroskedasticity (H):               1.05   Skew:                            -0.04
+   Prob(H) (two-sided):                  0.66   Kurtosis:                         3.02
+   ===================================================================================
    
    Warnings:
    [1] Covariance matrix calculated using the outer product of gradients.
