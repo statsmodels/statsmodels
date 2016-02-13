@@ -713,7 +713,7 @@ class KalmanFilter(Representation):
         return llf_obs
 
     def simulate(self, nsimulations, measurement_shocks=None,
-                 state_shocks=None, initial_state=None):
+                 state_shocks=None, initial_state=None, start_time=0):
         """
         Simulate a new time series following the state space model
 
@@ -737,13 +737,18 @@ class KalmanFilter(Representation):
             must be shaped `nsimulations` x `k_posdef` where `k_posdef` is the
             same as in the state space model.
         initial_state : array_like, optional
-            If specified, this is the state vector at time zero, which should
+            If specified, this is the state vector at start_time, which should
             be shaped (`k_states` x 1), where `k_states` is the same as in the
             state space model. If unspecified, but the model has been
             initialized, then that initialization is used. If unspecified and
             the model has not been initialized, then a vector of zeros is used.
             Note that this is not included in the returned `simulated_states`
             array.
+        start_time : int, optional
+            If specified, this arguement dictates the time-point from which the
+            simulation begins. Simulation ends at start_time+nsimulations, so
+            the time-varying matrices have length of nsimulations on the time
+            axis.
 
         Returns
         -------
@@ -754,7 +759,7 @@ class KalmanFilter(Representation):
         """
         time_invariant = self.time_invariant
         # Check for valid number of simulations
-        if not time_invariant and nsimulations > self.nobs:
+        if not time_invariant and (nsimulations + start_time) > self.nobs:
             raise ValueError('In a time-varying model, cannot create more'
                              ' simulations than there are observations.')
 
@@ -807,10 +812,10 @@ class KalmanFilter(Representation):
             initial_state = np.zeros(self.k_states)
 
         return self._simulate(nsimulations, measurement_shocks, state_shocks,
-                              initial_state)
+                              initial_state, start_time)
 
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
-                  initial_state):
+                  initial_state, start):
         time_invariant = self.time_invariant
 
         # Holding variables for the simulations
@@ -826,29 +831,29 @@ class KalmanFilter(Representation):
         state_intercept_t = 0
         transition_t = 0
         selection_t = 0
-        for t in range(nsimulations):
+        for t in range(start, start + nsimulations):
             # Get the current shocks (this accomodates time-varying matrices)
             if measurement_shocks is None:
                 measurement_shock = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_endog), cov=self['obs_cov', :, :, t])
+                    mean=np.zeros(self.k_endog), cov=self['obs_cov', :, :, t-start])
             else:
                 measurement_shock = measurement_shocks[t]
 
             if state_shocks is None:
                 state_shock = np.random.multivariate_normal(
                     mean=np.zeros(self.k_posdef),
-                    cov=self['state_cov', :, :, t])
+                    cov=self['state_cov', :, :, t-start])
             else:
                 state_shock = state_shocks[t]
 
             # Get current-iteration matrices
             if not time_invariant:
-                obs_intercept_t = 0 if self.obs_intercept.shape[-1] == 1 else t
-                design_t = 0 if self.design.shape[-1] == 1 else t
+                obs_intercept_t = 0 if self.obs_intercept.shape[-1] == 1 else (t - start)
+                design_t = 0 if self.design.shape[-1] == 1 else (t - start)
                 state_intercept_t = (
-                    0 if self.state_intercept.shape[-1] == 1 else t)
-                transition_t = 0 if self.transition.shape[-1] == 1 else t
-                selection_t = 0 if self.selection.shape[-1] == 1 else t
+                    0 if self.state_intercept.shape[-1] == 1 else (t - start))
+                transition_t = 0 if self.transition.shape[-1] == 1 else (t - start)
+                selection_t = 0 if self.selection.shape[-1] == 1 else (t - start)
 
             obs_intercept = self['obs_intercept', :, obs_intercept_t]
             design = self['design', :, :, design_t]
@@ -857,14 +862,14 @@ class KalmanFilter(Representation):
             selection = self['selection', :, :, selection_t]
 
             # Iterate the measurement equation
-            simulated_obs[t] = (
-                obs_intercept + np.dot(design, simulated_states[t])
+            simulated_obs[t-start] = (
+                obs_intercept + np.dot(design, simulated_states[t-start])
                 + measurement_shock)
 
             # Iterate the state equation
-            simulated_states[t+1] = (
-                state_intercept + np.dot(transition, simulated_states[t]) +
-                np.dot(selection, state_shock))
+            simulated_states[t-start+1] = (
+                state_intercept + np.dot(transition, simulated_states[t-start])
+                + np.dot(selection, state_shock))
 
         return simulated_obs, simulated_states[:-1]
 
