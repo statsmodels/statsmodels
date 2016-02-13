@@ -164,6 +164,11 @@
             "img": "../_static/images/statespace_varmax.png"
         },
         {
+            "text": "Dynamic Factor Models: Application to coincident indices",
+            "target": "notebooks/generated/statespace_dfm_coincident.html",
+            "img": "../_static/images/statespace_dfm_coincident.png"
+        },
+        {
             "text": "Trends and cycles in unemployment",
             "target": "notebooks/generated/statespace_cycles.html",
             "img": "../_static/images/statespace_cycles.png"
