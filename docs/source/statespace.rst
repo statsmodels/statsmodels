@@ -94,8 +94,8 @@ Models and Estimation
 The following are the main estimation classes, which can be accessed through
 `statsmodels.tsa.statespace.api` and their result classes.
 
-Seasonal Autoregressive Integrated Moving-Average with eXogenous regoressors (SARIMAX)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Seasonal Autoregressive Integrated Moving-Average with eXogenous regressors (SARIMAX)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The `SARIMAX` class is an example of a fully fledged model created using the
 statespace backend for estimation. `SARIMAX` can be used very similarly to
