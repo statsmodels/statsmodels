@@ -19,6 +19,7 @@ Barron-Kenny approach.
 import numpy as np
 import pandas as pd
 from statsmodels.graphics.utils import maybe_name_or_idx
+import statsmodels.compat.pandas as pdc  # pragma: no cover
 
 
 class Mediation(object):
@@ -390,6 +391,9 @@ class MediationResults(object):
             smry.iloc[i, 2] = np.percentile(vec, 100 * (1 - alpha / 2))
             smry.iloc[i, 3] = _pvalue(vec)
 
-        smry = smry.convert_objects(convert_numeric=True)
+        if pdc.version < '0.17.0':  # pragma: no cover
+            smry = smry.convert_objects(convert_numeric=True)
+        else:  # pragma: no cover
+            smry = smry.apply(pd.to_numeric, errors='coerce')
 
         return smry

@@ -128,7 +128,7 @@ def _pandas_to_dummies(endog):
     if endog.ndim == 2:
         if endog.shape[1] == 1:
             yname = endog.columns[0]
-            endog_dummies = get_dummies(endog.icol(0))
+            endog_dummies = get_dummies(endog.iloc[:, 0])
         else:  # series
             yname = 'y'
             endog_dummies = endog

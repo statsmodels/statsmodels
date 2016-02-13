@@ -134,8 +134,8 @@ def test_genfromdta_datetime():
         dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"),
                          pandas=True)
 
-    assert_array_equal(dta.irow(0).tolist(), results[0])
-    assert_array_equal(dta.irow(1).tolist(), results[1])
+    assert_array_equal(dta.iloc[0].tolist(), results[0])
+    assert_array_equal(dta.iloc[1].tolist(), results[1])
 
 def test_date_converters():
     ms = [-1479597200000, -1e6, -1e5, -100, 1e5, 1e6, 1479597200000]
