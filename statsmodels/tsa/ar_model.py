@@ -890,13 +890,13 @@ if __name__ == "__main__":
 
     dates = np.arange(1700, 1700 + len(sunspots.endog))
     dates = ts.date_array(dates, freq='A')
-    #sunspots = pandas.TimeSeries(sunspots.endog, index=dates)
+    #sunspots = pandas.Series(sunspots.endog, index=dates)
 
     #NOTE: pandas only does business days for dates it looks like
     import datetime
     dt_dates = np.asarray(lmap(datetime.datetime.fromordinal,
                               ts_dr.toordinal().astype(int)))
-    sunspots = pandas.TimeSeries(sunspots.endog, index=dt_dates)
+    sunspots = pandas.Series(sunspots.endog, index=dt_dates)
 
     #NOTE: pandas can't handle pre-1900 dates
     mod = AR(sunspots, freq='A')

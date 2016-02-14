@@ -1739,8 +1739,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
 
         if hasattr(self.data, "predict_dates"):
-            from pandas import TimeSeries
-            forecast = TimeSeries(forecast, index=self.data.predict_dates)
+            from pandas import Series
+            forecast = Series(forecast, index=self.data.predict_dates)
             ax = forecast.plot(ax=ax, label='forecast')
         else:
             ax.plot(forecast)
@@ -1863,8 +1863,8 @@ class ARIMAResults(ARMAResults):
                                                alpha)
 
         if hasattr(self.data, "predict_dates"):
-            from pandas import TimeSeries
-            forecast = TimeSeries(forecast, index=self.data.predict_dates)
+            from pandas import Series
+            forecast = Series(forecast, index=self.data.predict_dates)
             ax = forecast.plot(ax=ax, label='forecast')
         else:
             ax.plot(forecast)

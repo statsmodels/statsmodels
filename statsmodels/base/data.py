@@ -5,7 +5,7 @@ results, and doing data cleaning
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
 from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
-from pandas import DataFrame, Series, TimeSeries, isnull
+from pandas import DataFrame, Series, isnull
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
                                           cache_writable)
 import statsmodels.tools.data as data_util
@@ -548,7 +548,7 @@ class PandasData(ModelData):
         squeezed = result.squeeze()
         # May be zero-dim, for example in the case of forecast one step in tsa
         if squeezed.ndim < 2:
-            return TimeSeries(squeezed, index=self.predict_dates)
+            return Series(squeezed, index=self.predict_dates)
         else:
             return DataFrame(result, index=self.predict_dates,
                              columns=self.ynames)
@@ -557,7 +557,7 @@ class PandasData(ModelData):
         squeezed = result.squeeze()
         # May be zero-dim, for example in the case of forecast one step in tsa
         if squeezed.ndim < 2:
-            return TimeSeries(squeezed, name=self.ynames)
+            return Series(squeezed, name=self.ynames)
         else:
             return DataFrame(result, columns=self.ynames)
 
