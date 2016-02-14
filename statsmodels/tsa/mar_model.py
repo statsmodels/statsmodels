@@ -460,11 +460,18 @@ class MAR(tsbase.TimeSeriesModel):
 
         # Make a copy of original datasets
         orig_endog = endog
-        orig_exog = lagmat(orig_endog, order)
 
         # Create datasets / complete initialization
         endog = orig_endog[self.nobs_initial:]
-        exog = orig_exog[self.nobs_initial:]
+
+        # Handle exogenous data
+        if order > 0:
+            orig_exog = lagmat(orig_endog, order)
+            exog = orig_exog[self.nobs_initial:]
+        else:
+            orig_exog = None
+            exog = None
+
         super(MAR, self).__init__(endog, exog, missing=missing)
 
         # Overwrite originals
@@ -472,7 +479,10 @@ class MAR(tsbase.TimeSeriesModel):
         self.data.orig_exog = orig_exog
 
         # Cache
-        self.augmented = np.c_[endog, exog]
+        if exog is not None:
+            self.augmented = np.c_[endog, exog]
+        else:
+            self.augmented = endog.values[:, np.newaxis]  
 
     def expand_params(self, params):
         params = np.asarray(params)
