@@ -391,8 +391,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         predict_dates = getattr(self.data, 'predict_dates', None)
         if (predict_dates is not None and
                 isinstance(self.data, data.PandasData)):
-            prediction = pd.TimeSeries(prediction,
-                                       index=self.data.predict_dates)
+            prediction = pd.Series(prediction, index=self.data.predict_dates)
 
         return prediction
 
