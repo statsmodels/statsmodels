@@ -48,10 +48,14 @@ In the case that one of the matrices is time-invariant (so that, for
 example, :math:`Z_t = Z_{t+1} ~ \forall ~ t`), its last dimension may
 be of size :math:`1` rather than size `nobs`.
 
+This generic form encapsulates many of the most popular linear time series
+models (see below) and is very flexible, allowing estimation with missing
+observations, forecasting, impulse response functions, and much more.
+
 Example: AR(2) model
 ^^^^^^^^^^^^^^^^^^^^
 
-An autoregresive model is a good introductory example to putting models in
+An autoregressive model is a good introductory example to putting models in
 state space form. Recall that an AR(2) model is often written as:
 
 .. math::
@@ -94,8 +98,8 @@ Models and Estimation
 The following are the main estimation classes, which can be accessed through
 `statsmodels.tsa.statespace.api` and their result classes.
 
-Seasonal Autoregressive Integrated Moving-Average with eXogenous regoressors (SARIMAX)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Seasonal Autoregressive Integrated Moving-Average with eXogenous regressors (SARIMAX)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The `SARIMAX` class is an example of a fully fledged model created using the
 statespace backend for estimation. `SARIMAX` can be used very similarly to
@@ -109,7 +113,7 @@ arbitrary trend polynomials.
    sarimax.SARIMAX
    sarimax.SARIMAXResults
 
-A very brief example of how to use this model::
+For an example of the use of this model, see the :ref:`SARIMAX example notebook <statespace_sarimax_stata_notebook>` or the very brief code snippet below::
 
    # Load the statsmodels api
    import statsmodels.api as sm
@@ -156,7 +160,7 @@ The `UnobservedComponents` class is another example of a statespace model.
    structural.UnobservedComponents
    structural.UnobservedComponentsResults
 
-A very brief example of how to use this model::
+For examples of the use of this model, see the :ref:`example notebook <statespace_structural_harvey_jaeger_notebook>` or a notebook on using the unobserved components model to :ref:`decompose a time series into a trend and cycle <statespace_cycles_notebook>` or the very brief code snippet below::
 
    # Load the statsmodels api
    import statsmodels.api as sm
@@ -166,7 +170,7 @@ A very brief example of how to use this model::
 
    # Fit a local level model
    mod_ll = sm.tsa.UnobservedComponents(endog, 'local level')
-   # Note that mod_ar2 is an instance of the UnobservedComponents class
+   # Note that mod_ll is an instance of the UnobservedComponents class
 
    # Fit the model via maximum likelihood
    res_ll = mod_ll.fit()
@@ -189,6 +193,74 @@ A very brief example of how to use this model::
 
    # Show a plot of the estimated level, trend, and cycle component series
    fig_cycle = res_cycle.plot_components()
+
+Vector Autoregressive Moving-Average with eXogenous regressors (VARMAX)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `VARMAX` class is an example of a multivariate statespace model.
+
+.. autosummary::
+   :toctree: generated/
+
+   varmax.VARMAX
+   varmax.VARMAXResults
+
+For an example of the use of this model, see the :ref:`VARMAX example notebook <statespace_varmax_notebook>` or the very brief code snippet below::
+
+   # Load the statsmodels api
+   import statsmodels.api as sm
+
+   # Load your (multivariate) dataset
+   endog = pd.read_csv('your/dataset/here.csv')
+
+   # Fit a local level model
+   mod_var1 = sm.tsa.VARMAX(endog, order=(1,0))
+   # Note that mod_var1 is an instance of the VARMAX class
+
+   # Fit the model via maximum likelihood
+   res_var1 = mod_var1.fit()
+   # Note that res_var1 is an instance of the VARMAXResults class
+
+   # Show the summary of results
+   print(res_var1.summary())
+
+   # Construct impulse responses
+   irfs = res_ll.impulse_responses(steps=10)
+
+Dynamic Factor Models
+^^^^^^^^^^^^^^^^^^^^^
+
+The `DynamicFactor` class is another example of a multivariate statespace
+model.
+
+.. autosummary::
+   :toctree: generated/
+
+   dynamic_factor.DynamicFactor
+   dynamic_factor.DynamicFactorResults
+
+For an example of the use of this model, see the :ref:`Dynamic Factor example notebook <statespace_dfm_coincident_notebook>` or the very brief code snippet below::
+
+   # Load the statsmodels api
+   import statsmodels.api as sm
+
+   # Load your dataset
+   endog = pd.read_csv('your/dataset/here.csv')
+
+   # Fit a local level model
+   mod_dfm = sm.tsa.DynamicFactor(endog, k_factors=1, factor_order=2)
+   # Note that mod_dfm is an instance of the DynamicFactor class
+
+   # Fit the model via maximum likelihood
+   res_dfm = mod_dfm.fit()
+   # Note that res_dfm is an instance of the DynamicFactorResults class
+
+   # Show the summary of results
+   print(res_ll.summary())
+
+   # Show a plot of the r^2 values from regressions of
+   # individual estimated factors on endogenous variables.
+   fig_dfm = res_ll.plot_coefficients_of_determination()
 
 Custom state space models
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -236,17 +308,17 @@ estimated using only the following code::
                                      initialization='stationary')
 
            # Setup the fixed components of the state space representation
-           self.ssm['design'] = [1, 0]
-           self.ssm['transition'] = [[0, 0],
+           self['design'] = [1, 0]
+           self['transition'] = [[0, 0],
                                      [1, 0]]
-           self.ssm['selection', 0, 0] = 1
+           self['selection', 0, 0] = 1
 
        # Describe how parameters enter the model
        def update(self, params, transformed=True):
            params = super(AR2, self).update(params, transformed)
-           
-           self.ssm['transition', 0, :] = params[:2]
-           self.ssm['state_cov', 0, 0] = params[2]
+
+           self['transition', 0, :] = params[:2]
+           self['state_cov', 0, 0] = params[2]
 
        # Specify start parameters and parameter names
        @property
@@ -264,18 +336,23 @@ This results in the following summary table::
    ==============================================================================
    Dep. Variable:                      y   No. Observations:                 1000
    Model:                            AR2   Log Likelihood               -1389.437
-   Date:                Thu, 09 Jul 2015   AIC                           2784.874
-   Time:                        01:24:46   BIC                           2799.598
+   Date:                Sat, 13 Feb 2016   AIC                           2784.874
+   Time:                        00:25:30   BIC                           2799.598
    Sample:                             0   HQIC                          2790.470
                                   - 1000                                         
    Covariance Type:                  opg                                         
    ==============================================================================
-                    coef    std err          z      P>|z|      [95.0% Conf. Int.]
+                    coef    std err          z      P>|z|      [0.025      0.975]
    ------------------------------------------------------------------------------
-   var_0          0.4395      0.030     14.729      0.000         0.381     0.498
-   var_1         -0.2055      0.032     -6.523      0.000        -0.267    -0.144
-   var_2          0.9425      0.042     22.413      0.000         0.860     1.025
-   ==============================================================================
+   param.0        0.4395      0.030     14.729      0.000       0.381       0.498
+   param.1       -0.2055      0.032     -6.523      0.000      -0.267      -0.144
+   param.2        0.9425      0.042     22.413      0.000       0.860       1.025
+   ===================================================================================
+   Ljung-Box (Q):                       24.25   Jarque-Bera (JB):                 0.22
+   Prob(Q):                              0.98   Prob(JB):                         0.90
+   Heteroskedasticity (H):               1.05   Skew:                            -0.04
+   Prob(H) (two-sided):                  0.66   Kurtosis:                         3.02
+   ===================================================================================
    
    Warnings:
    [1] Covariance matrix calculated using the outer product of gradients.
@@ -330,7 +407,9 @@ dimensions, etc.) but it also holds the filtering output, including the
 loglikelihood (see the class documentation for the full list of available
 results). It also provides a
 :py:meth:`predict <kalman_filter.FilterResults.predict>` method, which allows
-in-sample prediction or out-of-sample forecasting.
+in-sample prediction or out-of-sample forecasting. A similar method,
+:py:meth:`predict <kalman_filter.FilterResults.get_prediction>`, provides
+additional prediction or forecasting results, including confidence intervals.
 
 .. autosummary::
    :toctree: generated/
@@ -338,6 +417,40 @@ in-sample prediction or out-of-sample forecasting.
    kalman_filter.KalmanFilter
    kalman_filter.FilterResults
 
+The `KalmanSmoother` class is a subclass of `KalmanFilter` that provides
+smoothing capabilities. Once the state space representation matrices have been
+constructed, the :py:meth:`filter <kalman_filter.KalmanSmoother.smooth>`
+method can be called, producing a `SmootherResults` instance; `SmootherResults`
+is a subclass of `FilterResults`.
+
+The `SmootherResults` class holds all the output from `FilterResults`, but
+also includes smoothing output, including the
+:py:attr:`smoothed state <kalman_filter.SmootherResults.smoothed_state>` and
+loglikelihood (see the class documentation for the full list of available
+results). Whereas "filtered" output at time `t` refers to estimates conditional
+on observations up through time `t`, "smoothed" output refers to estimates
+conditional on the entire set of observations in the dataset.
+
+.. autosummary::
+   :toctree: generated/
+
+   kalman_smoother.KalmanSmoother
+   kalman_smoother.SmootherResults
+
+Statespace diagnostics
+----------------------
+
+Three diagnostic tests are available after estimation of any statespace model,
+whether built in or custom, to help assess whether the model conforms to the
+underlying statistical assumptions. These tests are:
+
+- :py:meth:`test_normality <mlemodel.MLEResults.test_normality>`
+- :py:meth:`test_heteroskedasticity <mlemodel.MLEResults.test_heteroskedasticity>`
+- :py:meth:`test_serial_correlation <mlemodel.MLEResults.test_serial_correlation>`
+
+A number of standard plots of regression residuals are available for the same
+purpose. These can be produced using the command
+:py:meth:`plot_diagnostics <mlemodel.MLEResults.plot_diagnostics>`.
 
 Statespace Tools
 ----------------
@@ -353,5 +466,7 @@ class:
    tools.is_invertible
    tools.constrain_stationary_univariate
    tools.unconstrain_stationary_univariate
+   tools.constrain_stationary_multivariate
+   tools.unconstrain_stationary_multivariate
    tools.validate_matrix_shape
    tools.validate_vector_shape

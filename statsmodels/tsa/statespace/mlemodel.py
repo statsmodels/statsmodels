@@ -1551,7 +1551,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def test_heteroskedasticity(self, method, alternative='two-sided',
                                 use_f=True):
-        """
+        r"""
         Test for heteroskedasticity of standardized residuals
 
         Tests whether the sum-of-squares in the first third of the sample is
@@ -1572,6 +1572,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             (chi-squared) or the approximate small-sample distribution (F).
             Default is True (i.e. default is to compare against an F
             distribution).
+
+        Returns
+        -------
+        output : array
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable. The array is then sized `(k_endog, 2)`. If the method is
+            called as `het = res.test_heteroskedasticity()`, then `het[0]` is
+            an array of size 2 corresponding to the first endogenous variable,
+            where `het[0][0]` is the test statistic, and `het[0][1]` is the
+            p-value.
 
         Notes
         -----
@@ -1597,7 +1607,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         .. math::
 
             H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
-            \left / \sum_{t=d+1}^{d+1+h} \tilde v_t^2 \right .
+            \Bigg / \sum_{t=d+1}^{d+1+h} \tilde v_t^2
 
         where :math:`d` is the number of periods in which the loglikelihood was
         burned in the parent model (usually corresponding to diffuse
@@ -1614,16 +1624,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         TODO
 
         - Allow specification of :math:`h`
-
-        Returns
-        -------
-        output : array
-            An array with `(test_statistic, pvalue)` for each endogenous
-            variable. The array is then sized `(k_endog, 2)`. If the method is
-            called as `het = res.test_heteroskedasticity()`, then `het[0]` is
-            an array of size 2 corresponding to the first endogenous variable,
-            where `het[0][0]` is the test statistic, and `het[0][1]` is the
-            p-value.
 
         References
         ----------

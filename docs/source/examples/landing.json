@@ -159,6 +159,26 @@
             "img": "../_static/images/statespace_sarimax_internet.png"
         },
         {
+            "text": "VARMAX: introduction",
+            "target": "notebooks/generated/statespace_varmax.html",
+            "img": "../_static/images/statespace_varmax.png"
+        },
+        {
+            "text": "Dynamic Factor Models: Application",
+            "target": "notebooks/generated/statespace_dfm_coincident.html",
+            "img": "../_static/images/statespace_dfm_coincident.png"
+        },
+        {
+            "text": "Unobserved Components: Application",
+            "target": "notebooks/generated/statespace_structural_harvey_jaeger.html",
+            "img": "../_static/images/statespace_structural_harvey_jaeger.png"
+        },
+        {
+            "text": "Trends and cycles in unemployment",
+            "target": "notebooks/generated/statespace_cycles.html",
+            "img": "../_static/images/statespace_cycles.png"
+        },
+        {
             "text": "State space modeling: Local Linear Trends",
             "target": "notebooks/generated/statespace_local_linear_trend.html",
             "img": "../_static/images/statespace_local_linear_trend.png"

@@ -1004,7 +1004,7 @@ class KalmanFilter(Representation):
             model_kwargs.update(representation)
             model = KalmanFilter(np.zeros(self.endog.T.shape), self.k_states,
                                  self.k_posdef, **model_kwargs)
-            model.initialize_known(self.initial_state, self.initial_state_cov)
+            model.initialize_approximate_diffuse()
             model._initialize_filter()
             model._initialize_state()
 
