@@ -899,7 +899,6 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                              ' are "n", "r", and "g". Got %s.' %
                              heteroskedasticity)
 
-
         # Create samples
         samples = []
         for rep in range(reps):
@@ -919,15 +918,19 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                 verbose=0
             )
             f_stats = parallel(
-                p_func(samples[rep], self.model.delay, self.model.threshold_grid_size, null.order,
-                       null.ar_order, self.order, self.ar_order) for rep in range(reps)
+                p_func(samples[rep], self.model.delay,
+                       self.model.threshold_grid_size, null.order,
+                       null.ar_order, self.order, self.ar_order)
+                for rep in range(reps)
             )
         # Fall back on sequential
         except:
             f_stats = []
             for rep in range(reps):
-                f_stats.append(setar_utils._order_test_bootstrap(samples[rep], self.model.delay, self.model.threshold_grid_size, null.order,
-                   null.ar_order, self.order, self.ar_order))
+                f_stats.append(setar_utils._order_test_bootstrap(
+                    samples[rep], self.model.delay,
+                    self.model.threshold_grid_size, null.order, null.ar_order,
+                    self.order, self.ar_order))
 
         f_stat = self.f_stat(null)
         pvalue = np.mean(f_stats > f_stat)
@@ -1142,7 +1145,7 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
             '$LR_n(\gamma_%d)$' % (threshold_idx+1),
             '90% Critical', '95% Critical', '99% Critical'
         ]
-        ax.legend([LR, l90, l95, l99], labels, 'lower right')
+        ax.legend([LR, l90, l95, l99], labels, loc='lower right')
 
         # Add titles
         ax.set(
