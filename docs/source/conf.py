@@ -34,7 +34,6 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
-              'numpy_ext.numpydoc',
               'github' # for GitHub links
               ]
 

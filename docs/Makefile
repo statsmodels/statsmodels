@@ -41,7 +41,9 @@ help:
 clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -rf source/generated/
+	-rm -rf source/generated/examples/notebooks/
 	-rm -rf source/dev/generated/
+	-rm -rf ../examples/executed/
 
 cleanall: clean cleancache
 
@@ -52,18 +54,22 @@ cleancache:
 	-rm -rf source/datasets/generated/*
 
 notebooks:
-	@echo "Generating notebooks from examples/notebooks folder" 
-	$(TOOLSPATH)$(NOTEBOOKBUILD)
+	@echo "Generating notebooks from examples/notebooks folder"
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --execute=True --allow_errors=True
 
 html:
 	# generate the examples rst files
 	@echo "Generating reST from examples folder"
 	#$(TOOLSPATH)$(EXAMPLEBUILD)
-	@echo "Generating notebooks from examples/notebooks folder" 
-	$(TOOLSPATH)$(NOTEBOOKBUILD)
 	@echo "Generating datasets from installed statsmodels.datasets"
 	$(TOOLSPATH)$(DATASETBUILD)
+	@echo "Generating notebooks from examples/notebooks folder"
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --execute=True --allow_errors=True
+	@echo "Running sphinx-build"
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	@echo "Copying rendered example notebooks"
+	mkdir -p $(BUILDDIR)/html/examples/notebooks/generated
+	cp source/examples/notebooks/generated/*html $(BUILDDIR)/html/examples/notebooks/generated
 	#$(TOOLSPATH)$(EXAMPLEBUILD)
 	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
 	#$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/examples/index.html ../_static
