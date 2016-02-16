@@ -540,9 +540,8 @@ class Gaussian(Family):
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
-            return -0.5 * np.sum(freq_weights * ((endog - mu)**2 / scale +
-                                 np.log(scale / freq_weights) +
-                                 np.log(2 * np.pi)))
+            return np.sum(freq_weights * ((endog * mu - mu**2/2)/scale -
+                          endog**2/(2 * scale) - .5*np.log(2 * np.pi * scale)))
 
     def resid_anscombe(self, endog, mu):
         """
@@ -727,25 +726,30 @@ class Gamma(Family):
 class Binomial(Family):
     """
     Binomial exponential family distribution.
+
     Parameters
     ----------
     link : a link instance, optional
         The default link for the Binomial family is the logit link.
         Available links are logit, probit, cauchy, log, and cloglog.
         See statsmodels.family.links for more information.
+
     Attributes
     ----------
     Binomial.link : a link instance
         The link function of the Binomial instance
     Binomial.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.binary
+
     See also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
+
     Notes
     -----
     endog for Binomial can be specified in one of three ways.
+
     """
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
@@ -755,7 +759,7 @@ class Binomial(Family):
     safe_links = [L.Logit, L.CDFLink]
 
     def __init__(self, link=L.logit):  # , n=1.):
-        # TODO: it *should* work for a constant n>1 actually, if data_weights
+        # TODO: it *should* work for a constant n>1 actually, if freq_weights
         # is equal to n
         self.n = 1
         # overwritten by initialize if needed but always used to initialize
@@ -767,25 +771,32 @@ class Binomial(Family):
         """
         The starting values for the IRLS algorithm for the Binomial family.
         A good choice for the binomial family is
+
         starting_mu = (y + .5)/2
+
         """
         return (y + .5)/2
 
-    def initialize(self, endog):
+    def initialize(self, endog, freq_weights):
         '''
         Initialize the response variable.
+
         Parameters
         ----------
         endog : array
             Endogenous response variable
+
         Returns
         --------
         If `endog` is binary, returns `endog`
+
         If `endog` is a 2d array, then the input is assumed to be in the format
         (successes, failures) and
         successes/(success + failures) is returned.  And n is set to
         successes + failures.
         '''
+        # if not np.all(np.asarray(freq_weights) == 1):
+        #     self.variance = V.Binomial(n=freq_weights)
         if (endog.ndim > 1 and endog.shape[1] > 1):
             y = endog[:, 0]
             # overwrite self.freq_weights for deviance below
@@ -797,6 +808,7 @@ class Binomial(Family):
     def deviance(self, endog, mu, freq_weights=1, scale=1.):
         '''
         Deviance function for either Bernoulli or Binomial data.
+
         Parameters
         ----------
         endog : array-like
@@ -806,18 +818,23 @@ class Binomial(Family):
             Fitted mean response variable
         scale : float, optional
             An optional scale argument
+
         Returns
         --------
         deviance : float
             The deviance function as defined below
+
         Notes
         -----
         If the endogenous variable is binary:
+
         `deviance` = -2*sum(I_one * log(mu) + (I_zero)*log(1-mu))
         where I_one is an indicator function that evalueates to 1 if
         endog_i == 1. and I_zero is an indicator function that evaluates to
         1 if endog_i == 0.
+
         If the model is ninomial:
+
         `deviance` = 2*sum(log(endog/mu) + (n-endog)*log((n-endog)/(n-mu)))
         where endog and n are as defined in Binomial.initialize.
         '''
@@ -827,14 +844,15 @@ class Binomial(Family):
                                np.log(1 - mu + 1e-200)) * freq_weights)
 
         else:
-            return 2 * np.sum(self.n * (np.log(endog/mu + 1e-200) +
-                              (1 - endog) *
-                               np.log((1 - endog) / (1 - mu) + 1e-200)) *
-                              freq_weights)
+            return 2 * np.sum(self.n * freq_weights *
+                              (endog * np.log(endog/mu + 1e-200) +
+                               (1 - endog) * np.log((1 - endog) /
+                               (1 - mu) + 1e-200)))
 
     def resid_dev(self, endog, mu, freq_weights=1, scale=1.):
         """
         Binomial deviance residuals
+
         Parameters
         -----------
         endog : array-like
@@ -843,19 +861,25 @@ class Binomial(Family):
             Fitted mean response variable
         scale : float, optional
             An optional argument to divide the residuals by scale
+
         Returns
         -------
         resid_dev : array
             Deviance residuals as defined below
+
         Notes
         -----
         If `endog` is binary:
+
         resid_dev = sign(endog-mu)*sqrt(-2*log(I_one*mu + I_zero*(1-mu)))
         where I_one is an indicator function that evaluates as 1 if endog == 1
         and I_zero is an indicator function that evaluates as 1 if endog == 0.
+
         If `endog` is binomial:
+
         resid_dev = sign(endog - mu) * sqrt(2 * n * (endog * log(endog/mu) +
                     (1 - endog) * log((1 - endog)/(1 - mu))))
+
         where endog and n are as defined in Binomial.initialize.
         """
 
@@ -875,6 +899,7 @@ class Binomial(Family):
     def loglike(self, endog, mu, freq_weights, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
+
         Parameters
         ----------
         endog : array-like
@@ -883,18 +908,22 @@ class Binomial(Family):
             Fitted mean response variable
         scale : float, optional
             Not used for the Binomial GLM.
+
         Returns
         -------
         llf : float
             The value of the loglikelihood function evaluated at
             (endog,mu,scale) as defined below.
+
         Notes
         --------
         If `endog` is binary:
         `llf` = scale*sum(endog*log(mu/(1-mu))+log(1-mu))
+
         If `endog` is binomial:
         `llf` = scale*sum(gammaln(n+1) - gammaln(y+1) - gammaln(n-y+1) +\
                 y*log(mu/(1-mu)) + n*log(1-mu)
+
         where gammaln is the log gamma function and y = endog*n with endog
         and n as defined in Binomial initialize.  This simply makes y the
         original number of successes.
@@ -914,22 +943,27 @@ class Binomial(Family):
     def resid_anscombe(self, endog, mu):
         '''
         The Anscombe residuals
+
         Parameters
         ----------
         endog : array-like
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+
         Returns
         -------
         resid_anscombe : array
             The Anscombe residuals as defined below.
+
         Notes
         -----
         sqrt(n)*(cox_snell(endog)-cox_snell(mu))/(mu**(1/6.)*(1-mu)**(1/6.))
+
         where cox_snell is defined as
         cox_snell(x) = betainc(2/3., 2/3., x)*betainc(2/3.,2/3.)
         where betainc is the incomplete beta function
+
         The name 'cox_snell' is idiosyncratic and is simply used for
         convenience following the approach suggested in Cox and Snell (1968).
         Further note that
@@ -937,6 +971,7 @@ class Binomial(Family):
         where hyp2f1 is the hypergeometric 2f1 function.  The Anscombe
         residuals are sometimes defined in the literature using the
         hyp2f1 formulation.  Both betainc and hyp2f1 can be found in scipy.
+
         References
         ----------
         Anscombe, FJ. (1953) "Contribution to the discussion of H. Hotelling's

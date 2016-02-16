@@ -401,7 +401,7 @@ class GLM(base.LikelihoodModel):
 
         eim_factor = 1 / (self.family.link.deriv(mu)**2 *
                             self.family.variance(mu))
-        eim_factor *= self.freq_weights
+        eim_factor *= self.freq_weights * self.n
 
         if not observed:
             if not scale == 1:
@@ -590,7 +590,7 @@ class GLM(base.LikelihoodModel):
             elif self.scaletype.lower() == 'dev':
                 return (self.family.deviance(self.endog, mu,
                                              self.freq_weights) /
-                        self.freq_weights.sum() - self.df_model - 1)
+                        (self.freq_weights.sum() - self.df_model - 1))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
                                  (self.scaletype, type(self.scaletype)))
@@ -765,17 +765,18 @@ class GLM(base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
-        self.n = np.ones((self.endog.shape[0]))  # For binomial
-        if isinstance(self.family, families.Binomial):
-            tmp = self.family.initialize(self.endog)
-            self.endog = tmp[0]
-            self.n = tmp[1]
         if self.freq_weights is None:
             self.freq_weights = np.ones((self.endog.shape[0]))
         if np.shape(self.freq_weights) == () and self.freq_weights > 1:
             self.freq_weights = (self.freq_weights *
                                  np.ones((self.endog.shape[0])))
-        self.freq_weights = self.n * self.freq_weights
+
+        self.n = np.ones((self.endog.shape[0]))  # For binomial
+        if isinstance(self.family, families.Binomial):
+            tmp = self.family.initialize(self.endog, self.freq_weights)
+            self.endog = tmp[0]
+            self.n = tmp[1]
+
         self.scaletype = scale
 
         # Construct a combined offset/exposure term.  Note that
@@ -878,7 +879,7 @@ class GLM(base.LikelihoodModel):
             wls_results = lm.RegressionResults(self, start_params, None)
             iteration = 0
         for iteration in range(maxiter):
-            self.weights = self.freq_weights*self.family.weights(mu)
+            self.weights = self.freq_weights*self.n*self.family.weights(mu)
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
                         - self._offset_exposure)
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
@@ -1065,7 +1066,11 @@ class GLMResults(base.LikelihoodModelResults):
         self.nobs = model.endog.shape[0]
         self.mu = model.mu
         # Divide by n for binom
-        self._freq_weights = model.freq_weights / model.n
+        self._freq_weights = model.freq_weights
+        if isinstance(self.family, families.Binomial):
+            self._n = self.model.n
+        else:
+            self._n = 1
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.pinv_wexog = model.pinv_wexog
@@ -1098,17 +1103,17 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_response(self):
-        return self._freq_weights * (self._endog-self.mu)
+        return self._freq_weights * self._n * (self._endog-self.mu)
 
     @cache_readonly
     def resid_pearson(self):
-        return (np.sqrt(self._freq_weights) * (self._endog-self.mu) /
+        return (np.sqrt(self._freq_weights * self._n) * (self._endog-self.mu) /
                 np.sqrt(self.family.variance(self.mu)))
 
     @cache_readonly
     def resid_working(self):
         val = (self.resid_response / self.family.link.deriv(self.mu))
-        val *= self._freq_weights
+        val *= self._freq_weights * self._n
         return val
 
     @cache_readonly
@@ -1145,7 +1150,8 @@ class GLMResults(base.LikelihoodModelResults):
         if len(kwargs) > 0:
             return GLM(endog, exog, family=self.family, **kwargs).fit().mu
         else:
-            wls_model = lm.WLS(endog, exog, weights=self._freq_weights)
+            wls_model = lm.WLS(endog, exog, 
+                               weights=self._freq_weights * self._n)
             return wls_model.fit().fittedvalues
 
     @cache_readonly

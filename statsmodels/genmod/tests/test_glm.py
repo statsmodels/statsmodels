@@ -1089,9 +1089,12 @@ class CheckWtdDuplicationMixin(object):
     def test_tpvalues(self):
         # test comparing tvalues and pvalues with normal implementation
         # make sure they use normal distribution (inherited in results class)
-        assert_allclose(self.res1.tvalues, self.res2.tvalues, 1e-6)
-        assert_allclose(self.res1.pvalues, self.res2.pvalues, 1e-6)
-        assert_allclose(self.res1.conf_int(), self.res2.conf_int(), 1e-6)
+        assert_allclose(self.res1.tvalues, self.res2.tvalues, atol=1e-6,
+                        rtol=1e-6)
+        assert_allclose(self.res1.pvalues, self.res2.pvalues, atol=1e-6,
+                        rtol=1e-6)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int(), atol=1e-6,
+                        rtol=1e-6)
 
 
 class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
@@ -1187,11 +1190,12 @@ class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
                                    self.data['data'])
         self.y_big = np.repeat(self.y, self.data['data']['Holders'])
         self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        family_link = sm.families.Gaussian(sm.families.links.log)
         self.res1 = GLM(self.y, self.X,
                         freq_weights=self.data['data']['Holders'],
-                        family=sm.families.Gaussian()).fit()
+                        family=family_link).fit()
         self.res2 = GLM(self.y_big, self.X_big,
-                        family=sm.families.Gaussian()).fit()
+                        family=family_link).fit()
 
 
 class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
