@@ -519,19 +519,6 @@ class Gaussian(Family):
         llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
             (1/2.)*log(2*pi*`scale`))
         """
-        """
-        if isinstance(self.link, L.Power) and self.link.power == 1:
-            # This is just the loglikelihood for classical OLS
-            nobs2 = endog.shape[0]/2.
-            SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
-            llf = -np.log(SSR) * nobs2
-            llf -= (1+np.log(np.pi/nobs2))*nobs2
-            return llf
-        else:
-            # Return the loglikelihood for Gaussian GLM
-            return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
-                          - .5*np.log(2 * np.pi * scale))
-        """
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
             nobs2 = np.sum(freq_weights, axis=0) / 2.
@@ -773,7 +760,6 @@ class Binomial(Family):
         A good choice for the binomial family is
 
         starting_mu = (y + .5)/2
-
         """
         return (y + .5)/2
 
@@ -872,6 +858,7 @@ class Binomial(Family):
         If `endog` is binary:
 
         resid_dev = sign(endog-mu)*sqrt(-2*log(I_one*mu + I_zero*(1-mu)))
+
         where I_one is an indicator function that evaluates as 1 if endog == 1
         and I_zero is an indicator function that evaluates as 1 if endog == 0.
 
@@ -976,8 +963,10 @@ class Binomial(Family):
         ----------
         Anscombe, FJ. (1953) "Contribution to the discussion of H. Hotelling's
             paper." Journal of the Royal Statistical Society B. 15, 229-30.
+
         Cox, DR and Snell, EJ. (1968) "A General Definition of Residuals."
             Journal of the Royal Statistical Society B. 30, 248-75.
+
         '''
         cox_snell = lambda x: (special.betainc(2/3., 2/3., x)
                                * special.beta(2/3., 2/3.))
