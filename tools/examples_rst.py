@@ -1,11 +1,12 @@
 #! /usr/bin/env python
-
+from __future__ import print_function
 import os
 import sys
 import re
 import subprocess
 import pickle
-from StringIO import StringIO
+#from StringIO import StringIO
+from statsmodels.compat import StringIO, asunicode, asstr
 
 # 3rd party
 from matplotlib import pyplot as plt
@@ -42,7 +43,7 @@ def check_script(filename):
     file_to_run = "python -c\"import warnings; "
     file_to_run += "warnings.simplefilter('ignore'); "
     file_to_run += "from matplotlib import use; use('Agg'); "
-    file_to_run += "execfile(r'%s')\"" % os.path.join(example_dir, filename)
+    file_to_run += "exec(open(r'%s', 'r').read())\"" % os.path.join(example_dir, filename)
     proc = subprocess.Popen(file_to_run, shell=True, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     #NOTE: use communicate to wait for process termination
@@ -50,8 +51,8 @@ def check_script(filename):
     result = proc.returncode
     if result != 0: # raised an error
         msg = "Not generating reST from %s. An error occurred.\n" % filename
-        msg += stderr
-        print msg
+        msg += asstr(stderr)
+        print(msg)
         return False
     return True
 
@@ -65,7 +66,7 @@ def parse_docstring(block):
         start = re.search(ds, block).end()
         end = re.search(ds, block[start:]).start()
     except: #TODO: make more informative
-        raise IOError("File %s does not have a docstring?")
+        raise IOError("File does not have a docstring?")
     docstring = block[start:start+end]
     block = block[start+end+3:]
     return docstring.strip(), block
@@ -115,7 +116,7 @@ def write_file(outfile, rst_file_pth):
     """
     Write outfile to rst_file_pth
     """
-    print "Writing ", os.path.basename(rst_file_pth)
+    print("Writing ", os.path.basename(rst_file_pth))
     write_file = open(rst_file_pth, 'w')
     write_file.writelines(outfile)
     write_file.close()
@@ -132,14 +133,15 @@ def restify(example_file, filehash, fname):
     try:
         rst_file = parse_file(example_file)
     except IOError as err:
-        raise IOError(err.message % fname)
+        #raise IOError(err.message % fname)
+        print('IOError skipping %s' % fname)
     write_file(rst_file, write_filename)
     if filehash is not None:
         hash_funcs.update_hash_dict(filehash, fname)
 
 if __name__ == "__main__":
     sys.path.insert(0, example_dir)
-    from run_all import filelist
+    #from run_all import filelist
     sys.path.remove(example_dir)
 
     if not os.path.exists(docs_rst_dir):
@@ -156,11 +158,15 @@ if __name__ == "__main__":
                 continue
             for example in filenames:
                 example_file = os.path.join(root, example)
-                whole_file = open(example_file, 'r').read()
+                try:
+                    whole_file = open(example_file, 'rb').read()#.decode('utf-8')
+                    print(repr(example_file))
+                except UnicodeDecodeError:
+                    whole_file = open(example_file, 'rb').read().decode('cp1252')
                 to_write, filehash = hash_funcs.check_hash(whole_file,
                                                            example)
                 if not to_write:
-                    print "Hash has not changed for file %s" % example
+                    print("Hash has not changed for file %s" % example)
                     continue
                 elif (not example.endswith('.py') or example in exclude_list or
                       not check_script(example_file)):

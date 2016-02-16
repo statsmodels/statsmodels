@@ -44,7 +44,7 @@ if "%1" == "clean" (
 )
 
 if "%1" == "html" (
-	python %TOOLSPATH%/%EXAMPLEBUILD%
+REM	python %TOOLSPATH%/%EXAMPLEBUILD%
 	%SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	if errorlevel 1 exit /b 1
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/index.html

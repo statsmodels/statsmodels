@@ -17,9 +17,10 @@ It will:
 """
 
 import os, re, pydoc
-from docscrape_sphinx import get_doc_object, SphinxDocString
+from .docscrape_sphinx import get_doc_object, SphinxDocString
 from sphinx.util.compat import Directive
 import inspect
+from statsmodels.compat import asunicode
 
 def mangle_docstrings(app, what, name, obj, options, lines,
                       reference_offset=[0]):
@@ -29,12 +30,12 @@ def mangle_docstrings(app, what, name, obj, options, lines,
 
     if what == 'module':
         # Strip top title
-        title_re = re.compile(ur'^\s*[#*=]{4,}\n[a-z0-9 -]+\n[#*=]{4,}\s*',
+        title_re = re.compile(r'^\s*[#*=]{4,}\n[a-z0-9 -]+\n[#*=]{4,}\s*',
                               re.I|re.S)
         lines[:] = title_re.sub(u'', u"\n".join(lines)).split(u"\n")
     else:
         doc = get_doc_object(obj, what, u"\n".join(lines), config=cfg)
-        lines[:] = unicode(doc).split(u"\n")
+        lines[:] = str(doc).split(u"\n") #asunicode(doc).split(u"\n")
 
     if app.config.numpydoc_edit_link and hasattr(obj, '__name__') and \
            obj.__name__:
@@ -50,7 +51,7 @@ def mangle_docstrings(app, what, name, obj, options, lines,
     references = []
     for line in lines:
         line = line.strip()
-        m = re.match(ur'^.. \[([a-z0-9_.-])\]', line, re.I)
+        m = re.match(r'^.. \[([a-z0-9_.-])\]', line, re.I)
         if m:
             references.append(m.group(1))
 
@@ -59,7 +60,7 @@ def mangle_docstrings(app, what, name, obj, options, lines,
     if references:
         for i, line in enumerate(lines):
             for r in references:
-                if re.match(ur'^\d+$', r):
+                if re.match(r'^\d+$', r):
                     new_r = u"R%d" % (reference_offset[0] + int(r))
                 else:
                     new_r = u"%s%d" % (r, reference_offset[0])
