@@ -18,7 +18,9 @@ import platform
 
 
 iswin = platform.system() == 'Windows'
-npversionless15 = np.__version__ < '1.5'
+npversion = np.__version__.split('.')
+npversionless15 = not ((int(npversion[0]) > 1) or
+                       (int(npversion[0]) == 1 and (int(npversion[1]) >= 5)))
 winoldnp = iswin & npversionless15
 
 
