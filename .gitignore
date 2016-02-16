@@ -9,6 +9,8 @@ dist
 docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
+docs/source/examples/notebooks/generated
+examples/executed
 
 # generated c source and built extensions
 *.c
