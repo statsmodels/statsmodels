@@ -1219,6 +1219,71 @@ class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
                         family=family_link).fit()
 
 
+class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Gamma family with log link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                                   self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        family_link = sm.families.Gamma(sm.families.links.log)
+        self.res1 = GLM(self.y, self.X,
+                        freq_weights=self.data['data']['Holders'],
+                        family=family_link,
+                        method='newton').fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=family_link,
+                        method='newton').fit()
+
+
+class TestWtdGlmGammaScale_X2(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Gamma family with log link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                                   self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        family_link = sm.families.Gamma(sm.families.links.log)
+        self.res1 = GLM(self.y, self.X,
+                        freq_weights=self.data['data']['Holders'],
+                        family=family_link,
+                        scale='X2').fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=family_link,
+                        scale='X2').fit()
+
+
+class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Gamma family with log link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS')
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                                   self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        family_link = sm.families.Gamma(sm.families.links.log)
+        self.res1 = GLM(self.y, self.X,
+                        freq_weights=self.data['data']['Holders'],
+                        family=family_link,
+                        scale='dev').fit()
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=family_link,
+                        scale='dev').fit()
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:

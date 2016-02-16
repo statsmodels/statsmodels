@@ -208,19 +208,32 @@ class GLM(base.LikelihoodModel):
             exposure = np.log(exposure)
         if offset is not None:  # this should probably be done upstream
             offset = np.asarray(offset)
+
+        # I'd prefer to have this in _check_inputs, but this needs to be run
+        # prior to initialize
+        if freq_weights is not None:
+            if freq_weights.shape[0] != endog.shape[0]:
+                raise ValueError("freq weights not the same length as endog")
+            if len(freq_weights.shape) > 1:
+                raise ValueError("freq weights has too many dimensions")
+        self.freq_weights = freq_weights
+        if self.freq_weights is None:
+            self.freq_weights = np.ones((endog.shape[0]))
+        if np.shape(self.freq_weights) == () and self.freq_weights > 1:
+            self.freq_weights = (self.freq_weights *
+                                 np.ones((endog.shape[0])))
+
         super(GLM, self).__init__(endog, exog, missing=missing,
                                   offset=offset, exposure=exposure,
                                   **kwargs)
-        self.freq_weights = freq_weights
-        self._check_inputs(family, self.offset, self.exposure, self.endog, 
-                           self.freq_weights)
+        self._check_inputs(family, self.offset, self.exposure, self.endog)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
             delattr(self, 'exposure')
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
-                                '_offset_exposure'])
+                                '_offset_exposure', 'n'])
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
@@ -239,9 +252,9 @@ class GLM(base.LikelihoodModel):
                                             np.transpose(self.pinv_wexog))
 
         self.df_model = np_matrix_rank(self.exog)-1
-        self.df_resid = self.exog.shape[0] - np_matrix_rank(self.exog)
+        self.df_resid = self.freq_weights.sum() - self.df_model - 1
 
-    def _check_inputs(self, family, offset, exposure, endog, freq_weights):
+    def _check_inputs(self, family, offset, exposure, endog):
 
         # Default family is Gaussian
         if family is None:
@@ -258,12 +271,6 @@ class GLM(base.LikelihoodModel):
         if offset is not None:
             if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
-
-        if freq_weights is not None:
-            if freq_weights.shape[0] != endog.shape[0]:
-                raise ValueError("data weights not the same length as endog")
-            if len(freq_weights.shape) > 1:
-                raise ValueError("data weights has too many dimensions")
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
@@ -576,7 +583,7 @@ class GLM(base.LikelihoodModel):
                 resid = self.endog - mu
                 return ((self.freq_weights * (np.power(resid, 2) /
                          self.family.variance(mu))).sum() /
-                        (self.freq_weights.sum() - self.df_model - 1))
+                        (self.df_resid))
 
         if isinstance(self.scaletype, float):
             return np.array(self.scaletype)
@@ -586,11 +593,11 @@ class GLM(base.LikelihoodModel):
                 resid = self.endog - mu
                 return ((self.freq_weights * (np.power(resid, 2) /
                          self.family.variance(mu))).sum() /
-                        (self.freq_weights.sum() - self.df_model - 1))
+                        (self.df_resid))
             elif self.scaletype.lower() == 'dev':
                 return (self.family.deviance(self.endog, mu,
                                              self.freq_weights) /
-                        (self.freq_weights.sum() - self.df_model - 1))
+                        (self.df_resid))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
                                  (self.scaletype, type(self.scaletype)))
@@ -765,12 +772,6 @@ class GLM(base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
-        if self.freq_weights is None:
-            self.freq_weights = np.ones((self.endog.shape[0]))
-        if np.shape(self.freq_weights) == () and self.freq_weights > 1:
-            self.freq_weights = (self.freq_weights *
-                                 np.ones((self.endog.shape[0])))
-
         self.n = np.ones((self.endog.shape[0]))  # For binomial
         if isinstance(self.family, families.Binomial):
             tmp = self.family.initialize(self.endog, self.freq_weights)
@@ -1219,6 +1220,7 @@ class GLMResults(base.LikelihoodModelResults):
         #TODO: what are these in results?
         self._endog = None
         self._freq_weights = None
+        self._n = None
 
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
