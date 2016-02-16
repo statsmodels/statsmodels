@@ -58,6 +58,16 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     return dst
 
 def convert(src, dst, to='rst'):
+    '''
+    Convert a notebook `src`.
+
+    Parameters
+    ----------
+    src, dst: str
+        filepaths
+    to: {'rst', 'html'}
+        format to export to
+    '''
     dispatch = {'rst': RSTExporter, 'html': HTMLExporter}
     exporter = dispatch[to.lower()]()
 
@@ -104,7 +114,9 @@ def do(fp=None, directory=None, to='html', execute=True,
             print("Finished %s" % nb)
 
 parser = argparse.ArgumentParser(description="Process example notebooks")
-parser.add_argument("--fp", type=str, help="Path to notebook to convert", default=None)
+parser.add_argument("--fp", type=str, default=None,
+                    help="Path to notebook to convert. Converts all notebooks "
+                         "in `directory` by default.")
 parser.add_argument("--directory", type=str, default=None,
                     help="Path to notebook directory to convert")
 parser.add_argument("--to", type=str, default="html",
@@ -113,10 +125,8 @@ parser.add_argument("--execute", type=bool, default=True,
                     help="Execute notebook before converting")
 parser.add_argument("--allow_errors", type=bool, default=True,
                     help="Allow errors while executing")
-
 parser.add_argument("--timeout", type=int, default=1000,
                     help="Seconds to allow for each cell before timing out")
-
 parser.add_argument("--kernel_name", type=str, default=None,
                     help="Name of kernel to execute with")
 
