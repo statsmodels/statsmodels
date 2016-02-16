@@ -714,16 +714,15 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         assert_almost_equal(pred2, pred1+offset)
 
 
-def test_prefect_pred():
-    # cur_dir = os.path.dirname(os.path.abspath(__file__))
-    # iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
-    #                      delimiter=",", skip_header=1)
-    y = np.array([0, 0, 1, 1])[:, None]
-    X = np.array([[1, 0],
-                  [1, 0],
-                  [1, 1],
-                  [1, 1]])
-    # X = add_constant(X, prepend=True)
+def test_perfect_pred():
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
+                         delimiter=",", skip_header=1)
+    y = iris[:, -1]
+    X = iris[:, :-1]
+    X = X[y != 2]
+    y = y[y != 2]
+    X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
     assert_raises(PerfectSeparationError, glm.fit)
 
