@@ -253,6 +253,12 @@ class TestDecompose:
         assert_almost_equal(res_add.trend, trend, 2)
         assert_almost_equal(res_add.resid, random, 3)
 
+    def test_2d(self):
+        x = np.tile(np.arange(6), (2, 1)).T
+        trend = seasonal_decompose(x, freq=2).trend
+        expected = np.tile(np.arange(6, dtype=float), (2, 1)).T
+        expected[0] = expected[-1] = np.nan
+        assert_equal(trend, expected)
 
     def test_raises(self):
         assert_raises(ValueError, seasonal_decompose, self.data.values)
