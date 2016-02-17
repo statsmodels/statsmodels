@@ -3,6 +3,13 @@
 import io
 import os
 import argparse
+from functools import partial
+try:
+    from concurrent import futures
+    par = True
+except ImportError:
+    par = False
+
 
 import nbformat
 from nbconvert import HTMLExporter, RSTExporter
@@ -67,22 +74,34 @@ def find_notebooks(directory=None):
            if x.endswith('.ipynb'))
     return nbs
 
+def do_one(nb, to=None, execute=None, allow_errors=None, timeout=None, kernel_name=None):
+    name = os.path.basename(nb)
+    if execute:
+        dst = os.path.join(EXECUTED_DIR, name)
+        print("Executeing %s to %s" % (nb, dst))
+        nb = execute_nb(nb, dst, allow_errors=allow_errors, timeout=timeout,
+                        kernel_name=kernel_name)
+    dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + '.' + to
+    print("Converting %s to %s" % (nb, dst))
+    convert(nb, dst, to=to)
+    return dst
+
 def do(fp=None, directory=None, to='html', execute=True,
        allow_errors=True, timeout=1000, kernel_name=None):
     if fp is None:
         nbs = find_notebooks(directory)
     else:
         nbs = [fp]
-    for nb in nbs:
-        name = os.path.basename(nb)
-        if execute:
-            dst = os.path.join(EXECUTED_DIR, name)
-            print("Executeing %s to %s" % (nb, dst))
-            nb = execute_nb(nb, dst, allow_errors=allow_errors, timeout=timeout,
-                            kernel_name=kernel_name)
-        dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + '.' + to
-        print("Converting %s to %s" % (nb, dst))
-        convert(nb, dst, to=to)
+    func = partial(do_one, to=to, execute=execute, allow_errors=allow_errors,
+                   timeout=timeout, kernel_name=kernel_name)
+    if par:
+        with futures.ProcessPoolExecutor() as pool:
+            for dst in pool.map(func, nbs):
+                print("Finished %s" % dst)
+    else:
+        for nb in nbs:
+            func(nb)
+            print("Finished %s" % nb)
 
 parser = argparse.ArgumentParser(description="Process example notebooks")
 parser.add_argument("--fp", type=str, help="Path to notebook to convert", default=None)
