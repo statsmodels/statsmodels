@@ -15,7 +15,7 @@ def seasonal_mean(x, freq):
     number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
     in the mean.
     """
-    return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
+    return np.array([pd_nanmean(x[i::freq], axis=0) for i in range(freq)])
 
 
 def seasonal_decompose(x, model="additive", filt=None, freq=None):
@@ -96,11 +96,11 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
     period_averages = seasonal_mean(detrended, freq)
 
     if model.startswith('m'):
-        period_averages /= np.mean(period_averages)
+        period_averages /= np.mean(period_averages, axis=0)
     else:
-        period_averages -= np.mean(period_averages)
+        period_averages -= np.mean(period_averages, axis=0)
 
-    seasonal = np.tile(period_averages, nobs // freq + 1)[:nobs]
+    seasonal = np.tile(period_averages.T, nobs // freq + 1).T[:nobs]
 
     if model.startswith('m'):
         resid = x / seasonal / trend
