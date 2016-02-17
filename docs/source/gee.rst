@@ -19,7 +19,7 @@ Examples
 The following illustrates a Poisson regression with exchangeable correlation
 within clusters using data on epilepsy seizures.
 
-.. code-block:: python
+.. ipython:: python
 
     import statsmodels.api as sm
     import statsmodels.formula.api as smf

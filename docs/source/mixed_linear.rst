@@ -30,7 +30,7 @@ hope to implement these features for the next release.
 Examples
 --------
 
-::
+.. ipython:: python
 
   import statsmodels.api as sm
   import statsmodels.formula.api as smf

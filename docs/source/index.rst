@@ -18,7 +18,7 @@ Since version ``0.5.0`` of ``statsmodels``, you can use R-style formulas
 together with ``pandas`` data frames to fit your models. Here is a simple
 example using ordinary least squares:
 
-.. code-block:: python
+.. ipython:: python
 
     import numpy as np
     import statsmodels.api as sm
@@ -31,11 +31,11 @@ example using ordinary least squares:
     results = smf.ols('Lottery ~ Literacy + np.log(Pop1831)', data=dat).fit()
 
     # Inspect the results
-    print results.summary()
+    print(results.summary())
 
 You can also use ``numpy`` arrays instead of formulas:
 
-.. code-block:: python
+.. ipython:: python
 
     import numpy as np
     import statsmodels.api as sm
@@ -52,7 +52,7 @@ You can also use ``numpy`` arrays instead of formulas:
     results = sm.OLS(y, X).fit()
 
     # Inspect the results
-    print results.summary()
+    print(results.summary())
 
 Have a look at `dir(results)` to see available results. Attributes are
 described in `results.__doc__` and results methods have their own docstrings.

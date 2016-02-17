@@ -39,7 +39,7 @@ The main reference for empirical likelihood is::
 Examples
 --------
 
-.. code-block:: python
+.. ipython:: python
 
   import numpy as np
   import statsmodels.api as sm

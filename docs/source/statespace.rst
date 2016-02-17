@@ -113,7 +113,10 @@ arbitrary trend polynomials.
    sarimax.SARIMAX
    sarimax.SARIMAXResults
 
-For an example of the use of this model, see the :ref:`SARIMAX example notebook <statespace_sarimax_stata_notebook>` or the very brief code snippet below::
+For an example of the use of this model, see the :ref:`SARIMAX example notebook <statespace_sarimax_stata_notebook>` or the very brief code snippet below:
+
+
+.. code-block:: python
 
    # Load the statsmodels api
    import statsmodels.api as sm
@@ -160,7 +163,9 @@ The `UnobservedComponents` class is another example of a statespace model.
    structural.UnobservedComponents
    structural.UnobservedComponentsResults
 
-For examples of the use of this model, see the :ref:`example notebook <statespace_structural_harvey_jaeger_notebook>` or a notebook on using the unobserved components model to :ref:`decompose a time series into a trend and cycle <statespace_cycles_notebook>` or the very brief code snippet below::
+For examples of the use of this model, see the :ref:`example notebook <statespace_structural_harvey_jaeger_notebook>` or a notebook on using the unobserved components model to :ref:`decompose a time series into a trend and cycle <statespace_cycles_notebook>` or the very brief code snippet below:
+
+.. code-block:: python
 
    # Load the statsmodels api
    import statsmodels.api as sm
@@ -205,7 +210,9 @@ The `VARMAX` class is an example of a multivariate statespace model.
    varmax.VARMAX
    varmax.VARMAXResults
 
-For an example of the use of this model, see the :ref:`VARMAX example notebook <statespace_varmax_notebook>` or the very brief code snippet below::
+For an example of the use of this model, see the :ref:`VARMAX example notebook <statespace_varmax_notebook>` or the very brief code snippet below:
+
+.. code-block:: python
 
    # Load the statsmodels api
    import statsmodels.api as sm
@@ -239,7 +246,9 @@ model.
    dynamic_factor.DynamicFactor
    dynamic_factor.DynamicFactorResults
 
-For an example of the use of this model, see the :ref:`Dynamic Factor example notebook <statespace_dfm_coincident_notebook>` or the very brief code snippet below::
+For an example of the use of this model, see the :ref:`Dynamic Factor example notebook <statespace_dfm_coincident_notebook>` or the very brief code snippet below:
+
+.. code-block:: python
 
    # Load the statsmodels api
    import statsmodels.api as sm
@@ -284,7 +293,9 @@ For a more sophisticated example, see the source code for the `SARIMAX` and
 
 In simple cases, the model can be constructed entirely using the MLEModel
 class. For example, the AR(2) model from above could be constructed and
-estimated using only the following code::
+estimated using only the following code:
+
+.. code-block:: python
 
    import numpy as np
    from scipy.signal import lfilter

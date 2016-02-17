@@ -13,7 +13,7 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-::
+.. ipython:: python
 
     # Load modules and data
     import statsmodels.api as sm
@@ -23,6 +23,7 @@ Examples
     # Instantiate a gamma family model with the default link function.
     gamma_model = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
     gamma_results = gamma_model.fit()
+    print(gamma_results.summary())
 
 Detailed examples can be found here:
 

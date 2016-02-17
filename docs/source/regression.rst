@@ -17,7 +17,7 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-::
+.. ipython:: python
 
     # Load modules and data
     import numpy as np
@@ -28,7 +28,7 @@ Examples
     # Fit and summarize OLS model
     mod = sm.OLS(spector_data.endog, spector_data.exog)
     res = mod.fit()
-    print res.summary()
+    print(res.summary())
 
 Detailed examples can be found here:
 

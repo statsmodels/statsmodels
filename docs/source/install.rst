@@ -10,9 +10,13 @@ Using setuptools
 
 To obtain the latest released version of statsmodels using `setuptools <https://pypi.python.org/pypi/setuptools>`__::
 
-    easy_install -U statsmodels
+    pip install -U statsmodels
 
 Or follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__.
+
+Statsmodels is also available in `Anaconda <https://www.continuum.io/downloads>`__::
+
+    conda install statsmodels
 
 Obtaining the Source
 ~~~~~~~~~~~~~~~~~~~~

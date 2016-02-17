@@ -13,7 +13,7 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-::
+.. ipython:: python
 
     # Load modules and data
     import statsmodels.api as sm
@@ -23,7 +23,7 @@ Examples
     # Fit model and print summary
     rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
     rlm_results = rlm_model.fit()
-    print rlm_results.params
+    print(rlm_results.params)
 
 Detailed examples can be found here:
 

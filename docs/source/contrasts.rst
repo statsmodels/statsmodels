@@ -13,7 +13,7 @@ To have a look at the contrast matrices in Patsy, we will use data from UCLA ATS
 
 .. ipython:: python
    :suppress:
-   
+
    import numpy as np
    np.set_printoptions(precision=4, suppress=True)
 
@@ -62,7 +62,7 @@ Dummy coding is likely the most well known coding scheme. It compares each level
    from patsy.contrasts import Treatment
    levels = [1,2,3,4]
    contrast = Treatment(reference=0).code_without_intercept(levels)
-   print contrast.matrix
+   print(contrast.matrix)
 
 Here we used `reference=0`, which implies that the first level, Hispanic, is the reference category against which the other level effects are measured. As mentioned above, the columns do not sum to zero and are thus not independent of the intercept. To be explicit, let's look at how this would encode the `race` variable.
 
@@ -77,7 +77,7 @@ This is a bit of a trick, as the `race` category conveniently maps to zero-based
    from statsmodels.formula.api import ols
    mod = ols("write ~ C(race, Treatment)", data=hsb2)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 We explicitly gave the contrast for race; however, since Treatment is the default, we could have omitted this.
 
@@ -90,11 +90,11 @@ Like Treatment Coding, Simple Coding compares each level to a fixed reference le
 .. ipython:: python
 
    contrast = Simple().code_without_intercept(levels)
-   print contrast.matrix
+   print(contrast.matrix)
 
    mod = ols("write ~ C(race, Simple)", data=hsb2)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 Sum (Deviation) Coding
 ----------------------
@@ -105,11 +105,11 @@ Sum coding compares the mean of the dependent variable for a given level to the 
 
    from patsy.contrasts import Sum
    contrast = Sum().code_without_intercept(levels)
-   print contrast.matrix
+   print(contrast.matrix)
 
    mod = ols("write ~ C(race, Sum)", data=hsb2)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 This correspons to a parameterization that forces all the coefficients to sum to zero. Notice that the intercept here is the grand mean where the grand mean is the mean of means of the dependent variable by each level.
 
@@ -126,11 +126,11 @@ In backward difference coding, the mean of the dependent variable for a level is
 
    from patsy.contrasts import Diff
    contrast = Diff().code_without_intercept(levels)
-   print contrast.matrix
+   print(contrast.matrix)
 
    mod = ols("write ~ C(race, Diff)", data=hsb2)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 For example, here the coefficient on level 1 is the mean of `write` at level 2 compared with the mean at level 1. Ie.,
 
@@ -149,11 +149,11 @@ Our version of Helmert coding is sometimes referred to as Reverse Helmert Coding
 
    from patsy.contrasts import Helmert
    contrast = Helmert().code_without_intercept(levels)
-   print contrast.matrix
+   print(contrast.matrix)
 
    mod = ols("write ~ C(race, Helmert)", data=hsb2)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 To illustrate, the comparison on level 4 is the mean of the dependent variable at the previous three levels taken from the mean at level 4
 
@@ -192,11 +192,11 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
    from patsy.contrasts import Poly
    levels = hsb2.readcat.unique().tolist()
    contrast = Poly().code_without_intercept(levels)
-   print contrast.matrix
+   print(contrast.matrix)
 
    mod = ols("write ~ C(readcat, Poly)", data=hsb2)
    res = mod.fit()
-   print res.summary()
+   print(res.summary())
 
 As you can see, readcat has a significant linear effect on the dependent variable `write` but not a significant quadratic or cubic effect.
 
