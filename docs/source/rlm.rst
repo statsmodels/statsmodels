@@ -27,11 +27,8 @@ Examples
 
 Detailed examples can be found here:
 
-.. toctree::
-    :maxdepth: 1
-
-    examples/notebooks/generated/robust_models_0
-    examples/notebooks/generated/robust_models_1
+* `Robust Models 1 <examples/notebooks/generated/robust_models_0.html>`__
+* `Robust Models 2 <examples/notebooks/generated/robust_models_1.html>`__
 
 Technical Documentation
 -----------------------

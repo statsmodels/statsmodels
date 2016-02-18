@@ -43,10 +43,7 @@ Examples
 
 Detailed examples can be found here
 
-.. toctree::
-   :maxdepth: 2
-
-   examples/notebooks/generated/
+* `Mixed LM <examples/notebooks/generated/mixed_lm_example.html>`__
 
 There some notebook examples on the Wiki:
 `Wiki notebooks for MixedLM <https://github.com/statsmodels/statsmodels/wiki/Examples#linear-mixed-models>`_

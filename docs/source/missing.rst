@@ -17,7 +17,7 @@ All of the models can handle missing data. For performance reasons, the default 
    data.endog[missing_idx] = np.nan
    ols_model = sm.OLS(data.endog, data.exog)
    ols_fit = ols_model.fit()
-   print(ls_fit.params)
+   print(ols_fit.params)
 
 This silently fails and all of the model parameters are NaN, which is probably not what you expected. If you are not sure whether or not you have missing data you can use `missing = 'raise'`. This will raise a `MissingDataError` during model instantiation if missing data is present so that you know something was wrong in your input data.
 

@@ -32,12 +32,10 @@ Examples
 
 Detailed examples can be found here:
 
-.. toctree::
-   :maxdepth: 1
 
-   examples/notebooks/generated/ols
-   examples/notebooks/generated/wls
-   examples/notebooks/generated/gls
+* `OLS <examples/notebooks/generated/ols.html>`__
+* `WLS <examples/notebooks/generated/wls.html>`__
+* `GLS <examples/notebooks/generated/gls.html>`__
 
 Technical Documentation
 -----------------------

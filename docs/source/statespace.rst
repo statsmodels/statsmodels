@@ -113,7 +113,9 @@ arbitrary trend polynomials.
    sarimax.SARIMAX
    sarimax.SARIMAXResults
 
-For an example of the use of this model, see the :ref:`SARIMAX example notebook <statespace_sarimax_stata_notebook>` or the very brief code snippet below:
+For an example of the use of this model, see the
+`SARIMAX example notebook <examples/notebooks/generated/statespace_sarimax_stata_notebook.html>`__
+or the very brief code snippet below:
 
 
 .. code-block:: python
@@ -163,7 +165,7 @@ The `UnobservedComponents` class is another example of a statespace model.
    structural.UnobservedComponents
    structural.UnobservedComponentsResults
 
-For examples of the use of this model, see the :ref:`example notebook <statespace_structural_harvey_jaeger_notebook>` or a notebook on using the unobserved components model to :ref:`decompose a time series into a trend and cycle <statespace_cycles_notebook>` or the very brief code snippet below:
+For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger_notebook.html>`__ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles_notebook.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -210,7 +212,7 @@ The `VARMAX` class is an example of a multivariate statespace model.
    varmax.VARMAX
    varmax.VARMAXResults
 
-For an example of the use of this model, see the :ref:`VARMAX example notebook <statespace_varmax_notebook>` or the very brief code snippet below:
+For an example of the use of this model, see the `VARMAX example notebook <examples/notebooks/generated/statespace_varmax_notebook.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -246,7 +248,7 @@ model.
    dynamic_factor.DynamicFactor
    dynamic_factor.DynamicFactorResults
 
-For an example of the use of this model, see the :ref:`Dynamic Factor example notebook <statespace_dfm_coincident_notebook>` or the very brief code snippet below:
+For an example of the use of this model, see the `Dynamic Factor example notebook <examples/notebooks/generated/statespace_dfm_coincident_notebook.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -286,7 +288,7 @@ likelihood fitting functionality for estimation and results output.
    mlemodel.MLEResults
 
 For a basic example demonstrating creating and estimating a custom state space
-model, see the :ref:`Local Linear Trend example notebook <statespace_local_linear_trend_notebook>`.
+model, see the `Local Linear Trend example notebook <examples/notebooks/generated/statespace_local_linear_trend_notebook.html>`__.
 For a more sophisticated example, see the source code for the `SARIMAX` and
 `SARIMAXResults` classes, which are built by extending `MLEModel` and
 `MLEResults`.

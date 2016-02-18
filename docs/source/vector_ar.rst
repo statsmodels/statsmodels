@@ -41,6 +41,15 @@ class will use the passed variable names. Otherwise they can be passed
 explicitly:
 
 .. ipython:: python
+    :suppress:
+
+    import pandas as pd
+    pd.options.display.max_rows = 10
+    import matplotlib
+    import matplotlib.pyplot as plt
+    matplotlib.style.use('ggplot')
+
+.. ipython:: python
 
     # some example data
     import numpy as np
@@ -87,17 +96,16 @@ Plotting input time series:
 
 .. ipython:: python
 
+    @savefig var_plot_input.png
     results.plot()
 
-.. plot:: plots/var_plot_input.py
 
 Plotting time series autocorrelation function:
 
 .. ipython:: python
 
+    @savefig var_plot_acorr.png
     results.plot_acorr()
-
-.. plot:: plots/var_plot_acorr.py
 
 
 Lag order selection
@@ -140,7 +148,10 @@ The `forecast_interval` function will produce the above forecast along with
 asymptotic standard errors. These can be visualized using the `plot_forecast`
 function:
 
-.. plot:: plots/var_plot_forecast.py
+.. ipython:: python
+
+   @savefig var_forecast.png
+   results.plot_forecast(10)
 
 Impulse Response Analysis
 -------------------------
@@ -172,15 +183,16 @@ the 95% significance level, which can be modified by the user.
 
 .. ipython:: python
 
+    @savefig var_irf.png
     irf.plot(orth=False)
 
-.. plot:: plots/var_plot_irf.py
 
 Note the `plot` function is flexible and can plot only variables of interest if
 so desired:
 
 .. ipython:: python
 
+    @savefig var_realgdp.png
     irf.plot(impulse='realgdp')
 
 The cumulative effects :math:`\Psi_n = \sum_{i=0}^n \Phi_i` can be plotted with
@@ -188,9 +200,9 @@ the long run effects as follows:
 
 .. ipython:: python
 
+    @savefig var_irf_cum.png
     irf.plot_cum_effects(orth=False)
 
-.. plot:: plots/var_plot_irf_cum.py
 
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
@@ -216,9 +228,9 @@ They can also be visualized through the returned :class:`FEVD` object:
 
 .. ipython:: python
 
+    @savefig var_fevd.png
     results.fevd(20).plot()
 
-.. plot:: plots/var_plot_fevd.py
 
 Statistical tests
 -----------------
@@ -298,6 +310,7 @@ The forecasts can be visualized using `plot_forecast`:
 
 .. ipython:: python
 
+    @savefig dvar_forecast.png
     var.plot_forecast(2)
 
 Class Reference

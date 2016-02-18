@@ -25,13 +25,10 @@ Examples
 
     table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 ANOVA DataFrame
     print(table)
-    
+
 A more detailed example can be found here:
 
-.. toctree::
-  :maxdepth: 1
-
-  examples/notebooks/generated/interactions_anova
+*  `ANOVA <examples/notebooks/generated/interactions_anova.html>`__
 
 Module Reference
 ----------------

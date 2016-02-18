@@ -28,11 +28,9 @@ Examples
 
 Detailed examples can be found here:
 
-.. toctree::
-    :maxdepth: 2
 
-    examples/notebooks/generated/discrete_choice_overview
-    examples/notebooks/generated/discrete_choice_example
+* `Overview <examples/notebooks/generated/discrete_choice_overview.html>`__
+* `Examples <examples/notebooks/generated/discrete_choice_example.html>`__
 
 Technical Documentation
 -----------------------
