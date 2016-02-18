@@ -8,6 +8,7 @@ if "%SPHINXBUILD%" == "" (
 set BUILDDIR=build
 set TOOLSPATH=../tools
 set EXAMPLEBUILD=examples_rst.py
+set NOTEBOOKBUILD=nbgenerate.py
 set FOLDTOC=fold_toc.py
 set ALLSPHINXOPTS=-d %BUILDDIR%/doctrees %SPHINXOPTS% source
 if NOT "%PAPER%" == "" (
@@ -45,11 +46,15 @@ if "%1" == "clean" (
 
 if "%1" == "html" (
 	python %TOOLSPATH%/%EXAMPLEBUILD%
+    python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
 	%SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	if errorlevel 1 exit /b 1
+    xcopy /s source/examples/notebooks/generated/*.html %BUILDDIR%/html/examples/notebooks/generated
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/index.html
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/examples/index.html ../_static
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/dev/index.html ../_static
+    if not exists %BUILDDIR%/html/examples/notebooks/generated mkdir %BUILDDIR%/html/examples/notebooks/generated
+
 	echo.
 	echo.Build finished. The HTML pages are in %BUILDDIR%/html.
 	goto end
