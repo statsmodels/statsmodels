@@ -3,13 +3,13 @@
 Import Paths and Structure
 ==========================
 
-We offer two ways of importing functions and classes from statsmodels: 
+We offer two ways of importing functions and classes from statsmodels:
 
 1. `API import for interactive use`_
 
    + Allows tab completion
 
-2. `Direct import for programs`_ 
+2. `Direct import for programs`_
 
    + Avoids importing unnecessary modules and commands
 

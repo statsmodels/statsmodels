@@ -15,7 +15,7 @@ See `Module Reference`_ for commands and arguments.
 Examples
 --------
 
-::
+.. ipython:: python
 
   # Load the data from Spector and Mazzeo (1980)
   spector_data = sm.datasets.spector.load()
@@ -24,15 +24,13 @@ Examples
   # Logit Model
   logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
   logit_res = logit_mod.fit()
-  print logit_res.summary()
+  print(logit_res.summary())
 
 Detailed examples can be found here:
 
-.. toctree::
-    :maxdepth: 2
 
-    examples/notebooks/generated/discrete_choice_overview
-    examples/notebooks/generated/discrete_choice_example
+* `Overview <examples/notebooks/generated/discrete_choice_overview.html>`__
+* `Examples <examples/notebooks/generated/discrete_choice_example.html>`__
 
 Technical Documentation
 -----------------------

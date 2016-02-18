@@ -36,6 +36,7 @@ Here we create a ``SurvfuncRight`` object using data from the
 `flchain` study, which is available through the R datasets repository.
 We fit the survival distribution only for the female subjects.
 
+
 .. code-block:: python
 
    import statsmodels.api as sm

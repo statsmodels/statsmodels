@@ -437,6 +437,10 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(cwd, 'PKG-INFO')) and not no_frills:
         # Generate Cython sources, unless building from source release
         generate_cython()
+    extras = {'docs': ['sphinx>=1.3.5',
+                       'nbconvert>=4.1.0',
+                       'nbformat>=4.0.1',
+                       'numpydoc>=0.6.0']}
 
     setup(name = DISTNAME,
           version = VERSION,
@@ -454,4 +458,5 @@ if __name__ == "__main__":
           packages = packages,
           package_data = package_data,
           include_package_data=False,  # True will install all files in repo
+          extras_require=extras,
           **setuptools_kwargs)

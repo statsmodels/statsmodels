@@ -189,7 +189,7 @@ individual outliers and might not be able to identify groups of outliers.
         data.exog = sm.add_constant(data.exog)
         huber_t = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
         hub_results = huber_t.fit()
-        print hub_results.weights
+        print(hub_results.weights)
 
     And the weights give an idea of how much a particular observation is
     down-weighted according to the scaling asked for.

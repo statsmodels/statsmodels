@@ -1,321 +1,141 @@
 #! /usr/bin/env python
-"""
-Script to generate notebooks with output from notebooks that don't have
-output.
-"""
-
-# prefer HTML over rST for now until nbconvert changes drop
-OUTPUT = "html"
-
-import os
+# -*- coding: utf-8 -*-
 import io
-import sys
-import time
-import shutil
-
-SOURCE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
-                                          "examples",
-                                          "notebooks"))
-
-from Queue import Empty
-
-try: # IPython has been refactored
-    from IPython.kernel import KernelManager
-except ImportError:
-    from IPython.zmq.blockingkernelmanager import (BlockingKernelManager as
-                                                   KernelManager)
-
-from IPython.nbformat.current import reads, write, NotebookNode
-
-cur_dir = os.path.abspath(os.path.dirname(__file__))
-
-# for conversion of .ipynb -> html/rst
-
-from IPython.config import Config
+import os
+import argparse
+from functools import partial
 try:
-    from IPython.nbconvert.exporters import HTMLExporter
+    from concurrent import futures
+    par = True
 except ImportError:
-    from warnings import warn
-    from statsmodels.tools.sm_exceptions import ModuleUnavailableWarning
-    warn("Notebook examples not built. You need IPython 1.0.",
-         ModuleUnavailableWarning)
-    sys.exit(0)
+    par = False
 
-import hash_funcs
 
-class NotebookRunner:
-    """
-    Paramters
-    ---------
-    notebook_dir : str
-        Path to the notebooks to convert
-    extra_args : list
-        These are command line arguments passed to start the notebook kernel
-    profile : str
-        The profile name to use
-    timeout : int
-        How many seconds to wait for each sell to complete running
-    """
-    def __init__(self, notebook_dir, extra_args=None, profile=None,
-                 timeout=90):
-        self.notebook_dir = os.path.abspath(notebook_dir)
-        self.profile = profile
-        self.timeout = timeout
-        km = KernelManager()
-        if extra_args is None:
-            extra_args = []
-        if profile is not None:
-            extra_args += ["--profile=%s" % profile]
-        km.start_kernel(stderr=open(os.devnull, 'w'),
-                        extra_arguments=extra_args)
-        try:
-            kc = km.client()
-            kc.start_channels()
-            iopub = kc.iopub_channel
-        except AttributeError: # still on 0.13
-            kc = km
-            kc.start_channels()
-            iopub = kc.sub_channel
-        shell = kc.shell_channel
-        # make sure it's working
-        shell.execute("pass")
-        shell.get_msg()
+import nbformat
+from nbconvert import HTMLExporter, RSTExporter
+from nbconvert.preprocessors import ExecutePreprocessor
 
-        # all of these should be run pylab inline
-        shell.execute("%pylab inline")
-        shell.get_msg()
 
-        self.kc = kc
-        self.km = km
-        self.iopub = iopub
+EXAMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+                                           "examples"))
+SOURCE_DIR = os.path.join(EXAMPLE_DIR, "notebooks")
+EXECUTED_DIR = os.path.join(EXAMPLE_DIR, "executed")
+DST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+                                       "docs", "source", "examples",
+                                       "notebooks", "generated"))
+for dir in [EXECUTED_DIR, DST_DIR]:
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
-    def __iter__(self):
-        notebooks = [os.path.join(self.notebook_dir, i)
-                     for i in os.listdir(self.notebook_dir)
-                     if i.endswith('.ipynb') and 'generated' not in i]
-        for ipynb in notebooks:
-            with open(ipynb, 'r') as f:
-                nb = reads(f.read(), 'json')
-            yield ipynb, nb
 
-    def __call__(self, nb):
-        return self.run_notebook(nb)
+def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
+    '''
+    Execute notebook in `src` and write the output to `dst`
 
-    def run_cell(self, shell, iopub, cell, exec_count):
-        outs = []
-        shell.execute(cell.input)
-        # hard-coded timeout, problem?
-        shell.get_msg(timeout=90)
-        cell.prompt_number = exec_count # msg["content"]["execution_count"]
+    Parameters
+    ----------
+    src, dst: str
+        path to notebook
+    allow_errors: bool
+    timeout: int
+    kernel_name: str
+        defualts to value set in notebook metadata
 
-        while True:
-            try:
-                # whats the assumption on timeout here?
-                # is it asynchronous?
-                msg = iopub.get_msg(timeout=.2)
-            except Empty:
-                break
-            msg_type = msg["msg_type"]
-            if msg_type in ["status" , "pyin"]:
-                continue
-            elif msg_type == "clear_output":
-                outs = []
-                continue
+    Returns
+    -------
+    dst: str
+    '''
+    with io.open(src, encoding='utf-8') as f:
+        nb = nbformat.read(f, as_version=4)
 
-            content = msg["content"]
-            out = NotebookNode(output_type=msg_type)
+    ep = ExecutePreprocessor(allow_errors=allow_errors,
+                             timeout=timeout,
+                             kernel_name=kernel_name)
+    ep.preprocess(nb, {'metadta': {'path': 'notebooks/'}})
 
-            if msg_type == "stream":
-                out.stream = content["name"]
-                out.text = content["data"]
-            elif msg_type in ["display_data", "pyout"]:
-                for mime, data in content["data"].iteritems():
-                    attr = mime.split("/")[-1].lower()
-                    # this gets most right, but fix svg+html, plain
-                    attr = attr.replace('+xml', '').replace('plain', 'text')
-                    setattr(out, attr, data)
-                if msg_type == "pyout":
-                    out.prompt_number = exec_count #content["execution_count"]
-            elif msg_type == "pyerr":
-                out.ename = content["ename"]
-                out.evalue = content["evalue"]
-                out.traceback = content["traceback"]
-            else:
-                print "unhandled iopub msg:", msg_type
+    with io.open(dst, 'wt', encoding='utf-8') as f:
+        nbformat.write(nb, f)
+    return dst
 
-            outs.append(out)
+def convert(src, dst, to='rst'):
+    '''
+    Convert a notebook `src`.
 
-        return outs
+    Parameters
+    ----------
+    src, dst: str
+        filepaths
+    to: {'rst', 'html'}
+        format to export to
+    '''
+    dispatch = {'rst': RSTExporter, 'html': HTMLExporter}
+    exporter = dispatch[to.lower()]()
 
-    def run_notebook(self, nb):
-        """
-        """
-        shell = self.kc.shell_channel
-        iopub = self.iopub
-        cells = 0
-        errors = 0
-        cell_errors = 0
-        exec_count = 1
+    (body, resources) = exporter.from_filename(src)
+    with io.open(dst, 'wt', encoding='utf-8') as f:
+        f.write(body)
+    return dst
 
-        #TODO: What are the worksheets? -ss
-        for ws in nb.worksheets:
-            for cell in ws.cells:
-                if cell.cell_type != 'code':
-                    # there won't be any output
-                    continue
-                cells += 1
-                try:
-                    # attaches the output to cell inplace
-                    outs = self.run_cell(shell, iopub, cell, exec_count)
-                    if outs and outs[-1]['output_type'] == 'pyerr':
-                        cell_errors += 1
-                    exec_count += 1
-                except Exception as e:
-                    print "failed to run cell:", repr(e)
-                    print cell.input
-                    errors += 1
-                    continue
-                cell.outputs = outs
+def find_notebooks(directory=None):
+    if directory is None:
+        directory = SOURCE_DIR
+    nbs = (os.path.join(SOURCE_DIR, x)
+           for x in os.listdir(SOURCE_DIR)
+           if x.endswith('.ipynb'))
+    return nbs
 
-        print "ran notebook %s" % nb.metadata.name
-        print "    ran %3i cells" % cells
-        if errors:
-            print "    %3i cells raised exceptions" % errors
-        else:
-            print "    there were no errors in run_cell"
-        if cell_errors:
-            print "    %3i cells have exceptions in their output" % cell_errors
-        else:
-            print "    all code executed in the notebook as expected"
+def do_one(nb, to=None, execute=None, allow_errors=None, timeout=None, kernel_name=None):
+    name = os.path.basename(nb)
+    if execute:
+        dst = os.path.join(EXECUTED_DIR, name)
+        print("Executeing %s to %s" % (nb, dst))
+        nb = execute_nb(nb, dst, allow_errors=allow_errors, timeout=timeout,
+                        kernel_name=kernel_name)
+    dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + '.' + to
+    print("Converting %s to %s" % (nb, dst))
+    convert(nb, dst, to=to)
+    return dst
 
-    def __del__(self):
-        self.kc.stop_channels()
-        self.km.shutdown_kernel()
-        del self.km
+def do(fp=None, directory=None, to='html', execute=True,
+       allow_errors=True, timeout=1000, kernel_name=None):
+    if fp is None:
+        nbs = find_notebooks(directory)
+    else:
+        nbs = [fp]
+    func = partial(do_one, to=to, execute=execute, allow_errors=allow_errors,
+                   timeout=timeout, kernel_name=kernel_name)
+    if par:
+        with futures.ProcessPoolExecutor() as pool:
+            for dst in pool.map(func, nbs):
+                print("Finished %s" % dst)
+    else:
+        for nb in nbs:
+            func(nb)
+            print("Finished %s" % nb)
 
-def _get_parser():
-    try:
-        import argparse
-    except ImportError:
-        raise ImportError("This script only runs on Python >= 2.7")
-    parser = argparse.ArgumentParser(description="Convert .ipynb notebook "
-                                      "inputs to HTML page with output")
-    parser.add_argument("path", type=str, default=SOURCE_DIR, nargs="?",
-                        help="path to folder containing notebooks")
-    parser.add_argument("--profile", type=str,
-                        help="profile name to use")
-    parser.add_argument("--timeout", default=90, type=int,
-                        metavar="N",
-                        help="how long to wait for cells to run in seconds")
-    return parser
+parser = argparse.ArgumentParser(description="Process example notebooks")
+parser.add_argument("--fp", type=str, default=None,
+                    help="Path to notebook to convert. Converts all notebooks "
+                         "in `directory` by default.")
+parser.add_argument("--directory", type=str, default=None,
+                    help="Path to notebook directory to convert")
+parser.add_argument("--to", type=str, default="html",
+                    help="Type to convert to. One of `{'html', 'rst'}`")
+parser.add_argument("--execute", type=bool, default=True,
+                    help="Execute notebook before converting")
+parser.add_argument("--allow_errors", type=bool, default=True,
+                    help="Allow errors while executing")
+parser.add_argument("--timeout", type=int, default=1000,
+                    help="Seconds to allow for each cell before timing out")
+parser.add_argument("--kernel_name", type=str, default=None,
+                    help="Name of kernel to execute with")
 
-def nb2html(nb):
-    """
-    Cribbed from nbviewer
-    """
-    config = Config()
-    config.HTMLExporter.template_file = 'basic'
-    config.NbconvertApp.fileext = "html"
-    config.CSSHtmlHeaderTransformer.enabled = False
-
-    C = HTMLExporter(config=config)
-    return C.from_notebook_node(nb)[0]
-
-def nb2rst(nb, files_dir):
-    """
-    nb should be a NotebookNode
-    """
-    #NOTE: This does not currently work. Needs to be update to IPython 1.0.
-    config = Config()
-    C = ConverterRST(config=config)
-    # bastardize how this is supposed to be called
-    # either the API is broken, or I'm not using it right
-    # why can't I set this using the config?
-    C.files_dir = files_dir + "_files"
-    if not os.path.exists(C.files_dir):
-        os.makedirs(C.files_dir)
-    # already parsed into a NotebookNode
-    C.nb = nb
-    return C.convert()
+def main():
+    args = parser.parse_args()
+    do(fp=args.fp, directory=args.directory, to=args.to, execute=args.execute,
+       allow_errors=args.allow_errors, timeout=args.timeout,
+       kernel_name=args.kernel_name)
 
 if __name__ == '__main__':
-    rst_target_dir = os.path.join(cur_dir, '..',
-                        'docs/source/examples/notebooks/generated/')
-    if not os.path.exists(rst_target_dir):
-        os.makedirs(rst_target_dir)
+    main()
 
-    parser = _get_parser()
-    arg_ns, other_args = parser.parse_known_args()
-
-    os.chdir(arg_ns.path) # so we execute in notebook dir
-    notebook_runner = NotebookRunner(arg_ns.path, other_args, arg_ns.profile,
-                                     arg_ns.timeout)
-    try:
-        for fname, nb in notebook_runner:
-            base, ext = os.path.splitext(fname)
-            fname_only = os.path.basename(base)
-            # check if we need to write
-            towrite, filehash = hash_funcs.check_hash(open(fname, "r").read(),
-                                                      fname_only)
-            if not towrite:
-                print "Hash has not changed for file %s" % fname_only
-                continue
-            print "Writing ", fname_only
-
-            # This edits the notebook cells inplace
-            notebook_runner(nb)
-            # for debugging writes ipynb file with output
-            #new_ipynb = "%s_generated%s" % (base, ".ipynb")
-            #with io.open(new_ipynb, "w", encoding="utf-8") as f:
-            #    write(nb, f, "json")
-
-            # use nbconvert to convert to rst
-            support_file_dir = os.path.join(rst_target_dir,
-                                            fname_only+"_files")
-            if OUTPUT == "rst":
-                new_rst = os.path.join(rst_target_dir, fname_only+".rst")
-                rst_out = nb2rst(nb, fname_only)
-                # write them to source directory
-                if not os.path.exists(rst_target_dir):
-                    os.makedirs(rst_target_dir)
-                with io.open(new_rst, "w", encoding="utf-8") as f:
-                    f.write(rst_out)
-
-                # move support files
-                if os.path.exists(fname_only+"_files"):
-                    shutil.move(fname_only+"_files",
-                            os.path.join(rst_target_dir, fname_only+"_files"))
-            elif OUTPUT == "html":
-                from notebook_output_template import notebook_template
-                new_html = os.path.join(rst_target_dir, fname_only+".rst")
-                # get the title out of the notebook because sphinx needs it
-                title_cell = nb['worksheets'][0]['cells'].pop(0)
-                if title_cell['cell_type'] == 'heading':
-                    pass
-                elif (title_cell['cell_type'] == 'markdown'
-                      and title_cell['source'].strip().startswith('#')):
-                    # IPython 3.x got rid of header cells
-                    pass
-                else:
-                    print "Title not in first cell for ", fname_only
-                    print "Not generating rST"
-                    continue
-
-                html_out = nb2html(nb)
-                # indent for insertion into raw html block in rST
-                html_out = "\n".join(["   "+i for i in html_out.split("\n")])
-                with io.open(new_html, "w", encoding="utf-8") as f:
-                    f.write(title_cell["source"].replace("#",
-                                                         "").strip() + u"\n")
-                    f.write(u"="*len(title_cell["source"])+u"\n\n")
-                    f.write(notebook_template.substitute(name=fname_only,
-                                                         body=html_out))
-            hash_funcs.update_hash_dict(filehash, fname_only)
-    except Exception, err:
-        raise err
-
-    finally:
-        os.chdir(cur_dir)
-
-    # probably not necessary
-    del notebook_runner

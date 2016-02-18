@@ -9,6 +9,10 @@ dist
 docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
+docs/source/examples/notebooks/generated
+docs/source/datasets
+docs/gettingstarted_0.png
+examples/executed
 
 # generated c source and built extensions
 *.c

@@ -14,7 +14,7 @@ Users can also leverage the powerful input/output functions provided by :ref:`pa
 Examples
 --------
 
-    `SimpleTable: Basic example <examples/generated/example_wls.html#ols-vs-wls>`_
+    `SimpleTable: Basic example <examples/notebooks/generated/example_wls.html#ols-vs-wls>`__
 
 Module Reference
 ----------------
