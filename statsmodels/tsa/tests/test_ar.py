@@ -11,6 +11,7 @@ import numpy as np
 import numpy.testing as npt
 from pandas import Series, Index, TimeSeries, DatetimeIndex
 
+
 DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
@@ -264,7 +265,6 @@ def test_ar_dates():
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
     predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
-    from pandas import DatetimeIndex  # pylint: disable-msg=E0611
     predict_dates = DatetimeIndex(predict_dates, freq='infer')
 
     assert_equal(ar_model.data.predict_dates, predict_dates)

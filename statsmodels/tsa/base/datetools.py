@@ -5,9 +5,11 @@ import datetime
 from pandas import Period
 from pandas.tseries.frequencies import to_offset
 from pandas import datetools as pandas_datetools
+from pandas import PeriodIndex, Period, DatetimeIndex
 import numpy as np
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
+from pandas.tseries.frequencies import to_offset
 class _freq_to_pandas_class(object):
     # being lazy, don't want to replace dictionary below
     def __getitem__(self, key):
@@ -15,11 +17,20 @@ class _freq_to_pandas_class(object):
 _freq_to_pandas = _freq_to_pandas_class()
 
 
+def _maybe_convert_period(d, how='end'):
+    # we usually assume timestamp -> end. maybe make configurable sometime
+    # see pandas #6779 and #6780
+    if hasattr(d, 'to_timestamp'):
+        return d.to_timestamp(how=how)
+    return d
+
+
 def _is_datetime_index(dates):
     if isinstance(dates[0], (datetime.datetime, Period)):
         return True  # TimeStamp is a datetime subclass
     else:
         return False
+
 
 def _index_date(date, dates):
     """
@@ -36,16 +47,9 @@ def _index_date(date, dates):
     if isinstance(date, string_types):
         date = date_parser(date)
     try:
-        if hasattr(dates, 'indexMap'): # 0.7.x
-            return dates.indexMap[date]
-        else:
-            date = dates.get_loc(date)
-            try: # pandas 0.8.0 returns a boolean array
-                len(date)
-                return np.where(date)[0].item()
-            except TypeError: # expected behavior
-                return date
-    except KeyError as err:
+        date = dates.get_loc(date)
+        return date
+    except KeyError:
         freq = _infer_freq(dates)
         if freq is None:
             #TODO: try to intelligently roll forward onto a date in the
@@ -64,6 +68,7 @@ def _index_date(date, dates):
                          "date that is in the dates index or use an integer"
                          % date)
 
+
 def _date_from_idx(d1, idx, freq):
     """
     Returns the date from an index beyond the end of a date series.
@@ -76,7 +81,8 @@ def _date_from_idx(d1, idx, freq):
     This does not do any rounding to make sure that d1 is actually on the
     offset. For now, this needs to be taken care of before you get here.
     """
-    return d1 + idx * _freq_to_pandas[freq]
+    return _maybe_convert_period(d1) + idx * _freq_to_pandas[freq]
+
 
 def _idx_from_dates(d1, d2, freq):
     """
@@ -89,9 +95,10 @@ def _idx_from_dates(d1, d2, freq):
     Does not check the start date to see whether it is on the offest but
     assumes that it is.
     """
-    from pandas import DatetimeIndex
-    return len(DatetimeIndex(start=d1, end=d2,
-                             freq = _freq_to_pandas[freq])) - 1
+    return len(DatetimeIndex(start=_maybe_convert_period(d1),
+                             end=_maybe_convert_period(d2),
+                             freq=_freq_to_pandas[freq])) - 1
+
 
 _quarter_to_day = {
         "1" : (3, 31),
@@ -103,6 +110,7 @@ _quarter_to_day = {
         "III" : (9, 30),
         "IV" : (12, 31)
         }
+
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 _months_with_days = lzip(lrange(1,13), _mdays)
@@ -164,15 +172,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        if (hasattr(pandas_datetools, 'parser') and
-            not callable(pandas_datetools.parser)):
-            # exists in 0.8.0 pandas, but it's the class not the module
-            return pandas_datetools.parser.parse(timestr, parserinfo,
-                                                 **kwargs)
-        else: # 0.8.1 pandas version didn't import this into namespace
-            from dateutil import parser
-            return parser.parse(timestr, parserinfo, **kwargs)
-
+        return pandas_datetools.parse(timestr, parserinfo, **kwargs)
 
     return datetime.datetime(year, month, day)
 
@@ -284,33 +284,11 @@ def _infer_freq(dates):
     maybe_freqstr = getattr(dates, 'freqstr', None)
     if maybe_freqstr is not None:
         return maybe_freqstr
-    try:
-        from pandas.tseries.api import infer_freq
-        freq = infer_freq(dates)
-        return freq
-    except ImportError:
-        pass
 
-    timedelta = datetime.timedelta
-    nobs = min(len(dates), 6)
-    if nobs == 1:
-        raise ValueError("Cannot infer frequency from one date")
-    if hasattr(dates, 'values'):
-        dates = dates.values # can't do a diff on a DateIndex
-    diff = np.diff(dates[:nobs])
-    delta = _add_datetimes(diff)
-    nobs -= 1 # after diff
-    if delta == timedelta(nobs): #greedily assume 'D'
-        return 'D'
-    elif delta == timedelta(nobs + 2):
-        return 'B'
-    elif delta == timedelta(7*nobs):
-        return 'W'
-    elif delta >= timedelta(28*nobs) and delta <= timedelta(31*nobs):
-        return 'M'
-    elif delta >= timedelta(90*nobs) and delta <= timedelta(92*nobs):
-        return 'Q'
-    elif delta >= timedelta(365 * nobs) and delta <= timedelta(366 * nobs):
-        return 'A'
-    else:
-        return
+    # might be a DatetimeIndex
+    elif hasattr(dates, "inferred_freq"):  # see pandas/6637 and others
+        return dates.inferred_freq
+    # try to infer from a regular index or something
+    from pandas.tseries.api import infer_freq
+    freq = infer_freq(dates)
+    return freq
