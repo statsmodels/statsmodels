@@ -91,6 +91,13 @@ class RLS(MLEModel):
         # variance, so we set it here to 1
         self['obs_cov', 0, 0] = 1.
 
+    @classmethod
+    def from_formula(cls, formula, data, subset=None):
+        """
+        Not implemented for state space models
+        """
+        return super(MLEModel, cls).from_formula(formula, data, subset)
+
     def fit(self):
         """
         Fits the model by application of the Kalman filter
