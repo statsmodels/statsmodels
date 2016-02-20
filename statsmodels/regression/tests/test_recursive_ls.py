@@ -13,7 +13,7 @@ import os
 import warnings
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS
-from statsmodels.regression.rls import RecursiveLS
+from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
