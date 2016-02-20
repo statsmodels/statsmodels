@@ -1030,7 +1030,7 @@ class CheckWtdDuplicationMixin(object):
     decimal_bse = DECIMAL_4
 
     def test_standard_errors(self):
-        assert_allclose(self.res1.bse, self.res2.bse, 1e-6)
+        assert_allclose(self.res1.bse, self.res2.bse, rtol=1e-5, atol=1e-6)
 
     decimal_resids = DECIMAL_4
 
@@ -1089,7 +1089,7 @@ class CheckWtdDuplicationMixin(object):
         # test comparing tvalues and pvalues with normal implementation
         # make sure they use normal distribution (inherited in results class)
         assert_allclose(self.res1.tvalues, self.res2.tvalues, atol=1e-6,
-                        rtol=1e-6)
+                        rtol=2e-4)
         assert_allclose(self.res1.pvalues, self.res2.pvalues, atol=1e-6,
                         rtol=1e-6)
         assert_allclose(self.res1.conf_int(), self.res2.conf_int(), atol=1e-6,
@@ -1115,6 +1115,57 @@ class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
                         family=sm.families.Poisson()).fit()
 
 
+class TestWtdGlmPoissonNewton(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Poisson family with canonical log link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS', cache=True)
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                                   self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+
+        start_params = np.array([ 4.42285867, -0.38795696, -0.79935388, -1.37149459,
+                                 -0.57010177, -1.00858517, -1.62608719,  0.07200482,
+                                 -0.38729553,  1.5870247 ])
+
+        fit_kwds = dict(method='newton')
+        self.res1 = GLM(self.y, self.X,
+                        freq_weights=self.data['data']['Holders'],
+                        family=sm.families.Poisson()).fit(**fit_kwds)
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.Poisson()).fit(start_params=start_params,
+                                                          **fit_kwds)
+
+
+class TestWtdGlmPoissonHC0(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Poisson family with canonical log link.
+        '''
+        from statsmodels.datasets import get_rdataset
+        from patsy import dmatrices
+        self.data = get_rdataset('Insurance', 'MASS', cache=True)
+        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
+                                   self.data['data'])
+        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
+        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+
+        start_params = np.array([ 4.42285867, -0.38795696, -0.79935388, -1.37149459,
+                                 -0.57010177, -1.00858517, -1.62608719,  0.07200482,
+                                 -0.38729553,  1.5870247 ])
+        fit_kwds = dict(cov_type='HC0')
+        self.res1 = GLM(self.y, self.X,
+                        freq_weights=self.data['data']['Holders'],
+                        family=sm.families.Poisson()).fit(**fit_kwds)
+        self.res2 = GLM(self.y_big, self.X_big,
+                        family=sm.families.Poisson()).fit(start_params=start_params,
+                                                          **fit_kwds)
+
+
 class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
@@ -1125,7 +1176,7 @@ class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
         self.data = get_rdataset('Insurance', 'MASS')
         self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
                                    self.data['data'])
-        self.y = (self.y.transpose() / 
+        self.y = (self.y.transpose() /
                   self.data['data']['Holders'].values).transpose()
         self.y_big = np.repeat(self.y, self.data['data']['Holders'])
         self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
