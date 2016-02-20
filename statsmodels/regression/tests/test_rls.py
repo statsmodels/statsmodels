@@ -13,7 +13,7 @@ import os
 import warnings
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS
-from statsmodels.regression.rls import RLS
+from statsmodels.regression.rls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
@@ -41,7 +41,7 @@ endog = dta['cpi']
 exog = add_constant(dta['m1'])
 
 def test_estimates():
-    mod = RLS(endog, exog)
+    mod = RecursiveLS(endog, exog)
     res = mod.fit()
 
     # Test the RLS coefficient estimates against those from R (quantreg)
@@ -61,7 +61,7 @@ def test_estimates():
 
 
 def test_recursive_resid():
-    mod = RLS(endog, exog)
+    mod = RecursiveLS(endog, exog)
     res = mod.fit()
 
     # Test the recursive residuals against those from R (strucchange)
@@ -87,7 +87,7 @@ def test_recursive_resid():
 
 
 def test_cusum():
-    mod = RLS(endog, exog)
+    mod = RecursiveLS(endog, exog)
     res = mod.fit()
 
     # Test the cusum statistics against those from R (strucchange)
@@ -133,7 +133,7 @@ def test_stata():
     # Test the cusum and cusumsq statistics against Stata (cusum6)
     # Note that here we change the loglikelihood_burn variable to explicitly
     # excude the first 3 elements as in Stata, so we can compare directly
-    mod = RLS(endog, exog, loglikelihood_burn=3)
+    mod = RecursiveLS(endog, exog, loglikelihood_burn=3)
     res = mod.fit()
     llb = res.loglikelihood_burn
 

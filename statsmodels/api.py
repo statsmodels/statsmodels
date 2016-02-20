@@ -4,7 +4,7 @@ from . import tools
 from .tools.tools import add_constant, categorical
 from . import regression
 from .regression.linear_model import OLS, GLS, WLS, GLSAR
-from .regression.rls import RLS
+from .regression.rls import RecursiveLS
 from .regression.quantile_regression import QuantReg
 from .regression.mixed_linear_model import MixedLM
 from .genmod import api as genmod

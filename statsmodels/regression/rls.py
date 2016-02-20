@@ -27,7 +27,7 @@ _cusum_squares_scalars = np.array([
 ])
 
 
-class RLS(MLEModel):
+class RecursiveLS(MLEModel):
     r"""
     Recursive least squares
 
@@ -79,7 +79,7 @@ class RLS(MLEModel):
         kwargs.setdefault('initial_variance', 1e9)
 
         # Initialize the state space representation
-        super(RLS, self).__init__(
+        super(RecursiveLS, self).__init__(
             endog, k_states=self.k_exog, exog=exog, **kwargs
         )
 
@@ -104,7 +104,7 @@ class RLS(MLEModel):
 
         Returns
         -------
-        RLSResults
+        RecursiveLSResults
         """
         # Get the smoother results with an arbitrary measurement variance
         smoother_results = self.smooth(return_ssm=True)
@@ -120,8 +120,9 @@ class RLS(MLEModel):
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RLS, self).filter([], transformed=True, cov_type='none',
-                                         return_ssm=True, **kwargs)
+        result = super(RecursiveLS, self).filter([], transformed=True,
+                                                 cov_type='none',
+                                                 return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -133,17 +134,18 @@ class RLS(MLEModel):
                                        ' estimates are RLS estimates'
                                        ' conditional on the entire sample.')
             }
-            result = RLSResultsWrapper(
-                RLSResults(self, params, result, cov_type='custom',
-                           cov_kwds=cov_kwds)
+            result = RecursiveLSResultsWrapper(
+                RecursiveLSResults(self, params, result, cov_type='custom',
+                                   cov_kwds=cov_kwds)
             )
 
         return result
 
     def smooth(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RLS, self).smooth([], transformed=True, cov_type='none',
-                                         return_ssm=True, **kwargs)
+        result = super(RecursiveLS, self).smooth([], transformed=True,
+                                                 cov_type='none',
+                                                 return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -155,9 +157,9 @@ class RLS(MLEModel):
                                        ' estimates are RLS estimates'
                                        ' conditional on the entire sample.')
             }
-            result = RLSResultsWrapper(
-                RLSResults(self, params, result, cov_type='custom',
-                           cov_kwds=cov_kwds)
+            result = RecursiveLSResultsWrapper(
+                RecursiveLSResults(self, params, result, cov_type='custom',
+                                   cov_kwds=cov_kwds)
             )
 
         return result
@@ -194,13 +196,13 @@ class RLS(MLEModel):
         pass
 
 
-class RLSResults(MLEResults):
+class RecursiveLSResults(MLEResults):
     """
     Class to hold results from fitting a recursive least squares model.
 
     Parameters
     ----------
-    model : RLS instance
+    model : RecursiveLS instance
         The fitted model instance
 
     Attributes
@@ -217,7 +219,7 @@ class RLSResults(MLEResults):
 
     def __init__(self, model, params, filter_results, cov_type='opg',
                  **kwargs):
-        super(RLSResults, self).__init__(
+        super(RecursiveLSResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
@@ -683,11 +685,11 @@ class RLSResults(MLEResults):
         ax.legend(loc=legend_loc)
 
 
-class RLSResultsWrapper(MLEResultsWrapper):
+class RecursiveLSResultsWrapper(MLEResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(MLEResultsWrapper._wrap_attrs,
                                    _attrs)
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(RLSResultsWrapper, RLSResults)
+wrap.populate_wrapper(RecursiveLSResultsWrapper, RecursiveLSResults)
