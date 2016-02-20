@@ -125,6 +125,10 @@ class TestGEE(object):
         assert_allclose(marg.margeff, result.params[1:])
         assert_allclose(marg.margeff_se, result.bse[1:])
 
+        # smoke test
+        marg.summary()
+
+
     def test_margins_logistic(self):
         """
         Check marginal effects for a binomial GEE fit.  Comparison

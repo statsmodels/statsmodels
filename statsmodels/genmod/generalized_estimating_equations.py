@@ -2480,9 +2480,9 @@ class _Multinomial(families.Family):
 
 
 from statsmodels.discrete.discrete_margins import (_get_margeff_exog,
-    _get_const_index, _check_margeff_args, _effects_at,
-    margeff_cov_with_se, _check_at_is_all, _transform_names,
-    _check_discrete_args, _get_dummy_index, _get_count_index)
+    _check_margeff_args, _effects_at, margeff_cov_with_se,
+    _check_at_is_all, _transform_names, _check_discrete_args,
+    _get_dummy_index, _get_count_index)
 
 
 
@@ -2598,8 +2598,7 @@ class GEEMargins(object):
         exog_names = model.exog_names[:] # copy
         smry = Summary()
 
-        # sigh, we really need to hold on to this in _data...
-        _, const_idx = _get_const_index(model.exog)
+        const_idx = model.data.const_idx
         if const_idx is not None:
             exog_names.pop(const_idx)
 
@@ -2664,7 +2663,8 @@ class GEEMargins(object):
         model = results.model
         params = results.params
         exog = model.exog.copy() # copy because values are changed
-        effects_idx, const_idx = _get_const_index(exog)
+        effects_idx = exog.var(0) != 0
+        const_idx = model.data.const_idx
 
         if dummy:
             _check_discrete_args(at, method)
