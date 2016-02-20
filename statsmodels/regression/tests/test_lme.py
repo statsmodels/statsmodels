@@ -210,11 +210,17 @@ class TestMixedLM(object):
                         dist_high=0.5, num_high=3)
 
     # Fails on old versions of scipy/numpy
-    def txest_vcomp_1(self):
+    def test_vcomp_1(self):
         """
         Fit the same model using constrained random effects and
         variance components.
         """
+
+        import scipy
+        v = scipy.__version__.split(".")[1]
+        v = int(v)
+        if v < 16:
+            return
 
         np.random.seed(4279)
         exog = np.random.normal(size=(400, 1))
@@ -312,6 +318,12 @@ class TestMixedLM(object):
                         0.12610, 0.03938, 0.03848], rtol=1e-3)
 
     def test_sparse(self):
+
+        import scipy
+        v = scipy.__version__.split(".")[1]
+        v = int(v)
+        if v < 16:
+            return
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
