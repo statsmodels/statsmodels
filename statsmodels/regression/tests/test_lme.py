@@ -484,17 +484,20 @@ class TestMixedLM(object):
         assert_allclose(rslt1.params, rslt3.params, rtol=1e-4)
 
         # Check default variance structure with non-formula model
-        # creation.
+        # creation, also use different exog_re that produces a zero
+        # estimated variance parameter.
         exog_re = np.ones(len(endog), dtype=np.float64)
         mod4 = MixedLM(endog, exog, groups, exog_re)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            rslt4 = mod4.fit(start_params=rslt2.params)
+            rslt4 = mod4.fit()
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
         assert_(mod5.data.exog_re_names == ["groups"])
         assert_(mod5.data.exog_re_names_full == ["groups RE"])
-        rslt5 = mod5.fit(start_params=rslt2.params)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            rslt5 = mod5.fit()
         assert_almost_equal(rslt4.params, rslt5.params)
 
     def test_regularized(self):
@@ -524,13 +527,15 @@ class TestMixedLM(object):
 
         # L2 regularization
         pen = penalties.L2()
-        mdf4 = md.fit_regularized(method=pen, alpha=100.)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mdf4 = md.fit_regularized(method=pen, alpha=100.)
         mdf4.summary()
 
         # Pseudo-Huber regularization
         pen = penalties.PseudoHuber(0.3)
-        mdf4 = md.fit_regularized(method=pen, alpha=1.)
-        mdf4.summary()
+        mdf5 = md.fit_regularized(method=pen, alpha=1.)
+        mdf5.summary()
 
 
     def do1(self, reml, irf, ds_ix):
@@ -549,7 +554,12 @@ class TestMixedLM(object):
         md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
                      rslt.exog_re)
         if not irf: # Free random effects covariance
-            mdf = md.fit(gtol=1e-7, reml=reml)
+            if np.any(np.diag(rslt.cov_re_r) < 1e-5):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    mdf = md.fit(gtol=1e-7, reml=reml)
+            else:
+                mdf = md.fit(gtol=1e-7, reml=reml)
         else: # Independent random effects
             k_fe = rslt.exog_fe.shape[1]
             k_re = rslt.exog_re.shape[1]
@@ -557,7 +567,12 @@ class TestMixedLM(object):
             free.fe_params = np.ones(k_fe)
             free.cov_re = np.eye(k_re)
             free.vcomp = np.array([])
-            mdf = md.fit(reml=reml, gtol=1e-7, free=free)
+            if np.any(np.diag(rslt.cov_re_r) < 1e-5):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    mdf = md.fit(reml=reml, gtol=1e-7, free=free)
+            else:
+                mdf = md.fit(reml=reml, gtol=1e-7, free=free)
 
         assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
         assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
