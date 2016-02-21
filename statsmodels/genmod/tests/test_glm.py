@@ -1030,8 +1030,19 @@ def test_gradient_irls():
 class CheckWtdDuplicationMixin(object):
     decimal_params = DECIMAL_4
 
+    def __init__(self):
+        from statsmodels.datasets.cpunish import load
+        self.data = load()
+        self.endog = self.data.endog
+        self.exog = self.data.exog
+        np.random.seed(1234)
+        self.weight = np.random.randint(5, 100, len(self.endog))
+        self.endog_big = np.repeat(self.endog, self.weight)
+        self.exog_big = np.repeat(self.exog, self.weight, axis=0)
+
     def test_params(self):
-        assert_allclose(self.res1.params, self.res2.params, 1e-6)
+        assert_allclose(self.res1.params, self.res2.params,  atol=1e-6,
+                        rtol=1e-6)
 
     decimal_bse = DECIMAL_4
 
@@ -1060,13 +1071,14 @@ class CheckWtdDuplicationMixin(object):
     def test_aic(self):
         # R includes the estimation of the scale as a lost dof
         # Doesn't with Gamma though
-        assert_allclose(self.res1.aic, self.res2.aic, 1e-6)
+        assert_allclose(self.res1.aic, self.res2.aic,  atol=1e-6, rtol=1e-6)
 
     def test_deviance(self):
-        assert_allclose(self.res1.deviance, self.res2.deviance, 1e-6)
+        assert_allclose(self.res1.deviance, self.res2.deviance,  atol=1e-6,
+                        rtol=1e-6)
 
     def test_scale(self):
-        assert_allclose(self.res1.scale, self.res2.scale, 1e-6)
+        assert_allclose(self.res1.scale, self.res2.scale, atol=1e-6, rtol=1e-6)
 
     def test_loglike(self):
         # Stata uses the below llf for these families
@@ -1076,18 +1088,20 @@ class CheckWtdDuplicationMixin(object):
     decimal_null_deviance = DECIMAL_4
 
     def test_null_deviance(self):
-        assert_allclose(self.res1.null_deviance, self.res2.null_deviance, 1e-6)
+        assert_allclose(self.res1.null_deviance, self.res2.null_deviance,
+                        atol=1e-6, rtol=1e-6)
 
     decimal_bic = DECIMAL_4
 
     def test_bic(self):
-        assert_allclose(self.res1.bic, self.res2.bic, 1e-6)
+        assert_allclose(self.res1.bic, self.res2.bic,  atol=1e-6, rtol=1e-6)
 
     decimal_fittedvalues = DECIMAL_4
 
     def test_fittedvalues(self):
         res2_fitted = self.res2.predict(self.res1.model.exog)
-        assert_allclose(self.res1.fittedvalues, res2_fitted, 1e-6)
+        assert_allclose(self.res1.fittedvalues, res2_fitted, atol=1e-5,
+                        rtol=1e-5)
 
     decimal_tpvalues = DECIMAL_4
 
@@ -1107,17 +1121,11 @@ class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        super(TestWtdGlmPoisson, self).__init__()
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=sm.families.Poisson()).fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=sm.families.Poisson()).fit()
 
 
@@ -1126,23 +1134,17 @@ class TestWtdGlmPoissonNewton(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS', cache=True)
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmPoissonNewton, self).__init__()
 
-        start_params = np.array([ 4.42285867, -0.38795696, -0.79935388, -1.37149459,
-                                 -0.57010177, -1.00858517, -1.62608719,  0.07200482,
-                                 -0.38729553,  1.5870247 ])
+        start_params = np.array([1.82794424e-04, -4.76785037e-02,
+                                 -9.48249717e-02, -2.92293226e-04,
+                                 2.63728909e+00, -2.05934384e+01])
 
         fit_kwds = dict(method='newton')
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=sm.families.Poisson()).fit(**fit_kwds)
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=sm.families.Poisson()).fit(start_params=start_params,
                                                           **fit_kwds)
 
@@ -1152,22 +1154,17 @@ class TestWtdGlmPoissonHC0(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS', cache=True)
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmPoissonHC0, self).__init__()
 
-        start_params = np.array([ 4.42285867, -0.38795696, -0.79935388, -1.37149459,
-                                 -0.57010177, -1.00858517, -1.62608719,  0.07200482,
-                                 -0.38729553,  1.5870247 ])
+        start_params = np.array([1.82794424e-04, -4.76785037e-02,
+                                 -9.48249717e-02, -2.92293226e-04,
+                                 2.63728909e+00, -2.05934384e+01])
+
         fit_kwds = dict(cov_type='HC0')
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=sm.families.Poisson()).fit(**fit_kwds)
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=sm.families.Poisson()).fit(start_params=start_params,
                                                           **fit_kwds)
 
@@ -1177,19 +1174,13 @@ class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
         '''
         Tests Binomial family with canonical logit link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y = (self.y.transpose() /
-                  self.data['data']['Holders'].values).transpose()
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        super(TestWtdGlmBinomial, self).__init__()
+        self.endog = self.endog / 100
+        self.endog_big = self.endog_big / 100
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=sm.families.Binomial()).fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=sm.families.Binomial()).fit()
 
 
@@ -1199,18 +1190,12 @@ class TestWtdGlmNegativeBinomial(CheckWtdDuplicationMixin):
         Tests Negative Binomial family with canonical link
         g(u) = log(u/k * (1 - u/k))
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmNegativeBinomial, self).__init__()
         family_link = sm.families.NegativeBinomial()
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link).fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link).fit()
 
 
@@ -1219,18 +1204,12 @@ class TestWtdGlmGamma(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmGamma, self).__init__()
         family_link = sm.families.Gamma(sm.families.links.log)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link).fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link).fit()
 
 
@@ -1239,18 +1218,12 @@ class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
         '''
         Tests Gaussian family with canonical identity link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmGaussian, self).__init__()
         family_link = sm.families.Gaussian(sm.families.links.log)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link).fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link).fit()
 
 
@@ -1259,20 +1232,12 @@ class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
         '''
         Tests InverseGuassian family with log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y[self.y < 10] = 10
-        self.y[self.y > 100] = 100
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmInverseGaussian, self).__init__()
         family_link = sm.families.InverseGaussian(sm.families.links.log)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link).fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link).fit()
 
 
@@ -1281,19 +1246,13 @@ class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmGammaNewton, self).__init__()
         family_link = sm.families.Gamma(sm.families.links.log)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link,
                         method='newton').fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link,
                         method='newton').fit()
 
@@ -1303,19 +1262,13 @@ class TestWtdGlmGammaScale_X2(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmGammaScale_X2, self).__init__()
         family_link = sm.families.Gamma(sm.families.links.log)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link,
                         scale='X2').fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link,
                         scale='X2').fit()
 
@@ -1325,19 +1278,13 @@ class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        from statsmodels.datasets import get_rdataset
-        from patsy import dmatrices
-        self.data = get_rdataset('Insurance', 'MASS')
-        self.y, self.X = dmatrices('Claims ~ 1 + C(District) + Group + Age',
-                                   self.data['data'])
-        self.y_big = np.repeat(self.y, self.data['data']['Holders'])
-        self.X_big = np.repeat(self.X, self.data['data']['Holders'], axis=0)
+        super(TestWtdGlmGammaScale_dev, self).__init__()
         family_link = sm.families.Gamma(sm.families.links.log)
-        self.res1 = GLM(self.y, self.X,
-                        freq_weights=self.data['data']['Holders'],
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
                         family=family_link,
                         scale='dev').fit()
-        self.res2 = GLM(self.y_big, self.X_big,
+        self.res2 = GLM(self.endog_big, self.exog_big,
                         family=family_link,
                         scale='dev').fit()
 
