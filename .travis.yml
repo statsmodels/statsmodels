@@ -32,7 +32,7 @@ matrix:
     - PYTHON=2.7
     - NUMPY=1.7
     - SCIPY=0.12
-    - OPTIONAL=cvxopt
+    - OPTIONAL="cvxopt mkl libgfortran"
     - COVERAGE=true
   - python: 2.7
     env:
@@ -48,6 +48,7 @@ matrix:
     - SCIPY=0.14
     - PANDAS=0.14
     - MATPLOTLIB=1.4
+    - OPTIONAL=libgfortran
   - python: 2.7
     env:
     - PYTHON=2.7
