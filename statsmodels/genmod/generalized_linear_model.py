@@ -66,6 +66,10 @@ class GLM(base.LikelihoodModel):
         family = sm.family.Binomial()
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
+    freq_weights : array-like
+        1d array of frequency weights. The default is None. If None is selected
+        or a blank value, then the algorithm will replace with an array of 1's
+        with length equal to the endog.
     %(extra_params)s
 
     Attributes
@@ -80,8 +84,12 @@ class GLM(base.LikelihoodModel):
         See Parameters.
     family : family class instance
         A pointer to the distribution family of the model.
+    freq_weights : array
+        See Parameters.
     mu : array
         The estimated mean response of the transformed variable.
+    n_trials : array
+        See Parameters.
     normalized_cov_params : array
         `p` x `p` normalized covariance of the design / exogenous data.
     pinv_wexog : array
@@ -92,6 +100,7 @@ class GLM(base.LikelihoodModel):
         The scaling used for fitting the model.  Available after fit is called.
     weights : array
         The value of the weights after the last iteration of fit.
+
 
     Examples
     --------
@@ -151,16 +160,20 @@ class GLM(base.LikelihoodModel):
         Residual degrees of freedom is equal to the number of observation n
         minus the number of regressors p.
     endog : array
-        See above.  Note that endog is a reference to the data so that if
+        See above.  Note that `endog` is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
     exposure : array-like
         Include ln(exposure) in model with coefficient constrained to 1. Can
         only be used if the link is the logarithm function.
     exog : array
-        See above.  Note that endog is a reference to the data so that if
-        data is already an array and it is changed, then `endog` changes
+        See above.  Note that `exog` is a reference to the data so that if
+        data is already an array and it is changed, then `exog` changes
         as well.
+    freq_weights : array
+        See above. Note that `freq_weights` is a reference to the data so that
+        if data i already an array and it is changed, then `freq_weights`
+        changes as well.
     iteration : int
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
@@ -168,10 +181,16 @@ class GLM(base.LikelihoodModel):
         statsmodels.families.  Default is Gaussian.
     mu : array
         The mean response of the transformed variable.  `mu` is the value of
-        the inverse of the link function at lin_pred, where lin_pred is the linear
-        predicted value of the WLS fit of the transformed variable.  `mu` is
-        only available after fit is called.  See
+        the inverse of the link function at lin_pred, where lin_pred is the
+        linear predicted value of the WLS fit of the transformed variable.
+        `mu` is only available after fit is called.  See
         statsmodels.families.family.fitted of the distribution family for more
+        information.
+    n_trials : array
+        See above. Note that `n_trials` is a reference to the data so that if
+        data is already an array and it is changed, then `n_trials` changes
+        as well. `n_trials` is the number of binomial trials and only available
+        with that distribution. See statsmodels.families.Binomial for more
         information.
     normalized_cov_params : array
         The p x p normalized covariance of the design / exogenous data.
@@ -233,7 +252,7 @@ class GLM(base.LikelihoodModel):
             delattr(self, 'exposure')
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
-                                '_offset_exposure', 'n'])
+                                '_offset_exposure', 'n_trials'])
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
@@ -408,7 +427,7 @@ class GLM(base.LikelihoodModel):
 
         eim_factor = 1 / (self.family.link.deriv(mu)**2 *
                             self.family.variance(mu))
-        eim_factor *= self.freq_weights * self.n
+        eim_factor *= self.freq_weights * self.n_trials
 
         if not observed:
             if not scale == 1:
@@ -772,11 +791,11 @@ class GLM(base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
-        self.n = np.ones((self.endog.shape[0]))  # For binomial
+        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
         if isinstance(self.family, families.Binomial):
             tmp = self.family.initialize(self.endog, self.freq_weights)
             self.endog = tmp[0]
-            self.n = tmp[1]
+            self.n_trials = tmp[1]
 
         self.scaletype = scale
 
@@ -880,7 +899,8 @@ class GLM(base.LikelihoodModel):
             wls_results = lm.RegressionResults(self, start_params, None)
             iteration = 0
         for iteration in range(maxiter):
-            self.weights = self.freq_weights*self.n*self.family.weights(mu)
+            self.weights = (self.freq_weights * self.n_trials *
+                            self.family.weights(mu))
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
                         - self._offset_exposure)
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
@@ -1066,12 +1086,11 @@ class GLMResults(base.LikelihoodModelResults):
         self._endog = model.endog
         self.nobs = model.endog.shape[0]
         self.mu = model.mu
-        # Divide by n for binom
         self._freq_weights = model.freq_weights
         if isinstance(self.family, families.Binomial):
-            self._n = self.model.n
+            self._n_trials = self.model.n_trials
         else:
-            self._n = 1
+            self._n_trials = 1
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.pinv_wexog = model.pinv_wexog
@@ -1104,17 +1123,17 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_response(self):
-        return self._freq_weights * self._n * (self._endog-self.mu)
+        return self._freq_weights * self._n_trials * (self._endog-self.mu)
 
     @cache_readonly
     def resid_pearson(self):
-        return (np.sqrt(self._freq_weights * self._n) * (self._endog-self.mu) /
+        return (np.sqrt(self._freq_weights * self._n_trials) * (self._endog-self.mu) /
                 np.sqrt(self.family.variance(self.mu)))
 
     @cache_readonly
     def resid_working(self):
         val = (self.resid_response / self.family.link.deriv(self.mu))
-        val *= self._freq_weights * self._n
+        val *= self._freq_weights * self._n_trials
         return val
 
     @cache_readonly
@@ -1151,8 +1170,8 @@ class GLMResults(base.LikelihoodModelResults):
         if len(kwargs) > 0:
             return GLM(endog, exog, family=self.family, **kwargs).fit().mu
         else:
-            wls_model = lm.WLS(endog, exog, 
-                               weights=self._freq_weights * self._n)
+            wls_model = lm.WLS(endog, exog,
+                               weights=self._freq_weights * self._n_trials)
             return wls_model.fit().fittedvalues
 
     @cache_readonly
@@ -1220,7 +1239,7 @@ class GLMResults(base.LikelihoodModelResults):
         #TODO: what are these in results?
         self._endog = None
         self._freq_weights = None
-        self._n = None
+        self._n_trials = None
 
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
