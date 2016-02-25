@@ -1115,6 +1115,17 @@ class CheckWtdDuplicationMixin(object):
         assert_allclose(self.res1.conf_int(), self.res2.conf_int(), atol=1e-6,
                         rtol=1e-6)
 
+    def test_missing(self):
+        endog = self.data.endog.copy()
+        exog = self.data.exog.copy()
+        exog[0, 0] = np.nan
+        endog[[2, 4, 6, 8]] = np.nan
+        mod_misisng = GLM(endog, exog, self.freq_weights, self.model.family)
+        assert_equal(mod_misisng.freq_weights.shape[0],
+                     mod_misisng.endog.shape[0])
+        assert_equal(mod_misisng.freq_weights.shape[0],
+                     mod_misisng.exog.shape[0])
+
 
 class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
     def __init__(self):

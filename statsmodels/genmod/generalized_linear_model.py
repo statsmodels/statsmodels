@@ -228,24 +228,13 @@ class GLM(base.LikelihoodModel):
         if offset is not None:  # this should probably be done upstream
             offset = np.asarray(offset)
 
-        # I'd prefer to have this in _check_inputs, but this needs to be run
-        # prior to initialize
-        if freq_weights is not None:
-            if freq_weights.shape[0] != endog.shape[0]:
-                raise ValueError("freq weights not the same length as endog")
-            if len(freq_weights.shape) > 1:
-                raise ValueError("freq weights has too many dimensions")
         self.freq_weights = freq_weights
-        if self.freq_weights is None:
-            self.freq_weights = np.ones((endog.shape[0]))
-        if np.shape(self.freq_weights) == () and self.freq_weights > 1:
-            self.freq_weights = (self.freq_weights *
-                                 np.ones((endog.shape[0])))
 
         super(GLM, self).__init__(endog, exog, missing=missing,
                                   offset=offset, exposure=exposure,
-                                  **kwargs)
-        self._check_inputs(family, self.offset, self.exposure, self.endog)
+                                  freq_weights=freq_weights, **kwargs)
+        self._check_inputs(family, self.offset, self.exposure, self.endog,
+                           self.freq_weights)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
@@ -271,9 +260,14 @@ class GLM(base.LikelihoodModel):
                                             np.transpose(self.pinv_wexog))
 
         self.df_model = np_matrix_rank(self.exog)-1
-        self.df_resid = self.freq_weights.sum() - self.df_model - 1
 
-    def _check_inputs(self, family, offset, exposure, endog):
+        if (self.freq_weights is not None) and \
+           (self.freq_weights.shape[0] == self.endog.shape[0]):
+            self.df_resid = self.freq_weights.sum() - self.df_model - 1
+        else:
+            self.df_resid = self.exog.shape[0] - np_matrix_rank(self.exog)
+
+    def _check_inputs(self, family, offset, exposure, endog, freq_weights):
 
         # Default family is Gaussian
         if family is None:
@@ -290,6 +284,18 @@ class GLM(base.LikelihoodModel):
         if offset is not None:
             if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
+
+        if freq_weights is not None:
+            if freq_weights.shape[0] != endog.shape[0]:
+                raise ValueError("freq weights not the same length as endog")
+            if len(freq_weights.shape) > 1:
+                raise ValueError("freq weights has too many dimensions")
+
+        if self.freq_weights is None:
+            self.freq_weights = np.ones((endog.shape[0]))
+        if np.shape(self.freq_weights) == () and self.freq_weights > 1:
+            self.freq_weights = (self.freq_weights *
+                                 np.ones((endog.shape[0])))
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
