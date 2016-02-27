@@ -238,20 +238,17 @@ class Exchangeable(CovStruct):
         residsq_sum, scale = 0, 0
         fsum1, fsum2, n_pairs = 0., 0., 0.
         for i in range(self.model.num_group):
-
             expval, _ = cached_means[i]
             stdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / stdev
-
             f = weights_li[i] if has_weights else 1.
 
-            ngrp = len(resid)
-            residsq = np.outer(resid, resid)
-            scale += f * np.trace(residsq)
+            ssr = np.sum(resid * resid)
+            scale += f * ssr
             fsum1 += f * len(endog[i])
 
-            residsq = np.tril(residsq, -1)
-            residsq_sum += f * residsq.sum()
+            residsq_sum += f * (resid.sum()**2 - ssr) / 2
+            ngrp = len(resid)
             npr = 0.5 * ngrp * (ngrp - 1)
             fsum2 += f * npr
             n_pairs += npr
