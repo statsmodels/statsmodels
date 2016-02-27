@@ -897,8 +897,8 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
             sdev = np.sqrt(varfunc(expval))
 
-            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
-                                                           sdev, (dmat, resid))
+            rslt = self.cov_struct.covariance_matrix_solve(
+                expval, i, sdev, (dmat, resid))
             if rslt is None:
                 return None, None, None, None
             vinv_d, vinv_resid = tuple(rslt)
@@ -926,8 +926,8 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
             sdev = np.sqrt(varfunc(expval))
 
-            rslt = self.cov_struct.covariance_matrix_solve(expval,
-                                                           i, sdev, (dmat,))
+            rslt = self.cov_struct.covariance_matrix_solve(
+                expval, i, sdev, (dmat,))
             if rslt is None:
                 return None, None, None, None
             vinv_d = rslt[0]
@@ -939,8 +939,8 @@ class GEE(base.Model):
             f = self.weights_li[i] if self.weights is not None else 1.
 
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
-            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
-                                                           sdev, (aresid,))
+            rslt = self.cov_struct.covariance_matrix_solve(
+                expval, i, sdev, (aresid,))
             if rslt is None:
                 return None, None, None, None
             srt = rslt[0]
