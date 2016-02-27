@@ -1373,12 +1373,15 @@ class CheckConsistency(object):
         for (res, cov_type, cov) in [
                 (res_robust, 'robust', res_robust.cov_robust),
                 (res_naive, 'naive', res_robust.cov_naive),
-                (res_robust_bc, 'bias_reduced', res_robust.cov_robust_bc)
+                (res_robust_bc, 'bias_reduced', res_robust_bc.cov_robust_bc)
         ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
-            bse = res_naive.standard_errors(cov_type=cov_type)
-            assert_allclose(res.bse, bse, rtol=rtol)
+            if cov_type != 'bias_reduced':
+                # cov_type=naive shortcuts calculation of bias reduced
+                # covariance for efficiency
+                bse = res_naive.standard_errors(cov_type=cov_type)
+                assert_allclose(res.bse, bse, rtol=rtol)
             assert_allclose(res.cov_params(), cov, rtol=rtol, atol=1e-10)
             assert_allclose(res.cov_params_default, cov, rtol=rtol, atol=1e-10)
 

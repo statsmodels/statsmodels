@@ -873,9 +873,6 @@ class GEE(base.Model):
            The model-based estimate of the covariance, which is
            meaningful if the covariance structure is correctly
            specified.
-        cov_robust_bc : array-like
-           The "bias corrected" robust covariance of Mancl and
-           DeRouen.
         cmat : array-like
            The center matrix of the sandwich expression, used in
            obtaining score test results.
@@ -883,7 +880,6 @@ class GEE(base.Model):
 
         endog = self.endog_li
         exog = self.exog_li
-
         varfunc = self.family.variance
         cached_means = self.cached_means
 
@@ -915,9 +911,22 @@ class GEE(base.Model):
         cov_naive = bmati * scale
         cov_robust = np.dot(bmati, np.dot(cmat, bmati))
 
-        # Calculate the bias-corrected sandwich estimate of Mancl and
-        # DeRouen (requires cov_naive so cannot be calculated
-        # in the previous loop).
+        cov_naive *= self.scaling_factor
+        cov_robust *= self.scaling_factor
+        return cov_robust, cov_naive, cmat
+
+
+    # Calculate the bias-corrected sandwich estimate of Mancl and
+    # DeRouen.
+    def _bc_covmat(self, cov_naive):
+
+        cov_naive = cov_naive / self.scaling_factor
+        endog = self.endog_li
+        exog = self.exog_li
+        varfunc = self.family.variance
+        cached_means = self.cached_means
+        scale = self.estimate_scale()
+
         bcm = 0
         for i in range(self.num_group):
 
@@ -929,7 +938,7 @@ class GEE(base.Model):
             rslt = self.cov_struct.covariance_matrix_solve(
                 expval, i, sdev, (dmat,))
             if rslt is None:
-                return None, None, None, None
+                return None
             vinv_d = rslt[0]
             vinv_d /= scale
 
@@ -942,18 +951,15 @@ class GEE(base.Model):
             rslt = self.cov_struct.covariance_matrix_solve(
                 expval, i, sdev, (aresid,))
             if rslt is None:
-                return None, None, None, None
+                return None
             srt = rslt[0]
             srt = f * np.dot(dmat.T, srt) / scale
             bcm += np.outer(srt, srt)
 
         cov_robust_bc = np.dot(cov_naive, np.dot(bcm, cov_naive))
-
-        cov_naive *= self.scaling_factor
-        cov_robust *= self.scaling_factor
         cov_robust_bc *= self.scaling_factor
 
-        return (cov_robust, cov_naive, cov_robust_bc, cmat)
+        return cov_robust_bc
 
     def predict(self, params, exog=None, offset=None,
                 exposure=None, linear=False):
@@ -1121,11 +1127,14 @@ class GEE(base.Model):
                           ConvergenceWarning)
             return None
 
-        bcov, ncov, bc_cov, _ = self._covmat()
+        bcov, ncov, _ = self._covmat()
         if bcov is None:
             warnings.warn("Estimated covariance structure for GEE "
                           "estimates is singular", ConvergenceWarning)
             return None
+        bc_cov = None
+        if cov_type == "bias_reduced":
+            bc_cov = self._bc_covmat(ncov)
 
         if self.constraint is not None:
             mean_params, bcov = self._handle_constraint(mean_params, bcov)
@@ -1213,7 +1222,7 @@ class GEE(base.Model):
                           ConvergenceWarning)
             return None, None
 
-        _, ncov1, _, cmat = self._covmat()
+        _, ncov1, cmat = self._covmat()
         scale = self.estimate_scale()
         cmat = cmat / scale ** 2
         score2 = score[red_p:] / scale
@@ -1370,6 +1379,8 @@ class GEEResults(base.LikelihoodModelResults):
         elif covariance_type == "naive":
             return np.sqrt(np.diag(self.cov_naive))
         elif covariance_type == "bias_reduced":
+            if self.cov_robust_bc is None:
+                raise ValueError("GEE: `bias_reduced` covariance not available")
             return np.sqrt(np.diag(self.cov_robust_bc))
 
     # Need to override to allow for different covariance types.
