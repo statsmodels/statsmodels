@@ -50,11 +50,11 @@ def test_keyerror_start_date():
 
 def test_period_index():
     # test 1285
-    from pandas import PeriodIndex, TimeSeries
+    from pandas import PeriodIndex
     dates = PeriodIndex(start="1/1/1990", periods=20, freq="M")
     x = np.arange(1, 21.)
 
     model = TimeSeriesModel(Series(x, index=dates))
     npt.assert_(model.data.freq == "M")
-    model = TimeSeriesModel(TimeSeries(x, index=dates))
+    model = TimeSeriesModel(Series(x, index=dates))
     npt.assert_(model.data.freq == "M")

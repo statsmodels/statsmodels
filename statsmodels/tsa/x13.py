@@ -616,7 +616,7 @@ if __name__ == "__main__":
     assert arma.isinvertible()
     y = arma.generate_sample()
     dates = pd.date_range("1/1/1990", periods=len(y), freq='M')
-    ts = pd.TimeSeries(y, index=dates)
+    ts = pd.Series(y, index=dates)
 
     xpath = "/home/skipper/src/x12arima/x12a"
 
@@ -629,6 +629,6 @@ if __name__ == "__main__":
 
     # import pandas as pd
     # seas_y = pd.read_csv("usmelec.csv")
-    # seas_y = pd.TimeSeries(seas_y["usmelec"].values,
+    # seas_y = pd.Series(seas_y["usmelec"].values,
     #                        index=pd.DatetimeIndex(seas_y["date"], freq="MS"))
     # results = x13_arima_analysis(xpath, seas_y)

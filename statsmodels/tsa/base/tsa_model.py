@@ -274,6 +274,6 @@ if __name__ == "__main__":
 
     df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
     ex_mod = TimeSeriesModel(df)
-    #ts_series = pandas.TimeSeries()
+    #ts_series = pandas.Series()
 
 

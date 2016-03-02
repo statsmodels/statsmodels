@@ -1833,7 +1833,7 @@ def test_arima_small_data_bug():
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474]
 
     dr = dates_from_range("1990q1", length=len(vals))
-    ts = pandas.TimeSeries(vals, index=dr)
+    ts = pandas.Series(vals, index=dr)
     df = pandas.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
     assert_raises(ValueError, mod.fit)
@@ -1848,7 +1848,7 @@ def test_arima_dataframe_integer_name():
             94.0, 96.5, 93.3, 97.5, 96.3, 92.]
 
     dr = dates_from_range("1990q1", length=len(vals))
-    ts = pandas.TimeSeries(vals, index=dr)
+    ts = pandas.Series(vals, index=dr)
     df = pandas.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
 
@@ -1998,7 +1998,7 @@ class TestARMA00(TestCase):
 def test_arima_dates_startatend():
     # bug
     np.random.seed(18)
-    x = pandas.TimeSeries(np.random.random(36),
+    x = pandas.Series(np.random.random(36),
                           index=pandas.DatetimeIndex(start='1/1/1990',
                                                      periods=36, freq='M'))
     res = ARIMA(x, (1, 0, 0)).fit(disp=0)
