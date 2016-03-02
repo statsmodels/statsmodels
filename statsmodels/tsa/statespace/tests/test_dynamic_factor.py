@@ -495,10 +495,12 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
 
     def test_mle(self):
         with warnings.catch_warnings(record=True) as w:
+            # Depending on the system, this test can reach a greater precision,
+            # but for cross-platform results keep it at 1e-2
             mod = self.model
             res1 = mod.fit(maxiter=100, optim_score='approx', disp=False)
             res = mod.fit(res1.params, method='nm', maxiter=10000, optim_score='approx', disp=False)
-            assert_allclose(res.llf, self.results.llf, atol=1e-5)
+            assert_allclose(res.llf, self.results.llf, atol=1e-2)
 
 class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     """
