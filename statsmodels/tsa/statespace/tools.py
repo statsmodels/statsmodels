@@ -7,6 +7,7 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
+from scipy.linalg import solve_sylvester
 from statsmodels.tools.data import _is_using_pandas
 from . import _statespace
 
@@ -302,6 +303,33 @@ def is_invertible(polynomial, threshold=1.):
     # Final method:
     eigvals = np.linalg.eigvals(companion_matrix(polynomial))
     return np.all(np.abs(eigvals) < threshold)
+
+
+def solve_discrete_lyapunov(a, q, complex_step=False):
+    r"""
+    Solves the discrete Lyapunov equation using a bilinear transformation.
+
+    Notes
+    -----
+    This is a modification of the version in Scipy (see
+    https://github.com/scipy/scipy/blob/master/scipy/linalg/_solvers.py)
+    which allows passing through the complex numbers in the matrix a
+    (usually the transition matrix) in order to allow complex step
+    differentiation.
+    """
+    eye = np.eye(a.shape[0])
+    if not complex_step:
+        aH = a.conj().transpose()
+        aHI_inv = np.linalg.inv(aH + eye)
+        b = np.dot(aH - eye, aHI_inv)
+        c = 2*np.dot(np.dot(np.linalg.inv(a + eye), q), aHI_inv)
+        return solve_sylvester(b.conj().transpose(), b, -c)
+    else:
+        aH = a.transpose()
+        aHI_inv = np.linalg.inv(aH + eye)
+        b = np.dot(aH - eye, aHI_inv)
+        c = 2*np.dot(np.dot(np.linalg.inv(a + eye), q), aHI_inv)
+        return solve_sylvester(b.transpose(), b, -c)
 
 
 def constrain_stationary_univariate(unconstrained):

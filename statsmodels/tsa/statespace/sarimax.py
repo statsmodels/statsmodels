@@ -14,9 +14,8 @@ from .kalman_filter import KalmanFilter, FilterResults
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
-    unconstrain_stationary_univariate
+    unconstrain_stationary_univariate, solve_discrete_lyapunov
 )
-from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
@@ -655,7 +654,7 @@ class SARIMAX(MLEModel):
         KalmanFilter.initialize_stationary.__doc__
     )
 
-    def initialize_state(self, variance=None):
+    def initialize_state(self, variance=None, complex_step=False):
         """
         Initialize state and state covariance arrays in preparation for the
         Kalman filter.
@@ -713,7 +712,8 @@ class SARIMAX(MLEModel):
             )
             initial_state_cov_stationary = solve_discrete_lyapunov(
                 self.ssm.transition[start:end, start:end, 0],
-                selected_state_cov_stationary
+                selected_state_cov_stationary,
+                complex_step=complex_step
             )
 
             initial_state_cov[start:end, start:end] = (
@@ -844,53 +844,15 @@ class SARIMAX(MLEModel):
                 selection[-i, -i] = 1
         return selection
 
-    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
+    def filter(self, params, **kwargs):
+        kwargs.setdefault('results_class', SARIMAXResults)
+        kwargs.setdefault('results_wrapper_class', SARIMAXResultsWrapper)
+        return super(SARIMAX, self).filter(params, **kwargs)
 
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(SARIMAX, self).filter(params, transformed, cov_type,
-                       return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = SARIMAXResultsWrapper(
-                SARIMAXResults(self, params, result, **result_kwargs)
-            )
-
-        return result
-
-    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
-
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(SARIMAX, self).smooth(params, transformed, cov_type,
-                       return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = SARIMAXResultsWrapper(
-                SARIMAXResults(self, params, result, **result_kwargs)
-            )
-
-        return result
+    def smooth(self, params, **kwargs):
+        kwargs.setdefault('results_class', SARIMAXResults)
+        kwargs.setdefault('results_wrapper_class', SARIMAXResultsWrapper)
+        return super(SARIMAX, self).smooth(params, **kwargs)
 
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
@@ -1500,7 +1462,7 @@ class SARIMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, transformed=True):
+    def update(self, params, transformed=True, complex_step=False):
         """
         Update the parameters of the model
 
@@ -1520,7 +1482,8 @@ class SARIMAX(MLEModel):
         params : array_like
             Array of parameters.
         """
-        params = super(SARIMAX, self).update(params, transformed)
+        params = super(SARIMAX, self).update(params, transformed=transformed,
+                                             complex_step=False)
 
         params_trend = None
         params_exog = None
@@ -1687,7 +1650,7 @@ class SARIMAX(MLEModel):
 
         # Initialize
         if not self._manual_initialization:
-            self.initialize_state()
+            self.initialize_state(complex_step=complex_step)
 
         return params
 

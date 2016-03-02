@@ -17,7 +17,7 @@ from .kalman_filter import (
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import (
-    _get_epsilon, approx_hess_cs, approx_fprime_cs
+    _get_epsilon, approx_hess_cs, approx_fprime_cs, approx_fprime
 )
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
@@ -76,8 +76,6 @@ class MLEModel(tsbase.TimeSeriesModel):
     statsmodels.tsa.statespace.kalman_filter.KalmanFilter
     statsmodels.tsa.statespace.representation.Representation
     """
-
-    optim_hessian = 'cs'
 
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
@@ -296,10 +294,11 @@ class MLEModel(tsbase.TimeSeriesModel):
     def tolerance(self, value):
         self.ssm.tolerance = value
 
-    def fit(self, start_params=None, transformed=True, cov_type='opg',
-            cov_kwds=None, method='lbfgs', maxiter=50, full_output=1,
-            disp=5, callback=None, return_params=False,
-            optim_hessian=None, **kwargs):
+    def fit(self, start_params=None, transformed=True,
+            cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
+            full_output=1, disp=5, callback=None, return_params=False,
+            optim_score=None, optim_complex_step=True, optim_hessian=None,
+            **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -311,6 +310,34 @@ class MLEModel(tsbase.TimeSeriesModel):
         transformed : boolean, optional
             Whether or not `start_params` is already transformed. Default is
             True.
+        cov_type : str, optional
+            The `cov_type` keyword governs the method for calculating the
+            covariance matrix of parameter estimates. Can be one of:
+
+            - 'opg' for the outer product of gradient estimator
+            - 'oim' for the observed information matrix estimator, calculated
+              using the method of Harvey (1989)
+            - 'approx' for the observed information matrix estimator,
+              calculated using a numerical approximation of the Hessian matrix.
+            - 'robust' for an approximate (quasi-maximum likelihood) covariance
+              matrix that may be valid even in the presense of some
+              misspecifications. Intermediate calculations use the 'oim'
+              method.
+            - 'robust_approx' is the same as 'robust' except that the
+              intermediate calculations use the 'approx' method.
+            - 'none' for no covariance matrix calculation.
+        cov_kwds : dict or None, optional
+            A dictionary of arguments affecting covariance matrix computation.
+
+            **opg, oim, approx, robust, robust_approx**
+
+            - 'approx_complex_step' : boolean, optional - If True, numerical
+              approximations are computed using complex-step methods. If False,
+              numerical approximations are computed using finite difference
+              methods. Default is True.
+            - 'approx_centered' : boolean, optional - If True, numerical
+              approximations computed using finite difference methods use a
+              centered approximation. Default is False.
         method : str, optional
             The `method` determines which solver from `scipy.optimize`
             is used, and it can be chosen from among the following strings:
@@ -329,31 +356,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             solvers. See the notes section below (or scipy.optimize) for the
             available arguments and for the list of explicit arguments that the
             basin-hopping solver supports.
-        cov_type : str, optional
-            The `cov_type` keyword governs the method for calculating the
-            covariance matrix of parameter estimates. Can be one of:
-
-            - 'opg' for the outer product of gradient estimator
-            - 'oim' for the observed information matrix estimator, calculated
-              using the method of Harvey (1989)
-            - 'cs' for the observed information matrix estimator, calculated
-              using a numerical (complex step) approximation of the Hessian
-              matrix.
-            - 'delta' for the observed information matrix estimator, calculated
-              using a numerical (complex step) approximation of the Hessian
-              along with the delta method (method of propagation of errors)
-              applied to the parameter transformation function
-              `transform_params`.
-            - 'robust' for an approximate (quasi-maximum likelihood) covariance
-              matrix that may be valid even in the presense of some
-              misspecifications. Intermediate calculations use the 'oim'
-              method.
-            - 'robust_cs' is the same as 'robust' except that the intermediate
-              calculations use the 'cs' method.
-            - 'none' for no covariance matrix calculation.
-        cov_kwds : dict or None, optional
-            See `MLEResults.get_robustcov_results` for a description required
-            keywords for alternative covariance estimators
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : boolean, optional
@@ -368,11 +370,23 @@ class MLEModel(tsbase.TimeSeriesModel):
         return_params : boolean, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
-        optim_hessian : {'opg','oim','cs'}, optional
+        optim_score : {'harvey', 'approx'} or None, optional
+            The method by which the score vector is calculated. 'harvey' uses
+            the method from Harvey (1989), 'approx' uses either finite
+            difference or complex step differentiation depending upon the
+            value of `optim_complex_step`, and None uses the built-in gradient
+            approximation of the optimizer. Default is None. This keyword is
+            only relevant if the optimization method uses the score.
+        optim_complex_step : bool, optional
+            Whether or not to use complex step differentiation when
+            approximating the score; if False, finite difference approximation
+            is used. Default is True. This keyword is only relevant if
+            `optim_score` is set to 'harvey' or 'approx'.
+        optim_hessian : {'opg','oim','approx'}, optional
             The method by which the Hessian is numerically approximated. 'opg'
             uses outer product of gradients, 'oim' uses the information
-            matrix formula from Harvey (1989), and 'cs' uses second-order
-            complex step differentiation. This keyword is only relevant if the
+            matrix formula from Harvey (1989), and 'approx' uses numerical
+            approximation. This keyword is only relevant if the
             optimization method uses the Hessian matrix.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
@@ -385,29 +399,40 @@ class MLEModel(tsbase.TimeSeriesModel):
         --------
         statsmodels.base.model.LikelihoodModel.fit
         MLEResults
-        """
 
+        """
         if start_params is None:
             start_params = self.start_params
             transformed = True
 
+        # Update the score method
+        if optim_score is None and method == 'lbfgs':
+            kwargs.setdefault('approx_grad', True)
+            kwargs.setdefault('epsilon', 1e-5)
+        elif optim_score is None:
+            optim_score = 'approx'
+        elif optim_score not in ['harvey', 'approx']:
+            raise NotImplementedError('Invalid method for calculating the'
+                                      ' score.')
+
         # Update the hessian method
-        if optim_hessian is not None:
-            self.optim_hessian = optim_hessian
+        if optim_hessian not in [None, 'opg', 'oim', 'approx']:
+            raise NotImplementedError('Invalid method for calculating the'
+                                      ' Hessian.')
 
         # Unconstrain the starting parameters
         if transformed:
             start_params = self.untransform_params(np.array(start_params))
 
-        if method == 'lbfgs' or method == 'bfgs':
-            # kwargs.setdefault('pgtol', 1e-8)
-            # kwargs.setdefault('factr', 1e2)
-            # kwargs.setdefault('m', 12)
-            kwargs.setdefault('approx_grad', True)
-            kwargs.setdefault('epsilon', 1e-5)
-
         # Maximum likelihood estimation
-        fargs = (False,)  # (sets transformed=False)
+        flags = {
+            'transformed': False,
+            'score_method': optim_score,
+            'approx_complex_step': optim_complex_step
+        }
+        if optim_hessian is not None:
+            flags['hessian_method'] = optim_hessian
+        fargs = (flags,)
         mlefit = super(MLEModel, self).fit(start_params, method=method,
                                            fargs=fargs,
                                            maxiter=maxiter,
@@ -420,14 +445,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             return self.transform_params(mlefit.params)
         # Otherwise construct the results class if desired
         else:
-            try:
-                res = self.smooth(mlefit.params, transformed=False,
-                                  cov_type=cov_type, cov_kwds=cov_kwds)
-            except Exception as e:
-                warnings.warn('Could not perform smoothing; message was "%s".'
-                              ' Returning filtered results.' % str(e))
-                res = self.filter(mlefit.params, transformed=False,
-                                  cov_type=cov_type, cov_kwds=cov_kwds)
+            res = self.smooth(mlefit.params, transformed=False,
+                              cov_type=cov_type, cov_kwds=cov_kwds)
 
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
@@ -435,8 +454,9 @@ class MLEModel(tsbase.TimeSeriesModel):
 
             return res
 
-    def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
-               return_ssm=False, **kwargs):
+    def filter(self, params, transformed=True, complex_step=False,
+               cov_type=None, cov_kwds=None, return_ssm=False,
+               results_class=None, results_wrapper_class=None, **kwargs):
         """
         Kalman filtering
 
@@ -464,27 +484,39 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if not transformed:
             params = self.transform_params(params)
-        self.update(params, transformed=True)
+        self.update(params, transformed=True, complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
 
+        if complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
         # Get the state space output
-        result = self.ssm.filter(**kwargs)
+        result = self.ssm.filter(complex_step=complex_step, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
             result_kwargs = {}
             if cov_type is not None:
                 result_kwargs['cov_type'] = cov_type
-            result = MLEResultsWrapper(
-                MLEResults(self, params, result, **result_kwargs)
+            if cov_kwds is not None:
+                result_kwargs['cov_kwds'] = cov_kwds
+
+            if results_class is None:
+                results_class = MLEResults
+            if results_wrapper_class is None:
+                results_wrapper_class = MLEResultsWrapper
+
+            result = results_wrapper_class(
+                results_class(self, params, result, **result_kwargs)
             )
 
         return result
 
-    def smooth(self, params, transformed=True, cov_type=None, cov_kwds=None,
-               return_ssm=False, **kwargs):
+    def smooth(self, params, transformed=True, complex_step=False,
+               cov_type=None, cov_kwds=None, return_ssm=False,
+               results_class=None, results_wrapper_class=None, **kwargs):
         """
         Kalman smoothing
 
@@ -512,26 +544,37 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if not transformed:
             params = self.transform_params(params)
-        self.update(params, transformed=True)
+        self.update(params, transformed=True, complex_step=complex_step)
 
         # Save the parameter names
         self.data.param_names = self.param_names
 
+        if complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
         # Get the state space output
-        result = self.ssm.smooth(**kwargs)
+        result = self.ssm.smooth(complex_step=complex_step, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
             result_kwargs = {}
             if cov_type is not None:
                 result_kwargs['cov_type'] = cov_type
-            result = MLEResultsWrapper(
-                MLEResults(self, params, result, **result_kwargs)
+            if cov_kwds is not None:
+                result_kwargs['cov_kwds'] = cov_kwds
+
+            if results_class is None:
+                results_class = MLEResults
+            if results_wrapper_class is None:
+                results_wrapper_class = MLEResultsWrapper
+
+            result = results_wrapper_class(
+                results_class(self, params, result, **result_kwargs)
             )
 
         return result
 
-    def loglike(self, params, transformed=True, **kwargs):
+    def loglike(self, params, *args, **kwargs):
         """
         Loglikelihood evaluation
 
@@ -562,18 +605,49 @@ class MLEModel(tsbase.TimeSeriesModel):
         update : modifies the internal state of the state space model to
                  reflect new params
         """
+        # We need to handle positional arguments in two ways, in case this was
+        # called by a Scipy optimization routine
+        if len(args) > 0:
+            # the fit() method will pass a dictionary
+            if isinstance(args[0], dict):
+                flags = args[0]
+                transformed = flags.get('transformed', True)
+                complex_step = flags.get('complex_step', True)
+            # otherwise, a user may have just used positional arguments...
+            else:
+                transformed = args[0]
+                if 'transformed' in kwargs:
+                    raise TypeError("loglike() got multiple values for keyword"
+                                    " argument 'transformed'")
+                if len(args) > 1:
+                    complex_step = args[1]
+                    if 'complex_step' in kwargs:
+                        raise TypeError("loglike() got multiple values for"
+                                        " keyword argument 'complex_step'")
+                else:
+                    complex_step = kwargs.pop('complex_step', True)
+
+        else:
+            transformed = kwargs.pop('transformed', True)
+            complex_step = kwargs.pop('complex_step', True)
+
         if not transformed:
             params = self.transform_params(params)
-        self.update(params, transformed=True)
 
-        loglike = self.ssm.loglike(**kwargs)
+        self.update(params, transformed=True, complex_step=complex_step)
+
+        if complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
+        loglike = self.ssm.loglike(complex_step=complex_step, **kwargs)
 
         # Koopman, Shephard, and Doornik recommend maximizing the average
         # likelihood to avoid scale issues, but the averaging is done
         # automatically in the base model `fit` method
         return loglike
 
-    def loglikeobs(self, params, transformed=True, **kwargs):
+    def loglikeobs(self, params, transformed=True, complex_step=False,
+                   **kwargs):
         """
         Loglikelihood evaluation
 
@@ -605,11 +679,108 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         if not transformed:
             params = self.transform_params(params)
-        self.update(params, transformed=True)
+        self.update(params, transformed=True, complex_step=complex_step)
 
-        return self.ssm.loglikeobs(**kwargs)
+        return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
 
-    def observed_information_matrix(self, params, **kwargs):
+    def _forecasts_error_partial_derivatives(self, params, transformed=True,
+                                             approx_complex_step=None,
+                                             approx_centered=False,
+                                             res=None, **kwargs):
+        params = np.array(params, ndmin=1)
+
+        # We can't use complex-step differentiation with non-transformed
+        # parameters
+        if approx_complex_step is None:
+            approx_complex_step = transformed
+        if not transformed and approx_complex_step:
+            raise ValueError("Cannot use complex-step approximations to"
+                             " calculate the observed_information_matrix"
+                             " with untransformed parameters.")
+
+        # If we're using complex-step differentiation, then we can't use
+        # Cholesky factorization
+        if approx_complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
+        # Get values at the params themselves
+        if res is None:
+            self.update(params, transformed=transformed,
+                        complex_step=approx_complex_step)
+            res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
+
+        # Setup
+        n = len(params)
+
+        # Compute partial derivatives w.r.t. forecast error and forecast
+        # error covariance
+        partials_forecasts_error = (
+            np.zeros((self.k_endog, self.nobs, n))
+        )
+        partials_forecasts_error_cov = (
+            np.zeros((self.k_endog, self.k_endog, self.nobs, n))
+        )
+        if approx_complex_step:
+            epsilon = _get_epsilon(params, 2, None, n)
+            increments = np.identity(n) * 1j * epsilon
+
+            for i, ih in enumerate(increments):
+                self.update(params + ih, transformed=transformed,
+                            complex_step=True)
+                _res = self.ssm.filter(**kwargs)
+
+                partials_forecasts_error[:, :, i] = (
+                    _res.forecasts_error.imag / epsilon[i]
+                )
+
+                partials_forecasts_error_cov[:, :, :, i] = (
+                    _res.forecasts_error_cov.imag / epsilon[i]
+                )
+        elif not approx_centered:
+            epsilon = _get_epsilon(params, 2, None, n)
+            ei = np.zeros((n,), float)
+            for i in range(n):
+                ei[i] = epsilon[i]
+                self.update(params + ei, transformed=transformed,
+                            complex_step=False)
+                _res = self.ssm.filter(complex_step=False, **kwargs)
+
+                partials_forecasts_error[:, :, i] = (
+                    _res.forecasts_error - res.forecasts_error) / epsilon[i]
+
+                partials_forecasts_error_cov[:, :, :, i] = (
+                    _res.forecasts_error_cov -
+                    res.forecasts_error_cov) / epsilon[i]
+                ei[i] = 0.0
+        else:
+            epsilon = _get_epsilon(params, 3, None, n) / 2.
+            ei = np.zeros((n,), float)
+            for i in range(n):
+                ei[i] = epsilon[i]
+
+                self.update(params + ei, transformed=transformed,
+                            complex_step=False)
+                _res1 = self.ssm.filter(complex_step=False, **kwargs)
+
+                self.update(params - ei, transformed=transformed,
+                            complex_step=False)
+                _res2 = self.ssm.filter(complex_step=False, **kwargs)
+
+                partials_forecasts_error[:, :, i] = (
+                    (_res1.forecasts_error - _res2.forecasts_error) /
+                    (2 * epsilon[i]))
+
+                partials_forecasts_error_cov[:, :, :, i] = (
+                    (_res1.forecasts_error_cov - _res2.forecasts_error_cov) /
+                    (2 * epsilon[i]))
+
+                ei[i] = 0.0
+
+        return partials_forecasts_error, partials_forecasts_error_cov
+
+    def observed_information_matrix(self, params, transformed=True,
+                                    approx_complex_step=None,
+                                    approx_centered=False, **kwargs):
         """
         Observed information matrix
 
@@ -641,34 +812,34 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Setup
         n = len(params)
-        epsilon = _get_epsilon(params, 1, None, n)
-        increments = np.identity(n) * 1j * epsilon
+
+        # We can't use complex-step differentiation with non-transformed
+        # parameters
+        if approx_complex_step is None:
+            approx_complex_step = transformed
+        if not transformed and approx_complex_step:
+            raise ValueError("Cannot use complex-step approximations to"
+                             " calculate the observed_information_matrix"
+                             " with untransformed parameters.")
 
         # Get values at the params themselves
-        self.update(params)
-        res = self.ssm.filter(**kwargs)
+        self.update(params, transformed=transformed,
+                    complex_step=approx_complex_step)
+        # If we're using complex-step differentiation, then we can't use
+        # Cholesky factorization
+        if approx_complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+        res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
         dtype = self.ssm.dtype
+
         # Save this for inversion later
         inv_forecasts_error_cov = res.forecasts_error_cov.copy()
 
-        # Compute partial derivatives
-        partials_forecasts_error = (
-            np.zeros((self.k_endog, self.nobs, n))
-        )
-        partials_forecasts_error_cov = (
-            np.zeros((self.k_endog, self.k_endog, self.nobs, n))
-        )
-        for i, ih in enumerate(increments):
-            self.update(params + ih)
-            res = self.ssm.filter(**kwargs)
-
-            partials_forecasts_error[:, :, i] = (
-                res.forecasts_error.imag / epsilon[i]
-            )
-
-            partials_forecasts_error_cov[:, :, :, i] = (
-                res.forecasts_error_cov.imag / epsilon[i]
-            )
+        partials_forecasts_error, partials_forecasts_error_cov = (
+            self._forecasts_error_partial_derivatives(
+                params, transformed=transformed,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered, res=res, **kwargs))
 
         # Compute the information matrix
         tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
@@ -676,7 +847,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         information_matrix = np.zeros((n, n), dtype=dtype)
         for t in range(self.ssm.loglikelihood_burn, self.nobs):
             inv_forecasts_error_cov[:, :, t] = (
-                np.linalg.inv(inv_forecasts_error_cov[:, :, t])
+                np.linalg.inv(res.forecasts_error_cov[:, :, t])
             )
             for i in range(n):
                 tmp[:, :, t, i] = np.dot(
@@ -696,7 +867,8 @@ class MLEModel(tsbase.TimeSeriesModel):
                     )
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
-    def opg_information_matrix(self, params, **kwargs):
+    def opg_information_matrix(self, params, transformed=True,
+                               approx_complex_step=None, **kwargs):
         """
         Outer product of gradients information matrix
 
@@ -715,11 +887,109 @@ class MLEModel(tsbase.TimeSeriesModel):
         NBER Chapters. National Bureau of Economic Research, Inc.
 
         """
-        score_obs = self.score_obs(params, **kwargs).transpose()
+        # We can't use complex-step differentiation with non-transformed
+        # parameters
+        if approx_complex_step is None:
+            approx_complex_step = transformed
+        if not transformed and approx_complex_step:
+            raise ValueError("Cannot use complex-step approximations to"
+                             " calculate the observed_information_matrix"
+                             " with untransformed parameters.")
+
+        # If we're using complex-step differentiation, then we can't use
+        # Cholesky factorization
+        # if approx_complex_step:
+        #     kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
+        score_obs = self.score_obs(params, transformed=transformed,
+                                   approx_complex_step=approx_complex_step,
+                                   **kwargs).transpose()
         return (
             np.inner(score_obs, score_obs) /
             (self.nobs - self.ssm.loglikelihood_burn)
         )
+
+    def _score_complex_step(self, params, **kwargs):
+        # the default epsilon can be too small
+        # inversion_method = INVERT_UNIVARIATE | SOLVE_LU
+        epsilon = _get_epsilon(params, 2., None, len(params))
+        kwargs['transformed'] = True
+        kwargs['complex_step'] = True
+        return approx_fprime_cs(params, self.loglike, epsilon=epsilon,
+                                kwargs=kwargs)
+
+    def _score_finite_difference(self, params, approx_centered=False,
+                                 **kwargs):
+        kwargs['transformed'] = True
+        return approx_fprime(params, self.loglike, kwargs=kwargs,
+                             centered=approx_centered)
+
+    def _score_harvey(self, params, approx_complex_step=True, **kwargs):
+        score_obs = self._score_obs_harvey(
+            params, approx_complex_step=approx_complex_step, **kwargs)
+        return np.sum(score_obs, axis=0)
+
+    def _score_obs_harvey(self, params, approx_complex_step=True, **kwargs):
+        """
+        Score
+
+        Parameters
+        ----------
+        params : array_like, optional
+            Array of parameters at which to evaluate the loglikelihood
+            function.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
+
+        Notes
+        -----
+        This method is from Harvey (1989), section 3.4.5
+
+        References
+        ----------
+        Harvey, Andrew C. 1990.
+        Forecasting, Structural Time Series Models and the Kalman Filter.
+        Cambridge University Press.
+
+        """
+        params = np.array(params, ndmin=1)
+        n = len(params)
+
+        # Get values at the params themselves
+        self.update(params, transformed=True, complex_step=approx_complex_step)
+        if approx_complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+        res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
+        dtype = self.ssm.dtype
+
+        # Get forecasts error partials
+        partials_forecasts_error, partials_forecasts_error_cov = (
+            self._forecasts_error_partial_derivatives(
+                params, transformed=True,
+                complex_step=approx_complex_step, res=res, **kwargs))
+
+        # Compute partial derivatives w.r.t. likelihood function
+        partials = np.zeros((self.nobs, n))
+        k_endog = self.k_endog
+        for t in range(self.nobs):
+            for i in range(n):
+                inv_forecasts_error_cov = np.linalg.inv(
+                    res.forecasts_error_cov[:, :, t])
+                partials[t, i] += np.trace(np.dot(
+                    np.dot(inv_forecasts_error_cov,
+                           partials_forecasts_error_cov[:, :, t, i]),
+                    (np.eye(k_endog) -
+                     np.dot(inv_forecasts_error_cov,
+                            np.outer(res.forecasts_error[:, t],
+                                     res.forecasts_error[:, t])))))
+                # 2 * dv / di * F^{-1} v_t
+                # where x = F^{-1} v_t or F x = v
+                partials[t, i] += 2 * np.dot(
+                    partials_forecasts_error[:, t, i],
+                    np.dot(inv_forecasts_error_cov, res.forecasts_error[:, t]))
+
+        return -partials / 2.
 
     def score(self, params, *args, **kwargs):
         """
@@ -748,17 +1018,42 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         params = np.array(params, ndmin=1)
 
-        transformed = (
-            args[0] if len(args) > 0 else kwargs.get('transformed', False)
-        )
+        # We were given one positional argument if this was called by a Scipy
+        # optimization routine
+        if len(args) > 0:
+            flags = args[0]
+            transformed = flags.get('transformed', True)
+            method = flags.get('score_method', 'approx')
+            approx_complex_step = flags.get('approx_complex_step', True)
+            approx_centered = flags.get('approx_centered', True)
+        else:
+            transformed = kwargs.pop('transformed', True)
+            method = kwargs.pop('method', 'approx')
+            approx_complex_step = kwargs.pop('approx_complex_step', True)
+            approx_centered = kwargs.pop('approx_centered', False)
 
-        score = approx_fprime_cs(params, self.loglike, kwargs={
-            'transformed': transformed
-        })
+        if not transformed:
+            transform_score = self.transform_jacobian(params)
+            params = self.transform_params(params)
+
+        if method == 'harvey':
+            score = self._score_harvey(
+                params, approx_complex_step=approx_complex_step, **kwargs)
+        elif method == 'approx' and approx_complex_step:
+            score = self._score_complex_step(params, **kwargs)
+        elif method == 'approx':
+            score = self._score_finite_difference(
+                params, approx_centered=approx_centered, **kwargs)
+        else:
+            raise NotImplementedError('Invalid score method.')
+
+        if not transformed:
+            score = np.dot(transform_score, score)
 
         return score
 
-    def score_obs(self, params, **kwargs):
+    def score_obs(self, params, method='approx', transformed=True,
+                  approx_complex_step=True, approx_centered=False, **kwargs):
         """
         Compute the score per observation, evaluated at params
 
@@ -766,7 +1061,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the score.
-        *args, **kwargs
+        **kwargs
             Additional arguments to the `loglike` method.
 
         Returns
@@ -781,8 +1076,30 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         params = np.array(params, ndmin=1)
 
-        self.update(params)
-        return approx_fprime_cs(params, self.loglikeobs, kwargs=kwargs)
+        if not transformed and approx_complex_step:
+            raise ValueError("Cannot use complex-step approximations to"
+                             " calculate the score at each observation"
+                             " with untransformed parameters.")
+
+        if method == 'harvey':
+            score = self._score_obs_harvey(
+                params, transformed=transformed,
+                approx_complex_step=approx_complex_step, **kwargs)
+        elif method == 'approx' and approx_complex_step:
+            # the default epsilon can be too small
+            epsilon = _get_epsilon(params, 2., None, len(params))
+            kwargs['complex_step'] = True
+            kwargs['transformed'] = True
+            score = approx_fprime_cs(params, self.loglikeobs, epsilon=epsilon,
+                                     kwargs=kwargs)
+        elif method == 'approx':
+            kwargs['transformed'] = transformed
+            score = approx_fprime(params, self.loglikeobs, kwargs=kwargs,
+                                  centered=approx_centered)
+        else:
+            raise NotImplementedError('Invalid scoreobs method.')
+
+        return score
 
     def hessian(self, params, *args, **kwargs):
         """
@@ -809,45 +1126,89 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
-        if self.optim_hessian == 'cs':
-            hessian = self._hessian_cs(params, *args, **kwargs)
-        elif self.optim_hessian == 'oim':
-            hessian = self._hessian_oim(params)
-        elif self.optim_hessian == 'opg':
-            hessian = self._hessian_opg(params)
+        # We were given one positional argument if this was called by a Scipy
+        # optimization routine
+        if len(args) > 0:
+            flags = args[0]
+            transformed = flags.get('transformed', False)
+            method = flags.get('hessian_method', 'approx')
+            approx_complex_step = flags.get('approx_complex_step', True)
+            approx_centered = flags.get('approx_centered', True)
+        else:
+            transformed = kwargs.pop('transformed', False)
+            method = kwargs.pop('method', 'approx')
+            approx_complex_step = kwargs.pop('approx_complex_step', True)
+            approx_centered = kwargs.pop('approx_centered', False)
+
+        if not transformed and approx_complex_step:
+            raise ValueError("Cannot use complex-step approximations to"
+                             " calculate the hessian with untransformed"
+                             " parameters.")
+
+        if method == 'oim':
+            hessian = self._hessian_oim(
+                params, transformed=transformed,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered, **kwargs)
+        elif method == 'opg':
+            hessian = self._hessian_opg(
+                params, transformed=transformed,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered, **kwargs)
+        elif method == 'approx' and approx_complex_step:
+            return self._hessian_complex_step(
+                params, transformed=transformed, **kwargs)
+        elif method == 'approx':
+            return self._hessian_finite_difference(
+                params, transformed=transformed,
+                approx_centered=approx_centered, **kwargs)
         else:
             raise NotImplementedError('Invalid Hessian calculation method.')
         return hessian
 
-    def _hessian_oim(self, params):
+    def _hessian_oim(self, params, **kwargs):
         """
         Hessian matrix computed using the Harvey (1989) information matrix
         """
-        return -self.observed_information_matrix(params)
+        return -self.observed_information_matrix(params, **kwargs)
 
-    def _hessian_opg(self, params):
+    def _hessian_opg(self, params, **kwargs):
         """
         Hessian matrix computed using the outer product of gradients
         information matrix
         """
-        return -self.opg_information_matrix(params)
+        return -self.opg_information_matrix(params, **kwargs)
 
-    def _hessian_cs(self, params, *args, **kwargs):
+    def _hessian_finite_difference(self, params, approx_centered=False,
+                                   **kwargs):
+        params = np.array(params, ndmin=1)
+
+        warnings.warn('Calculation of the Hessian using finite differences'
+                      ' is usually subject to substantial approximation'
+                      ' errors.')
+
+        if not approx_centered:
+            epsilon = _get_epsilon(params, 3, None, len(params))
+        else:
+            epsilon = _get_epsilon(params, 4, None, len(params)) / 2
+        hessian = approx_fprime(params, self._score_finite_difference,
+            epsilon=epsilon, kwargs=kwargs, centered=approx_centered)
+
+        return hessian / (self.nobs - self.ssm.loglikelihood_burn)
+
+    def _hessian_complex_step(self, params, **kwargs):
         """
         Hessian matrix computed by second-order complex-step differentiation
         on the `loglike` function.
         """
+        # the default epsilon can be too small
+        epsilon = _get_epsilon(params, 3., None, len(params))
+        kwargs['transformed'] = True
+        kwargs['complex_step'] = True
+        hessian = approx_hess_cs(
+            params, self.loglike, epsilon=epsilon, kwargs=kwargs)
 
-        transformed = (
-            args[0] if len(args) > 0 else kwargs.get('transformed', False)
-        )
-
-        f = lambda params, **kwargs: self.loglike(params, **kwargs) / self.nobs
-        hessian = approx_hess_cs(params, f, kwargs={
-            'transformed': transformed
-        })
-
-        return hessian
+        return hessian / (self.nobs - self.ssm.loglikelihood_burn)
 
     @property
     def start_params(self):
@@ -874,7 +1235,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 names = []
             return names
 
-    def transform_jacobian(self, unconstrained):
+    def transform_jacobian(self, unconstrained, approx_centered=False):
         """
         Jacobian matrix for the parameter transformation function
 
@@ -890,13 +1251,17 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        This is a numerical approximation.
+        This is a numerical approximation using finite differences. Note that
+        in general complex step methods cannot be used because it is not
+        guaranteed that the `transform_params` method is a real function (e.g.
+        if Cholesky decomposition is used).
 
         See Also
         --------
         transform_params
         """
-        return approx_fprime_cs(unconstrained, self.transform_params)
+        return approx_fprime(unconstrained, self.transform_params,
+                             centered=approx_centered)
 
     def transform_params(self, unconstrained):
         """
@@ -945,7 +1310,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         return np.array(constrained, ndmin=1)
 
-    def update(self, params, transformed=True):
+    def update(self, params, transformed=True, complex_step=False):
         """
         Update the parameters of the model
 
@@ -1145,6 +1510,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Handle covariance matrix calculation
         if cov_kwds is None:
                 cov_kwds = {}
+        self._cov_approx_complex_step = (
+            cov_kwds.pop('approx_complex_step', True))
+        self._cov_approx_centered = cov_kwds.pop('approx_centered', False)
         try:
             self._rank = None
             self._get_robustcov_results(cov_type=cov_type, use_self=True,
@@ -1198,19 +1566,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         - 'opg' for the outer product of gradient estimator
         - 'oim' for the observed information matrix estimator, calculated
           using the method of Harvey (1989)
-        - 'cs' for the observed information matrix estimator, calculated
-          using a numerical (complex step) approximation of the Hessian
-          matrix.
-        - 'delta' for the observed information matrix estimator, calculated
-          using a numerical (complex step) approximation of the Hessian along
-          with the delta method (method of propagation of errors)
-          applied to the parameter transformation function `transform_params`.
+        - 'approx' for the observed information matrix estimator,
+          calculated using a numerical approximation of the Hessian matrix.
+          Uses complex step approximation by default, or uses finite
+          differences if `approx_complex_step=False` in the `cov_kwds`
+          dictionary.
         - 'robust' for an approximate (quasi-maximum likelihood) covariance
           matrix that may be valid even in the presense of some
           misspecifications. Intermediate calculations use the 'oim'
           method.
-        - 'robust_cs' is the same as 'robust' except that the intermediate
-          calculations use the 'cs' method.
+        - 'robust_approx' is the same as 'robust' except that the
+          intermediate calculations use the 'approx' method.
         - 'none' for no covariance matrix calculation.
         """
 
@@ -1231,6 +1597,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         res.cov_kwds = {}
 
         # Calculate the new covariance matrix
+        approx_complex_step = self._cov_approx_complex_step
+        if approx_complex_step:
+            approx_type_str = 'complex-step'
+        elif self._cov_approx_centered:
+            approx_type_str = 'centered finite differences'
+        else:
+            approx_type_str = 'finite differences'
         k_params = len(self.params)
         if k_params == 0:
             res.cov_params_default = np.zeros((0, 0))
@@ -1242,40 +1615,35 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res._rank = np.nan
             res.cov_kwds['description'] = (
                 'Covariance matrix not calculated.')
-        elif self.cov_type == 'cs':
-            res.cov_params_default = res.cov_params_cs
+        elif self.cov_type == 'approx':
+            res.cov_params_default = res.cov_params_approx
             res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical (complex-step)'
-                ' differentiation.')
-        elif self.cov_type == 'delta':
-            res.cov_params_default = res.cov_params_delta
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical differentiation'
-                ' and the delta method (method of propagation of errors)'
-                ' applied to the parameter transformation function.')
+                'Covariance matrix calculated using numerical (%s)'
+                ' differentiation.' % approx_type_str)
         elif self.cov_type == 'oim':
             res.cov_params_default = res.cov_params_oim
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the observed information'
-                ' matrix described in Harvey (1989).')
+                ' matrix (%s) described in Harvey (1989).' % approx_type_str)
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the outer product of'
-                ' gradients.'
+                ' gradients (%s).' % approx_type_str
             )
         elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
             res.cov_params_default = res.cov_params_robust_oim
             res.cov_kwds['description'] = (
                 'Quasi-maximum likelihood covariance matrix used for'
                 ' robustness to some misspecifications; calculated using the'
-                ' observed information matrix described in Harvey (1989).')
-        elif self.cov_type == 'robust_cs':
-            res.cov_params_default = res.cov_params_robust_cs
+                ' observed information matrix (%s) described in'
+                ' Harvey (1989).' % approx_type_str)
+        elif self.cov_type == 'robust_approx':
+            res.cov_params_default = res.cov_params_robust
             res.cov_kwds['description'] = (
                 'Quasi-maximum likelihood covariance matrix used for'
                 ' robustness to some misspecifications; calculated using'
-                ' numerical (complex-step) differentiation.')
+                ' numerical (%s) differentiation.' % approx_type_str)
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
@@ -1297,20 +1665,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # return -2*self.llf + self.params.shape[0]*np.log(self.nobs)
         return bic(self.llf, self.nobs, self.params.shape[0])
 
-    @cache_readonly
-    def cov_params_cs(self):
-        """
-        (array) The variance / covariance matrix. Computed using the numerical
-        Hessian computed without using parameter transformations.
-        """
+    def _cov_params_approx(self, approx_complex_step=True,
+                           approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        # When using complex-step methods, cannot rely on Cholesky inversion
-        # because variance parameters will then have a complex component which
-        # which implies non-positive-definiteness.
-        inversion_method = INVERT_UNIVARIATE | SOLVE_LU
-        evaluated_hessian = self.model._hessian_cs(
-            self.params, transformed=True, inversion_method=inversion_method
-        )
+        if approx_complex_step:
+            evaluated_hessian = self.model._hessian_complex_step(
+                self.params, transformed=True
+            )
+        else:
+            evaluated_hessian = self.model._hessian_finite_difference(
+                self.params, transformed=True,
+                approx_centered=approx_centered
+            )
         self.model.update(self.params)
 
         neg_cov, singular_values = pinv_extended(nobs * evaluated_hessian)
@@ -1321,24 +1687,29 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return -neg_cov
 
     @cache_readonly
-    def cov_params_delta(self):
+    def cov_params_approx(self):
         """
         (array) The variance / covariance matrix. Computed using the numerical
-        Hessian computed using parameter transformations and the Delta method
-        (method of propagation of errors).
+        Hessian approximated by complex step or finite differences methods.
         """
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        return self._cov_params_approx(self._cov_approx_complex_step,
+                                       self._cov_approx_centered)
 
-        unconstrained = self.model.untransform_params(self.params)
-        jacobian = self.model.transform_jacobian(unconstrained)
-        neg_cov, singular_values = pinv_extended(
-            nobs * self.model._hessian_cs(unconstrained, transformed=False)
+    def _cov_params_oim(self, approx_complex_step=True,
+                        approx_centered=False):
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        cov_params, singular_values = pinv_extended(
+            nobs * self.model.observed_information_matrix(
+                self.params, transformed=True,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered)
         )
+        self.model.update(self.params)
 
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
 
-        return np.dot(np.dot(jacobian, -neg_cov), jacobian.transpose())
+        return cov_params
 
     @cache_readonly
     def cov_params_oim(self):
@@ -1346,10 +1717,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the method
         from Harvey (1989).
         """
+        return self._cov_params_oim(self._cov_approx_complex_step,
+                                    self._cov_approx_centered)
+
+    def _cov_params_opg(self, approx_complex_step=True,
+                        approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_params, singular_values = pinv_extended(
-            nobs * self.model.observed_information_matrix(self.params)
+            nobs * self.model.opg_information_matrix(
+                self.params, transformed=True,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered)
         )
+        self.model.update(self.params)
 
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
@@ -1362,22 +1742,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the outer
         product of gradients method.
         """
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        # When using complex-step methods, cannot rely on Cholesky inversion
-        # because variance parameters will then have a complex component which
-        # which implies non-positive-definiteness.
-        inversion_method = INVERT_UNIVARIATE | SOLVE_LU
-        cov_params, singular_values = pinv_extended(
-            nobs *
-            self.model.opg_information_matrix(
-                self.params, inversion_method=inversion_method
-            )
-        )
-
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
-        return cov_params
+        return self._cov_params_opg(self._cov_approx_complex_step,
+                                    self._cov_approx_centered)
 
     @cache_readonly
     def cov_params_robust(self):
@@ -1387,17 +1753,52 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.cov_params_robust_oim
 
+
+    def _cov_params_robust_oim(self, approx_complex_step=True,
+                               approx_centered=False):
+        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
+        cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
+                                       approx_centered=approx_centered)
+        evaluated_hessian = (
+            nobs * self.model.observed_information_matrix(
+                self.params, transformed=True,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered)
+        )
+        self.model.update(self.params)
+        cov_params, singular_values = pinv_extended(
+            np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
+        )
+
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+
+        return cov_params
+
     @cache_readonly
     def cov_params_robust_oim(self):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         method from Harvey (1989) as the evaluated hessian.
         """
+        return self._cov_params_robust_oim(self._cov_approx_complex_step,
+                                           self._cov_approx_centered)
+
+    def _cov_params_robust_approx(self, approx_complex_step=True,
+                                  approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        cov_opg = self.cov_params_opg
-        evaluated_hessian = (
-            nobs * self.model.observed_information_matrix(self.params)
-        )
+        cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
+                                       approx_centered=approx_centered)
+        if approx_complex_step:
+            evaluated_hessian = nobs * self.model._hessian_complex_step(
+                self.params, transformed=True
+            )
+        else:
+            evaluated_hessian = nobs * self.model._hessian_finite_difference(
+                self.params, transformed=True,
+                approx_centered=approx_centered
+            )
+        self.model.update(self.params)
         cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
@@ -1408,31 +1809,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return cov_params
 
     @cache_readonly
-    def cov_params_robust_cs(self):
+    def cov_params_robust_approx(self):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
-        numerical Hessian computed without using parameter transformations as
-        the evaluated hessian.
+        numerical Hessian as the evaluated hessian.
         """
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        cov_opg = self.cov_params_opg
-        # When using complex-step methods, cannot rely on Cholesky inversion
-        # because variance parameters will then have a complex component which
-        # which implies non-positive-definiteness.
-        inversion_method = INVERT_UNIVARIATE | SOLVE_LU
-        evaluated_hessian = (
-            nobs *
-            self.model._hessian_cs(self.params, transformed=True,
-                                   inversion_method=inversion_method)
-        )
-        cov_params, singular_values = pinv_extended(
-            np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
-        )
-
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
-        return cov_params
+        return self._cov_params_robust_approx(self._cov_approx_complex_step,
+                                              self._cov_approx_centered)
 
     @cache_readonly
     def fittedvalues(self):
@@ -2244,7 +2627,7 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
         'cov_params_oim': 'cov',
         'cov_params_opg': 'cov',
         'cov_params_robust': 'cov',
-        'cov_params_robust_cs': 'cov',
+        'cov_params_robust_complex_step': 'cov',
         'cov_params_robust_oim': 'cov',
     }
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,

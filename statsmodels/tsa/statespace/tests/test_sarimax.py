@@ -36,6 +36,11 @@ except ImportError:
 class TestSARIMAXStatsmodels(object):
     """
     Test ARIMA model using SARIMAX class against statsmodels ARIMA class
+
+    Notes
+    -----
+
+    Standard errors are quite good for the OPG case.
     """
     @classmethod
     def setup_class(cls):
@@ -48,7 +53,7 @@ class TestSARIMAXStatsmodels(object):
         cls.model_b = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c',
                                        simple_differencing=True,
                                        hamilton_representation=True)
-        cls.result_b = cls.model_b.fit(disp=-1, cov_type='oim')
+        cls.result_b = cls.model_b.fit(disp=-1)
 
     def test_loglike(self):
         assert_allclose(self.result_b.llf, self.result_a.llf)
@@ -70,15 +75,9 @@ class TestSARIMAXStatsmodels(object):
         assert_allclose(self.result_b.params[:-1], params_a, atol=5e-5)
 
     def test_bse(self):
-        # Make sure the default type is OIM for this example
-        assert(self.result_b.cov_type == 'oim')
-        # Test the OIM BSE values
-        assert_allclose(
-            self.result_b.bse[1:-1],
-            self.result_a.bse[1:],
-            atol=1e-2
-        )
-
+        # Test the complex step approximated BSE values
+        bse = self.result_b._cov_params_approx(approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[1:-1], self.result_a.bse[1:], atol=1e-5)
 
     def test_t_test(self):
         import statsmodels.tools._testing as smt
@@ -191,6 +190,13 @@ class ARIMA(SARIMAXStataTests):
 
 
 class TestARIMAStationary(ARIMA):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and complex step approximation
+    cases.
+    """
     @classmethod
     def setup_class(cls):
         super(TestARIMAStationary, cls).setup_class(
@@ -198,58 +204,60 @@ class TestARIMAStationary(ARIMA):
         )
 
     def test_bse(self):
-        # Default covariance type (OPG)
-        assert_allclose(
-            self.result.bse[1], self.true['se_ar_opg'],
-            atol=1e-3,
-        )
-        assert_allclose(
-            self.result.bse[2], self.true['se_ma_opg'],
-            atol=1e-3,
-        )
+        # test defaults
+        assert_equal(self.result.cov_type, 'opg')
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[1], self.true['se_ar_opg'], atol=1e-7)
+        assert_allclose(self.result.bse[2], self.true['se_ma_opg'], atol=1e-7)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-7)
+        assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-7)
+
+        # finite difference, non-centered
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False).diagonal()**0.5
+            assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-2)
+            assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-2)
+
+            # finite difference, centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False, approx_centered=True).diagonal()**0.5
+            assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-3)
+            assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-3)
 
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[1], self.true['se_ar_oim'],
-            atol=1e-3,
-        )
-        assert_allclose(
-            oim_bse[2], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[1], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[2], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
+        assert_allclose(oim_bse[1], self.true['se_ar_oim'], atol=1e-3)
+        assert_allclose(oim_bse[2], self.true['se_ma_oim'], atol=1e-2)
 
     def test_bse_robust(self):
         robust_oim_bse = self.result.cov_params_robust_oim.diagonal()**0.5
-        robust_cs_bse = self.result.cov_params_robust_cs.diagonal()**0.5
+        robust_approx_bse = self.result.cov_params_robust_approx.diagonal()**0.5
         true_robust_bse = np.r_[
             self.true['se_ar_robust'], self.true['se_ma_robust']
         ]
 
-        assert_allclose(
-            robust_oim_bse[1:3], true_robust_bse,
-            atol=1e-2,
-        )
-        assert_allclose(
-            robust_cs_bse[1:3], true_robust_bse,
-            atol=1e-1,
-         )
+        assert_allclose(robust_oim_bse[1:3], true_robust_bse, atol=1e-2)
+        assert_allclose(robust_approx_bse[1:3], true_robust_bse, atol=1e-3)
 
 
 class TestARIMADiffuse(ARIMA):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and quite good for the complex
+    step approximation cases.
+    """
     @classmethod
     def setup_class(cls, **kwargs):
         kwargs['initialization'] = 'approximate_diffuse'
@@ -260,41 +268,41 @@ class TestARIMADiffuse(ARIMA):
                                                **kwargs)
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[1], self.true['se_ar_opg'],
-            atol=1e-1,
-        )
-        assert_allclose(
-            self.result.bse[2], self.true['se_ma_opg'],
-            atol=1e-1, rtol=1e-1
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[1], self.true['se_ar_opg'], atol=1e-7)
+        assert_allclose(self.result.bse[2], self.true['se_ma_opg'], atol=1e-7)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-4)
+        assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-4)
+
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore")
+
+        #     # finite difference, non-centered : failure
+        #     bse = self.result._cov_params_approx(
+        #         approx_complex_step=False).diagonal()**0.5
+        #     assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-4)
+        #     assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-4)
+
+        #     # finite difference, centered : failure
+        #     bse = self.result._cov_params_approx(
+        #         approx_complex_step=False, approx_centered=True).diagonal()**0.5
+        #     assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-4)
+        #     assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-4)
 
     def test_bse_oim(self):
         # OIM covariance type
-        oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[1], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[2], self.true['se_ma_oim'],
-            atol=1e-2, rtol=1e-1
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[1], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[2], self.true['se_ma_oim'],
-            atol=1e-2, rtol=1e-1
-         )
+        bse = self.result._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-2)
+        assert_allclose(bse[2], self.true['se_ma_oim'], atol=1e-1)
 
 
 class AdditiveSeasonal(SARIMAXStataTests):
@@ -332,6 +340,13 @@ class AdditiveSeasonal(SARIMAXStataTests):
 
 
 class TestAdditiveSeasonal(AdditiveSeasonal):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and quite good for the complex
+    step approximation cases.
+    """
     @classmethod
     def setup_class(cls):
         super(TestAdditiveSeasonal, cls).setup_class(
@@ -339,41 +354,41 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
         )
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[1], self.true['se_ar_opg'],
-            atol=1e-3,
-        )
-        assert_allclose(
-            self.result.bse[2:4], self.true['se_ma_opg'],
-            atol=1e-3,
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[1], self.true['se_ar_opg'], atol=1e-6)
+        assert_allclose(self.result.bse[2:4], self.true['se_ma_opg'], atol=1e-5)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-4)
+        assert_allclose(bse[2:4], self.true['se_ma_oim'], atol=1e-4)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            
+            # finite difference, non-centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False).diagonal()**0.5
+            assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-3)
+            assert_allclose(bse[2:4], self.true['se_ma_oim'], atol=1e-2)
+
+            # finite difference, centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False, approx_centered=True).diagonal()**0.5
+            assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-3)
+            assert_allclose(bse[2:4], self.true['se_ma_oim'], atol=1e-3)
 
     def test_bse_oim(self):
         # OIM covariance type
-        oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[1], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[2:4], self.true['se_ma_oim'],
-            atol=1e-1
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[1], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[2:4], self.true['se_ma_oim'],
-            atol=1e-1
-        )
+        bse = self.result._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse[1], self.true['se_ar_oim'], atol=1e-2)
+        assert_allclose(bse[2:4], self.true['se_ma_oim'], atol=1e-1)
 
 
 class Airline(SARIMAXStataTests):
@@ -401,14 +416,24 @@ class Airline(SARIMAXStataTests):
         cls.result = cls.model.filter(params)
 
     def test_mle(self):
-        result = self.model.fit(disp=-1)
-        assert_allclose(
-            result.params, self.result.params,
-            atol=1e-4
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            result = self.model.fit(disp=-1)
+            assert_allclose(
+                result.params, self.result.params,
+                atol=1e-4
+            )
 
 
 class TestAirlineHamilton(Airline):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and complex step approximation
+    cases.
+    """
     @classmethod
     def setup_class(cls):
         super(TestAirlineHamilton, cls).setup_class(
@@ -416,44 +441,51 @@ class TestAirlineHamilton(Airline):
         )
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[0], self.true['se_ma_opg'],
-            atol=1e-4,
-        )
-        assert_allclose(
-            self.result.bse[1], self.true['se_seasonal_ma_opg'],
-            atol=1e-3,
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[0], self.true['se_ma_opg'], atol=1e-6)
+        assert_allclose(self.result.bse[1], self.true['se_seasonal_ma_opg'], atol=1e-6)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-6)
+        assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-6)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+        
+            # finite difference, non-centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False).diagonal()**0.5
+            assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-2)
+            assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-2)
+
+            # finite difference, centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False, approx_centered=True).diagonal()**0.5
+            assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-4)
+            assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-4)
 
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[0], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[1], self.true['se_seasonal_ma_oim'],
-            atol=1e-1
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[0], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[1], self.true['se_seasonal_ma_oim'],
-            atol=1e-1
-        )
+        assert_allclose(oim_bse[0], self.true['se_ma_oim'], atol=1e-1)
+        assert_allclose(oim_bse[1], self.true['se_seasonal_ma_oim'], atol=1e-1)
 
 
 class TestAirlineHarvey(Airline):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and complex step approximation
+    cases.
+    """
     @classmethod
     def setup_class(cls):
         super(TestAirlineHarvey, cls).setup_class(
@@ -461,44 +493,51 @@ class TestAirlineHarvey(Airline):
         )
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[0], self.true['se_ma_opg'],
-            atol=1e-3,
-        )
-        assert_allclose(
-            self.result.bse[1], self.true['se_seasonal_ma_opg'],
-            atol=1e-3,
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[0], self.true['se_ma_opg'], atol=1e-6)
+        assert_allclose(self.result.bse[1], self.true['se_seasonal_ma_opg'], atol=1e-6)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-6)
+        assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-6)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+        
+            # finite difference, non-centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False).diagonal()**0.5
+            assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-2)
+            assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-2)
+
+            # finite difference, centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False, approx_centered=True).diagonal()**0.5
+            assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-4)
+            assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-4)
 
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[0], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[1], self.true['se_seasonal_ma_oim'],
-            atol=1e-1
-        )
-
-    def test_bse_cs(self):
-        # OIM covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[0], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[1], self.true['se_seasonal_ma_oim'],
-            atol=1e-1
-        )
+        assert_allclose(oim_bse[0], self.true['se_ma_oim'], atol=1e-1)
+        assert_allclose(oim_bse[1], self.true['se_seasonal_ma_oim'], atol=1e-1)
 
 
 class TestAirlineStateDifferencing(Airline):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and quite good for the complex
+    step approximation cases.
+    """
     @classmethod
     def setup_class(cls):
         super(TestAirlineStateDifferencing, cls).setup_class(
@@ -523,41 +562,41 @@ class TestAirlineStateDifferencing(Airline):
         )
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[0], self.true['se_ma_opg'],
-            atol=1e-3,
-        )
-        assert_allclose(
-            self.result.bse[1], self.true['se_seasonal_ma_opg'],
-            atol=1e-4,
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[0], self.true['se_ma_opg'], atol=1e-6)
+        assert_allclose(self.result.bse[1], self.true['se_seasonal_ma_opg'], atol=1e-6)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-4)
+        assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-4)
+
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore")
+
+        #     # finite difference, non-centered : failure with NaNs
+        #     bse = self.result._cov_params_approx(
+        #         approx_complex_step=False).diagonal()**0.5
+        #     assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-2)
+        #     assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-2)
+
+        #     # finite difference, centered : failure with NaNs
+        #     bse = self.result._cov_params_approx(
+        #         approx_complex_step=False, approx_centered=True).diagonal()**0.5
+        #     assert_allclose(bse[0], self.true['se_ma_oim'], atol=1e-4)
+        #     assert_allclose(bse[1], self.true['se_seasonal_ma_oim'], atol=1e-4)
 
     def test_bse_oim(self):
         # OIM covariance type
         oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[0], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[1], self.true['se_seasonal_ma_oim'],
-            atol=1e-1
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[0], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[1], self.true['se_seasonal_ma_oim'],
-            atol=1e-1
-        )
+        assert_allclose(oim_bse[0], self.true['se_ma_oim'], atol=1e-1)
+        assert_allclose(oim_bse[1], self.true['se_seasonal_ma_oim'], atol=1e-1)
 
 
 class Friedman(SARIMAXStataTests):
@@ -587,6 +626,13 @@ class Friedman(SARIMAXStataTests):
 
 
 class TestFriedmanMLERegression(Friedman):
+    """
+    Notes
+    -----
+
+    Standard errors are very good for the OPG and complex step approximation
+    cases.
+    """
     @classmethod
     def setup_class(cls):
         super(TestFriedmanMLERegression, cls).setup_class(
@@ -601,68 +647,63 @@ class TestFriedmanMLERegression(Friedman):
         )
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[0], self.true['se_exog_opg'][0],
-            rtol=1e-1
-        )
-        assert_allclose(
-            self.result.bse[1], self.true['se_exog_opg'][1],
-            atol=1e-2,
-        )
-        assert_allclose(
-            self.result.bse[2], self.true['se_ar_opg'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            self.result.bse[3], self.true['se_ma_opg'],
-            atol=1e-2,
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[0:2], self.true['se_exog_opg'], atol=1e-4)
+        assert_allclose(self.result.bse[2], self.true['se_ar_opg'], atol=1e-6)
+        assert_allclose(self.result.bse[3], self.true['se_ma_opg'], atol=1e-6)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[0:2], self.true['se_exog_oim'], atol=1e-4)
+        assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-6)
+        assert_allclose(bse[3], self.true['se_ma_oim'], atol=1e-6)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+        
+            # finite difference, non-centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False).diagonal()**0.5
+            assert_allclose(bse[0], self.true['se_exog_oim'][0], rtol=1)
+            assert_allclose(bse[1], self.true['se_exog_oim'][1], atol=1e-2)
+            assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-2)
+            assert_allclose(bse[3], self.true['se_ma_oim'], atol=1e-2)
+
+            # finite difference, centered
+            bse = self.result._cov_params_approx(
+                approx_complex_step=False, approx_centered=True).diagonal()**0.5
+            assert_allclose(bse[0], self.true['se_exog_oim'][0], rtol=1)
+            assert_allclose(bse[1], self.true['se_exog_oim'][1], atol=1e-2)
+            assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-3)
+            assert_allclose(bse[3], self.true['se_ma_oim'], atol=1e-2)
 
     def test_bse_oim(self):
         # OIM covariance type
-        oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[0], self.true['se_exog_oim'][0],
-            rtol=1e-1
-        )
-        assert_allclose(
-            oim_bse[1], self.true['se_exog_oim'][1],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[2], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            oim_bse[3], self.true['se_ma_oim'],
-            atol=1e-2,
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            cs_bse[0], self.true['se_exog_oim'][0],
-            rtol=1e-1
-        )
-        assert_allclose(
-            cs_bse[1], self.true['se_exog_oim'][1],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[2], self.true['se_ar_oim'],
-            atol=1e-2,
-        )
-        assert_allclose(
-            cs_bse[3], self.true['se_ma_oim'],
-             atol=1e-2,
-         )
+        bse = self.result.cov_params_oim.diagonal()**0.5
+        assert_allclose(bse[0], self.true['se_exog_oim'][0], rtol=1)
+        assert_allclose(bse[1], self.true['se_exog_oim'][1], atol=1e-2)
+        assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-4)
+        assert_allclose(bse[3], self.true['se_ma_oim'], atol=1e-2)
 
 
 class TestFriedmanStateRegression(Friedman):
+    """
+    Notes
+    -----
+
+    MLE is not very close and standard errors are not very close for any set of
+    parameters.
+
+    This is likely because we're comparing against the model where the
+    regression coefficients are also estimated by MLE. So this test should be
+    considered just a very basic "sanity" test.
+    """
     @classmethod
     def setup_class(cls):
         # Remove the regression coefficients from the parameters, since they
@@ -719,41 +760,41 @@ class TestFriedmanStateRegression(Friedman):
         pass
 
     def test_bse(self):
-        # Make sure the default type is OPG
+        # test defaults
         assert_equal(self.result.cov_type, 'opg')
-        # Test the OPG BSE values
-        assert_allclose(
-            self.result.bse[0], self.true['se_ar_opg'],
-            atol=1e-2
-        )
-        assert_allclose(
-            self.result.bse[1], self.true['se_ma_opg'],
-            atol=1e-2
-        )
+        assert_equal(self.result._cov_approx_complex_step, True)
+        assert_equal(self.result._cov_approx_centered, False)
+        # default covariance type (opg)
+        assert_allclose(self.result.bse[0], self.true['se_ar_opg'], atol=1e-2)
+        assert_allclose(self.result.bse[1], self.true['se_ma_opg'], atol=1e-2)
+
+    def test_bse_approx(self):
+        # complex step
+        bse = self.result._cov_params_approx(
+            approx_complex_step=True).diagonal()**0.5
+        assert_allclose(bse[0], self.true['se_ar_oim'], atol=1e-1)
+        assert_allclose(bse[1], self.true['se_ma_oim'], atol=1e-1)
+
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore")
+
+        #     # finite difference, non-centered : failure (catastrophic cancellation)
+        #     bse = self.result._cov_params_approx(
+        #         approx_complex_step=False).diagonal()**0.5
+        #     assert_allclose(bse[0], self.true['se_ar_oim'], atol=1e-3)
+        #     assert_allclose(bse[1], self.true['se_ma_oim'], atol=1e-2)
+
+        #     # finite difference, centered : failure (nan)
+        #     bse = self.result._cov_params_approx(
+        #         approx_complex_step=False, approx_centered=True).diagonal()**0.5
+        #     assert_allclose(bse[0], self.true['se_ar_oim'], atol=1e-3)
+        #     assert_allclose(bse[1], self.true['se_ma_oim'], atol=1e-3)
 
     def test_bse_oim(self):
         # OIM covariance type
-        oim_bse = self.result.cov_params_oim.diagonal()**0.5
-        assert_allclose(
-            oim_bse[0], self.true['se_ar_oim'],
-            atol=1e-1,
-        )
-        assert_allclose(
-            oim_bse[1], self.true['se_ma_oim'],
-            atol=1e-2, rtol=1e-2
-        )
-
-    def test_bse_cs(self):
-        # CS covariance type
-        cs_bse = self.result.cov_params_cs.diagonal()**0.5
-        assert_allclose(
-            cs_bse[0], self.true['se_ar_oim'],
-            atol=1e-1,
-        )
-        assert_allclose(
-            cs_bse[1], self.true['se_ma_oim'],
-            atol=1e-2, rtol=1e-2
-         )
+        bse = self.result._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse[0], self.true['se_ar_oim'], atol=1e-1)
+        assert_allclose(bse[1], self.true['se_ma_oim'], atol=1e-1)
 
 
 class TestFriedmanPredict(Friedman):
@@ -945,19 +986,11 @@ class SARIMAXCoverageTest(object):
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
         self.result.cov_params_default
-        self.result.cov_params_cs
-        # Some of the below models have non-invertible parameters, which causes
-        # problems with the reverse parameter transformation used in the
-        # `cov_params_delta` procedure. This is unavoidable with these types of
-        # parameters, and should not be considered a failure.
-        try:
-            self.result.cov_params_delta
-        except np.linalg.LinAlgError:
-            pass
-        except ValueError:
-            pass
+        self.result.cov_params_approx
         self.result.cov_params_oim
         self.result.cov_params_opg
+        self.result.cov_params_robust_oim
+        self.result.cov_params_robust_approx
 
     def test_predict(self):
         result = self.model.filter(self.true_params)
@@ -1627,8 +1660,7 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         self.result.cov_params_default
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
-        # self.result.cov_params_cs
-        # self.result.cov_params_delta
+        # self.result.cov_params_approx
         self.result.cov_params_oim
         self.result.cov_params_opg
 
@@ -1678,8 +1710,7 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         self.result.cov_params_default
         # Known failure due to the complex step inducing non-stationary
         # parameters, causing a failure in the solve_discrete_lyapunov call
-        # self.result.cov_params_cs
-        #s self.result.cov_params_delta
+        # self.result.cov_params_approx
         self.result.cov_params_oim
         self.result.cov_params_opg
 

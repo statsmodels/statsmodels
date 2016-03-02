@@ -684,7 +684,7 @@ class Representation(object):
 
         return prefix, dtype, create
 
-    def _initialize_state(self, prefix=None):
+    def _initialize_state(self, prefix=None, complex_step=False):
         if prefix is None:
             prefix = self.prefix
         dtype = prefix_dtype_map[prefix]
@@ -700,7 +700,7 @@ class Representation(object):
                 self._initial_variance
             )
         elif self.initialization == 'stationary':
-            self._statespaces[prefix].initialize_stationary()
+            self._statespaces[prefix].initialize_stationary(complex_step)
         else:
             raise RuntimeError('Statespace model not initialized.')
 

@@ -178,16 +178,14 @@ def test_fit_misc():
 
     mod = sarimax.SARIMAX(endog, order=(1,0,1), trend='c')
 
-    # Test optim_hessian={'opg','oim','cs'}
+    # Test optim_hessian={'opg','oim','approx'}
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res1 = mod.fit(method='ncg', disp=True, optim_hessian='opg')
-        res2 = mod.fit(method='ncg', disp=True, optim_hessian='oim')
-        res3 = mod.fit(method='ncg', disp=True, optim_hessian='cs')
+        res1 = mod.fit(method='ncg', disp=0, optim_hessian='opg', optim_complex_step=False)
+        res2 = mod.fit(method='ncg', disp=0, optim_hessian='oim', optim_complex_step=False)
         assert_raises(NotImplementedError, mod.fit, method='ncg', disp=False, optim_hessian='a')
     # Check that the Hessians broadly result in the same optimum
     assert_allclose(res1.llf, res2.llf, rtol=1e-2)
-    assert_allclose(res1.llf, res3.llf, rtol=1e-2)
 
     # Test return_params=True
     mod, _ = get_dummy_mod(fit=False)
@@ -217,26 +215,23 @@ def test_cov_params():
         warnings.simplefilter("ignore")
         res = mod.fit(res.params, disp=-1, cov_type='none')
         assert_equal(res.cov_kwds['description'], 'Covariance matrix not calculated.')
-        res = mod.fit(res.params, disp=-1, cov_type='cs')
-        assert_equal(res.cov_type, 'cs')
+        res = mod.fit(res.params, disp=-1, cov_type='approx')
+        assert_equal(res.cov_type, 'approx')
         assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using numerical (complex-step) differentiation.')
-        res = mod.fit(res.params, disp=-1, cov_type='delta')
-        assert_equal(res.cov_type, 'delta')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using numerical differentiation and the delta method (method of propagation of errors) applied to the parameter transformation function.')
         res = mod.fit(res.params, disp=-1, cov_type='oim')
         assert_equal(res.cov_type, 'oim')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the observed information matrix described in Harvey (1989).')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the observed information matrix (complex-step) described in Harvey (1989).')
         res = mod.fit(res.params, disp=-1, cov_type='opg')
         assert_equal(res.cov_type, 'opg')
-        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the outer product of gradients.')
+        assert_equal(res.cov_kwds['description'], 'Covariance matrix calculated using the outer product of gradients (complex-step).')
         res = mod.fit(res.params, disp=-1, cov_type='robust')
         assert_equal(res.cov_type, 'robust')
-        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix described in Harvey (1989).')
+        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix (complex-step) described in Harvey (1989).')
         res = mod.fit(res.params, disp=-1, cov_type='robust_oim')
         assert_equal(res.cov_type, 'robust_oim')
-        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix described in Harvey (1989).')
-        res = mod.fit(res.params, disp=-1, cov_type='robust_cs')
-        assert_equal(res.cov_type, 'robust_cs')
+        assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using the observed information matrix (complex-step) described in Harvey (1989).')
+        res = mod.fit(res.params, disp=-1, cov_type='robust_approx')
+        assert_equal(res.cov_type, 'robust_approx')
         assert_equal(res.cov_kwds['description'], 'Quasi-maximum likelihood covariance matrix used for robustness to some misspecifications; calculated using numerical (complex-step) differentiation.')
         assert_raises(NotImplementedError, mod.fit, res.params, disp=-1, cov_type='invalid_cov_type')
 

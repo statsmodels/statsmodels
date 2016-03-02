@@ -413,7 +413,7 @@ class KalmanSmoother(KalmanFilter):
                 setattr(self, name, kwargs[name])
 
     def smooth(self, smoother_output=None, results=None, run_filter=True,
-               prefix=None):
+               prefix=None, complex_step=False, **kwargs):
         """
         Apply the Kalman smoother to the statespace model.
 
@@ -447,7 +447,7 @@ class KalmanSmoother(KalmanFilter):
 
         # Initialize the filter and statespace object if necessary
         prefix, dtype, create_filter, create_statespace = (
-            self._initialize_filter()
+            self._initialize_filter(**kwargs)
         )
 
         # Instantiate a new results object, if required
@@ -465,7 +465,7 @@ class KalmanSmoother(KalmanFilter):
             warnings.warn('Despite `run_filter=False`, Kalman filtering was'
                           ' performed because filtering was not complete.')
         if run_filter:
-            self._initialize_state()
+            self._initialize_state(prefix=prefix, complex_step=complex_step)
             kfilter()
 
         # Update the results object with filtered output

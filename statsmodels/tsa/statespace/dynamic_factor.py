@@ -435,56 +435,15 @@ class DynamicFactor(MLEModel):
         idx = idx[:, np.lexsort((idx[1], idx[0]))]
         self._idx_error_transition = np.s_['transition', idx[0], idx[1]]
 
-    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
+    def filter(self, params, **kwargs):
+        kwargs.setdefault('results_class', DynamicFactorResults)
+        kwargs.setdefault('results_wrapper_class', DynamicFactorResultsWrapper)
+        return super(DynamicFactor, self).filter(params, **kwargs)
 
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(DynamicFactor, self).filter(params, transformed,
-                                                   cov_type, return_ssm=True,
-                                                   **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = DynamicFactorResultsWrapper(
-                DynamicFactorResults(self, params, result, **result_kwargs)
-            )
-
-        return result
-    filter.__doc__ = MLEModel.filter.__doc__
-
-    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
-
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(DynamicFactor, self).smooth(params, transformed,
-                       cov_type, return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = DynamicFactorResultsWrapper(
-                DynamicFactorResults(self, params, result, **result_kwargs)
-            )
-
-        return result
-    smooth.__doc__ = MLEModel.smooth.__doc__
+    def smooth(self, params, **kwargs):
+        kwargs.setdefault('results_class', DynamicFactorResults)
+        kwargs.setdefault('results_wrapper_class', DynamicFactorResultsWrapper)
+        return super(DynamicFactor, self).smooth(params, **kwargs)
 
     @property
     def start_params(self):
@@ -749,8 +708,8 @@ class DynamicFactor(MLEModel):
                 end = self.k_factors + self.k_endog
                 cov = self.ssm['state_cov', start:end, start:end].real
                 coefficient_matrices, variance = (
-                    constrain_stationary_multivariate(unconstrained_matrices,
-                                                      cov))
+                    constrain_stationary_multivariate(
+                        unconstrained_matrices, cov))
                 constrained[self._params_error_transition] = (
                     coefficient_matrices.ravel())
             # Separate AR specifications
@@ -820,8 +779,8 @@ class DynamicFactor(MLEModel):
             cov = self.ssm[
                 'state_cov', :self.k_factors, :self.k_factors].real
             coefficient_matrices, variance = (
-                unconstrain_stationary_multivariate(constrained_matrices,
-                                                    cov))
+                unconstrain_stationary_multivariate(
+                    constrained_matrices, cov))
             unconstrained[self._params_factor_transition] = (
                 coefficient_matrices.ravel())
         else:
@@ -841,8 +800,8 @@ class DynamicFactor(MLEModel):
                 end = self.k_factors + self.k_endog
                 cov = self.ssm['state_cov', start:end, start:end].real
                 coefficient_matrices, variance = (
-                    unconstrain_stationary_multivariate(constrained_matrices,
-                                                        cov))
+                    unconstrain_stationary_multivariate(
+                        constrained_matrices, cov))
                 unconstrained[self._params_error_transition] = (
                     coefficient_matrices.ravel())
             # Separate AR specifications
@@ -863,7 +822,7 @@ class DynamicFactor(MLEModel):
 
         return unconstrained
 
-    def update(self, params, transformed=True):
+    def update(self, params, transformed=True, complex_step=False):
         """
         Update the parameters of the model
 
@@ -907,7 +866,8 @@ class DynamicFactor(MLEModel):
           second :math:`m^2` parameters fill the second matrix, etc.
 
         """
-        params = super(DynamicFactor, self).update(params, transformed)
+        params = super(DynamicFactor, self).update(
+            params, transformed=transformed, complex_step=complex_step)
 
         # 1. Factor loadings
         # Update the design / factor loading matrix

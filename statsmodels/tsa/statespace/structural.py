@@ -671,55 +671,17 @@ class UnobservedComponents(MLEModel):
 
         self.ssm.initialize_known(initial_state, initial_state_cov)
 
-    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
+    def filter(self, params, **kwargs):
+        kwargs.setdefault('results_class', UnobservedComponentsResults)
+        kwargs.setdefault('results_wrapper_class',
+                          UnobservedComponentsResultsWrapper)
+        return super(UnobservedComponents, self).filter(params, **kwargs)
 
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(UnobservedComponents, self).filter(
-            params, transformed, cov_type, return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = UnobservedComponentsResultsWrapper(
-                UnobservedComponentsResults(self, params, result,
-                                            **result_kwargs)
-            )
-
-        return result
-
-    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
-
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(UnobservedComponents, self).smooth(
-            params, transformed, cov_type, return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = UnobservedComponentsResultsWrapper(
-                UnobservedComponentsResults(self, params, result,
-                                            **result_kwargs)
-            )
-
-        return result
+    def smooth(self, params, **kwargs):
+        kwargs.setdefault('results_class', UnobservedComponentsResults)
+        kwargs.setdefault('results_wrapper_class',
+                          UnobservedComponentsResultsWrapper)
+        return super(UnobservedComponents, self).smooth(params, **kwargs)
 
     @property
     def start_params(self):
