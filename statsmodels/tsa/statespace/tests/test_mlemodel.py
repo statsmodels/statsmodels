@@ -122,10 +122,7 @@ def test_wrapping():
     # set_stability_method, set_conserve_memory, set_smoother_output
 
     # The defaults are as follows:
-    if not compatibility_mode:
-        assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_UNIVARIATE)
-    else:
-        assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(mod.ssm.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(mod.ssm.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
     assert_equal(mod.ssm.smoother_output, kalman_smoother.SMOOTHER_ALL)
