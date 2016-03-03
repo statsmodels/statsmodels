@@ -20,6 +20,7 @@ prefix_dtype_map = {
 compatibility_mode = False
 has_trmm = True
 try:
+    from scipy.linalg import cython_blas
     from . import (_representation, _kalman_filter, _kalman_smoother,
                    _simulation_smoother, _tools)
     from scipy.linalg.blas import find_best_blas_type

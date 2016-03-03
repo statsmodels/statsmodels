@@ -56,6 +56,7 @@ help
 # Project specific
 statsmodels/version.py
 cythonize.dat
+cythonize_exclusions.dat
 statsmodels.egg-info/
 iterate.dat
 hash_dict.pickle
