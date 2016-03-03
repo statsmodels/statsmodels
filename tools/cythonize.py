@@ -39,6 +39,7 @@ import hashlib
 import subprocess
 
 HASH_FILE = 'cythonize.dat'
+EXCLUSION_FILE = 'cythonize_exclusions.dat'
 DEFAULT_ROOT = 'statsmodels'
 
 # WindowsError is not defined on unix systems
@@ -131,6 +132,19 @@ def sha1_of_file(filename):
     return h.hexdigest()
 
 #
+# Exclusions
+#
+def load_exclusions(filename):
+    # Return [ path ]
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            paths = f.read().splitlines()
+    else:
+        paths = []
+    return paths
+
+
+#
 # Main program
 #
 
@@ -168,10 +182,13 @@ def process(path, fromfile, tofile, processor_function, hash_db):
 
 def find_process_files(root_dir):
     hash_db = load_hashes(HASH_FILE)
+    exclusions = load_exclusions(EXCLUSION_FILE)
     for cur_dir, dirs, files in os.walk(root_dir):
         for filename in files:
             in_file = os.path.join(cur_dir, filename + ".in")
             if filename.endswith('.pyx') and os.path.isfile(in_file):
+                continue
+            if os.path.join(cur_dir, filename) in exclusions:
                 continue
             for fromext, function in rules.items():
                 if filename.endswith(fromext):
