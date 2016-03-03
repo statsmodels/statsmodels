@@ -131,10 +131,7 @@ def test_wrapping():
     # transferred correctly
     mod.ssm._initialize_filter()
     kf = mod.ssm._kalman_filter
-    if not compatibility_mode:
-        assert_equal(kf.filter_method, kalman_filter.FILTER_UNIVARIATE)
-    else:
-        assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
     # (the smoother object is so far not in Cython, so there is no
@@ -157,10 +154,7 @@ def test_wrapping():
     assert_equal(mod.ssm.smoother_output, 103)
 
     # Assert that the changes have *not yet* occurred in the filter object
-    if not compatibility_mode:
-        assert_equal(kf.filter_method, kalman_filter.FILTER_UNIVARIATE)
-    else:
-        assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
 
