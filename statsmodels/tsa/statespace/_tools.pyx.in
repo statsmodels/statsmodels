@@ -299,12 +299,12 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                 v[i,j] = v[i,j] - v[i,j].imag * 2.0j
     {{endif}}
 
-    # Construct f = u'*q*u (result overwrites q)
+    # Construct f = u^H*q*u (result overwrites q)
     # In the usual case, v = u
     # In the complex step case, v = u.conj()
     blas.{{prefix}}gemm("N", "N", &n, &n, &n,
                         &alpha, q, &n,
-                                &u[0,0], &n,
+                                &v[0,0], &n,
                         &beta, &capI[0,0], &n)
     blas.{{prefix}}gemm("C", "N", &n, &n, &n,
                         &alpha, &u[0,0], &n,
