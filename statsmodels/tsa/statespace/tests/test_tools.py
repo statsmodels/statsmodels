@@ -147,6 +147,34 @@ class TestSolveDiscreteLyapunov(object):
         desired = self.solve_dicrete_lyapunov_direct(a, q, complex_step=True)
         assert_allclose(actual, desired)
 
+class TestConcat(object):
+
+    x = np.arange(10)
+    
+    valid = [
+        (((1,2,3),(4,)), (1,2,3,4)),
+        (((1,2,3),[4]), (1,2,3,4)),
+        (([1,2,3],np.r_[4]), (1,2,3,4)),
+        ((np.r_[1,2,3],pd.Series([4])), 0, True, (1,2,3,4)),
+        ((pd.Series([1,2,3]),pd.Series([4])), 0, True, (1,2,3,4)),
+        ((np.c_[x[:2],x[:2]], np.c_[x[2:3],x[2:3]]), np.c_[x[:3],x[:3]]),
+        ((np.c_[x[:2],x[:2]].T, np.c_[x[2:3],x[2:3]].T), 1, np.c_[x[:3],x[:3]].T),
+        ((pd.DataFrame(np.c_[x[:2],x[:2]]), np.c_[x[2:3],x[2:3]]), 0, True, np.c_[x[:3],x[:3]]),
+    ]
+
+    invalid = [
+        (((1,2,3), pd.Series([4])), ValueError),
+        (((1,2,3), np.array([[1,2]])), ValueError)
+    ]
+
+    def test_valid(self):
+        for args in self.valid:
+            assert_array_equal(tools.concat(*args[:-1]), args[-1])
+
+    def test_invalid(self):
+        for args in self.invalid:
+            assert_raises(args[-1], tools.concat, *args[:-1])
+
 class TestIsInvertible(object):
 
     cases = [
