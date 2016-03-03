@@ -8,54 +8,99 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from scipy.linalg import solve_sylvester
+import pandas as pd
 from statsmodels.tools.data import _is_using_pandas
-from . import _statespace
-
-has_find_best_blas_type = True
-try:
-    from scipy.linalg.blas import find_best_blas_type
-except ImportError:  # pragma: no cover
-    has_find_best_blas_type = False
-    # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
-    _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
-
-    def find_best_blas_type(arrays):
-        dtype, index = max(
-            [(ar.dtype, i) for i, ar in enumerate(arrays)])
-        prefix = _type_conv.get(dtype.char, 'd')
-        return prefix, dtype, None
-
-has_trmm = True
-try:
-    from scipy.linalg.blas import dtrmm
-except ImportError:
-    has_trmm = False
 
 
 prefix_dtype_map = {
     's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
 }
-prefix_statespace_map = {
-    's': _statespace.sStatespace, 'd': _statespace.dStatespace,
-    'c': _statespace.cStatespace, 'z': _statespace.zStatespace
-}
-prefix_kalman_filter_map = {
-    's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
-    'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
-}
-if has_trmm:
+
+
+compatibility_mode = False
+has_trmm = True
+try:
+    from . import (_representation, _kalman_filter, _kalman_smoother,
+                   _simulation_smoother, _tools)
+    from scipy.linalg.blas import find_best_blas_type
+
+    prefix_statespace_map = {
+        's': _representation.sStatespace, 'd': _representation.dStatespace,
+        'c': _representation.cStatespace, 'z': _representation.zStatespace
+    }
+    prefix_kalman_filter_map = {
+        's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
+        'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+    }
+    prefix_kalman_smoother_map = {
+        's': _kalman_smoother.sKalmanSmoother,
+        'd': _kalman_smoother.dKalmanSmoother,
+        'c': _kalman_smoother.cKalmanSmoother,
+        'z': _kalman_smoother.zKalmanSmoother
+    }
+    prefix_simulation_smoother_map = {
+        's': _simulation_smoother.sSimulationSmoother,
+        'd': _simulation_smoother.dSimulationSmoother,
+        'c': _simulation_smoother.cSimulationSmoother,
+        'z': _simulation_smoother.zSimulationSmoother
+    }
     prefix_pacf_map = {
-        's': _statespace._scompute_coefficients_from_multivariate_pacf,
-        'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
-        'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
-        'z': _statespace._zcompute_coefficients_from_multivariate_pacf
+        's': _tools._scompute_coefficients_from_multivariate_pacf,
+        'd': _tools._dcompute_coefficients_from_multivariate_pacf,
+        'c': _tools._ccompute_coefficients_from_multivariate_pacf,
+        'z': _tools._zcompute_coefficients_from_multivariate_pacf
     }
     prefix_sv_map = {
-        's': _statespace._sconstrain_sv_less_than_one,
-        'd': _statespace._dconstrain_sv_less_than_one,
-        'c': _statespace._cconstrain_sv_less_than_one,
-        'z': _statespace._zconstrain_sv_less_than_one
+        's': _tools._sconstrain_sv_less_than_one,
+        'd': _tools._dconstrain_sv_less_than_one,
+        'c': _tools._cconstrain_sv_less_than_one,
+        'z': _tools._zconstrain_sv_less_than_one
     }
+except ImportError:
+    from . import _statespace
+    compatibility_mode = True
+
+    try:
+        from scipy.linalg.blas import find_best_blas_type
+    except ImportError:  # pragma: no cover
+        # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
+        _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
+
+        def find_best_blas_type(arrays):
+            dtype, index = max(
+                [(ar.dtype, i) for i, ar in enumerate(arrays)])
+            prefix = _type_conv.get(dtype.char, 'd')
+            return prefix, dtype, None
+
+    try:
+        from scipy.linalg.blas import dtrmm
+    except ImportError:
+        has_trmm = False
+
+
+    prefix_statespace_map = {
+        's': _statespace.sStatespace, 'd': _statespace.dStatespace,
+        'c': _statespace.cStatespace, 'z': _statespace.zStatespace
+    }
+    prefix_kalman_filter_map = {
+        's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
+        'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
+    }
+    prefix_kalman_smoother_map = None
+    prefix_simulation_smoother_map = None
+    if has_trmm:
+        prefix_pacf_map = {
+            's': _statespace._scompute_coefficients_from_multivariate_pacf,
+            'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
+            'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
+            'z': _statespace._zcompute_coefficients_from_multivariate_pacf
+        }
+        prefix_sv_map = {
+            's': _statespace._sconstrain_sv_less_than_one,
+            'd': _statespace._dconstrain_sv_less_than_one,
+            'c': _statespace._cconstrain_sv_less_than_one,
+            'z': _statespace._zconstrain_sv_less_than_one
+        }
 
 
 def companion_matrix(polynomial):
@@ -232,6 +277,40 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
             differenced = differenced.diff()[1:]
             k_diff -= 1
     return differenced
+
+
+def concat(series, axis=0, allow_mix=False):
+    """
+    Concatenate a set of series.
+
+    Parameters
+    ----------
+    series : iterable
+        An iterable of series to be concatenated
+    axis : int, optional
+        The axis along which to concatenate. Default is 1 (columns).
+    allow_mix : bool
+        Whether or not to allow a mix of pandas and non-pandas objects. Default
+        is False. If true, the returned object is an ndarray, and additional
+        pandas metadata (e.g. column names, indices, etc) is lost.
+
+    Returns
+    -------
+    concatenated : array or pd.DataFrame
+        The concatenated array. Will be a DataFrame if series are pandas
+        objects.
+    """
+    is_pandas = np.r_[[_is_using_pandas(s, None) for s in series]]
+
+    if np.all(is_pandas):
+        concatenated = pd.concat(series, axis=axis)
+    elif np.all(~is_pandas) or allow_mix:
+        concatenated = np.concatenate(series, axis=axis)
+    else:
+        raise ValueError('Attempted to concatenate Pandas objects with'
+                         ' non-Pandas objects with `allow_mix=False`.')
+
+    return concatenated
 
 
 def is_invertible(polynomial, threshold=1.):
