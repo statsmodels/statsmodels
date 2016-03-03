@@ -13,6 +13,13 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from statsmodels.tsa.statespace.kalman_filter import (
     FILTER_CONVENTIONAL,
+    FILTER_EXACT_INITIAL,
+    FILTER_AUGMENTED,
+    FILTER_SQUARE_ROOT,
+    FILTER_UNIVARIATE,
+    FILTER_COLLAPSED,
+    FILTER_EXTENDED,
+    FILTER_UNSCENTED,
 
     INVERT_UNIVARIATE,
     SOLVE_LU,
@@ -27,6 +34,8 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_NO_PREDICTED,
     MEMORY_NO_FILTERED,
     MEMORY_NO_LIKELIHOOD,
+    MEMORY_NO_GAIN,
+    MEMORY_NO_SMOOTHING,
     MEMORY_CONSERVE
 )
 from statsmodels.tsa.statespace.kalman_smoother import (
@@ -168,7 +177,7 @@ class TestOptions(Options):
         assert_equal(
             model.conserve_memory,
             MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-            MEMORY_NO_LIKELIHOOD
+            MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
         )
         assert_equal(model.conserve_memory, MEMORY_CONSERVE)
         for name in model.memory_options:

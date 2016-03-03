@@ -59,6 +59,11 @@ cdef int MEMORY_CONSERVE = (
     MEMORY_NO_LIKELIHOOD
 )
 
+# ### Timing options
+# By default, assume filter is initialized with predicted values (as in
+# Durbin and Koopman 2012)
+cdef int TIMING_INIT_PREDICTED = 0
+
 # Typical imports
 import numpy as np
 import warnings
@@ -1055,6 +1060,8 @@ cdef class {{prefix}}KalmanFilter(object):
     # Whether or not to conserve memory
     # If True, only stores filtered states and covariance matrices
     cdef readonly int conserve_memory
+    # Filter timing
+    cdef public int filter_timing
     # If conserving loglikelihood, the number of periods to "burn"
     # before starting to record the loglikelihood
     cdef readonly int loglikelihood_burn
@@ -1183,6 +1190,7 @@ cdef class {{prefix}}KalmanFilter(object):
                  int inversion_method=INVERT_UNIVARIATE | SOLVE_CHOLESKY,
                  int stability_method=STABILITY_FORCE_SYMMETRY,
                  int conserve_memory=MEMORY_STORE_ALL,
+                 int filter_timing=TIMING_INIT_PREDICTED,
                  np.float64_t tolerance=1e-19,
                  int loglikelihood_burn=0):
         # Local variables
@@ -1203,6 +1211,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self.inversion_method = inversion_method
         self.stability_method = stability_method
         self.conserve_memory = conserve_memory
+        self.filter_timing = filter_timing
         self.loglikelihood_burn = loglikelihood_burn
 
         # Initialize the constant values
@@ -1215,6 +1224,10 @@ cdef class {{prefix}}KalmanFilter(object):
         self.k_endogstates = self.model.k_endog * self.model.k_states
         # TODO replace with optimal work array size
         self.ldwork = self.model.k_endog
+
+        # Check for valid options
+        if not self.filter_timing == TIMING_INIT_PREDICTED:
+            raise NotImplementedError("Invalid timing option.")
 
         # #### Allocate arrays for calculations
 

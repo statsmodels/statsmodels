@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from .kalman_smoother import KalmanSmoother, SmootherResults
+from .simulation_smoother import SimulationSmoother
+from .kalman_smoother import SmootherResults
 from .kalman_filter import (
     KalmanFilter, FilterResults, PredictionResults, INVERT_UNIVARIATE, SOLVE_LU
 )
@@ -128,7 +129,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         endog = self.endog.T
 
         # Instantiate the state space object
-        self.ssm = KalmanSmoother(endog.shape[0], self.k_states, **kwargs)
+        self.ssm = SimulationSmoother(endog.shape[0], self.k_states, **kwargs)
         # Bind the data to the model
         self.ssm.bind(endog)
 
@@ -690,6 +691,26 @@ class MLEModel(tsbase.TimeSeriesModel):
         self.update(params, transformed=True, complex_step=complex_step)
 
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
+
+    def simulation_smoother(self, simulation_output=None, **kwargs):
+        r"""
+        Retrieve a simulation smoother for the state space model.
+
+        Parameters
+        ----------
+        simulation_output : int, optional
+            Determines which simulation smoother output is calculated.
+            Default is all (including state and disturbances).
+        **kwargs
+            Additional keyword arguments, used to set the simulation output.
+            See `set_simulation_output` for more details.
+
+        Returns
+        -------
+        SimulationSmoothResults
+        """
+        return self.ssm.simulation_smoother(
+            simulation_output=simulation_output, **kwargs)
 
     def _forecasts_error_partial_derivatives(self, params, transformed=True,
                                              approx_complex_step=None,
@@ -1573,6 +1594,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.cov_kwds['cov_type'] = (
                 'Covariance matrix could not be calculated: singular.'
                 ' information matrix.')
+        self.model.update(self.params)
 
         # References of filter and smoother output
         for name in ['filtered_state', 'filtered_state_cov', 'predicted_state',

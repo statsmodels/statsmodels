@@ -14,6 +14,7 @@ import re
 import warnings
 from statsmodels.tsa.statespace import sarimax, kalman_filter, kalman_smoother
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
+from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from nose.exc import SkipTest
@@ -121,7 +122,10 @@ def test_wrapping():
     # set_stability_method, set_conserve_memory, set_smoother_output
 
     # The defaults are as follows:
-    assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    if not compatibility_mode:
+        assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_UNIVARIATE)
+    else:
+        assert_equal(mod.ssm.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(mod.ssm.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(mod.ssm.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
     assert_equal(mod.ssm.smoother_output, kalman_smoother.SMOOTHER_ALL)
@@ -130,26 +134,36 @@ def test_wrapping():
     # transferred correctly
     mod.ssm._initialize_filter()
     kf = mod.ssm._kalman_filter
-    assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    if not compatibility_mode:
+        assert_equal(kf.filter_method, kalman_filter.FILTER_UNIVARIATE)
+    else:
+        assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
     # (the smoother object is so far not in Cython, so there is no
     # transferring)
 
     # Change the attributes in the model class
-    mod.set_filter_method(100)
+    if compatibility_mode:
+        assert_raises(NotImplementedError, mod.set_filter_method, 100)
+    else:
+        mod.set_filter_method(100)
     mod.set_stability_method(101)
     mod.set_conserve_memory(102)
     mod.set_smoother_output(103)
 
     # Assert that the changes have occurred in the ssm class
-    assert_equal(mod.ssm.filter_method, 100)
+    if not compatibility_mode:
+        assert_equal(mod.ssm.filter_method, 100)
     assert_equal(mod.ssm.stability_method, 101)
     assert_equal(mod.ssm.conserve_memory, 102)
     assert_equal(mod.ssm.smoother_output, 103)
 
     # Assert that the changes have *not yet* occurred in the filter object
-    assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
+    if not compatibility_mode:
+        assert_equal(kf.filter_method, kalman_filter.FILTER_UNIVARIATE)
+    else:
+        assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
 
@@ -157,7 +171,10 @@ def test_wrapping():
     # loglike, filter, etc. were called)
     # In this case, an error will be raised since filter_method=100 is not
     # valid
-    assert_raises(NotImplementedError, mod.ssm._initialize_filter)
+    # Note: this error is only raised in the compatibility case, since the
+    # newer filter logic checks for a valid filter mode at a different point
+    if compatibility_mode:
+        assert_raises(NotImplementedError, mod.ssm._initialize_filter)
 
     # Now, test the setting of the other two methods by resetting the
     # filter method to a valid value

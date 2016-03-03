@@ -11,11 +11,19 @@ from warnings import warn
 import numpy as np
 from .representation import OptionWrapper, Representation, FrozenRepresentation
 from .tools import (
-    prefix_kalman_filter_map, validate_vector_shape, validate_matrix_shape
+    compatibility_mode, prefix_kalman_filter_map, validate_vector_shape,
+    validate_matrix_shape
 )
 
 # Define constants
 FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4
+FILTER_EXACT_INITIAL = 0x02    # ibid., Chapter 5.6
+FILTER_AUGMENTED = 0x04        # ibid., Chapter 5.7
+FILTER_SQUARE_ROOT = 0x08      # ibid., Chapter 6.3
+FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
+FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
+FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
+FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
 
 INVERT_UNIVARIATE = 0x01
 SOLVE_LU = 0x02
@@ -30,10 +38,15 @@ MEMORY_NO_FORECAST = 0x01
 MEMORY_NO_PREDICTED = 0x02
 MEMORY_NO_FILTERED = 0x04
 MEMORY_NO_LIKELIHOOD = 0x08
+MEMORY_NO_GAIN = 0x10
+MEMORY_NO_SMOOTHING = 0x20
 MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-    MEMORY_NO_LIKELIHOOD
+    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
 )
+
+TIMING_INIT_PREDICTED = 0
+TIMING_INIT_FILTERED = 1
 
 
 class KalmanFilter(Representation):
@@ -90,6 +103,11 @@ class KalmanFilter(Representation):
         By default, the Kalman filter computes a number of intermediate
         matrices at each iteration. The memory conservation options control
         which of those matrices are stored.
+    filter_timing
+        By default, the Kalman filter follows Durbin and Koopman, 2012, in
+        initializing the filter with predicted values. Kim and Nelson, 1999,
+        instead initialize the filter with filtered values, which is
+        essentially just a different timing convention.
 
     The `filter_method` and `inversion_method` options intentionally allow
     the possibility that multiple methods will be indicated. In the case that
@@ -112,12 +130,42 @@ class KalmanFilter(Representation):
     """
 
     filter_methods = [
-        'filter_conventional'
+        'filter_conventional', 'filter_exact_initial', 'filter_augmented',
+        'filter_square_root', 'filter_univariate', 'filter_collapsed',
+        'filter_extended', 'filter_unscented'
     ]
 
     filter_conventional = OptionWrapper('filter_method', FILTER_CONVENTIONAL)
     """
     (bool) Flag for conventional Kalman filtering.
+    """
+    filter_exact_initial = OptionWrapper('filter_method', FILTER_EXACT_INITIAL)
+    """
+    (bool) Flag for exact initial Kalman filtering. Not implemented.
+    """
+    filter_augmented = OptionWrapper('filter_method', FILTER_AUGMENTED)
+    """
+    (bool) Flag for augmented Kalman filtering. Not implemented.
+    """
+    filter_square_root = OptionWrapper('filter_method', FILTER_SQUARE_ROOT)
+    """
+    (bool) Flag for square-root Kalman filtering. Not implemented.
+    """
+    filter_univariate = OptionWrapper('filter_method', FILTER_UNIVARIATE)
+    """
+    (bool) Flag for univariate filtering of multivariate observation vector.
+    """
+    filter_collapsed = OptionWrapper('filter_method', FILTER_COLLAPSED)
+    """
+    (bool) Flag for Kalman filtering with collapsed observation vector.
+    """
+    filter_extended = OptionWrapper('filter_method', FILTER_EXTENDED)
+    """
+    (bool) Flag for extended Kalman filtering. Not implemented.
+    """
+    filter_unscented = OptionWrapper('filter_method', FILTER_UNSCENTED)
+    """
+    (bool) Flag for unscented Kalman filtering. Not implemented.
     """
 
     inversion_methods = [
@@ -157,7 +205,8 @@ class KalmanFilter(Representation):
 
     memory_options = [
         'memory_store_all', 'memory_no_forecast', 'memory_no_predicted',
-        'memory_no_filtered', 'memory_no_likelihood', 'memory_conserve'
+        'memory_no_filtered', 'memory_no_likelihood', 'memory_no_gain',
+        'memory_no_smoothing', 'memory_conserve'
     ]
 
     memory_store_all = OptionWrapper('conserve_memory', MEMORY_STORE_ALL)
@@ -182,9 +231,30 @@ class KalmanFilter(Representation):
     """
     (bool) Flag to prevent storing likelihood values for each observation.
     """
+    memory_no_gain = OptionWrapper('conserve_memory', MEMORY_NO_GAIN)
+    """
+    (bool) Flag to prevent storing the Kalman gain matrices.
+    """
+    memory_no_smoothing = OptionWrapper('conserve_memory', MEMORY_NO_SMOOTHING)
+    """
+    (bool) Flag to prevent storing likelihood values for each observation.
+    """
     memory_conserve = OptionWrapper('conserve_memory', MEMORY_CONSERVE)
     """
     (bool) Flag to conserve the maximum amount of memory.
+    """
+
+    timing_options = [
+        'timing_init_predicted', 'timing_init_filtered'
+    ]
+    timing_init_predicted = OptionWrapper('filter_timing',
+                                          TIMING_INIT_PREDICTED)
+    """
+    (bool) Flag for the default timing convention (Durbin and Koopman, 2012).
+    """
+    timing_init_filtered = OptionWrapper('filter_timing', TIMING_INIT_FILTERED)
+    """
+    (bool) Flag for the alternate timing convention (Kim and Nelson, 2012).
     """
 
     # Default filter options
@@ -203,6 +273,10 @@ class KalmanFilter(Representation):
     conserve_memory = MEMORY_STORE_ALL
     """
     (int) Memory conservation bitmask.
+    """
+    filter_timing = TIMING_INIT_PREDICTED
+    """
+    (int) Filter timing.
     """
 
     def __init__(self, k_endog, k_states, k_posdef=None,
@@ -237,7 +311,8 @@ class KalmanFilter(Representation):
 
     def _initialize_filter(self, filter_method=None, inversion_method=None,
                            stability_method=None, conserve_memory=None,
-                           tolerance=None, loglikelihood_burn=None):
+                           tolerance=None, filter_timing=None,
+                           loglikelihood_burn=None):
         if filter_method is None:
             filter_method = self.filter_method
         if inversion_method is None:
@@ -248,6 +323,8 @@ class KalmanFilter(Representation):
             conserve_memory = self.conserve_memory
         if loglikelihood_burn is None:
             loglikelihood_burn = self.loglikelihood_burn
+        if filter_timing is None:
+            filter_timing = self.filter_timing
         if tolerance is None:
             tolerance = self.tolerance
 
@@ -280,7 +357,7 @@ class KalmanFilter(Representation):
             cls = prefix_kalman_filter_map[prefix]
             self._kalman_filters[prefix] = cls(
                 self._statespaces[prefix], filter_method, inversion_method,
-                stability_method, conserve_memory, tolerance,
+                stability_method, conserve_memory, filter_timing, tolerance,
                 loglikelihood_burn
             )
         # Otherwise, update the filter parameters
@@ -289,6 +366,7 @@ class KalmanFilter(Representation):
             kalman_filter.set_filter_method(filter_method, False)
             kalman_filter.inversion_method = inversion_method
             kalman_filter.stability_method = stability_method
+            kalman_filter.filter_timing = filter_timing
             kalman_filter.tolerance = tolerance
             # conserve_memory and loglikelihood_burn changes always lead to
             # re-created filters
@@ -296,7 +374,7 @@ class KalmanFilter(Representation):
         return prefix, dtype, create_filter, create_statespace
 
     def set_filter_method(self, filter_method=None, **kwargs):
-        """
+        r"""
         Set the filtering method
 
         The filtering method controls aspects of which Kalman filtering
@@ -313,11 +391,19 @@ class KalmanFilter(Representation):
         Notes
         -----
         The filtering method is defined by a collection of boolean flags, and
-        is internally stored as a bitmask. Only one method is currently
-        available:
+        is internally stored as a bitmask. The methods available are:
 
         FILTER_CONVENTIONAL = 0x01
             Conventional Kalman filter.
+        FILTER_UNIVARIATE = 0x10
+            Univariate approach to Kalman filtering. Overrides conventional
+            method if both are specified.
+        FILTER_COLLAPSED = 0x20
+            Collapsed approach to Kalman filtering. Will be used *in addition*
+            to conventional or univariate filtering.
+
+        Note that only the first method is available if using a Scipy version
+        older than 0.16.
 
         If the bitmask is set directly via the `filter_method` argument, then
         the full method must be provided.
@@ -339,15 +425,23 @@ class KalmanFilter(Representation):
         1
         >>> mod.filter_conventional
         True
+        >>> mod.filter_univariate = True
+        >>> mod.filter_method
+        17
+        >>> mod.set_filter_method(filter_univariate=False,
+                                  filter_collapsed=True)
+        >>> mod.filter_method
+        33
         >>> mod.set_filter_method(filter_method=1)
+        >>> mod.filter_conventional
+        True
+        >>> mod.filter_univariate
+        False
+        >>> mod.filter_collapsed
+        False
+        >>> mod.filter_univariate = True
         >>> mod.filter_method
-        1
-        >>> mod.set_filter_method(filter_conventional=True)
-        >>> mod.filter_method
-        1
-        >>> mod.filter_conventional = True
-        >>> mod.filter_method
-        1
+        17
         """
         if filter_method is not None:
             self.filter_method = filter_method
@@ -355,8 +449,13 @@ class KalmanFilter(Representation):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
+        if compatibility_mode and not self.filter_method == 1:
+            raise NotImplementedError('Only conventional Kalman filtering'
+                                      ' is available. Consider updating'
+                                      ' dependencies for more options.')
+
     def set_inversion_method(self, inversion_method=None, **kwargs):
-        """
+        r"""
         Set the inversion method
 
         The Kalman filter may contain one matrix inversion: that of the
@@ -407,6 +506,9 @@ class KalmanFilter(Representation):
 
         Several things to keep in mind are:
 
+        - If the filtering method is specified to be univariate, then simple
+          division is always used regardless of the dimension of the endogenous
+          time series.
         - Cholesky decomposition is about twice as fast as LU decomposition,
           but it requires that the matrix be positive definite. While this
           should generally be true, it may not be in every case.
@@ -439,7 +541,7 @@ class KalmanFilter(Representation):
                 setattr(self, name, kwargs[name])
 
     def set_stability_method(self, stability_method=None, **kwargs):
-        """
+        r"""
         Set the numerical stability method
 
         The Kalman filter is a recursive algorithm that may in some cases
@@ -497,7 +599,7 @@ class KalmanFilter(Representation):
                 setattr(self, name, kwargs[name])
 
     def set_conserve_memory(self, conserve_memory=None, **kwargs):
-        """
+        r"""
         Set the memory conservation method
 
         By default, the Kalman filter computes a number of intermediate
@@ -534,8 +636,16 @@ class KalmanFilter(Representation):
         MEMORY_NO_LIKELIHOOD = 0x08
             Do not store the vector of loglikelihood values for each
             observation. Only the sum of the loglikelihood values is stored.
+        MEMORY_NO_GAIN = 0x10
+            Do not store the Kalman gain matrices.
+        MEMORY_NO_SMOOTHING = 0x20
+            Do not store temporary variables related to Klaman smoothing. If
+            this option is used, smoothing is unavailable.
         MEMORY_CONSERVE
             Do not store any intermediate matrices.
+
+        Note that if using a Scipy version less than 0.16, the options
+        MEMORY_NO_GAIN and MEMORY_NO_SMOOTHING have no effect.
 
         If the bitmask is set directly via the `conserve_memory` argument,
         then the full method must be provided.
@@ -572,10 +682,43 @@ class KalmanFilter(Representation):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-    def filter(self, filter_method=None, inversion_method=None,
-               stability_method=None, conserve_memory=None, tolerance=None,
-               loglikelihood_burn=None, results=None, complex_step=False):
+    def set_filter_timing(self, alternate_timing=None, **kwargs):
+        r"""
+        Set the filter timing convention
+
+        By default, the Kalman filter follows Durbin and Koopman, 2012, in
+        initializing the filter with predicted values. Kim and Nelson, 1999,
+        instead initialize the filter with filtered values, which is
+        essentially just a different timing convention.
+
+        Parameters
+        ----------
+        alternate_timing : integer, optional
+            Whether or not to use the alternate timing convention. Default is
+            unspecified.
+        **kwargs
+            Keyword arguments may be used to influence the memory conservation
+            method by setting individual boolean flags. See notes for details.
         """
+        if alternate_timing is not None:
+            self.filter_timing = int(alternate_timing)
+        if 'timing_init_predicted' in kwargs:
+            self.filter_timing = int(not kwargs['timing_init_predicted'])
+        if 'timing_init_filtered' in kwargs:
+            self.filter_timing = int(kwargs['timing_init_filtered'])
+
+        if compatibility_mode and self.filter_timing == TIMING_INIT_FILTERED:
+            if compability_mode and not self.filter_method == 1:
+                raise NotImplementedError('Only "predicted" Kalman filter'
+                                          ' timing is available. Consider'
+                                          ' updating dependencies for more'
+                                          ' options.')
+
+    def filter(self, filter_method=None, inversion_method=None,
+               stability_method=None, conserve_memory=None, filter_timing=None,
+               tolerance=None, loglikelihood_burn=None, results=None,
+               complex_step=False):
+        r"""
         Apply the Kalman filter to the statespace model.
 
         Parameters
@@ -591,6 +734,10 @@ class KalmanFilter(Representation):
         conserve_memory : int, optional
             Determines what output from the filter to store. Default is to
             store everything.
+        filter_timing : int, optional
+            Determines the timing convention of the filter. Default is that
+            from Durbin and Koopman (2012), in which the filter is initialized
+            with predicted values.
         tolerance : float, optional
             The tolerance at which the Kalman filter determines convergence to
             steady-state. Default is 1e-19.
@@ -616,7 +763,7 @@ class KalmanFilter(Representation):
         prefix, dtype, create_filter, create_statespace = (
             self._initialize_filter(
                 filter_method, inversion_method, stability_method,
-                conserve_memory, tolerance, loglikelihood_burn
+                conserve_memory, filter_timing, tolerance, loglikelihood_burn
             )
         )
         kfilter = self._kalman_filters[prefix]
@@ -651,7 +798,7 @@ class KalmanFilter(Representation):
         return results
 
     def loglike(self, loglikelihood_burn=None, **kwargs):
-        """
+        r"""
         Calculate the loglikelihood associated with the statespace model.
 
         Parameters
@@ -677,7 +824,7 @@ class KalmanFilter(Representation):
         return np.sum(self.filter(**kwargs)[loglikelihood_burn:])
 
     def loglikeobs(self, loglikelihood_burn=None, **kwargs):
-        """
+        r"""
         Calculate the loglikelihood for each observation associated with the
         statespace model.
 
@@ -715,7 +862,7 @@ class KalmanFilter(Representation):
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None):
-        """
+        r"""
         Simulate a new time series following the state space model
 
         Parameters
@@ -859,8 +1006,8 @@ class KalmanFilter(Representation):
 
             # Iterate the measurement equation
             simulated_obs[t] = (
-                obs_intercept + np.dot(design, simulated_states[t])
-                + measurement_shock)
+                obs_intercept + np.dot(design, simulated_states[t]) +
+                measurement_shock)
 
             # Iterate the state equation
             simulated_states[t+1] = (
@@ -871,7 +1018,7 @@ class KalmanFilter(Representation):
 
     def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
-        """
+        r"""
         Impulse response function
 
         Parameters
@@ -920,7 +1067,7 @@ class KalmanFilter(Representation):
         if type(impulse) == int:
             if impulse >= self.k_posdef or impulse < 0:
                 raise ValueError('Invalid value for `impulse`. Must be the'
-                                 ' of one of the state innovations.')
+                                 ' index of one of the state innovations.')
 
             # Create the (non-orthogonalized) impulse vector
             idx = impulse
@@ -1096,6 +1243,8 @@ class FilterResults(FrozenRepresentation):
         recursions.
     conserve_memory : int
         Bitmask representing the selected memory conservation method.
+    filter_timing : int
+        Whether or not to use the alternate timing convention.
     tolerance : float
         The tolerance at which the Kalman filter
         determines convergence to steady-state.
@@ -1114,6 +1263,8 @@ class FilterResults(FrozenRepresentation):
         The predicted state vector at each time period.
     predicted_state_cov : array
         The predicted state covariance matrix at each time period.
+    kalman_gain : array
+        The Kalman gain at each time period.
     forecasts : array
         The one-step-ahead forecasts of observations at each time period.
     forecasts_error : array
@@ -1125,11 +1276,13 @@ class FilterResults(FrozenRepresentation):
     """
     _filter_attributes = [
         'filter_method', 'inversion_method', 'stability_method',
-        'conserve_memory', 'tolerance', 'loglikelihood_burn', 'converged',
-        'period_converged', 'filtered_state', 'filtered_state_cov',
-        'predicted_state', 'predicted_state_cov',
-        'forecasts', 'forecasts_error', 'forecasts_error_cov',
-        'llf_obs'
+        'conserve_memory', 'filter_timing', 'tolerance', 'loglikelihood_burn',
+        'converged', 'period_converged', 'filtered_state',
+        'filtered_state_cov', 'predicted_state', 'predicted_state_cov',
+        'tmp1', 'tmp2', 'tmp3', 'tmp4', 'forecasts',
+        'forecasts_error', 'forecasts_error_cov', 'llf_obs',
+        'collapsed_forecasts', 'collapsed_forecasts_error',
+        'collapsed_forecasts_error_cov',
     ]
 
     _filter_options = (
@@ -1195,6 +1348,7 @@ class FilterResults(FrozenRepresentation):
         self.inversion_method = kalman_filter.inversion_method
         self.stability_method = kalman_filter.stability_method
         self.conserve_memory = kalman_filter.conserve_memory
+        self.filter_timing = kalman_filter.filter_timing
         self.tolerance = kalman_filter.tolerance
         self.loglikelihood_burn = kalman_filter.loglikelihood_burn
 
@@ -1214,8 +1368,27 @@ class FilterResults(FrozenRepresentation):
         )
 
         # Reset caches
-        self._kalman_gain = None
         self._standardized_forecasts_error = None
+        if not compatibility_mode:
+            self._kalman_gain = np.array(kalman_filter.kalman_gain, copy=True)
+            # In the partially missing data case, various entries will
+            # be in the first rows rather than the correct rows
+            # TODO this does not work for collapsed data.
+            if not self.memory_no_gain and not self.filter_collapsed:
+                for t in range(self.nobs):
+                    if self.nmissing[t] > 0:
+                        k_endog = self.k_endog - self.nmissing[t]
+                        mask = ~self.missing[:, t].astype(bool)
+                        tmp = self.kalman_gain[:, :, t].copy()
+                        self.kalman_gain[:, :, t] = 0
+                        self.kalman_gain[:, mask, t] = tmp[:, :k_endog]
+
+            self.tmp1 = np.array(kalman_filter.tmp1, copy=True)
+            self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
+            self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
+            self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
+        else:
+            self._kalman_gain = None
 
         # Note: use forecasts rather than forecast, so as not to interfer
         # with the `forecast` methods in subclasses
@@ -1241,6 +1414,28 @@ class FilterResults(FrozenRepresentation):
             self.missing_forecasts_error = np.copy(self.forecasts_error)
             self.missing_forecasts_error_cov = (
                 np.copy(self.forecasts_error_cov)
+            )
+
+        # Save the collapsed values
+        self.collapsed_forecasts = None
+        self.collapsed_forecasts_error = None
+        self.collapsed_forecasts_error_cov = None
+        if self.filter_collapsed:
+            # Copy the provided arrays (which are from the collapsed dataset)
+            # into new variables
+            self.collapsed_forecasts = self.forecasts[:self.k_states, :]
+            self.collapsed_forecasts_error = (
+                self.forecasts_error[:self.k_states, :]
+            )
+            self.collapsed_forecasts_error_cov = (
+                self.forecasts_error_cov[:self.k_states, :self.k_states, :]
+            )
+            # Recreate the original arrays (which should be from the original
+            # dataset) in the appropriate dimension
+            self.forecasts = np.zeros((self.k_endog, self.nobs))
+            self.forecasts_error = np.zeros((self.k_endog, self.nobs))
+            self.forecasts_error_cov = (
+                np.zeros((self.k_endog, self.k_endog, self.nobs))
             )
 
         # Fill in missing values in the forecast, forecast error, and
@@ -1282,6 +1477,23 @@ class FilterResults(FrozenRepresentation):
                     self.forecasts_error[:, t] = np.nan
                     self.forecasts_error[mask, t] = (
                         self.endog[mask, t] - self.forecasts[mask, t])
+                    self.forecasts_error_cov[:, :, t] = np.dot(
+                        np.dot(self.design[:, :, design_t],
+                               self.predicted_state_cov[:, :, t]),
+                        self.design[:, :, design_t].T
+                    ) + self.obs_cov[:, :, obs_cov_t]
+                # In the collapsed case, everything just needs to be rebuilt
+                # for the original observed data, since the Kalman filter
+                # produced these values for the collapsed data.
+                elif self.filter_collapsed:
+                    self.forecasts[:, t] = np.dot(
+                        self.design[:, :, design_t], self.predicted_state[:, t]
+                    ) + self.obs_intercept[:, obs_intercept_t]
+
+                    self.forecasts_error[:, t] = (
+                        self.endog[:, t] - self.forecasts[:, t]
+                    )
+
                     self.forecasts_error_cov[:, :, t] = np.dot(
                         np.dot(self.design[:, :, design_t],
                                self.predicted_state_cov[:, :, t]),
@@ -1345,7 +1557,7 @@ class FilterResults(FrozenRepresentation):
             for t in range(self.forecasts_error_cov.shape[2]):
                 if self.nmissing[t] > 0:
                     self._standardized_forecasts_error[:, t] = np.nan
-                if self.nmissing[t] < self.k_endog:
+                else:
                     mask = ~self.missing[:, t].astype(bool)
                     F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
                     upper, _ = linalg.cho_factor(F[:, :, 0])
@@ -1358,7 +1570,7 @@ class FilterResults(FrozenRepresentation):
         return self._standardized_forecasts_error
 
     def predict(self, start=None, end=None, dynamic=None, **kwargs):
-        """
+        r"""
         In-sample and out-of-sample prediction for state space models generally
 
         Parameters
@@ -1540,6 +1752,7 @@ class FilterResults(FrozenRepresentation):
                 'inversion_method': self.inversion_method,
                 'stability_method': self.stability_method,
                 'conserve_memory': self.conserve_memory,
+                'filter_timing': self.filter_timing,
                 'tolerance': self.tolerance,
                 'loglikelihood_burn': self.loglikelihood_burn
             }
@@ -1607,7 +1820,7 @@ class FilterResults(FrozenRepresentation):
 
 
 class PredictionResults(FilterResults):
-    """
+    r"""
     Results of in-sample and out-of-sample prediction for state space models
     generally
 
