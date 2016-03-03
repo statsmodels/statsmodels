@@ -151,6 +151,7 @@ class SimulationSmoother(KalmanSmoother):
             inversion_method = self.inversion_method
             stability_method = self.stability_method
             conserve_memory = self.conserve_memory
+            filter_timing = self.filter_timing
             loglikelihood_burn = self.loglikelihood_burn
             tolerance = self.tolerance
 
@@ -159,7 +160,7 @@ class SimulationSmoother(KalmanSmoother):
             self._simulators[prefix] = cls(
                 self._statespaces[prefix],
                 filter_method, inversion_method, stability_method,
-                conserve_memory, tolerance, loglikelihood_burn,
+                conserve_memory, filter_timing, tolerance, loglikelihood_burn,
                 smoother_output, simulation_output, nsimulations, True
             )
         simulator = self._simulators[prefix]
@@ -186,8 +187,8 @@ class SimulationSmoother(KalmanSmoother):
         simulated_state = np.array(simulator.generated_state, copy=True)
 
         return (
-            simulated_obs[:, :nsimulations],
-            simulated_state[:, :nsimulations]
+            simulated_obs[:, :nsimulations].T,
+            simulated_state[:, :nsimulations].T
         )
 
     def simulation_smoother(self, simulation_output=None,
