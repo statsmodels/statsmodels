@@ -2621,13 +2621,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 class MLEResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
         'zvalues': 'columns',
-        'cov_params_cs': 'cov',
+        'cov_params_approx': 'cov',
         'cov_params_default': 'cov',
-        'cov_params_delta': 'cov',
         'cov_params_oim': 'cov',
         'cov_params_opg': 'cov',
         'cov_params_robust': 'cov',
-        'cov_params_robust_complex_step': 'cov',
+        'cov_params_robust_approx': 'cov',
         'cov_params_robust_oim': 'cov',
     }
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
