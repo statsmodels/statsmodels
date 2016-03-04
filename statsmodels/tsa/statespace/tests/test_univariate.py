@@ -185,7 +185,7 @@ class TestClark1989(object):
     def test_smoothed_states(self):
         assert_almost_equal(
             self.conventional_results.smoothed_state,
-            self.univariate_results.smoothed_state, 8
+            self.univariate_results.smoothed_state, 7
         )
 
     def test_smoothed_states_cov(self):
