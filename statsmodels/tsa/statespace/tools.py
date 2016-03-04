@@ -161,7 +161,7 @@ def companion_matrix(polynomial):
             m = 1
             polynomial = np.asanyarray(polynomial)
 
-    matrix = np.zeros((n * m, n * m), dtype=polynomial.dtype)
+    matrix = np.zeros((n * m, n * m), dtype=np.asanyarray(polynomial).dtype)
     idx = np.diag_indices((n - 1) * m)
     idx = (idx[0], idx[1] + m)
     matrix[idx] = 1
