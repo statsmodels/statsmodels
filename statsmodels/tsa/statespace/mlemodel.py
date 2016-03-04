@@ -929,7 +929,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             params, approx_complex_step=approx_complex_step, **kwargs)
         return np.sum(score_obs, axis=0)
 
-    def _score_obs_harvey(self, params, approx_complex_step=True, **kwargs):
+    def _score_obs_harvey(self, params, approx_complex_step=True,
+                          approx_centered=False, **kwargs):
         """
         Score
 
@@ -967,7 +968,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         partials_forecasts_error, partials_forecasts_error_cov = (
             self._forecasts_error_partial_derivatives(
                 params, transformed=True,
-                complex_step=approx_complex_step, res=res, **kwargs))
+                complex_step=approx_complex_step,
+                approx_centered=approx_centered, res=res, **kwargs))
 
         # Compute partial derivatives w.r.t. likelihood function
         partials = np.zeros((self.nobs, n))
