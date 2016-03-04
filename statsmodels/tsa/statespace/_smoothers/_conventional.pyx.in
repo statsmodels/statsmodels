@@ -363,11 +363,11 @@ cdef int {{prefix}}smoothed_disturbances_conventional({{prefix}}KalmanSmoother s
         # blas.{{prefix}}axpy(&model._k_endog2, &alpha,
         #        model._obs_cov, &inc,
         #        smoother._smoothed_measurement_disturbance_cov, &inc)
-        for i in range(model.k_endog):
+        for i in range(kfilter.k_endog):
             for j in range(i+1):
-                smoother._smoothed_measurement_disturbance_cov[i + j*model.k_endog] = model._obs_cov[i + j*model._k_endog] + smoother._smoothed_measurement_disturbance_cov[i + j*model.k_endog]
+                smoother._smoothed_measurement_disturbance_cov[i + j*kfilter.k_endog] = model._obs_cov[i + j*model._k_endog] + smoother._smoothed_measurement_disturbance_cov[i + j*kfilter.k_endog]
                 if not i == j:
-                    smoother._smoothed_measurement_disturbance_cov[j + i*model.k_endog] = model._obs_cov[j + i*model._k_endog] + smoother._smoothed_measurement_disturbance_cov[j + i*model.k_endog]
+                    smoother._smoothed_measurement_disturbance_cov[j + i*kfilter.k_endog] = model._obs_cov[j + i*model._k_endog] + smoother._smoothed_measurement_disturbance_cov[j + i*kfilter.k_endog]
         
         # Smoothed state disturbance covariance matrix  
         # $Var(\eta_t | Y_n) = Q_t - \\#_0' N_t \\#_0$  
