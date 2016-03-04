@@ -727,7 +727,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             for i, ih in enumerate(increments):
                 self.update(params + ih, transformed=transformed,
                             complex_step=True)
-                _res = self.ssm.filter(**kwargs)
+                _res = self.ssm.filter(complex_step=True, **kwargs)
 
                 partials_forecasts_error[:, :, i] = (
                     _res.forecasts_error.imag / epsilon[i]
@@ -968,7 +968,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         partials_forecasts_error, partials_forecasts_error_cov = (
             self._forecasts_error_partial_derivatives(
                 params, transformed=True,
-                complex_step=approx_complex_step,
+                approx_complex_step=approx_complex_step,
                 approx_centered=approx_centered, res=res, **kwargs))
 
         # Compute partial derivatives w.r.t. likelihood function
