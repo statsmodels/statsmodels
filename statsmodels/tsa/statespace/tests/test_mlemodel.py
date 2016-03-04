@@ -231,23 +231,23 @@ def test_score_analytic_ar1():
     assert_allclose(approx_cs, analytic_score)
 
     approx_fd = mod.score(params, transformed=True, approx_complex_step=False)
-    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+    assert_allclose(approx_fd, analytic_score, atol=1e-5)
 
     approx_fd_centered = (
         mod.score(params, transformed=True, approx_complex_step=False,
                   approx_centered=True))
-    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+    assert_allclose(approx_fd, analytic_score, atol=1e-5)
 
     harvey_cs = mod.score(params, transformed=True, method='harvey',
                           approx_complex_step=True)
     assert_allclose(harvey_cs, analytic_score)
     harvey_fd = mod.score(params, transformed=True, method='harvey',
                           approx_complex_step=False)
-    assert_allclose(harvey_fd, analytic_score, atol=1e-6)
+    assert_allclose(harvey_fd, analytic_score, atol=1e-5)
     harvey_fd_centered = mod.score(params, transformed=True, method='harvey',
                                    approx_complex_step=False,
                                    approx_centered=True)
-    assert_allclose(harvey_fd_centered, analytic_score, atol=1e-6)
+    assert_allclose(harvey_fd_centered, analytic_score, atol=1e-5)
 
     # Check the approximations for untransformed parameters. The analytic
     # check now comes from chain rule with the analytic derivative of the
@@ -276,23 +276,23 @@ def test_score_analytic_ar1():
 
     approx_fd = mod.score(uparams, transformed=False,
                           approx_complex_step=False)
-    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+    assert_allclose(approx_fd, analytic_score, atol=1e-5)
 
     approx_fd_centered = (
         mod.score(uparams, transformed=False, approx_complex_step=False,
                   approx_centered=True))
-    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+    assert_allclose(approx_fd, analytic_score, atol=1e-5)
 
     harvey_cs = mod.score(uparams, transformed=False, method='harvey',
                           approx_complex_step=True)
     assert_allclose(harvey_cs, analytic_score)
     harvey_fd = mod.score(uparams, transformed=False, method='harvey',
                           approx_complex_step=False)
-    assert_allclose(harvey_fd, analytic_score, atol=1e-6)
+    assert_allclose(harvey_fd, analytic_score, atol=1e-5)
     harvey_fd_centered = mod.score(uparams, transformed=False, method='harvey',
                                    approx_complex_step=False,
                                    approx_centered=True)
-    assert_allclose(harvey_fd_centered, analytic_score, atol=1e-6)
+    assert_allclose(harvey_fd_centered, analytic_score, atol=1e-5)
 
     # Check the Hessian: these approximations are not very good, particularly
     # when phi is close to 0
