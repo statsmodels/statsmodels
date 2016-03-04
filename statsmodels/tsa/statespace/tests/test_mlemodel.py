@@ -207,6 +207,113 @@ def test_from_formula():
     assert_raises(NotImplementedError, lambda: MLEModel.from_formula(1,2,3))
 
 
+def test_score_analytic_ar1():
+    # Test the score against the analytic score for an AR(1) model with 2
+    # observations
+    # Let endog = [1, 0.5], params=[0, 1]
+    mod = sarimax.SARIMAX([1, 0.5], order=(1,0,0))
+
+    def partial_phi(phi, sigma2):
+        return -0.5 * (phi**2 + 2*phi*sigma2 - 1) / (sigma2 * (1 - phi**2))
+
+    def partial_sigma2(phi, sigma2):
+        return -0.5 * (2*sigma2 + phi - 1.25) / (sigma2**2)
+
+    params = np.r_[0., 2]
+
+    # Compute the analytic score
+    analytic_score = np.r_[
+        partial_phi(params[0], params[1]),
+        partial_sigma2(params[0], params[1])]
+
+    # Check each of the approximations, transformed parameters
+    approx_cs = mod.score(params, transformed=True, approx_complex_step=True)
+    assert_allclose(approx_cs, analytic_score)
+
+    approx_fd = mod.score(params, transformed=True, approx_complex_step=False)
+    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+
+    approx_fd_centered = (
+        mod.score(params, transformed=True, approx_complex_step=False,
+                  approx_centered=True))
+    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+
+    harvey_cs = mod.score(params, transformed=True, method='harvey',
+                          approx_complex_step=True)
+    assert_allclose(harvey_cs, analytic_score)
+    harvey_fd = mod.score(params, transformed=True, method='harvey',
+                          approx_complex_step=False)
+    assert_allclose(harvey_fd, analytic_score, atol=1e-6)
+    harvey_fd_centered = mod.score(params, transformed=True, method='harvey',
+                                   approx_complex_step=False,
+                                   approx_centered=True)
+    assert_allclose(harvey_fd_centered, analytic_score, atol=1e-6)
+
+    # Check the approximations for untransformed parameters. The analytic
+    # check now comes from chain rule with the analytic derivative of the
+    # transformation
+    # if L* is the likelihood evaluated at untransformed parameters and
+    # L is the likelihood evaluated at transformed parameters, then we have:
+    # L*(u) = L(t(u))
+    # and then
+    # L'*(u) = L'(t(u)) * t'(u)
+    def partial_transform_phi(phi):
+        return -1. / (1 + phi**2)**(3./2)
+
+    def partial_transform_sigma2(sigma2):
+        return 2. * sigma2
+
+    uparams = mod.untransform_params(params)
+
+    analytic_score = np.dot(
+        np.diag(np.r_[partial_transform_phi(uparams[0]),
+                      partial_transform_sigma2(uparams[1])]),
+        np.r_[partial_phi(params[0], params[1]),
+              partial_sigma2(params[0], params[1])])
+
+    approx_cs = mod.score(uparams, transformed=False, approx_complex_step=True)
+    assert_allclose(approx_cs, analytic_score)
+
+    approx_fd = mod.score(uparams, transformed=False,
+                          approx_complex_step=False)
+    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+
+    approx_fd_centered = (
+        mod.score(uparams, transformed=False, approx_complex_step=False,
+                  approx_centered=True))
+    assert_allclose(approx_fd, analytic_score, atol=1e-6)
+
+    harvey_cs = mod.score(uparams, transformed=False, method='harvey',
+                          approx_complex_step=True)
+    assert_allclose(harvey_cs, analytic_score)
+    harvey_fd = mod.score(uparams, transformed=False, method='harvey',
+                          approx_complex_step=False)
+    assert_allclose(harvey_fd, analytic_score, atol=1e-6)
+    harvey_fd_centered = mod.score(uparams, transformed=False, method='harvey',
+                                   approx_complex_step=False,
+                                   approx_centered=True)
+    assert_allclose(harvey_fd_centered, analytic_score, atol=1e-6)
+
+    # Check the Hessian: these approximations are not very good, particularly
+    # when phi is close to 0
+    params = np.r_[0.5, 1.]
+    def hessian(phi, sigma2):
+        hessian = np.zeros((2,2))
+        hessian[0,0] = (-phi**2 - 1) / (phi**2 - 1)**2
+        hessian[1,0] = hessian[0,1] = -1 / (2 * sigma2**2)
+        hessian[1,1] = (sigma2 + phi - 1.25) / sigma2**3
+        return hessian
+
+    analytic_hessian = hessian(params[0], params[1])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        assert_allclose(mod._hessian_complex_step(params) * 2,
+                        analytic_hessian, atol=1e-1)
+        assert_allclose(mod._hessian_finite_difference(params) * 2,
+                        analytic_hessian, atol=1e-1)
+
+
 def test_cov_params():
     mod, res = get_dummy_mod()
 
