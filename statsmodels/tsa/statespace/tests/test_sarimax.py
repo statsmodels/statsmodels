@@ -700,7 +700,7 @@ class TestFriedmanMLERegression(Friedman):
         bse = self.result.cov_params_oim.diagonal()**0.5
         assert_allclose(bse[0], self.true['se_exog_oim'][0], rtol=1)
         assert_allclose(bse[1], self.true['se_exog_oim'][1], atol=1e-2)
-        assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-4)
+        assert_allclose(bse[2], self.true['se_ar_oim'], atol=1e-2)
         assert_allclose(bse[3], self.true['se_ma_oim'], atol=1e-2)
 
 
