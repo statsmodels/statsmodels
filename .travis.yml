@@ -32,7 +32,7 @@ matrix:
     - PYTHON=2.7
     - NUMPY=1.7
     - SCIPY=0.12
-    - OPTIONAL="cvxopt mkl mkl-rt libgfortran=1.0"
+    - OPTIONAL="mkl mkl-rt libgfortran=1.0"
     - COVERAGE=true
   - python: 2.7
     env:
