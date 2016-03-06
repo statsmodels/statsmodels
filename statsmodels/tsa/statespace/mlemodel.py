@@ -679,6 +679,12 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         if not transformed:
             params = self.transform_params(params)
+
+        # If we're using complex-step differentiation, then we can't use
+        # Cholesky factorization
+        if complex_step:
+            kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
         self.update(params, transformed=True, complex_step=complex_step)
 
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
