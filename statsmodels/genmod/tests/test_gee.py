@@ -1087,13 +1087,15 @@ class TestGEE(object):
         endog = np.r_[4, 2, 3, 1, 4, 5, 6, 7, 8, 3, 2, 4.]
         exog = np.r_[2, 3, 1, 4, 3, 2, 5, 4, 5, 6, 3, 2]
         group = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
-
         exog = sm.add_constant(exog)
 
-        model = sm.GEE(endog, exog, group,
-                       cov_struct=Stationary(max_lag=2, grid=True))
+        cs = Stationary(max_lag=2, grid=True)
+        model = sm.GEE(endog, exog, group, cov_struct=cs)
         result = model.fit()
         se = result.bse * np.sqrt(12 / 9.)  # Stata adjustment
+
+        assert_allclose(cs.covariance_matrix(np.r_[1, 1, 1], 0)[0].sum(),
+                        6.4633538285149452)
 
         # Obtained from Stata using:
         # xtgee y x, i(g) vce(robust) corr(Stationary2)
