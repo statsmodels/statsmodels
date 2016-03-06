@@ -1137,11 +1137,24 @@ class GEE(base.Model):
             bc_cov = self._bc_covmat(ncov)
 
         if self.constraint is not None:
-            mean_params, bcov = self._handle_constraint(mean_params, bcov)
+            if cov_type == "robust":
+                cov = bcov
+            elif cov_type == "naive":
+                cov = ncov
+            elif cov_type == "bias_reduced":
+                cov = bc_cov
+
+            mean_params, cov = self._handle_constraint(mean_params, cov)
             if mean_params is None:
                 warnings.warn("Unable to estimate constrained GEE "
                               "parameters.", ConvergenceWarning)
                 return None
+            if cov_type == "robust":
+                bcov = cov
+            elif cov_type == "naive":
+                ncov = cov
+            elif cov_type == "bias_reduced":
+                bc_cov = cov
 
         scale = self.estimate_scale()
 
