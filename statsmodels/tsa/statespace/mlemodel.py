@@ -608,25 +608,20 @@ class MLEModel(tsbase.TimeSeriesModel):
         # We need to handle positional arguments in two ways, in case this was
         # called by a Scipy optimization routine
         if len(args) > 0:
+            argnames = ['transformed', 'complex_step']
             # the fit() method will pass a dictionary
             if isinstance(args[0], dict):
                 flags = args[0]
-                transformed = flags.get('transformed', True)
-                complex_step = flags.get('complex_step', True)
             # otherwise, a user may have just used positional arguments...
             else:
-                transformed = args[0]
-                if 'transformed' in kwargs:
-                    raise TypeError("loglike() got multiple values for keyword"
-                                    " argument 'transformed'")
-                if len(args) > 1:
-                    complex_step = args[1]
-                    if 'complex_step' in kwargs:
-                        raise TypeError("loglike() got multiple values for"
-                                        " keyword argument 'complex_step'")
-                else:
-                    complex_step = kwargs.pop('complex_step', True)
+                flags = dict(zip(argnames, args))
+            transformed = flags.get('transformed', True)
+            complex_step = flags.get('complex_step', True)
 
+            for name, value in flags.items():
+                if name in kwargs:
+                    raise TypeError("loglike() got multiple values for keyword"
+                                    " argument '%s'" % name)
         else:
             transformed = kwargs.pop('transformed', True)
             complex_step = kwargs.pop('complex_step', True)
@@ -1029,11 +1024,24 @@ class MLEModel(tsbase.TimeSeriesModel):
         # We were given one positional argument if this was called by a Scipy
         # optimization routine
         if len(args) > 0:
-            flags = args[0]
+            argnames = ['transformed', 'method', 'approx_complex_step',
+                        'approx_centered']
+            # the fit() method will pass a dictionary
+            if isinstance(args[0], dict):
+                flags = args[0]
+                flags['method'] = flags.get('score_method', 'approx')
+            # otherwise, a user may have just used positional arguments...
+            else:
+                flags = dict(zip(argnames, args))
             transformed = flags.get('transformed', True)
-            method = flags.get('score_method', 'approx')
+            method = flags.get('method', 'approx')
             approx_complex_step = flags.get('approx_complex_step', True)
             approx_centered = flags.get('approx_centered', True)
+
+            for name, value in flags.items():
+                if name in kwargs:
+                    raise TypeError("score() got multiple values for keyword"
+                                    " argument '%s'" % name)
         else:
             transformed = kwargs.pop('transformed', True)
             method = kwargs.pop('method', 'approx')
@@ -1137,11 +1145,24 @@ class MLEModel(tsbase.TimeSeriesModel):
         # We were given one positional argument if this was called by a Scipy
         # optimization routine
         if len(args) > 0:
-            flags = args[0]
-            transformed = flags.get('transformed', False)
-            method = flags.get('hessian_method', 'approx')
+            argnames = ['transformed', 'method', 'approx_complex_step',
+                        'approx_centered']
+            # the fit() method will pass a dictionary
+            if isinstance(args[0], dict):
+                flags = args[0]
+                flags['method'] = flags.get('hessian_method', 'approx')
+            # otherwise, a user may have just used positional arguments...
+            else:
+                flags = dict(zip(argnames, args))
+            transformed = flags.get('transformed', True)
+            method = flags.get('method', 'approx')
             approx_complex_step = flags.get('approx_complex_step', True)
             approx_centered = flags.get('approx_centered', True)
+
+            for name, value in flags.items():
+                if name in kwargs:
+                    raise TypeError("hessian() got multiple values for keyword"
+                                    " argument '%s'" % name)
         else:
             transformed = kwargs.pop('transformed', False)
             method = kwargs.pop('method', 'approx')
