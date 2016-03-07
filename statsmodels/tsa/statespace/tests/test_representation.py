@@ -766,14 +766,6 @@ def test_filter():
     res = mod.filter()
     assert_equal(isinstance(res, FilterResults), True)
 
-    # Test specified invalid results class
-    assert_raises(ValueError, mod.filter, results=object)
-
-    # Test specified valid results class
-    res = mod.filter(results=FilterResults)
-    assert_equal(isinstance(res, FilterResults), True)
-
-
 def test_loglike():
     # Tests of invalid calls to the loglike function
 

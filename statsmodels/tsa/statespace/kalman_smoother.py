@@ -15,12 +15,7 @@ from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
                                                       FilterResults)
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tsa.statespace.tools import (compatibility_mode,
-                                              prefix_kalman_smoother_map)
-
-if compatibility_mode:
-    from statsmodels.tsa.statespace._pykalman_smoother import (_KalmanSmoother,
-                                                               _SmootherOutput)
+from statsmodels.tsa.statespace import tools
 
 SMOOTHER_STATE = 0x01          # Durbin and Koopman (2012), Chapter 4.4.2
 SMOOTHER_STATE_COV = 0x02      # ibid., Chapter 4.4.3
@@ -77,7 +72,7 @@ class KalmanSmoother(KalmanFilter):
     smoother_output = SMOOTHER_ALL
 
     def __init__(self, k_endog, k_states, k_posdef=None, results_class=None,
-                 **kwargs):
+                 kalman_smoother_classes=None, **kwargs):
         # Set the default results class
         if results_class is None:
             results_class = SmootherResults
@@ -85,6 +80,12 @@ class KalmanSmoother(KalmanFilter):
         super(KalmanSmoother, self).__init__(
             k_endog, k_states, k_posdef, results_class=results_class, **kwargs
         )
+
+        # Options
+        self.prefix_kalman_smoother_map = (
+            kalman_smoother_classes
+            if kalman_smoother_classes is not None
+            else tools.prefix_kalman_smoother_map.copy())
 
         # Setup the underlying Kalman smoother storage
         self._kalman_smoothers = {}
@@ -109,7 +110,7 @@ class KalmanSmoother(KalmanFilter):
             self._initialize_filter(prefix, **kwargs)
         )
 
-        if compatibility_mode:
+        if self._compatibility_mode:
             create_smoother = None
         else:
             # Determine if we need to (re-)create the smoother
@@ -127,7 +128,7 @@ class KalmanSmoother(KalmanFilter):
             # need to re-create it), create it
             if create_smoother:
                 # Setup the smoother
-                cls = prefix_kalman_smoother_map[prefix]
+                cls = self.prefix_kalman_smoother_map[prefix]
                 self._kalman_smoothers[prefix] = cls(
                     self._statespaces[prefix], self._kalman_filters[prefix],
                     smoother_output
@@ -209,6 +210,38 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
+    def _smooth(self, smoother_output=None, prefix=None,
+                complex_step=False, results=None, **kwargs):
+        # Initialize the smoother
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother(
+                smoother_output, prefix=prefix, **kwargs
+            ))
+
+        # Check that the filter and statespace weren't just recreated
+        if create_filter or create_statespace:
+            raise ValueError('Passed settings forced re-creation of the'
+                             ' Kalman filter. Please run `_filter` before'
+                             ' running `_smooth`.')
+
+        # Get the appropriate smoother
+        if self._compatibility_mode:
+            # Create the results object if not provided
+            if results is None:
+                results = self.results_class(self)
+                results.update_representation(self)
+                results.update_filter(self._kalman_filters[prefix])
+
+            cls = self.prefix_kalman_smoother_map[prefix]
+            smoother = cls(self, results, smoother_output)
+        else:
+            smoother = self._kalman_smoothers[prefix]
+
+        # Run the smoother
+        smoother()
+
+        return smoother
+
     def smooth(self, smoother_output=None, results=None, run_filter=True,
                prefix=None, complex_step=False, **kwargs):
         """
@@ -235,75 +268,21 @@ class KalmanSmoother(KalmanFilter):
         -------
         SmootherResults object
         """
+        # Run the filter
+        kfilter = self._filter(**kwargs)
+
+        # Create the results object
+        results = self.results_class(self)
+        results.update_representation(self)
+        results.update_filter(kfilter)
+
+        # Run the smoother
         if smoother_output is None:
             smoother_output = self.smoother_output
+        smoother = self._smooth(smoother_output, results=results, **kwargs)
 
-        # Set the class to be the default results class, if None provided
-        if results is None:
-            results = self.results_class
-
-        # Initialize the smoother
-        prefix, dtype, create_smoother, create_filter, create_statespace = (
-            self._initialize_smoother(
-                smoother_output, prefix=prefix, **kwargs
-            ))
-
-        # Instantiate a new results object, if required
-        new_results = False
-        if isinstance(results, type):
-            if not issubclass(results, SmootherResults):
-                raise ValueError('Invalid results class provided.')
-            results = results(self)
-            new_results = True
-
-        # Run the filter
-        kfilter = self._kalman_filters[prefix]
-        if not run_filter and (not kfilter.t == self.nobs or create_filter):
-            run_filter = True
-            warnings.warn('Despite `run_filter=False`, Kalman filtering was'
-                          ' performed because filtering was not complete.',
-                          ValueWarning)
-        if run_filter:
-            self._initialize_state(prefix=prefix, complex_step=complex_step)
-            kfilter()
-
-        if not compatibility_mode:
-            # Run the smoother
-            smoother = self._kalman_smoothers[prefix]
-            smoother()
-
-        # Update the results object with filtered output
-        # Update the model features; unless we had to recreate the
-        # statespace, only update the filter options
-        if not new_results:
-            results.update_representation(self)
-        if run_filter:
-            results.update_filter(kfilter)
-
-        if not compatibility_mode:
-            results.update_smoother(smoother)
-        else:
-            # Run the smoother and update the output
-            smoother = _KalmanSmoother(self, results, smoother_output)
-            smoother()
-
-            output = _SmootherOutput(
-                tmp_L=smoother.tmp_L,
-                scaled_smoothed_estimator=smoother.scaled_smoothed_estimator,
-                scaled_smoothed_estimator_cov=(
-                    smoother.scaled_smoothed_estimator_cov),
-                smoothing_error=smoother.smoothing_error,
-                smoothed_state=smoother.smoothed_state,
-                smoothed_state_cov=smoother.smoothed_state_cov,
-                smoothed_state_disturbance=smoother.smoothed_state_disturbance,
-                smoothed_state_disturbance_cov=(
-                    smoother.smoothed_state_disturbance_cov),
-                smoothed_measurement_disturbance=(
-                    smoother.smoothed_measurement_disturbance),
-                smoothed_measurement_disturbance_cov=(
-                    smoother.smoothed_measurement_disturbance_cov),
-            )
-            results.update_smoother(output)
+        # Update the results
+        results.update_smoother(smoother)
 
         return results
 
@@ -537,7 +516,7 @@ class SmootherResults(FilterResults):
         # r_T, ..., r_{-1}. We only want r_0, ..., r_T
         # so exclude the appropriate element so that the time index is
         # consistent with the other returned output
-        if not compatibility_mode:
+        if not self._compatibility_mode:
             # r_t stored such that scaled_smoothed_estimator[0] == r_{-1}
             start = 1
             end = None
@@ -558,7 +537,7 @@ class SmootherResults(FilterResults):
         # be in the first rows rather than the correct rows
         # TODO this can really slow things down if the smoother needs to be run
         # many times in a row.
-        if not compatibility_mode and not self.filter_collapsed:
+        if not self._compatibility_mode and not self.filter_collapsed:
             for t in range(self.nobs):
                 if self.nmissing[t] > 0:
                     k_endog = self.k_endog - self.nmissing[t]
