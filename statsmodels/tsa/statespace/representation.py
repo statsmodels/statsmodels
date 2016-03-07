@@ -545,6 +545,9 @@ class Representation(object):
         if not endog.flags['F_CONTIGUOUS']:
             endog = np.asfortranarray(endog)
 
+        # Set a flag for complex data
+        self._complex_endog = np.iscomplexobj(endog)
+
         # Set the data
         self.endog = endog
         self.nobs = self.endog.shape[1]

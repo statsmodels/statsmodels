@@ -297,7 +297,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def fit(self, start_params=None, transformed=True,
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
-            optim_score=None, optim_complex_step=True, optim_hessian=None,
+            optim_score=None, optim_complex_step=None, optim_hessian=None,
             **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
@@ -419,6 +419,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         if optim_hessian not in [None, 'opg', 'oim', 'approx']:
             raise NotImplementedError('Invalid method for calculating the'
                                       ' Hessian.')
+
+        # Check for complex step differentiation
+        if optim_complex_step is None:
+            optim_complex_step = not self.ssm._complex_endog
+        elif optim_complex_step and self.ssm._complex_endog:
+            raise ValueError('Cannot use complex step derivatives when data'
+                             ' or parameters are complex.')
 
         # Unconstrain the starting parameters
         if transformed:
@@ -897,11 +904,6 @@ class MLEModel(tsbase.TimeSeriesModel):
                              " calculate the observed_information_matrix"
                              " with untransformed parameters.")
 
-        # If we're using complex-step differentiation, then we can't use
-        # Cholesky factorization
-        # if approx_complex_step:
-        #     kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
-
         score_obs = self.score_obs(params, transformed=transformed,
                                    approx_complex_step=approx_complex_step,
                                    **kwargs).transpose()
@@ -1035,7 +1037,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 flags = dict(zip(argnames, args))
             transformed = flags.get('transformed', True)
             method = flags.get('method', 'approx')
-            approx_complex_step = flags.get('approx_complex_step', True)
+            approx_complex_step = flags.get('approx_complex_step', None)
             approx_centered = flags.get('approx_centered', True)
 
             for name, value in flags.items():
@@ -1045,8 +1047,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         else:
             transformed = kwargs.pop('transformed', True)
             method = kwargs.pop('method', 'approx')
-            approx_complex_step = kwargs.pop('approx_complex_step', True)
+            approx_complex_step = kwargs.pop('approx_complex_step', None)
             approx_centered = kwargs.pop('approx_centered', False)
+
+        if approx_complex_step is None:
+            approx_complex_step = not self.ssm._complex_endog
+        if approx_complex_step and self.ssm._complex_endog:
+            raise ValueError('Cannot use complex step derivatives when data'
+                             ' or parameters are complex.')
 
         if not transformed:
             transform_score = self.transform_jacobian(params)
@@ -1069,7 +1077,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         return score
 
     def score_obs(self, params, method='approx', transformed=True,
-                  approx_complex_step=True, approx_centered=False, **kwargs):
+                  approx_complex_step=None, approx_centered=False, **kwargs):
         """
         Compute the score per observation, evaluated at params
 
@@ -1096,6 +1104,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             raise ValueError("Cannot use complex-step approximations to"
                              " calculate the score at each observation"
                              " with untransformed parameters.")
+
+        if approx_complex_step is None:
+            approx_complex_step = not self.ssm._complex_endog
+        if approx_complex_step and self.ssm._complex_endog:
+            raise ValueError('Cannot use complex step derivatives when data'
+                             ' or parameters are complex.')
 
         if method == 'harvey':
             score = self._score_obs_harvey(
@@ -1156,7 +1170,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 flags = dict(zip(argnames, args))
             transformed = flags.get('transformed', True)
             method = flags.get('method', 'approx')
-            approx_complex_step = flags.get('approx_complex_step', True)
+            approx_complex_step = flags.get('approx_complex_step', None)
             approx_centered = flags.get('approx_centered', True)
 
             for name, value in flags.items():
@@ -1166,13 +1180,19 @@ class MLEModel(tsbase.TimeSeriesModel):
         else:
             transformed = kwargs.pop('transformed', False)
             method = kwargs.pop('method', 'approx')
-            approx_complex_step = kwargs.pop('approx_complex_step', True)
+            approx_complex_step = kwargs.pop('approx_complex_step', None)
             approx_centered = kwargs.pop('approx_centered', False)
 
         if not transformed and approx_complex_step:
             raise ValueError("Cannot use complex-step approximations to"
                              " calculate the hessian with untransformed"
                              " parameters.")
+
+        if approx_complex_step is None:
+            approx_complex_step = not self.ssm._complex_endog
+        if approx_complex_step and self.ssm._complex_endog:
+            raise ValueError('Cannot use complex step derivatives when data'
+                             ' or parameters are complex.')
 
         if method == 'oim':
             hessian = self._hessian_oim(
