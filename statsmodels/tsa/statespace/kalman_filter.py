@@ -10,10 +10,8 @@ from warnings import warn
 
 import numpy as np
 from .representation import OptionWrapper, Representation, FrozenRepresentation
-from .tools import (
-    compatibility_mode, prefix_kalman_filter_map, validate_vector_shape,
-    validate_matrix_shape
-)
+from .tools import validate_vector_shape, validate_matrix_shape
+from . import tools
 
 # Define constants
 FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4
@@ -281,7 +279,7 @@ class KalmanFilter(Representation):
 
     def __init__(self, k_endog, k_states, k_posdef=None,
                  loglikelihood_burn=0, tolerance=1e-19, results_class=None,
-                 **kwargs):
+                 kalman_filter_classes=None, **kwargs):
         super(KalmanFilter, self).__init__(
             k_endog, k_states, k_posdef, **kwargs
         )
@@ -294,6 +292,11 @@ class KalmanFilter(Representation):
         self.results_class = (
             results_class if results_class is not None else FilterResults
         )
+        # Options
+        self.prefix_kalman_filter_map = (
+            kalman_filter_classes
+            if kalman_filter_classes is not None
+            else tools.prefix_kalman_filter_map.copy())
 
         self.set_filter_method(**kwargs)
         self.set_inversion_method(**kwargs)
@@ -354,7 +357,7 @@ class KalmanFilter(Representation):
                 # Delete the old filter
                 del self._kalman_filters[prefix]
             # Setup the filter
-            cls = prefix_kalman_filter_map[prefix]
+            cls = self.prefix_kalman_filter_map[prefix]
             self._kalman_filters[prefix] = cls(
                 self._statespaces[prefix], filter_method, inversion_method,
                 stability_method, conserve_memory, filter_timing, tolerance,
@@ -449,7 +452,7 @@ class KalmanFilter(Representation):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-        if compatibility_mode and not self.filter_method == 1:
+        if self._compatibility_mode and not self.filter_method == 1:
             raise NotImplementedError('Only conventional Kalman filtering'
                                       ' is available. Consider updating'
                                       ' dependencies for more options.')
@@ -707,17 +710,37 @@ class KalmanFilter(Representation):
         if 'timing_init_filtered' in kwargs:
             self.filter_timing = int(kwargs['timing_init_filtered'])
 
-        if compatibility_mode and self.filter_timing == TIMING_INIT_FILTERED:
-            if compability_mode and not self.filter_method == 1:
-                raise NotImplementedError('Only "predicted" Kalman filter'
-                                          ' timing is available. Consider'
-                                          ' updating dependencies for more'
-                                          ' options.')
+        if (self._compatibility_mode and
+                self.filter_timing == TIMING_INIT_FILTERED):
+            raise NotImplementedError('Only "predicted" Kalman filter'
+                                      ' timing is available. Consider'
+                                      ' updating dependencies for more'
+                                      ' options.')
+
+    def _filter(self, filter_method=None, inversion_method=None,
+                stability_method=None, conserve_memory=None,
+                filter_timing=None, tolerance=None, loglikelihood_burn=None,
+                complex_step=False):
+        # Initialize the filter
+        prefix, dtype, create_filter, create_statespace = (
+            self._initialize_filter(
+                filter_method, inversion_method, stability_method,
+                conserve_memory, filter_timing, tolerance, loglikelihood_burn
+            )
+        )
+        kfilter = self._kalman_filters[prefix]
+
+        # Initialize the state
+        self._initialize_state(prefix=prefix, complex_step=complex_step)
+
+        # Run the filter
+        kfilter()
+
+        return kfilter
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, filter_timing=None,
-               tolerance=None, loglikelihood_burn=None, results=None,
-               complex_step=False):
+               tolerance=None, loglikelihood_burn=None, complex_step=False):
         r"""
         Apply the Kalman filter to the statespace model.
 
@@ -744,68 +767,33 @@ class KalmanFilter(Representation):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
-        results : class, object, or {'loglikelihood'}, optional
-            If a class which is a subclass of FilterResults, then that class is
-            instantiated and returned with the result of filtering. Classes
-            must subclass FilterResults.
-            If an object, then that object is updated with the new filtering
-            results.
-            If the string 'loglikelihood', then only the loglikelihood is
-            returned as an ndarray.
-            If None, then the default results object is updated with the
-            result of filtering.
+
+        Notes
+        -----
+        This function by default does not compute variables required for
+        smoothing.
         """
-        # Set the class to be the default results class, if None provided
-        if results is None:
-            results = self.results_class
-
-        # Initialize the filter
-        prefix, dtype, create_filter, create_statespace = (
-            self._initialize_filter(
-                filter_method, inversion_method, stability_method,
-                conserve_memory, filter_timing, tolerance, loglikelihood_burn
-            )
-        )
-        kfilter = self._kalman_filters[prefix]
-
-        # Instantiate a new results object, if required
-        new_results = False
-        if isinstance(results, type):
-            if not issubclass(results, FilterResults):
-                raise ValueError
-            results = results(self)
-            new_results = True
-
-        # Initialize the state
-        self._initialize_state(prefix=prefix, complex_step=complex_step)
+        if conserve_memory is None:
+            conserve_memory = self.conserve_memory | MEMORY_NO_SMOOTHING
 
         # Run the filter
-        kfilter()
+        kfilter = self._filter(
+            filter_method, inversion_method, stability_method, conserve_memory,
+            filter_timing, tolerance, loglikelihood_burn, complex_step)
 
-        # We may just want the loglikelihood
-        if results == 'loglikelihood':
-            results = np.array(
-                self._kalman_filters[prefix].loglikelihood, copy=True
-            )
-        # Otherwise update the results object
-        else:
-            # Update the model features; unless we had to recreate the
-            # statespace, only update the filter options
-            if not new_results:
-                results.update_representation(self)
-            results.update_filter(kfilter)
+        # Create the results object
+        results = self.results_class(self)
+        results.update_representation(self)
+        results.update_filter(kfilter)
 
         return results
 
-    def loglike(self, loglikelihood_burn=None, **kwargs):
+    def loglike(self, **kwargs):
         r"""
         Calculate the loglikelihood associated with the statespace model.
 
         Parameters
         ----------
-        loglikelihood_burn : int, optional
-            The number of initial periods during which the loglikelihood is not
-            recorded. Default is 0.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -818,21 +806,19 @@ class KalmanFilter(Representation):
         if self.memory_no_likelihood:
             raise RuntimeError('Cannot compute loglikelihood if'
                                ' MEMORY_NO_LIKELIHOOD option is selected.')
-        if loglikelihood_burn is None:
-            loglikelihood_burn = self.loglikelihood_burn
-        kwargs['results'] = 'loglikelihood'
-        return np.sum(self.filter(**kwargs)[loglikelihood_burn:])
+        kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
+        kfilter = self._filter(**kwargs)
+        loglikelihood_burn = kwargs.get('loglikelihood_burn',
+                                        self.loglikelihood_burn)
+        return np.sum(kfilter.loglikelihood[loglikelihood_burn:])
 
-    def loglikeobs(self, loglikelihood_burn=None, **kwargs):
+    def loglikeobs(self, **kwargs):
         r"""
         Calculate the loglikelihood for each observation associated with the
         statespace model.
 
         Parameters
         ----------
-        loglikelihood_burn : int, optional
-            The number of initial periods during which the loglikelihood is not
-            recorded. Default is 0.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -850,12 +836,13 @@ class KalmanFilter(Representation):
         if self.memory_no_likelihood:
             raise RuntimeError('Cannot compute loglikelihood if'
                                ' MEMORY_NO_LIKELIHOOD option is selected.')
-        if loglikelihood_burn is None:
-            loglikelihood_burn = self.loglikelihood_burn
-        kwargs['results'] = 'loglikelihood'
-        llf_obs = self.filter(**kwargs)
+        kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
+        kfilter = self._filter(**kwargs)
+        llf_obs = np.array(kfilter.loglikelihood, copy=True)
 
         # Set any burned observations to have zero likelihood
+        loglikelihood_burn = kwargs.get('loglikelihood_burn',
+                                        self.loglikelihood_burn)
         llf_obs[:loglikelihood_burn] = 0
 
         return llf_obs
@@ -1369,7 +1356,7 @@ class FilterResults(FrozenRepresentation):
 
         # Reset caches
         self._standardized_forecasts_error = None
-        if not compatibility_mode:
+        if not self._compatibility_mode:
             self._kalman_gain = np.array(kalman_filter.kalman_gain, copy=True)
             # In the partially missing data case, various entries will
             # be in the first rows rather than the correct rows

@@ -8,7 +8,7 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from .kalman_smoother import KalmanSmoother
-from .tools import compatibility_mode, prefix_simulation_smoother_map
+from . import tools
 
 SIMULATION_STATE = 0x01
 SIMULATION_DISTURBANCE = 0x04
@@ -52,7 +52,8 @@ class SimulationSmoother(KalmanSmoother):
     ]
 
     def __init__(self, k_endog, k_states, k_posdef=None,
-                 simulation_smooth_results_class=None, **kwargs):
+                 simulation_smooth_results_class=None,
+                 simulation_smoother_classes=None, **kwargs):
         super(SimulationSmoother, self).__init__(
             k_endog, k_states, k_posdef, **kwargs
         )
@@ -60,6 +61,11 @@ class SimulationSmoother(KalmanSmoother):
         if simulation_smooth_results_class is None:
             simulation_smooth_results_class = SimulationSmoothResults
         self.simulation_smooth_results_class = simulation_smooth_results_class
+
+        self.prefix_simulation_smoother_map = (
+            simulation_smoother_classes
+            if simulation_smoother_classes is not None
+            else tools.prefix_simulation_smoother_map.copy())
 
         # Holder for an model-level simulation smoother objects, to use in
         # simulating new time series.
@@ -126,7 +132,7 @@ class SimulationSmoother(KalmanSmoother):
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
                   initial_state):
 
-        if compatibility_mode:
+        if self._compatibility_mode:
             return super(SimulationSmoother, self)._simulate(
                 nsimulations, measurement_shocks, state_shocks, initial_state)
 
@@ -156,7 +162,7 @@ class SimulationSmoother(KalmanSmoother):
             tolerance = self.tolerance
 
             # Create a new simulation smoother object
-            cls = prefix_simulation_smoother_map[prefix]
+            cls = self.prefix_simulation_smoother_map[prefix]
             self._simulators[prefix] = cls(
                 self._statespaces[prefix],
                 filter_method, inversion_method, stability_method,
@@ -216,7 +222,7 @@ class SimulationSmoother(KalmanSmoother):
         SimulationSmoothResults
         """
 
-        if compatibility_mode:
+        if self._compatibility_mode:
             raise NotImplementedError('Simulation smoothing is not available.'
                                       ' Consider updating dependencies for'
                                       ' more options.')
@@ -258,7 +264,7 @@ class SimulationSmoother(KalmanSmoother):
         tolerance = kwargs.get('tolerance', self.tolerance)
 
         # Create a new simulation smoother object
-        cls = prefix_simulation_smoother_map[prefix]
+        cls = self.prefix_simulation_smoother_map[prefix]
         simulation_smoother = cls(
             self._statespaces[prefix],
             filter_method, inversion_method, stability_method, conserve_memory,
