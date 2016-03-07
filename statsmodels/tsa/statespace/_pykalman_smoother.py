@@ -6,10 +6,7 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-from collections import namedtuple
 import numpy as np
-from .representation import OptionWrapper
-from .kalman_filter import KalmanFilter, FilterResults
 import warnings
 
 SMOOTHER_STATE = 0x01          # Durbin and Koopman (2012), Chapter 4.4.2
@@ -20,16 +17,6 @@ SMOOTHER_ALL = (
     SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
     SMOOTHER_DISTURBANCE_COV
 )
-
-
-_SmootherOutput = namedtuple('_SmootherOutput', (
-    'tmp_L'
-    ' scaled_smoothed_estimator scaled_smoothed_estimator_cov'
-    ' smoothing_error'
-    ' smoothed_state smoothed_state_cov'
-    ' smoothed_state_disturbance smoothed_state_disturbance_cov'
-    ' smoothed_measurement_disturbance smoothed_measurement_disturbance_cov'
-))
 
 
 class _KalmanSmoother(object):
