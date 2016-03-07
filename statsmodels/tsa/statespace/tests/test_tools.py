@@ -9,6 +9,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 
+from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tsa.statespace import tools
 from statsmodels.tsa.api import acovf
 # from .results import results_sarimax
@@ -79,6 +80,72 @@ class TestDiff(object):
             series = pd.DataFrame(series)
             x = tools.diff(series, diff, seasonal_diff, k_seasons)
             assert_almost_equal(x, result)
+
+class TestSolveDiscreteLyapunov(object):
+
+    def solve_dicrete_lyapunov_direct(self, a, q, complex_step=False):
+        # This is the discrete Lyapunov solver as "real function of real
+        # variables":  the difference between this and the usual, complex,
+        # version is that in the Kronecker product the second argument is
+        # *not* conjugated here.
+        if not complex_step:
+            lhs = np.kron(a, a.conj())
+            lhs = np.eye(lhs.shape[0]) - lhs
+            x = np.linalg.solve(lhs, q.flatten())
+        else:
+            lhs = np.kron(a, a)
+            lhs = np.eye(lhs.shape[0]) - lhs
+            x = np.linalg.solve(lhs, q.flatten())
+
+        return np.reshape(x, q.shape)
+
+    def test_univariate(self):
+        # Real case
+        a = np.array([[0.5]])
+        q = np.array([[10.]])
+        actual = tools.solve_discrete_lyapunov(a, q)
+        desired = solve_discrete_lyapunov(a, q)
+        assert_allclose(actual, desired)
+
+        # Complex case (where the Lyapunov equation is taken as a complex
+        # function)
+        a = np.array([[0.5+1j]])
+        q = np.array([[10.]])
+        actual = tools.solve_discrete_lyapunov(a, q)
+        desired = solve_discrete_lyapunov(a, q)
+        assert_allclose(actual, desired)
+
+        # Complex case (where the Lyapunov equation is taken as a real
+        # function)
+        a = np.array([[0.5+1j]])
+        q = np.array([[10.]])
+        actual = tools.solve_discrete_lyapunov(a, q, complex_step=True)
+        desired = self.solve_dicrete_lyapunov_direct(a, q, complex_step=True)
+        assert_allclose(actual, desired)
+
+    def test_multivariate(self):
+        # Real case
+        a = tools.companion_matrix([1, -0.4, 0.5])
+        q = np.diag([10., 5.])
+        actual = tools.solve_discrete_lyapunov(a, q)
+        desired = solve_discrete_lyapunov(a, q)
+        assert_allclose(actual, desired)
+
+        # Complex case (where the Lyapunov equation is taken as a complex
+        # function)
+        a = tools.companion_matrix([1, -0.4+0.1j, 0.5])
+        q = np.diag([10., 5.])
+        actual = tools.solve_discrete_lyapunov(a, q, complex_step=False)
+        desired = self.solve_dicrete_lyapunov_direct(a, q, complex_step=False)
+        assert_allclose(actual, desired)
+
+        # Complex case (where the Lyapunov equation is taken as a real
+        # function)
+        a = tools.companion_matrix([1, -0.4+0.1j, 0.5])
+        q = np.diag([10., 5.])
+        actual = tools.solve_discrete_lyapunov(a, q, complex_step=True)
+        desired = self.solve_dicrete_lyapunov_direct(a, q, complex_step=True)
+        assert_allclose(actual, desired)
 
 class TestIsInvertible(object):
 

@@ -281,55 +281,15 @@ class VARMAX(MLEModel):
         self._params_state_cov, offset = _slice('state_cov', offset)
         self._params_obs_cov, offset = _slice('obs_cov', offset)
 
-    def filter(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
+    def filter(self, params, **kwargs):
+        kwargs.setdefault('results_class', VARMAXResults)
+        kwargs.setdefault('results_wrapper_class', VARMAXResultsWrapper)
+        return super(VARMAX, self).filter(params, **kwargs)
 
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(VARMAX, self).filter(params, transformed, cov_type,
-                                            return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = VARMAXResultsWrapper(
-                VARMAXResults(self, params, result, **result_kwargs)
-            )
-
-        return result
-    filter.__doc__ = MLEModel.filter.__doc__
-
-    def smooth(self, params, transformed=True, cov_type=None, return_ssm=False,
-               **kwargs):
-        params = np.array(params, ndmin=1)
-
-        # Transform parameters if necessary
-        if not transformed:
-            params = self.transform_params(params)
-            transformed = True
-
-        # Get the state space output
-        result = super(VARMAX, self).smooth(params, transformed,
-                       cov_type, return_ssm=True, **kwargs)
-
-        # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            result = VARMAXResultsWrapper(
-                VARMAXResults(self, params, result, **result_kwargs)
-            )
-
-        return result
-    smooth.__doc__ = MLEModel.smooth.__doc__
+    def smooth(self, params, **kwargs):
+        kwargs.setdefault('results_class', VARMAXResults)
+        kwargs.setdefault('results_wrapper_class', VARMAXResultsWrapper)
+        return super(VARMAX, self).smooth(params, **kwargs)
 
     @property
     def start_params(self):
@@ -655,8 +615,8 @@ class VARMAX(MLEModel):
 
         return unconstrained
 
-    def update(self, params, *args, **kwargs):
-        params = super(VARMAX, self).update(params, *args, **kwargs)
+    def update(self, params, **kwargs):
+        params = super(VARMAX, self).update(params, **kwargs)
 
         # 1. State intercept
         if self.mle_regression:

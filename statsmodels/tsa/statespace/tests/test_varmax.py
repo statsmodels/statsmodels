@@ -94,9 +94,6 @@ class CheckVARMAX(object):
     def test_loglike(self):
         assert_allclose(self.results.llf, self.true['loglike'], rtol=1e-6)
 
-    def test_bse_oim(self):
-        assert_allclose(self.results.bse**2, self.true['var_oim'], atol=1e-2)
-
     def test_aic(self):
         # We only get 3 digits from Stata
         assert_allclose(self.results.aic, self.true['aic'], atol=3)
@@ -122,7 +119,7 @@ class CheckVARMAX(object):
 
 class CheckLutkepohl(CheckVARMAX):
     @classmethod
-    def setup_class(cls, true, order, trend, error_cov_type, cov_type='oim',
+    def setup_class(cls, true, order, trend, error_cov_type, cov_type='approx',
              included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
              **kwargs):
         cls.true = true
@@ -158,6 +155,14 @@ class TestVAR(CheckLutkepohl):
         super(TestVAR, cls).setup_class(
             true,  order=(1,0), trend='nc',
             error_cov_type="unstructured")
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-4)
+
+    def test_bse_oim(self):
+        bse = self.results._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-2)
 
     def test_summary(self):
         summary = self.results.summary()
@@ -203,6 +208,14 @@ class TestVAR_diagonal(CheckLutkepohl):
         super(TestVAR_diagonal, cls).setup_class(
             true,  order=(1,0), trend='nc',
             error_cov_type="diagonal")
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-5)
+
+    def test_bse_oim(self):
+        bse = self.results._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-2)
 
     def test_summary(self):
         summary = self.results.summary()
@@ -270,6 +283,10 @@ class TestVAR_measurement_error(CheckLutkepohl):
     def test_mle(self):
         # With the additional measurment error parameters, this wouldn't be
         # a meaningful test
+        pass
+
+    def test_bse_approx(self):
+        # This would just test the same thing as TestVAR_diagonal.test_bse_approx
         pass
 
     def test_bse_oim(self):
@@ -346,6 +363,14 @@ class TestVAR_obs_intercept(CheckLutkepohl):
             true, order=(1,0), trend='nc',
             error_cov_type="diagonal", obs_intercept=true['obs_intercept'])
 
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-4)
+
+    def test_bse_oim(self):
+        bse = self.results._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-2)
+
     def test_aic(self):
         # Since the obs_intercept is added in in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
@@ -382,10 +407,15 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var calculates BIC differently
         pass
 
+    def test_bse_approx(self):
+        # Exclude the covariance cholesky terms
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse[:-6]**2, self.true['var_oim'], atol=1e-5)
+
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
-        assert_allclose(
-            self.results.bse[:-6]**2, self.true['var_oim'], atol=1e-2)
+        bse = self.results._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse[:-6]**2, self.true['var_oim'], atol=1e-5)
 
     def test_predict(self):
         super(CheckLutkepohl, self).test_predict(end='1978-10-01', atol=1e-3)
@@ -469,6 +499,9 @@ class TestVAR_exog2(CheckLutkepohl):
     def test_bic(self):
         pass
 
+    def test_bse_approx(self):
+        pass
+
     def test_bse_oim(self):
         pass
 
@@ -497,10 +530,15 @@ class TestVAR2(CheckLutkepohl):
             true, order=(2,0), trend='nc', error_cov_type='unstructured',
             included_vars=['dln_inv', 'dln_inc'])
 
+    def test_bse_approx(self):
+        # Exclude the covariance cholesky terms
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-5)
+
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
-        assert_allclose(
-            self.results.bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
+        bse = self.results._cov_params_oim().diagonal()**0.5
+        assert_allclose(bse[:-3]**2, self.true['var_oim'][:-3], atol=1e-2)
 
     def test_summary(self):
         summary = self.results.summary()
@@ -541,7 +579,7 @@ class TestVAR2(CheckLutkepohl):
 
 class CheckFREDManufacturing(CheckVARMAX):
     @classmethod
-    def setup_class(cls, true, order, trend, error_cov_type, cov_type='oim',
+    def setup_class(cls, true, order, trend, error_cov_type, cov_type='approx',
                  **kwargs):
         cls.true = true
         # 1960:Q1 - 1982:Q4
@@ -579,6 +617,10 @@ class TestVARMA(CheckFREDManufacturing):
         # in some params) whereas Stata's is restricted, the MLE test isn't
         # meaninful
         pass
+
+    def test_bse_approx(self):
+        # Standard errors do not match Stata's
+        raise SkipTest('Known failure: standard errors do not match.')
 
     def test_bse_oim(self):
         # Standard errors do not match Stata's
@@ -658,6 +700,10 @@ class TestVMA1(CheckFREDManufacturing):
         # in some params) whereas Stata's is restricted, the MLE test isn't
         # meaninful
         pass
+
+    def test_bse_approx(self):
+        # Standard errors do not match Stata's
+        raise SkipTest('Known failure: standard errors do not match.')
 
     def test_bse_oim(self):
         # Standard errors do not match Stata's

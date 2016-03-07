@@ -374,7 +374,7 @@ cdef class {{prefix}}Statespace(object):
     # *Note:* see Durbin and Koopman section 5.6.2
     # 
     # TODO improve efficiency with direct BLAS / LAPACK calls
-    def initialize_stationary(self):
+    def initialize_stationary(self, complex_step=False):
         """
         initialize_stationary()
         """
@@ -387,13 +387,14 @@ cdef class {{prefix}}Statespace(object):
                                    &self.state_cov[0,0,0],
                                    &self.selected_state_cov[0,0,0])
 
-        from scipy.linalg import solve_discrete_lyapunov
+        from tools import solve_discrete_lyapunov
 
         dim[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
         self.initial_state_cov = np.asfortranarray(solve_discrete_lyapunov(
             np.array(self.transition[:,:,0], dtype={{dtype}}),
-            np.array(self.selected_state_cov[:,:,0], dtype={{dtype}})
+            np.array(self.selected_state_cov[:,:,0], dtype={{dtype}}),
+            complex_step=complex_step
         ).T)
 
         self.initialized = True

@@ -574,7 +574,7 @@ class KalmanFilter(Representation):
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, tolerance=None,
-               loglikelihood_burn=None, results=None):
+               loglikelihood_burn=None, results=None, complex_step=False):
         """
         Apply the Kalman filter to the statespace model.
 
@@ -630,7 +630,7 @@ class KalmanFilter(Representation):
             new_results = True
 
         # Initialize the state
-        self._initialize_state(prefix=prefix)
+        self._initialize_state(prefix=prefix, complex_step=complex_step)
 
         # Run the filter
         kfilter()

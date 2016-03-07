@@ -32,7 +32,7 @@ output_results = pd.read_csv(current_path + os.sep + output_path)
 
 class CheckDynamicFactor(object):
     @classmethod
-    def setup_class(cls, true, k_factors, factor_order, cov_type='oim',
+    def setup_class(cls, true, k_factors, factor_order, cov_type='approx',
                  included_vars=['dln_inv', 'dln_inc', 'dln_consump'],
                  demean=False, filter=True, **kwargs):
         cls.true = true
@@ -115,10 +115,6 @@ class CheckDynamicFactor(object):
     def test_loglike(self):
         assert_allclose(self.results.llf, self.true['loglike'], rtol=1e-6)
 
-    def test_bse_oim(self):
-        raise SkipTest('Known failure: standard errors do not match.')
-        # assert_allclose(self.results.bse, self.true['bse_oim'], atol=1e-2)
-
     def test_aic(self):
         # We only get 3 digits from Stata
         assert_allclose(self.results.aic, self.true['aic'], atol=3)
@@ -151,6 +147,10 @@ class TestDynamicFactor(CheckDynamicFactor):
         true['predict'] = output_results.ix[1:, ['predict_dfm_1', 'predict_dfm_2', 'predict_dfm_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
         super(TestDynamicFactor, cls).setup_class(true, k_factors=1, factor_order=2)
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse, self.true['bse_oim'], atol=1e-5)
 
 class TestDynamicFactor2(CheckDynamicFactor):
     """
@@ -266,6 +266,10 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
         exog = np.ones((16, 1))
         super(TestDynamicFactor_exog1, self).test_dynamic_predict(exog=exog)
 
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-5)
+
 class TestDynamicFactor_exog2(CheckDynamicFactor):
     """
     Test for a dynamic factor model with 2 exogenous regressors: a constant
@@ -278,6 +282,10 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_exog2_1', 'dyn_predict_dfm_exog2_2', 'dyn_predict_dfm_exog2_3']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestDynamicFactor_exog2, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()**0.5
+        assert_allclose(bse**2, self.true['var_oim'], atol=1e-5)
 
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
@@ -361,6 +369,11 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         true['predict'] = output_results.ix[1:, ['predict_dfm_gen_1', 'predict_dfm_gen_2', 'predict_dfm_gen_3']]
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_gen_1', 'dyn_predict_dfm_gen_2', 'dyn_predict_dfm_gen_3']]
         super(TestDynamicFactor_general_errors, cls).setup_class(true, k_factors=1, factor_order=1, error_var=True, error_order=1, error_cov_type='unstructured')
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()
+        assert_allclose(bse[:3], self.true['var_oim'][:3], atol=1e-5)
+        assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=1e-4)
 
     def test_mle(self):
         raise SkipTest("Known failure, no sequence of optimizers has been"
@@ -476,12 +489,18 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_ar2_1', 'dyn_predict_dfm_ar2_2', 'dyn_predict_dfm_ar2_3']]
         super(TestDynamicFactor_ar2_errors, cls).setup_class(true, k_factors=1, factor_order=1, error_order=2)
 
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()
+        assert_allclose(bse, self.true['var_oim'], atol=1e-5)
+
     def test_mle(self):
         with warnings.catch_warnings(record=True) as w:
+            # Depending on the system, this test can reach a greater precision,
+            # but for cross-platform results keep it at 1e-2
             mod = self.model
-            res1 = mod.fit(method='lbfgs', maxiter=10000, disp=-1)
-            res = mod.fit(res1.params, method='nm', maxiter=10000, maxfev=10000, disp=False)
-            assert_allclose(res.llf, self.results.llf, atol=1e-3)
+            res1 = mod.fit(maxiter=100, optim_score='approx', disp=False)
+            res = mod.fit(res1.params, method='nm', maxiter=10000, optim_score='approx', disp=False)
+            assert_allclose(res.llf, self.results.llf, atol=1e-2)
 
 class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     """
@@ -495,6 +514,10 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_scalar_1', 'dyn_predict_dfm_scalar_2', 'dyn_predict_dfm_scalar_3']]
         exog = np.ones((75,1))
         super(TestDynamicFactor_scalar_error, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog, error_cov_type='scalar')
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()
+        assert_allclose(bse, self.true['var_oim'], atol=1e-5)
 
     def test_predict(self):
         exog = np.ones((16, 1))
@@ -516,6 +539,10 @@ class TestStaticFactor(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sfm_1', 'dyn_predict_sfm_2', 'dyn_predict_sfm_3']]
         super(TestStaticFactor, cls).setup_class(true, k_factors=1, factor_order=0)
 
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()
+        assert_allclose(bse, self.true['var_oim'], atol=1e-5)
+
     def test_bic(self):
         # Stata uses 5 df (i.e. 5 params) here instead of 6, because one param
         # is basically zero.
@@ -534,6 +561,10 @@ class TestSUR(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sur_1', 'dyn_predict_sur_2', 'dyn_predict_sur_3']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestSUR, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_cov_type='unstructured')
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()
+        assert_allclose(bse[:6], self.true['var_oim'][:6], atol=1e-5)
 
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
@@ -557,6 +588,10 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sur_auto_1', 'dyn_predict_sur_auto_2']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestSUR_autocorrelated_errors, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_order=1, error_var=True, error_cov_type='diagonal', included_vars=['dln_inv', 'dln_inc'])
+
+    def test_bse_approx(self):
+        bse = self.results._cov_params_approx().diagonal()
+        assert_allclose(bse, self.true['var_oim'], atol=1e-5)
 
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
