@@ -11,97 +11,135 @@ from scipy.linalg import solve_sylvester
 import pandas as pd
 from statsmodels.tools.data import _is_using_pandas
 
-
-prefix_dtype_map = {
-    's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
-}
+import warnings
 
 
 compatibility_mode = False
 has_trmm = True
+prefix_dtype_map = {
+    's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
+}
+prefix_statespace_map = {}
+prefix_kalman_filter_map = {}
+prefix_kalman_smoother_map = {}
+prefix_simulation_smoother_map = {}
+prefix_pacf_map = {}
+prefix_sv_map = {}
+
+
+def set_mode(compatibility=None):
+    global compatibility_mode, has_trmm, prefix_statespace_map,        \
+        prefix_kalman_filter_map, prefix_kalman_smoother_map,          \
+        prefix_simulation_smoother_map, prefix_pacf_map, prefix_sv_map
+
+    # Determine mode automatically if none given
+    if compatibility is None:
+        try:
+            from scipy.linalg import cython_blas
+            compatibility = False
+        except ImportError:
+            compatibility = True
+
+    # If compatibility was False, make sure that is possible
+    if not compatibility:
+        try:
+            from scipy.linalg import cython_blas
+        except ImportError:
+            warnings.warn('Minimum dependencies not met. Compatibility mode'
+                          ' enabled.')
+            compatibility = True
+
+    # Initialize the appropriate mode
+    if not compatibility:
+        from scipy.linalg import cython_blas
+        from . import (_representation, _kalman_filter, _kalman_smoother,
+                       _simulation_smoother, _tools)
+        compatibility_mode = False
+
+        prefix_statespace_map.update({
+            's': _representation.sStatespace, 'd': _representation.dStatespace,
+            'c': _representation.cStatespace, 'z': _representation.zStatespace
+        })
+        prefix_kalman_filter_map.update({
+            's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
+            'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+        })
+        prefix_kalman_smoother_map.update({
+            's': _kalman_smoother.sKalmanSmoother,
+            'd': _kalman_smoother.dKalmanSmoother,
+            'c': _kalman_smoother.cKalmanSmoother,
+            'z': _kalman_smoother.zKalmanSmoother
+        })
+        prefix_simulation_smoother_map.update({
+            's': _simulation_smoother.sSimulationSmoother,
+            'd': _simulation_smoother.dSimulationSmoother,
+            'c': _simulation_smoother.cSimulationSmoother,
+            'z': _simulation_smoother.zSimulationSmoother
+        })
+        prefix_pacf_map.update({
+            's': _tools._scompute_coefficients_from_multivariate_pacf,
+            'd': _tools._dcompute_coefficients_from_multivariate_pacf,
+            'c': _tools._ccompute_coefficients_from_multivariate_pacf,
+            'z': _tools._zcompute_coefficients_from_multivariate_pacf
+        })
+        prefix_sv_map.update({
+            's': _tools._sconstrain_sv_less_than_one,
+            'd': _tools._dconstrain_sv_less_than_one,
+            'c': _tools._cconstrain_sv_less_than_one,
+            'z': _tools._zconstrain_sv_less_than_one
+        })
+    else:
+        from . import _statespace
+        from ._pykalman_smoother import _KalmanSmoother
+        compatibility_mode = True
+
+        try:
+            from scipy.linalg.blas import dtrmm
+        except ImportError:
+            has_trmm = False
+
+        prefix_statespace_map.update({
+            's': _statespace.sStatespace, 'd': _statespace.dStatespace,
+            'c': _statespace.cStatespace, 'z': _statespace.zStatespace
+        })
+        prefix_kalman_filter_map.update({
+            's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
+            'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
+        })
+        prefix_kalman_smoother_map.update({
+            's': _KalmanSmoother, 'd': _KalmanSmoother,
+            'c': _KalmanSmoother, 'z': _KalmanSmoother
+        })
+        prefix_simulation_smoother_map.update({
+            's': None, 'd': None, 'c': None, 'z': None
+        })
+        if has_trmm:
+            prefix_pacf_map.update({
+                's': _statespace._scompute_coefficients_from_multivariate_pacf,
+                'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
+                'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
+                'z': _statespace._zcompute_coefficients_from_multivariate_pacf
+            })
+            prefix_sv_map.update({
+                's': _statespace._sconstrain_sv_less_than_one,
+                'd': _statespace._dconstrain_sv_less_than_one,
+                'c': _statespace._cconstrain_sv_less_than_one,
+                'z': _statespace._zconstrain_sv_less_than_one
+            })
+set_mode(compatibility=None)
+
+
 try:
-    from scipy.linalg import cython_blas
-    from . import (_representation, _kalman_filter, _kalman_smoother,
-                   _simulation_smoother, _tools)
     from scipy.linalg.blas import find_best_blas_type
+except ImportError:  # pragma: no cover
+    # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
+    _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
 
-    prefix_statespace_map = {
-        's': _representation.sStatespace, 'd': _representation.dStatespace,
-        'c': _representation.cStatespace, 'z': _representation.zStatespace
-    }
-    prefix_kalman_filter_map = {
-        's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
-        'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
-    }
-    prefix_kalman_smoother_map = {
-        's': _kalman_smoother.sKalmanSmoother,
-        'd': _kalman_smoother.dKalmanSmoother,
-        'c': _kalman_smoother.cKalmanSmoother,
-        'z': _kalman_smoother.zKalmanSmoother
-    }
-    prefix_simulation_smoother_map = {
-        's': _simulation_smoother.sSimulationSmoother,
-        'd': _simulation_smoother.dSimulationSmoother,
-        'c': _simulation_smoother.cSimulationSmoother,
-        'z': _simulation_smoother.zSimulationSmoother
-    }
-    prefix_pacf_map = {
-        's': _tools._scompute_coefficients_from_multivariate_pacf,
-        'd': _tools._dcompute_coefficients_from_multivariate_pacf,
-        'c': _tools._ccompute_coefficients_from_multivariate_pacf,
-        'z': _tools._zcompute_coefficients_from_multivariate_pacf
-    }
-    prefix_sv_map = {
-        's': _tools._sconstrain_sv_less_than_one,
-        'd': _tools._dconstrain_sv_less_than_one,
-        'c': _tools._cconstrain_sv_less_than_one,
-        'z': _tools._zconstrain_sv_less_than_one
-    }
-except ImportError:
-    from . import _statespace
-    compatibility_mode = True
-
-    try:
-        from scipy.linalg.blas import find_best_blas_type
-    except ImportError:  # pragma: no cover
-        # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
-        _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
-
-        def find_best_blas_type(arrays):
-            dtype, index = max(
-                [(ar.dtype, i) for i, ar in enumerate(arrays)])
-            prefix = _type_conv.get(dtype.char, 'd')
-            return prefix, dtype, None
-
-    try:
-        from scipy.linalg.blas import dtrmm
-    except ImportError:
-        has_trmm = False
-
-
-    prefix_statespace_map = {
-        's': _statespace.sStatespace, 'd': _statespace.dStatespace,
-        'c': _statespace.cStatespace, 'z': _statespace.zStatespace
-    }
-    prefix_kalman_filter_map = {
-        's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
-        'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
-    }
-    prefix_kalman_smoother_map = None
-    prefix_simulation_smoother_map = None
-    if has_trmm:
-        prefix_pacf_map = {
-            's': _statespace._scompute_coefficients_from_multivariate_pacf,
-            'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
-            'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
-            'z': _statespace._zcompute_coefficients_from_multivariate_pacf
-        }
-        prefix_sv_map = {
-            's': _statespace._sconstrain_sv_less_than_one,
-            'd': _statespace._dconstrain_sv_less_than_one,
-            'c': _statespace._cconstrain_sv_less_than_one,
-            'z': _statespace._zconstrain_sv_less_than_one
-        }
+    def find_best_blas_type(arrays):
+        dtype, index = max(
+            [(ar.dtype, i) for i, ar in enumerate(arrays)])
+        prefix = _type_conv.get(dtype.char, 'd')
+        return prefix, dtype, None
 
 
 def companion_matrix(polynomial):
