@@ -33,6 +33,9 @@ class Family(object):
     # TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
 
+    #TODO: delete_me
+    delete_me = True
+
     links = []
 
     def _setlink(self, link):
@@ -279,6 +282,7 @@ class Poisson(Family):
     variance = V.mu
     valid = [0, np.inf]
     safe_links = [L.Log,]
+    _canonical_link = L.log
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
@@ -431,6 +435,7 @@ class Gaussian(Family):
     links = [L.log, L.identity, L.inverse_power]
     variance = V.constant
     safe_links = links
+    _canonical_link = L.identity
 
     def __init__(self, link=L.identity):
         self.variance = Gaussian.variance
@@ -516,7 +521,8 @@ class Gaussian(Family):
         llf = sum((`endog`*`mu`-`mu`**2/2)/`scale` - `endog`**2/(2*`scale`) - \
             (1/2.)*log(2*pi*`scale`))
         """
-        if isinstance(self.link, L.Power) and self.link.power == 1:
+        # TODO: delete_me
+        if isinstance(self.link, L.Power) and self.link.power == 1 and self.delete_me:
             # This is just the loglikelihood for classical OLS
             nobs2 = endog.shape[0]/2.
             SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
@@ -524,7 +530,7 @@ class Gaussian(Family):
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
-            # Return the loglikelihood for Gaussian GLM
+            #Return the loglikelihood for Gaussian GLM
             return np.sum((endog * mu - mu**2/2)/scale - endog**2/(2 * scale)
                           - .5*np.log(2 * np.pi * scale))
 
@@ -576,9 +582,11 @@ class Gamma(Family):
 
     """
 
-    links = [L.log, L.identity, L.inverse_power]
+    links = [L.log, L.identity, L.inverse_power, L.negative_inverse_power]
     variance = V.mu_squared
     safe_links = [L.Log,]
+    # TODO: we need a canonical link for Gamma
+    _canonical_link = L.negative_inverse_power
 
     def __init__(self, link=L.inverse_power):
         self.variance = Gamma.variance
@@ -740,6 +748,7 @@ class Binomial(Family):
 
     # Other safe links, e.g. cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
+    _canonical_link = L.logit
 
     def __init__(self, link=L.logit):  # , n=1.):
         # TODO: it *should* work for a constant n>1 actually, if data_weights
@@ -876,6 +885,7 @@ class Binomial(Family):
                             (1 - endog) * np.log((1 - endog)/(1 - mu) +
                                                  1e-200)))/scale)
 
+    #@profile
     def loglike(self, endog, mu, scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
@@ -910,8 +920,9 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale * np.sum(endog * np.log(mu/(1 - mu) + 1e-200) +
-                                  np.log(1 - mu))
+            p1 = endog * np.log(mu/(1 - mu) + 1e-200)
+            p2 = np.log(1 - mu)
+            return scale * np.sum(p1 + p2)
         else:
             y = endog * self.n  # convert back to successes
             return scale * np.sum(special.gammaln(self.n + 1) -
@@ -998,9 +1009,10 @@ class InverseGaussian(Family):
 
     """
 
-    links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
+    links = [L.inverse_squared, L.inverse_power, L.identity, L.log, L.negative_inverse_squared]
     variance = V.mu_cubed
     safe_links = [L.inverse_squared, L.Log,]
+    _canonical_link = L.negative_inverse_squared
 
     def __init__(self, link=L.inverse_squared):
         self.variance = InverseGaussian.variance
@@ -1143,6 +1155,7 @@ class NegativeBinomial(Family):
     # similar to below
     variance = V.nbinom
     safe_links = [L.Log,]
+    _canonical_link = L.nbinom
 
     def __init__(self, link=L.log, alpha=1.):
         self.alpha = 1. * alpha # make it at least float

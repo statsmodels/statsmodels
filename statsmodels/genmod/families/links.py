@@ -95,6 +95,13 @@ class Link(object):
         """
         return 1 / self.deriv(self.inverse(z))
 
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of inverse link function.
+        """
+
+        return - self.deriv2(self.inverse(z)) / (self.deriv(self.inverse(z))**3)
+
 
 class Logit(Link):
     """
@@ -226,6 +233,7 @@ class Logit(Link):
         g''(z) : array
             The value of the second derivative of the logit function
         """
+        p = self._clean(p)
         v = p * (1 - p)
         return (2*p - 1) / v**2
 
@@ -410,6 +418,168 @@ class identity(Power):
     """
     def __init__(self):
         super(identity, self).__init__(power=1.)
+
+
+# TODO: Negative powers need to be tested.
+class NegativePower(Power):
+
+
+    """
+    The negative power transform
+
+    Parameters
+    ----------
+    power : float
+        The exponent of the negative power transform
+
+    """
+
+    def __init__(self, power=1.):
+        self.power = power
+
+    def _clean(self, p):
+        """
+        Clip logistic values to range (eps, 1-eps)
+
+        Parameters
+        -----------
+        p : array-like
+            Probabilities
+
+        Returns
+        --------
+        pclip : array
+            Clipped probabilities
+        """
+        return np.clip(p, FLOAT_EPS, np.inf)
+
+
+    def __call__(self, p):
+        """
+        Negative power transform link function
+
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
+
+        Returns
+        -------
+        z : array-like
+            Power transform of x
+
+        Notes
+        -----
+        g(p) = - (x**self.power)
+        """
+        p = self._clean(p)
+        return - super(NegativePower, self).__call__(p)
+
+    def inverse(self, z):
+        """
+        Inverse of the power transform link function
+
+        Parameters
+        ----------
+        `z` : array-like
+            Value of the transformed mean parameters at `p`
+
+        Returns
+        -------
+        `p` : array
+            Mean parameters
+
+        Notes
+        -----
+        g^(-1)(z`) = - `(-z)`**(1/`power`)
+        """
+        return super(NegativePower, self).inverse(-z)
+
+    def deriv(self, p):
+        """
+        Derivative of the power transform
+
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
+
+        Returns
+        --------
+        g'(p) : array
+            Derivative of power transform of `p`
+
+        Notes
+        -----
+        g'(`p`) = - `power` * `p`**(`power` - 1)
+        """
+        p = self._clean(p)
+        return - super(NegativePower, self).deriv(p)
+
+    def deriv2(self, p):
+        """
+        Second derivative of the power transform
+
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
+
+        Returns
+        --------
+        g''(p) : array
+            Second derivative of the power transform of `p`
+
+        Notes
+        -----
+        g''(`p`) = - `power` * (`power` - 1) * `p`**(`power` - 2)
+        """
+        p = self._clean(p)
+        return - super(NegativePower, self).deriv2(p)
+
+    def inverse_deriv(self, z):
+        """
+        Derivative of the inverse of the power transform
+
+        Parameters
+        ----------
+        z : array-like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        The value of the derivative of the inverse of the power transform
+        function
+        """
+        return - super(NegativePower, self).inverse_deriv(-z)
+
+
+class negative_inverse_power(NegativePower):
+    """
+    The negative inverse transform
+
+    Notes
+    -----
+    g(p) = -1/p
+
+    Alias of statsmodels.family.links.NegativePower(power=-1.)
+    """
+    def __init__(self):
+        super(negative_inverse_power, self).__init__(power=-1.)
+
+
+class negative_inverse_squared(NegativePower):
+    """
+    The negative inverse squared transform
+
+    Notes
+    -----
+    g(`p`) = -1/(`p`\ \*\*2)
+
+    Alias of statsmodels.family.links.NegativePower(power=2.)
+    """
+    def __init__(self):
+        super(negative_inverse_squared, self).__init__(power=-2.)
 
 
 class Log(Link):
@@ -818,7 +988,7 @@ class cloglog(CLogLog):
     pass
 
 
-class NegativeBinomial(object):
+class NegativeBinomial(Link):
     '''
     The negative binomial link function
 

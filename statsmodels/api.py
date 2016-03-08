@@ -6,6 +6,7 @@ from . import regression
 from .regression.linear_model import OLS, GLS, WLS, GLSAR
 from .regression.quantile_regression import QuantReg
 from .regression.mixed_linear_model import MixedLM
+from .regression.mixed_glm import MixedGLM
 from .genmod import api as genmod
 from .genmod.api import GLM, GEE, OrdinalGEE, NominalGEE, families, cov_struct
 from . import robust
