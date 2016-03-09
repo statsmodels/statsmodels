@@ -66,10 +66,19 @@ class GLM(base.LikelihoodModel):
         family = sm.family.Binomial()
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
+    offset : array-like or None
+        An offset to be included in the model.  If provided, must be
+        an array whose length is the number of rows in exog.
+    exposure : array-like or None
+        Log(exposure) will be added to the linear prediction in the model. Exposure
+        is only valid if the log link is used. If provided, it must be an array
+        with the same length as endog.
     freq_weights : array-like
         1d array of frequency weights. The default is None. If None is selected
         or a blank value, then the algorithm will replace with an array of 1's
         with length equal to the endog.
+        WARNING: Using weights is not verified yet for all possible options
+        and results, see Notes.
     %(extra_params)s
 
     Attributes
@@ -149,6 +158,18 @@ class GLM(base.LikelihoodModel):
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
 
+    Using frequency weights: Frequency weights produce the same results as repeating
+    observations by the frequencies (if those are integers). This is verified for all
+    basic results with nonrobust or heteroscedasticity robust ``cov_type``. Other
+    robust covariance types have not yet been verified, and at least the small sample
+    correction is currently not based on the correct total frequency count.
+    It is not yet desided whether all the different types of residuals will be
+    based on weighted residuals. Currently, deviance and pearson residuals,
+    as well as working and response residuals are weighted, while Anscombe
+    residuals are unweighted. Consequently, Pearson and deviance residuals
+    provide a correct measure for the scale and dispersion, but will be
+    proportional to the frequency weights for outlier measures.
+
 
     **Attributes**
 
@@ -215,8 +236,8 @@ class GLM(base.LikelihoodModel):
         the specific distribution weighting functions.
     """ % {'extra_params' : base._missing_param_doc}
 
-    def __init__(self, endog, exog, family=None, freq_weights=None,
-                 offset=None, exposure=None, missing='none', **kwargs):
+    def __init__(self, endog, exog, family=None, offset=None,
+                 exposure=None, freq_weights=None, missing='none', **kwargs):
 
         if (family is not None) and not isinstance(family.link, tuple(family.safe_links)):
             import warnings
@@ -1207,7 +1228,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def bic(self):
         return (self.deviance -
-                (self._freq_weights.sum() - self.df_model - 1) * 
+                (self._freq_weights.sum() - self.df_model - 1) *
                 np.log(self._freq_weights.sum()))
 
 
