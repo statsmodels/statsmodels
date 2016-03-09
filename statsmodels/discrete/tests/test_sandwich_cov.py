@@ -217,6 +217,22 @@ class TestPoissonHC1Fit(CheckCountRobustMixin):
         cls.corr_fact = np.sqrt(1./corr_fact)
 
 
+class TestPoissonHC1FitExposure(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_exposure_hc1
+        mod = smd.Poisson(endog, exog, exposure=exposure)
+        cls.res1 = mod.fit(disp=False, cov_type='HC1')
+
+        cls.bse_rob = cls.res1.bse
+        nobs, k_vars = mod.exog.shape
+        corr_fact = (nobs) / float(nobs - 1.)
+        # for bse we need sqrt of correction factor
+        cls.corr_fact = np.sqrt(1./corr_fact)
+
+
+
 class TestPoissonCluExposure(CheckCountRobustMixin):
 
     @classmethod

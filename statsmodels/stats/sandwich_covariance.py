@@ -244,6 +244,15 @@ def _get_sandwich_arrays(results):
             xu = results.model.wexog * results.wresid[:, None]
 
             hessian_inv = np.asarray(results.normalized_cov_params)
+
+        # experimental support for freq_weights
+        if hasattr(results.model, 'freq_weights'):
+            # we don't want to square the weights in the covariance calculations
+            # assumes that freq_weights are incorporated in score_obs or equivalent
+            # assumes xu/score_obs is 2D
+            # temporary asarray
+            xu /= np.sqrt(np.asarray(results.model.freq_weights)[:, None])
+
     else:
         raise ValueError('need either tuple of (jac, hessian_inv) or results' +
                          'instance')
