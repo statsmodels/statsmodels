@@ -260,6 +260,9 @@ class GLM(base.LikelihoodModel):
             delattr(self, 'offset')
         if exposure is None:
             delattr(self, 'exposure')
+
+        self.nobs = self.endog.shape[0]
+
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
                                 '_offset_exposure', 'n_trials'])
@@ -280,13 +283,16 @@ class GLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                             np.transpose(self.pinv_wexog))
 
-        self.df_model = np_matrix_rank(self.exog)-1
+        self.df_model = np_matrix_rank(self.exog) - 1
+
 
         if (self.freq_weights is not None) and \
            (self.freq_weights.shape[0] == self.endog.shape[0]):
-            self.df_resid = self.freq_weights.sum() - self.df_model - 1
+            self.wnobs = self.freq_weights.sum()
+            self.df_resid = self.wnobs - self.df_model - 1
         else:
-            self.df_resid = self.exog.shape[0] - np_matrix_rank(self.exog)
+            self.wnobs = self.exog.shape[0]
+            self.df_resid = self.exog.shape[0] - self.df_model - 1
 
     def _check_inputs(self, family, offset, exposure, endog, freq_weights):
 
@@ -1126,7 +1132,7 @@ class GLMResults(base.LikelihoodModelResults):
         # call the model's attributes?
 
         # for remove data and pickle without large arrays
-        self._data_attr.extend(['results_constrained'])
+        self._data_attr.extend(['results_constrained', '_freq_weights'])
         self.data_in_cache = getattr(self, 'data_in_cache', [])
         self.data_in_cache.extend(['null'])
 
@@ -1228,8 +1234,8 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def bic(self):
         return (self.deviance -
-                (self._freq_weights.sum() - self.df_model - 1) *
-                np.log(self._freq_weights.sum()))
+                (self.model.wnobs - self.df_model - 1) *
+                np.log(self.model.wnobs))
 
 
     def get_prediction(self, exog=None, exposure=None, offset=None,
