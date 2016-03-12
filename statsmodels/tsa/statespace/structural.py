@@ -1339,7 +1339,7 @@ class UnobservedComponentsResults(MLEResults):
         if hasattr(self.data, 'dates') and self.data.dates is not None:
             dates = self.data.dates._mpl_repr()
         else:
-            dates = np.arange(len(resid))
+            dates = np.arange(len(self.data.endog))
 
         # Get the critical value for confidence intervals
         critical_value = norm.ppf(1 - alpha / 2.)
