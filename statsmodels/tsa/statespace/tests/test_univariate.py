@@ -194,18 +194,16 @@ class TestClark1989(object):
             self.univariate_results.smoothed_state_cov, 6
         )
 
-    @SkipTest
     def test_smoothed_measurement_disturbance(self):
         assert_almost_equal(
             self.conventional_results.smoothed_measurement_disturbance,
             self.univariate_results.smoothed_measurement_disturbance, 9
         )
 
-    @SkipTest
     def test_smoothed_measurement_disturbance_cov(self):
         assert_almost_equal(
-            self.conventional_results.smoothed_measurement_disturbance_cov,
-            self.univariate_results.smoothed_measurement_disturbance_cov, 9
+            self.conventional_results.smoothed_measurement_disturbance_cov.diagonal(),
+            self.univariate_results.smoothed_measurement_disturbance_cov.diagonal(), 9
         )
 
     def test_smoothed_state_disturbance(self):

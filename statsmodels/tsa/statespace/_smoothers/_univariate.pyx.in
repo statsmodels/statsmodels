@@ -5,15 +5,24 @@
 """
 State Space Models
 
-TODO: lots of duplicated index multiplications here
-TODO: This can give slightly different measurement disturbance estimates from
-      the conventional smoother and radically different measurement disturbance
-      covariance estimates. Not sure why. Although since the forecast error
-      covariance matrix in the conventional is not necessarily diagonal, but
-      in the univariate version it must be. For example, if H = I, then in the
-      conventional version, for t = n, Var(eps|Y_n) = I - F^{-1}. If F^{-1} is
-      not diagonal, then the two cannot be the same.
-      However, possibly this is expected (???) insofar as 
+Note: there is a typo in Durbin and Koopman (2012) in the equations for the
+univariate smoothed measurement disturbances and smoothed measurement
+disturbance covariances. In each equation (p157), the Kalman gain vector
+K_{t,i} is used, but in fact these should be multiplied by the forecast error
+covariance F_{t,i}. The original paper on the univariate approach, Koopman and
+Durbin (2000) has the correct form. The typo arose because the original paper
+defines the Kalman gain as K_{t,i} = P_{t,i} Z_{t,i}' but the book defines it
+as K_{t,i} = P_{t,i} Z_{t,i}' F_{t,i}^{-1}, and the book does not correct the
+disturbances formulas for this change.
+
+Furthermore, in analogy to the disturbance smoother from chapter 4, the
+formula for the univariate covariance ought to be subtracted from the
+observation covariance.
+
+So, what we ought to have is:
+
+\hat \varepsilon_{t,i} = \sigma_{t,i}^2 F_{t,i}^{-1} (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})
+Var(\hat \varepsilon_{t,i}) = \sigma_{t,i}^2 - \sigma_{t,i}^4 F_{t,i}^{-2} (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})
 
 Author: Chad Fulton  
 License: Simplified-BSD
@@ -227,7 +236,7 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
     if smoother.smoother_output & SMOOTHER_DISTURBANCE:
         for i in range(model._k_endog):
             # Smoothed measurement disturbance  
-            # $\hat \varepsilon_t = (H_{t,i} / F_{t,i}) (v_{t,i} - K_{t,i}' r_{t,i})$  
+            # $\hat \varepsilon_t = (H_{t,i} / F_{t,i}) (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})$  
             # Note: K_{t,i}' r_{t,i} was stored in _smoothed_measurement_disturbance[i]
             # in smoothed_estimators_univariate, above, so we just need to implement
             # $\hat \varepsilon_t = (H_{t,i} / F_{t,i}) (v_{t,i} - \\#)$ here
@@ -236,7 +245,7 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
             smoother._smoothed_measurement_disturbance[i] = (
                 kfilter._tmp4[i + i*kfilter.k_endog] * (
                     kfilter._forecast_error[i] -
-                    smoother._smoothed_measurement_disturbance[i]
+                    kfilter._forecast_error_cov[i + i*kfilter.k_endog] * smoother._smoothed_measurement_disturbance[i]
                 )
             )
 
@@ -251,16 +260,16 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
     if smoother.smoother_output & SMOOTHER_DISTURBANCE_COV:
         for i in range(model._k_endog):
             # Smoothed measurement disturbance covariance matrix  
-            # $Var(\varepsilon_{t,i} | Y_n) = (H_{t,i} / F_{t,i})^2 * (F_{t,i} + K_{t,i}' N_{t,i} K_{t,i})$  
+            # $Var(\varepsilon_{t,i} | Y_n) = H_{t,i} - (H_{t,i} / F_{t,i})^2 * (F_{t,i} + F_{t,i}^2 K_{t,i}' N_{t,i} K_{t,i})$  
             # Note: K_{t,i}' N_{t,i} K_{t,i} was stored in _smoothed_measurement_disturbance_cov[i,i]
             # in smoothed_estimators_univariate, above, so we just need to implement
-            # $Var(\varepsilon_{t,i} | Y_n) = (H_{t,i} / F_{t,i})^2 * (F_{t,i} + \\#)$ here
+            # $Var(\varepsilon_{t,i} | Y_n) = H_{t,i} - (H_{t,i} / F_{t,i})^2 * (F_{t,i} + F_{t,i}^2 * \\#)$ here
             # (this is because we do not otherwise store the N_{t,i} values)  
             # $(1 \times 1) = (p \times p) - (p \times p) (p \times p) - (p \times m) (m \times m) (m \times p)$  
-            smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = (
+            smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = model._obs_cov[i + i*model._k_endog] - (
                 (kfilter._tmp4[i + i*kfilter.k_endog]**2) * (
                     kfilter._forecast_error_cov[i + i*kfilter.k_endog] +
-                    smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog]
+                    kfilter._forecast_error_cov[i + i*kfilter.k_endog]**2 * smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog]
                 )
             )
         
