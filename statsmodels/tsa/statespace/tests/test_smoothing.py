@@ -205,6 +205,9 @@ class TestStatesMissingAR3(object):
             'detV','eps','epsvar','eta','etavar'
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
+        # KFAS comparison
+        path = current_path + os.sep+'results/results_smoothing3_R.csv'
+        cls.R_ssm = pd.read_csv(path)
         # Regression tests data
         path = current_path + os.sep+'results/results_wpi1_missing_ar3_regression.csv'
         cls.regression = pd.read_csv(path)
@@ -281,21 +284,34 @@ class TestStatesMissingAR3(object):
             self.matlab_ssm[['epsvar']], 4
         )
 
-    # TODO there is a discrepancy between MATLAB ssm toolbox and
+    # There is a discrepancy between MATLAB ssm toolbox and
     # dismalpy.ssm on the following variables in the case of missing data.
-    # Need to find a third implementation to compare against.
+    # Tests against the R package KFAS confirm our results
 
-    # def test_smoothed_state_disturbance(self):
-    #     assert_almost_equal(
-    #         self.results.smoothed_state_disturbance.T,
-    #         self.matlab_ssm[['eta']], 4
-    #     )
+    def test_smoothed_state_disturbance(self):
+        # assert_almost_equal(
+        #     self.results.smoothed_state_disturbance.T,
+        #     self.matlab_ssm[['eta']], 4
+        # )
+        assert_almost_equal(
+            self.results.smoothed_state_disturbance.T,
+            self.R_ssm[['etahat']], 9
+        )
 
-    # def test_smoothed_state_disturbance_cov(self):
-    #     assert_almost_equal(
-    #         self.results.smoothed_state_disturbance_cov[0].T,
-    #         self.matlab_ssm[['etavar']], 4
-    #     )
+    def test_smoothed_state_disturbance_cov(self):
+        # assert_almost_equal(
+        #     self.results.smoothed_state_disturbance_cov[0].T,
+        #     self.matlab_ssm[['etavar']], 4
+        # )
+        assert_almost_equal(
+            self.results.smoothed_state_disturbance_cov[0,0,:],
+            self.R_ssm['detVeta'], 9
+        )
+
+    # TODO there is a discrepancy between MATLAB ssm toolbox and
+    # dismalpy.ssm on the following variables in the case of missing data;
+    # tests against the R package KFAS confirm our results, but so far we don't
+    # have results from KFAS for the simulation smoother tests, below
 
     # def test_simulation_smoothed_state(self):
     #     if compatibility_mode:
