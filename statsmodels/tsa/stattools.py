@@ -12,6 +12,9 @@ from .tsatools import lagmat, lagmat2ds, add_trend
 from .adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.compat.scipy import _next_regular
+import logging
+
+logger = logging.getLogger('statsmodels')
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
@@ -735,6 +738,135 @@ def levinson_durbin(s, nlags=10, isacov=False):
     pacf_[0] = 1.
     return sigma_v, arcoefs, pacf_, sig, phi  # return everything
 
+def granger_causality(x, lag, addconst=True):
+    """four tests for granger non causality of 2 timeseries
+
+    all four tests give similar results
+    `params_ftest` and `ssr_ftest` are equivalent based on F test which is
+    identical to lmtest:grangertest in R
+
+    Parameters
+    ----------
+    x : array, 2d, (nobs,2)
+        data for test whether the time series in the second column Granger
+        causes the time series in the first column
+    lag : integer
+        the Granger causality test results are calculated for a single lag
+    addconst : bool
+        add a constant to todo
+
+    Returns
+    -------
+    results : dictionary
+        all test results, dictionary keys are the number of lags. For each
+        lag the values are a tuple, with the first element a dictionary with
+        teststatistic, pvalues, degrees of freedom, the second element are
+        the OLS estimation results for the restricted model, the unrestricted
+        model and the restriction (contrast) matrix for the parameter f_test.
+
+    Notes
+    -----
+    TODO: convert to class and attach results properly
+
+    The Null hypothesis for grangercausalitytests is that the time series in
+    the second column, x2, does NOT Granger cause the time series in the first
+    column, x1. Grange causality means that past values of x2 have a
+    statistically significant effect on the current value of x1, taking past
+    values of x1 into account as regressors. We reject the null hypothesis
+    that x2 does not Granger cause x1 if the pvalues are below a desired size
+    of the test.
+
+    The null hypothesis for all four test is that the coefficients
+    corresponding to past values of the second time series are zero.
+
+    'params_ftest', 'ssr_ftest' are based on F distribution
+
+    'ssr_chi2test', 'lrtest' are based on chi-square distribution
+
+    References
+    ----------
+    http://en.wikipedia.org/wiki/Granger_causality
+    Greene: Econometric Analysis
+
+    """
+    from scipy import stats
+
+    x = np.asarray(x)
+
+    if x.shape[0] <= 3 * lag + int(addconst):
+        raise ValueError("Insufficient observations. Maximum allowable "
+                         "lag is {0}".format(int((x.shape[0] - int(addconst)) /
+                                                 3) - 1))
+
+    logger.info('\nGranger Causality')
+    logger.info('number of lags {0}'.format(lag))
+
+    # create lagmat of both time series
+    dta = lagmat2ds(x, lag, trim='both', dropex=1)
+
+    # add constant
+    if addconst:
+        dtaown = add_constant(dta[:, 1:(lag + 1)], prepend=False)
+        dtajoint = add_constant(dta[:, 1:], prepend=False)
+    else:
+        raise NotImplementedError('Not Implemented')
+        # dtaown = dta[:, 1:mxlg]
+        # dtajoint = dta[:, 1:]
+
+    # Run ols on both models without and with lags of second variable
+    res2down = OLS(dta[:, 0], dtaown).fit()
+    res2djoint = OLS(dta[:, 0], dtajoint).fit()
+    rconstr = np.column_stack((np.zeros((lag, lag)),
+                               np.eye(lag, lag),
+                               np.zeros((lag, 1))))
+
+    result = {}
+    # print results
+    # for ssr based tests see:
+    # http://support.sas.com/rnd/app/examples/ets/granger/index.htm
+    # the other tests are made-up
+
+    # Granger Causality test using ssr (F statistic)
+    fgc1 = ((res2down.ssr - res2djoint.ssr) /
+            res2djoint.ssr / lag * res2djoint.df_resid)
+
+    logger.info('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
+           ' df_num=%d' % (fgc1, stats.f.sf(fgc1, lag, res2djoint.df_resid),
+                            res2djoint.df_resid, lag))
+
+    result['ssr_ftest'] = (fgc1, stats.f.sf(fgc1, lag, res2djoint.df_resid),
+             res2djoint.df_resid, lag)
+
+    # Granger Causality test using ssr (ch2 statistic)
+    fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
+
+    logger.info('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, df=%d'
+                % (fgc2, stats.chi2.sf(fgc2, lag), lag))
+
+    result['ssr_chi2test'] =  (fgc2, stats.chi2.sf(fgc2, lag), lag)
+
+    #likelihood ratio test pvalue:
+    lr = -2 * (res2down.llf - res2djoint.llf)
+
+    logger.info('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
+                (lr, stats.chi2.sf(lr, lag), lag))
+
+    result['lrtest'] = (lr, stats.chi2.sf(lr, lag), lag)
+
+    # F test that all lag coefficients of exog are zero
+    ftres = res2djoint.f_test(rconstr)
+
+    logger.info('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
+           ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
+                            ftres.df_num))
+
+    result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
+                          np.squeeze(ftres.pvalue)[()],
+                          ftres.df_denom, ftres.df_num)
+
+    result['models'] = [res2down, res2djoint, rconstr]
+
+    return result
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     """four tests for granger non causality of 2 timeseries
@@ -822,10 +954,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         res2down = OLS(dta[:, 0], dtaown).fit()
         res2djoint = OLS(dta[:, 0], dtajoint).fit()
 
-        #print results
-        #for ssr based tests see:
-        #http://support.sas.com/rnd/app/examples/ets/granger/index.htm
-        #the other tests are made-up
+        # print results
+        # for ssr based tests see:
+        # http://support.sas.com/rnd/app/examples/ets/granger/index.htm
+        # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
         fgc1 = ((res2down.ssr - res2djoint.ssr) /

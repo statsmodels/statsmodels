@@ -1,6 +1,7 @@
 from statsmodels.compat.python import lrange
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
+                                               granger_causality,
                                                coint, acovf, kpss, ResultsStore,
                                                arma_order_select_ic)
 from statsmodels.tsa.base.datetools import dates_from_range
@@ -236,11 +237,38 @@ class TestGrangerCausality(object):
         assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
         assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'], decimal=7)
 
+    def test_single_grangercausality(self):
+        # some example data
+        mdata = macrodata.load().data
+        mdata = mdata[['realgdp', 'realcons']]
+        data = mdata.view((float, 2))
+        data = np.diff(np.log(data), axis=0)
+
+        #R: lmtest:grangertest
+        r_result = [0.243097, 0.7844328, 195, 2]  # f_test
+        results = granger_causality(data[:, 1::-1], 2)
+        assert_almost_equal(r_result, results['ssr_ftest'], decimal=7)
+        assert_almost_equal(results['params_ftest'], results['ssr_ftest'], decimal=7)
+
     def test_granger_fails_on_nobs_check(self):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         X = np.random.rand(10, 2)
         grangercausalitytests(X, 2, verbose=False)  # This should pass.
         assert_raises(ValueError, grangercausalitytests, X, 3, verbose=False)
+
+    def test_single_granger_fails(self):
+        # Test that if maxlag is too large, Granger Test raises a clear error.
+        X = np.random.rand(10, 2)
+        granger_causality(X, 2)  # This should pass.
+
+        assert_raises(ValueError, granger_causality, X, 3)
+
+        assert_raises(ValueError, granger_causality, X, 3)
+
+        assert_raises(ValueError, granger_causality, X, 3)
+
+        assert_raises(NotImplementedError, granger_causality, X, 3, addconst=False)
+
 
 
 class SetupKPSS(object):
