@@ -878,7 +878,7 @@ default_latex_fmt = dict(
     stub=r'\textbf{%s}',
     empty='',
     missing='--',
-    replacements={"%" : "\%", ">" : "$>$", "|" : "$|$"}
+    replacements={"%" : "\%", ">" : "$>$", "|" : "$|$", "_" : "\_", "$" : "\$", "&" : "\&", "#" : "\#"}
 )
 
 default_fmts = dict(
