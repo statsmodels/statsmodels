@@ -144,6 +144,30 @@ stub R2 C2  40.95038  40.65765
 """ % desired[1:-1]
             actual_centered = '\n%s\n' % tbl.as_latex_tabular()
             self.assertEqual(actual_centered, desired_centered)
+    def test_SimpleTable_special_chars(self):
+		# Simple table with characters: (%, >, |, _, $, &, #)
+		cell0c_data = 22
+		cell1c_data = 1053
+		row0c_data = [cell0c_data, cell1c_data]
+		row1c_data = [23, 6250.4]
+		table1c_data = [ row0c_data, row1c_data ]
+		test1c_stubs = ('> stub1 %', 'stub_2')
+		test1c_header = ('#header 1$', 'header&2 |')
+		tbl_c = SimpleTable(table1c_data, test1c_header, test1c_stubs, ltx_fmt=ltx_fmt1)
+        def test_ltx_special_chars(self):
+            # Test for special characters (latex) in headers and stubs
+            desired = r"""
+\begin{tabular}{lcc}
+\toprule
+               & \textbf{\#header 1\$} & \textbf{header\&2 $|$}  \\
+\midrule
+\textbf{$>$ stub1 \%} &       22        &        1053          \\
+\textbf{stub\_2} &        23         &      6250.4        \\
+\bottomrule
+\end{tabular}
+"""
+            actual = '\n%s\n' % tbl_c.as_latex_tabular(center=False)
+            self.assertEqual(actual, desired)
         def test_html_fmt1(self):
             # Limited test of custom html_fmt
             desired = """
