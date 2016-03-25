@@ -27,7 +27,7 @@ and their lagged values is the *vector autoregression process*:
 
 .. math::
 
-   Y_t = A_1 Y_{t-1} + \ldots + A_p Y_{t-p} + u_t
+   Y_t = \nu + A_1 Y_{t-1} + \ldots + A_p Y_{t-p} + u_t
 
    u_t \sim {\sf Normal}(0, \Sigma_u)
 
@@ -315,8 +315,23 @@ F-test.
 Normality
 ~~~~~~~~~
 
+As pointed out in the beginning of this document, the white noise component
+:math:`u_t` is assumed to be normally distributed. While this assumption
+is not required for parameter estimates to be consistent or asymptotically
+normal, results are generally more reliable in finite samples when residuals
+are Gaussian white noise. To test whether this assumption is consistent with
+a data set, :class:`VARResults` offers the `test_normality` method.
+
+.. ipython:: python
+
+    results.test_normality()
+
 Whiteness of residuals
 ~~~~~~~~~~~~~~~~~~~~~~
+
+To test the whiteness of the estimation residuals (this means absence of
+significant residual autocorrelations) one can use the `test_whiteness`
+method of :class:`VARResults`.
 
 Dynamic Vector Autoregressions
 ------------------------------
