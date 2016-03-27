@@ -179,10 +179,10 @@ stub R2 C2  40.95038  40.65765
             desired = r"""
 \begin{tabular}{lcc}
 \toprule
-               & \textbf{\#header 1\$} & \textbf{header\&2 $|$}  \\
+                    & \textbf{\#header1\$} & \textbf{header\&$|$}  \\
 \midrule
-\textbf{$>$ stub1 \%} &       22        &        1053          \\
-\textbf{stub\_2} &        23         &      6250.4        \\
+\textbf{$>$stub1\%} &          22          &         1053          \\
+\textbf{stub\_2}    &          23          &        6250.4         \\
 \bottomrule
 \end{tabular}
 """
