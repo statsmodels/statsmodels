@@ -1432,3 +1432,188 @@ class NegativeBinomial(Family):
         return ((hyp2f1(-self.alpha * endog) - hyp2f1(-self.alpha * mu) +
                  1.5 * ( endog**(2 / 3.) - mu**(2 / 3.))) /
                 (mu + self.alpha * mu**2)**(1 / 6.))
+
+
+class Tweedie(Family):
+    """
+    Tweedie family.
+
+    Parameters
+    ----------
+    link : a link instance, optional
+        The default link for the Tweedie family is the log link when the
+        link_power is 0. Otherwise, the power link is default.
+        Available links are log, cloglog, identity, nbinom and power.
+        See statsmodels.family.links for more information.
+    var_power : float, optional
+        The variance power.
+    link_power : float, optional
+        The link power.
+
+    Attributes
+    ----------
+    Tweedie.link : a link instance
+        The link function of the Tweedie instance
+    Tweedie.variance : varfunc instance
+        `variance` is an instance of statsmodels.family.varfuncs.nbinom
+
+    See also
+    --------
+    statsmodels.genmod.families.family.Family
+    :ref:`links`
+
+    Notes
+    -----
+    Still under development.
+    """
+    links = [L.log, L.Power]
+    # TODO: add the ability to use the power links with an if test
+    # similar to below
+    variance = V.Power
+    safe_links = [L.log, L.Power]
+
+    def __init__(self, link=L.log, var_power=1., link_power=0):
+        self.var_power = var_power
+        self.link_power = link_power
+        self.variance = V.Power(power=var_power * 1.)
+        if isinstance(link, L.log) and link_power != 0:
+            msg = 'link_power of {} not supported with log link'
+            msg = msg.format(link_power)
+            raise ValueError(msg)
+        if link_power == 0:
+            self.link = L.log()
+        else:
+            self.link = L.Power(power=link_power * 1.)
+
+    def _clean(self, x):
+        """
+        Helper function to trim the data so that is in (0,inf)
+
+        Notes
+        -----
+        The need for this function was discovered through usage and its
+        possible that other families might need a check for validity of the
+        domain.
+        """
+        return np.clip(x, 0, np.inf)
+
+    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+        r"""
+        Returns the value of the deviance function.
+
+        Parameters
+        -----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        freq_weights : array-like
+            1d array of frequency weights. The default is 1.
+        scale : float, optional
+            An optional scale argument. The default is 1.
+
+        Returns
+        -------
+        deviance : float
+            Deviance function as defined below
+
+        Notes
+        -----
+        Not yet...
+        """
+        endog1 = np.clip(endog, 0.1, np.inf)
+        p = self.var_power
+        if p == 1:
+            dev = mu - endog * (1 + np.log(mu / endog1))
+        elif p == 2:
+            dev = -1 + (endog / mu) + np.log(mu / endog1)
+        else:
+            dev = (endog1 ** (2 - p) / ((1 - p) * (2 - p)) -
+                   endog1 * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+        return np.sum(2 * freq_weights * dev)
+
+    def resid_dev(self, endog, mu, freq_weights=1, scale=1.):
+        r"""
+        Negative Binomial Deviance Residual
+
+        Parameters
+        ----------
+        endog : array-like
+            `endog` is the response variable
+        mu : array-like
+            `mu` is the fitted value of the model
+        freq_weights : array-like
+            1d array of frequency weights. The default is 1.
+        scale : float, optional
+            An optional argument to divide the residuals by scale. The default
+            is 1.
+
+        Returns
+        --------
+        resid_dev : array
+            The array of deviance residuals
+
+        Notes
+        -----
+        Not yet...
+        """
+        endog1 = np.clip(endog, 0.1, np.inf)
+        p = self.var_power
+        if p == 1:
+            dev = mu - endog * (1 + np.log(mu / endog1))
+        elif p == 2:
+            dev = -1 + (endog / mu) + np.log(mu / endog1)
+        else:
+            dev = (endog1 ** (2 - p) / ((1 - p) * (2 - p)) -
+                   endog1 * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+        return np.sign(endog - mu) * np.sqrt(2 * freq_weights * dev)
+
+    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+        # TODO: Check weights
+        r"""
+        The log-likelihood function in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            The fitted mean response values
+        freq_weights : array-like
+            1d array of frequency weights. The default is 1.
+        scale : float
+            The scale parameter. The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at
+            (endog,mu,freq_weights,scale) as defined below.
+
+        Notes
+        -----
+        Not yet...
+        """
+        return np.nan
+
+    def resid_anscombe(self, endog, mu):
+        """
+        The Anscombe residuals for the Tweedie family
+
+        Parameters
+        ----------
+        endog : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_anscombe : array
+            The Anscombe residuals as defined below.
+
+        Notes
+        -----
+        Not yet...
+        """
+        return np.nan
