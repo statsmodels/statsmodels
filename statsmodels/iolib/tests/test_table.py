@@ -171,8 +171,8 @@ stub R2 C2  40.95038  40.65765
         row0c_data = [cell0c_data, cell1c_data]
         row1c_data = [23, 6250.4]
         table1c_data = [ row0c_data, row1c_data ]
-        test1c_stubs = ('> stub1 %', 'stub_2')
-        test1c_header = ('#header 1$', 'header&2 |')
+        test1c_stubs = ('>stub1%', 'stub_2')
+        test1c_header = ('#header1$', 'header&|')
         tbl_c = SimpleTable(table1c_data, test1c_header, test1c_stubs, ltx_fmt=ltx_fmt1)
         def test_ltx_special_chars(self):
         # Test for special characters (latex) in headers and stubs
