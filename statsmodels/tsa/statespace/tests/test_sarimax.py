@@ -743,7 +743,7 @@ class TestFriedmanStateRegression(Friedman):
         result = self.model.fit(disp=-1)
         assert_allclose(
             result.params, self.result.params,
-            atol=1e-1, rtol=1e-1
+            atol=1e-1, rtol=2e-1
         )
 
     def test_regression_parameters(self):
