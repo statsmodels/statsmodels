@@ -39,6 +39,18 @@ class CheckWeight(object):
         assert_allclose(res1.llf, res2.ll, atol= 1e-6, rtol=1e-7)
         assert_allclose(res1.deviance, res2.deviance, atol= 1e-6, rtol=1e-7)
 
+    def test_residuals(self):
+        res1 = self.res1
+        res2 = self.res2
+        if not hasattr(res2, 'resids'):
+            return None  # use SkipError instead
+        resid_all = dict(zip(res2.resids_colnames, res2.resids.T))
+
+        assert_allclose(res1.resid_response, resid_all['resid_response'], atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_pearson, resid_all['resid_pearson'], atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_deviance, resid_all['resid_deviance'], atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
+
 
 class TestGlmPoissonPlain(CheckWeight):
     @classmethod
