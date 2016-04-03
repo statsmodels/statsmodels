@@ -1,7 +1,7 @@
 """
 Test functions for models.GLM
 """
-
+from __future__ import division
 from statsmodels.compat import range
 
 import os

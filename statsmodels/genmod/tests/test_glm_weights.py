@@ -1,7 +1,7 @@
 """Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
 
 """
-
+from __future__ import division
 
 from statsmodels.compat import range
 
