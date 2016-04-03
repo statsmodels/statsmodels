@@ -1170,6 +1170,29 @@ class TestWtdGlmPoissonHC0(CheckWtdDuplicationMixin):
                         family=sm.families.Poisson()).fit(**fit_kwds)
 
 
+class TestWtdGlmPoissonClu(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Poisson family with canonical log link.
+        '''
+        super(TestWtdGlmPoissonClu, self).__init__()
+
+        start_params = np.array([1.82794424e-04, -4.76785037e-02,
+                                 -9.48249717e-02, -2.92293226e-04,
+                                 2.63728909e+00, -2.05934384e+01])
+
+        gid = np.arange(1, len(self.endog) + 1) // 2
+        fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gid, 'use_correction':False})
+        self.res1 = GLM(self.endog, self.exog,
+                        freq_weights=self.weight,
+                        family=sm.families.Poisson()).fit(**fit_kwds)
+        gidr = np.repeat(gid, self.weight)
+        fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gidr, 'use_correction':False})
+        self.res2 = GLM(self.endog_big, self.exog_big,
+                        family=sm.families.Poisson()).fit(start_params=start_params,
+                                                          **fit_kwds)
+
+
 class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
