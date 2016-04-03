@@ -1156,28 +1156,27 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_response(self):
-        return self._freq_weights * self._n_trials * (self._endog-self.mu)
+        return self._n_trials * (self._endog-self.mu)
 
     @cache_readonly
     def resid_pearson(self):
-        return (np.sqrt(self._freq_weights * self._n_trials) * (self._endog-self.mu) /
+        return (np.sqrt(self._n_trials) * (self._endog-self.mu) /
                 np.sqrt(self.family.variance(self.mu)))
 
     @cache_readonly
     def resid_working(self):
+        # Isn't self.resid_response is already adjusted by _n_trials?
         val = (self.resid_response / self.family.link.deriv(self.mu))
-        val *= self._freq_weights * self._n_trials
+        val *= self._n_trials
         return val
 
     @cache_readonly
     def resid_anscombe(self):
-        # TODO: Data weights?
         return self.family.resid_anscombe(self._endog, self.mu)
 
     @cache_readonly
     def resid_deviance(self):
-        # TODO: Data weights?
-        return self.family.resid_dev(self._endog, self.mu, self._freq_weights)
+        return self.family.resid_dev(self._endog, self.mu)
 
     @cache_readonly
     def pearson_chi2(self):

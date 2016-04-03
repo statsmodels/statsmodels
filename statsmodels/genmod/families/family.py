@@ -291,12 +291,11 @@ class Poisson(Family):
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
     valid = [0, np.inf]
-    safe_links = [L.Log,]
+    safe_links = [L.Log, ]
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
         self.link = link()
-
 
     def _clean(self, x):
         """
@@ -310,7 +309,7 @@ class Poisson(Family):
         """
         return np.clip(x, FLOAT_EPS, np.inf)
 
-    def resid_dev(self, endog, mu, freq_weights=1., scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""Poisson deviance residual
 
         Parameters
@@ -319,8 +318,6 @@ class Poisson(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by scale. The default
             is 1.
@@ -334,13 +331,12 @@ class Poisson(Family):
         -----
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) * \sqrt{2 * freq\_weights_i *
+           resid\_dev_i = sign(Y_i - \mu_i) * \sqrt{2 *
                           (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i))} / scale
         """
         endog_mu = self._clean(endog / mu)
         return (np.sign(endog - mu) *
-                np.sqrt(2 * freq_weights * (endog * np.log(endog_mu) -
-                                            (endog - mu))) / scale)
+                np.sqrt(2 * (endog * np.log(endog_mu) - (endog - mu))) / scale)
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r'''
@@ -464,7 +460,7 @@ class Gaussian(Family):
         self.variance = Gaussian.variance
         self.link = link()
 
-    def resid_dev(self, endog, mu, freq_weights=1., scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         Gaussian deviance residuals
 
@@ -474,8 +470,6 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by scale. The default
             is 1.
@@ -489,12 +483,10 @@ class Gaussian(Family):
         --------
         .. math::
 
-           resid\_dev_i = freq\_weights_i * (Y_i - \mu_i) / \sqrt{Var(\mu_i)} /
-                          scale
+           resid\_dev_i = (Y_i - \mu_i) / \sqrt{Var(\mu_i)} / scale
         """
 
-        return (np.sqrt(freq_weights) * (endog - mu) /
-                np.sqrt(self.variance(mu)) / scale)
+        return (endog - mu) / np.sqrt(self.variance(mu)) / scale
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -631,7 +623,7 @@ class Gamma(Family):
 
     links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
-    safe_links = [L.Log,]
+    safe_links = [L.Log, ]
 
     def __init__(self, link=L.inverse_power):
         self.variance = Gamma.variance
@@ -679,7 +671,7 @@ class Gamma(Family):
         endog_mu = self._clean(endog/mu)
         return 2*np.sum(freq_weights*((endog-mu)/mu-np.log(endog_mu)))
 
-    def resid_dev(self, endog, mu, freq_weights=1., scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         Gamma deviance residuals
 
@@ -689,8 +681,6 @@ class Gamma(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by scale. The default
             is 1.
@@ -704,13 +694,12 @@ class Gamma(Family):
         -----
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{-2 * freq\_weights_i *
+           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{-2 *
                           (-(Y_i - \mu_i) / \mu_i + \log(Y_i / \mu_i))}
         """
         endog_mu = self._clean(endog / mu)
-        return np.sign(endog - mu) * np.sqrt(-2 * freq_weights *
-                                             (-(endog - mu)/mu +
-                                              np.log(endog_mu)))
+        return np.sign(endog - mu) * np.sqrt(-2 * (-(endog - mu)/mu +
+                                                   np.log(endog_mu)))
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -737,7 +726,7 @@ class Gamma(Family):
         --------
         .. math::
 
-           llf = -1 / scale * \sum_i freq\_weights_i * (Y_i / \mu_i+\log(\mu_i)+
+           llf = -1 / scale * \sum_i *(Y_i / \mu_i+ \log(\mu_i)+
                  (scale -1) * \log(Y) + \log(scale) + scale *
                  \ln \Gamma(1 / scale))
         """
@@ -907,7 +896,7 @@ class Binomial(Family):
                                (1 - endog) * np.log((1 - endog) /
                                (1 - mu) + 1e-200)))
 
-    def resid_dev(self, endog, mu, freq_weights=1, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         Binomial deviance residuals
 
@@ -917,8 +906,6 @@ class Binomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by scale. The default
             is 1.
@@ -934,7 +921,7 @@ class Binomial(Family):
 
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) * \sqrt{-2 * freq\_weights_i *
+           resid\_dev_i = sign(Y_i - \mu_i) * \sqrt{-2 *
                           \log(I_{1,i} * \mu_i + I_{0,i} * (1 - \mu_i))}
 
         where :math:`I_{1,i}` is an indicator function that evalueates to 1 if
@@ -945,7 +932,7 @@ class Binomial(Family):
 
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{2 * freq\_weights * n_i *
+           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{2 * n_i *
                           (Y_i * \log(Y_i / \mu_i) + (1 - Y_i) *
                           \log(1 - Y_i)/(1 - \mu_i))}
 
@@ -955,12 +942,12 @@ class Binomial(Family):
         mu = self.link._clean(mu)
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(endog, 1)
-            return np.sign(endog-mu)*np.sqrt(-2 * freq_weights *
+            return np.sign(endog-mu)*np.sqrt(-2 *
                                              np.log(one * mu + (1 - one) *
                                                     (1 - mu)))/scale
         else:
             return (np.sign(endog - mu) *
-                    np.sqrt(2 * freq_weights * self.n *
+                    np.sqrt(2 * self.n *
                             (endog * np.log(endog/mu + 1e-200) +
                              (1 - endog) * np.log((1 - endog)/(1 - mu) +
                                                   1e-200)))/scale)
@@ -1099,13 +1086,13 @@ class InverseGaussian(Family):
 
     links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
     variance = V.mu_cubed
-    safe_links = [L.inverse_squared, L.Log,]
+    safe_links = [L.inverse_squared, L.Log, ]
 
     def __init__(self, link=L.inverse_squared):
         self.variance = InverseGaussian.variance
         self.link = link()
 
-    def resid_dev(self, endog, mu, freq_weights=1., scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         Returns the deviance residuals for the inverse Gaussian family.
 
@@ -1130,11 +1117,10 @@ class InverseGaussian(Family):
         -----
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) \sqrt {freq\_weights_i *
-                          (Y_i - \mu_i)^2 / (Y_i * \mu_i^2)} / scale
+           resid\_dev_i = sign(Y_i - \mu_i) * 
+                          \sqrt {(Y_i - \mu_i)^2 / (Y_i * \mu_i^2)} / scale
         """
-        return np.sign(endog-mu) * np.sqrt(freq_weights *
-                                           (endog-mu)**2/(endog*mu**2))/scale
+        return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2))/scale
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -1260,10 +1246,10 @@ class NegativeBinomial(Family):
     # TODO: add the ability to use the power links with an if test
     # similar to below
     variance = V.nbinom
-    safe_links = [L.Log,]
+    safe_links = [L.Log, ]
 
     def __init__(self, link=L.log, alpha=1.):
-        self.alpha = 1. * alpha # make it at least float
+        self.alpha = 1. * alpha  # make it at least float
         self.variance = V.NegativeBinomial(alpha=self.alpha)
         if isinstance(link, L.NegativeBinomial):
             self.link = link(alpha=self.alpha)
@@ -1325,7 +1311,7 @@ class NegativeBinomial(Family):
                                  (1 + self.alpha * mu)))
         return np.sum(freq_weights * tmp) / scale
 
-    def resid_dev(self, endog, mu, freq_weights=1, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         Negative Binomial Deviance Residual
 
@@ -1335,8 +1321,6 @@ class NegativeBinomial(Family):
             `endog` is the response variable
         mu : array-like
             `mu` is the fitted value of the model
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by scale. The default
             is 1.
@@ -1369,7 +1353,7 @@ class NegativeBinomial(Family):
                           (1 + self.alpha * endog) *
                           np.log((1 + self.alpha * endog) /
                                  (1 + self.alpha * mu)))
-        return np.sign(endog - mu) * np.sqrt(freq_weights * tmp) / scale
+        return np.sign(endog - mu) * np.sqrt(tmp) / scale
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         # TODO: Check weights
