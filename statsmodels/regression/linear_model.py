@@ -32,6 +32,8 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
 from __future__ import print_function
+
+from statsmodels.base.data import PandasData
 from statsmodels.compat.python import lrange, lzip, range
 __docformat__ = 'restructuredtext en'
 
@@ -362,7 +364,8 @@ class RegressionModel(base.LikelihoodModel):
 
         Returns
         -------
-        An array of fitted values
+        A pandas Series if model data was a pandas DataFrame
+        otherwise, it returns an ndarray.
 
         Notes
         -----
@@ -370,10 +373,19 @@ class RegressionModel(base.LikelihoodModel):
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
-        if exog is None:
-            exog = self.exog
-        return np.dot(exog, params)
 
+        if exog is None:
+            exog_to_fit = self.exog
+        else:
+            exog_to_fit = exog
+
+        fitted_values = np.dot(exog_to_fit, params)
+
+        if isinstance(self.data, PandasData):
+            return pd.Series(data=fitted_values, index=self.data.orig_exog.index)
+
+        else:
+            return fitted_values
 
     def get_distribution(self, params, scale, exog=None, dist_class=None):
         """
