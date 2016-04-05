@@ -1105,7 +1105,7 @@ def test_pandas_fit():
 
     result = fit.predict(data)
 
-    answer = pd.DataFrame(result.values, index=data.index.values[1:])
+    answer = pd.Series(result.values, index=data.index.values[1:])
 
     assert_(answer.equals(result))
 

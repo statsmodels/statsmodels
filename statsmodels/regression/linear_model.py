@@ -364,7 +364,7 @@ class RegressionModel(base.LikelihoodModel):
 
         Returns
         -------
-        A pandas DataFrame if model data was a pandas DataFrame
+        A pandas Series if model data was a pandas DataFrame
         otherwise, it returns an ndarray.
 
         Notes
@@ -381,8 +381,8 @@ class RegressionModel(base.LikelihoodModel):
 
         fitted_values = np.dot(exog_to_fit, params)
 
-        if isinstance(self.data, PandasData) and exog is not None:
-            return pd.DataFrame(data=fitted_values, index=self.data.orig_exog.index)
+        if isinstance(self.data, PandasData):
+            return pd.Series(data=fitted_values, index=self.data.orig_exog.index)
 
         else:
             return fitted_values
