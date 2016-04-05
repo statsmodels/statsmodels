@@ -19,6 +19,8 @@ cdef int FILTER_UNIVARIATE       # ibid., Chapter 6.4
 cdef int FILTER_COLLAPSED        # ibid., Chapter 6.5
 cdef int FILTER_EXTENDED         # ibid., Chapter 10.2
 cdef int FILTER_UNSCENTED        # ibid., Chapter 10.3
+cdef int SMOOTHER_CLASSICAL      # ibid., Chapter 4.6.1
+cdef int SMOOTHER_ALTERNATIVE    # 
 
 # ### Inversion methods
 # Methods by which the terms using the inverse of the forecast error

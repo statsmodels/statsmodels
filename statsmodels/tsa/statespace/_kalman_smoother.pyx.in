@@ -27,10 +27,16 @@ cdef int SMOOTHER_STATE = 0x01           # Durbin and Koopman (2012), Chapter 4.
 cdef int SMOOTHER_STATE_COV = 0x02       # Durbin and Koopman (2012), Chapter 4.4.3
 cdef int SMOOTHER_DISTURBANCE = 0x04     # Durbin and Koopman (2012), Chapter 4.5
 cdef int SMOOTHER_DISTURBANCE_COV = 0x08 # Durbin and Koopman (2012), Chapter 4.5
+cdef int SMOOTHER_STATE_AUTOCOV = 0x10       # Durbin and Koopman (2012), Chapter 4.7
 cdef int SMOOTHER_ALL = (
-    SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
-    SMOOTHER_DISTURBANCE_COV
+    SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_STATE_AUTOCOV |
+    SMOOTHER_DISTURBANCE | SMOOTHER_DISTURBANCE_COV
 )
+
+cdef int SMOOTH_CONVENTIONAL = 0x01
+cdef int SMOOTH_CLASSICAL = 0x02
+cdef int SMOOTH_ALTERNATIVE = 0x04
+cdef int SMOOTH_UNIVARIATE = 0x08
 
 from statsmodels.tsa.statespace._kalman_filter cimport (
     FILTER_CONVENTIONAL, FILTER_UNIVARIATE, FILTER_COLLAPSED,
@@ -65,13 +71,27 @@ if prefix == 's':
 from statsmodels.tsa.statespace._smoothers._conventional cimport (
     {{prefix}}smoothed_estimators_missing_conventional,
     {{prefix}}smoothed_disturbances_missing_conventional,
-    {{prefix}}smoothed_estimators_conventional,
+    {{prefix}}smoothed_estimators_measurement_conventional,
+    {{prefix}}smoothed_estimators_time_conventional,
     {{prefix}}smoothed_state_conventional,
+    {{prefix}}smoothed_state_autocov_conventional,
     {{prefix}}smoothed_disturbances_conventional
 )
 from statsmodels.tsa.statespace._smoothers._univariate cimport (
-    {{prefix}}smoothed_estimators_univariate,
+    {{prefix}}smoothed_estimators_measurement_univariate,
+    {{prefix}}smoothed_estimators_time_univariate,
     {{prefix}}smoothed_disturbances_univariate
+)
+from statsmodels.tsa.statespace._smoothers._classical cimport (
+    {{prefix}}smoothed_estimators_measurement_classical,
+    {{prefix}}smoothed_estimators_time_classical,
+    {{prefix}}smoothed_state_classical
+)
+from statsmodels.tsa.statespace._smoothers._alternative cimport (
+    {{prefix}}smoothed_estimators_measurement_alternative,
+    {{prefix}}smoothed_estimators_time_alternative,
+    {{prefix}}smoothed_state_alternative,
+    {{prefix}}smoothed_disturbances_alternative
 )
 
 # ## Kalman filter
@@ -213,7 +233,8 @@ cdef class {{prefix}}KalmanSmoother(object):
     def __init__(self,
                  {{prefix}}Statespace model,
                  {{prefix}}KalmanFilter kfilter,
-                 int smoother_output=SMOOTHER_ALL):
+                 int smoother_output=SMOOTHER_ALL,
+                 int smooth_method=0):
 
         # Save the model
         self.model = model
@@ -234,6 +255,7 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         # Set smoothing output and initialize output arrays
         self.set_smoother_output(smoother_output)
+        self.set_smooth_method(smooth_method)
 
     cdef allocate_arrays(self):
         cdef:
@@ -290,6 +312,14 @@ cdef class {{prefix}}KalmanSmoother(object):
         self.tmp000 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmp000 = &self.tmp000[0, 0]
 
+        # Smoothed state autocovariance arrays
+        dim3[0] = self.kfilter.k_states; dim3[1] = self.kfilter.k_states; dim3[2] = self.model.nobs
+        self.smoothed_state_autocov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
+        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        self.tmp_autocov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._tmp_autocov = &self.tmp_autocov[0, 0]
+
         # Arrays for missing data
         # dim1[0] = self.kfilter.k_endog * self.kfilter.k_states;
         # self.selected_design = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
@@ -307,6 +337,9 @@ cdef class {{prefix}}KalmanSmoother(object):
             self.filter_method = self.kfilter.filter_method
             # Reset matrices
             self.allocate_arrays()
+            # Reset the smooth method (in case it was based on the filter
+            # method)
+            self.set_smooth_method(self.smooth_method)
 
         return changed
 
@@ -317,6 +350,31 @@ cdef class {{prefix}}KalmanSmoother(object):
 
             # Reset matrices
             self.reset(True)
+
+    cpdef set_smooth_method(self, int smooth_method):
+        cdef int _smooth_method
+        self.smooth_method = smooth_method
+
+        # If no smooth method provided, use default for the filter type
+        if self.smooth_method == 0:
+            self.reset_filter_method(False)
+            if self.kfilter.filter_method & FILTER_UNIVARIATE:
+                _smooth_method = SMOOTH_UNIVARIATE
+            else:
+                _smooth_method = SMOOTH_CONVENTIONAL
+        else:
+            _smooth_method = self.smooth_method
+
+        # Make sure we don't have an invalid smooth method for our filter
+        # method
+        if((_smooth_method & SMOOTH_UNIVARIATE) and not (self.filter_method & FILTER_UNIVARIATE) or 
+                (self.filter_method & FILTER_UNIVARIATE) and not (_smooth_method & SMOOTH_UNIVARIATE)):
+            raise ValueError('Invalid smoothing method: can only use'
+                             ' univariate smoothing when univariate filtering'
+                             ' has been used previously.')
+
+
+        self._smooth_method = _smooth_method
 
     cpdef reset(self, int force_reset=False):
         """
@@ -344,7 +402,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         explicitly reset the smoother using the `reset` method.
         """
         # Make sure the seek location is valid
-        if t >= self.model.nobs:
+        if not t == 0 and t >= self.model.nobs:
             raise IndexError("Observation index out of range")
 
         # Make sure we haven't changed filter methods in-between seeking
@@ -399,19 +457,34 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Initialize pointers to appropriate Kalman smoothing functions
         self.initialize_function_pointers()
 
-        # Scaled smoothed estimator and covariance matrix, smoothing error  
+        # Conventional timing of the measurement step of the scaled smoothed
+        # estimator and covariance matrix, smoothing error  
         # $L_t, r_{t-1}, N_{t-1}, u_t$
-        self.smooth_estimators(self, self.kfilter, self.model)
+        if self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
+            self.smooth_estimators_measurement(self, self.kfilter, self.model)
 
         # Smoothed state and covariance matrix  
         # $\hat \alpha_t, V_t$
         if self.smoother_output & (SMOOTHER_STATE | SMOOTHER_STATE_COV):
             self.smooth_state(self, self.kfilter, self.model)
 
+        # Smoothed state autocovariance matrix
+        if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
+            {{prefix}}smoothed_state_autocov_conventional(self, self.kfilter, self.model)
+
+        # Modified Byrson-Frazier timing of the measurement step of the scaled
+        # smoothed estimator and covariance matrix, smoothing error  
+        # $L_t, r_{t-1}, N_{t-1}, u_t$
+        if self._smooth_method & SMOOTH_ALTERNATIVE:
+            self.smooth_estimators_measurement(self, self.kfilter, self.model)
+
         # Smoothed disturbances  
         # $\hat \eta_t, \hat \varepsilon_t, Var(\eta_t | Y_n), Var(\varepsilon_t | Y_n)$
         if self.smoother_output & SMOOTHER_DISTURBANCE:
             self.smooth_disturbances(self, self.kfilter, self.model)
+
+        # Time step of the scaled smoothed estimator and covariance matrix
+        self.smooth_estimators_time(self, self.kfilter, self.model)
 
         # Advance the smoother
         self.t -= 1
@@ -483,11 +556,17 @@ cdef class {{prefix}}KalmanSmoother(object):
             int inc = 1
 
         # Initialize object-level pointers to output arrays
-        self._input_scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t+1]
-        self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t+1]
+        if self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
+            self._input_scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t+1]
+            self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t+1]
+            self._scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t]
+            self._scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t]
+        else:  # if self._smooth_method & SMOOTH_ALTERNATIVE
+            self._input_scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t]
+            self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t]
+            self._scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t-1]
+            self._scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t-1]
 
-        self._scaled_smoothed_estimator = &self.scaled_smoothed_estimator[0, t]
-        self._scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, t]
         self._smoothing_error = &self.smoothing_error[0, t]
         self._smoothed_state = &self.smoothed_state[0, t]
         self._smoothed_state_cov = &self.smoothed_state_cov[0, 0, t]
@@ -496,24 +575,42 @@ cdef class {{prefix}}KalmanSmoother(object):
         self._smoothed_measurement_disturbance_cov = &self.smoothed_measurement_disturbance_cov[0, 0, t]
         self._smoothed_state_disturbance_cov = &self.smoothed_state_disturbance_cov[0, 0, t]
 
+        self._smoothed_state_autocov = &self.smoothed_state_autocov[0, 0, t]
+
     cdef void initialize_function_pointers(self) except *:
-        # Univariate smoother
-        if self.kfilter.filter_method & FILTER_UNIVARIATE:
-            self.smooth_estimators = {{prefix}}smoothed_estimators_univariate
+        # Multivariate modified Bryson–Frazier smoother
+        if self._smooth_method & SMOOTH_ALTERNATIVE:
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_alternative
+            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_alternative
+            self.smooth_state = {{prefix}}smoothed_state_alternative
+            self.smooth_disturbances = {{prefix}}smoothed_disturbances_alternative
+        # Multivariate classical (Anderson and Moore) smoother
+        elif self._smooth_method & SMOOTH_CLASSICAL:
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_classical
+            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_classical
+            self.smooth_state = {{prefix}}smoothed_state_classical
+            self.smooth_disturbances = {{prefix}}smoothed_disturbances_conventional
+        # Univariate (modified Bryson-Frazier) smoother
+        elif self._smooth_method & SMOOTH_UNIVARIATE:
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_univariate
+            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_univariate
             self.smooth_state = {{prefix}}smoothed_state_conventional
             self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate
-        # Conventional smoother
-        elif self.kfilter.filter_method & FILTER_CONVENTIONAL:
-            self.smooth_estimators = {{prefix}}smoothed_estimators_conventional
+        # Multivariate conventional (Durbin and Koopman) smoother
+        elif self._smooth_method & SMOOTH_CONVENTIONAL:
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_conventional
+            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_conventional
             self.smooth_state = {{prefix}}smoothed_state_conventional
             self.smooth_disturbances = {{prefix}}smoothed_disturbances_conventional
         else:
-            raise NotImplementedError("Smoother not implemented for provided Kalman filter method")
+            raise NotImplementedError("Smoother method not available.")
 
         # Handle completely missing data
-        if self.model._nmissing == self.model.k_endog:
+        # (All methods except the classical method can use the same routines in this case)
+        # This is essentially just an application of the smoothed_estimators_time_* step.
+        if self._smooth_method & SMOOTH_CONVENTIONAL and self.model._nmissing == self.model.k_endog:
             # Change the smoothing functions to take into account a missing observation
-            self.smooth_estimators = {{prefix}}smoothed_estimators_missing_conventional
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_missing_conventional
             # (no need to change the state smoothing recursion)
             # self.smooth_state = {{prefix}}smoothed_state_missing_conventional
             self.smooth_disturbances = {{prefix}}smoothed_disturbances_missing_conventional

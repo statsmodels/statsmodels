@@ -302,6 +302,7 @@ class KalmanFilter(Representation):
         self.set_inversion_method(**kwargs)
         self.set_stability_method(**kwargs)
         self.set_conserve_memory(**kwargs)
+        self.set_filter_timing(**kwargs)
 
         self.tolerance = tolerance
 
@@ -1544,7 +1545,7 @@ class FilterResults(FrozenRepresentation):
             for t in range(self.forecasts_error_cov.shape[2]):
                 if self.nmissing[t] > 0:
                     self._standardized_forecasts_error[:, t] = np.nan
-                else:
+                if self.nmissing[t] < self.k_endog:
                     mask = ~self.missing[:, t].astype(bool)
                     F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
                     upper, _ = linalg.cho_factor(F[:, :, 0])

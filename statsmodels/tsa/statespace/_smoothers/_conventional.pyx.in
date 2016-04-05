@@ -88,7 +88,7 @@ if prefix == 's':
 # Here k_endog is the same as usual, but the design matrix and observation
 # covariance matrix are enforced to be zero matrices.
 
-cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model) except *:
     cdef:
         int inc = 1
         {{cython_type}} alpha = 1.0
@@ -202,7 +202,7 @@ cdef int {{prefix}}smoothed_disturbances_missing_conventional({{prefix}}KalmanSm
 #
 # See Durbin and Koopman (2012) Chapter 4
 
-cdef int {{prefix}}smoothed_estimators_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+cdef int {{prefix}}smoothed_estimators_measurement_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model) except *:
     cdef:
         int i
         int inc = 1
@@ -266,6 +266,9 @@ cdef int {{prefix}}smoothed_estimators_conventional({{prefix}}KalmanSmoother smo
                           kfilter._tmp3, &kfilter.k_endog,
                   &alpha, smoother._scaled_smoothed_estimator_cov, &kfilter.k_states)
 
+cdef int {{prefix}}smoothed_estimators_time_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+  pass
+
 cdef int {{prefix}}smoothed_state_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     cdef int i, j
     cdef:
@@ -298,6 +301,32 @@ cdef int {{prefix}}smoothed_state_conventional({{prefix}}KalmanSmoother smoother
               &alpha, &kfilter.predicted_state_cov[0,0,smoother.t], &kfilter.k_states,
                       smoother._tmp0, &kfilter.k_states,
               &beta, smoother._smoothed_state_cov, &kfilter.k_states)
+
+
+cdef int {{prefix}}smoothed_state_autocov_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    cdef:
+        int i
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    blas.{{prefix}}gemm("N", "N", &model.k_states, &model.k_states, &model.k_states,
+                  &gamma, &kfilter.predicted_state_cov[0,0,smoother.t+1], &kfilter.k_states,
+                          smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
+                  &beta, smoother._tmp0, &kfilter.k_states)
+    for i in range(kfilter.k_states):
+        smoother.tmp0[i,i] = 1 + smoother.tmp0[i,i]
+
+    blas.{{prefix}}gemm("N", "N", &model.k_states, &model.k_states, &model.k_states,
+                  &alpha, smoother._tmpL, &kfilter.k_states,
+                          &kfilter.predicted_state_cov[0,0,smoother.t], &kfilter.k_states,
+                  &beta, smoother._tmp_autocov, &kfilter.k_states)
+
+    blas.{{prefix}}gemm("N", "N", &model.k_states, &model.k_states, &model.k_states,
+                  &alpha, smoother._tmp0, &kfilter.k_states,
+                          smoother._tmp_autocov, &kfilter.k_states,
+                  &beta, smoother._smoothed_state_autocov, &kfilter.k_states)
 
 cdef int {{prefix}}smoothed_disturbances_conventional({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     cdef int i, j
