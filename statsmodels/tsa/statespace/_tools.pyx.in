@@ -15,6 +15,7 @@ import numpy as np
 
 np.import_array()
 
+from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
@@ -702,5 +703,47 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
         lapack.{{prefix}}trtrs("L", "N", "N", &k_endog, &k_endog, &tmp[0, 0], &k_endog,
                                                            &constrained[0, i*k_endog], &k_endog, &info)
     return constrained
+
+cdef int _{{prefix}}ldl({{cython_type}} * A, int n) except *:
+    # See Golub and Van Loan, Algorithm 4.1.2
+    cdef:
+        int info = 0
+        int j, i, k
+        cdef np.npy_intp dim[1]
+        np.float64_t tol = 1e-15
+        {{cython_type}} [:] v
+
+    dim[0] = n
+    v = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+
+    for j in range(n):
+        # Compute v(1:j)
+        v[j] = A[j + j*n]
+
+        # Positive definite element: use Golub and Van Loan algorithm
+        if v[j].real < -tol:
+            info = -j
+            break
+        elif v[j].real > tol:
+            for i in range(j):
+                v[i] = A[j + i*n] * A[i + i*n]
+                v[j] = v[j] - A[j + i*n] * v[i]
+
+            # Store d(j) and compute L(j+1:n,j)
+            A[j + j*n] = v[j]
+            for i in range(j+1, n):
+                for k in range(j):
+                    A[i + j*n] = A[i + j*n] - A[i + k*n] * v[k]
+                A[i + j*n] = A[i + j*n] / v[j]
+        # Positive semi-definite element: zero the appropriate column
+        else:
+            info = 1
+            for i in range(j, n):
+                A[i + j*n]
+
+    return info
+
+cpdef int {{prefix}}ldl({{cython_type}} [::1, :] A) except *:
+    _{{prefix}}ldl(&A[0,0], A.shape[0])
 
 {{endfor}}
