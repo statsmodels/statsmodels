@@ -174,10 +174,12 @@ cdef class {{prefix}}Statespace(object):
                  {{cython_type}} [::1,:,:] transition,
                  {{cython_type}} [::1,:]   state_intercept,
                  {{cython_type}} [::1,:,:] selection,
-                 {{cython_type}} [::1,:,:] state_cov):
+                 {{cython_type}} [::1,:,:] state_cov,
+                 diagonal_obs_cov=-1):
 
         # Local variables
         cdef:
+            int t, i, j
             np.npy_intp dim1[1]
             np.npy_intp dim2[2]
             np.npy_intp dim3[3]
@@ -231,11 +233,18 @@ cdef class {{prefix}}Statespace(object):
         # Set the flag for initialization to be false
         self.initialized = False
 
-        # By default, assume a diagonal observation covariance
-        # (since it is most common to have diagonal or zero observation
-        # covariance matrices, we don't want to test for, so require it to be
-        # set manually)
-        self.diagonal_obs_cov = True
+        # Unless it is specified, check for a diagonal covariance matrix
+        if diagonal_obs_cov == -1:
+            diagonal_obs_cov = True
+            for t in range(self.obs_cov.shape[2]):
+                for i in range(self.k_endog):
+                    for j in range(self.k_endog):
+                        if i == j:
+                            continue
+                        if not ({{combined_prefix}}abs(self.obs_cov[i, j, t]) < 1e-9):
+                            diagonal_obs_cov = False
+                            break
+        self.diagonal_obs_cov = diagonal_obs_cov
 
         # Allocate selected state covariance matrix
         dim3[0] = self.k_states; dim3[1] = self.k_states; dim3[2] = 1;
@@ -540,11 +549,14 @@ cdef class {{prefix}}Statespace(object):
         # Note: this assumes that initialize_object_pointers has *already* been done
         # Note: this assumes that select_missing has *already* been done
         # TODO need unit tests, especially for the missing case
+        # TODO need to also transform observation intercept
         cdef:
             int i, j, inc=1
             int obs_cov_t, design_t
             int info
             int reset_missing
+            {{cython_type}} * _transform_obs_cov = &self.transform_obs_cov[0, 0]
+            {{cython_type}} * _transform_cholesky = &self.transform_cholesky[0, 0]
 
         # Compute the cholesky decomposition of *self._obs_cov
         if self.diagonal_obs_cov:
@@ -559,31 +571,37 @@ cdef class {{prefix}}Statespace(object):
 
         # Perform the LDL decomposition, if necessary
         if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
+            # Make sure we don't have an observation intercept
+            if not np.sum(self.obs_intercept) == 0 or self.obs_intercept.shape[2] > 1:
+                raise RuntimeError('The univariate method with non-diagonal observation covariance matrix'
+                                   ' does not currently support an observation intercept.')
 
-            # Cholesky decomposition: $H = L L'$
-            blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, &self.transform_cholesky[0,0], &inc)
-            # Use LDA=self.k_endog so that we can use the memoryview slicing below
-            lapack.{{prefix}}potrf("L", &self._k_endog, &self.transform_cholesky[0,0], &self.k_endog, &info)
+            # LDL decomposition
+            blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, _transform_cholesky, &inc)
+            info = tools._{{prefix}}ldl(_transform_cholesky, self._k_endog)
 
             # Check for errors
             if info > 0:
-                warnings.warn('Non-positive-definite observation covariance matrix encountered at period %d' % t)
-                pass
+                warnings.warn("Positive semi-definite observation covariance matrix encountered at period %d" % t)
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in observation covariance matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in LDL factorization of observation covariance matrix encountered at period %d' % t)
 
-            # Convert to $H = C D C'$
+            # Currently both L and D are stored in transform_cholesky
             for i in range(self._k_endog): # i is rows
                 for j in range(self._k_endog): # j is columns
-                    # Diagonal elements come from the Cholesky diagonal, squared
+                    # Diagonal elements come from the diagonal
                     if i == j:
-                        self.transform_obs_cov[i,i] = self.transform_cholesky[i, i]**2
+                        _transform_obs_cov[i + i * self._k_endog] = _transform_cholesky[i + i * self._k_endog]
                     # Other elements are zero
                     else:
-                        self.transform_obs_cov[i,j] = 0
+                        _transform_obs_cov[i + j * self._k_endog] = 0
+
+                    # Zero out the upper triangle of the cholesky
+                    if j > i:
+                        _transform_cholesky[i + j * self._k_endog] = 0
 
                 # Convert from L to C simply by setting the diagonal elements to ones
-                self.transform_cholesky[i,i] = 1
+                _transform_cholesky[i + i * self._k_endog] = 1
         
         # Solve for y_t^*
         # (unless this is a completely missing observation)
@@ -591,7 +609,9 @@ cdef class {{prefix}}Statespace(object):
             # If we have some missing elements, selected_obs is already populated
             if self._nmissing == 0:
                 blas.{{prefix}}copy(&self._k_endog, &self.obs[0,t], &inc, &self.selected_obs[0], &inc)
-            lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &inc, &self.transform_cholesky[0,0], &self.k_endog, &self.selected_obs[0], &self._k_endog, &info)
+            lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &inc,
+                        _transform_cholesky, &self.k_endog,
+                        &self.selected_obs[0], &self._k_endog, &info)
 
             # Check for errors
             if info > 0:
@@ -606,7 +626,7 @@ cdef class {{prefix}}Statespace(object):
         if t == 0 or self.design.shape[2] > 1 or reset_missing:
             blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
             lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &self._k_states,
-                        &self.transform_cholesky[0,0], &self.k_endog,
+                        _transform_cholesky, &self.k_endog,
                         &self.transform_design[0,0], &self._k_endog,
                         &info)
 
