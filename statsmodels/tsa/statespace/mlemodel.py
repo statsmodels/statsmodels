@@ -298,7 +298,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
             optim_score=None, optim_complex_step=None, optim_hessian=None,
-            **kwargs):
+            flags=None, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -410,14 +410,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             kwargs.setdefault('epsilon', 1e-5)
         elif optim_score is None:
             optim_score = 'approx'
-        elif optim_score not in ['harvey', 'approx']:
-            raise NotImplementedError('Invalid method for calculating the'
-                                      ' score.')
-
-        # Update the hessian method
-        if optim_hessian not in [None, 'opg', 'oim', 'approx']:
-            raise NotImplementedError('Invalid method for calculating the'
-                                      ' Hessian.')
 
         # Check for complex step differentiation
         if optim_complex_step is None:
@@ -431,11 +423,13 @@ class MLEModel(tsbase.TimeSeriesModel):
             start_params = self.untransform_params(np.array(start_params))
 
         # Maximum likelihood estimation
-        flags = {
+        if flags is None:
+            flags = {}
+        flags.update({
             'transformed': False,
             'score_method': optim_score,
             'approx_complex_step': optim_complex_step
-        }
+        })
         if optim_hessian is not None:
             flags['hessian_method'] = optim_hessian
         fargs = (flags,)
@@ -2029,7 +2023,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Tests whether the sum-of-squares in the first third of the sample is
         significantly different than the sum-of-squares in the last third
-        of the sample. Analogous to a Goldfeld-Quandt test.
+        of the sample. Analogous to a Goldfeld-Quandt test. The null hypothesis
+        is of no heteroskedasticity.
 
         Parameters
         ----------
@@ -2126,13 +2121,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 denom_dof = len(denom_resid)
 
                 if numer_dof < 2:
-                    raise RuntimeError('Early subset of data has too few'
-                                       ' non-missing observations to'
-                                       ' calculate test statistic.')
+                    warnings.warn('Early subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    numer_resid = np.nan
                 if denom_dof < 2:
-                    raise RuntimeError('Later subset of data has too few'
-                                       ' non-missing observations to'
-                                       ' calculate test statistic.')
+                    warnings.warn('Later subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    denom_resid = np.nan
 
                 test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
 
@@ -2570,7 +2567,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Bottom-left: QQ plot
         ax = fig.add_subplot(223)
         from statsmodels.graphics.gofplots import qqplot
-        qqplot(resid, line='s', ax=ax)
+        qqplot(resid_nonmissing, line='s', ax=ax)
         ax.set_title('Normal Q-Q')
 
         # Bottom-right: Correlogram

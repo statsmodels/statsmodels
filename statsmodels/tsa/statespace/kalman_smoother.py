@@ -17,14 +17,20 @@ from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.statespace import tools
 
-SMOOTHER_STATE = 0x01          # Durbin and Koopman (2012), Chapter 4.4.2
-SMOOTHER_STATE_COV = 0x02      # ibid., Chapter 4.4.3
-SMOOTHER_DISTURBANCE = 0x04    # ibid., Chapter 4.5
+SMOOTHER_STATE = 0x01              # Durbin and Koopman (2012), Chapter 4.4.2
+SMOOTHER_STATE_COV = 0x02          # ibid., Chapter 4.4.3
+SMOOTHER_DISTURBANCE = 0x04        # ibid., Chapter 4.5
 SMOOTHER_DISTURBANCE_COV = 0x08    # ibid., Chapter 4.5
+SMOOTHER_STATE_AUTOCOV = 0x10      # ibid., Chapter 4.7
 SMOOTHER_ALL = (
     SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
-    SMOOTHER_DISTURBANCE_COV
+    SMOOTHER_DISTURBANCE_COV | SMOOTHER_STATE_AUTOCOV
 )
+
+SMOOTH_CONVENTIONAL = 0x01
+SMOOTH_CLASSICAL = 0x02
+SMOOTH_ALTERNATIVE = 0x04
+SMOOTH_UNIVARIATE = 0x08
 
 
 class KalmanSmoother(KalmanFilter):
@@ -54,8 +60,8 @@ class KalmanSmoother(KalmanFilter):
     """
 
     smoother_outputs = [
-        'smoother_state', 'smoother_state_cov', 'smoother_disturbance',
-        'smoother_disturbance_cov', 'smoother_all',
+        'smoother_state', 'smoother_state_cov', 'smoother_state_autocov',
+        'smoother_disturbance', 'smoother_disturbance_cov', 'smoother_all',
     ]
 
     smoother_state = OptionWrapper('smoother_output', SMOOTHER_STATE)
@@ -66,10 +72,35 @@ class KalmanSmoother(KalmanFilter):
     smoother_disturbance_cov = (
         OptionWrapper('smoother_output', SMOOTHER_DISTURBANCE_COV)
     )
+    smoother_state_autocov = (
+        OptionWrapper('smoother_output', SMOOTHER_STATE_AUTOCOV)
+    )
     smoother_all = OptionWrapper('smoother_output', SMOOTHER_ALL)
+
+    smooth_methods = [
+        'smooth_conventional', 'smooth_alternative', 'smooth_classical'
+    ]
+
+    smooth_conventional = OptionWrapper('smooth_method', SMOOTH_CONVENTIONAL)
+    """
+    (bool) Flag for conventional (Durbin and Koopman, 2012) Kalman smoothing.
+    """
+    smooth_alternative = OptionWrapper('smooth_method', SMOOTH_ALTERNATIVE)
+    """
+    (bool) Flag for alternative (modified Bryson-Frazier) smoothing.
+    """
+    smooth_classical = OptionWrapper('smooth_method', SMOOTH_CLASSICAL)
+    """
+    (bool) Flag for classical (see e.g. Anderson and Moore, 1979) smoothing.
+    """
+    smooth_univariate = OptionWrapper('smooth_method', SMOOTH_UNIVARIATE)
+    """
+    (bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing).
+    """
 
     # Default smoother options
     smoother_output = SMOOTHER_ALL
+    smooth_method = 0
 
     def __init__(self, k_endog, k_states, k_posdef=None, results_class=None,
                  kalman_smoother_classes=None, **kwargs):
@@ -90,8 +121,9 @@ class KalmanSmoother(KalmanFilter):
         # Setup the underlying Kalman smoother storage
         self._kalman_smoothers = {}
 
-        # Set the smoother output
+        # Set the smoother options
         self.set_smoother_output(**kwargs)
+        self.set_smooth_method(**kwargs)
 
     @property
     def _kalman_smoother(self):
@@ -100,10 +132,12 @@ class KalmanSmoother(KalmanFilter):
             return self._kalman_smoothers[prefix]
         return None
 
-    def _initialize_smoother(self, smoother_output=None, prefix=None,
-                             **kwargs):
+    def _initialize_smoother(self, smoother_output=None, smooth_method=None,
+                             prefix=None, **kwargs):
         if smoother_output is None:
             smoother_output = self.smoother_output
+        if smooth_method is None:
+            smooth_method = self.smooth_method
 
         # Make sure we have the required Kalman filter
         prefix, dtype, create_filter, create_statespace = (
@@ -131,12 +165,13 @@ class KalmanSmoother(KalmanFilter):
                 cls = self.prefix_kalman_smoother_map[prefix]
                 self._kalman_smoothers[prefix] = cls(
                     self._statespaces[prefix], self._kalman_filters[prefix],
-                    smoother_output
+                    smoother_output, smooth_method
                 )
             # Otherwise, update the smoother parameters
             else:
                 self._kalman_smoothers[prefix].set_smoother_output(
                     smoother_output, False)
+                self._kalman_smoothers[prefix].set_smooth_method(smooth_method)
 
         return prefix, dtype, create_smoother, create_filter, create_statespace
 
@@ -164,6 +199,9 @@ class KalmanSmoother(KalmanFilter):
             Calculate and return the smoothed states.
         SMOOTHER_STATE_COV = 0x02
             Calculate and return the smoothed state covariance matrices.
+        SMOOTHER_STATE_AUTOCOV = 0x10
+            Calculate and return the smoothed state lag-one autocovariance
+            matrices.
         SMOOTHER_DISTURBANCE = 0x04
             Calculate and return the smoothed state and observation
             disturbances.
@@ -210,12 +248,103 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-    def _smooth(self, smoother_output=None, prefix=None,
+    def set_smooth_method(self, smooth_method=None, **kwargs):
+        r"""
+        Set the smoothing method
+
+        The smoothing method can be used to override the Kalman smoother
+        approach used. By default, the Kalman smoother used depends on the
+        Kalman filter method.
+
+        Parameters
+        ----------
+        smooth_method : integer, optional
+            Bitmask value to set the filter method to. See notes for details.
+        **kwargs
+            Keyword arguments may be used to influence the filter method by
+            setting individual boolean flags. See notes for details.
+
+        Notes
+        -----
+        The smoothing method is defined by a collection of boolean flags, and
+        is internally stored as a bitmask. The methods available are:
+
+        SMOOTH_CONVENTIONAL = 0x01
+            Default Kalman smoother, as presented in Durbin and Koopman, 2012
+            chapter 4.
+        SMOOTH_CLASSICAL = 0x02
+            Classical Kalman smoother, as presented in Anderson and Moore, 1979
+            or Durbin and Koopman, 2012 chapter 4.6.1.
+        SMOOTH_ALTERNATIVE = 0x04
+            Modified Bryson-Frazier Kalman smoother method; this is identical
+            to the conventional method of Durbin and Koopman, 2012, except that
+            an additional intermediate step is included.
+        SMOOTH_UNIVARIATE = 0x08
+            Univariate Kalman smoother, as presented in Durbin and Koopman,
+            2012 chapter 6, except with modified Bryson-Frazier timing.
+
+        Practically speaking, these methods should all produce the same output
+        but different computational implications, numerical stability
+        implications, or internal timing assumptions.
+
+        Note that only the first method is available if using a Scipy version
+        older than 0.16.
+
+        If the bitmask is set directly via the `smooth_method` argument, then
+        the full method must be provided.
+
+        If keyword arguments are used to set individual boolean flags, then
+        the lowercase of the method must be used as an argument name, and the
+        value is the desired value of the boolean flag (True or False).
+
+        Note that the filter method may also be specified by directly modifying
+        the class attributes which are defined similarly to the keyword
+        arguments.
+
+        The default filtering method is SMOOTH_CONVENTIONAL.
+
+        Examples
+        --------
+        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> mod.smooth_method
+        1
+        >>> mod.filter_conventional
+        True
+        >>> mod.filter_univariate = True
+        >>> mod.smooth_method
+        17
+        >>> mod.set_smooth_method(filter_univariate=False,
+                                  filter_collapsed=True)
+        >>> mod.smooth_method
+        33
+        >>> mod.set_smooth_method(smooth_method=1)
+        >>> mod.filter_conventional
+        True
+        >>> mod.filter_univariate
+        False
+        >>> mod.filter_collapsed
+        False
+        >>> mod.filter_univariate = True
+        >>> mod.smooth_method
+        17
+        """
+        if smooth_method is not None:
+            self.smooth_method = smooth_method
+        for name in KalmanSmoother.smooth_methods:
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
+
+        if self._compatibility_mode and not self.smooth_method == 1:
+            raise NotImplementedError('Only conventional Kalman filtering'
+                                      ' is available. Consider updating'
+                                      ' dependencies for more options.')
+
+    def _smooth(self, smoother_output=None, smooth_method=None, prefix=None,
                 complex_step=False, results=None, **kwargs):
         # Initialize the smoother
         prefix, dtype, create_smoother, create_filter, create_statespace = (
             self._initialize_smoother(
-                smoother_output, prefix=prefix, **kwargs
+                smoother_output, smooth_method, prefix=prefix, **kwargs
             ))
 
         # Check that the filter and statespace weren't just recreated
@@ -242,8 +371,8 @@ class KalmanSmoother(KalmanFilter):
 
         return smoother
 
-    def smooth(self, smoother_output=None, results=None, run_filter=True,
-               prefix=None, complex_step=False, **kwargs):
+    def smooth(self, smoother_output=None, smooth_method=None, results=None,
+               run_filter=True, prefix=None, complex_step=False, **kwargs):
         """
         Apply the Kalman smoother to the statespace model.
 

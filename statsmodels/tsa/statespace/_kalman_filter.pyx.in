@@ -32,6 +32,8 @@ cdef int FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
 cdef int FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
 cdef int FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
 cdef int FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
+cdef int SMOOTHER_CLASSICAL = 0x100     # ibid., Chapter 4.6.1
+cdef int SMOOTHER_ALTERNATIVE = 0x200   # ibid., Chapter 4.6.1
 
 # ### Inversion methods
 # Methods by which the terms using the inverse of the forecast error
@@ -579,7 +581,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         Is usually called to reset the filter to the beginning.
         """
-        if t >= self.model.nobs:
+        if not t == 0 and t >= self.model.nobs:
             raise IndexError("Observation index out of range")
         self.t = t
 
@@ -612,8 +614,11 @@ cdef class {{prefix}}KalmanFilter(object):
         Perform an iteration of the Kalman filter
         """
         cdef int filtered_t = self.t
+        cdef int predicted_t = self.t
         if self.conserve_memory & MEMORY_NO_FILTERED > 0:
             filtered_t = 1
+        if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
+            predicted_t = 1
 
         # Get time subscript, and stop the iterator if at the end
         if not self.t < self.model.nobs:
@@ -691,6 +696,12 @@ cdef class {{prefix}}KalmanFilter(object):
 
             # Aids to numerical stability
             self.numerical_stability()
+
+        # Last prediction step (alternate timing)
+        if self.filter_timing == TIMING_INIT_FILTERED and self.t == self.model.nobs-1:
+            self._predicted_state = &self.predicted_state[0, predicted_t+1]
+            self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t+1]
+            self.prediction(self, self.model)
 
         # Check for convergence
         self.check_convergence()

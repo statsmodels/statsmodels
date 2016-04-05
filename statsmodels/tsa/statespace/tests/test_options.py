@@ -40,6 +40,7 @@ from statsmodels.tsa.statespace.kalman_filter import (
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTHER_STATE,
     SMOOTHER_STATE_COV,
+    SMOOTHER_STATE_AUTOCOV,
     SMOOTHER_DISTURBANCE,
     SMOOTHER_DISTURBANCE_COV,
     SMOOTHER_ALL
@@ -241,8 +242,8 @@ class TestOptions(Options):
             setattr(model, name, True)
         assert_equal(
             model.smoother_output,
-            SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
-            SMOOTHER_DISTURBANCE_COV
+            SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_STATE_AUTOCOV |
+            SMOOTHER_DISTURBANCE | SMOOTHER_DISTURBANCE_COV
         )
         assert_equal(model.smoother_output, SMOOTHER_ALL)
         for name in model.smoother_outputs:

@@ -21,7 +21,11 @@ import os
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels.tsa.statespace.tools import compatibility_mode
-from numpy.testing import assert_allclose, assert_almost_equal, assert_raises
+from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
+from statsmodels.tsa.statespace.kalman_smoother import (
+    SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
+    SMOOTH_UNIVARIATE)
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
 from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -182,12 +186,61 @@ class TestStatesAR3(object):
         )
 
 
-class TestStatesAR3Alternate(TestStatesAR3):
+class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
             raise SkipTest
-        super(TestStatesAR3Alternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestStatesAR3AlternateTiming, cls).setup_class(
+            alternate_timing=True, *args, **kwargs)
+
+
+class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestStatesAR3AlternativeSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+
+    def test_smoothed_states(self):
+        # Initialization issues can change the first few smoothed states
+        assert_almost_equal(
+            self.results.smoother_results.smoothed_state.T[2:],
+            self.stata.ix[3:, ['sm1', 'sm2', 'sm3']], 4
+        )
+        assert_almost_equal(
+            self.results.smoother_results.smoothed_state.T[2:],
+            self.matlab_ssm.ix[2:, ['alphahat1', 'alphahat2', 'alphahat3']], 4
+        )
+
+    def test_smoothed_states_cov(self):
+        assert_almost_equal(
+            self.results.det_smoothed_state_cov.T[1:],
+            self.matlab_ssm.ix[1:, ['detV']], 4
+        )
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_ALTERNATIVE)
+
+
+class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestStatesAR3UnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
 
 
 class TestStatesMissingAR3(object):
@@ -341,12 +394,43 @@ class TestStatesMissingAR3(object):
     #     )
 
 
-class TestStatesMissingAR3Alternate(TestStatesMissingAR3):
+class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
             raise SkipTest
-        super(TestStatesMissingAR3Alternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super(TestStatesMissingAR3AlternateTiming, cls).setup_class(alternate_timing=True, *args, **kwargs)
+
+
+class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestStatesMissingAR3AlternativeSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_ALTERNATIVE)
+
+
+class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestStatesMissingAR3UnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
 
 
 class TestMultivariateMissing(object):
@@ -362,7 +446,7 @@ class TestMultivariateMissing(object):
     not.
     """
     @classmethod
-    def setup_class(cls):
+    def setup_class(cls, **kwargs):
         # Results
         path = current_path + os.sep + 'results/results_smoothing_R.csv'
         cls.desired = pd.read_csv(path)
@@ -378,7 +462,7 @@ class TestMultivariateMissing(object):
         obs.ix[119:130, 2] = np.nan
 
         # Create the model
-        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3)
+        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod['design'] = np.eye(3)
         mod['obs_cov'] = np.eye(3)
         mod['transition'] = np.eye(3)
@@ -496,6 +580,38 @@ class TestMultivariateMissing(object):
             self.desired[['Veps1','Veps2','Veps3']]
         )
 
+
+class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateMissingAlternativeSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_ALTERNATIVE)
+
+
+class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateMissingUnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
+
+
 class TestMultivariateVAR(object):
     """
     Tests for most filtering and smoothing variables against output from the
@@ -509,7 +625,7 @@ class TestMultivariateVAR(object):
     not.
     """
     @classmethod
-    def setup_class(cls):
+    def setup_class(cls, *args, **kwargs):
         # Results
         path = current_path + os.sep + 'results/results_smoothing2_R.csv'
         cls.desired = pd.read_csv(path)
@@ -520,7 +636,7 @@ class TestMultivariateVAR(object):
         obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:]
 
         # Create the model
-        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3)
+        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod['design'] = np.eye(3)
         mod['obs_cov'] = np.array([[ 0.0000640649,  0.          ,  0.          ],
                                    [ 0.          ,  0.0000572802,  0.          ],
@@ -644,6 +760,23 @@ class TestMultivariateVAR(object):
             self.desired[['Veps1','Veps2','Veps3']], atol=1e-6
         )
 
+
+class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateVARAlternativeSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_ALTERNATIVE)
+
+
 class TestMultivariateVARUnivariate(object):
     """
     Tests for most filtering and smoothing variables against output from the
@@ -657,7 +790,7 @@ class TestMultivariateVARUnivariate(object):
     not.
     """
     @classmethod
-    def setup_class(cls):
+    def setup_class(cls, *args, **kwargs):
         # Results
         path = current_path + os.sep + 'results/results_smoothing2_R.csv'
         cls.desired = pd.read_csv(path)
@@ -668,7 +801,7 @@ class TestMultivariateVARUnivariate(object):
         obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:]
 
         # Create the model
-        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3)
+        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
         mod.ssm.filter_univariate = True
         mod['design'] = np.eye(3)
         mod['obs_cov'] = np.array([[ 0.0000640649,  0.          ,  0.          ],
@@ -792,3 +925,18 @@ class TestMultivariateVARUnivariate(object):
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
             self.desired[['Veps1','Veps2','Veps3']]
         )
+
+
+class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateVARUnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)

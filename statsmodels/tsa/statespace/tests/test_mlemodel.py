@@ -191,7 +191,6 @@ def test_fit_misc():
         warnings.simplefilter("ignore")
         res1 = mod.fit(method='ncg', disp=0, optim_hessian='opg', optim_complex_step=False)
         res2 = mod.fit(method='ncg', disp=0, optim_hessian='oim', optim_complex_step=False)
-        assert_raises(NotImplementedError, mod.fit, method='ncg', disp=False, optim_hessian='a')
     # Check that the Hessians broadly result in the same optimum
     assert_allclose(res1.llf, res2.llf, rtol=1e-2)
 
