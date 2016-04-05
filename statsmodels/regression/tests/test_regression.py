@@ -1103,9 +1103,9 @@ def test_pandas_fit():
 
     fit = ols(model, data=data).fit()
 
-    result = fit.predict()
+    result = fit.predict(data)
 
-    answer = pd.Series(result.values, index=data.index.values[1:])
+    answer = pd.DataFrame(result.values, index=data.index.values[1:])
 
     assert_(answer.equals(result))
 
