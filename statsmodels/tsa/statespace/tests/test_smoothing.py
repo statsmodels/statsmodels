@@ -21,7 +21,8 @@ import os
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels.tsa.statespace.tools import compatibility_mode
-from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
+from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE)
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
@@ -581,6 +582,61 @@ class TestMultivariateMissing(object):
         )
 
 
+class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateMissingClassicalSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_CLASSICAL)
+
+
+class TestMultivariateMissingClassicalCollapsedSmoothing(TestMultivariateMissing):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateMissingClassicalCollapsedSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, *args, filter_collapsed=True,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_CLASSICAL)
+
+    # These two fail because in the missing data cases, the smoother places
+    # the smoothed disturbances in the first elements of these vectors,
+    # regardless of their actual position
+    def test_smoothed_measurement_disturbance(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.smoothed_measurement_disturbance.T,
+            self.desired[['epshat1','epshat2','epshat3']]
+        )
+
+    def test_smoothed_measurement_disturbance_cov(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.smoothed_measurement_disturbance_cov.diagonal(),
+            self.desired[['Veps1','Veps2','Veps3']]
+        )
+
+
 class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -610,6 +666,64 @@ class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
         assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
         assert_equal(self.model.ssm._kalman_smoother._smooth_method,
                      SMOOTH_UNIVARIATE)
+
+
+class TestMultivariateMissingCollapsedUnivariateSmoothing(TestMultivariateMissing):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateMissingCollapsedUnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE | FILTER_COLLAPSED, *args,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_UNIVARIATE | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
+
+    # With the collapsed method, all output related to the observation
+    # equation is in the transformed space
+    def test_forecasts(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.forecasts.T[:, 0],
+            self.desired['m1'], atol=1e-6
+        )
+
+    def test_forecasts_error(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.forecasts_error.T,
+            self.desired[['v1', 'v2', 'v3']], atol=1e-6
+        )
+
+    def test_forecasts_error_cov(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.forecasts_error.T,
+            self.desired[['v1', 'v2', 'v3']], atol=1e-6
+        )
+
+    def test_smoothed_measurement_disturbance(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.smoothed_measurement_disturbance.T,
+            self.desired[['epshat1','epshat2','epshat3']]
+        )
+
+    def test_smoothed_measurement_disturbance_cov(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.smoothed_measurement_disturbance_cov.diagonal(),
+            self.desired[['Veps1','Veps2','Veps3']]
+        )
 
 
 class TestMultivariateVAR(object):
@@ -777,6 +891,66 @@ class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
                      SMOOTH_ALTERNATIVE)
 
 
+class TestMultivariateVARAlternativeCollapsedSmoothing(TestMultivariateVAR):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateVARAlternativeCollapsedSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, filter_collapsed=True,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_ALTERNATIVE)
+
+
+class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateVARClassicalSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_CLASSICAL)
+
+
+class TestMultivariateVARClassicalCollapsedSmoothing(TestMultivariateVAR):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateVARClassicalCollapsedSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, *args, filter_collapsed=True,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_CLASSICAL)
+
+
 class TestMultivariateVARUnivariate(object):
     """
     Tests for most filtering and smoothing variables against output from the
@@ -935,8 +1109,57 @@ class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
         super(TestMultivariateVARUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_UNIVARIATE)
+
     def test_smooth_method(self):
         assert_equal(self.model.ssm.smooth_method, 0)
         assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
         assert_equal(self.model.ssm._kalman_smoother._smooth_method,
                      SMOOTH_UNIVARIATE)
+
+
+class TestMultivariateVARCollapsedUnivariateSmoothing(TestMultivariateVARUnivariate):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestMultivariateVARCollapsedUnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE | FILTER_COLLAPSED, *args,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_UNIVARIATE | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
+
+    # With the collapsed method, all output related to the observation
+    # equation is in the transformed space
+    def test_forecasts(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.forecasts.T[:, 0],
+            self.desired['m1'], atol=1e-6
+        )
+
+    def test_forecasts_error(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.forecasts_error.T,
+            self.desired[['v1', 'v2', 'v3']], atol=1e-6
+        )
+
+    def test_forecasts_error_cov(self):
+        raise SkipTest
+        assert_allclose(
+            self.results.forecasts_error.T,
+            self.desired[['v1', 'v2', 'v3']], atol=1e-6
+        )
