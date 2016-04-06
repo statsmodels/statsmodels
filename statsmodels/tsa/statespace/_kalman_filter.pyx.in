@@ -734,8 +734,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Determine which transformations need to be made
         transform_generalized_collapse = self.filter_method & FILTER_COLLAPSED
-        if not transform_generalized_collapse:
-            transform_diagonalize = self.filter_method & FILTER_UNIVARIATE
+        transform_diagonalize = self.filter_method & FILTER_UNIVARIATE
 
         # Initialize object-level pointers to statespace arrays
         #self.model.initialize_object_pointers(self.t)
