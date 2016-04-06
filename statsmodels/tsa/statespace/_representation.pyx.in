@@ -681,7 +681,7 @@ cdef class {{prefix}}Statespace(object):
             reset_missing = reset_missing + (not self.missing[i,t] == self.missing[i,previous_t])
 
         # Initialize the transformation
-        if t == 0:
+        if self.collapse_obs_cov[0,0] == 0:
             # Set H_t^* to identity
             for i in range(k_states):
                 self.collapse_obs_cov[i,i] = 1

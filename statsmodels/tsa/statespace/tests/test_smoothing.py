@@ -688,29 +688,9 @@ class TestMultivariateMissingCollapsedUnivariateSmoothing(TestMultivariateMissin
         assert_equal(self.model.ssm._kalman_smoother._smooth_method,
                      SMOOTH_UNIVARIATE)
 
-    # With the collapsed method, all output related to the observation
-    # equation is in the transformed space
-    def test_forecasts(self):
-        raise SkipTest
-        assert_allclose(
-            self.results.forecasts.T[:, 0],
-            self.desired['m1'], atol=1e-6
-        )
-
-    def test_forecasts_error(self):
-        raise SkipTest
-        assert_allclose(
-            self.results.forecasts_error.T,
-            self.desired[['v1', 'v2', 'v3']], atol=1e-6
-        )
-
-    def test_forecasts_error_cov(self):
-        raise SkipTest
-        assert_allclose(
-            self.results.forecasts_error.T,
-            self.desired[['v1', 'v2', 'v3']], atol=1e-6
-        )
-
+    # These two fail because in the missing data cases, the smoother places
+    # the smoothed disturbances in the first elements of these vectors,
+    # regardless of their actual position
     def test_smoothed_measurement_disturbance(self):
         raise SkipTest
         assert_allclose(
@@ -1131,7 +1111,8 @@ class TestMultivariateVARCollapsedUnivariateSmoothing(TestMultivariateVARUnivari
             **kwargs)
 
     def test_filter_method(self):
-        assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm.filter_method,
+                     FILTER_UNIVARIATE | FILTER_COLLAPSED)
         assert_equal(self.model.ssm._kalman_smoother.filter_method,
                      FILTER_UNIVARIATE | FILTER_COLLAPSED)
 
@@ -1143,13 +1124,6 @@ class TestMultivariateVARCollapsedUnivariateSmoothing(TestMultivariateVARUnivari
 
     # With the collapsed method, all output related to the observation
     # equation is in the transformed space
-    def test_forecasts(self):
-        raise SkipTest
-        assert_allclose(
-            self.results.forecasts.T[:, 0],
-            self.desired['m1'], atol=1e-6
-        )
-
     def test_forecasts_error(self):
         raise SkipTest
         assert_allclose(
