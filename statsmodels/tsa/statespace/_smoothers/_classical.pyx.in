@@ -222,10 +222,10 @@ cdef int {{prefix}}smoothed_state_classical({{prefix}}KalmanSmoother smoother, {
         blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
               &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
                       smoother._tmp0, &kfilter.k_states,
-              &beta, smoother._tmpL, &kfilter.k_states)
+              &beta, smoother._tmpL2, &kfilter.k_states)
         blas.{{prefix}}gemm("T", "N", &model._k_states, &model._k_states, &model._k_states,
               &gamma, model._transition, &kfilter.k_states,
-                      smoother._tmpL, &kfilter.k_states,
+                      smoother._tmpL2, &kfilter.k_states,
               &beta, smoother._tmp0, &kfilter.k_states)
         for i in range(kfilter.k_states):
             smoother.tmp0[i,i] = 1 + smoother.tmp0[i,i]

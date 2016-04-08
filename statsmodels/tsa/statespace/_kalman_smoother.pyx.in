@@ -176,7 +176,7 @@ cdef class {{prefix}}KalmanSmoother(object):
     # cdef readonly {{cython_type}} [:] selected_design
     # cdef readonly {{cython_type}} [:] selected_obs_cov
     # These hold the memory allocations of the unnamed temporary arrays
-    # cdef readonly {{cython_type}} [::1,:] tmpL, tmp0, tmp00, tmp000
+    # cdef readonly {{cython_type}} [::1,:] tmpL, tmpL2, tmp0, tmp00, tmp000
 
     # ### Pointers to current-iteration arrays
 
@@ -212,6 +212,7 @@ cdef class {{prefix}}KalmanSmoother(object):
     # cdef {{cython_type}} * _smoothed_state_disturbance_cov
 
     # cdef {{cython_type}} * _tmpL
+    # cdef {{cython_type}} * _tmpL2
     # cdef {{cython_type}} * _tmp0
     # cdef {{cython_type}} * _tmp00
     # cdef {{cython_type}} * _tmp000
@@ -296,6 +297,8 @@ cdef class {{prefix}}KalmanSmoother(object):
         dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
         self.tmpL = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL = &self.tmpL[0, 0]
+        self.tmpL2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._tmpL2 = &self.tmpL2[0, 0]
 
         # # Holds arrays of dimension $(m \times m)$ and $(m \times r)$
         dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
@@ -468,15 +471,19 @@ cdef class {{prefix}}KalmanSmoother(object):
         if self.smoother_output & (SMOOTHER_STATE | SMOOTHER_STATE_COV):
             self.smooth_state(self, self.kfilter, self.model)
 
-        # Smoothed state autocovariance matrix
-        if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
-            {{prefix}}smoothed_state_autocov_conventional(self, self.kfilter, self.model)
-
         # Modified Byrson-Frazier timing of the measurement step of the scaled
         # smoothed estimator and covariance matrix, smoothing error  
         # $L_t, r_{t-1}, N_{t-1}, u_t$
         if self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
+
+        # Smoothed state autocovariance matrix
+        if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
+            if self.smooth_method & SMOOTH_ALTERNATIVE:
+                self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t+1]
+            {{prefix}}smoothed_state_autocov_conventional(self, self.kfilter, self.model)
+            if self.smooth_method & SMOOTH_ALTERNATIVE:
+                self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t]
 
         # Smoothed disturbances  
         # $\hat \eta_t, \hat \varepsilon_t, Var(\eta_t | Y_n), Var(\varepsilon_t | Y_n)$
