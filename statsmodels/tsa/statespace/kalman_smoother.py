@@ -619,7 +619,7 @@ class SmootherResults(FilterResults):
             attributes.append('smoothed_state')
         if self.smoother_state_cov:
             attributes.append('smoothed_state_cov')
-        if self.smoother_state_cov:
+        if self.smoother_state_autocov:
             attributes.append('smoothed_state_autocov')
         if self.smoother_disturbance:
             attributes += [
