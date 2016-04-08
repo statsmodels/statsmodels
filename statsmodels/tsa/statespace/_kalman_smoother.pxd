@@ -59,7 +59,7 @@ cdef class sKalmanSmoother(object):
     cdef readonly np.float32_t [:] selected_design
     cdef readonly np.float32_t [:] selected_obs_cov
 
-    cdef readonly np.float32_t [::1,:] tmpL, tmp0, tmp00, tmp000
+    cdef readonly np.float32_t [::1,:] tmpL, tmpL2, tmp0, tmp00, tmp000
 
     # Statespace
     # cdef np.float32_t * _design
@@ -97,6 +97,7 @@ cdef class sKalmanSmoother(object):
 
     # Temporary
     cdef np.float32_t * _tmpL
+    cdef np.float32_t * _tmpL2
     cdef np.float32_t * _tmp0
     cdef np.float32_t * _tmp00
     cdef np.float32_t * _tmp000
@@ -158,7 +159,7 @@ cdef class dKalmanSmoother(object):
     cdef readonly np.float64_t [:] selected_design
     cdef readonly np.float64_t [:] selected_obs_cov
 
-    cdef readonly np.float64_t [::1,:] tmpL, tmp0, tmp00, tmp000
+    cdef readonly np.float64_t [::1,:] tmpL, tmpL2, tmp0, tmp00, tmp000
 
     # Statespace
     # cdef np.float64_t * _design
@@ -196,6 +197,7 @@ cdef class dKalmanSmoother(object):
 
     # Temporary
     cdef np.float64_t * _tmpL
+    cdef np.float64_t * _tmpL2
     cdef np.float64_t * _tmp0
     cdef np.float64_t * _tmp00
     cdef np.float64_t * _tmp000
@@ -257,7 +259,7 @@ cdef class cKalmanSmoother(object):
     cdef readonly np.complex64_t [:] selected_design
     cdef readonly np.complex64_t [:] selected_obs_cov
 
-    cdef readonly np.complex64_t [::1,:] tmpL, tmp0, tmp00, tmp000
+    cdef readonly np.complex64_t [::1,:] tmpL, tmpL2, tmp0, tmp00, tmp000
 
     # Statespace
     # cdef np.complex64_t * _design
@@ -295,6 +297,7 @@ cdef class cKalmanSmoother(object):
 
     # Temporary
     cdef np.complex64_t * _tmpL
+    cdef np.complex64_t * _tmpL2
     cdef np.complex64_t * _tmp0
     cdef np.complex64_t * _tmp00
     cdef np.complex64_t * _tmp000
@@ -356,7 +359,7 @@ cdef class zKalmanSmoother(object):
     cdef readonly np.complex128_t [:] selected_design
     cdef readonly np.complex128_t [:] selected_obs_cov
 
-    cdef readonly np.complex128_t [::1,:] tmpL, tmp0, tmp00, tmp000
+    cdef readonly np.complex128_t [::1,:] tmpL, tmpL2, tmp0, tmp00, tmp000
 
     # Statespace
     # cdef np.complex128_t * _design
@@ -394,6 +397,7 @@ cdef class zKalmanSmoother(object):
 
     # Temporary
     cdef np.complex128_t * _tmpL
+    cdef np.complex128_t * _tmpL2
     cdef np.complex128_t * _tmp0
     cdef np.complex128_t * _tmp00
     cdef np.complex128_t * _tmp000

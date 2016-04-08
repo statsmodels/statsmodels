@@ -498,3 +498,170 @@ class TestMultivariateMixedMissingGeneralObsCov(MultivariateMissingGeneralObsCov
             self.conventional_results.forecasts_error[0,:],
             self.univariate_results.forecasts_error[0,:], 8
         )
+
+
+class TestMultivariateVAR(object):
+    @classmethod
+    def setup_class(cls, which='none', **kwargs):
+        # Results
+        path = current_path + os.sep + 'results/results_smoothing_generalobscov_R.csv'
+        cls.desired = pd.read_csv(path)
+
+        # Data
+        dta = datasets.macrodata.load_pandas().data
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
+        obs = dta[['realgdp','realcons','realinv']].diff().ix[1:]
+
+        if which == 'all':
+            obs.ix[:50, :] = np.nan
+            obs.ix[119:130, :] = np.nan
+        elif which == 'partial':
+            obs.ix[0:50, 0] = np.nan
+            obs.ix[119:130, 0] = np.nan
+        elif which == 'mixed':
+            obs.ix[0:50, 0] = np.nan
+            obs.ix[19:70, 1] = np.nan
+            obs.ix[39:90, 2] = np.nan
+            obs.ix[119:130, 0] = np.nan
+            obs.ix[119:130, 2] = np.nan
+
+        # Create the model
+        mod = MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
+        mod['design'] = np.eye(3)
+        mod['obs_cov'] = np.array([[ 609.0746647855,    0.          ,    0.          ],
+                                   [   0.          ,    1.8774916622,    0.          ],
+                                   [   0.          ,    0.          ,  124.6768281675]])
+        mod['transition'] = np.array([[-0.8110473405,  1.8005304445,  1.0215975772],
+                                      [-1.9846632699,  2.4091302213,  1.9264449765],
+                                      [ 0.9181658823, -0.2442384581, -0.6393462272]])
+        mod['selection'] = np.eye(3)
+        mod['state_cov'] = np.array([[ 1552.9758843938,   612.7185121905,   877.6157204992],
+                                     [  612.7185121905,   467.8739411204,    70.608037339 ],
+                                     [  877.6157204992,    70.608037339 ,   900.5440385836]])
+        mod.initialize_approximate_diffuse(1e6)
+        cls.model = mod.ssm
+
+        # Conventional filtering, smoothing, and simulation smoothing
+        cls.model.filter_conventional = True
+        cls.conventional_results = cls.model.smooth()
+        n_disturbance_variates = (
+            (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
+        )
+        cls.conventional_sim = cls.model.simulation_smoother(
+            disturbance_variates=np.zeros(n_disturbance_variates),
+            initial_state_variates=np.zeros(cls.model.k_states)
+        )
+
+        # Univariate filtering, smoothing, and simulation smoothing
+        cls.model.filter_univariate = True
+        cls.univariate_results = cls.model.smooth()
+        cls.univariate_sim = cls.model.simulation_smoother(
+            disturbance_variates=np.zeros(n_disturbance_variates),
+            initial_state_variates=np.zeros(cls.model.k_states)
+        )
+
+    def test_forecasts(self):
+        assert_almost_equal(
+            self.conventional_results.forecasts[0,:],
+            self.univariate_results.forecasts[0,:], 9
+        )
+
+    def test_forecasts_error(self):
+        assert_almost_equal(
+            self.conventional_results.forecasts_error[0,:],
+            self.univariate_results.forecasts_error[0,:], 9
+        )
+
+    def test_forecasts_error_cov(self):
+        assert_almost_equal(
+            self.conventional_results.forecasts_error_cov[0,0,:],
+            self.univariate_results.forecasts_error_cov[0,0,:], 9
+        )
+
+    def test_filtered_state(self):
+        assert_almost_equal(
+            self.conventional_results.filtered_state,
+            self.univariate_results.filtered_state, 8
+        )
+
+    def test_filtered_state_cov(self):
+        assert_almost_equal(
+            self.conventional_results.filtered_state_cov,
+            self.univariate_results.filtered_state_cov, 9
+        )
+
+    def test_predicted_state(self):
+        assert_almost_equal(
+            self.conventional_results.predicted_state,
+            self.univariate_results.predicted_state, 8
+        )
+
+    def test_predicted_state_cov(self):
+        assert_almost_equal(
+            self.conventional_results.predicted_state_cov,
+            self.univariate_results.predicted_state_cov, 9
+        )
+
+    def test_loglike(self):
+        assert_allclose(
+            self.conventional_results.llf_obs,
+            self.univariate_results.llf_obs
+        )
+
+    def test_smoothed_states(self):
+        assert_allclose(
+            self.conventional_results.smoothed_state,
+            self.univariate_results.smoothed_state
+        )
+
+    def test_smoothed_states_cov(self):
+        assert_allclose(
+            self.conventional_results.smoothed_state_cov,
+            self.univariate_results.smoothed_state_cov, atol=1e-9
+        )
+
+    def test_smoothed_measurement_disturbance(self):
+        raise SkipTest
+        assert_almost_equal(
+            self.conventional_results.smoothed_measurement_disturbance,
+            self.univariate_results.smoothed_measurement_disturbance, 9
+        )
+
+    def test_smoothed_measurement_disturbance_cov(self):
+        raise SkipTest
+        assert_almost_equal(
+            self.conventional_results.smoothed_measurement_disturbance_cov.diagonal(),
+            self.univariate_results.smoothed_measurement_disturbance_cov.diagonal(), 9
+        )
+
+    def test_smoothed_state_disturbance(self):
+        assert_allclose(
+            self.conventional_results.smoothed_state_disturbance,
+            self.univariate_results.smoothed_state_disturbance,
+            atol=1e-7
+        )
+
+    def test_smoothed_state_disturbance_cov(self):
+        assert_almost_equal(
+            self.conventional_results.smoothed_state_disturbance_cov,
+            self.univariate_results.smoothed_state_disturbance_cov, 9
+        )
+
+    def test_simulation_smoothed_state(self):
+        assert_almost_equal(
+            self.conventional_sim.simulated_state,
+            self.univariate_sim.simulated_state, 9
+        )
+
+    def test_simulation_smoothed_measurement_disturbance(self):
+        raise SkipTest
+        assert_almost_equal(
+            self.conventional_sim.simulated_measurement_disturbance,
+            self.univariate_sim.simulated_measurement_disturbance, 9
+        )
+
+    def test_simulation_smoothed_state_disturbance(self):
+        assert_almost_equal(
+            self.conventional_sim.simulated_state_disturbance,
+            self.univariate_sim.simulated_state_disturbance, 9
+        )

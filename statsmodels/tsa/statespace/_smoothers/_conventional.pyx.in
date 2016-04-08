@@ -123,6 +123,9 @@ cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoo
                           smoother._tmp0, &kfilter.k_states,
                   &beta, smoother._scaled_smoothed_estimator_cov, &kfilter.k_states)
 
+    # $L_t = T_t$  
+    blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, smoother._tmpL, &inc)
+
     # Smoothing error  
     # It is undefined here, since F_t^{-1} is nan
     # for i in range(kfilter.k_endog):
@@ -214,7 +217,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_conventional({{prefix}}Kalman
     # $u_t = \\#_2 - K_t' r_t$  
     # $(p \times 1) = (p \times 1) - (p \times m) (m \times 1)$ 
     if smoother.smoother_output & (SMOOTHER_DISTURBANCE):
-        blas.{{prefix}}copy(&kfilter.k_endog, kfilter._tmp2, &inc, smoother._smoothing_error, &inc)
+        blas.{{prefix}}copy(&model._k_endog, kfilter._tmp2, &inc, smoother._smoothing_error, &inc)
         blas.{{prefix}}gemv("T", &model._k_states, &model._k_endog,
                   &gamma, kfilter._kalman_gain, &kfilter.k_states,
                           smoother._input_scaled_smoothed_estimator, &inc,
@@ -310,6 +313,9 @@ cdef int {{prefix}}smoothed_state_autocov_conventional({{prefix}}KalmanSmoother 
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
+    # This function computes Cov(alpha_{t+1}, alpha_t) = Cov(alpha_t, alpha_{t+1})'
+    # From Durbin and Koopman, 2012, Chapter 4.7
+    # Cov(alpha_{t+1}, alpha_t) = (I - P_{t+1} N_{t}) L_t P_t
 
     blas.{{prefix}}gemm("N", "N", &model.k_states, &model.k_states, &model.k_states,
                   &gamma, &kfilter.predicted_state_cov[0,0,smoother.t+1], &kfilter.k_states,

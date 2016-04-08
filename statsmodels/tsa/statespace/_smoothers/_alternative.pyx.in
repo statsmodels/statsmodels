@@ -59,6 +59,8 @@ cdef int {{prefix}}smoothed_estimators_measurement_alternative({{prefix}}KalmanS
         {{cython_type}} gamma = -1.0
 
     if model._nmissing == model.k_endog:
+        # $L_t = T_t$  
+        blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, smoother._tmpL, &inc)
         return 1
 
     # $C_t = (I - P_t Z_t' F_t^{-1} Z_t)$  
@@ -113,10 +115,8 @@ cdef int {{prefix}}smoothed_estimators_measurement_alternative({{prefix}}KalmanS
     blas.{{prefix}}copy(&model._k_states2, smoother._tmpL, &inc, smoother._tmp0, &inc)
     blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
               &alpha, model._transition, &kfilter.k_states,
-                      kfilter._tmp0, &kfilter.k_states,
+                      smoother._tmp0, &kfilter.k_states,
               &beta, smoother._tmpL, &kfilter.k_states)
-    for i in range(model._k_states):
-        smoother.tmpL[i,i] = smoother.tmpL[i,i] + 1
 
     # Smoothing error  
     # $u_t = \\#_2 - K_t' \tilde r_{t+1}$  

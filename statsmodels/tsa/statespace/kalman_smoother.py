@@ -532,6 +532,9 @@ class SmootherResults(FilterResults):
         The smoothed state at each time period.
     smoothed_state_cov : array
         The smoothed state covariance matrices at each time period.
+    smoothed_state_autocov : array
+        The smoothed state lago-one autocovariance matrices at each time
+        period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
     smoothed_measurement_disturbance : array
         The smoothed measurement at each time period.
     smoothed_state_disturbance : array
@@ -546,7 +549,7 @@ class SmootherResults(FilterResults):
     _smoother_attributes = [
         'smoother_output', 'scaled_smoothed_estimator',
         'scaled_smoothed_estimator_cov', 'smoothing_error',
-        'smoothed_state', 'smoothed_state_cov',
+        'smoothed_state', 'smoothed_state_cov', 'smoothed_state_autocov',
         'smoothed_measurement_disturbance', 'smoothed_state_disturbance',
         'smoothed_measurement_disturbance_cov',
         'smoothed_state_disturbance_cov'
@@ -611,6 +614,8 @@ class SmootherResults(FilterResults):
             attributes.append('smoothed_state')
         if self.smoother_state_cov:
             attributes.append('smoothed_state_cov')
+        if self.smoother_state_cov:
+            attributes.append('smoothed_state_autocov')
         if self.smoother_disturbance:
             attributes += [
                 'smoothing_error',

@@ -1137,3 +1137,183 @@ class TestMultivariateVARCollapsedUnivariateSmoothing(TestMultivariateVARUnivari
             self.results.forecasts_error.T,
             self.desired[['v1', 'v2', 'v3']], atol=1e-6
         )
+
+
+class TestVARAutocovariances(object):
+    @classmethod
+    def setup_class(cls, which='mixed', *args, **kwargs):
+        # Data
+        dta = datasets.macrodata.load_pandas().data
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:]
+
+        if which == 'all':
+            obs.ix[:50, :] = np.nan
+            obs.ix[119:130, :] = np.nan
+        elif which == 'partial':
+            obs.ix[0:50, 0] = np.nan
+            obs.ix[119:130, 0] = np.nan
+        elif which == 'mixed':
+            obs.ix[0:50, 0] = np.nan
+            obs.ix[19:70, 1] = np.nan
+            obs.ix[39:90, 2] = np.nan
+            obs.ix[119:130, 0] = np.nan
+            obs.ix[119:130, 2] = np.nan
+
+        # Create the model with typical state space
+        mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
+        mod['design'] = np.eye(3)
+        mod['obs_cov'] = np.array([[ 609.0746647855,    0.          ,    0.          ],
+                                   [   0.          ,    1.8774916622,    0.          ],
+                                   [   0.          ,    0.          ,  124.6768281675]])
+        mod['transition'] = np.array([[-0.8110473405,  1.8005304445,  1.0215975772],
+                                      [-1.9846632699,  2.4091302213,  1.9264449765],
+                                      [ 0.9181658823, -0.2442384581, -0.6393462272]])
+        mod['selection'] = np.eye(3)
+        mod['state_cov'] = np.array([[ 1552.9758843938,   612.7185121905,   877.6157204992],
+                                     [  612.7185121905,   467.8739411204,    70.608037339 ],
+                                     [  877.6157204992,    70.608037339 ,   900.5440385836]])
+        mod.initialize_approximate_diffuse(1e6)
+        cls.model = mod
+        cls.results = mod.smooth([], return_ssm=True)
+
+        # Create the model with augmented state space
+        kwargs.pop('filter_collapsed', None)
+        mod = mlemodel.MLEModel(obs, k_states=6, k_posdef=3, **kwargs)
+        mod['design', :3, :3] = np.eye(3)
+        mod['obs_cov'] = np.array([[ 609.0746647855,    0.          ,    0.          ],
+                                   [   0.          ,    1.8774916622,    0.          ],
+                                   [   0.          ,    0.          ,  124.6768281675]])
+        mod['transition', :3, :3] = np.array([[-0.8110473405,  1.8005304445,  1.0215975772],
+                                              [-1.9846632699,  2.4091302213,  1.9264449765],
+                                              [ 0.9181658823, -0.2442384581, -0.6393462272]])
+        mod['transition', 3:, :3] = np.eye(3)
+        mod['selection', :3, :3] = np.eye(3)
+        mod['state_cov'] = np.array([[ 1552.9758843938,   612.7185121905,   877.6157204992],
+                                     [  612.7185121905,   467.8739411204,    70.608037339 ],
+                                     [  877.6157204992,    70.608037339 ,   900.5440385836]])
+
+        mod.initialize_approximate_diffuse(1e6)
+        cls.augmented_model = mod
+        cls.augmented_results = mod.smooth([], return_ssm=True)
+
+    def test_smoothed_state_autocov(self):
+        # Cov(\alpha_{t+1}, \alpha_t)
+        # Initialization makes these two methods slightly different for the
+        # first few observations
+        assert_allclose(self.results.smoothed_state_autocov[:, :, 0:5],
+                        self.augmented_results.smoothed_state_cov[:3, 3:, 1:6],
+                        atol=1e-4)
+        assert_allclose(self.results.smoothed_state_autocov[:, :, 5:-1],
+                        self.augmented_results.smoothed_state_cov[:3, 3:, 6:])
+
+
+class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestVARAutocovariancesAlternativeSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_ALTERNATIVE)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_ALTERNATIVE)
+
+
+class TestVARAutocovariancesAlternativeCollapsedSmoothing(TestVARAutocovariances):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestVARAutocovariancesAlternativeCollapsedSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_ALTERNATIVE, *args, filter_collapsed=True,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+
+
+class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestVARAutocovariancesClassicalSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_CLASSICAL)
+
+
+class TestVARAutocovariancesClassicalCollapsedSmoothing(TestVARAutocovariances):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestVARAutocovariancesClassicalCollapsedSmoothing, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, *args, filter_collapsed=True,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method,
+                     SMOOTH_CLASSICAL)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_CLASSICAL)
+
+
+class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestVARAutocovariancesUnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE, *args, **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method, FILTER_UNIVARIATE)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_UNIVARIATE)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
+
+
+class TestVARAutocovariancesCollapsedUnivariateSmoothing(TestVARAutocovariances):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestVARAutocovariancesCollapsedUnivariateSmoothing, cls).setup_class(
+            filter_method=FILTER_UNIVARIATE | FILTER_COLLAPSED, *args,
+            **kwargs)
+
+    def test_filter_method(self):
+        assert_equal(self.model.ssm.filter_method,
+                     FILTER_UNIVARIATE | FILTER_COLLAPSED)
+        assert_equal(self.model.ssm._kalman_smoother.filter_method,
+                     FILTER_UNIVARIATE | FILTER_COLLAPSED)
+
+    def test_smooth_method(self):
+        assert_equal(self.model.ssm.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother.smooth_method, 0)
+        assert_equal(self.model.ssm._kalman_smoother._smooth_method,
+                     SMOOTH_UNIVARIATE)
