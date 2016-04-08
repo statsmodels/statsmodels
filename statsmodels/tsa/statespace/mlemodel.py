@@ -1592,7 +1592,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         extra_arrays = [
             'filtered_state', 'filtered_state_cov', 'predicted_state',
             'predicted_state_cov', 'forecasts', 'forecasts_error',
-            'forecasts_error_cov', 'smoothed_state',
+            'forecasts_error_cov', 'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
             'smoothed_state_cov', 'smoothed_state_autocov',
             'smoothed_measurement_disturbance',
             'smoothed_state_disturbance',
