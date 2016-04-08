@@ -297,7 +297,7 @@ class VARMAX(MLEModel):
         params = np.zeros(self.k_params, dtype=np.float64)
 
         # A. Run a multivariate regression to get beta estimates
-        endog = self.endog.copy()
+        endog = pd.DataFrame(self.endog.copy()).interpolate().fillna(method='backfill').values
         exog = self.exog.copy() if self.k_exog > 0 else None
 
         # Although the Kalman filter can deal with missing values in endog,
