@@ -755,8 +755,6 @@ class Results(object):
 
         if hasattr(exog, 'index'):
             row_labels = exog.index
-        elif hasattr(self.model.data.orig_exog, 'index'):
-            row_labels = self.model.data.orig_exog.index
         else:
             row_labels = None
 
