@@ -33,7 +33,6 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
 from __future__ import print_function
 
-from statsmodels.base.data import PandasData
 from statsmodels.compat.python import lrange, lzip, range
 __docformat__ = 'restructuredtext en'
 
@@ -364,8 +363,7 @@ class RegressionModel(base.LikelihoodModel):
 
         Returns
         -------
-        A pandas Series if model data was a pandas DataFrame
-        otherwise, it returns an ndarray.
+        An array of fitted values
 
         Notes
         -----
@@ -375,17 +373,9 @@ class RegressionModel(base.LikelihoodModel):
         #SS: it needs its own predict method
 
         if exog is None:
-            exog_to_fit = self.exog
-        else:
-            exog_to_fit = exog
+            exog = self.exog
 
-        fitted_values = np.dot(exog_to_fit, params)
-
-        if isinstance(self.data, PandasData):
-            return pd.Series(data=fitted_values, index=self.data.orig_exog.index)
-
-        else:
-            return fitted_values
+        return np.dot(exog, params)
 
     def get_distribution(self, params, scale, exog=None, dist_class=None):
         """

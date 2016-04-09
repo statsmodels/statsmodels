@@ -751,7 +751,23 @@ class Results(object):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
-        return self.model.predict(self.params, exog, *args, **kwargs)
+        predict_results = self.model.predict(self.params, exog, *args, **kwargs)
+
+        if hasattr(exog, 'index'):
+            row_labels = exog.index
+        elif hasattr(self.model.data.orig_exog, 'index'):
+            row_labels = self.model.data.orig_exog.index
+
+        if row_labels is not None:
+            import pandas as pd
+
+            if predict_results.ndim == 1:
+                return pd.Series(predict_results, index=row_labels)
+            else:
+                return pd.DataFrame(predict_results, index=row_labels)
+
+        else:
+            return predict_results
 
 
 #TODO: public method?

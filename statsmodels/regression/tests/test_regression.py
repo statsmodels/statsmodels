@@ -1089,27 +1089,6 @@ def test_fvalue_implicit_constant():
     res.summary()
 
 
-def test_pandas_fit():
-
-    import pandas as pd
-    from statsmodels.formula.api import ols
-
-    data = pd.Series(range(10), index=pd.date_range("2013-1-1", periods=10))
-
-    def shifter(x):
-        return x.shift()
-
-    model = "data ~ shifter(data)"
-
-    fit = ols(model, data=data).fit()
-
-    result = fit.predict(data)
-
-    answer = pd.Series(result.values, index=data.index.values[1:])
-
-    assert_(answer.equals(result))
-
-
 if __name__=="__main__":
 
     import nose
