@@ -1532,7 +1532,7 @@ class Tweedie(Family):
                    endog1 * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sum(2 * freq_weights * dev)
 
-    def resid_dev(self, endog, mu, freq_weights=1, scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         Negative Binomial Deviance Residual
 
@@ -1542,8 +1542,6 @@ class Tweedie(Family):
             `endog` is the response variable
         mu : array-like
             `mu` is the fitted value of the model
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by scale. The default
             is 1.
@@ -1566,7 +1564,7 @@ class Tweedie(Family):
         else:
             dev = (endog1 ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog1 * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
-        return np.sign(endog - mu) * np.sqrt(2 * freq_weights * dev)
+        return np.sign(endog - mu) * np.sqrt(2 * dev)
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         # TODO: Check weights
