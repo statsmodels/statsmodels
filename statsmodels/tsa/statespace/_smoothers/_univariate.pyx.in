@@ -95,6 +95,12 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
     if model.subset_design:
         k_states = model._k_posdef
 
+    # Need to clear out the scaled_smoothed_estimator and
+    # scaled_smoothed_estimator_cov in case we're re-running the filter
+    if smoother.t == model.nobs - 1:
+        smoother.scaled_smoothed_estimator[:, model.nobs-1] = 0
+        smoother.scaled_smoothed_estimator_cov[:, :, model.nobs-1] = 0
+
     # Smoothing error  
     # (not used in the univariate approach)  
 
