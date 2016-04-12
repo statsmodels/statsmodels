@@ -235,6 +235,7 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
     cdef:
         int inc = 1, j, k
         {{cython_type}} scalar = -1.0 * forecast_error_cov_inv
+        {{cython_type}} alpha = 1.0
         {{cython_type}} gamma = -1.0
         int k_states = model._k_states
         int k_states1 = model._k_states
@@ -251,18 +252,17 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
     #             &kfilter._kalman_gain[i*kfilter.k_states], &inc,
     #     kfilter._filtered_state_cov, &kfilter.k_states
     # )
-    
-    # {{if combined_prefix == 'd'}}
+
+    {{if combined_prefix == 'd'}}
     blas.{{prefix}}syr("L", &model._k_states,
         &scalar, &kfilter._tmp1[i*kfilter.k_states], &inc,
                  kfilter._filtered_state_cov, &kfilter.k_states
     )
-    # {{else}}
-    # blas.{{prefix}}her("L", &model._k_states,
-    #     &scalar, kfilter._tmp1, &inc,
-    #              kfilter._filtered_state_cov, &kfilter.k_states
-    # )
-    # {{endif}}
+    {{else}}
+    blas.{{prefix}}syrk("L", "N", &model._k_states, &inc,
+        &scalar, &kfilter._tmp1[i*kfilter.k_states], &kfilter.k_states,
+        &alpha, kfilter._filtered_state_cov, &kfilter.k_states)
+    {{endif}}
 
     # The ?syr or ?her call fills in the lower triangle. Eventually (see the
     # end of `forecast_univariate`) we need to fill in the entire upper
