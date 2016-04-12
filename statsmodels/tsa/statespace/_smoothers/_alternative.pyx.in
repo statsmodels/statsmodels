@@ -170,6 +170,12 @@ cdef int {{prefix}}smoothed_state_alternative({{prefix}}KalmanSmoother smoother,
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
 
+    # Need to clear out the scaled_smoothed_estimator and
+    # scaled_smoothed_estimator_cov in case we're re-running the filter
+    if smoother.t == model.nobs - 1:
+        smoother.scaled_smoothed_estimator[:, model.nobs-1] = 0
+        smoother.scaled_smoothed_estimator_cov[:, :, model.nobs-1] = 0
+
     # Smoothed state
     if smoother.smoother_output & SMOOTHER_STATE:
         # $\hat \alpha_t = a_t|t + P_t|t \hat r_t$  
