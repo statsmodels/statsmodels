@@ -1472,18 +1472,20 @@ class Tweedie(Family):
     variance = V.Power
     safe_links = [L.log, L.Power]
 
-    def __init__(self, link=L.log, var_power=1., link_power=0):
+    def __init__(self, link=None, var_power=1., link_power=0):
         self.var_power = var_power
         self.link_power = link_power
         self.variance = V.Power(power=var_power * 1.)
-        if isinstance(link, L.log) and link_power != 0:
-            msg = 'link_power of {} not supported with log link'
+        if link_power != 0 and not isinstance(link, L.Power):
+            msg = 'link_power of {} not supported specified link'
             msg = msg.format(link_power)
             raise ValueError(msg)
-        if link_power == 0:
+        if (link_power == 0) and ((link is None) or isinstance(link, L.log)):
             self.link = L.log()
-        else:
+        elif link_power != 0:
             self.link = L.Power(power=link_power * 1.)
+        else:
+            self.link = link()
 
     def _clean(self, x):
         """
@@ -1614,4 +1616,9 @@ class Tweedie(Family):
         -----
         Not yet...
         """
-        return np.nan
+        if self.var_power == 3:
+            return (np.log(endog) - np.log(mu)) / np.sqrt(mu)
+        else:
+            c = (3 - self.var_power) / 3
+            return ((1 / c) * (endog ** c - mu ** c) /
+                    mu ** (self.var_power / 6))

@@ -1453,6 +1453,81 @@ class TestTweedieLog1(CheckTweedie):
         self.res2 = CpunishTweedieLog1()
 
 
+class CheckTweedieSpecial(object):
+    def __init__(self):
+        from statsmodels.datasets.cpunish import load_pandas
+        self.data = load_pandas()
+        self.exog = self.data.exog[['INCOME', 'SOUTH']]
+        self.endog = self.data.endog
+
+    def test_mu(self):
+        assert_allclose(self.res1.mu, self.res2.mu, rtol=1e-5, atol=1e-5)
+
+    def test_resid(self):
+        assert_allclose(self.res1.resid_response, self.res2.resid_response,
+                        rtol=1e-5, atol=1e-5)
+        assert_allclose(self.res1.resid_pearson, self.res2.resid_pearson,
+                        rtol=1e-5, atol=1e-5)
+        assert_allclose(self.res1.resid_deviance, self.res2.resid_deviance,
+                        rtol=1e-5, atol=1e-5)
+        assert_allclose(self.res1.resid_working, self.res2.resid_working,
+                        rtol=1e-5, atol=1e-5)
+        assert_allclose(self.res1.resid_anscombe, self.res2.resid_anscombe,
+                        rtol=1e-5, atol=1e-5)
+
+
+class TestTweedieSpecialLog0(CheckTweedieSpecial):
+    def __init__(self):
+        super(TestTweedieSpecialLog0, self).__init__()
+        family1 = sm.families.Gaussian(link=sm.families.links.log)
+        self.res1 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family1).fit()
+        family2 = sm.families.Tweedie(var_power=0, link_power=0)
+        self.res2 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family2).fit()
+
+
+class TestTweedieSpecialLog1(CheckTweedieSpecial):
+    def __init__(self):
+        super(TestTweedieSpecialLog1, self).__init__()
+        family1 = sm.families.Poisson(link=sm.families.links.log)
+        self.res1 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family1).fit()
+        family2 = sm.families.Tweedie(var_power=1, link_power=0)
+        self.res2 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family2).fit()
+
+
+class TestTweedieSpecialLog2(CheckTweedieSpecial):
+    def __init__(self):
+        super(TestTweedieSpecialLog2, self).__init__()
+        family1 = sm.families.Gamma(link=sm.families.links.log)
+        self.res1 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family1).fit()
+        family2 = sm.families.Tweedie(var_power=2, link_power=0)
+        self.res2 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family2).fit()
+
+
+class TestTweedieSpecialLog3(CheckTweedieSpecial):
+    def __init__(self):
+        super(TestTweedieSpecialLog3, self).__init__()
+        family1 = sm.families.InverseGaussian(link=sm.families.links.log)
+        self.res1 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family1).fit()
+        family2 = sm.families.Tweedie(var_power=3, link_power=0)
+        self.res2 = sm.GLM(endog=self.data.endog,
+                           exog=self.data.exog[['INCOME', 'SOUTH']],
+                           family=family2).fit()
+
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:

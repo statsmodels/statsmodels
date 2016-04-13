@@ -658,6 +658,36 @@ class GLM(base.LikelihoodModel):
             raise ValueError("Scale %s with type %s not understood" %
                              (self.scaletype, type(self.scaletype)))
 
+    def tweedie_estimate_power(self, mu, low=1.01, high=5):
+        """
+        Tweedie specific function to estimate scale and shape.
+
+        Parameters
+        ----------
+        mu : array-like
+            Fitted mean response variable
+        low : float, optional
+            Low end of the bracketing interval [a,b] to be used in the search
+            for the power. Defaults to 1.01.
+        high : float, optional
+            High end of the bracketing interval [a,b] to be used in the search
+            for the power. Defaults to 1.99.
+
+        Returns
+        -------
+        power : float
+            The estimated shape or power
+        """
+        from scipy.optimize import brentq
+
+        def psi_p(power, endog, mu, weight):
+            scale = self.estimate_scale(mu)
+            return np.sum(((endog - mu) ** 2 / (scale * (mu ** power)) - 1) *
+                          np.log(mu))
+        power = brentq(psi_p, low, high, args=(self.endog, mu,
+                                               self.freq_weights))
+        return power
+
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
         """
