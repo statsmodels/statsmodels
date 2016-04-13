@@ -1476,11 +1476,11 @@ class Tweedie(Family):
         self.var_power = var_power
         self.link_power = link_power
         self.variance = V.Power(power=var_power * 1.)
-        if link_power != 0 and not isinstance(link, L.Power):
+        if link_power != 0 and not ((link is L.Power) or (link is None)):
             msg = 'link_power of {} not supported specified link'
             msg = msg.format(link_power)
             raise ValueError(msg)
-        if (link_power == 0) and ((link is None) or isinstance(link, L.log)):
+        if (link_power == 0) and ((link is None) or (link is L.Log)):
             self.link = L.log()
         elif link_power != 0:
             self.link = L.Power(power=link_power * 1.)
