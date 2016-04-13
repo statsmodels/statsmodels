@@ -1619,6 +1619,6 @@ class Tweedie(Family):
         if self.var_power == 3:
             return (np.log(endog) - np.log(mu)) / np.sqrt(mu)
         else:
-            c = (3 - self.var_power) / 3
-            return ((1 / c) * (endog ** c - mu ** c) /
-                    mu ** (self.var_power / 6))
+            c = (3. - self.var_power) / 3.
+            return ((1. / c) * (endog ** c - mu ** c) /
+                    mu ** (self.var_power / 6.))
