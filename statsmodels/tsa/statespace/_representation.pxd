@@ -36,6 +36,7 @@ cdef class sStatespace(object):
 
     # Temporary selection arrays
     cdef readonly np.float32_t [:] selected_obs
+    cdef readonly np.float32_t [:] selected_obs_intercept
     cdef readonly np.float32_t [:] selected_design
     cdef readonly np.float32_t [:] selected_obs_cov
 
@@ -108,6 +109,7 @@ cdef class dStatespace(object):
 
     # Temporary selection arrays
     cdef readonly np.float64_t [:] selected_obs
+    cdef readonly np.float64_t [:] selected_obs_intercept
     cdef readonly np.float64_t [:] selected_design
     cdef readonly np.float64_t [:] selected_obs_cov
 
@@ -180,6 +182,7 @@ cdef class cStatespace(object):
 
     # Temporary selection arrays
     cdef readonly np.complex64_t [:] selected_obs
+    cdef readonly np.complex64_t [:] selected_obs_intercept
     cdef readonly np.complex64_t [:] selected_design
     cdef readonly np.complex64_t [:] selected_obs_cov
 
@@ -252,6 +255,7 @@ cdef class zStatespace(object):
 
     # Temporary selection arrays
     cdef readonly np.complex128_t [:] selected_obs
+    cdef readonly np.complex128_t [:] selected_obs_intercept
     cdef readonly np.complex128_t [:] selected_design
     cdef readonly np.complex128_t [:] selected_obs_cov
 
