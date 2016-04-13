@@ -1103,6 +1103,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # design matrices, and observation covariance matrices in the case of
     # missing data.  
     cdef readonly {{cython_type}} [:] selected_obs
+    cdef readonly {{cython_type}} [:] selected_obs_intercept
     # The following are contiguous memory segments which are then used to
     # store the data in the above matrices.
     cdef readonly {{cython_type}} [:] selected_design
@@ -1321,6 +1322,8 @@ cdef class {{prefix}}KalmanFilter(object):
         # Arrays for missing data
         dim1[0] = self.k_endog;
         self.selected_obs = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim1[0] = self.k_endog;
+        self.selected_obs_intercept = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         dim1[0] = self.k_endog * self.k_states;
         self.selected_design = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         dim1[0] = self.k_endog2;
@@ -1633,6 +1636,7 @@ cdef class {{prefix}}KalmanFilter(object):
             if not self.model.missing[i, self.t]:
 
                 self.selected_obs[k] = self.model.obs[i, self.t]
+                self.selected_obs_intercept[k] = self._obs_intercept[i]
 
                 # i is rows
                 # k is rows
@@ -1649,6 +1653,7 @@ cdef class {{prefix}}KalmanFilter(object):
                         l += 1
                 k += 1
         self._obs = &self.selected_obs[0]
+        self._obs_intercept = &self.selected_obs_intercept[0]
         self._design = &self.selected_design[0]
         self._obs_cov = &self.selected_obs_cov[0]
 

@@ -266,6 +266,8 @@ cdef class {{prefix}}Statespace(object):
         # Arrays for missing data
         dim1[0] = self.k_endog;
         self.selected_obs = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim1[0] = self.k_endog;
+        self.selected_obs_intercept = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         dim1[0] = self.k_endog * self.k_states;
         self.selected_design = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         dim1[0] = self.k_endog**2;
@@ -517,6 +519,7 @@ cdef class {{prefix}}Statespace(object):
             if not self.missing[i, t]:
 
                 self.selected_obs[k] = self._obs[i]
+                self.selected_obs_intercept[k] = self._obs_intercept[i]
 
                 # i is rows, k is rows
                 blas.{{prefix}}copy(&self.k_states,
@@ -531,6 +534,7 @@ cdef class {{prefix}}Statespace(object):
                         l += 1
                 k += 1
         self._obs = &self.selected_obs[0]
+        self._obs_intercept = &self.selected_obs_intercept[0]
         self._design = &self.selected_design[0]
         self._obs_cov = &self.selected_obs_cov[0]
 
