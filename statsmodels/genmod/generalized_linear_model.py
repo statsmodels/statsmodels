@@ -680,14 +680,13 @@ class GLM(base.LikelihoodModel):
         """
         from scipy.optimize import brentq
 
-        def psi_p(power, endog, mu, weight):
-            scale = ((weight * (endog - mu) ** 2 / (mu ** power)).sum() /
-                     weight.sum())
-            return (np.sum(weight * ((endog - mu) ** 2 /
+        def psi_p(power, mu):
+            scale = ((self.freq_weights * (self.endog - mu) ** 2 /
+                      (mu ** power)).sum() / self.df_resid)
+            return (np.sum(self.freq_weights * ((self.endog - mu) ** 2 /
                            (scale * (mu ** power)) - 1) *
-                           np.log(mu)) / weight.sum())
-        power = brentq(psi_p, low, high, args=(self.endog, mu,
-                                               self.freq_weights))
+                           np.log(mu)) / self.freq_weights.sum())
+        power = brentq(psi_p, low, high, args=(mu))
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
