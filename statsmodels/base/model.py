@@ -739,6 +739,11 @@ class Results(object):
             See self.model.predict
 
         """
+        from copy import copy
+        import pandas as pd
+
+        orig_exog = copy(exog)
+
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
             exog = dmatrix(self.model.data.design_info.builder,
@@ -753,13 +758,12 @@ class Results(object):
 
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
-        if hasattr(exog, 'index'):
-            row_labels = exog.index
+        if isinstance(orig_exog, pd.Series) or isinstance(orig_exog, pd.DataFrame):
+            row_labels = orig_exog.index
         else:
             row_labels = None
 
         if row_labels is not None:
-            import pandas as pd
 
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=row_labels)
