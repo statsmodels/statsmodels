@@ -775,6 +775,7 @@ class MICEData(object):
 
         from statsmodels.graphics import utils as gutils
         from statsmodels.nonparametric.smoothers_lowess import lowess
+        import pandas as pd
 
         if lowess_args is None:
             lowess_args = {}
@@ -1006,10 +1007,12 @@ class MICEData(object):
 
         if isinstance(obj, np.ndarray):
             return obj
+        elif isinstance(obj, pd.Series):
+            return obj.values
         elif hasattr(obj, 'predicted_values'):
             return obj.predicted_values
         else:
-            raise "cannot obtain predicted values from %s" % obj.__class__
+            raise ValueError("cannot obtain predicted values from %s" % obj.__class__)
 
 
     def impute_pmm(self, vname):
