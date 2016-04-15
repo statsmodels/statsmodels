@@ -144,6 +144,7 @@ class CheckGenericMixin(object):
         else:
 
             import pandas as pd
+            from pandas.util.testing import assert_series_equal
 
             fitted = res.fittedvalues[:2]
             assert_allclose(fitted, res.predict(p_exog), rtol=1e-12)
@@ -170,7 +171,7 @@ class CheckGenericMixin(object):
                 assert_(isinstance(predicted_pandas, pd.Series))
 
                 predicted_expected = pd.Series(predicted, index=exog_index)
-                assert_(predicted_expected.equals(predicted_pandas))
+                assert_series_equal(predicted_expected, predicted_pandas)
 
             else:
                 assert_(isinstance(predicted_pandas, pd.DataFrame))
