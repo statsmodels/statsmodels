@@ -760,10 +760,6 @@ class Results(object):
 
         if isinstance(orig_exog, pd.Series) or isinstance(orig_exog, pd.DataFrame):
             row_labels = orig_exog.index
-        else:
-            row_labels = None
-
-        if row_labels is not None:
 
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=row_labels)
@@ -771,6 +767,7 @@ class Results(object):
                 return pd.DataFrame(predict_results, index=row_labels)
 
         else:
+
             return predict_results
 
 

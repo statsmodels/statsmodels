@@ -157,7 +157,7 @@ class CheckGenericMixin(object):
             assert_allclose(fitted[:1], res.predict(p_exog[0]),
                             rtol=1e-12)
 
-            exog_index=range(len(p_exog))
+            exog_index = range(len(p_exog))
             predicted = res.predict(p_exog)
 
             if p_exog.ndim == 1:
