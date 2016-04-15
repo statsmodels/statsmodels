@@ -3,6 +3,7 @@ from statsmodels.compat.python import iterkeys, lzip, range, reduce
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
@@ -739,10 +740,9 @@ class Results(object):
             See self.model.predict
 
         """
-        from copy import copy
         import pandas as pd
 
-        orig_exog = copy(exog)
+        exog_index = exog.index if _is_using_pandas(exog, None) else None
 
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
@@ -758,15 +758,12 @@ class Results(object):
 
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
-        if (isinstance(orig_exog, pd.Series) or isinstance(orig_exog, pd.DataFrame) and
-           not hasattr(predict_results, 'predicted_values')):
-
-            row_labels = orig_exog.index
+        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
 
             if predict_results.ndim == 1:
-                return pd.Series(predict_results, index=row_labels)
+                return pd.Series(predict_results, index=exog_index)
             else:
-                return pd.DataFrame(predict_results, index=row_labels)
+                return pd.DataFrame(predict_results, index=exog_index)
 
         else:
 
