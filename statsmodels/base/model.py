@@ -735,7 +735,7 @@ class Results(object):
 
         Returns
         -------
-        prediction : ndarray or pandas.Series
+        prediction : ndarray, pandas.Series or pandas.DataFrame
             See self.model.predict
 
         """
