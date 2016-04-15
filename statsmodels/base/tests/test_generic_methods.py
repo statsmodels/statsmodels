@@ -144,7 +144,6 @@ class CheckGenericMixin(object):
         else:
 
             import pandas as pd
-            from statsmodels.genmod.generalized_estimating_equations import GEEResultsWrapper
 
             fitted = res.fittedvalues[:2]
             assert_allclose(fitted, res.predict(p_exog), rtol=1e-12)
