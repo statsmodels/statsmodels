@@ -168,12 +168,7 @@ class CheckGenericMixin(object):
 
             if predicted.ndim == 1:
 
-                try:
-                    assert_(isinstance(predicted_pandas, pd.Series))
-
-                except AssertionError:
-                    import pdb
-                    pdb.set_trace()
+                assert_(isinstance(predicted_pandas, pd.Series))
 
                 predicted_expected = pd.Series(predicted, index=exog_index)
                 assert_(predicted_expected.equals(predicted_pandas))
