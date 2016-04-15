@@ -189,6 +189,10 @@ class TestPHReg(object):
         dfp = dmatrix(model1.data.design_info.builder, df)
 
         pr1 = result1.predict()
+
+        import pdb
+        pdb.set_trace()
+
         pr2 = result1.predict(exog=df)
         pr3 = model1.predict(result1.params, exog=dfp) # No standard errors
         pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp)

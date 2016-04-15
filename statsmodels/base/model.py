@@ -758,7 +758,9 @@ class Results(object):
 
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
-        if isinstance(orig_exog, pd.Series) or isinstance(orig_exog, pd.DataFrame):
+        if (isinstance(orig_exog, pd.Series) or isinstance(orig_exog, pd.DataFrame) and
+           not hasattr(predict_results, 'predicted_values')):
+
             row_labels = orig_exog.index
 
             if predict_results.ndim == 1:
