@@ -1528,6 +1528,27 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
                            family=family2).fit()
 
 
+def testTweediePowerEstimate():
+    data = sm.datasets.cpunish.load_pandas()
+    y = [1.00113835e+05,   6.89668315e+03,   6.15726842e+03,
+         1.41718806e+03,   5.11776456e+02,   2.55369154e+02,
+         1.07147443e+01,   3.56874698e+00,   4.06797842e-02,
+         7.06996731e-05,   2.10165106e-07,   4.34276938e-08,
+         1.56354040e-09,   0.00000000e+00,   0.00000000e+00,
+         0.00000000e+00,   0.00000000e+00]
+    model1 = sm.GLM(y, data.exog[['INCOME', 'SOUTH']],
+                    family=sm.families.Tweedie(var_power=1.5, link_power=0))
+    res1 = model1.fit()
+    model2 = sm.GLM((y - res1.mu) ** 2,
+                    np.column_stack((np.ones(len(res1.mu)), np.log(res1.mu))),
+                    family=sm.families.Gamma(sm.families.links.log))
+    res2 = model2.fit()
+    # Sample may be too small for this...
+    # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
+    p = model1.tweedie_estimate_power(res1.mu)
+    assert_allclose(p, res2.params[1], rtol=0.25)
+
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:
