@@ -92,7 +92,7 @@ class PredictionResults(object):
 
 
 def get_prediction(self, exog=None, transform=True, weights=None,
-                   row_labels=None, pred_kwds=None):
+                   row_labels=None, cov_params=None, pred_kwds=None):
     """
     compute prediction results
 
@@ -110,9 +110,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     weights : array_like, optional
         Weights interpreted as in WLS, used for the variance of the predicted
         residual.
+    cov_params : array-like, optional
+        The covariance matrix of the estimated `params` vector
     args, kwargs :
         Some models can take additional arguments or keywords, see the
-        predict method of the model for the details.
 
     Returns
     -------
@@ -156,20 +157,26 @@ def get_prediction(self, exog=None, transform=True, weights=None,
            (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
             raise ValueError('weights has wrong shape')
 
+    else:
+        # this handles the case where we don't want to apply weights
+        weights = 1.
     ### end
 
     if pred_kwds is None:
         pred_kwds = {}
     predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
 
-    covb = self.cov_params()
-    var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
+    if cov_params is None:
+        cov_params = self.cov_params()
+
+    var_pred_mean = (exog * np.dot(cov_params, exog.T).T).sum(1)
 
     # TODO: check that we have correct scale, Refactor scale #???
     var_resid = self.scale / weights # self.mse_resid / weights
     # special case for now:
-    if self.cov_type == 'fixed scale':
-        var_resid = self.cov_kwds['scale'] / weights
+    if hasattr(self, 'cov_type'):
+        if self.cov_type == 'fixed scale':
+            var_resid = self.cov_kwds['scale'] / weights
 
     dist = ['norm', 't'][self.use_t]
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,
