@@ -1171,20 +1171,43 @@ class PHReg(model.LikelihoodModel):
 
         return cumhaz_f
 
-    def predict(self, params, exog=None, cov_params=None, endog=None,
-                strata=None, offset=None, pred_type="lhr"):
-        # docstring attached below
+    def predict(self, params, exog=None, pred_type="lhr"):
+        """
+        Returns predicted values from the proportional hazards
+        regression models.
+
+        Parameters
+        ----------
+        params : array-like
+            The proportional hazard model parameters.
+        exog : array-like
+            Duration (time) values at which the predictions are made.
+            Only used if pred_type is either 'cumhaz' or 'surv'.  If
+            using model `exog`, defaults to model `endog` (time), but
+            may be provided explicitly to make predictions at
+            alternative times.
+        pred_type : string
+            If 'lhr', returns log hazard ratios, if 'hr' returns
+            hazard ratios, if 'surv' returns the survival function, if
+            'cumhaz' returns the cumulative hazard function.
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model has not yet been fit, params is not optional.
+
+        Types `surv` and `cumhaz` require estimation of the cumulative
+        hazard function.
+        """
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
             msg = "Type %s not allowed for prediction" % pred_type
             raise ValueError(msg)
-
-        class bunch:
-            predicted_values = None
-            standard_errors = None
-        ret_val = bunch()
-
+        
         # Don't do anything with offset here because we want to allow
         # different offsets to be specified even if exog is the model
         # exog.
@@ -1204,19 +1227,13 @@ class PHReg(model.LikelihoodModel):
         # use of the hazard function.
 
         if pred_type == "lhr":
-            ret_val.predicted_values = lhr
-            if cov_params is not None:
-                mat = np.dot(exog, cov_params)
-                va = (mat * exog).sum(1)
-                ret_val.standard_errors = np.sqrt(va)
-            return ret_val
+            predicted_values = lhr
 
         hr = np.exp(lhr)
 
         if pred_type == "hr":
-            ret_val.predicted_values = hr
-            return ret_val
-
+            predicted_values = hr
+        
         # Makes sure endog is defined
         if endog is None and exog_provided:
             msg = "If `exog` is provided `endog` must be provided."
@@ -1243,14 +1260,51 @@ class PHReg(model.LikelihoodModel):
             cumhaz[ix] = func(endog[ix]) * hr[ix]
 
         if pred_type == "cumhaz":
-            ret_val.predicted_values = cumhaz
+            predicted_values = cumhaz
 
         elif pred_type == "surv":
-            ret_val.predicted_values = np.exp(-cumhaz)
+            predicted_values = np.exp(-cumhaz)
+
+        return predicted_values 
+
+    def get_prediction(self, exog=None, pred_type="lhr"):
+        """
+        compute prediction results
+
+        Paramters
+        ---------
+        exog : array-like, optional
+            The values for which you want to predict.
+
+        Returns
+        -------
+        A bunch containing two fields: `predicted_values` and
+        `standard_errors`.
+
+        Notes
+        -----
+        Standard errors are only returned when predicting the log
+        hazard ratio (pred_type is 'lhr').
+
+        Types `surv` and `cumhaz` require estimation of the cumulative
+        hazard function.
+        """
+
+        class bunch:
+            predicted_values = None
+            standard_errors = None
+        ret_val = bunch()
+       
+        ret_val.predicted_values = self.predict(self.params, exog, pred_type)
+
+        if pred_type == "lhr":
+            ret_val.predicted_values = lhr
+            if cov_params is not None:
+                mat = np.dot(exog, cov_params)
+                va = (mat * exog).sum(1)
+                ret_val.standard_errors = np.sqrt(va)
 
         return ret_val
-
-    predict.__doc__ = _predict_docstring % {'cov_params_doc': _predict_cov_params_docstring}
 
     def get_distribution(self, params):
         """
