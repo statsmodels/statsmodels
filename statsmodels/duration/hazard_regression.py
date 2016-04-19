@@ -6,6 +6,8 @@ from scipy.optimize import brent
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.compat.numpy import np_new_unique
 
+from statsmodels.regression import _prediction as pred
+
 """
 Implementation of proportional hazards regression models for duration
 data that may be censored ("Cox models").
@@ -26,49 +28,43 @@ http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
-    regression model.
+    regression models.
 
     Parameters
     ----------
     params : array-like
-        The proportional hazards model parameters.
+        The proportional hazard model parameters.
     exog : array-like
-        Data to use as `exog` in forming predictions.  If not
-        provided, the `exog` values from the model used to fit the
-        data are used.%(cov_params_doc)s
-    endog : array-like
         Duration (time) values at which the predictions are made.
         Only used if pred_type is either 'cumhaz' or 'surv'.  If
         using model `exog`, defaults to model `endog` (time), but
         may be provided explicitly to make predictions at
         alternative times.
-    strata : array-like
-        A vector of stratum values used to form the predictions.
-        Not used (may be 'None') if pred_type is 'lhr' or 'hr'.
-        If `exog` is None, the model stratum values are used.  If
-        `exog` is not None and pred_type is 'surv' or 'cumhaz',
-        stratum values must be provided (unless there is only one
-        stratum).
-    offset : array-like
-        Offset values used to create the predicted values.
     pred_type : string
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
-        'cumhaz' returns the cumulative hazard function.
+        'cumhaz' returns the cumulative hazard function, if 'qsurv'
+        returns a quantile of the survival distribution (specify
+        the quantile using the `prob` argument, specify the
+        grid mesh for calculating the quantiles using the `eps_t`
+        argument).
 
     Returns
     -------
-    A bunch containing two fields: `predicted_values` and
-    `standard_errors`.
+    If return_object == True
+        A bunch containing two fields: `predicted_values` and
+        `standard_errors`.
+    Else
+        An array of fitted values
 
     Notes
     -----
-    Standard errors are only returned when predicting the log
-    hazard ratio (pred_type is 'lhr').
+    If the model has not yet been fit, params is not optional.
 
     Types `surv` and `cumhaz` require estimation of the cumulative
     hazard function.
 """
+
 
 _predict_cov_params_docstring = """
     cov_params : array-like
@@ -1172,19 +1168,14 @@ class PHReg(model.LikelihoodModel):
         return cumhaz_f
 
     def predict(self, params, exog=None, cov_params=None, endog=None,
-                strata=None, offset=None, pred_type="lhr"):
-        # docstring attached below
+                strata=None, offset=None, pred_type="lhr", 
+                return_object=False, **kwargs):
 
         pred_type = pred_type.lower()
-        if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
+        if pred_type not in ["lhr", "hr", "surv", "cumhaz", "qsurv"]:
             msg = "Type %s not allowed for prediction" % pred_type
             raise ValueError(msg)
-
-        class bunch:
-            predicted_values = None
-            standard_errors = None
-        ret_val = bunch()
-
+        
         # Don't do anything with offset here because we want to allow
         # different offsets to be specified even if exog is the model
         # exog.
@@ -1200,29 +1191,45 @@ class PHReg(model.LikelihoodModel):
         elif self.offset is not None and not exog_provided:
             lhr += self.offset
 
+        # if desired, revert to the original behavior for backwards
+        # compatability
+        if return_object:
+            class bunch:
+                predicted_values = None
+                standard_errors = None
+                
+            ret_val = bunch()
+
         # Handle lhr and hr prediction first, since they don't make
         # use of the hazard function.
 
         if pred_type == "lhr":
-            ret_val.predicted_values = lhr
-            if cov_params is not None:
-                mat = np.dot(exog, cov_params)
-                va = (mat * exog).sum(1)
-                ret_val.standard_errors = np.sqrt(va)
-            return ret_val
+            predicted_values = lhr
+        
+            if return_object:
+                ret_val.predicted_values = predicted_values
+
+                if cov_params is not None:
+                    mat = np.dot(exog, cov_params)
+                    va = (mat * exog).sum(1)
+                    ret_val.standard_errors = np.sqrt(va)
+                return ret_val
+            else:
+                return predicted_values
 
         hr = np.exp(lhr)
 
         if pred_type == "hr":
-            ret_val.predicted_values = hr
-            return ret_val
+            predicted_values = hr
+       
+            if return_object:
+                ret_val.predicted_values = predicted_values
+                return ret_val
+            else:
+                return predicted_values
 
-        # Makes sure endog is defined
-        if endog is None and exog_provided:
-            msg = "If `exog` is provided `endog` must be provided."
-            raise ValueError(msg)
         # Use model endog if using model exog
-        elif endog is None and not exog_provided:
+        if endog is None and not exog_provided:
             endog = self.endog
 
         # Make sure strata is defined
@@ -1230,11 +1237,41 @@ class PHReg(model.LikelihoodModel):
             if exog_provided and self.surv.nstrat > 1:
                 raise ValueError("`strata` must be provided")
             if self.strata is None:
-                strata = [self.surv.stratum_names[0],] * len(endog)
+                strata = [self.surv.stratum_names[0],] * exog.shape[0]
             else:
                 strata = self.strata
 
-        cumhaz = np.nan * np.ones(len(endog), dtype=np.float64)
+        # Survival quantiles.
+        if pred_type == "qsurv":
+            if "prob" not in kwargs:
+                raise ValueError("prob argument required for qsurv prediction")
+            from scipy.optimize import bisect
+            bhaz = self.baseline_cumulative_hazard_function(params)
+            qp = -np.log(1 - kwargs["prob"])
+            qsurv = np.empty(exog.shape[0])
+            stu = np.unique(strata)
+            eps_t = 0.01 if "eps_t" not in kwargs else kwargs["eps_t"]
+            for stx in stu:
+                ix = np.flatnonzero(strata == stx)
+                bh = bhaz[stx]
+                vr = qp / hr[ix]
+                mx = vr.max()
+                x = 1
+                while True:
+                    if bh(x) > mx:
+                        break
+                    x *= 2
+                xg = np.arange(0, x + 1, eps_t)
+                hg = bh(xg)
+                jx = np.searchsorted(hg, vr)
+                qsurv[ix] = hg[jx]
+            if return_object:
+                ret_val.predicted_values = qsurv
+                return ret_val
+            else:
+                return qsurv
+
+        cumhaz = np.nan * np.ones(exog.shape[0], dtype=np.float64)
         stv = np.unique(strata)
         bhaz = self.baseline_cumulative_hazard_function(params)
         for stx in stv:
@@ -1243,12 +1280,16 @@ class PHReg(model.LikelihoodModel):
             cumhaz[ix] = func(endog[ix]) * hr[ix]
 
         if pred_type == "cumhaz":
-            ret_val.predicted_values = cumhaz
+            predicted_values = cumhaz
 
         elif pred_type == "surv":
-            ret_val.predicted_values = np.exp(-cumhaz)
+            predicted_values = np.exp(-cumhaz)
 
-        return ret_val
+        if return_object:
+            ret_val.predicted_values = predicted_values
+            return ret_val
+        else:
+            return predicted_values 
 
     predict.__doc__ = _predict_docstring % {'cov_params_doc': _predict_cov_params_docstring}
 
@@ -1414,21 +1455,6 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-
-    def predict(self, endog=None, exog=None, strata=None,
-                offset=None, transform=True, pred_type="lhr"):
-        # docstring attached below
-
-        return super(PHRegResults, self).predict(exog=exog,
-                                                 transform=transform,
-                                                 cov_params=self.cov_params(),
-                                                 endog=endog,
-                                                 strata=strata,
-                                                 offset=offset,
-                                                 pred_type=pred_type)
-
-    predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
-
     def _group_stats(self, groups):
         """
         Descriptive statistics of the groups.
@@ -1539,6 +1565,43 @@ class PHRegResults(base.LikelihoodModelResults):
             mart_resid[ii] = self.model.status[ii] - e_linpred * chaz
 
         return mart_resid
+    
+    def predict(self, endog=None, exog=None, strata=None,
+                offset=None, transform=True, pred_type="lhr",
+                return_object=False, **kwargs):
+
+        return super(PHRegResults, self).predict(exog=exog,
+                                                 transform=transform,
+                                                 cov_params=self.cov_params(),
+                                                 endog=endog,
+                                                 strata=strata,
+                                                 offset=offset,
+                                                 pred_type=pred_type,
+                                                 return_object=return_object,
+                                                 **kwargs)
+
+    predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
+    
+    def get_prediction(self, exog=None, transform=True, row_labels=None, 
+                       cov_params=None, endog=None, strata=None,
+                       offset=None, pred_type="lhr", **kwds):
+
+        # since we can currently only do this with lhr do a check
+        if pred_type == "lhr":
+            # modify kwds to play nice with _prediction
+            kwds['endog'] = endog
+            kwds['strata'] = strata
+            kwds['offset'] = offset
+            kwds['pred_type'] = pred_type
+
+            return pred.get_prediction(self, exog=exog, transform=transform,
+                                       cov_params=cov_params, pred_kwds=kwds)
+
+        else:
+            msg = "Type %s does not support get_prediction" % pred_type
+            raise ValueError(msg)
+
+    get_prediction.__doc__ = pred.get_prediction.__doc__
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """
