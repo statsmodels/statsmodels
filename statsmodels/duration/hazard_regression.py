@@ -6,6 +6,8 @@ from scipy.optimize import brent
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.compat.numpy import np_new_unique
 
+from . import _prediction as pred
+
 """
 Implementation of proportional hazards regression models for duration
 data that may be censored ("Cox models").
@@ -26,31 +28,18 @@ http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
-    regression model.
+    regression models.
 
     Parameters
     ----------
     params : array-like
-        The proportional hazards model parameters.
+        The proportional hazard model parameters.
     exog : array-like
-        Data to use as `exog` in forming predictions.  If not
-        provided, the `exog` values from the model used to fit the
-        data are used.%(cov_params_doc)s
-    endog : array-like
         Duration (time) values at which the predictions are made.
         Only used if pred_type is either 'cumhaz' or 'surv'.  If
         using model `exog`, defaults to model `endog` (time), but
         may be provided explicitly to make predictions at
         alternative times.
-    strata : array-like
-        A vector of stratum values used to form the predictions.
-        Not used (may be 'None') if pred_type is 'lhr' or 'hr'.
-        If `exog` is None, the model stratum values are used.  If
-        `exog` is not None and pred_type is 'surv' or 'cumhaz',
-        stratum values must be provided (unless there is only one
-        stratum).
-    offset : array-like
-        Offset values used to create the predicted values.
     pred_type : string
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
@@ -58,17 +47,20 @@ _predict_docstring = """
 
     Returns
     -------
-    A bunch containing two fields: `predicted_values` and
-    `standard_errors`.
+    If gen_var == True
+        A bunch containing two fields: `predicted_values` and
+        `standard_errors`.
+    Else
+        An array of fitted values
 
     Notes
     -----
-    Standard errors are only returned when predicting the log
-    hazard ratio (pred_type is 'lhr').
+    If the model has not yet been fit, params is not optional.
 
     Types `surv` and `cumhaz` require estimation of the cumulative
     hazard function.
 """
+
 
 _predict_cov_params_docstring = """
     cov_params : array-like
@@ -1171,37 +1163,8 @@ class PHReg(model.LikelihoodModel):
 
         return cumhaz_f
 
-    def predict(self, params, exog=None, pred_type="lhr"):
-        """
-        Returns predicted values from the proportional hazards
-        regression models.
-
-        Parameters
-        ----------
-        params : array-like
-            The proportional hazard model parameters.
-        exog : array-like
-            Duration (time) values at which the predictions are made.
-            Only used if pred_type is either 'cumhaz' or 'surv'.  If
-            using model `exog`, defaults to model `endog` (time), but
-            may be provided explicitly to make predictions at
-            alternative times.
-        pred_type : string
-            If 'lhr', returns log hazard ratios, if 'hr' returns
-            hazard ratios, if 'surv' returns the survival function, if
-            'cumhaz' returns the cumulative hazard function.
-
-        Returns
-        -------
-        An array of fitted values
-
-        Notes
-        -----
-        If the model has not yet been fit, params is not optional.
-
-        Types `surv` and `cumhaz` require estimation of the cumulative
-        hazard function.
-        """
+    def predict(self, params, exog=None, cov_params=None, endog=None,
+                strata=None, offset=None, pred_type="lhr", gen_var=False):
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
@@ -1265,46 +1228,27 @@ class PHReg(model.LikelihoodModel):
         elif pred_type == "surv":
             predicted_values = np.exp(-cumhaz)
 
-        return predicted_values 
+        # reverts to the original behavior for backwards compatability
+        if gen_var:
+            class bunch:
+                predicted_values = None
+                standard_errors = None
+                ret_val = bunch()
 
-    def get_prediction(self, exog=None, pred_type="lhr"):
-        """
-        compute prediction results
+            ret_val.predicted_values = predicted_values
 
-        Paramters
-        ---------
-        exog : array-like, optional
-            The values for which you want to predict.
+            if pred_type == "lhr":
+                if cov_params is not None:
+                    mat = np.dot(exog, cov_params)
+                    va = (mat * exog).sum(1)
+                    ret_val.standard_errors = np.sqrt(va)
+                
+            return ret_val
 
-        Returns
-        -------
-        A bunch containing two fields: `predicted_values` and
-        `standard_errors`.
+        else:
+            return predicted_values 
 
-        Notes
-        -----
-        Standard errors are only returned when predicting the log
-        hazard ratio (pred_type is 'lhr').
-
-        Types `surv` and `cumhaz` require estimation of the cumulative
-        hazard function.
-        """
-
-        class bunch:
-            predicted_values = None
-            standard_errors = None
-        ret_val = bunch()
-       
-        ret_val.predicted_values = self.predict(self.params, exog, pred_type)
-
-        if pred_type == "lhr":
-            ret_val.predicted_values = lhr
-            if cov_params is not None:
-                mat = np.dot(exog, cov_params)
-                va = (mat * exog).sum(1)
-                ret_val.standard_errors = np.sqrt(va)
-
-        return ret_val
+    predict.__doc__ = _predict_docstring % {'cov_params_doc': _predict_cov_params_docstring}
 
     def get_distribution(self, params):
         """
@@ -1468,21 +1412,6 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-
-    def predict(self, endog=None, exog=None, strata=None,
-                offset=None, transform=True, pred_type="lhr"):
-        # docstring attached below
-
-        return super(PHRegResults, self).predict(exog=exog,
-                                                 transform=transform,
-                                                 cov_params=self.cov_params(),
-                                                 endog=endog,
-                                                 strata=strata,
-                                                 offset=offset,
-                                                 pred_type=pred_type)
-
-    predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
-
     def _group_stats(self, groups):
         """
         Descriptive statistics of the groups.
@@ -1593,6 +1522,32 @@ class PHRegResults(base.LikelihoodModelResults):
             mart_resid[ii] = self.model.status[ii] - e_linpred * chaz
 
         return mart_resid
+    
+    def predict(self, endog=None, exog=None, strata=None,
+                offset=None, transform=True, pred_type="lhr",
+                gen_var=False):
+
+        return super(PHRegResults, self).predict(exog=exog,
+                                                 transform=transform,
+                                                 cov_params=self.cov_params(),
+                                                 endog=endog,
+                                                 strata=strata,
+                                                 offset=offset,
+                                                 pred_type=pred_type,
+                                                 gen_var=gen_var)
+
+    predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
+    
+    def get_prediction(self, exog=None, transform=True, row_labels=None, 
+                       cov_params=None, endog=None, strata=None,
+                       offset=None, pred_type=None, **kwds):
+
+        return pred.get_prediction(self, exog=exog, transform=transform,
+                              row_labels=row_labels, cov_params=cov_params,
+                              endog=endog, strata=strata, offset=offset,
+                              pred_type=pred_type, **kwds)
+
+    get_prediction.__doc__ = pred.get_prediction.__doc__
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """
