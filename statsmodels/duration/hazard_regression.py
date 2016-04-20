@@ -1540,7 +1540,7 @@ class PHRegResults(base.LikelihoodModelResults):
     
     def get_prediction(self, exog=None, transform=True, row_labels=None, 
                        cov_params=None, endog=None, strata=None,
-                       offset=None, pred_type=None, **kwds):
+                       offset=None, pred_type="lhr", **kwds):
 
         return pred.get_prediction(self, exog=exog, transform=transform,
                               row_labels=row_labels, cov_params=cov_params,
