@@ -133,6 +133,9 @@ def get_prediction(self, exog=None, transform=True, row_labels=None,
     else:
         exog = self.model.exog
 
+    if endog is None:
+        endog = self.model.endog
+
         if row_labels is None:
             row_labels = getattr(self.model.data, 'row_labels', None)
 
@@ -140,16 +143,20 @@ def get_prediction(self, exog=None, transform=True, row_labels=None,
 
     if pred_kwds is None:
         pred_kwds = {}
-    predicted_mean = self.model.predict(self.params, exog, cov_params,
-                                        endog, strata, offset, pred_type,
-                                        **pred_kwds)
+    predicted_mean = self.model.predict(self.params, exog=exog,
+                                        cov_params=cov_params, endog=endog,
+                                        strata=strata, offset=offset,
+                                        pred_type=pred_type, **pred_kwds)
 
-    if pred_type == "lhr" and cov_params is not None:
+    if pred_type == "lhr":
+        # TODO fix the handling of this
+        if cov_params is None:
+            cov_params = self.cov_params()
         mat = np.dot(exog, cov_params)
         var_pred_mean = (mat * exog).sum(1)
     
     else:
-        msg = "Type %s does not support gen_prediction" % pred_type
+        msg = "Type %s does not support get_prediction" % pred_type
         raise ValueError(msg)
 
     dist = ['norm', 't'][self.use_t]
