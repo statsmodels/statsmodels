@@ -56,6 +56,13 @@ matrix:
     - SCIPY=
     - USEMPL=false
     - PANDAS=
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - NUMPY=
+    - SCIPY=
+    - MATPLOTLIB=
+    - PANDAS=
 
 notifications:
   email:
