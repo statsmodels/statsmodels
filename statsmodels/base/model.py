@@ -3,6 +3,7 @@ from statsmodels.compat.python import iterkeys, lzip, range, reduce
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
@@ -735,10 +736,14 @@ class Results(object):
 
         Returns
         -------
-        prediction : ndarray or pandas.Series
+        prediction : ndarray, pandas.Series or pandas.DataFrame
             See self.model.predict
 
         """
+        import pandas as pd
+
+        exog_index = exog.index if _is_using_pandas(exog, None) else None
+
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
             exog = dmatrix(self.model.data.design_info.builder,
@@ -751,7 +756,18 @@ class Results(object):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
-        return self.model.predict(self.params, exog, *args, **kwargs)
+        predict_results = self.model.predict(self.params, exog, *args, **kwargs)
+
+        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
+
+            if predict_results.ndim == 1:
+                return pd.Series(predict_results, index=exog_index)
+            else:
+                return pd.DataFrame(predict_results, index=exog_index)
+
+        else:
+
+            return predict_results
 
 
 #TODO: public method?

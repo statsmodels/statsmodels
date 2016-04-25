@@ -1089,7 +1089,6 @@ def test_fvalue_implicit_constant():
     res.summary()
 
 
-
 if __name__=="__main__":
 
     import nose

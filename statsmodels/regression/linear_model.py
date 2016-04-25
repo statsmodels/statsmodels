@@ -32,6 +32,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
 from __future__ import print_function
+
 from statsmodels.compat.python import lrange, lzip, range
 __docformat__ = 'restructuredtext en'
 
@@ -370,10 +371,11 @@ class RegressionModel(base.LikelihoodModel):
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
+
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params)
 
+        return np.dot(exog, params)
 
     def get_distribution(self, params, scale, exog=None, dist_class=None):
         """
