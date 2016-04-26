@@ -308,9 +308,13 @@ cdef class {{prefix}}SimulationSmoother(object):
             blas.{{prefix}}copy(&k_states, &self.model.initial_state[0], &inc, &self.secondary_simulated_model.initial_state[0], &inc)
             blas.{{prefix}}copy(&k_states2, &self.model.initial_state_cov[0,0], &inc, &self.secondary_simulated_model.initial_state_cov[0,0], &inc)
 
-        # 0. Kalman filter initialization: transform the N(0,1) random variate
-        # into a N(initial_state, initial_state_cov) random variate:
+        # 0. Kalman filter initialization: get alpha_1^+ ~ N(a_1, P_1)
+        # Usually, this means transforming the N(0,1) random variate
+        # into a N(initial_state, initial_state_cov) random variate.
         # alpha_1^+ = initial_state + variate * chol(initial_state_cov)
+        # If pretransformed_variates is True, then the variates should already
+        # be N(0, initial_state_cov), and then we just need:
+        # alpha_1^+ = initial_state + variate
         self.cholesky(&self.model.initial_state_cov[0,0], self._tmp0, k_states)
         blas.{{prefix}}copy(&k_states, &self.initial_state_variates[0], &inc, &self.generated_state[0,0], &inc)
         if not self.pretransformed_variates:
@@ -337,21 +341,27 @@ cdef class {{prefix}}SimulationSmoother(object):
             #      alpha_{t+1}^+ = c_t + T_t alpha_t^+ + eta_t^+
 
             #    Measurement disturbance (eps)
+            # self._tmp1 = chol(H_t)
             if t == 0 or self.model.obs_cov.shape[2] > 1:
                 self.cholesky(&self.model.obs_cov[0,0,t], self._tmp1, k_endog)
 
+            # eps_t^+ = ind_eps * chol(H_t)
             if not self.pretransformed_variates:
                 self.transform_variates(&self.disturbance_variates[measurement_idx], self._tmp1, k_endog)
+            # y_t^+
             self.generate_obs(t, &self.generated_obs[0,t], &self.generated_state[0,t], &self.disturbance_variates[measurement_idx])
 
             measurement_idx += k_endog
 
             #    State disturbance (eta)
+            # self._tmp1 = chol(Q_t)
             if t == 0 or self.model.state_cov.shape[2] > 1:
                 self.cholesky(&self.model.state_cov[0,0,t], self._tmp2, k_posdef)
 
+            # eta_t^+ = ind_eta * chol(Q_t)
             if not self.pretransformed_variates:
                 self.transform_variates(&self.disturbance_variates[state_idx], self._tmp2, k_posdef)
+            # alpha_t+1^+
             self.generate_state(t, &self.generated_state[0,t+1], &self.generated_state[0,t], &self.disturbance_variates[state_idx])
 
             state_idx += k_posdef
@@ -387,11 +397,12 @@ cdef class {{prefix}}SimulationSmoother(object):
             return
 
         # Backwards recursion
-        # This gives us \hat w_t^*        (simulation_output & SIMULATE_DISTURBANCE)
-        #               \hat alpha_t+1^*  (simulation_output & SIMULATE_STATE)
+        # This gives us \hat w_t^* = \hat w_t - \hat w_t^+                    (simulation_output & SIMULATE_DISTURBANCE)
+        #               \hat alpha_t+1^* = \hat alpha_t+1 - \hat alpha_t+1^+  (simulation_output & SIMULATE_STATE)
         # or if there is missing data:
         # this gives us \hat w_t^+
         #               \hat alpha_t+1
+        # and we construct starred versions below
         self.simulated_smoother.smoother_output = simulation_output
         self.simulated_smoother()
 
@@ -423,8 +434,8 @@ cdef class {{prefix}}SimulationSmoother(object):
                                                            &self.simulated_smoother.smoothed_state[0,0], &inc)
 
         # Construct the final simulated variables
-        # This gives us \tilde w_t        (simulation_output & SIMULATE_DISTURBANCE)
-        #               \tilde alpha_t+1  (simulation_output & SIMULATE_STATE)
+        # This gives us \tilde w_t = \hat w_t^* + w_t^+                (simulation_output & SIMULATE_DISTURBANCE)
+        #               \tilde alpha_t+1 = \hat alpha_t^* + alpha_t^+  (simulation_output & SIMULATE_STATE)
         if self.simulation_output & SIMULATE_DISTURBANCE:
             # \tilde eps_t = \hat eps_t^* + eps_t^+
             blas.{{prefix}}copy(&nobs_endog, &self.disturbance_variates[0], &inc, &self.simulated_measurement_disturbance[0,0], &inc)
