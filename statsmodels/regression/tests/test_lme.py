@@ -68,10 +68,9 @@ class R_Results(object):
 
 
 def loglike_function(model, profile_fe, has_fe):
-    """
-    Returns a function that evaluates the negative log-likelihood for
-    the given model.
-    """
+    # Returns a function that evaluates the negative log-likelihood for
+    # the given model.
+
     def f(x):
         params = MixedLMParams.from_packed(
             x, model.k_fe, model.k_re, model.use_sqrt, has_fe=has_fe)
@@ -211,10 +210,8 @@ class TestMixedLM(object):
 
     # Fails on old versions of scipy/numpy
     def test_vcomp_1(self):
-        """
-        Fit the same model using constrained random effects and
-        variance components.
-        """
+        # Fit the same model using constrained random effects and
+        # variance components.
 
         import scipy
         v = scipy.__version__.split(".")[1]
@@ -255,11 +252,8 @@ class TestMixedLM(object):
         assert_allclose(result1.bse[[0, 1, 3]],
                         result2.bse, atol=1e-2, rtol=1e-2)
 
-
     def test_vcomp_2(self):
-        """
-        Simulated data comparison to R
-        """
+        # Simulated data comparison to R
 
         np.random.seed(6241)
         n = 1600
@@ -319,9 +313,13 @@ class TestMixedLM(object):
                         0.12610, 0.03938, 0.03848], rtol=1e-3)
 
     def test_vcomp_3(self):
-        """
-        Test a model with vcomp but no other random effects, using formulas.
-        """
+        # Test a model with vcomp but no other random effects, using formulas.
+
+        import scipy
+        v = scipy.__version__.split(".")[1]
+        v = int(v)
+        if v < 16:
+            return
 
         np.random.seed(4279)
         x1 = np.random.normal(size=400)
@@ -332,13 +330,18 @@ class TestMixedLM(object):
         vc_fml = {"a": "0 + x1"}
         df = pd.DataFrame({"y": y, "x1": x1, "groups": groups})
 
-        model = MixedLM.from_formula("y ~ 1", groups="groups", vc_formula=vc_fml, data=df)
+        model = MixedLM.from_formula("y ~ 1", groups="groups",
+                                     vc_formula=vc_fml,
+                                     data=df)
         result = model.fit()
         result.summary()
 
-        assert_allclose(result.resid.iloc[0:4], np.r_[-1.180753, 0.279966, 0.578576, -0.667916], rtol=1e-3)
-        assert_allclose(result.fittedvalues.iloc[0:4], np.r_[-0.101549, 0.028613, -0.224621, -0.126295], rtol=1e-3)
-
+        assert_allclose(result.resid.iloc[0:4],
+                        np.r_[-1.180753, 0.279966, 0.578576, -0.667916],
+                        rtol=1e-3)
+        assert_allclose(result.fittedvalues.iloc[0:4],
+                        np.r_[-0.101549, 0.028613, -0.224621, -0.126295],
+                        rtol=1e-3)
 
     def test_sparse(self):
 
@@ -370,13 +373,11 @@ class TestMixedLM(object):
         assert_allclose(result.bse, result2.bse)
 
     def test_pastes_vcomp(self):
-        """
-        pastes data from lme4
-
-        Fit in R using formula:
-
-        strength ~ (1|batch) + (1|batch:cask)
-        """
+        # pastes data from lme4
+        #
+        # Fit in R using formula:
+        #
+        # strength ~ (1|batch) + (1|batch:cask)
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
