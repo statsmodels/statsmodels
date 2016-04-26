@@ -71,6 +71,7 @@ def test_data_conversion():
 
     pylab.suptitle('testing data conversion (plot 1 of 4)')
     #pylab.show()
+    pylab.close('all')
 
 @dec.skipif(not have_matplotlib)
 def test_mosaic_simple():
@@ -100,6 +101,7 @@ def test_mosaic_simple():
     mosaic(data, gap=0.05, properties=props, axes_label=False)
     pylab.suptitle('syntetic data, 4 categories (plot 2 of 4)')
     #pylab.show()
+    pylab.close('all')
 
 
 @dec.skipif(not have_matplotlib or pandas_old)
@@ -138,6 +140,7 @@ def test_mosaic():
                 title='inter-dependence', axes_label=False)
     pylab.suptitle("extramarital affairs (plot 3 of 4)")
     #pylab.show()
+    pylab.close('all')
 
 @dec.skipif(not have_matplotlib)
 def test_mosaic_very_complex():
@@ -179,6 +182,7 @@ def test_mosaic_very_complex():
                        properties=props, gap=0.05, horizontal=i > j)
     pylab.suptitle('old males should look bright red,  (plot 4 of 4)')
     #pylab.show()
+    pylab.close('all')
 
 @dec.skipif(not have_matplotlib)
 def test_axes_labeling():
@@ -197,6 +201,7 @@ def test_axes_labeling():
     #fig.tight_layout()
     fig.suptitle("correct alignment of the axes labels")
     #pylab.show()
+    pylab.close('all')
 
 @dec.skipif(not have_matplotlib or pandas_old)
 def test_mosaic_empty_cells():
@@ -219,6 +224,7 @@ def test_mosaic_empty_cells():
     ct = pd.crosstab(mydata.id1, mydata.id2)
     fig, vals = mosaic(ct.T.unstack())
     fig, vals = mosaic(mydata, ['id1','id2'])
+    pylab.close('all')
 
 
 eq = lambda x, y: assert_(np.allclose(x, y))
