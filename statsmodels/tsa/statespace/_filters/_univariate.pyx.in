@@ -244,7 +244,8 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
-        k_states1 = model._k_posdef + 1
+        if model._k_posdef > model._k_states:
+            k_states1 = model._k_posdef + 1
 
     # $P_{t,i+1} = P_{t,i} - P_{t,i} Z_{t,i}' F_{t,i}^{-1} Z_{t,i} P_{t,i}'$
     # blas.{{prefix}}ger{{combined_suffix}}(&model._k_states, &model._k_states,
