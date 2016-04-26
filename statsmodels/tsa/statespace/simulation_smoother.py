@@ -426,9 +426,9 @@ class SimulationSmoothResults(object):
 
         """
         if self._unconditional_state_disturbance_variates is None:
-            end = self.model.nobs * self.model.k_posdef
+            start = self.model.nobs * self.model.k_endog
             self._unconditional_state_disturbance_variates = np.array(
-                self._simulation_smoother.disturbance_variates[:end],
+                self._simulation_smoother.disturbance_variates[start:],
                 copy=True).reshape(self.model.nobs, self.model.k_posdef)
         return self._unconditional_state_disturbance_variates
 
