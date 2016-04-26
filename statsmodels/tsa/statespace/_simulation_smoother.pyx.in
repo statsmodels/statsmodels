@@ -230,9 +230,9 @@ cdef class {{prefix}}SimulationSmoother(object):
         # Note that these are (k_endog x nobs), (k_posdef x nobs), (k_states x nobs)
         dim2[0] = self.model.k_endog; dim2[1] = self.nobs;
         self.simulated_measurement_disturbance = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
-        dim2[0] = self.model.k_posdef; dim2[1] = self.nobs+1;
+        dim2[0] = self.model.k_posdef; dim2[1] = self.nobs;
         self.simulated_state_disturbance = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
-        dim2[0] = self.model.k_states; dim2[1] = self.nobs+1;
+        dim2[0] = self.model.k_states; dim2[1] = self.nobs;
         self.simulated_state = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # Generated data (y_t^+, alpha_t^+)
@@ -282,9 +282,11 @@ cdef class {{prefix}}SimulationSmoother(object):
             int measurement_idx, state_idx, t
             int k_endog = self.model.k_endog
             int k_states = self.model.k_states
+            int k_states2 = self.model.k_states**2
             int k_posdef = self.model.k_posdef
             int k_posdef2 = self.model.k_posdef**2
             int nobs_endog = self.nobs * self.model.k_endog
+            int nobs_kstates = self.nobs * self.model.k_states
             int nobs1_kstates = (self.nobs+1) * self.model.k_states
             int nobs_posdef = self.nobs * self.model.k_posdef
         cdef:
@@ -415,10 +417,10 @@ cdef class {{prefix}}SimulationSmoother(object):
                                                           &self.simulated_smoother.smoothed_state_disturbance[0,0], &inc)
 
             if self.simulation_output & SIMULATE_STATE:
-                blas.{{prefix}}swap(&nobs1_kstates, &self.simulated_smoother.smoothed_state[0,0], &inc,
-                                                  &self.secondary_simulated_smoother.smoothed_state[0,0], &inc)
-                blas.{{prefix}}axpy(&nobs1_kstates, &gamma, &self.secondary_simulated_smoother.smoothed_state[0,0], &inc,
-                                                           &self.secondary_simulated_smoother.smoothed_state[0,0], &inc)
+                blas.{{prefix}}swap(&nobs_kstates, &self.simulated_smoother.smoothed_state[0,0], &inc,
+                                                   &self.secondary_simulated_smoother.smoothed_state[0,0], &inc)
+                blas.{{prefix}}axpy(&nobs_kstates, &gamma, &self.secondary_simulated_smoother.smoothed_state[0,0], &inc,
+                                                           &self.simulated_smoother.smoothed_state[0,0], &inc)
 
         # Construct the final simulated variables
         # This gives us \tilde w_t        (simulation_output & SIMULATE_DISTURBANCE)
@@ -436,8 +438,8 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         if self.simulation_output & SIMULATE_STATE:
             # \tilde alpha_t = \hat alpha_t^* + alpha_t^+
-            blas.{{prefix}}copy(&nobs1_kstates, &self.generated_state[0,0], &inc, &self.simulated_state[0,0], &inc)
-            blas.{{prefix}}axpy(&nobs1_kstates, &alpha, &self.simulated_smoother.smoothed_state[0,0], &inc,
+            blas.{{prefix}}copy(&nobs_kstates, &self.generated_state[0,0], &inc, &self.simulated_state[0,0], &inc)
+            blas.{{prefix}}axpy(&nobs_kstates, &alpha, &self.simulated_smoother.smoothed_state[0,0], &inc,
                                                        &self.simulated_state[0,0], &inc)
 
     cdef {{cython_type}} generate_obs(self, int t, {{cython_type}} * obs, {{cython_type}} * state, {{cython_type}} * variates):
