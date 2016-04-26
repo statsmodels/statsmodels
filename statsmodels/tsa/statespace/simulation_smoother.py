@@ -378,6 +378,18 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_obs(self):
+        """
+        Generated vector of observations by iterating on the observation and
+        transition equations, given a random initial state draw and random
+        disturbance draws.
+
+        Notes
+        -----
+
+        .. math::
+            y_t^+ = d_t + Z_t \alpha_t^+ + \varepsilon_t^+
+
+        """
         if self._generated_obs is None:
             self._generated_obs = np.array(
                 self._simulation_smoother.generated_obs, copy=True
@@ -386,6 +398,17 @@ class SimulationSmoothResults(object):
 
     @property
     def generated_state(self):
+        """
+        Generated vector of states by iterating on the transition equation,
+        given a random initial state draw and random disturbance draws.
+
+        Notes
+        -----
+
+        .. math::
+            \alpha_{t+1}^+ = c_t + T_t \alpha_t^+ + \eta_t^+
+
+        """
         if self._generated_state is None:
             self._generated_state = np.array(
                 self._simulation_smoother.generated_state, copy=True
@@ -394,6 +417,16 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_state(self):
+        """
+        Random draw of the state vector from its conditional distribution.
+
+        Notes
+        -----
+
+        .. math::
+            \alpha ~ p(\alpha \mid Y_n)
+
+        """
         if self._simulated_state is None:
             self._simulated_state = np.array(
                 self._simulation_smoother.simulated_state, copy=True
@@ -402,6 +435,17 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_measurement_disturbance(self):
+        """
+        Random draw of the measurement disturbance vector from its conditional
+        distribution.
+
+        Notes
+        -----
+
+        .. math::
+            \varepsilon ~ N(\hat \varepsilon, Var(\hat \varepsilon \mid Y_n))
+
+        """
         if self._simulated_measurement_disturbance is None:
             self._simulated_measurement_disturbance = np.array(
                 self._simulation_smoother.simulated_measurement_disturbance,
@@ -411,6 +455,17 @@ class SimulationSmoothResults(object):
 
     @property
     def simulated_state_disturbance(self):
+        """
+        Random draw of the state disturbance vector from its conditional
+        distribution.
+
+        Notes
+        -----
+
+        .. math::
+            \eta ~ N(\hat \eta, Var(\hat \eta \mid Y_n))
+
+        """
         if self._simulated_state_disturbance is None:
             self._simulated_state_disturbance = np.array(
                 self._simulation_smoother.simulated_state_disturbance,
@@ -432,15 +487,17 @@ class SimulationSmoothResults(object):
             Bitmask controlling simulation output. Default is to use the
             simulation output defined in object initialization.
         disturbance_variates : array_likes, optional
-            Random values to use as disturbance variates. Usually only
-            specified if results are to be replicated (e.g. to enforce a seed)
-            or for testing. If not specified, random variates are drawn.
+            Random values to use as disturbance variates, distributed standard
+            Normal. Usually only specified if results are to be replicated
+            (e.g. to enforce a seed) or for testing. If not specified, random
+            variates are drawn.
         initial_state_variates : array_likes, optional
             Random values to use as initial state variates. Usually only
             specified if results are to be replicated (e.g. to enforce a seed)
             or for testing. If not specified, random variates are drawn.
         """
         # Clear any previous output
+        self._generated_state = None
         self._generated_obs = None
         self._generated_state = None
         self._simulated_state = None
