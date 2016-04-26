@@ -1804,6 +1804,7 @@ class FilterResults(FrozenRepresentation):
 
         # Return the predicted state and predicted state covariance matrices
         results = FilterResults(model)
+        results.update_representation(model)
         results.update_filter(kfilter)
         return results
 
