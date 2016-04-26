@@ -68,7 +68,7 @@ matrix:
     - NUMPY=
     - SCIPY=
     - PANDAS=
-    - MATPLOTLIB=
+    - MATPLOTLIB=1.4
 
 notifications:
   email:
