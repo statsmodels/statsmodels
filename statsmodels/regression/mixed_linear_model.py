@@ -2112,7 +2112,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         for group_ix, group in enumerate(self.model.group_labels):
             ix = self.model.row_indices[group]
 
-            mat = [self.model.exog_re_li[group_ix]]
+            mat = []
+            if self.model.exog_re_li is not None:
+                mat.append(self.model.exog_re_li[group_ix])
             for c in self.model._vc_names:
                 if group in self.model.exog_vc[c]:
                     mat.append(self.model.exog_vc[c][group])

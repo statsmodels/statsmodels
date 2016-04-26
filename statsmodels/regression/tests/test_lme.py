@@ -255,6 +255,7 @@ class TestMixedLM(object):
         assert_allclose(result1.bse[[0, 1, 3]],
                         result2.bse, atol=1e-2, rtol=1e-2)
 
+
     def test_vcomp_2(self):
         """
         Simulated data comparison to R
@@ -316,6 +317,28 @@ class TestMixedLM(object):
         assert_allclose(result1.vcomp, [4.024, 3.997], rtol=1e-3)
         assert_allclose(result1.bse.iloc[0:3], [
                         0.12610, 0.03938, 0.03848], rtol=1e-3)
+
+    def test_vcomp_3(self):
+        """
+        Test a model with vcomp but no other random effects, using formulas.
+        """
+
+        np.random.seed(4279)
+        x1 = np.random.normal(size=400)
+        groups = np.kron(np.arange(100), np.ones(4))
+        slopes = np.random.normal(size=100)
+        slopes = np.kron(slopes, np.ones(4)) * x1
+        y = slopes + np.random.normal(size=400)
+        vc_fml = {"a": "0 + x1"}
+        df = pd.DataFrame({"y": y, "x1": x1, "groups": groups})
+
+        model = MixedLM.from_formula("y ~ 1", groups="groups", vc_formula=vc_fml, data=df)
+        result = model.fit()
+        result.summary()
+
+        assert_allclose(result.resid.iloc[0:4], np.r_[-1.180753, 0.279966, 0.578576, -0.667916], rtol=1e-3)
+        assert_allclose(result.fittedvalues.iloc[0:4], np.r_[-0.101549, 0.028613, -0.224621, -0.126295], rtol=1e-3)
+
 
     def test_sparse(self):
 
