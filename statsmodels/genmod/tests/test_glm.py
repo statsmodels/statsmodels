@@ -1530,24 +1530,28 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
 
 def testTweediePowerEstimate():
     """
+    Test the Pearson estimate of the Tweedie variance and scale parameters.
+
     Ideally, this would match the following R code, but I can't make it work...
-    
+
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(tweedie)
-    
+
     y <- c(1.00113835e+05,   6.89668315e+03,   6.15726842e+03,
            1.41718806e+03,   5.11776456e+02,   2.55369154e+02,
            1.07147443e+01,   3.56874698e+00,   4.06797842e-02,
            7.06996731e-05,   2.10165106e-07,   4.34276938e-08,
            1.56354040e-09,   0.00000000e+00,   0.00000000e+00,
            0.00000000e+00,   0.00000000e+00)
-    
+
     data$NewY <- y
-    
-    out <- tweedie.profile( NewY ~ INCOME + SOUTH - 1, p.vec=c(1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9),
-                            link.power=0, data=data,do.plot = TRUE)
+
+    out <- tweedie.profile( NewY ~ INCOME + SOUTH - 1,
+                            p.vec=c(1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
+                                    1.9), link.power=0,
+                            data=data,do.plot = TRUE)
     """
     data = sm.datasets.cpunish.load_pandas()
     y = [1.00113835e+05,   6.89668315e+03,   6.15726842e+03,
@@ -1565,7 +1569,7 @@ def testTweediePowerEstimate():
     res2 = model2.fit()
     # Sample may be too small for this...
     # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
-    p = model1.tweedie_estimate_power(res1.mu)
+    p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
 
 
