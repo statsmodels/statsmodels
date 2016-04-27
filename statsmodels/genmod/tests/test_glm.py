@@ -1384,16 +1384,29 @@ class CheckTweedie(object):
         self.endog = self.data.endog
 
     def test_resid(self):
-        assert_allclose(self.res1.resid_response, self.res2.resid_response,
+        l = len(self.res1.resid_response) - 1
+        l2 = len(self.res2.resid_response) - 1
+        assert_allclose(np.concatenate((self.res1.resid_response[:17],
+                                        [self.res1.resid_response[l]])),
+                        np.concatenate((self.res2.resid_response[:17],
+                                        [self.res2.resid_response[l2]])),
                         rtol=1e-5, atol=1e-5)
-        assert_allclose(self.res1.resid_pearson, self.res2.resid_pearson,
+        assert_allclose(np.concatenate((self.res1.resid_pearson[:17],
+                                        [self.res1.resid_pearson[l]])),
+                        np.concatenate((self.res2.resid_pearson[:17],
+                                        [self.res2.resid_pearson[l2]])),
                         rtol=1e-5, atol=1e-5)
-        # Not working...
-        assert_allclose(self.res1.resid_deviance, self.res2.resid_deviance,
+        assert_allclose(np.concatenate((self.res1.resid_deviance[:17],
+                                        [self.res1.resid_deviance[l]])),
+                        np.concatenate((self.res2.resid_deviance[:17],
+                                        [self.res2.resid_deviance[l2]])),
                         rtol=1e-5, atol=1e-5)
         # Not working either...
-        if not isinstance(self, TestTweedieLog1):
-            assert_allclose(self.res1.resid_working, self.res2.resid_working,
+        if not isinstance(self, (TestTweedieLog1, TestTweedieLog15Fair)):
+            assert_allclose(np.concatenate((self.res1.resid_working[:17],
+                                            [self.res1.resid_working[l]])),
+                            np.concatenate((self.res2.resid_working[:17],
+                                            [self.res2.resid_working[l2]])),
                             rtol=1e-5, atol=1e-5)
 
     def test_bse(self):
@@ -1412,7 +1425,12 @@ class CheckTweedie(object):
         assert_equal(self.res1.df_resid, self.res2.df_resid)
 
     def test_fittedvalues(self):
-        assert_allclose(self.res1.fittedvalues, self.res2.fittedvalues,
+        l = len(self.res1.fittedvalues) - 1
+        l2 = len(self.res2.resid_response) - 1
+        assert_allclose(np.concatenate((self.res1.fittedvalues[:17],
+                                        [self.res1.fittedvalues[l]])),
+                        np.concatenate((self.res2.fittedvalues[:17],
+                                        [self.res2.fittedvalues[l2]])),
                         atol=1e-4, rtol=1e-4)
 
     def test_summary(self):
@@ -1451,6 +1469,19 @@ class TestTweedieLog1(CheckTweedie):
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
         self.res2 = CpunishTweedieLog1()
+
+
+class TestTweedieLog15Fair(CheckTweedie):
+    def __init__(self):
+        from .results.results_glm import FairTweedieLog15
+        from statsmodels.datasets.fair import load_pandas
+        data = load_pandas()
+        family_link = sm.families.Tweedie(var_power=1.5, link_power=0.)
+        self.res1 = sm.GLM(endog=data.endog,
+                           exog=data.exog[['rate_marriage', 'age',
+                                           'yrs_married']],
+                           family=family_link).fit()
+        self.res2 = FairTweedieLog15()
 
 
 class CheckTweedieSpecial(object):

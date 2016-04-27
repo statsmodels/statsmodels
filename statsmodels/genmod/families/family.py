@@ -1356,7 +1356,6 @@ class NegativeBinomial(Family):
         return np.sign(endog - mu) * np.sqrt(tmp) / scale
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
-        # TODO: Check weights
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1469,12 +1468,10 @@ class Tweedie(Family):
     -----
     Logliklihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
-    estimated using the `tweedie_estimate_power` function that is part of the
+    estimated using the `estimate_tweedie_power` function that is part of the
     `GLM` class.
     """
     links = [L.log, L.Power]
-    # TODO: add the ability to use the power links with an if test
-    # similar to below
     variance = V.Power
     safe_links = [L.log, L.Power]
 
@@ -1637,7 +1634,6 @@ class Tweedie(Family):
         return np.sign(endog - mu) * np.sqrt(2 * dev)
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
-        # TODO: Check weights
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
