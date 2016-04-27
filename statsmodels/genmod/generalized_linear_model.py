@@ -658,14 +658,18 @@ class GLM(base.LikelihoodModel):
             raise ValueError("Scale %s with type %s not understood" %
                              (self.scaletype, type(self.scaletype)))
 
-    def tweedie_estimate_power(self, mu, low=1.01, high=5.):
+    def tweedie_estimate_power(self, mu, method='brentq', low=1.01, high=5.):
         """
-        Tweedie specific function to estimate scale and shape.
+        Tweedie specific function to estimate scale and the variance parameter.
+        The variance parameter is also referred to as p, xi, or shape.        
 
         Parameters
         ----------
         mu : array-like
             Fitted mean response variable
+        method : str, defaults to 'brentq'
+            Scipy optimizer used to solve the Pearson equation. Only brentq
+            currently supported.
         low : float, optional
             Low end of the bracketing interval [a,b] to be used in the search
             for the power. Defaults to 1.01.
@@ -678,15 +682,18 @@ class GLM(base.LikelihoodModel):
         power : float
             The estimated shape or power
         """
-        from scipy.optimize import brentq
+        if method == 'brentq':
+            from scipy.optimize import brentq
 
-        def psi_p(power, mu):
-            scale = ((self.freq_weights * (self.endog - mu) ** 2 /
-                      (mu ** power)).sum() / self.df_resid)
-            return (np.sum(self.freq_weights * ((self.endog - mu) ** 2 /
-                           (scale * (mu ** power)) - 1) *
-                           np.log(mu)) / self.freq_weights.sum())
-        power = brentq(psi_p, low, high, args=(mu))
+            def psi_p(power, mu):
+                scale = ((self.freq_weights * (self.endog - mu) ** 2 /
+                          (mu ** power)).sum() / self.df_resid)
+                return (np.sum(self.freq_weights * ((self.endog - mu) ** 2 /
+                               (scale * (mu ** power)) - 1) *
+                               np.log(mu)) / self.freq_weights.sum())
+            power = brentq(psi_p, low, high, args=(mu))
+        else:
+            raise NotImplementedError('Only brentq can currently be used')
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
@@ -751,7 +758,6 @@ class GLM(base.LikelihoodModel):
             return linpred
         else:
             return self.family.fitted(linpred)
-
 
     def get_distribution(self, params, scale=1, exog=None, exposure=None,
                          offset=None):

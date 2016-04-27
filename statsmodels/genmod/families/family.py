@@ -1443,8 +1443,7 @@ class Tweedie(Family):
     link : a link instance, optional
         The default link for the Tweedie family is the log link when the
         link_power is 0. Otherwise, the power link is default.
-        Available links are log, cloglog, identity, nbinom and power.
-        See statsmodels.family.links for more information.
+        Available links are log and Power.
     var_power : float, optional
         The variance power.
     link_power : float, optional
@@ -1455,7 +1454,11 @@ class Tweedie(Family):
     Tweedie.link : a link instance
         The link function of the Tweedie instance
     Tweedie.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.nbinom
+        `variance` is an instance of statsmodels.family.varfuncs.Power
+    Tweedie.link_power : float
+        The power of the link function, or 0 if its a log link.
+    Tweedie.var_power : float
+        The power of the variance function.
 
     See also
     --------
@@ -1464,7 +1467,10 @@ class Tweedie(Family):
 
     Notes
     -----
-    Still under development.
+    Logliklihood function not implemented because of the complexity of
+    calculating an infinite series of summations. The variance power can be
+    estimated using the `tweedie_estimate_power` function that is part of the
+    `GLM` class.
     """
     links = [L.log, L.Power]
     # TODO: add the ability to use the power links with an if test
@@ -1521,22 +1527,56 @@ class Tweedie(Family):
 
         Notes
         -----
-        Not yet...
+        When :math:`p = 1`,
+
+        .. math::
+
+            resid\_dev_i = \mu
+
+        when :math:`endog = 0` and
+
+        .. math::
+
+            resid\_dev_i = \mu - endog * (1 + \log(\mu / endog))
+
+        otherwise.
+
+        When :math:`p = 2`,
+
+        .. math::
+
+            resid\_dev_i = -1 + (endog / \mu) + \log(\mu / endog)
+
+        For all other p,
+
+        .. math::
+
+            resid\_dev_i = endog ^{2 - p} / ((1 - p) * (2 - p)) -
+                           endog * \mu ^{1 - p} / (1 - p) + \mu ^{2 - p} /
+                           (2 - p)
+
+        Once :math:`resid\_dev_i` is calculated, then calculate deviance as
+
+        .. math::
+
+            D = \sum{2 * freq\_weights * resid\_dev_i}
         """
-        endog1 = np.clip(endog, 0.1, np.inf)
         p = self.var_power
         if p == 1:
-            dev = mu - endog * (1 + np.log(mu / endog1))
+            dev = np.where(endog == 0,
+                           2. * mu,
+                           mu - endog * (1 + np.log(mu / endog)))
         elif p == 2:
+            endog1 = np.clip(endog, FLOAT_EPS, np.inf)
             dev = -1 + (endog / mu) + np.log(mu / endog1)
         else:
-            dev = (endog1 ** (2 - p) / ((1 - p) * (2 - p)) -
-                   endog1 * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+            dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
+                   endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sum(2 * freq_weights * dev)
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
-        Negative Binomial Deviance Residual
+        Tweedie Deviance Residual
 
         Parameters
         ----------
@@ -1555,17 +1595,45 @@ class Tweedie(Family):
 
         Notes
         -----
-        Not yet...
+        When :math:`p = 1`,
+
+        .. math::
+
+            resid\_dev_i = \mu
+
+        when :math:`endog = 0` and
+
+        .. math::
+
+            resid\_dev_i = \mu - endog * (1 + \log(\mu / endog))
+
+        otherwise.
+
+        When :math:`p = 2`,
+
+        .. math::
+
+            resid\_dev_i = -1 + (endog / \mu) + \log(\mu / endog1)
+
+        For all other p,
+
+        .. math::
+
+            resid\_dev_i = endog ^{2 - p} / ((1 - p) * (2 - p)) -
+                           endog * \mu ^{1 - p} / (1 - p) + \mu ^{2 - p} /
+                           (2 - p)
         """
-        endog1 = np.clip(endog, 0.1, np.inf)
         p = self.var_power
         if p == 1:
-            dev = mu - endog * (1 + np.log(mu / endog1))
+            dev = np.where(endog == 0,
+                           2. * mu,
+                           mu - endog * (1 + np.log(mu / endog)))
         elif p == 2:
+            endog1 = np.clip(endog, FLOAT_EPS, np.inf)
             dev = -1 + (endog / mu) + np.log(mu / endog1)
         else:
-            dev = (endog1 ** (2 - p) / ((1 - p) * (2 - p)) -
-                   endog1 * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+            dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
+                   endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sign(endog - mu) * np.sqrt(2 * dev)
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
@@ -1592,7 +1660,8 @@ class Tweedie(Family):
 
         Notes
         -----
-        Not yet...
+        This is not implemented because of the complexity of calculating an
+        infinite series of sums.
         """
         return np.nan
 
@@ -1614,7 +1683,21 @@ class Tweedie(Family):
 
         Notes
         -----
-        Not yet...
+        When :math:`p = 3`, then
+
+        .. math::
+
+            resid\_anscombe_i = (\log(endog) - \log(\mu)) / \sqrt{mu}
+
+        Otherwise,
+
+        .. math::
+
+            c = (3 - p) / 3
+
+        .. math::
+
+            resid\_anscombe_i = (1 / c) * (endog ^ c - \mu ^ c) / \mu ^{p / 6}
         """
         if self.var_power == 3:
             return (np.log(endog) - np.log(mu)) / np.sqrt(mu)
