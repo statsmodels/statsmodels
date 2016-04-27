@@ -1537,7 +1537,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i = \mu - endog * (1 + \log(\mu / endog))
+            resid\_dev_i = endog * \log(endog / \mu) + (\mu - endog)
 
         otherwise.
 
@@ -1545,7 +1545,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i = -1 + (endog / \mu) + \log(\mu / endog)
+            resid\_dev_i =  (endog - \mu) / \mu - \log(endog / \mu)
 
         For all other p,
 
@@ -1564,11 +1564,11 @@ class Tweedie(Family):
         p = self.var_power
         if p == 1:
             dev = np.where(endog == 0,
-                           2. * mu,
-                           mu - endog * (1 + np.log(mu / endog)))
+                           mu,
+                           endog * np.log(endog / mu) + (mu - endog))
         elif p == 2:
             endog1 = np.clip(endog, FLOAT_EPS, np.inf)
-            dev = -1 + (endog / mu) + np.log(mu / endog1)
+            dev = ((endog - mu) / mu) - np.log(endog1 / mu)
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
@@ -1605,7 +1605,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i = \mu - endog * (1 + \log(\mu / endog))
+            resid\_dev_i = endog * \log(endog / \mu) + (\mu - endog)
 
         otherwise.
 
@@ -1613,7 +1613,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i = -1 + (endog / \mu) + \log(\mu / endog1)
+            resid\_dev_i =  (endog - \mu) / \mu - \log(endog / \mu)
 
         For all other p,
 
@@ -1626,11 +1626,11 @@ class Tweedie(Family):
         p = self.var_power
         if p == 1:
             dev = np.where(endog == 0,
-                           2. * mu,
-                           mu - endog * (1 + np.log(mu / endog)))
+                           mu,
+                           endog * np.log(endog / mu) + (mu - endog))
         elif p == 2:
             endog1 = np.clip(endog, FLOAT_EPS, np.inf)
-            dev = -1 + (endog / mu) + np.log(mu / endog1)
+            dev = ((endog - mu) / mu) - np.log(endog1 / mu)
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
