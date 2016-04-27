@@ -658,7 +658,7 @@ class GLM(base.LikelihoodModel):
             raise ValueError("Scale %s with type %s not understood" %
                              (self.scaletype, type(self.scaletype)))
 
-    def tweedie_estimate_power(self, mu, method='brentq', low=1.01, high=5.):
+    def estimate_tweedie_power(self, mu, method='brentq', low=1.01, high=5.):
         """
         Tweedie specific function to estimate scale and the variance parameter.
         The variance parameter is also referred to as p, xi, or shape.        
