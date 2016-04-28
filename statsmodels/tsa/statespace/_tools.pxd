@@ -28,3 +28,33 @@ cpdef int sldl(np.float32_t [::1, :] A) except *
 cpdef int dldl(np.float64_t [::1, :] A) except *
 cpdef int cldl(np.complex64_t [::1, :] A) except *
 cpdef int zldl(np.complex128_t [::1, :] A) except *
+
+cdef int _sreorder_missing_diagonal(np.float32_t * a, int * missing, int n)
+cdef int _dreorder_missing_diagonal(np.float64_t * a, int * missing, int n)
+cdef int _creorder_missing_diagonal(np.complex64_t * a, int * missing, int n)
+cdef int _zreorder_missing_diagonal(np.complex128_t * a, int * missing, int n)
+
+cdef int _sreorder_missing_submatrix(np.float32_t * a, int * missing, int n)
+cdef int _dreorder_missing_submatrix(np.float64_t * a, int * missing, int n)
+cdef int _creorder_missing_submatrix(np.complex64_t * a, int * missing, int n)
+cdef int _zreorder_missing_submatrix(np.complex128_t * a, int * missing, int n)
+
+cdef int _sreorder_missing_rows(np.float32_t * a, int * missing, int n, int m)
+cdef int _dreorder_missing_rows(np.float64_t * a, int * missing, int n, int m)
+cdef int _creorder_missing_rows(np.complex64_t * a, int * missing, int n, int m)
+cdef int _zreorder_missing_rows(np.complex128_t * a, int * missing, int n, int m)
+
+cdef int _sreorder_missing_cols(np.float32_t * a, int * missing, int n, int m)
+cdef int _dreorder_missing_cols(np.float64_t * a, int * missing, int n, int m)
+cdef int _creorder_missing_cols(np.complex64_t * a, int * missing, int n, int m)
+cdef int _zreorder_missing_cols(np.complex128_t * a, int * missing, int n, int m)
+
+cpdef int sreorder_missing_matrix(np.float32_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *
+cpdef int dreorder_missing_matrix(np.float64_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *
+cpdef int creorder_missing_matrix(np.complex64_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *
+cpdef int zreorder_missing_matrix(np.complex128_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *
+
+cpdef int sreorder_missing_vector(np.float32_t [::1, :] A, int [::1, :] missing) except *
+cpdef int dreorder_missing_vector(np.float64_t [::1, :] A, int [::1, :] missing) except *
+cpdef int creorder_missing_vector(np.complex64_t [::1, :] A, int [::1, :] missing) except *
+cpdef int zreorder_missing_vector(np.complex128_t [::1, :] A, int [::1, :] missing) except *
