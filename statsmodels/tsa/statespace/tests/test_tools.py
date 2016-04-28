@@ -388,7 +388,6 @@ class TestConstrainStationaryMultivariate(object):
                 [1] + [-constrained[i] for i in range(len(constrained))]
             ).T
             assert_equal(np.max(np.abs(np.linalg.eigvals(companion))) < 1, True)
-            
 
 
 class TestUnconstrainStationaryMultivariate(object):
@@ -406,6 +405,7 @@ class TestUnconstrainStationaryMultivariate(object):
             result = tools.unconstrain_stationary_multivariate(
                 constrained, error_variance)
             assert_allclose(result[0], unconstrained)
+
 
 class TestStationaryMultivariate(object):
     # Test that the constraint and unconstraint functions are inverses
@@ -447,3 +447,255 @@ class TestStationaryMultivariate(object):
             # Note: low tolerance comes from last example in unconstrained_cases,
             # but is not a real problem
             assert_allclose(reunconstrained, unconstrained, atol=1e-4)
+
+
+def test_reorder_matrix_rows():
+    nobs = 5
+    k_endog = 3
+    k_states = 3
+
+    missing = np.zeros((k_endog, nobs))
+    given = np.zeros((k_endog, k_states, nobs))
+    given[:, :, :] = np.array([[11, 12, 13],
+                               [21, 22, 23],
+                               [31, 32, 33]])[:, :, np.newaxis]
+    desired = given.copy()
+
+    missing[0, 0] = 1
+    given[:, :, 0] = np.array([[21, 22, 23],
+                               [31, 32, 33],
+                               [0,  0,  0]])
+    desired[0, :, 0] = 0
+
+    missing[:2, 1] = 1
+    given[:, :, 1] = np.array([[31, 32, 33],
+                               [0,  0,  0],
+                               [0,  0,  0]])
+    desired[:2, :, 1] = 0
+
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    given[:, :, 2] = np.array([[21, 22, 23],
+                               [0,  0,  0],
+                               [0,  0,  0]])
+    desired[0, :, 2] = 0
+    desired[2, :, 2] = 0
+
+    missing[1, 3] = 1
+    given[:, :, 3] = np.array([[11, 12, 13],
+                               [31, 32, 33],
+                               [0,  0,  0]])
+    desired[1, :, 3] = 0
+
+    missing[2, 4] = 1
+    given[:, :, 4] = np.array([[11, 12, 13],
+                               [21, 22, 23],
+                               [0,  0,  0]])
+    desired[2, :, 4] = 0
+
+    actual = np.asfortranarray(given)
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.reorder_missing_matrix(actual, missing, True, False, False, inplace=True)
+
+    assert_equal(actual, desired)
+
+
+def test_reorder_matrix_cols():
+    nobs = 5
+    k_endog = 3
+    k_states = 3
+
+    missing = np.zeros((k_endog, nobs))
+    given = np.zeros((k_endog, k_states, nobs))
+    given[:, :, :] = np.array([[11, 12, 13],
+                               [21, 22, 23],
+                               [31, 32, 33]])[:, :, np.newaxis]
+    desired = given.copy()
+
+    missing[0, 0] = 1
+    given[:, :, :] = np.array([[12, 13, 0],
+                               [22, 23, 0],
+                               [32, 33, 0]])[:, :, np.newaxis]
+    desired[:, 0, 0] = 0
+
+    missing[:2, 1] = 1
+    given[:, :, 1] = np.array([[13, 0, 0],
+                               [23, 0, 0],
+                               [33, 0, 0]])
+    desired[:, :2, 1] = 0
+
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    given[:, :, 2] = np.array([[12, 0, 0],
+                               [22, 0, 0],
+                               [32, 0, 0]])
+    desired[:, 0, 2] = 0
+    desired[:, 2, 2] = 0
+
+    missing[1, 3] = 1
+    given[:, :, 3] = np.array([[11, 13, 0],
+                               [21, 23, 0],
+                               [31, 33, 0]])
+    desired[:, 1, 3] = 0
+
+    missing[2, 4] = 1
+    given[:, :, 4] = np.array([[11, 12, 0],
+                               [21, 22, 0],
+                               [31, 32, 0]])
+    desired[:, 2, 4] = 0
+
+    actual = np.asfortranarray(given)
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.reorder_missing_matrix(actual, missing, False, True, False, inplace=True)
+
+    assert_equal(actual[:, :, 4], desired[:, :, 4])
+
+
+def test_reorder_submatrix():
+    nobs = 5
+    k_endog = 3
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    given = np.zeros((k_endog, k_endog, nobs))
+    given[:, :, :] = np.array([[11, 12, 13],
+                               [21, 22, 23],
+                               [31, 32, 33]])[:, :, np.newaxis]
+    desired = given.copy()
+
+    given[:, :, 0] = np.array([[22, 23, 0],
+                               [32, 33, 0],
+                               [0,  0,  0]])
+    desired[0, :, 0] = 0
+    desired[:, 0, 0] = 0
+
+    given[:, :, 1] = np.array([[33, 0, 0],
+                               [0,  0, 0],
+                               [0,  0,  0]])
+    desired[:2, :, 1] = 0
+    desired[:, :2, 1] = 0
+
+    given[:, :, 2] = np.array([[22, 0, 0],
+                               [0,  0, 0],
+                               [0,  0, 0]])
+    desired[0, :, 2] = 0
+    desired[:, 0, 2] = 0
+    desired[2, :, 2] = 0
+    desired[:, 2, 2] = 0
+
+    given[:, :, 3] = np.array([[11, 13, 0],
+                               [31, 33, 0],
+                               [0,  0,  0]])
+    desired[1, :, 3] = 0
+    desired[:, 1, 3] = 0
+
+    given[:, :, 4] = np.array([[11, 12, 0],
+                               [21, 22, 0],
+                               [0,  0,  0]])
+    desired[2, :, 4] = 0
+    desired[:, 2, 4] = 0
+
+    actual = np.asfortranarray(given)
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.reorder_missing_matrix(actual, missing, True, True, False, inplace=True)
+
+    assert_equal(actual, desired)
+
+
+def test_reorder_diagonal_submatrix():
+    nobs = 5
+    k_endog = 3
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    given = np.zeros((k_endog, k_endog, nobs))
+    given[:, :, :] = np.array([[11, 00, 00],
+                               [00, 22, 00],
+                               [00, 00, 33]])[:, :, np.newaxis]
+    desired = given.copy()
+
+    given[:, :, 0] = np.array([[22, 00, 0],
+                               [00, 33, 0],
+                               [0,  0,  0]])
+    desired[0, :, 0] = 0
+    desired[:, 0, 0] = 0
+
+    given[:, :, 1] = np.array([[33, 0, 0],
+                               [0,  0, 0],
+                               [0,  0,  0]])
+    desired[:2, :, 1] = 0
+    desired[:, :2, 1] = 0
+
+    given[:, :, 2] = np.array([[22, 0, 0],
+                               [0,  0, 0],
+                               [0,  0, 0]])
+    desired[0, :, 2] = 0
+    desired[:, 0, 2] = 0
+    desired[2, :, 2] = 0
+    desired[:, 2, 2] = 0
+
+    given[:, :, 3] = np.array([[11, 00, 0],
+                               [00, 33, 0],
+                               [0,  0,  0]])
+    desired[1, :, 3] = 0
+    desired[:, 1, 3] = 0
+
+    given[:, :, 4] = np.array([[11, 00, 0],
+                               [00, 22, 0],
+                               [0,  0,  0]])
+    desired[2, :, 4] = 0
+    desired[:, 2, 4] = 0
+
+    actual = np.asfortranarray(given.copy())
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.reorder_missing_matrix(actual, missing, True, True, False, inplace=True)
+    assert_equal(actual, desired)
+
+    actual = np.asfortranarray(given.copy())
+    tools.reorder_missing_matrix(actual, missing, True, True, True, inplace=True)
+    assert_equal(actual, desired)
+
+
+def test_reorder_vector():
+    nobs = 5
+    k_endog = 3
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    given = np.zeros((k_endog, nobs))
+    given[:, :] = np.array([1, 2, 3])[:, np.newaxis]
+    desired = given.copy()
+
+    given[:, 0] = [2, 3, 0]
+    desired[:, 0] = [0, 2, 3]
+    given[:, 1] = [3, 0, 0]
+    desired[:, 1] = [0, 0, 3]
+    given[:, 2] = [2, 0, 0]
+    desired[:, 2] = [0, 2, 0]
+    given[:, 3] = [1, 3, 0]
+    desired[:, 3] = [1, 0, 3]
+    given[:, 4] = [1, 2, 0]
+    desired[:, 4] = [1, 2, 0]
+
+    actual = np.asfortranarray(given.copy())
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.reorder_missing_vector(actual, missing, inplace=True)
+    assert_equal(actual, desired)

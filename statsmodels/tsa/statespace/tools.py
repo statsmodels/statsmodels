@@ -25,6 +25,8 @@ prefix_kalman_smoother_map = {}
 prefix_simulation_smoother_map = {}
 prefix_pacf_map = {}
 prefix_sv_map = {}
+prefix_reorder_missing_matrix_map = {}
+prefix_reorder_missing_vector_map = {}
 
 
 def set_mode(compatibility=None):
@@ -87,6 +89,18 @@ def set_mode(compatibility=None):
             'd': _tools._dconstrain_sv_less_than_one,
             'c': _tools._cconstrain_sv_less_than_one,
             'z': _tools._zconstrain_sv_less_than_one
+        })
+        prefix_reorder_missing_matrix_map.update({
+            's': _tools.sreorder_missing_matrix,
+            'd': _tools.dreorder_missing_matrix,
+            'c': _tools.creorder_missing_matrix,
+            'z': _tools.zreorder_missing_matrix
+        })
+        prefix_reorder_missing_vector_map.update({
+            's': _tools.sreorder_missing_vector,
+            'd': _tools.dreorder_missing_vector,
+            'c': _tools.creorder_missing_vector,
+            'z': _tools.zreorder_missing_vector
         })
     else:
         from . import _statespace
@@ -1529,3 +1543,92 @@ def validate_vector_shape(name, shape, nrows, nobs):
         raise ValueError('Invalid dimensions for time-varying %s'
                          ' vector. Requires shape (*,%d), got %s' %
                          (name, nobs, str(shape)))
+
+
+def reorder_missing_matrix(matrix, missing, reorder_rows=False,
+                           reorder_cols=False, is_diagonal=False,
+                           inplace=False):
+    """
+    Reorder the rows or columns of a time-varying matrix where all non-missing
+    values are in the upper left corner of the matrix.
+
+    Parameters
+    ----------
+    matrix : array_like
+        The matrix to be reordered. Must have shape (n, m, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (k, nobs) where `k = n`
+        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+    reorder_rows : bool
+        Whether or not the rows of the matrix should be re-ordered.
+    reorder_cols : bool
+        Whether or not the columns of the matrix should be re-ordered.
+    is_diagonal : bool
+        Whether or not the matrix is diagonal. If this is True, must also have
+        `n = m`.
+    inplace : bool
+        Whether or not to reorder the matrix in-place.
+
+    Returns
+    -------
+    reordered_matrix : array_like
+        The reordered matrix.
+
+    Notes
+    -----
+    This function is not available in compatibility mode.
+
+    """
+    if compatibility_mode:
+        raise RuntimeError('`reorder_missing_matrix` is not available in'
+                           ' compatibility mode.')
+
+    prefix = find_best_blas_type((matrix,))[0]
+    reorder = prefix_reorder_missing_matrix_map[prefix]
+
+    if not inplace:
+        matrix = np.copy(matrix, order='F')
+
+    reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
+            is_diagonal)
+
+    return matrix
+
+
+def reorder_missing_vector(vector, missing, inplace=False):
+    """
+    Reorder the elements of a time-varying vector where all non-missing
+    values are in the first elements of the vector.
+
+    Parameters
+    ----------
+    vector : array_like
+        The vector to be reordered. Must have shape (n, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (n, nobs).
+    inplace : bool
+        Whether or not to reorder the matrix in-place.
+
+    Returns
+    -------
+    reordered_matrix : array_like
+        The reordered matrix.
+
+    Notes
+    -----
+    This function is not available in compatibility mode.
+
+    """
+    if compatibility_mode:
+        raise RuntimeError('`reorder_missing_matrix` is not available in'
+                           ' compatibility mode.')
+
+    prefix = find_best_blas_type((vector,))[0]
+    reorder = prefix_reorder_missing_vector_map[prefix]
+
+    if not inplace:
+        vector = np.copy(vector, order='F')
+
+    reorder(vector, np.asfortranarray(missing))
+
+    return vector
