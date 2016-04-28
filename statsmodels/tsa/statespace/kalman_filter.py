@@ -10,7 +10,8 @@ from warnings import warn
 
 import numpy as np
 from .representation import OptionWrapper, Representation, FrozenRepresentation
-from .tools import validate_vector_shape, validate_matrix_shape
+from .tools import (validate_vector_shape, validate_matrix_shape,
+                    reorder_missing_matrix, reorder_missing_vector)
 from . import tools
 from statsmodels.tools.sm_exceptions import ValueWarning
 
@@ -1359,23 +1360,33 @@ class FilterResults(FrozenRepresentation):
         # Reset caches
         self._standardized_forecasts_error = None
         if not self._compatibility_mode:
-            self._kalman_gain = np.array(kalman_filter.kalman_gain, copy=True)
-            # In the partially missing data case, various entries will
-            # be in the first rows rather than the correct rows
-            # TODO this does not work for collapsed data.
-            if not self.memory_no_gain and not self.filter_collapsed:
-                for t in range(self.nobs):
-                    if self.nmissing[t] > 0:
-                        k_endog = self.k_endog - self.nmissing[t]
-                        mask = ~self.missing[:, t].astype(bool)
-                        tmp = self.kalman_gain[:, :, t].copy()
-                        self.kalman_gain[:, :, t] = 0
-                        self.kalman_gain[:, mask, t] = tmp[:, :k_endog]
-
-            self.tmp1 = np.array(kalman_filter.tmp1, copy=True)
-            self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
-            self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
-            self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
+            has_missing = np.sum(self.nmissing) > 0
+            # In the partially missing data case, all entries will
+            # be in the upper left submatrix rather than the correct placement
+            # Re-ordering does not make sense in the collapsed case.
+            if has_missing and (not self.memory_no_gain and
+                                not self.filter_collapsed):
+                self._kalman_gain = reorder_missing_matrix(
+                    kalman_filter.kalman_gain, self.missing, reorder_cols=True,
+                    prefix=self.prefix)
+                self.tmp1 = reorder_missing_matrix(
+                    kalman_filter.tmp1, self.missing, reorder_cols=True,
+                    prefix=self.prefix)
+                self.tmp2 = reorder_missing_vector(
+                    kalman_filter.tmp2, self.missing, prefix=self.prefix)
+                self.tmp3 = reorder_missing_matrix(
+                    kalman_filter.tmp3, self.missing, reorder_rows=True,
+                    prefix=self.prefix)
+                self.tmp4 = reorder_missing_matrix(
+                    kalman_filter.tmp4, self.missing, reorder_cols=True,
+                    reorder_rows=True, prefix=self.prefix)
+            else:
+                self._kalman_gain = np.array(
+                    kalman_filter.kalman_gain, copy=True)
+                self.tmp1 = np.array(kalman_filter.tmp1, copy=True)
+                self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
+                self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
+                self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
         else:
             self._kalman_gain = None
 
