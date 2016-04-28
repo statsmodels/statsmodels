@@ -418,6 +418,9 @@ cdef class {{prefix}}SimulationSmoother(object):
             # so that the steps below will be the same regardless of whether or
             # not there was missing data
             if self.simulation_output & SIMULATE_DISTURBANCE:
+                # If there are partially missing entries, we need to re-order
+                # the smoothed measurment disturbances.
+                tools.{{prefix}}reorder_missing_vector(self.secondary_simulated_smoother.smoothed_measurement_disturbance, self.model.missing)
                 blas.{{prefix}}swap(&nobs_endog, &self.simulated_smoother.smoothed_measurement_disturbance[0,0], &inc,
                                                  &self.secondary_simulated_smoother.smoothed_measurement_disturbance[0,0], &inc)
                 blas.{{prefix}}axpy(&nobs_endog, &gamma, &self.secondary_simulated_smoother.smoothed_measurement_disturbance[0,0], &inc,
