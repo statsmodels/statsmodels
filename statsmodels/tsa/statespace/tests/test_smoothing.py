@@ -47,9 +47,6 @@ class TestStatesAR3(object):
             'detV', 'eps', 'epsvar', 'eta', 'etavar'
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
-        # Regression tests data
-        path = current_path + os.sep+'results/results_wpi1_ar3_regression.csv'
-        cls.regression = pd.read_csv(path)
 
         cls.model = sarimax.SARIMAX(
             cls.stata['wpi'], order=(3, 1, 0), simple_differencing=True,
@@ -159,33 +156,6 @@ class TestStatesAR3(object):
             self.matlab_ssm[['etavar']], 4
         )
 
-    def test_simulation_smoothed_state(self):
-        if compatibility_mode:
-            raise SkipTest
-        # regression test
-        assert_allclose(
-            self.sim.simulated_state.T,
-            self.regression[['state1', 'state2', 'state3']], atol=1e-4
-        )
-
-    def test_simulation_smoothed_measurement_disturbance(self):
-        if compatibility_mode:
-            raise SkipTest
-        # regression test
-        assert_allclose(
-            self.sim.simulated_measurement_disturbance.T,
-            self.regression[['measurement_disturbance']][:-1], atol=1e-4
-        )
-
-    def test_simulation_smoothed_state_disturbance(self):
-        if compatibility_mode:
-            raise SkipTest
-        # regression test
-        assert_allclose(
-            self.sim.simulated_state_disturbance.T,
-            self.regression[['state_disturbance']], atol=1e-4
-        )
-
 
 class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
@@ -262,9 +232,6 @@ class TestStatesMissingAR3(object):
         # KFAS comparison
         path = current_path + os.sep+'results/results_smoothing3_R.csv'
         cls.R_ssm = pd.read_csv(path)
-        # Regression tests data
-        path = current_path + os.sep+'results/results_wpi1_missing_ar3_regression.csv'
-        cls.regression = pd.read_csv(path)
 
         # Create missing observations
         cls.stata['dwpi'] = cls.stata['wpi'].diff()
@@ -361,38 +328,6 @@ class TestStatesMissingAR3(object):
             self.results.smoothed_state_disturbance_cov[0,0,:],
             self.R_ssm['detVeta'], 9
         )
-
-    # TODO there is a discrepancy between MATLAB ssm toolbox and
-    # dismalpy.ssm on the following variables in the case of missing data;
-    # tests against the R package KFAS confirm our results, but so far we don't
-    # have results from KFAS for the simulation smoother tests, below
-
-    # def test_simulation_smoothed_state(self):
-    #     if compatibility_mode:
-    #         raise SkipTest
-    #     # regression test
-    #     assert_almost_equal(
-    #         self.sim.simulated_state.T,
-    #         self.regression[['state1', 'state2', 'state3']], 4
-    #     )
-
-    # def test_simulation_smoothed_measurement_disturbance(self):
-    #     if compatibility_mode:
-    #         raise SkipTest
-    #     # regression test
-    #     assert_almost_equal(
-    #         self.sim.simulated_measurement_disturbance.T,
-    #         self.regression[['measurement_disturbance']][:-1], 4
-    #     )
-
-    # def test_simulation_smoothed_state_disturbance(self):
-    #     if compatibility_mode:
-    #         raise SkipTest
-    #     # regression test
-    #     assert_almost_equal(
-    #         self.sim.simulated_state_disturbance.T,
-    #         self.regression[['state_disturbance']], 4
-    #     )
 
 
 class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
