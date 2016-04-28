@@ -143,7 +143,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     # TODO:  add scaled stepsize
     f0 = f(*((x,)+args), **kwargs)
     dim = np.atleast_1d(f0).shape  # it could be a scalar
-    grad = np.zeros((n,) + dim, float)
+    grad = np.zeros((n,) + dim, np.promote_types(float, x.dtype))
     ei = np.zeros((n,), float)
     if not centered:
         epsilon = _get_epsilon(x, 2, epsilon, n)
