@@ -17,7 +17,7 @@ TYPES = {
     "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
 }
 
-BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "scal"]
+BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "swap", "scal"]
 LAPACK_FUNCTIONS = ["getrf", "getri", "getrs", "potrf", "potri", "potrs", "trtrs"]
 
 }}

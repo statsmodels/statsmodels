@@ -123,6 +123,15 @@ ctypedef int saxpy_t(
     int *incy             # The increment between elements of y (usually 1)
 )
 
+ctypedef int sswap_t(
+    # Swap y and x
+    int *n,               # Columns of o(A) / min(len(x))
+    np.float32_t *x,      # Vector x, min(len(x)) = n
+    int *incx,            # The increment between elements of x (usually 1)
+    np.float32_t *y,      # Vector y, min(len(y)) = m
+    int *incy             # The increment between elements of y (usually 1)
+)
+
 ctypedef np.float64_t sdot_t(
     # Compute DDOT := x.T * y
     int *n,           # Length of vectors
@@ -249,6 +258,15 @@ ctypedef int daxpy_t(
     int *incx,           # The increment between elements of x (usually 1)
     np.float64_t *y,     # Vector y, min(len(y)) = m
     int *incy            # The increment between elements of y (usually 1)
+)
+
+ctypedef int dswap_t(
+    # Swap y and x
+    int *n,               # Columns of o(A) / min(len(x))
+    np.float64_t *x,      # Vector x, min(len(x)) = n
+    int *incx,            # The increment between elements of x (usually 1)
+    np.float64_t *y,      # Vector y, min(len(y)) = m
+    int *incy             # The increment between elements of y (usually 1)
 )
 
 ctypedef double ddot_t(
@@ -379,6 +397,15 @@ ctypedef int caxpy_t(
     int *incy               # The increment between elements of y (usually 1)
 )
 
+ctypedef int cswap_t(
+    # Swap y and x
+    int *n,               # Columns of o(A) / min(len(x))
+    np.complex64_t *x,      # Vector x, min(len(x)) = n
+    int *incx,            # The increment between elements of x (usually 1)
+    np.complex64_t *y,      # Vector y, min(len(y)) = m
+    int *incy             # The increment between elements of y (usually 1)
+)
+
 ctypedef np.complex64_t cdotu_t(
     # Compute CDOTU := x.T * y
     int *n,             # Length of vectors
@@ -505,6 +532,15 @@ ctypedef int zaxpy_t(
     int *incx,      # The increment between elements of x (usually 1)
     np.complex128_t *y,     # Vector y, min(len(y)) = m
     int *incy       # The increment between elements of y (usually 1)
+)
+
+ctypedef int zswap_t(
+    # Swap y and x
+    int *n,               # Columns of o(A) / min(len(x))
+    np.complex128_t *x,      # Vector x, min(len(x)) = n
+    int *incx,            # The increment between elements of x (usually 1)
+    np.complex128_t *y,      # Vector y, min(len(y)) = m
+    int *incy             # The increment between elements of y (usually 1)
 )
 
 ctypedef np.complex128_t zdotu_t(
