@@ -1559,7 +1559,7 @@ def validate_vector_shape(name, shape, nrows, nobs):
 
 def reorder_missing_matrix(matrix, missing, reorder_rows=False,
                            reorder_cols=False, is_diagonal=False,
-                           inplace=False):
+                           inplace=False, prefix=None):
     """
     Reorder the rows or columns of a time-varying matrix where all non-missing
     values are in the upper left corner of the matrix.
@@ -1571,15 +1571,20 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     missing : array_like of bool
         The vector of missing indices. Must have shape (k, nobs) where `k = n`
         if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
-    reorder_rows : bool
-        Whether or not the rows of the matrix should be re-ordered.
-    reorder_cols : bool
-        Whether or not the columns of the matrix should be re-ordered.
-    is_diagonal : bool
+    reorder_rows : bool, optional
+        Whether or not the rows of the matrix should be re-ordered. Default
+        is False.
+    reorder_cols : bool, optional
+        Whether or not the columns of the matrix should be re-ordered. Default
+        is False.
+    is_diagonal : bool, optional
         Whether or not the matrix is diagonal. If this is True, must also have
-        `n = m`.
-    inplace : bool
+        `n = m`. Default is False.
+    inplace : bool, optional
         Whether or not to reorder the matrix in-place.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
 
     Returns
     -------
@@ -1591,7 +1596,8 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     This function is not available in compatibility mode.
 
     """
-    prefix = find_best_blas_type((matrix,))[0]
+    if prefix is None:
+        prefix = find_best_blas_type((matrix,))[0]
     reorder = prefix_reorder_missing_matrix_map[prefix]
 
     if not inplace:
@@ -1603,7 +1609,7 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     return matrix
 
 
-def reorder_missing_vector(vector, missing, inplace=False):
+def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     """
     Reorder the elements of a time-varying vector where all non-missing
     values are in the first elements of the vector.
@@ -1614,8 +1620,11 @@ def reorder_missing_vector(vector, missing, inplace=False):
         The vector to be reordered. Must have shape (n, nobs).
     missing : array_like of bool
         The vector of missing indices. Must have shape (n, nobs).
-    inplace : bool
-        Whether or not to reorder the matrix in-place.
+    inplace : bool, optional
+        Whether or not to reorder the matrix in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
 
     Returns
     -------
@@ -1627,7 +1636,8 @@ def reorder_missing_vector(vector, missing, inplace=False):
     This function is not available in compatibility mode.
 
     """
-    prefix = find_best_blas_type((vector,))[0]
+    if prefix is None:
+        prefix = find_best_blas_type((vector,))[0]
     reorder = prefix_reorder_missing_vector_map[prefix]
 
     if not inplace:
