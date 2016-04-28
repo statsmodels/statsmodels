@@ -902,8 +902,8 @@ class KalmanFilter(Representation):
             elif measurement_shocks.ndim == 1:
                 measurement_shocks = measurement_shocks[:, np.newaxis]
             if not measurement_shocks.shape == (nsimulations, self.k_endog):
-                raise ValueError('Invalid shape of provided measurement shocks.'
-                                 ' Required (%d, %d)'
+                raise ValueError('Invalid shape of provided measurement'
+                                 ' shocks. Required (%d, %d)'
                                  % (nsimulations, self.k_endog))
         elif self.shapes['obs_cov'][-1] == 1:
             measurement_shocks = np.random.multivariate_normal(
@@ -1072,7 +1072,7 @@ class KalmanFilter(Representation):
         # Orthogonalize the impulses, if requested, using Cholesky on the
         # first state covariance matrix
         if orthogonalized:
-            state_chol = np.linalg.cholesky(self.state_cov[:,:,0])
+            state_chol = np.linalg.cholesky(self.state_cov[:, :, 0])
             impulse = np.dot(state_chol, impulse)
 
         # If we have a time-invariant system, we can solve for the IRF directly
@@ -1448,17 +1448,18 @@ class FilterResults(FrozenRepresentation):
                     # will produce all elements (forecasts, forecast errors,
                     # forecast error covariance matrices) as usual, but their
                     # dimension will only be equal to the number of non-missing
-                    # elements, and their location in memory will be in the first
-                    # blocks (e.g. for the forecasts_error, the first
-                    # k_endog - nmissing[t] columns will be filled in), regardless
-                    # of which endogenous variables they refer to (i.e. the non-
-                    # missing endogenous variables for that observation).
-                    # Furthermore, the forecast error covariance matrix is only
-                    # valid for those elements. What is done is to set all elements
-                    # to nan for these observations so that they are flagged as
-                    # missing. The variables missing_forecasts, etc. then provide
-                    # the forecasts, etc. provided by the Kalman filter, from which
-                    # the data can be retrieved if desired.
+                    # elements, and their location in memory will be in the
+                    # first blocks (e.g. for the forecasts_error, the first
+                    # k_endog - nmissing[t] columns will be filled in),
+                    # regardless of which endogenous variables they refer to
+                    # (i.e. the non- missing endogenous variables for that
+                    # observation). Furthermore, the forecast error covariance
+                    # matrix is only valid for those elements. What is done is
+                    # to set all elements to nan for these observations so that
+                    # they are flagged as missing. The variables
+                    # missing_forecasts, etc. then provide the forecasts, etc.
+                    # provided by the Kalman filter, from which the data can be
+                    # retrieved if desired.
                     self.forecasts[:, t] = np.dot(
                         self.design[:, :, design_t], self.predicted_state[:, t]
                     ) + self.obs_intercept[:, obs_intercept_t]
@@ -1761,7 +1762,7 @@ class FilterResults(FrozenRepresentation):
                                  nforecast)
 
     def _predict(self, nstatic, ndynamic, nforecast, model):
-        # TODO: this doesn't use self, and can either be a static method or
+        # Note: this doesn't use self, and can either be a static method or
         #       moved outside the class altogether.
 
         # Get the underlying filter
@@ -1926,7 +1927,7 @@ class PredictionResults(FilterResults):
         # Prevent infinite recursive lookups
         if attr[0] == '_':
             raise AttributeError("'%s' object has no attribute '%s'" %
-                                     (self.__class__.__name__, attr))
+                                 (self.__class__.__name__, attr))
 
         _attr = '_' + attr
 
