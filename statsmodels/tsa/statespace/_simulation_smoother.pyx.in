@@ -517,7 +517,7 @@ cdef class {{prefix}}SimulationSmoother(object):
             destination[0] = source[0]**0.5
         else:
             blas.{{prefix}}copy(&n2, source, &inc, destination, &inc)
-            lapack.{{prefix}}potrf("U", &n, destination, &n, &info)
+            lapack.{{prefix}}potrf("L", &n, destination, &n, &info)
 
     cdef void transform_variates(self, {{cython_type}} * variates, {{cython_type}} * cholesky_factor, int n):
         cdef:
@@ -527,7 +527,7 @@ cdef class {{prefix}}SimulationSmoother(object):
         if n == 1:
             variates[0] = cholesky_factor[0] * variates[0]
         else:
-            blas.{{prefix}}trmv("U", "N", "N", &n, cholesky_factor, &n,
+            blas.{{prefix}}trmv("L", "N", "N", &n, cholesky_factor, &n,
                                                    variates, &inc)
 
 {{endfor}}
