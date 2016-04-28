@@ -307,10 +307,10 @@ class SimulationSmoothResults(object):
         simulation output.
     simulate_all : boolean
         Flag for if simulation output should include everything.
-    unconditional_measurement_disturbance_variates : array
+    generated_measurement_disturbance : array
         Measurement disturbance variates used to genereate the observation
         vector.
-    unconditional_state_disturbance_variates : array
+    generated_state_disturbance : array
         State disturbance variates used to genereate the state and
         observation vectors.
     generated_obs : array
@@ -333,8 +333,8 @@ class SimulationSmoothResults(object):
         self._simulation_smoother = simulation_smoother
 
         # Output
-        self._unconditional_measurement_disturbance_variates = None
-        self._unconditional_state_disturbance_variates = None
+        self._generated_measurement_disturbance = None
+        self._generated_state_disturbance = None
         self._generated_obs = None
         self._generated_state = None
         self._simulated_state = None
@@ -385,7 +385,7 @@ class SimulationSmoothResults(object):
             self.simulation_output = self.simulation_output & ~SIMULATION_ALL
 
     @property
-    def unconditional_measurement_disturbance_variates(self):
+    def generated_measurement_disturbance(self):
         """
         Randomly drawn measurement disturbance variates, used to construct
         `generated_obs`.
@@ -401,15 +401,15 @@ class SimulationSmoothResults(object):
         distribution above.
 
         """
-        if self._unconditional_measurement_disturbance_variates is None:
+        if self._generated_measurement_disturbance is None:
             end = self.model.nobs * self.model.k_endog
-            self._unconditional_measurement_disturbance_variates = np.array(
+            self._generated_measurement_disturbance = np.array(
                 self._simulation_smoother.disturbance_variates[:end],
                 copy=True).reshape(self.model.nobs, self.model.k_endog)
-        return self._unconditional_measurement_disturbance_variates
+        return self._generated_measurement_disturbance
 
     @property
-    def unconditional_state_disturbance_variates(self):
+    def generated_state_disturbance(self):
         """
         Randomly drawn state disturbance variates, used to construct
         `generated_state` and `generated_obs`.
@@ -425,12 +425,12 @@ class SimulationSmoothResults(object):
         distribution above.
 
         """
-        if self._unconditional_state_disturbance_variates is None:
+        if self._generated_state_disturbance is None:
             start = self.model.nobs * self.model.k_endog
-            self._unconditional_state_disturbance_variates = np.array(
+            self._generated_state_disturbance = np.array(
                 self._simulation_smoother.disturbance_variates[start:],
                 copy=True).reshape(self.model.nobs, self.model.k_posdef)
-        return self._unconditional_state_disturbance_variates
+        return self._generated_state_disturbance
 
     @property
     def generated_obs(self):
@@ -553,8 +553,8 @@ class SimulationSmoothResults(object):
             or for testing. If not specified, random variates are drawn.
         """
         # Clear any previous output
-        self._unconditional_measurement_disturbance_variates = None
-        self._unconditional_state_disturbance_variates = None
+        self._generated_measurement_disturbance = None
+        self._generated_state_disturbance = None
         self._generated_state = None
         self._generated_obs = None
         self._generated_state = None
