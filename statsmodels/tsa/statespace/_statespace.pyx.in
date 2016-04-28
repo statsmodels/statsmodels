@@ -2128,4 +2128,114 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
                                                            &constrained[0, i*k_endog], &k_endog, &info)
     return constrained
 
+
+cdef int _{{prefix}}reorder_missing_diagonal({{cython_type}} * a, int * missing, int n):
+    """
+    a is a pointer to an n x n diagonal array A
+    missing is a pointer to an n x 1 array
+    n is the dimension of A
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(n-1,-1,-1):
+        if not missing[i]:
+            a[i + i*n] = a[k + k*n]
+            k = k - 1
+        else:
+            a[i + i*n] = 0
+
+cdef int _{{prefix}}reorder_missing_submatrix({{cython_type}} * a, int * missing, int n):
+    """
+    a is a pointer to an n x n array A
+    missing is a pointer to an n x 1 array
+    n is the dimension of A
+    """
+    cdef int i, j, k, nobs
+
+    _{{prefix}}reorder_missing_rows(a, missing, n, n)
+    _{{prefix}}reorder_missing_cols(a, missing, n, n)
+
+cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    missing is a pointer to an n x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(n-1,-1,-1):
+        if not missing[i]:
+            {{prefix}}swap(&m, &a[i], &n, &a[k], &n)
+            k = k - 1
+
+
+cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    missing is a pointer to an m x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    nobs = m
+    # Construct the non-missing index
+    for i in range(m):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(m-1,-1,-1):
+        if not missing[i]:
+            {{prefix}}swap(&n, &a[i*n], &inc, &a[k*n], &inc)
+            k = k - 1
+
+cpdef int {{prefix}}reorder_missing_matrix({{cython_type}} [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *:
+    cdef int n, m, T, t
+
+    n, m, T = A.shape[0:3]
+
+    if reorder_rows and reorder_cols:
+        if not n == m:
+            raise RuntimeError('Reordering a submatrix requires n = m')
+        if diagonal:
+            for t in range(T):
+                _{{prefix}}reorder_missing_diagonal(&A[0, 0, t], &missing[0, t], n)
+        else:
+            for t in range(T):
+                _{{prefix}}reorder_missing_submatrix(&A[0, 0, t], &missing[0, t], n)
+    elif diagonal:
+        raise RuntimeError('`diagonal` argument only valid with reordering a submatrix')
+    elif reorder_rows:
+        for t in range(T):
+            _{{prefix}}reorder_missing_rows(&A[0, 0, t], &missing[0, t], n, m)
+    elif reorder_cols:
+        for t in range(T):
+            _{{prefix}}reorder_missing_cols(&A[0, 0, t], &missing[0, t], n, m)
+
+
+cpdef int {{prefix}}reorder_missing_vector({{cython_type}} [::1, :] A, int [::1, :] missing) except *:
+    cdef int i, k, t, n, T, nobs
+
+    n, T = A.shape[0:2]
+
+    for t in range(T):
+        _{{prefix}}reorder_missing_rows(&A[0, t], &missing[0, t], n, 1)
+
+
 {{endfor}}

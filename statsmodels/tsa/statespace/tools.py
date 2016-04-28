@@ -140,6 +140,18 @@ def set_mode(compatibility=None):
                 'c': _statespace._cconstrain_sv_less_than_one,
                 'z': _statespace._zconstrain_sv_less_than_one
             })
+        prefix_reorder_missing_matrix_map.update({
+            's': _statespace.sreorder_missing_matrix,
+            'd': _statespace.dreorder_missing_matrix,
+            'c': _statespace.creorder_missing_matrix,
+            'z': _statespace.zreorder_missing_matrix
+        })
+        prefix_reorder_missing_vector_map.update({
+            's': _statespace.sreorder_missing_vector,
+            'd': _statespace.dreorder_missing_vector,
+            'c': _statespace.creorder_missing_vector,
+            'z': _statespace.zreorder_missing_vector
+        })
 set_mode(compatibility=None)
 
 
@@ -1579,10 +1591,6 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     This function is not available in compatibility mode.
 
     """
-    if compatibility_mode:
-        raise RuntimeError('`reorder_missing_matrix` is not available in'
-                           ' compatibility mode.')
-
     prefix = find_best_blas_type((matrix,))[0]
     reorder = prefix_reorder_missing_matrix_map[prefix]
 
@@ -1619,10 +1627,6 @@ def reorder_missing_vector(vector, missing, inplace=False):
     This function is not available in compatibility mode.
 
     """
-    if compatibility_mode:
-        raise RuntimeError('`reorder_missing_matrix` is not available in'
-                           ' compatibility mode.')
-
     prefix = find_best_blas_type((vector,))[0]
     reorder = prefix_reorder_missing_vector_map[prefix]
 
