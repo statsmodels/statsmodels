@@ -699,3 +699,124 @@ def test_reorder_vector():
     missing = np.asfortranarray(missing.astype(np.int32))
     tools.reorder_missing_vector(actual, missing, inplace=True)
     assert_equal(actual, desired)
+
+
+def test_copy_matrix_rows():
+    nobs = 5
+    k_endog = 3
+    k_states = 2
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    A = np.zeros((k_endog, k_states, nobs))
+    for t in range(nobs):
+        n = int(k_endog - np.sum(missing[:, t]))
+        A[:n, :, t] = 1.
+    B = np.zeros((k_endog, k_states, nobs), order='F')
+
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.copy_missing_matrix(A, B, missing, True, False, False, inplace=True)
+    assert_equal(B, A)
+
+
+def test_copy_matrix_cols():
+    nobs = 5
+    k_endog = 3
+    k_states = 2
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    A = np.zeros((k_states, k_endog, nobs))
+    for t in range(nobs):
+        n = int(k_endog - np.sum(missing[:, t]))
+        A[:, :n, t] = 1.
+    B = np.zeros((k_states, k_endog, nobs), order='F')
+
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.copy_missing_matrix(A, B, missing, False, True, False, inplace=True)
+    assert_equal(B, A)
+
+
+def test_copy_submatrix():
+    nobs = 5
+    k_endog = 3
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    A = np.zeros((k_endog, k_endog, nobs))
+    for t in range(nobs):
+        n = int(k_endog - np.sum(missing[:, t]))
+        A[:n, :n, t] = 1.
+    B = np.zeros((k_endog, k_endog, nobs), order='F')
+
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.copy_missing_matrix(A, B, missing, True, True, False, inplace=True)
+    assert_equal(B, A)
+
+
+def test_copy_diagonal_submatrix():
+    nobs = 5
+    k_endog = 3
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    A = np.zeros((k_endog, k_endog, nobs))
+    for t in range(nobs):
+        n = int(k_endog - np.sum(missing[:, t]))
+        A[:n, :n, t] = np.eye(n)
+    B = np.zeros((k_endog, k_endog, nobs), order='F')
+
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.copy_missing_matrix(A, B, missing, True, True, False, inplace=True)
+    assert_equal(B, A)
+
+    B = np.zeros((k_endog, k_endog, nobs), order='F')
+    tools.copy_missing_matrix(A, B, missing, True, True, True, inplace=True)
+    assert_equal(B, A)
+
+
+def test_copy_vector():
+    nobs = 5
+    k_endog = 3
+
+    missing = np.zeros((k_endog, nobs))
+    missing[0, 0] = 1
+    missing[:2, 1] = 1
+    missing[0, 2] = 1
+    missing[2, 2] = 1
+    missing[1, 3] = 1
+    missing[2, 4] = 1
+
+    A = np.zeros((k_endog, nobs))
+    for t in range(nobs):
+        n = int(k_endog - np.sum(missing[:, t]))
+        A[:n, t] = 1.
+    B = np.zeros((k_endog, nobs), order='F')
+
+    missing = np.asfortranarray(missing.astype(np.int32))
+    tools.copy_missing_vector(A, B, missing, inplace=True)
+    assert_equal(B, A)

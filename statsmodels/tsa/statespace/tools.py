@@ -27,6 +27,8 @@ prefix_pacf_map = {}
 prefix_sv_map = {}
 prefix_reorder_missing_matrix_map = {}
 prefix_reorder_missing_vector_map = {}
+prefix_copy_missing_matrix_map = {}
+prefix_copy_missing_vector_map = {}
 
 
 def set_mode(compatibility=None):
@@ -102,6 +104,18 @@ def set_mode(compatibility=None):
             'c': _tools.creorder_missing_vector,
             'z': _tools.zreorder_missing_vector
         })
+        prefix_copy_missing_matrix_map.update({
+            's': _tools.scopy_missing_matrix,
+            'd': _tools.dcopy_missing_matrix,
+            'c': _tools.ccopy_missing_matrix,
+            'z': _tools.zcopy_missing_matrix
+        })
+        prefix_copy_missing_vector_map.update({
+            's': _tools.scopy_missing_vector,
+            'd': _tools.dcopy_missing_vector,
+            'c': _tools.ccopy_missing_vector,
+            'z': _tools.zcopy_missing_vector
+        })
     else:
         from . import _statespace
         from ._pykalman_smoother import _KalmanSmoother
@@ -151,6 +165,18 @@ def set_mode(compatibility=None):
             'd': _statespace.dreorder_missing_vector,
             'c': _statespace.creorder_missing_vector,
             'z': _statespace.zreorder_missing_vector
+        })
+        prefix_copy_missing_matrix_map.update({
+            's': _statespace.scopy_missing_matrix,
+            'd': _statespace.dcopy_missing_matrix,
+            'c': _statespace.ccopy_missing_matrix,
+            'z': _statespace.zcopy_missing_matrix
+        })
+        prefix_copy_missing_vector_map.update({
+            's': _statespace.scopy_missing_vector,
+            'd': _statespace.dcopy_missing_vector,
+            'c': _statespace.ccopy_missing_vector,
+            'z': _statespace.zcopy_missing_vector
         })
 set_mode(compatibility=None)
 
@@ -1591,10 +1617,6 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     reordered_matrix : array_like
         The reordered matrix.
 
-    Notes
-    -----
-    This function is not available in compatibility mode.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((matrix,))[0]
@@ -1628,12 +1650,8 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
 
     Returns
     -------
-    reordered_matrix : array_like
-        The reordered matrix.
-
-    Notes
-    -----
-    This function is not available in compatibility mode.
+    reordered_vector : array_like
+        The reordered vector.
 
     """
     if prefix is None:
@@ -1646,3 +1664,106 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     reorder(vector, np.asfortranarray(missing))
 
     return vector
+
+
+def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
+                        is_diagonal=False, inplace=False, prefix=None):
+    """
+    Copy the rows or columns of a time-varying matrix where all non-missing
+    values are in the upper left corner of the matrix.
+
+    Parameters
+    ----------
+    A : array_like
+        The matrix from which to copy. Must have shape (n, m, nobs) or
+        (n, m, 1).
+    B : array_like
+        The matrix to copy to. Must have shape (n, m, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (k, nobs) where `k = n`
+        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+    missing_rows : bool, optional
+        Whether or not the rows of the matrix are a missing dimension. Default
+        is False.
+    missing_cols : bool, optional
+        Whether or not the columns of the matrix are a missing dimension.
+        Default is False.
+    is_diagonal : bool, optional
+        Whether or not the matrix is diagonal. If this is True, must also have
+        `n = m`. Default is False.
+    inplace : bool, optional
+        Whether or not to copy to B in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_matrix : array_like
+        The matrix B with the non-missing submatrix of A copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((A, B))[0]
+    copy = prefix_copy_missing_matrix_map[prefix]
+
+    if not inplace:
+        B = np.copy(B, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not A.is_f_contig():
+            raise ValueError()
+    except:
+        A = np.asfortranarray(A)
+
+    copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
+         is_diagonal)
+
+    return B
+
+
+def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
+    """
+    Reorder the elements of a time-varying vector where all non-missing
+    values are in the first elements of the vector.
+
+    Parameters
+    ----------
+    a : array_like
+        The vector from which to copy. Must have shape (n, nobs) or (n, 1).
+    b : array_like
+        The vector to copy to. Must have shape (n, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (n, nobs).
+    inplace : bool, optional
+        Whether or not to copy to b in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_vector : array_like
+        The vector b with the non-missing subvector of b copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((a, b))[0]
+    copy = prefix_copy_missing_vector_map[prefix]
+
+    if not inplace:
+        b = np.copy(b, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not a.is_f_contig():
+            raise ValueError()
+    except:
+        a = np.asfortranarray(a)
+
+    copy(a, b, np.asfortranarray(missing))
+
+    return b

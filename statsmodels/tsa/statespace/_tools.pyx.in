@@ -854,4 +854,135 @@ cpdef int {{prefix}}reorder_missing_vector({{cython_type}} [::1, :] A, int [::1,
     for t in range(T):
         _{{prefix}}reorder_missing_rows(&A[0, t], &missing[0, t], n, 1)
 
+
+cdef int _{{prefix}}copy_missing_diagonal({{cython_type}} * a, {{cython_type}} * b, int * missing, int n):
+    """
+    Copy the non-missing block of diagonal entries
+
+    a is a pointer to an n x n diagonal array A (copy from)
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an n x 1 array
+    n is the dimension of A, B
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(nobs):
+        b[i + i*n] = a[i + i*n]
+
+
+cdef int _{{prefix}}copy_missing_submatrix({{cython_type}} * a, {{cython_type}} * b, int * missing, int n):
+    """
+    Copy the non-missing submatrix
+
+    a is a pointer to an n x n diagonal array A (copy from)
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an n x 1 array
+    n is the dimension of A, B
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    for i in range(nobs):
+        blas.{{prefix}}copy(&nobs, &a[i*n], &inc, &b[i*n], &inc)
+
+
+cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an n x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    for i in range(nobs):
+        blas.{{prefix}}copy(&m, &a[i], &n, &b[i], &n)
+
+
+cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an m x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    nobs = m
+    # Construct the non-missing index
+    for i in range(m):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    for i in range(nobs):
+        blas.{{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+
+
+cpdef int {{prefix}}copy_missing_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] missing, int missing_rows, int missing_cols, int diagonal) except *:
+    cdef int n, m, T, t, A_T, A_t = 0, time_varying
+
+    n, m, T = B.shape[0:3]
+    A_T = A.shape[2]
+    time_varying = (A_T == T)
+
+    if missing_rows and missing_cols:
+        if not n == m:
+            raise RuntimeError('Copying a submatrix requires n = m')
+        if diagonal:
+            for t in range(T):
+                if time_varying:
+                    A_t = t
+                _{{prefix}}copy_missing_diagonal(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n)
+        else:
+            for t in range(T):
+                if time_varying:
+                    A_t = t
+                _{{prefix}}copy_missing_submatrix(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n)
+    elif diagonal:
+        raise RuntimeError('`diagonal` argument only valid with copying a submatrix')
+    elif missing_rows:
+        for t in range(T):
+            if time_varying:
+                    A_t = t
+            _{{prefix}}copy_missing_rows(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n, m)
+    elif missing_cols:
+        for t in range(T):
+            if time_varying:
+                    A_t = t
+            _{{prefix}}copy_missing_cols(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n, m)
+    pass
+
+
+cpdef int {{prefix}}copy_missing_vector({{cython_type}} [::1, :] A, {{cython_type}} [::1, :] B, int [::1, :] missing) except *:
+    cdef int n, t, T, A_t = 0, A_T
+
+    n, T = B.shape[0:2]
+    A_T = A.shape[1]
+    time_varying = (A_T == T)
+
+    for t in range(T):
+        if time_varying:
+            A_t = t
+        _{{prefix}}copy_missing_rows(&A[0, A_t], &B[0, t], &missing[0, t], n, 1)
+
 {{endfor}}
