@@ -20,6 +20,7 @@ import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax
+from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import assert_allclose, assert_almost_equal, assert_raises
 from nose.exc import SkipTest
 
@@ -28,17 +29,17 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 class TestStatesAR3(object):
     @classmethod
-    def setup_class(cls, *args, **kwargs):
+    def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset / Stata comparison
         path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
-                                         freq='QS')
+                                        freq='QS')
         # Matlab comparison
         path = current_path + os.sep+'results/results_wpi1_ar3_matlab_ssm.csv'
         matlab_names = [
-            'a1','a2','a3','detP','alphahat1','alphahat2','alphahat3',
-            'detV','eps','epsvar','eta','etavar'
+            'a1', 'a2', 'a3', 'detP', 'alphahat1', 'alphahat2', 'alphahat3',
+            'detV', 'eps', 'epsvar', 'eta', 'etavar'
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # Regression tests data
@@ -50,19 +51,33 @@ class TestStatesAR3(object):
             hamilton_representation=True, *args, **kwargs
         )
 
+        if alternate_timing:
+            cls.model.ssm.timing_init_filtered = True
+
         # Parameters from from Stata's sspace MLE estimation
         params = np.r_[.5270715, .0952613, .2580355, .5307459]
-        cls.results = cls.model.smooth(params)
+        cls.results = cls.model.smooth(params, cov_type='none')
 
         # Calculate the determinant of the covariance matrices (for easy
         # comparison to other languages without having to store 2-dim arrays)
         cls.results.det_predicted_state_cov = np.zeros((1, cls.model.nobs))
         cls.results.det_smoothed_state_cov = np.zeros((1, cls.model.nobs))
         for i in range(cls.model.nobs):
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.filter_results.predicted_state_cov[:,:,i])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoother_results.smoothed_state_cov[:,:,i])
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.filter_results.predicted_state_cov[:, :, i])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoother_results.smoothed_state_cov[:, :, i])
+
+        if not compatibility_mode:
+            # Perform simulation smoothing
+            n_disturbance_variates = (
+                (cls.model.k_endog + cls.model.ssm.k_posdef) * cls.model.nobs
+            )
+            cls.sim = cls.model.simulation_smoother(filter_timing=0)
+            cls.sim.simulate(
+                disturbance_variates=np.zeros(n_disturbance_variates),
+                initial_state_variates=np.zeros(cls.model.k_states)
+            )
 
     def test_predict_obs(self):
         assert_almost_equal(
@@ -78,11 +93,11 @@ class TestStatesAR3(object):
 
     def test_predicted_states(self):
         assert_almost_equal(
-            self.results.filter_results.predicted_state[:,:-1].T,
+            self.results.filter_results.predicted_state[:, :-1].T,
             self.stata.ix[1:, ['sp1', 'sp2', 'sp3']], 4
         )
         assert_almost_equal(
-            self.results.filter_results.predicted_state[:,:-1].T,
+            self.results.filter_results.predicted_state[:, :-1].T,
             self.matlab_ssm[['a1', 'a2', 'a3']], 4
         )
 
@@ -139,10 +154,45 @@ class TestStatesAR3(object):
             self.matlab_ssm[['etavar']], 4
         )
 
+    def test_simulation_smoothed_state(self):
+        if compatibility_mode:
+            raise SkipTest
+        # regression test
+        assert_allclose(
+            self.sim.simulated_state.T,
+            self.regression[['state1', 'state2', 'state3']], atol=1e-4
+        )
+
+    def test_simulation_smoothed_measurement_disturbance(self):
+        if compatibility_mode:
+            raise SkipTest
+        # regression test
+        assert_allclose(
+            self.sim.simulated_measurement_disturbance.T,
+            self.regression[['measurement_disturbance']][:-1], atol=1e-4
+        )
+
+    def test_simulation_smoothed_state_disturbance(self):
+        if compatibility_mode:
+            raise SkipTest
+        # regression test
+        assert_allclose(
+            self.sim.simulated_state_disturbance.T,
+            self.regression[['state_disturbance']], atol=1e-4
+        )
+
+
+class TestStatesAR3Alternate(TestStatesAR3):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestStatesAR3Alternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
+
 
 class TestStatesMissingAR3(object):
     @classmethod
-    def setup_class(cls, *args, **kwargs):
+    def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset
         path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
         cls.stata = pd.read_csv(path)
@@ -167,6 +217,8 @@ class TestStatesMissingAR3(object):
             cls.stata.ix[1:,'dwpi'], order=(3, 0, 0),
             hamilton_representation=True, *args, **kwargs
         )
+        if alternate_timing:
+            cls.model.ssm.timing_init_filtered = True
 
         # Parameters from from Stata's sspace MLE estimation
         params = np.r_[.5270715, .0952613, .2580355, .5307459]
@@ -181,6 +233,17 @@ class TestStatesMissingAR3(object):
                 cls.results.predicted_state_cov[:,:,i])
             cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
                 cls.results.smoothed_state_cov[:,:,i])
+
+        if not compatibility_mode:
+            # Perform simulation smoothing
+            n_disturbance_variates = (
+                (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
+            )
+            cls.sim = cls.model.simulation_smoother()
+            cls.sim.simulate(
+                disturbance_variates=np.zeros(n_disturbance_variates),
+                initial_state_variates=np.zeros(cls.model.k_states)
+            )
 
     def test_predicted_states(self):
         assert_almost_equal(
@@ -217,6 +280,57 @@ class TestStatesMissingAR3(object):
             self.results.smoothed_measurement_disturbance_cov[0].T,
             self.matlab_ssm[['epsvar']], 4
         )
+
+    # TODO there is a discrepancy between MATLAB ssm toolbox and
+    # dismalpy.ssm on the following variables in the case of missing data.
+    # Need to find a third implementation to compare against.
+
+    # def test_smoothed_state_disturbance(self):
+    #     assert_almost_equal(
+    #         self.results.smoothed_state_disturbance.T,
+    #         self.matlab_ssm[['eta']], 4
+    #     )
+
+    # def test_smoothed_state_disturbance_cov(self):
+    #     assert_almost_equal(
+    #         self.results.smoothed_state_disturbance_cov[0].T,
+    #         self.matlab_ssm[['etavar']], 4
+    #     )
+
+    # def test_simulation_smoothed_state(self):
+    #     if compatibility_mode:
+    #         raise SkipTest
+    #     # regression test
+    #     assert_almost_equal(
+    #         self.sim.simulated_state.T,
+    #         self.regression[['state1', 'state2', 'state3']], 4
+    #     )
+
+    # def test_simulation_smoothed_measurement_disturbance(self):
+    #     if compatibility_mode:
+    #         raise SkipTest
+    #     # regression test
+    #     assert_almost_equal(
+    #         self.sim.simulated_measurement_disturbance.T,
+    #         self.regression[['measurement_disturbance']][:-1], 4
+    #     )
+
+    # def test_simulation_smoothed_state_disturbance(self):
+    #     if compatibility_mode:
+    #         raise SkipTest
+    #     # regression test
+    #     assert_almost_equal(
+    #         self.sim.simulated_state_disturbance.T,
+    #         self.regression[['state_disturbance']], 4
+    #     )
+
+
+class TestStatesMissingAR3Alternate(TestStatesMissingAR3):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+        super(TestStatesMissingAR3Alternate, cls).setup_class(alternate_timing=True, *args, **kwargs)
 
 
 class TestMultivariateMissing(object):
@@ -278,7 +392,7 @@ class TestMultivariateMissing(object):
             cls.results.det_smoothed_state_disturbance_cov[0,i] = (
                 np.linalg.det(
                     cls.results.smoothed_state_disturbance_cov[:,:,i]))
-                
+
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), -205310.9767)
 
@@ -287,19 +401,19 @@ class TestMultivariateMissing(object):
             self.results.scaled_smoothed_estimator.T,
             self.desired[['r1', 'r2', 'r3']]
         )
-        
+
     def test_scaled_smoothed_estimator_cov(self):
         assert_allclose(
             self.results.det_scaled_smoothed_estimator_cov.T,
             self.desired[['detN']]
         )
-        
+
     def test_forecasts(self):
         assert_allclose(
             self.results.forecasts.T,
             self.desired[['m1', 'm2', 'm3']]
         )
-    
+
     def test_forecasts_error(self):
         assert_allclose(
             self.results.forecasts_error.T,
@@ -335,13 +449,13 @@ class TestMultivariateMissing(object):
             self.results.det_smoothed_state_cov.T,
             self.desired[['detV']]
         )
-        
+
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
             self.desired[['muhat1','muhat2','muhat3']]
         )
-        
+
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
