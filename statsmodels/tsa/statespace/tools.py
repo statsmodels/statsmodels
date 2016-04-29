@@ -29,6 +29,8 @@ prefix_reorder_missing_matrix_map = {}
 prefix_reorder_missing_vector_map = {}
 prefix_copy_missing_matrix_map = {}
 prefix_copy_missing_vector_map = {}
+prefix_copy_index_matrix_map = {}
+prefix_copy_index_vector_map = {}
 
 
 def set_mode(compatibility=None):
@@ -116,6 +118,18 @@ def set_mode(compatibility=None):
             'c': _tools.ccopy_missing_vector,
             'z': _tools.zcopy_missing_vector
         })
+        prefix_copy_index_matrix_map.update({
+            's': _tools.scopy_index_matrix,
+            'd': _tools.dcopy_index_matrix,
+            'c': _tools.ccopy_index_matrix,
+            'z': _tools.zcopy_index_matrix
+        })
+        prefix_copy_index_vector_map.update({
+            's': _tools.scopy_index_vector,
+            'd': _tools.dcopy_index_vector,
+            'c': _tools.ccopy_index_vector,
+            'z': _tools.zcopy_index_vector
+        })
     else:
         from . import _statespace
         from ._pykalman_smoother import _KalmanSmoother
@@ -177,6 +191,18 @@ def set_mode(compatibility=None):
             'd': _statespace.dcopy_missing_vector,
             'c': _statespace.ccopy_missing_vector,
             'z': _statespace.zcopy_missing_vector
+        })
+        prefix_copy_index_matrix_map.update({
+            's': _statespace.scopy_index_matrix,
+            'd': _statespace.dcopy_index_matrix,
+            'c': _statespace.ccopy_index_matrix,
+            'z': _statespace.zcopy_index_matrix
+        })
+        prefix_copy_index_vector_map.update({
+            's': _statespace.scopy_index_vector,
+            'd': _statespace.dcopy_index_vector,
+            'c': _statespace.ccopy_index_vector,
+            'z': _statespace.zcopy_index_vector
         })
 set_mode(compatibility=None)
 
@@ -1765,5 +1791,108 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(missing))
+
+    return b
+
+
+def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
+                      is_diagonal=False, inplace=False, prefix=None):
+    """
+    Copy the rows or columns of a time-varying matrix where all non-index
+    values are in the upper left corner of the matrix.
+
+    Parameters
+    ----------
+    A : array_like
+        The matrix from which to copy. Must have shape (n, m, nobs) or
+        (n, m, 1).
+    B : array_like
+        The matrix to copy to. Must have shape (n, m, nobs).
+    index : array_like of bool
+        The vector of index indices. Must have shape (k, nobs) where `k = n`
+        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+    index_rows : bool, optional
+        Whether or not the rows of the matrix are a index dimension. Default
+        is False.
+    index_cols : bool, optional
+        Whether or not the columns of the matrix are a index dimension.
+        Default is False.
+    is_diagonal : bool, optional
+        Whether or not the matrix is diagonal. If this is True, must also have
+        `n = m`. Default is False.
+    inplace : bool, optional
+        Whether or not to copy to B in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_matrix : array_like
+        The matrix B with the non-index submatrix of A copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((A, B))[0]
+    copy = prefix_copy_index_matrix_map[prefix]
+
+    if not inplace:
+        B = np.copy(B, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not A.is_f_contig():
+            raise ValueError()
+    except:
+        A = np.asfortranarray(A)
+
+    copy(A, B, np.asfortranarray(index), index_rows, index_cols,
+         is_diagonal)
+
+    return B
+
+
+def copy_index_vector(a, b, index, inplace=False, prefix=None):
+    """
+    Reorder the elements of a time-varying vector where all non-index
+    values are in the first elements of the vector.
+
+    Parameters
+    ----------
+    a : array_like
+        The vector from which to copy. Must have shape (n, nobs) or (n, 1).
+    b : array_like
+        The vector to copy to. Must have shape (n, nobs).
+    index : array_like of bool
+        The vector of index indices. Must have shape (n, nobs).
+    inplace : bool, optional
+        Whether or not to copy to b in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_vector : array_like
+        The vector b with the non-index subvector of b copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((a, b))[0]
+    copy = prefix_copy_index_vector_map[prefix]
+
+    if not inplace:
+        b = np.copy(b, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not a.is_f_contig():
+            raise ValueError()
+    except:
+        a = np.asfortranarray(a)
+
+    copy(a, b, np.asfortranarray(index))
 
     return b
