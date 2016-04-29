@@ -385,6 +385,13 @@ class TestMultivariateVARKnown(MultivariateVARKnown):
         cls.true_llf = 39.01246166
 
 
+class TestMultivariateVARKnownCollapsed(MultivariateVARKnown):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        super(TestMultivariateVARKnownCollapsed, cls).setup_class(filter_collapsed=True)
+        cls.true_llf = 39.01246166
+
+
 class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
     """
     Notes
@@ -403,11 +410,27 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
         cls.true_llf = 1305.739288
 
 
+class TestMultivariateVARKnownMissingAllCollapsed(MultivariateVARKnown):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        super(TestMultivariateVARKnownMissingAllCollapsed, cls).setup_class(
+            missing='all', test_against_KFAS=False, filter_collapsed=True)
+        cls.true_llf = 1305.739288
+
+
 class TestMultivariateVARKnownMissingPartial(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         super(TestMultivariateVARKnownMissingPartial, cls).setup_class(
             missing='partial', test_against_KFAS=False)
+        cls.true_llf = 1518.449598
+
+
+class TestMultivariateVARKnownMissingPartialCollapsed(MultivariateVARKnown):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        super(TestMultivariateVARKnownMissingPartialCollapsed, cls).setup_class(
+            missing='partial', test_against_KFAS=False, filter_collapsed=True)
         cls.true_llf = 1518.449598
 
 
@@ -419,9 +442,17 @@ class TestMultivariateVARKnownMissingMixed(MultivariateVARKnown):
         cls.true_llf = 1117.265303
 
 
+class TestMultivariateVARKnownMissingMixedCollapsed(MultivariateVARKnown):
+    @classmethod
+    def setup_class(cls, *args, **kwargs):
+        super(TestMultivariateVARKnownMissingMixedCollapsed, cls).setup_class(
+            missing='mixed', test_against_KFAS=False, filter_collapsed=True)
+        cls.true_llf = 1117.265303
+
+
 class MultivariateVAR(object):
     """
-    Tests for simulation smoothing
+    More generic tests for simulation smoothing; use actual N(0,1) variates
     """
     @classmethod
     def setup_class(cls, missing='none', *args, **kwargs):
