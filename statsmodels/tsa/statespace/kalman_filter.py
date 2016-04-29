@@ -1365,20 +1365,20 @@ class FilterResults(FrozenRepresentation):
             # Re-ordering does not make sense in the collapsed case.
             if has_missing and (not self.memory_no_gain and
                                 not self.filter_collapsed):
-                self._kalman_gain = reorder_missing_matrix(
+                self._kalman_gain = np.array(reorder_missing_matrix(
                     kalman_filter.kalman_gain, self.missing, reorder_cols=True,
-                    prefix=self.prefix)
-                self.tmp1 = reorder_missing_matrix(
+                    prefix=self.prefix))
+                self.tmp1 = np.array(reorder_missing_matrix(
                     kalman_filter.tmp1, self.missing, reorder_cols=True,
-                    prefix=self.prefix)
-                self.tmp2 = reorder_missing_vector(
-                    kalman_filter.tmp2, self.missing, prefix=self.prefix)
-                self.tmp3 = reorder_missing_matrix(
+                    prefix=self.prefix))
+                self.tmp2 = np.array(reorder_missing_vector(
+                    kalman_filter.tmp2, self.missing, prefix=self.prefix))
+                self.tmp3 = np.array(reorder_missing_matrix(
                     kalman_filter.tmp3, self.missing, reorder_rows=True,
-                    prefix=self.prefix)
-                self.tmp4 = reorder_missing_matrix(
+                    prefix=self.prefix))
+                self.tmp4 = np.array(reorder_missing_matrix(
                     kalman_filter.tmp4, self.missing, reorder_cols=True,
-                    reorder_rows=True, prefix=self.prefix)
+                    reorder_rows=True, prefix=self.prefix))
             else:
                 self._kalman_gain = np.array(
                     kalman_filter.kalman_gain, copy=True)
