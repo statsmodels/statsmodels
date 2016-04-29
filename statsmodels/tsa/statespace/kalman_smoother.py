@@ -6,7 +6,6 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-from collections import namedtuple
 import warnings
 
 import numpy as np
@@ -15,6 +14,9 @@ from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
                                                       FilterResults)
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tsa.statespace.tools import (
+    reorder_missing_matrix, reorder_missing_vector,
+    copy_index_matrix, copy_index_vector)
 from statsmodels.tsa.statespace import tools
 
 SMOOTHER_STATE = 0x01              # Durbin and Koopman (2012), Chapter 4.4.2
@@ -633,14 +635,38 @@ class SmootherResults(FilterResults):
                 'smoothed_state_disturbance_cov'
             ]
 
+        has_missing = np.sum(self.nmissing) > 0
         for name in self._smoother_attributes:
             if name == 'smoother_output':
                 pass
             elif name in attributes:
-                setattr(
-                    self, name,
-                    np.array(getattr(smoother, name, None), copy=True)
-                )
+                if name in ['smoothing_error',
+                            'smoothed_measurement_disturbance']:
+                    vector = getattr(smoother, name, None)
+                    if vector is not None and has_missing:
+                        vector = np.array(reorder_missing_vector(
+                            vector, self.missing, prefix=self.prefix))
+                    else:
+                        vector = np.array(vector, copy=True)
+                    setattr(self, name, vector)
+                elif name == 'smoothed_measurement_disturbance_cov':
+                    matrix = getattr(smoother, name, None)
+                    if matrix is not None and has_missing:
+                        matrix = reorder_missing_matrix(
+                            matrix, self.missing, reorder_rows=True,
+                            reorder_cols=True, prefix=self.prefix)
+                        # In the missing data case, we want to set the missing
+                        # components equal to their unconditional distribution
+                        copy_index_matrix(
+                            self.obs_cov, matrix, self.missing,
+                            index_rows=True, index_cols=True, inplace=True,
+                            prefix=self.prefix)
+                    else:
+                        matrix = np.array(matrix, copy=True)
+                    setattr(self, name, matrix)
+                else:
+                    setattr(self, name,
+                            np.array(getattr(smoother, name, None), copy=True))
             else:
                 setattr(self, name, None)
 
@@ -666,32 +692,6 @@ class SmootherResults(FilterResults):
             self.scaled_smoothed_estimator_cov = (
                 self.scaled_smoothed_estimator_cov[:, :, start:end]
             )
-
-        # In the partially missing data case, various entries will
-        # be in the first rows rather than the correct rows
-        # TODO this can really slow things down if the smoother needs to be run
-        # many times in a row.
-        if not self._compatibility_mode and not self.filter_collapsed:
-            for t in range(self.nobs):
-                if self.nmissing[t] > 0:
-                    k_endog = self.k_endog - self.nmissing[t]
-                    mask = ~self.missing[:, t].astype(bool)
-
-                    if 'smoothed_measurement_disturbance' in attributes:
-                        tmp = np.copy(
-                            self.smoothed_measurement_disturbance[:, t])
-                        self.smoothed_measurement_disturbance[:, t] = 0
-                        self.smoothed_measurement_disturbance[mask, t] = (
-                            tmp[:k_endog])
-                    if 'smoothed_measurement_disturbance_cov' in attributes:
-                        obs_cov_t = 0 if self.obs_cov.shape[2] == 1 else t
-                        tmp = np.copy(
-                            self.smoothed_measurement_disturbance_cov[:, :, t])
-                        self.smoothed_measurement_disturbance_cov[:, :, t] = (
-                            np.copy(self.obs_cov[:, :, obs_cov_t]))
-                        ix = np.ix_(mask, mask, [t])
-                        self.smoothed_measurement_disturbance_cov[ix] = (
-                            tmp[:k_endog, :k_endog, np.newaxis])
 
         # Clear the smoothed forecasts
         self._smoothed_forecasts = None
