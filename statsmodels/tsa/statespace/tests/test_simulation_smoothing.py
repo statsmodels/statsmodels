@@ -25,6 +25,9 @@ from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
+if compatibility_mode:
+    raise SkipTest
+
 
 class MultivariateVARKnown(object):
     """
@@ -157,8 +160,6 @@ class MultivariateVARKnown(object):
         #   smoothed generated measurement disturbance are zero.
         # - The simulated state disturbance is equal to the smoothed
         #   state disturbance for exactly the same reason as above.
-        if compatibility_mode:
-            raise SkipTest
         sim = self.sim
         Z = self.model['design']
 
@@ -202,8 +203,6 @@ class MultivariateVARKnown(object):
     def test_simulation_smoothing_1(self):
         # Test with measurement disturbance as np.arange / 10., all other
         # disturbances are zeros
-        if compatibility_mode:
-            raise SkipTest
         sim = self.sim
 
         Z = self.model['design']
@@ -279,8 +278,6 @@ class MultivariateVARKnown(object):
     def test_simulation_smoothing_2(self):
         # Test with measurement and state disturbances as np.arange / 10.,
         # initial state variates are zeros.
-        if compatibility_mode:
-            raise SkipTest
         sim = self.sim
 
         Z = self.model['design']
@@ -501,8 +498,6 @@ class MultivariateVAR(object):
         assert_allclose(np.sum(self.results.llf_obs), self.true_llf)
 
     def test_simulation_smoothing(self):
-        if compatibility_mode:
-            raise SkipTest
         sim = self.sim
 
         Z = self.model['design']
@@ -543,8 +538,6 @@ class TestMultivariateVAR(MultivariateVAR):
 
 
 def test_misc():
-    if compatibility_mode:
-        raise SkipTest
 
     # Create the model and simulation smoother
     dta = datasets.macrodata.load_pandas().data
