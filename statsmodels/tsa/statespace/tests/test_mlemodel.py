@@ -719,13 +719,24 @@ def test_diagnostics():
     desired = res.test_normality(method='jarquebera')
     assert_allclose(actual, desired)
 
+    assert_raises(NotImplementedError, res.test_normality, method='invalid')
+
     actual = res.test_heteroskedasticity(method=None)
     desired = res.test_heteroskedasticity(method='breakvar')
     assert_allclose(actual, desired)
 
+    assert_raises(ValueError, res.test_heteroskedasticity, method=None, alternative='invalid')
+    assert_raises(NotImplementedError, res.test_heteroskedasticity, method='invalid')
+
     actual = res.test_serial_correlation(method=None)
     desired = res.test_serial_correlation(method='ljungbox')
     assert_allclose(actual, desired)
+
+    assert_raises(NotImplementedError, res.test_serial_correlation, method='invalid')
+
+    # Smoke tests for other options
+    actual = res.test_heteroskedasticity(method=None, alternative='d', use_f=False)
+    desired = res.test_serial_correlation(method='boxpierce')
 
 def test_diagnostics_nile_eviews():
     # Test the diagnostic tests using the Nile dataset. Results are from 
@@ -789,3 +800,11 @@ def test_diagnostics_nile_durbinkoopman():
     # Note: only 2 digits provided in the book
     actual = res.test_heteroskedasticity(method='breakvar')[0, 0]
     assert_allclose(actual, [0.61], atol=1e-2)
+
+def test_prediction_results():
+    # Just smoke tests for the PredictionResults class, which is copied from
+    # elsewhere in Statsmodels
+
+    mod, res = get_dummy_mod()
+    predict = res.get_prediction()
+    summary_frame = predict.summary_frame()
