@@ -27,6 +27,9 @@ from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
+if compatibility_mode:
+    raise SkipTest
+
 
 class TestClark1989(object):
     """
@@ -42,8 +45,6 @@ class TestClark1989(object):
     """
     @classmethod
     def setup_class(cls, dtype=float, alternate_timing=False, **kwargs):
-        if compatibility_mode:
-            raise SkipTest('Collapsed methods not available.')
 
         cls.true = results_kalman_filter.uc_bi
         cls.true_states = pd.DataFrame(cls.true['states'])
