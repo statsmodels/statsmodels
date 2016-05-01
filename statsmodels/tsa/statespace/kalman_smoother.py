@@ -97,7 +97,7 @@ class KalmanSmoother(KalmanFilter):
 
     # Default smoother options
     smoother_output = SMOOTHER_ALL
-    smooth_method = SMOOTH_CONVENTIONAL
+    smooth_method = 0
 
     def __init__(self, k_endog, k_states, k_posdef=None, results_class=None,
                  kalman_smoother_classes=None, **kwargs):
@@ -331,7 +331,7 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-        if self._compatibility_mode and not self.smooth_method == 1:
+        if self._compatibility_mode and not self.smooth_method in [0,1]:
             raise NotImplementedError('Only conventional Kalman filtering'
                                       ' is available. Consider updating'
                                       ' dependencies for more options.')
