@@ -18,6 +18,8 @@ from statsmodels.tsa.statespace.kalman_filter import (
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
+from statsmodels.tsa.statespace.simulation_smoother import (
+    SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
 from nose.exc import SkipTest
 
@@ -538,3 +540,51 @@ class TestMultivariateVAR(MultivariateVAR):
                 'results/results_simulation_smoothing3.csv')
         cls.true = pd.read_csv(path)
         cls.true_llf = 1695.34872
+
+
+def test_misc():
+    if compatibility_mode:
+        raise SkipTest
+
+    # Create the model and simulation smoother
+    dta = datasets.macrodata.load_pandas().data
+    dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
+                              freq='QS')
+    obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+
+    mod = sarimax.SARIMAX(obs['realgdp'], order=(1, 0, 0))
+    mod['design', 0, 0] = 0.
+    mod['obs_cov', 0, 0] = 1.
+    mod.update(np.r_[1., 1.])
+    sim = mod.simulation_smoother()
+
+    # Test that the simulation smoother is drawing variates correctly
+    np.random.seed(1234)
+    n_disturbance_variates = mod.nobs * (mod.k_endog + mod.k_states)
+    variates = np.random.normal(size=n_disturbance_variates)
+    np.random.seed(1234)
+    sim.simulate()
+    assert_allclose(sim.generated_measurement_disturbance[:, 0],
+                    variates[:mod.nobs])
+    assert_allclose(sim.generated_state_disturbance[:, 0],
+                    variates[mod.nobs:])
+
+    # Test that we can change the options of the simulations smoother
+    assert_equal(sim.simulation_output, mod.ssm.smoother_output)
+    sim.simulation_output = 0
+    assert_equal(sim.simulation_output, 0)
+
+    sim.simulate_state = True
+    assert_equal(sim.simulation_output, SIMULATION_STATE)
+    sim.simulate_state = False
+    assert_equal(sim.simulation_output, 0)
+
+    sim.simulate_disturbance = True
+    assert_equal(sim.simulation_output, SIMULATION_DISTURBANCE)
+    sim.simulate_disturbance = False
+    assert_equal(sim.simulation_output, 0)
+
+    sim.simulate_all = True
+    assert_equal(sim.simulation_output, SIMULATION_ALL)
+    sim.simulate_all = False
+    assert_equal(sim.simulation_output, 0)
