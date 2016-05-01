@@ -102,7 +102,7 @@ class KalmanSmoother(KalmanFilter):
 
     # Default smoother options
     smoother_output = SMOOTHER_ALL
-    smooth_method = 0
+    smooth_method = SMOOTH_CONVENTIONAL
 
     def __init__(self, k_endog, k_states, k_posdef=None, results_class=None,
                  kalman_smoother_classes=None, **kwargs):
