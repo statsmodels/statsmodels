@@ -880,6 +880,8 @@ class TestMultivariateVARUnivariate(object):
     """
     @classmethod
     def setup_class(cls, *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
         # Results
         path = current_path + os.sep + 'results/results_smoothing2_R.csv'
         cls.desired = pd.read_csv(path)
@@ -1077,6 +1079,9 @@ class TestMultivariateVARCollapsedUnivariateSmoothing(TestMultivariateVARUnivari
 class TestVARAutocovariances(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
