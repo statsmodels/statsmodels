@@ -638,7 +638,8 @@ class SmootherResults(FilterResults):
                 if name in ['smoothing_error',
                             'smoothed_measurement_disturbance']:
                     vector = getattr(smoother, name, None)
-                    if vector is not None and has_missing:
+                    if (not self._compatibility_mode and vector is not None and
+                            has_missing):
                         vector = np.array(reorder_missing_vector(
                             vector, self.missing, prefix=self.prefix))
                     else:
@@ -646,7 +647,8 @@ class SmootherResults(FilterResults):
                     setattr(self, name, vector)
                 elif name == 'smoothed_measurement_disturbance_cov':
                     matrix = getattr(smoother, name, None)
-                    if matrix is not None and has_missing:
+                    if (not self._compatibility_mode and matrix is not None and
+                            has_missing):
                         matrix = reorder_missing_matrix(
                             matrix, self.missing, reorder_rows=True,
                             reorder_cols=True, prefix=self.prefix)
