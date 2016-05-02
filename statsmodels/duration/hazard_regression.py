@@ -46,7 +46,7 @@ _predict_docstring = """
 
     Returns
     -------
-    If gen_var == True
+    If return_object == True
         A bunch containing two fields: `predicted_values` and
         `standard_errors`.
     Else
@@ -1257,7 +1257,7 @@ class PHReg(model.LikelihoodModel):
         return cumhaz_f
 
     def predict(self, params, exog=None, cov_params=None, endog=None,
-                strata=None, offset=None, pred_type="lhr", gen_var=False):
+                strata=None, offset=None, pred_type="lhr", return_object=False):
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
@@ -1322,7 +1322,7 @@ class PHReg(model.LikelihoodModel):
             predicted_values = np.exp(-cumhaz)
 
         # reverts to the original behavior for backwards compatability
-        if gen_var:
+        if return_object:
             class bunch:
                 predicted_values = None
                 standard_errors = None
@@ -1620,7 +1620,7 @@ class PHRegResults(base.LikelihoodModelResults):
     
     def predict(self, endog=None, exog=None, strata=None,
                 offset=None, transform=True, pred_type="lhr",
-                gen_var=False):
+                return_object=False):
 
         return super(PHRegResults, self).predict(exog=exog,
                                                  transform=transform,
@@ -1629,7 +1629,7 @@ class PHRegResults(base.LikelihoodModelResults):
                                                  strata=strata,
                                                  offset=offset,
                                                  pred_type=pred_type,
-                                                 gen_var=gen_var)
+                                                 return_object=return_object)
 
     predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
     

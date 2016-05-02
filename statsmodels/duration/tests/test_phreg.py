@@ -170,6 +170,39 @@ class TestPHReg(object):
         assert_allclose(rslt1.bse, rslt2.bse)
         assert_allclose(rslt1.bse, rslt3.bse)
 
+    def test_predict_formula_revert(self):
+
+        n = 100
+        np.random.seed(34234)
+        time = 50 * np.random.uniform(size=n)
+        status = np.random.randint(0, 2, n).astype(np.float64)
+        exog = np.random.uniform(1, 2, size=(n, 2))
+
+        df = pd.DataFrame({"time": time, "status": status,
+                           "exog1": exog[:, 0], "exog2": exog[:, 1]})
+
+        fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
+        model1 = PHReg.from_formula(fml, df, status=status)
+        result1 = model1.fit()
+
+        from patsy import dmatrix
+        dfp = dmatrix(model1.data.design_info.builder, df)
+
+        pr1 = result1.predict(return_object=True)
+        pr2 = result1.predict(exog=df, return_object=True)
+        pr3 = model1.predict(result1.params, exog=dfp, return_object=True) # No standard errors
+        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp, return_object=True)
+
+        prl = (pr1, pr2, pr3, pr4)
+        for i in range(4):
+            for j in range(i):
+                assert_allclose(prl[i].predicted_values, prl[j].predicted_values)
+
+        prl = (pr1, pr2, pr4)
+        for i in range(3):
+            for j in range(i):
+                assert_allclose(prl[i].standard_errors, prl[j].standard_errors)
+
     def test_predict_formula(self):
 
         n = 100
@@ -188,20 +221,20 @@ class TestPHReg(object):
         from patsy import dmatrix
         dfp = dmatrix(model1.data.design_info.builder, df)
 
-        pr1 = result1.predict()
-        pr2 = result1.predict(exog=df)
-        pr3 = model1.predict(result1.params, exog=dfp) # No standard errors
-        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp)
+        pr1 = result1.get_prediction()
+        pr2 = result1.get_prediction(exog=df)
+        pr3 = model1.get_prediction(result1.params, exog=dfp) # No standard errors
+        pr4 = model1.get_prediction(result1.params, cov_params=result1.cov_params(), exog=dfp)
 
         prl = (pr1, pr2, pr3, pr4)
         for i in range(4):
             for j in range(i):
-                assert_allclose(prl[i].predicted_values, prl[j].predicted_values)
+                assert_allclose(prl[i].predicted_mean, prl[j].predicted_mean)
 
         prl = (pr1, pr2, pr4)
         for i in range(3):
             for j in range(i):
-                assert_allclose(prl[i].standard_errors, prl[j].standard_errors)
+                assert_allclose(prl[i].se_mean, prl[j].se_mean)
 
     def test_offset(self):
 
@@ -303,12 +336,12 @@ class TestPHReg(object):
 
         mod = PHReg(endog, exog, status)
         rslt = mod.fit()
-        rslt.predict()
+        rslt.predict(return_object=True)
         for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
-            rslt.predict(pred_type=pred_type)
-            rslt.predict(endog=endog[0:10], pred_type=pred_type)
+            rslt.predict(pred_type=pred_type, return_object=True)
+            rslt.predict(endog=endog[0:10], pred_type=pred_type, return_object=True)
             rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
-                         pred_type=pred_type)
+                         pred_type=pred_type, return_object=True)
 
     def test_get_distribution(self):
         # Smoke test
