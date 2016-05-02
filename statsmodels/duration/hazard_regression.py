@@ -1326,7 +1326,8 @@ class PHReg(model.LikelihoodModel):
             class bunch:
                 predicted_values = None
                 standard_errors = None
-                ret_val = bunch()
+            
+            ret_val = bunch()
 
             ret_val.predicted_values = predicted_values
 
