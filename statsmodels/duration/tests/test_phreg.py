@@ -189,9 +189,9 @@ class TestPHReg(object):
         dfp = dmatrix(model1.data.design_info.builder, df)
 
         pr1 = result1.predict(return_object=True)
-        pr2 = result1.predict(exog=df, endog=result1.endog, return_object=True)
-        pr3 = model1.predict(result1.params, exog=dfp, endog=result1.endog, return_object=True) # No standard errors
-        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp, endog=result1.endog, return_object=True)
+        pr2 = result1.predict(exog=df, endog=model1.endog, return_object=True)
+        pr3 = model1.predict(result1.params, exog=dfp, endog=model1.endog, return_object=True) # No standard errors
+        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp, endog=model1.endog, return_object=True)
 
         prl = (pr1, pr2, pr3, pr4)
         for i in range(4):
