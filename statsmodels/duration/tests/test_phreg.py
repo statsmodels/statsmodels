@@ -388,7 +388,7 @@ class TestPHReg(object):
                 smry = rslt.summary()
 
     # Simulation based test of survival quantiles.
-    def test_qsurv():
+    def test_qsurv(self):
 
         np.random.seed(34249)
         n = 100
