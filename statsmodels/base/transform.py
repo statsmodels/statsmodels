@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import minimize
 
 
 class BoxCox(object):
@@ -27,10 +28,13 @@ class BoxCox(object):
         """
         x = np.asarray(x)
 
+        if np.any(x <= 0):
+            raise ValueError("Non-positive x.")
+
         if lmbda is None:
             lmbda = self._est_lambda(x, method)
 
-        if np.isclose(lmbda, 0.0):
+        if np.isclose(lmbda, 0.):
             y = np.log(x)
         else:
             y = (np.power(x, lmbda) - 1) / lmbda
@@ -58,12 +62,12 @@ class BoxCox(object):
         x = np.asarray(x)
 
         if method == 'naive':
-            if np.isclose(lmbda, 0.0):
+            if np.isclose(lmbda, 0.):
                 y = np.exp(x)
             else:
                 y = np.power(lmbda * x + 1, 1. / lmbda)
         elif method == 'normal':
-            pass # TODO
+            pass  # TODO
 
         return y
 
@@ -73,4 +77,9 @@ class BoxCox(object):
         transformation using method.
         """
         if method == 'guerrero':
-            pass
+            return minimize(self.__guerrero_cv, 0.,
+                            method='Nelder-Mead',
+                            options={'maxiter': 100})
+
+    def __guerrero_cv():
+        pass  # TODO
