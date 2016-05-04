@@ -387,6 +387,24 @@ class TestPHReg(object):
                 # Smoke test for summary
                 smry = rslt.summary()
 
+    # Simulation based test of survival quantiles.
+    def test_qsurv():
+
+        np.random.seed(34249)
+        n = 100
+        p = 4
+        xmat = np.zeros((n, 1))
+        xmat[n/2:] = 1
+        expval = np.exp(-xmat)
+        time = np.random.exponential(expval)
+
+        mod = PHReg(time, xmat)
+        rslt = mod.fit()
+        qsurv = rslt.predict(pred_type='qsurv', prob=0.5)
+
+        # smoke test
+        assert_allclose(np.r_[qsurv[0], qsurv[-1]], np.r_[0.72573760409939703, 0.28558443438847758])
+
 
 if  __name__=="__main__":
 
