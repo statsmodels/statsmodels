@@ -306,7 +306,6 @@ class TestPHReg(object):
         rslt.predict()
         for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
             rslt.predict(pred_type=pred_type)
-            rslt.predict(endog=endog[0:10], pred_type=pred_type)
             rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
                          pred_type=pred_type)
 
