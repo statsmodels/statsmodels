@@ -405,7 +405,7 @@ class TestPHReg(object):
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
     # Simulation based test of survival quantiles.
-    def test_qsurv():
+    def test_qsurv(self):
 
         np.random.seed(34249)
         n = 100
