@@ -1334,7 +1334,7 @@ class PHReg(model.LikelihoodModel):
                 qsurv[ix] = hg[jx]
             return qsurv
 
-        cumhaz = np.nan * np.ones(len(endog), dtype=np.float64)
+        cumhaz = np.nan * np.ones(exog.shape[0], dtype=np.float64)
         stv = np.unique(strata)
         bhaz = self.baseline_cumulative_hazard_function(params)
         for stx in stv:
