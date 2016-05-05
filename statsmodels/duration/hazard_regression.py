@@ -1202,10 +1202,6 @@ class PHReg(model.LikelihoodModel):
         if pred_type == "hr":
             predicted_values = hr
         
-        # Makes sure endog is defined
-        if endog is None and exog_provided:
-            msg = "If `exog` is provided `endog` must be provided."
-            raise ValueError(msg)
         # Use model endog if using model exog
         if endog is None and not exog_provided:
             endog = self.endog
