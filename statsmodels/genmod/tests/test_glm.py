@@ -1620,7 +1620,7 @@ def testTweediePowerEstimate():
     # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
     p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
-=======
+
 class TestRegularized(object):
 
     def test_regularized(self):
