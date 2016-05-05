@@ -14,7 +14,12 @@ class SetupBoxCox(object):
 class TestTransform(SetupBoxCox):
 
     def test_nonpositive(self):
+        # Testing negative values
         y = [1, -1, 1]
+        assert_raises(ValueError, self.bc.transform_boxcox, y)
+
+        # Testing nonzero
+        y = [1, 0, 1]
         assert_raises(ValueError, self.bc.transform_boxcox, y)
 
     def test_invalid_bounds(self):
@@ -29,7 +34,8 @@ class TestTransform(SetupBoxCox):
                       self.x, 1, 'test')
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     import nose
     import numpy as np
+
     np.testing.run_module_suite()
