@@ -25,6 +25,11 @@ class BoxCox(object):
             The transformed series.
         lmbda : float
             The lmbda parameter used to transform the series.
+
+        References
+        ----------
+        Guerrero, Victor M. 1993. "Time-series analysis supported by power
+        transformations". `Journal of Forecasting`. 12 (1): 37-48.
         """
         x = np.asarray(x)
 
@@ -32,7 +37,7 @@ class BoxCox(object):
             raise ValueError("Non-positive x.")
 
         if lmbda is None:
-            lmbda = self._est_lambda(x, method=method)
+            lmbda = self._est_lambda(x, bounds=(-1, 2), method=method)
 
         if np.isclose(lmbda, 0.):
             y = np.log(x)
@@ -53,7 +58,8 @@ class BoxCox(object):
         method : {'naive', 'normal'}
             Indicates the method to be used in the untransformation. Defaults
             to 'naive', which reverses the transformation. 'normal' yields an
-            optimal back-transform, assuming the series is normally distributed.
+            optimal back-transform, assuming the transform series is normally
+            distributed.
 
         Returns
         -------
@@ -68,30 +74,38 @@ class BoxCox(object):
             else:
                 y = np.power(lmbda * x + 1, 1. / lmbda)
         elif method == 'normal':
-            pass  # TODO
+            if np.isclose(lmbda, 0.):
+                y = np.exp(x)
+            else:
+                y = np.power(lmbda * x + 1, 1. / lmbda)
+        else:
+            raise ValueError("Method '{0}' not understood.".format(method))
 
         return y
 
-    def _est_lambda(self, x, low=None, up=None, R=2, method='guerrero'):
+    def _est_lambda(self, x, bounds, R=2, method='guerrero'):
         """
         Computes an estimate for the lambda parameter in the Box-Cox
         transformation using method.
 
-        TODO: for specific methods, the number of arguments may increase
-        enormously. Think about a more elegant solution.
+        TODO: by adding more specific methods, the number of arguments may
+        increase quite quickly. Think about a more elegant solution.
         """
-        if low is None:
-            low = -1
-        if up is None:
-            up = 3
+        if len(bounds) != 2:
+            raise ValueError("Bounds of length {0} not understood."
+                             .format(len(bounds)))
 
         if method == 'guerrero':
             res = minimize_scalar(self.__guerrero_cv,
-                                   bounds=(low, up),
+                                   bounds=bounds,
                                    args=(x, R),
                                    method='bounded',
                                    options={'maxiter': 100})
-            return res.x
+            lmbda = res.x
+        else:
+            raise ValueError("Method '{0}' not understood.".format(method))
+
+        return lmbda
 
     def __guerrero_cv(self, lmbda, x, R, **kwargs):
         """
