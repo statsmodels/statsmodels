@@ -1304,7 +1304,7 @@ class PHReg(model.LikelihoodModel):
             if exog_provided and self.surv.nstrat > 1:
                 raise ValueError("`strata` must be provided")
             if self.strata is None:
-                strata = [self.surv.stratum_names[0],] * endog.shape[0]
+                strata = [self.surv.stratum_names[0],] * exog.shape[0]
             else:
                 strata = self.strata
 
