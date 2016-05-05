@@ -273,9 +273,7 @@ class GLM(base.LikelihoodModel):
 
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
-        offset_exposure = 0.
-        if hasattr(self, 'offset'):
-            offset_exposure = self.offset
+        offset_exposure = getattr(self, 'offset', 0)
         if hasattr(self, 'exposure'):
             offset_exposure = offset_exposure + self.exposure
         self._offset_exposure = offset_exposure
