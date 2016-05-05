@@ -1202,8 +1202,8 @@ class PHReg(model.LikelihoodModel):
         if pred_type == "hr":
             predicted_values = hr
         
-        # Use model endog if using model exog
-        if endog is None and not exog_provided:
+        # Use model endog if not provided 
+        if endog is None:
             endog = self.endog
 
         # Make sure strata is defined
