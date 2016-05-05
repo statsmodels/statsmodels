@@ -1066,7 +1066,7 @@ class GLM(base.LikelihoodModel):
             Coefficients below this threshold are treated as zero.
         """
 
-        from statsmodels.base import elastic_net
+        from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
             raise ValueError("method for fit_regularied must be elastic_net")
@@ -1075,11 +1075,11 @@ class GLM(base.LikelihoodModel):
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
 
-        result = elastic_net.fit(self, method=method,
-                                 alpha=alpha,
-                                 start_params=start_params,
-                                 refit=refit,
-                                 **defaults)
+        result = fit_elasticnet(self, method=method,
+                                alpha=alpha,
+                                start_params=start_params,
+                                refit=refit,
+                                **defaults)
 
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)

@@ -500,7 +500,7 @@ class PHReg(model.LikelihoodModel):
             Coefficients below this threshold are treated as zero.
         """
 
-        from statsmodels.base import elastic_net
+        from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
             raise ValueError("method for fit_regularied must be elastic_net")
@@ -509,11 +509,11 @@ class PHReg(model.LikelihoodModel):
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
 
-        return elastic_net.fit(self, method=method,
-                               alpha=alpha,
-                               start_params=start_params,
-                               refit=refit,
-                               **defaults)
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              start_params=start_params,
+                              refit=refit,
+                              **defaults)
 
 
     def loglike(self, params):

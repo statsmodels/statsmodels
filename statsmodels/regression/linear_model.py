@@ -820,7 +820,7 @@ class OLS(WLS):
         Statistical Software 33(1), 1-22 Feb 2010.
         """
 
-        from statsmodels.base import elastic_net
+        from statsmodels.base.elastic_net import fit_elasticnet
 
         # In the future we could add support for other penalties, e.g. SCAD.
         if method != "elastic_net":
@@ -843,14 +843,14 @@ class OLS(WLS):
             score_kwds = {"scale": 1}
             hess_kwds = {"scale": 1}
 
-        return elastic_net.fit(self, method=method,
-                               alpha=alpha,
-                               start_params=start_params,
-                               loglike_kwds=loglike_kwds,
-                               score_kwds=score_kwds,
-                               hess_kwds=hess_kwds,
-                               refit=refit,
-                               **defaults)
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              start_params=start_params,
+                              loglike_kwds=loglike_kwds,
+                              score_kwds=score_kwds,
+                              hess_kwds=hess_kwds,
+                              refit=refit,
+                              **defaults)
 
 
 class GLSAR(GLS):

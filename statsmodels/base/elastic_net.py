@@ -59,7 +59,7 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
 
 
 
-def fit(model, method="coord_descent", maxiter=100, alpha=0.,
+def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
          L1_wt=1., start_params=None, cnvrg_tol=1e-7, zero_tol=1e-8,
          refit=False, loglike_kwds=None, score_kwds=None,
          hess_kwds=None):
@@ -89,7 +89,7 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
         Starting values for `params`.
     cnvrg_tol : scalar
         If `params` changes by less than this amount (in sup-norm)
-        in once iteration cycle, the algorithm terminates with
+        in one iteration cycle, the algorithm terminates with
         convergence.
     zero_tol : scalar
         Any estimated coefficient smaller than this value is
@@ -196,7 +196,7 @@ def fit(model, method="coord_descent", maxiter=100, alpha=0.,
             break
 
     # Set approximate zero coefficients to be exactly zero
-    params *= np.abs(params) >= zero_tol
+    params[np.abs(params) < zero_tol] = 0
 
     if not refit:
         results = RegularizedResults(model, params)
