@@ -1289,6 +1289,24 @@ class PHReg(model.LikelihoodModel):
 
         if pred_type == "lhr":
             predicted_values = lhr
+        
+            # reverts to the original behavior for backwards compatability
+            if return_object:
+                class bunch:
+                    predicted_values = None
+                    standard_errors = None
+            
+                ret_val = bunch()
+                ret_val.predicted_values = predicted_values
+
+                if cov_params is not None:
+                    mat = np.dot(exog, cov_params)
+                    va = (mat * exog).sum(1)
+                    ret_val.standard_errors = np.sqrt(va)
+                return ret_val
+
+            else:
+                return predicted_values
 
         hr = np.exp(lhr)
 
@@ -1348,26 +1366,7 @@ class PHReg(model.LikelihoodModel):
         elif pred_type == "surv":
             predicted_values = np.exp(-cumhaz)
 
-        # reverts to the original behavior for backwards compatability
-        if return_object:
-            class bunch:
-                predicted_values = None
-                standard_errors = None
-            
-            ret_val = bunch()
-
-            ret_val.predicted_values = predicted_values
-
-            if pred_type == "lhr":
-                if cov_params is not None:
-                    mat = np.dot(exog, cov_params)
-                    va = (mat * exog).sum(1)
-                    ret_val.standard_errors = np.sqrt(va)
-                
-            return ret_val
-
-        else:
-            return predicted_values 
+        return predicted_values 
 
     predict.__doc__ = _predict_docstring % {'cov_params_doc': _predict_cov_params_docstring}
 
