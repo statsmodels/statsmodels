@@ -1435,7 +1435,7 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         gsizes = np_new_unique(groups, return_counts=True)
         gsizes = gsizes[1]
-        return gsizes.min(), gsizes.max(), gsizes.mean()
+        return gsizes.min(), gsizes.max(), gsizes.mean(), len(gsizes)
 
     @cache_readonly
     def weighted_covariate_averages(self):
