@@ -1340,7 +1340,7 @@ class PHReg(model.LikelihoodModel):
         for stx in stv:
             ix = np.flatnonzero(strata == stx)
             func = bhaz[stx]
-            cumhaz[ix] = func(exog[ix]) * hr[ix]
+            cumhaz[ix] = func(endog[ix]) * hr[ix]
 
         if pred_type == "cumhaz":
             predicted_values = cumhaz
