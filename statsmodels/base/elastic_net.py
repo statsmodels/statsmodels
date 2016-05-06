@@ -53,7 +53,8 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     def nphess(params, model):
         nobs = model.nobs
         pen_hess = alpha[k] * (1 - L1_wt)
-        return -model.hessian(np.r_[params], **hess_kwds)[0,0] / nobs + pen_hess
+        h = -model.hessian(np.r_[params], **hess_kwds)[0,0] / nobs + pen_hess
+        return h
 
     return nploglike, npscore, nphess
 

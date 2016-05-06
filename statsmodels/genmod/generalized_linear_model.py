@@ -290,6 +290,7 @@ class GLM(base.LikelihoodModel):
         self.data_weights = data_weights
         if np.shape(self.data_weights) == () and self.data_weights > 1:
             self.data_weights = self.data_weights * np.ones((endog.shape[0]))
+        self._setup_binomial()
 
 
     def initialize(self):
@@ -369,8 +370,9 @@ class GLM(base.LikelihoodModel):
         expval = self.family.link.inverse(lin_pred)
         if scale is None:
             scale = self.estimate_scale(expval)
-        return self.family.loglike(expval, self.endog, self.freq_weights,
-                                   scale)
+        llf = self.family.loglike(self.endog, expval, self.freq_weights,
+                                  scale)
+        return llf
 
     def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
@@ -828,6 +830,15 @@ class GLM(base.LikelihoodModel):
         else:
             raise ValueError("get_distribution not implemented for %s" % self.family.name)
 
+    def _setup_binomial(self):
+        # this checks what kind of data is given for Binomial.
+        # family will need a reference to endog if this is to be removed from
+        # preprocessing
+        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
+        if isinstance(self.family, families.Binomial):
+            tmp = self.family.initialize(self.endog, self.freq_weights)
+            self.endog = tmp[0]
+            self.n_trials = tmp[1]
 
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
@@ -880,15 +891,6 @@ class GLM(base.LikelihoodModel):
         -----
         This method does not take any extra undocumented ``kwargs``.
         """
-        # this checks what kind of data is given for Binomial.
-        # family will need a reference to endog if this is to be removed from
-        # preprocessing
-        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
-        if isinstance(self.family, families.Binomial):
-            tmp = self.family.initialize(self.endog, self.freq_weights)
-            self.endog = tmp[0]
-            self.n_trials = tmp[1]
-
         self.scaletype = scale
 
         if method.lower() == "irls":
@@ -1063,7 +1065,6 @@ class GLM(base.LikelihoodModel):
         zero_tol : float
             Coefficients below this threshold are treated as zero.
         """
-
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
@@ -1240,7 +1241,6 @@ class GLMResults(base.LikelihoodModelResults):
         self.family = model.family
         self._endog = model.endog
         self.nobs = model.endog.shape[0]
-        self.mu = model.mu
         self._freq_weights = model.freq_weights
         if isinstance(self.family, families.Binomial):
             self._n_trials = self.model.n_trials
