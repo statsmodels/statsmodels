@@ -1169,7 +1169,7 @@ class PHReg(model.LikelihoodModel):
 
     def predict(self, params, exog=None, cov_params=None, endog=None,
                 strata=None, offset=None, pred_type="lhr", 
-                return_object=False, **kwargs):
+                return_object=False):
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz", "qsurv"]:
@@ -1553,7 +1553,7 @@ class PHRegResults(base.LikelihoodModelResults):
     
     def predict(self, endog=None, exog=None, strata=None,
                 offset=None, transform=True, pred_type="lhr",
-                return_object=False, **kwargs):
+                return_object=False):
 
         return super(PHRegResults, self).predict(exog=exog,
                                                  transform=transform,
@@ -1562,8 +1562,7 @@ class PHRegResults(base.LikelihoodModelResults):
                                                  strata=strata,
                                                  offset=offset,
                                                  pred_type=pred_type,
-                                                 return_object=return_object,
-                                                 **kwargs)
+                                                 return_object=return_object)
 
     predict.__doc__ = _predict_docstring % {'cov_params_doc': ''}
     
