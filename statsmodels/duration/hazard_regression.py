@@ -1191,19 +1191,22 @@ class PHReg(model.LikelihoodModel):
         elif self.offset is not None and not exog_provided:
             lhr += self.offset
 
+        # if desired, revert to the original behavior for backwards
+        # compatability
+        if return_object
+            class bunch:
+                predicted_values = None
+                standard_errors = None
+                
+            ret_val = bunch()
+
         # Handle lhr and hr prediction first, since they don't make
         # use of the hazard function.
 
         if pred_type == "lhr":
             predicted_values = lhr
         
-            # reverts to the original behavior for backwards compatability
             if return_object:
-                class bunch:
-                    predicted_values = None
-                    standard_errors = None
-            
-                ret_val = bunch()
                 ret_val.predicted_values = predicted_values
 
                 if cov_params is not None:
@@ -1211,7 +1214,6 @@ class PHReg(model.LikelihoodModel):
                     va = (mat * exog).sum(1)
                     ret_val.standard_errors = np.sqrt(va)
                 return ret_val
-
             else:
                 return predicted_values
 
@@ -1219,7 +1221,13 @@ class PHReg(model.LikelihoodModel):
 
         if pred_type == "hr":
             predicted_values = hr
-        
+       
+            if return_object:
+                ret_val.predicted_values = predicted_values
+                return ret_val
+            else:
+                return predicted_values
+
         # Use model endog if using model exog
         if endog is None and not exog_provided:
             endog = self.endog
@@ -1257,7 +1265,11 @@ class PHReg(model.LikelihoodModel):
                 hg = bh(xg)
                 jx = np.searchsorted(hg, vr)
                 qsurv[ix] = hg[jx]
-            return qsurv
+            if return_object:
+                ret_val.predicted_values = qsurv
+                return ret_val
+            else:
+                return qsurv
 
         cumhaz = np.nan * np.ones(exog.shape[0], dtype=np.float64)
         stv = np.unique(strata)
@@ -1273,7 +1285,11 @@ class PHReg(model.LikelihoodModel):
         elif pred_type == "surv":
             predicted_values = np.exp(-cumhaz)
 
-        return predicted_values 
+        if return_object:
+            ret_val.predicted_values = predicted_values
+            return ret_val
+        else:
+            return predicted_values 
 
     predict.__doc__ = _predict_docstring % {'cov_params_doc': _predict_cov_params_docstring}
 
