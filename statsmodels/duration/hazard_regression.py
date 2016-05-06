@@ -1286,7 +1286,7 @@ class PHReg(model.LikelihoodModel):
 
         # if desired, revert to the original behavior for backwards
         # compatability
-        if return_object
+        if return_object:
             class bunch:
                 predicted_values = None
                 standard_errors = None
