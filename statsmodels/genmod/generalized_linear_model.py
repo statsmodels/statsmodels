@@ -258,9 +258,9 @@ class GLM(base.LikelihoodModel):
                            self.freq_weights)
         if offset is None:
             delattr(self, 'offset')
-            self._init_keys.remove('offset')
         if exposure is None:
             delattr(self, 'exposure')
+
         self.nobs = self.endog.shape[0]
 
         #things to remove_data
@@ -269,28 +269,18 @@ class GLM(base.LikelihoodModel):
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
-        self.nobs = len(endog)
+        self._setup_binomial()
 
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
-        offset_exposure = getattr(self, 'offset', 0)
+        offset_exposure = 0.
+        if hasattr(self, 'offset'):
+            offset_exposure = self.offset
         if hasattr(self, 'exposure'):
             offset_exposure = offset_exposure + self.exposure
         self._offset_exposure = offset_exposure
 
-        # Set here so the the likelihood, score and Hessian can be
-        # evaluated without fitting the model.
         self.scaletype = None
-
-        # Set the data weights
-        if endog.ndim > 1 and endog.shape[1] == 2:
-            data_weights = endog.sum(1)  # weights are total trials
-        else:
-            data_weights = np.ones((endog.shape[0]))
-        self.data_weights = data_weights
-        if np.shape(self.data_weights) == () and self.data_weights > 1:
-            self.data_weights = self.data_weights * np.ones((endog.shape[0]))
-        self._setup_binomial()
 
 
     def initialize(self):
