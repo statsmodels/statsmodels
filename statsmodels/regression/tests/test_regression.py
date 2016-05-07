@@ -989,7 +989,6 @@ class TestRegularizedFit(object):
        result = model.fit_regularized(alpha=1000)
 
        assert_equal(result.params, 0.)
-       assert_equal(result.bse, 0.)
 
 
     def test_regularized(self):
@@ -1027,6 +1026,9 @@ class TestRegularizedFit(object):
 
             # Smoke test for summary
             smry = rslt.summary()
+
+            # Smoke test for profile likeihood
+            result = mod.fit_regularized(L1_wt=L1_wt, alpha=lam, profile_scale=True)
 
 
 def test_formula_missing_cat():
@@ -1087,7 +1089,6 @@ def test_fvalue_implicit_constant():
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
     res.summary()
-
 
 
 if __name__=="__main__":

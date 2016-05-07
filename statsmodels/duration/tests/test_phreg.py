@@ -342,12 +342,16 @@ class TestPHReg(object):
     def test_get_distribution(self):
         # Smoke test
         np.random.seed(34234)
-        exog = np.random.normal(size=(200, 2))
+        n = 200
+        exog = np.random.normal(size=(n, 2))
         lin_pred = exog.sum(1)
         elin_pred = np.exp(-lin_pred)
-        time = -elin_pred * np.log(np.random.uniform(size=200))
+        time = -elin_pred * np.log(np.random.uniform(size=n))
+        status = np.ones(n)
+        status[0:20] = 0
+        strata = np.kron(range(5), np.ones(n // 5))
 
-        mod = PHReg(time, exog)
+        mod = PHReg(time, exog, status=status, strata=strata)
         rslt = mod.fit()
 
         dist = rslt.get_distribution()
@@ -358,6 +362,7 @@ class TestPHReg(object):
         fitted_sd = dist.std()
         sample = dist.rvs()
 
+
     def test_fit_regularized(self):
 
         # Data set sizes
@@ -367,7 +372,7 @@ class TestPHReg(object):
             for js,s in enumerate([0,0.1]):
 
                 coef_name = "coef_%d_%d_%d" % (n, p, js)
-                coef = getattr(survival_enet_r_results, coef_name)
+                params = getattr(survival_enet_r_results, coef_name)
 
                 fname = "survival_data_%d_%d.csv" % (n, p)
                 time, status, entry, exog = self.load_file(fname)
@@ -375,16 +380,28 @@ class TestPHReg(object):
                 exog -= exog.mean(0)
                 exog /= exog.std(0, ddof=1)
 
-                mod = PHReg(time, exog, status=status, ties='breslow')
-                rslt = mod.fit_regularized(alpha=s)
+                model = PHReg(time, exog, status=status, ties='breslow')
+                sm_result = model.fit_regularized(alpha=s)
 
                 # The agreement isn't very high, the issue may be on
-                # their side.  They seem to use some approximations
-                # that we are not using.
-                assert_allclose(rslt.params, coef, rtol=0.3)
+                # the R side.  See below for further checks.
+                assert_allclose(sm_result.params, params, rtol=0.3)
 
                 # Smoke test for summary
-                smry = rslt.summary()
+                smry = sm_result.summary()
+
+                # The penalized log-likelihood that we are maximizing.
+                def plf(params):
+                    llf = model.loglike(params) / len(time)
+                    L1_wt = 1
+                    llf = llf - s * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    return llf
+
+                # Confirm that we are doing better than glmnet.
+                from numpy.testing import assert_equal
+                llf_r = plf(params)
+                llf_sm = plf(sm_result.params)
+                assert_equal(np.sign(llf_sm - llf_r), 1)
 
     # Simulation based test of survival quantiles.
     def test_qsurv(self):

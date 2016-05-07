@@ -24,8 +24,6 @@ for (n in c(100, 200, 300)) {
         for (alpha in c(0, 0.5, 1)) {
 
             fit = glmnet(exog, endog, intercept=FALSE, standardize=FALSE, alpha=alpha)
-            ii = length(fit$lambda) * c(0.3, 0.5, 0.7)
-            ii = round(ii)
 
             for (q in c(0.3, 0.5, 0.7)) {
                 ii = round(q * length(fit$lambda))

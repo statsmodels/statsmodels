@@ -4,7 +4,7 @@ from statsmodels.base import data
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.base import datetools
 from numpy import arange, asarray
-from pandas import Index
+from pandas import Index, to_datetime
 from pandas import datetools as pandas_datetools
 import datetime
 
@@ -48,8 +48,11 @@ class TimeSeriesModel(base.LikelihoodModel):
         if dates is not None:
             if (not datetools._is_datetime_index(dates) and
                     isinstance(self.data, data.PandasData)):
-                raise ValueError("Given a pandas object and the index does "
-                                 "not contain dates")
+                try:
+                    dates = to_datetime(dates)
+                except ValueError:
+                    raise ValueError("Given a pandas object and the index does "
+                                     "not contain dates")
             if not freq:
                 try:
                     freq = datetools._infer_freq(dates)

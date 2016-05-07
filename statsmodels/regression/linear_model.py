@@ -32,6 +32,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
 from __future__ import print_function
+
 from statsmodels.compat.python import lrange, lzip, range
 __docformat__ = 'restructuredtext en'
 
@@ -231,123 +232,6 @@ class RegressionModel(base.LikelihoodModel):
                        **kwargs)
         return RegressionResultsWrapper(lfit)
 
-    def fit_regularized(self, method="coord_descent", maxiter=1000,
-                        alpha=0., L1_wt=1., start_params=None,
-                        cnvrg_tol=1e-8, zero_tol=1e-8, **kwargs):
-        """
-        Return a regularized fit to a linear regression model.
-
-        Parameters
-        ----------
-        method : string
-            Only the coordinate descent algorithm is implemented.
-        maxiter : integer
-            The maximum number of iteration cycles (an iteration cycle
-            involves running coordinate descent on all variables).
-        alpha : scalar or array-like
-            The penalty weight.  If a scalar, the same penalty weight
-            applies to all variables in the model.  If a vector, it
-            must have the same length as `params`, and contains a
-            penalty weight for each coefficient.
-        L1_wt : scalar
-            The fraction of the penalty given to the L1 penalty term.
-            Must be between 0 and 1 (inclusive).  If 0, the fit is
-            ridge regression.  If 1, the fit is the lasso.
-        start_params : array-like
-            Starting values for ``params``.
-        cnvrg_tol : scalar
-            If ``params`` changes by less than this amount (in sup-norm)
-            in once iteration cycle, the algorithm terminates with
-            convergence.
-        zero_tol : scalar
-            Any estimated coefficient smaller than this value is
-            replaced with zero.
-
-        Returns
-        -------
-        A RegressionResults object, of the same type returned by
-        ``fit``.
-
-        Notes
-        -----
-        The approach closely follows that implemented in the glmnet
-        package in R.  The penalty is the "elastic net" penalty, which
-        is a convex combination of L1 and L2 penalties.
-
-        The function that is minimized is: ..math::
-
-            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
-
-        where RSS is the usual regression sum of squares, n is the
-        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
-        norms.
-
-        Post-estimation results are based on the same data used to
-        select variables, hence may be subject to overfitting biases.
-
-        References
-        ----------
-        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
-        generalized linear models via coordinate descent.  Journal of
-        Statistical Software 33(1), 1-22 Feb 2010.
-        """
-
-        k_exog = self.wexog.shape[1]
-
-        if np.isscalar(alpha):
-            alpha = alpha * np.ones(k_exog, dtype=np.float64)
-
-        # Below we work with RSS + penalty, so we need to rescale.
-        alpha *= 2 * self.wexog.shape[0]
-
-        if start_params is None:
-            params = np.zeros(k_exog, dtype=np.float64)
-        else:
-            params = start_params.copy()
-
-        converged = False
-        xxprod = 2*(self.wexog**2).sum(0)
-
-        # Coordinate descent
-        for itr in range(maxiter):
-
-            params_save = params.copy()
-            for k in range(self.wexog.shape[1]):
-
-                params[k] = 0.
-                wendog_adj = self.wendog - np.dot(self.wexog, params)
-                xyprod = 2*np.dot(self.wexog[:,k], wendog_adj)
-                den = xxprod[k] + alpha[k] * (1 - L1_wt)
-                a = alpha[k] * L1_wt
-                if a >= np.abs(xyprod):
-                    params[k] = 0.
-                elif xyprod > 0:
-                    params[k] = (xyprod - a) / den
-                else:
-                    params[k] = (xyprod + a) / den
-
-            # Check for convergence
-            pchange = np.max(np.abs(params - params_save))
-            if pchange < cnvrg_tol:
-                converged = True
-                break
-
-        # Set approximate zero coefficients to be exactly zero
-        params *= np.abs(params) >= zero_tol
-
-        # Fit the reduced model to get standard errors and other
-        # post-estimation results.
-        ii = np.flatnonzero(params)
-        cov = np.zeros((k_exog, k_exog), dtype=np.float64)
-        if len(ii) > 0:
-            model = self.__class__(self.wendog, self.wexog[:,ii])
-            rslt = model.fit()
-            cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
-
-        lfit = RegressionResults(self, params,
-                                 normalized_cov_params=cov)
-        lfit.converged = converged
-        return RegressionResultsWrapper(lfit)
 
     def predict(self, params, exog=None):
         """
@@ -370,10 +254,11 @@ class RegressionModel(base.LikelihoodModel):
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
+
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params)
 
+        return np.dot(exog, params)
 
     def get_distribution(self, params, scale, exog=None, dist_class=None):
         """
@@ -747,31 +632,226 @@ class OLS(WLS):
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
 
-    def loglike(self, params):
+    def loglike(self, params, scale=None):
         """
-        The likelihood function for the clasical OLS model.
+        The likelihood function for the OLS model.
 
         Parameters
         ----------
         params : array-like
             The coefficients with which to estimate the log-likelihood.
+        scale : float or None
+            If None, return the profile (concentrated) log likelihood
+            (profiled over the scale parameter), else return the
+            log-likelihood using the given scale value.
 
         Returns
         -------
-        The concentrated likelihood function evaluated at params.
+        The likelihood function evaluated at params.
         """
         nobs2 = self.nobs / 2.0
-        return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
-                np.dot(np.transpose(self.endog -
-                    np.dot(self.exog, params)),
-                    (self.endog - np.dot(self.exog,params)))) -\
-                    nobs2
+        nobs = float(self.nobs)
+        resid = self.endog - np.dot(self.exog, params)
+        if hasattr(self, 'offset'):
+            resid -= self.offset
+        ssr = np.sum(resid**2)
+        if scale is None:
+            # profile log likelihood
+            llf = -nobs2*np.log(2*np.pi) - nobs2*np.log(ssr / nobs) - nobs2
+        else:
+            # log-likelihood
+            llf = -nobs2 * np.log(2 * np.pi * scale) - ssr / (2*scale)
+        return llf
+
 
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.
         """
         return Y
+
+
+    def score(self, params, scale=None):
+        """
+        Evaluate the score function at a given point.
+
+        The score corresponds to the profile (concentrated)
+        log-likelihood in which the scale parameter has been profiled
+        out.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter vector at which the score function is
+            computed.
+        scale : float or None
+            If None, return the profile (concentrated) log likelihood
+            (profiled over the scale parameter), else return the
+            log-likelihood using the given scale value.
+
+        Returns
+        -------
+        The score vector.
+        """
+
+        if not hasattr(self, "_wexog_xprod"):
+            self._setup_score_hess()
+
+        xtxb = np.dot(self._wexog_xprod, params)
+        sdr = -self._wexog_x_wendog + xtxb
+
+        if scale is None:
+            ssr = self._wendog_xprod - 2 * np.dot(self._wexog_x_wendog.T, params)
+            ssr += np.dot(params, xtxb)
+            return -self.nobs * sdr / ssr
+        else:
+            return -sdr / scale
+
+
+    def _setup_score_hess(self):
+        y = self.wendog
+        if hasattr(self, 'offset'):
+            y = y - self.offset
+        self._wendog_xprod = np.sum(y * y)
+        self._wexog_xprod = np.dot(self.wexog.T, self.wexog)
+        self._wexog_x_wendog = np.dot(self.wexog.T, y)
+
+
+    def hessian(self, params, scale=None):
+        """
+        Evaluate the Hessian function at a given point.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter vector at which the Hessian is computed.
+        scale : float or None
+            If None, return the profile (concentrated) log likelihood
+            (profiled over the scale parameter), else return the
+            log-likelihood using the given scale value.
+
+        Returns
+        -------
+        The Hessian matrix.
+        """
+
+        if not hasattr(self, "_wexog_xprod"):
+            self._setup_score_hess()
+
+        xtxb = np.dot(self._wexog_xprod, params)
+
+        if scale is None:
+            ssr = self._wendog_xprod - 2 * np.dot(self._wexog_x_wendog.T, params)
+            ssr += np.dot(params, xtxb)
+            ssrp = -2*self._wexog_x_wendog + 2*xtxb
+            hm = self._wexog_xprod / ssr - np.outer(ssrp, ssrp) / ssr**2
+            return -self.nobs * hm / 2
+        else:
+            return -self._wexog_xprod / scale
+
+        return hess
+
+
+    def fit_regularized(self, method="elastic_net", alpha=0.,
+                        start_params=None, profile_scale=False,
+                        refit=False, **kwargs):
+        """
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method : string
+            Only the 'elastic_net' approach is currently implemented.
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        start_params : array-like
+            Starting values for ``params``.
+        profile_scale : bool
+            If True the penalized fit is computed using the profile
+            (concentrated) log-likelihood for the Gaussian model.
+            Otherwise the fit uses the residual sum of squares.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
+
+        Returns
+        -------
+        An array of coefficients, or a RegressionResults object of the
+        same type returned by ``fit``.
+
+        Notes
+        -----
+
+        The elastic net approach closely follows that implemented in
+        the glmnet package in R.  The penalty is a combination of L1
+        and L2 penalties.
+
+        The function that is minimized is: ..math::
+
+            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+
+        where RSS is the usual regression sum of squares, n is the
+        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
+        norms.
+
+        Post-estimation results are based on the same data used to
+        select variables, hence may be subject to overfitting biases.
+
+        The elastic_net method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations
+        L1_wt  : float
+            Must be in [0, 1].  The L1 penalty has weight L1_wt and the
+            L2 penalty has weight 1 - L1_wt.
+        cnvrg_tol : float
+            Convergence threshold for line searches
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+
+        References
+        ----------
+        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
+        generalized linear models via coordinate descent.  Journal of
+        Statistical Software 33(1), 1-22 Feb 2010.
+        """
+
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularied must be elastic_net")
+
+        # Set default parameters.
+        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
+
+        # If a scale parameter is passed in, the non-profile
+        # likelihood (residual sum of squares divided by -2) is used,
+        # otherwise the profile likelihood is used.
+        if profile_scale:
+            loglike_kwds = {}
+            score_kwds = {}
+            hess_kwds = {}
+        else:
+            loglike_kwds = {"scale": 1}
+            score_kwds = {"scale": 1}
+            hess_kwds = {"scale": 1}
+
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              start_params=start_params,
+                              loglike_kwds=loglike_kwds,
+                              score_kwds=score_kwds,
+                              hess_kwds=hess_kwds,
+                              refit=refit,
+                              **defaults)
+
 
 class GLSAR(GLS):
     __doc__ = """

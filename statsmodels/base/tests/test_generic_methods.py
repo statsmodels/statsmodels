@@ -120,6 +120,7 @@ class CheckGenericMixin(object):
         assert_allclose(fitted, res.predict(), rtol=1e-12)
 
     def test_predict_types(self):
+
         res = self.results
         # squeeze to make 1d for single regressor test case
         p_exog = np.squeeze(np.asarray(res.model.exog[:2]))
@@ -141,6 +142,10 @@ class CheckGenericMixin(object):
             res.predict(p_exog.tolist())
             res.predict(p_exog[0].tolist())
         else:
+
+            import pandas as pd
+            from pandas.util.testing import assert_series_equal
+
             fitted = res.fittedvalues[:2]
             assert_allclose(fitted, res.predict(p_exog), rtol=1e-12)
             # this needs reshape to column-vector:
@@ -152,11 +157,27 @@ class CheckGenericMixin(object):
             assert_allclose(fitted[:1], res.predict(p_exog[0]),
                             rtol=1e-12)
 
-            # predict doesn't preserve DataFrame, e.g. dot converts to ndarray
-#             import pandas
-#             predicted = res.predict(pandas.DataFrame(p_exog))
-#             assert_(isinstance(predicted, pandas.DataFrame))
-#             assert_allclose(predicted, fitted, rtol=1e-12)
+            exog_index = range(len(p_exog))
+            predicted = res.predict(p_exog)
+
+            if p_exog.ndim == 1:
+                predicted_pandas = res.predict(pd.Series(p_exog, index=exog_index))
+
+            else:
+                predicted_pandas = res.predict(pd.DataFrame(p_exog, index=exog_index))
+
+            if predicted.ndim == 1:
+
+                assert_(isinstance(predicted_pandas, pd.Series))
+
+                predicted_expected = pd.Series(predicted, index=exog_index)
+                assert_series_equal(predicted_expected, predicted_pandas)
+
+            else:
+                assert_(isinstance(predicted_pandas, pd.DataFrame))
+
+                predicted_expected = pd.DataFrame(predicted, index=exog_index)
+                assert_(predicted_expected.equals(predicted_pandas))
 
 
 #########  subclasses for individual models, unchanged from test_shrink_pickle

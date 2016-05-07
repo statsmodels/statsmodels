@@ -51,6 +51,10 @@ class RemoveDataPickle(object):
         self.l_max = 20000
 
     def test_remove_data_pickle(self):
+
+        import pandas as pd
+        from pandas.util.testing import assert_series_equal
+
         if winoldnp:
             raise SkipTest
         results = self.results
@@ -72,7 +76,15 @@ class RemoveDataPickle(object):
         #remove data arrays, check predict still works
         results.remove_data()
         pred2 = results.predict(xf, **pred_kwds)
-        np.testing.assert_equal(pred2, pred1)
+
+        if isinstance(pred1, pd.Series) and isinstance(pred2, pd.Series):
+            assert_series_equal(pred1, pred2)
+
+        elif isinstance(pred1, pd.DataFrame) and isinstance(pred2, pd.DataFrame):
+            assert_(pred1.equals(pred2))
+
+        else:
+            np.testing.assert_equal(pred2, pred1)
 
         #pickle, unpickle reduced array
         res, l = check_pickle(results._results)
@@ -86,7 +98,15 @@ class RemoveDataPickle(object):
 
 
         pred3 = results.predict(xf, **pred_kwds)
-        np.testing.assert_equal(pred3, pred1)
+
+        if isinstance(pred1, pd.Series) and isinstance(pred3, pd.Series):
+            assert_series_equal(pred1, pred3)
+
+        elif isinstance(pred1, pd.DataFrame) and isinstance(pred3, pd.DataFrame):
+            assert_(pred1.equals(pred3))
+
+        else:
+            np.testing.assert_equal(pred3, pred1)
 
     def test_remove_data_docstring(self):
         assert_(self.results.remove_data.__doc__ is not None)

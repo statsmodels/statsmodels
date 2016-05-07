@@ -24,12 +24,14 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=2.6
+    - dateutil=
     - NUMPY="1.6.2=py26_4"
     - SCIPY="0.11.0=np16py26_3"
     - MATPLOTLIB=1.2
   - python: 2.7
     env:
     - PYTHON=2.7
+    - dateutil=
     - NUMPY=1.7
     - SCIPY=0.12
     - OPTIONAL="mkl mkl-rt libgfortran=1.0"
@@ -37,6 +39,7 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.3
+    - dateutil=
     - NUMPY=1.8
     - SCIPY=0.13
     - MATPLOTLIB=1.3
@@ -44,6 +47,7 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.4
+    - dateutil=
     - NUMPY=1.9
     - SCIPY=0.14
     - PANDAS=0.14
@@ -52,10 +56,19 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=2.7
+    - dateutil=
     - NUMPY=
     - SCIPY=
     - USEMPL=false
     - PANDAS=
+  - python: 2.7
+    env:
+    - PYTHON=3.5
+    - python-dateutil=
+    - NUMPY=
+    - SCIPY=
+    - PANDAS=
+    - MATPLOTLIB=1.4
 
 notifications:
   email:
@@ -91,7 +104,7 @@ before_install:
 
 # Install packages
 install:
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} dateutil nose pip pyyaml setuptools
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pip pyyaml setuptools
   - source activate statsmodels-test
   - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
   - python setup.py install

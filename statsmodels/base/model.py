@@ -3,6 +3,7 @@ from statsmodels.compat.python import iterkeys, lzip, range, reduce
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
@@ -735,10 +736,14 @@ class Results(object):
 
         Returns
         -------
-        prediction : ndarray or pandas.Series
+        prediction : ndarray, pandas.Series or pandas.DataFrame
             See self.model.predict
 
         """
+        import pandas as pd
+
+        exog_index = exog.index if _is_using_pandas(exog, None) else None
+
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
             exog = dmatrix(self.model.data.design_info.builder,
@@ -751,7 +756,22 @@ class Results(object):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
-        return self.model.predict(self.params, exog, *args, **kwargs)
+        predict_results = self.model.predict(self.params, exog, *args, **kwargs)
+
+        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
+
+            if predict_results.ndim == 1:
+                return pd.Series(predict_results, index=exog_index)
+            else:
+                return pd.DataFrame(predict_results, index=exog_index)
+
+        else:
+
+            return predict_results
+
+
+    def summary(self):
+        pass
 
 
 #TODO: public method?
@@ -1689,10 +1709,20 @@ class LikelihoodModelResults(Results):
         Not fully tested for time series models, tsa, and might delete too much
         for prediction or not all that would be possible.
 
-        The list of arrays to delete is maintained as an attribute of the
-        result and model instance, except for cached values. These lists could
-        be changed before calling remove_data.
+        The lists of arrays to delete are maintained as attributes of
+        the result and model instance, except for cached values. These
+        lists could be changed before calling remove_data.
 
+        The attributes to remove are named in:
+
+        model._data_attr : arrays attached to both the model instance
+            and the results instance with the same attribute name.
+
+        result.data_in_cache : arrays that may exist as values in
+            result._cache (TODO : should privatize name)
+
+        result._data_attr_model : arrays attached to the model
+            instance but not to the results instance
         '''
         def wipe(obj, att):
             #get to last element in attribute path
@@ -1709,8 +1739,9 @@ class LikelihoodModelResults(Results):
             except AttributeError:
                 pass
 
+        model_only = ['model.' + i for i in getattr(self, "_data_attr_model", [])]
         model_attr = ['model.' + i for i in self.model._data_attr]
-        for att in self._data_attr + model_attr:
+        for att in self._data_attr + model_attr + model_only:
             #print('removing', att)
             wipe(self, att)
 
