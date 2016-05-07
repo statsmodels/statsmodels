@@ -1,111 +1,132 @@
 import numpy as np
 from scipy.stats import multivariate_normal
-from ..statespace.representation import Representation
-from ..statespace.kalman_filter import KalmanFilter
+from statsmodels.tsa.statespace.reprepresentation import Representation
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 
 class KimFilter(object):
     '''
     Kim Filter
     '''
     
-    def __init__(self, k_endog, k_states, k_regimes, endog=None,
-            regime_switch_probs=None, k_posdef=None, tolerance=1e-19,
-            kalman_filter_classes=None, results_class=None, **kwargs):
+    def __init__(self, k_endog, k_states, k_regimes, dtype=np.float64,
+            loglikelihood_burn=0, designs=None, obs_intercepts=None,
+            obs_covs=None, transitions=None, state_intercepts=None,
+            selections=None, state_covs=None, regime_switch_probs=None,
+            **kwargs):
 
         if k_regimes == 1:
             raise ValueError('Only multiple regimes are available.'
                     'Consider using regular KalmanFilter.')
         
+        self._k_endog = k_endog
+        self._k_states = k_states
         self._k_regimes = k_regimes
+        self._dtype = dtype
+        self._loglikelihood_burn = loglikelihood_burn
 
-        if endog is not None:
-            self.bind(endog)
+        designs = self._prepare_data_for_regimes(designs, 3)
+        obs_intercepts = self._prepare_data_for_regimes(obs_intercepts, 2)
+        obs_covs = self._prepare_data_for_regimes(obs_covs, 3)
+        transitions = self._prepare_data_for_regimes(transitions, 3)
+        state_intercepts = self._prepare_data_for_regimes(state_intercepts, 2)
+        selections = self._prepare_data_for_regimes(selections, 3)
+        state_covs = self._prepare_data_for_regimes(state_covs, 3)
+
+        # Kalman filters for each regime 
+        
+        kwargs['alternate_timing'] = True
+        self._regime_kalman_filters = [KalmanFilter(k_endog, k_states,
+                dtype=dtype, loglikelihood_burn=loglikelihood_burn,
+                design=designs[i], obs_intercept=obs_intercepts[i],
+                obs_cov=obs_covs[i], transition=transitions[i],
+                state_intercept=state_intercepts[i], selection=selections[i],
+                state_cov=state_covs[i], **kwargs) for i in range(k_regimes)]
 
         if regime_switch_probs is not None:
+            regime_switch_probs = np.asarray(regime_switch_probs, dtype=dtype)
             if regime_switch_probs.shape != (k_regimes, k_regimes):
                 raise ValueError('Regime switching matrix should have shape'
                         ' (k_regimes, k_regimes)')
-            if not self._is_stochastic(regime_switch_probs):
+            if not self._is_right_stochastic(regime_switch_probs):
                 raise ValueError(
                         'Provided regime switching matrix is not stochastic')
             self._regime_switch_probs = regime_switch_probs
         else:
-            self._regime_switch_probs = None
-
-        # Kalman filters for each regime
-        # Diffuse initialization ???
-        self._regime_kalman_filters = [KalmanFilter(k_endog, k_states,
-            k_posdef=k_posdef, tolerance=tolerance,
-            kalman_filter_classes=kalman_filter_classes,
-            **kwargs) for _ in range(k_regimes)]
-
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_filter_timing(alternate_timing=True)
-
+            self._regime_switch_probs = None 
+        
+        self._nobs = None
         self.initial_regime_probs = None
 
-    def _is_stochastic(self, matrix):
+    def _prepare_data_for_regimes(self, data, per_regime_dims):
+
+        k_regimes = self._k_regimes
+
+        if data is None:
+            return [None for _ in range(k_regimes)]
         
-        if (matrix < 0).max() != False:
+        data = np.asarray(data, dtype=self._dtype)
+
+        if len(data.shape) == per_regime_dims:
+            return [data for _ in range(k_regimes)]
+
+        if data.shape[0] != k_regimes:
+            raise ValueError('First dimension is not k_regimes')
+
+        return data
+
+    def _is_right_stochastic(self, matrix):
+        
+        if np.any(matrix < 0):
             return False
-        if (matrix.sum(axis=1) == 1).min() == False:
+        if not np.all(matrix.sum(axis=1) == 1):
             return False
         return True
 
-    def _initialize_filter(self, filter_method=None, inversion_method=None,
-            stability_method=None, conserve_memory=None, tolerance=None):
+    def _initialize_filter(self, **kwargs):
         
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter._initialize_filter(filter_method=filter_method,
-                    inversion_method=inversion_method,
-                    stability_method=stability_method,
-                    conserve_memory=conserve_memory, tolerance=tolerance,
-                    filter_timing=1)
-
-    def set_filter_method(self, filter_method=None, **kwargs):
+        kwargs['filter_timing'] = 1
 
         for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_filter_method(filter_method=filter_method,
-                    **kwargs)
+            regime_filter._initialize_filter(**kwargs)
 
-    def set_inversion_method(self, inversion_method=None, **kwargs):
-
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_inversion_method(
-                    inversion_method=inversion_method, **kwargs)
-
-    def set_stability_method(self, stability_method=None, **kwargs):
+    def set_filter_method(self, **kwargs):
 
         for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_stability_method(
-                    stability_method=stability_method, **kwargs)
+            regime_filter.set_filter_method(**kwargs)
 
-    def set_conserve_memory(self, conserve_memory=None, **kwargs):
+    def set_inversion_method(self, **kwargs):
 
         for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_conserve_memory(conserve_memory=conserve_memory,
-                    **kwargs)
+            regime_filter.set_inversion_method(**kwargs)
+
+    def set_stability_method(self, **kwargs):
+
+        for regime_filter in self._regime_kalman_filters:
+            regime_filter.set_stability_method(**kwargs)
+
+    def set_conserve_memory(self, **kwargs):
+
+        for regime_filter in self._regime_kalman_filters:
+            regime_filter.set_conserve_memory(**kwargs)
 
     def bind(self, endog):
 
         for regime_filter in self._regime_kalman_filters:
             regime_filter.bind(endog)
 
-        self._endog = endog
         self._nobs = endog.shape[1]
 
     def initialize_known(self, initial_states, initial_state_covs):
         
-        if (initial_states.shape[0] != self._k_regimes and \
-                initial_states.shape[0] != 1) or \
-                (initial_state_covs.shape[0] != self._k_regimes and \
-                initial_state_covs.shape[0] != 1):
-            raise ValueError(
-                    'One or k_regimes initial parameters should be provided')
-
+        k_regimes = self._k_regimes
         regime_filters = self._regime_kalman_filters
         
-        for i in range(self._k_regimes):
+        initial_states = self._prepare_data_for_regimes(k_regimes,
+                initial_states, 1)
+        initial_state_covs = self._prepare_data_for_regimes(k_regimes,
+                initial_state_covs, 2)
+        
+        for i in range(k_regimes):
             regime_filters[i].initialize_known(initial_states[i],
                     initial_state_covs[i])
 
@@ -117,11 +138,34 @@ class KimFilter(object):
     def initialize_known_regime_probs(self, initial_regime_probs):
         
         self.initial_regime_probs = initial_regime_probs
+    
+    def initialize_uniform_regime_probs(self):
+        
+        k_regimes = self._k_regimes
+        self.initial_regime_probs = np.ones((k_regimes,), dtype=self._dtype) \
+                / k_regimes
 
     def initialize_stationary_regime_probs(self):
-        #TODO:implement stationary distribution
+        
+        if self._regime_switch_probs is None:
+            raise RuntimeError('No regime switching matrix provided')
+        
+        eigenvalues, eigenvectors = np.linalg.eig(self._regime_switch_probs.T)
+        one_eigenvalue_indices = np.where(eigenvalues == 1)[0]
 
-        self.initial_regime_probs = np.ones((self._k_regimes,))/self._k_regimes
+        non_uniq_stat_distr_message = 'Regime switching chain doesn\'t have ' \
+                'a unique stationary distribution'
+
+        if one_eigenvalue_indices.shape[0] != 1:
+            raise RuntimeError(non_uniq_stat_distr_message)
+
+        candidate_eigenvector = eigenvectors[:, one_eigenvalue_indices[0]]
+
+        if not np.all(candidate_eigenvector >= 0):
+            raise RuntimeError(non_uniq_stat_distr_message)
+
+        self.initial_regime_probs = candidate_eigenvector / \
+                np.linalg.norm(candidate_eigenvector)
 
     def _initialize_filters(self, filter_method=None, inversion_method=None,
             stability_method=None, conserve_memory=None, tolerance=None,
@@ -132,9 +176,9 @@ class KimFilter(object):
         for regime_filter in self._regime_kalman_filters:
             prefix = regime_filter._initialize_filter(
                     filter_method=filter_method,
-                    inversion_method=inversion_method, stability_method,
-                    conserve_memory=conserve_memory, tolerance=tolerance,
-                    filter_timing=1)[0]
+                    inversion_method=inversion_method,
+                    stability_method=stability_method,
+                    conserve_memory=conserve_memory, tolerance=tolerance)[0]
             kfilters.append(regime_filter._kalman_filters[prefix])
             regime_filter._initialize_state(prefix=prefix,
                     complex_step=complex_step)
@@ -202,7 +246,7 @@ class KimFilter(object):
         else:
             regime_probs = filtered_curr_regime_probs
             
-        np.multiply(self.regime_switch_probs,
+        np.multiply(self._regime_switch_probs,
                 regime_probs.reshape(-1, 1),
                 out=predicted_prev_and_curr_regime_probs)
         
@@ -279,56 +323,69 @@ class KimFilter(object):
                 filtered_curr_regime_probs[curr_regime],
                 out=curr_filter.filtered_state_cov[:, :, t])
 
-    def filter(self, filter_method=None, inversion_method=None,
-            stability_method=None, conserve_memory=None, tolerance=None,
-            complex_step=False):
-
-        nobs = self.nobs
-        k_regimes = self._k_regimes
+    def filter(self, **kwargs):
+        
         k_states = self._k_states
+        k_regimes = self._k_regimes
+        dtype = self._dtype
 
-        kfilters = self._initialize_filters(filter_method=filter_method,
-                inversion_method=inversion_method,
-                stability_method=stability_method,
-                conserve_memory=conserve_memory, tolerance=tolerance,
-                complex_step=complex_step) 
+        if self._nobs is None:
+            raise RuntimeError(
+                    'No endog data binded. Consider using bind() first')
         
-        self.obs_likelihoods = np.zeros((nobs,))
+        nobs = self._nobs
+                
+        kfilters = self._initialize_filters(**kwargs) 
         
+        self.obs_likelihoods = np.zeros((nobs,), dtype=dtype)
+
+        if self._regime_switch_probs is None:
+            raise RuntimeError('No regime switching matrix provided')
+
         if self.initial_regime_probs is None:
-            self.initialize_stationary_regime_probs()
+            try:
+                self.initialize_stationary_regime_probs()
+            except RuntimeError:
+                self.initialize_uniform_regime_probs()
 
         # Allocation of buffers
 
-        state_buffer = np.zeros((k_states,))
-        state_cov_buffer = np.zeros((k_states, k_states))
+        state_buffer = np.zeros((k_states,), dtype=dtype)
+        state_cov_buffer = np.zeros((k_states, k_states), dtype=dtype)
         
-        state_batteries = np.zeros((k_regimes, k_regimes, k_states))
+        state_batteries = np.zeros((k_regimes, k_regimes, k_states),
+                dtype=dtype)
         state_cov_batteries = np.zeros((k_regimes, k_regimes, k_states,
-                k_states))
+                k_states), dtype=dtype)
         
-        forecast_error_batteries = np.zeros((k_regimes, k_regimes, k_states))
+        forecast_error_batteries = np.zeros((k_regimes, k_regimes, k_states),
+                dtype=dtype)
         forecast_error_cov_batteries = np.zeros((k_regimes, k_regimes,
-                k_states, k_states))
+                k_states, k_states), dtype=dtype)
 
-        filtered_curr_regime_probs = np.zeros((k_regimes,))
-        predicted_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes))
-        prev_and_curr_regime_cond_obs_probs = np.zeros((k_regimes, k_regimes))
+        filtered_curr_regime_probs = np.zeros((k_regimes,), dtype=dtype)
+        predicted_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes),
+                dtype=dtype)
+        prev_and_curr_regime_cond_obs_probs = np.zeros((k_regimes, k_regimes),
+                dtype=dtype)
         predicted_obs_prev_and_curr_regime_probs = np.zeros((k_regimes,
-                k_regimes))
-        filtered_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes))        
+                k_regimes), dtype=dtype)
+        filtered_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes),
+                dtype=dtype)        
         
-        weighted_states = np.zeros((k_regimes, k_states))
-        weighted_states_sum = np.zeros((k_states,))
-        state_biases = np.zeros((k_regimes, k_states, 1))
-        transposed_state_biases = np.zeros((k_regimes, 1, k_states))
-        state_bias_sqrs = np.zeros((k_regimes, k_states, k_states))
+        weighted_states = np.zeros((k_regimes, k_states), dtype=dtype)
+        weighted_states_sum = np.zeros((k_states,), dtype=dtype)
+        state_biases = np.zeros((k_regimes, k_states, 1), dtype=dtype)
+        transposed_state_biases = np.zeros((k_regimes, 1, k_states),
+                dtype=dtype)
+        state_bias_sqrs = np.zeros((k_regimes, k_states, k_states),
+                dtype=dtype)
         state_covs_and_state_bias_sqrs = np.zeros((k_regimes, k_states,
-                k_states))
+                k_states), dtype=dtype)
         weighted_state_covs_and_state_bias_sqrs = np.zeros((k_regimes,
-                k_states, k_states))
+                k_states, k_states), dtype=dtype)
         weighted_state_covs_and_state_bias_sqrs_sum = np.zeros((k_states,
-                k_states))
+                k_states), dtype=dtype)
 
         for t in range(self.nobs):
             
@@ -361,10 +418,17 @@ class KimFilter(object):
                         weighted_state_covs_and_state_bias_sqrs,
                         weighted_state_covs_and_state_bias_sqrs_sum)
     
-    def loglike(self, **kwargs):
+    def loglike(self, loglikelihood_burn=0):
+        
+        loglikelihood_burn = max(loglikelihood_burn, self._loglikelihood_burn)
 
-        return np.log(self.obs_likelihoods).sum()
+        return np.log(self.obs_likelihoods[loglikelihood_burn:]).sum()
     
-    def loglikeobs(self, **kwargs):
+    def loglikeobs(self, loglikelihood_burn=0):
+        
+        loglikelihood_burn = max(loglikelihood_burn, self._loglikelihood_burn)
 
-        return np.log(self.obs_likelihoods)
+        loglikelihoods = np.log(self.obs_likelihoods) 
+        loglikelihoods[:loglikelihood_burn] = 0
+
+        return loglikelihoods
