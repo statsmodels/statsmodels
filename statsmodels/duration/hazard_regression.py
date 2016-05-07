@@ -4,6 +4,7 @@ import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
 from scipy.optimize import brent
 from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.compat.numpy import np_new_unique
 
 """
 Implementation of proportional hazards regression models for duration
@@ -322,8 +323,10 @@ class PHReg(model.LikelihoodModel):
             self.offset = np.asarray(self.offset)
 
         self.surv = PHSurvivalTime(self.endog, self.status,
-                                   self.exog, self.strata,
-                                   self.entry, self.offset)
+                                    self.exog, self.strata,
+                                    self.entry, self.offset)
+        self.nobs = len(self.endog)
+        self.groups = None
 
         # TODO: not used?
         self.missing = missing
@@ -444,46 +447,36 @@ class PHReg(model.LikelihoodModel):
         return results
 
 
-    def fit_regularized(self, method="coord_descent", maxiter=100,
-                        alpha=0., L1_wt=1., start_params=None,
-                        cnvrg_tol=1e-7, zero_tol=1e-8, **kwargs):
+    def fit_regularized(self, method="elastic_net", alpha=0.,
+                        start_params=None, refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
         Parameters
         ----------
         method :
-            Only the coordinate descent algorithm is implemented.
-        maxiter : integer
-            The maximum number of iteration cycles (an iteration cycle
-            involves running coordinate descent on all variables).
+            Only the `elastic_net` approach is currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        L1_wt : scalar
-            The fraction of the penalty given to the L1 penalty term.
-            Must be between 0 and 1 (inclusive).  If 0, the fit is
-            a ridge fit, if 1 it is a lasso fit.
         start_params : array-like
             Starting values for `params`.
-        cnvrg_tol : scalar
-            If `params` changes by less than this amount (in sup-norm)
-            in once iteration cycle, the algorithm terminates with
-            convergence.
-        zero_tol : scalar
-            Any estimated coefficient smaller than this value is
-            replaced with zero.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
+
 
         Returns
         -------
-        A PHregResults object, of the same type returned by `fit`.
+        A results object.
 
         Notes
         -----
-        The penalty is the"elastic net" penalty, which
-        is a convex combination of L1 and L2 penalties.
+        The penalty is the ``elastic net`` penalty, which is a
+        combination of L1 and L2 penalties.
 
         The function that is minimized is: ..math::
 
@@ -493,121 +486,35 @@ class PHReg(model.LikelihoodModel):
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
+
+        The elastic_net method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations
+        L1_wt  : float
+            Must be in [0, 1].  The L1 penalty has weight L1_wt and the
+            L2 penalty has weight 1 - L1_wt.
+        cnvrg_tol : float
+            Convergence threshold for line searches
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
         """
 
-        k_exog = self.exog.shape[1]
-        n_exog = self.exog.shape[0]
+        from statsmodels.base.elastic_net import fit_elasticnet
 
-        if np.isscalar(alpha):
-            alpha = alpha * np.ones(k_exog, dtype=np.float64)
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularied must be elastic_net")
 
-        # regularization cannot be used with groups
-        self.groups = None
+        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
 
-        # Define starting params
-        if start_params is None:
-            params = np.zeros(k_exog, dtype=np.float64)
-        else:
-            params = start_params.copy()
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              start_params=start_params,
+                              refit=refit,
+                              **defaults)
 
-        # Maybe could be a shallow copy, but just in case...
-        import copy
-        surv = copy.deepcopy(self.surv)
-
-        # This is the base offset, onto which the effects of
-        # constrained variables are added.
-        if self.offset is None:
-            offset_s_base = [np.zeros(len(x)) for x in surv.stratum_rows]
-            surv.offset_s = [x.copy() for x in offset_s_base]
-        else:
-            offset_s_base = [x.copy() for x in surv.offset_s]
-
-        # Create a model instance for optimizing a single variable
-        model_1var = copy.deepcopy(self)
-        model_1var.surv = surv
-        model_1var.ties = self.ties
-
-        # All the negative penalized loglikeihood functions.
-        def gen_npfuncs(k):
-            def nploglike(params):
-                pen = alpha[k]*((1 - L1_wt)*params**2/2 + L1_wt*np.abs(params))
-                return -model_1var.loglike(np.r_[params]) / n_exog + pen
-            def npscore(params):
-                pen_grad = alpha[k]*(1 - L1_wt)*params
-                return -model_1var.score(np.r_[params])[0] / n_exog + pen_grad
-            def nphess(params):
-                pen_hess = alpha[k]*(1 - L1_wt)
-                return -model_1var.hessian(np.r_[params])[0,0] / n_exog + pen_hess
-            return nploglike, npscore, nphess
-        nploglike_funcs = [gen_npfuncs(k) for k in range(len(params))]
-
-        # 1-dimensional exog's
-        exog_s = []
-        for k in range(k_exog):
-            ex = [x[:, k][:, None] for x in surv.exog_s]
-            exog_s.append(ex)
-
-        converged = False
-        btol = 1e-8
-        params_zero = np.zeros(len(params), dtype=bool)
-
-        for itr in range(maxiter):
-
-            # Sweep through the parameters
-            params_save = params.copy()
-            for k in range(k_exog):
-
-                # Under the active set method, if a parameter becomes
-                # zero we don't try to change it again.
-                if params_zero[k]:
-                    continue
-
-                # Set exog to include only the variable whose effect
-                # is being estimated.
-                surv.exog_s = exog_s[k]
-
-                # Set the offset to account for the variables that are
-                # being held fixed.
-                params0 = params.copy()
-                params0[k] = 0
-                for stx in range(self.surv.nstrat):
-                    v = np.dot(self.surv.exog_s[stx], params0)
-                    surv.offset_s[stx] = offset_s_base[stx] + v
-
-                params[k] = _opt_1d(nploglike_funcs[k], params[k],
-                                    alpha[k]*L1_wt, tol=btol)
-
-                # Update the active set
-                if itr > 0 and np.abs(params[k]) < zero_tol:
-                    params_zero[k] = True
-                    params[k] = 0.
-
-            # Check for convergence
-            pchange = np.max(np.abs(params - params_save))
-            if pchange < cnvrg_tol:
-                converged = True
-                break
-
-        # Set approximate zero coefficients to be exactly zero
-        params *= np.abs(params) >= zero_tol
-
-        # Fit the reduced model to get standard errors and other
-        # post-estimation results.
-        ii = np.flatnonzero(params)
-        cov = np.zeros((k_exog, k_exog), dtype=np.float64)
-        if len(ii) > 0:
-            model = self.__class__(self.endog, self.exog[:, ii],
-                                   status=self.status, entry=self.entry,
-                                   strata=self.strata, offset=self.offset,
-                                   ties=self.ties, missing=self.missing)
-            rslt = model.fit()
-            cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
-
-        rfit = PHRegResults(self, params, cov_params=cov)
-        rfit.converged = converged
-        rfit.regularized = True
-
-        return rfit
 
     def loglike(self, params):
         """
@@ -1353,8 +1260,8 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        params : arrayh-like
-            The model proportional hazards model parameters.
+        params : array-like
+            The proportional hazards model parameters.
 
         Returns
         -------
@@ -1364,7 +1271,7 @@ class PHReg(model.LikelihoodModel):
         -----
         The distributions are obtained from a simple discrete estimate
         of the survivor function that puts all mass on the observed
-        failure times wihtin a stratum.
+        failure times within a stratum.
         """
 
         # TODO: this returns a Python list of rv_discrete objects, so
@@ -1399,8 +1306,8 @@ class PHReg(model.LikelihoodModel):
 
             # The individual survival functions.
             usurv = np.exp(-ichaz)
-            usurv = np.concatenate((usurv, np.zeros((usurv.shape[0], 1))),
-                                   axis=1)
+            z = np.zeros((usurv.shape[0], 1))
+            usurv = np.concatenate((usurv, z), axis=1)
 
             # The individual survival probability masses.
             probs = -np.diff(usurv, 1)
@@ -1412,15 +1319,15 @@ class PHReg(model.LikelihoodModel):
         mxc = max([x.shape[1] for x in xk])
         for k in range(self.surv.nstrat):
             if xk[k].shape[1] < mxc:
-                xk1 = np.zeros((xk.shape[0], mxc))
-                pk1 = np.zeros((pk.shape[0], mxc))
-                xk1[:, -mxc:] = xk
-                pk1[:, -mxc:] = pk
+                xk1 = np.zeros((xk[k].shape[0], mxc))
+                pk1 = np.zeros((pk[k].shape[0], mxc))
+                xk1[:, 0:xk[k].shape[1]] = xk[k]
+                pk1[:, 0:pk[k].shape[1]] = pk[k]
                 xk[k], pk[k] = xk1, pk1
 
-        xka = np.nan * np.zeros((len(self.endog), mxc), dtype=np.float64)
+        # Put the support points and probabilities into single matrices
+        xka = np.nan * np.ones((len(self.endog), mxc))
         pka = np.ones((len(self.endog), mxc), dtype=np.float64) / mxc
-
         for stx in range(self.surv.nstrat):
             ix = self.surv.stratum_rows[stx]
             xka[ix, :] = xk[stx]
@@ -1462,13 +1369,16 @@ class PHRegResults(base.LikelihoodModelResults):
     statsmodels.LikelihoodModelResults
     '''
 
-    def __init__(self, model, params, cov_params, covariance_type="naive"):
+    def __init__(self, model, params, cov_params, scale=1., covariance_type="naive"):
+
+        # There is no scale parameter, but we need it for
+        # meta-procedures that work with results.
 
         self.covariance_type = covariance_type
         self.df_resid = model.df_resid
         self.df_model = model.df_model
 
-        super(PHRegResults, self).__init__(model, params,
+        super(PHRegResults, self).__init__(model, params, scale=1.,
            normalized_cov_params=cov_params)
 
     @cache_readonly
@@ -1523,14 +1433,9 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         Descriptive statistics of the groups.
         """
-        # better handled with np.unique(..., return_counts=True)
-        gsize = {}
-        for x in groups:
-            if x not in gsize:
-                gsize[x] = 0
-            gsize[x] += 1
-        gsize = np.asarray(list(gsize.values()))
-        return gsize.min(), gsize.max(), gsize.mean(), len(gsize)
+        gsizes = np_new_unique(groups, return_counts=True)
+        gsizes = gsizes[1]
+        return gsizes.min(), gsizes.max(), gsizes.mean(), len(gsizes)
 
     @cache_readonly
     def weighted_covariate_averages(self):
@@ -1816,53 +1721,3 @@ class rv_discrete_float(object):
         """
 
         return np.sqrt(self.var())
-
-
-def _opt_1d(funcs, start, L1_wt, tol):
-    """
-    Optimize a L1-penalized smooth one-dimensional function of a
-    single variable.
-
-    Parameters
-    ----------
-    funcs : tuple of functions
-        funcs[0] is the objective function to be minimized.  funcs[1]
-        and funcs[2] are, respectively, the first and second
-        derivatives of the smooth part of funcs[0] (i.e. excluding the
-        L1 penalty).
-    start : real
-        A starting value for the function argument
-    L1_wt : non-negative real
-        The weight for the L1 penalty function.
-    tol : non-negative real
-        A convergence threshold.
-
-    Returns
-    -------
-    The argmin of the objective function.
-    """
-
-    # TODO: can we detect failures without calling funcs[0] twice?
-
-    x = start
-    f = funcs[0](x)
-
-    b = funcs[1](x)
-    c = funcs[2](x)
-    d = b - c*x
-
-    if L1_wt > np.abs(d):
-        return 0.
-    elif d >= 0:
-        x += (L1_wt - b) / c
-    elif d < 0:
-        x -= (L1_wt + b) / c
-
-    f1 = funcs[0](x)
-
-    # This is an expensive fall-back if the quadratic
-    # approximation is poor and sends us far off-course.
-    if f1 > f + 1e-10:
-        return brent(funcs[0], brack=(x-0.2, x+0.2), tol=tol)
-
-    return x

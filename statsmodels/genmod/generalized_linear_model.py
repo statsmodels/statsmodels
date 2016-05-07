@@ -269,6 +269,19 @@ class GLM(base.LikelihoodModel):
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
+        self._setup_binomial()
+
+        # Construct a combined offset/exposure term.  Note that
+        # exposure has already been logged if present.
+        offset_exposure = 0.
+        if hasattr(self, 'offset'):
+            offset_exposure = self.offset
+        if hasattr(self, 'exposure'):
+            offset_exposure = offset_exposure + self.exposure
+        self._offset_exposure = offset_exposure
+
+        self.scaletype = None
+
 
     def initialize(self):
         """
@@ -347,8 +360,9 @@ class GLM(base.LikelihoodModel):
         expval = self.family.link.inverse(lin_pred)
         if scale is None:
             scale = self.estimate_scale(expval)
-        return self.family.loglike(expval, self.endog, self.freq_weights,
-                                   scale)
+        llf = self.family.loglike(self.endog, expval, self.freq_weights,
+                                  scale)
+        return llf
 
     def score_obs(self, params, scale=None):
         """score first derivative of the loglikelihood for each observation.
@@ -488,6 +502,7 @@ class GLM(base.LikelihoodModel):
             oim_factor /= scale
 
         return oim_factor
+
 
     def hessian(self, params, scale=None, observed=True):
         """Hessian, second derivative of loglikelihood function
@@ -661,7 +676,7 @@ class GLM(base.LikelihoodModel):
     def estimate_tweedie_power(self, mu, method='brentq', low=1.01, high=5.):
         """
         Tweedie specific function to estimate scale and the variance parameter.
-        The variance parameter is also referred to as p, xi, or shape.        
+        The variance parameter is also referred to as p, xi, or shape.
 
         Parameters
         ----------
@@ -733,7 +748,7 @@ class GLM(base.LikelihoodModel):
 
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
-            offset = getattr(self, 'offset')
+            offset = self.offset
         elif offset is None:
             offset = 0.
 
@@ -744,7 +759,7 @@ class GLM(base.LikelihoodModel):
         # Use fit exposure if appropriate
         if exposure is None and exog is None and hasattr(self, 'exposure'):
             # Already logged
-            exposure = getattr(self, 'exposure')
+            exposure = self.exposure
         elif exposure is None:
             exposure = 0.
         else:
@@ -805,7 +820,15 @@ class GLM(base.LikelihoodModel):
         else:
             raise ValueError("get_distribution not implemented for %s" % self.family.name)
 
-
+    def _setup_binomial(self):
+        # this checks what kind of data is given for Binomial.
+        # family will need a reference to endog if this is to be removed from
+        # preprocessing
+        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
+        if isinstance(self.family, families.Binomial):
+            tmp = self.family.initialize(self.endog, self.freq_weights)
+            self.endog = tmp[0]
+            self.n_trials = tmp[1]
 
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
@@ -858,25 +881,7 @@ class GLM(base.LikelihoodModel):
         -----
         This method does not take any extra undocumented ``kwargs``.
         """
-        # this checks what kind of data is given for Binomial.
-        # family will need a reference to endog if this is to be removed from
-        # preprocessing
-        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
-        if isinstance(self.family, families.Binomial):
-            tmp = self.family.initialize(self.endog, self.freq_weights)
-            self.endog = tmp[0]
-            self.n_trials = tmp[1]
-
         self.scaletype = scale
-
-        # Construct a combined offset/exposure term.  Note that
-        # exposure has already been logged if present.
-        offset_exposure = 0.
-        if hasattr(self, 'offset'):
-            offset_exposure = self.offset
-        if hasattr(self, 'exposure'):
-            offset_exposure = offset_exposure + self.exposure
-        self._offset_exposure = offset_exposure
 
         if method.lower() == "irls":
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
@@ -913,12 +918,12 @@ class GLM(base.LikelihoodModel):
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
 
-        self.mu = self.predict(rslt.params)
-        self.scale = self.estimate_scale(self.mu)
+        mu = self.predict(rslt.params)
+        scale = self.estimate_scale(mu)
 
         glm_results = GLMResults(self, rslt.params,
-                                 rslt.normalized_cov_params / self.scale,
-                                 self.scale,
+                                 rslt.normalized_cov_params / scale,
+                                 scale,
                                  cov_type=cov_type, cov_kwds=cov_kwds,
                                  use_t=use_t)
 
@@ -999,6 +1004,78 @@ class GLM(base.LikelihoodModel):
         return GLMResultsWrapper(glm_results)
 
 
+    def fit_regularized(self, method="elastic_net", alpha=0.,
+                        start_params=None, refit=False, **kwargs):
+        """
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method :
+            Only the `elastic_net` approach is currently implemented.
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        start_params : array-like
+            Starting values for `params`.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
+
+        Returns
+        -------
+        An array, or a GLMResults object of the same type returned by `fit`.
+
+        Notes
+        -----
+        The penalty is the ``elastic net`` penalty, which is a
+        combination of L1 and L2 penalties.
+
+        The function that is minimized is: ..math::
+
+            -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+
+        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
+
+        Post-estimation results are based on the same data used to
+        select variables, hence may be subject to overfitting biases.
+
+        The elastic_net method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations
+        L1_wt  : float
+            Must be in [0, 1].  The L1 penalty has weight L1_wt and the
+            L2 penalty has weight 1 - L1_wt.
+        cnvrg_tol : float
+            Convergence threshold for line searches
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+        """
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularied must be elastic_net")
+
+        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
+
+        result = fit_elasticnet(self, method=method,
+                                alpha=alpha,
+                                start_params=start_params,
+                                refit=refit,
+                                **defaults)
+
+        self.mu = self.predict(result.params)
+        self.scale = self.estimate_scale(self.mu)
+
+        return result
+
+
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
 
@@ -1055,7 +1132,6 @@ class GLM(base.LikelihoodModel):
         res._results.results_constrained = res_constr
         # TODO: the next is not the best. history should bin in results
         res._results.model.history = res_constr.model.history
-        res._results.mu = res_constr.mu
         return res
 
 
@@ -1155,7 +1231,6 @@ class GLMResults(base.LikelihoodModelResults):
         self.family = model.family
         self._endog = model.endog
         self.nobs = model.endog.shape[0]
-        self.mu = model.mu
         self._freq_weights = model.freq_weights
         if isinstance(self.family, families.Binomial):
             self._n_trials = self.model.n_trials
@@ -1171,7 +1246,9 @@ class GLMResults(base.LikelihoodModelResults):
         # for remove data and pickle without large arrays
         self._data_attr.extend(['results_constrained', '_freq_weights'])
         self.data_in_cache = getattr(self, 'data_in_cache', [])
-        self.data_in_cache.extend(['null'])
+        self.data_in_cache.extend(['null', 'mu'])
+        self._data_attr_model = getattr(self, '_data_attr_model', [])
+        self._data_attr_model.append('mu')
 
         # robust covariance
         from statsmodels.base.covtype import get_robustcov_results
@@ -1209,11 +1286,11 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_anscombe(self):
-        return self.family.resid_anscombe(self._endog, self.mu)
+        return self.family.resid_anscombe(self._endog, self.fittedvalues)
 
     @cache_readonly
     def resid_deviance(self):
-        return self.family.resid_dev(self._endog, self.mu)
+        return self.family.resid_dev(self._endog, self.fittedvalues)
 
     @cache_readonly
     def pearson_chi2(self):
@@ -1222,9 +1299,16 @@ class GLMResults(base.LikelihoodModelResults):
         chisqsum = np.sum(chisq)
         return chisqsum
 
+
     @cache_readonly
     def fittedvalues(self):
         return self.mu
+
+
+    @cache_readonly
+    def mu(self):
+        return self.model.predict(self.params)
+
 
     @cache_readonly
     def null(self):
@@ -1237,7 +1321,7 @@ class GLMResults(base.LikelihoodModelResults):
         if hasattr(model, 'exposure'):
             kwargs['exposure'] = model.exposure
         if len(kwargs) > 0:
-            return GLM(endog, exog, family=self.family, **kwargs).fit().mu
+            return GLM(endog, exog, family=self.family, **kwargs).fit().fittedvalues
         else:
             wls_model = lm.WLS(endog, exog,
                                weights=self._freq_weights * self._n_trials)

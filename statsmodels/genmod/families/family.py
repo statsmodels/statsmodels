@@ -1117,7 +1117,7 @@ class InverseGaussian(Family):
         -----
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) * 
+           resid\_dev_i = sign(Y_i - \mu_i) *
                           \sqrt {(Y_i - \mu_i)^2 / (Y_i * \mu_i^2)} / scale
         """
         return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2))/scale

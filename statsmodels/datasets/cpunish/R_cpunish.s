@@ -9,3 +9,7 @@ results <- summary.glm(m1)
 results
 results['coefficients']
 
+# Model with exposure
+m2 <- glm(EXECUTIONS ~ INCOME + PERPOVERTY + PERBLACK + LN_VC100k96 + SOUTH + DEGREE,
+    family=poisson, offset=rep(log(100), length(EXECUTIONS)))
+results2 <- summary.glm(m2)

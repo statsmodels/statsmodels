@@ -88,7 +88,7 @@ class CheckModelResultsMixin(object):
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                    self.res1.mu, self.res1.model.freq_weights, scale=1)
+                                                 self.res1.mu, self.res1.model.freq_weights, scale=1)
             aic = (-2*llf+2*(self.res1.df_model+1))/self.res1.nobs
         else:
             aic = self.res1.aic/self.res1.nobs
@@ -111,7 +111,7 @@ class CheckModelResultsMixin(object):
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                    self.res1.mu, self.res1.model.freq_weights, scale=1)
+                                                 self.res1.mu, self.res1.model.freq_weights, scale=1)
         else:
             llf = self.res1.llf
         assert_almost_equal(llf, self.res2.llf, self.decimal_loglike)
@@ -625,23 +625,24 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 #class TestGlmNegbinomial_nbinom(CheckModelResultsMixin):
 #    pass
 
-#NOTE: hacked together version to test poisson offset
+
 class TestGlmPoissonOffset(CheckModelResultsMixin):
     @classmethod
     def setupClass(cls):
-        from .results.results_glm import Cpunish
+        from .results.results_glm import Cpunish_offset
         from statsmodels.datasets.cpunish import load
+        cls.decimal_params = DECIMAL_4
+        cls.decimal_bse = DECIMAL_4
+        cls.decimal_aic_R = 3
         data = load()
         data.exog[:,3] = np.log(data.exog[:,3])
-        data.exog = add_constant(data.exog, prepend=False)
+        data.exog = add_constant(data.exog, prepend=True)
         exposure = [100] * len(data.endog)
         cls.data = data
         cls.exposure = exposure
         cls.res1 = GLM(data.endog, data.exog, family=sm.families.Poisson(),
                     exposure=exposure).fit()
-        cls.res1.params[-1] += np.log(100) # add exposure back in to param
-                                            # to make the results the same
-        cls.res2 = Cpunish()
+        cls.res2 = Cpunish_offset()
 
     def test_missing(self):
         # make sure offset is dropped correctly
@@ -1619,6 +1620,52 @@ def testTweediePowerEstimate():
     # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
     p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
+
+class TestRegularized(object):
+
+    def test_regularized(self):
+
+        import os
+        from . import glmnet_r_results
+
+        for dtype in "binomial", "poisson":
+
+            cur_dir = os.path.dirname(os.path.abspath(__file__))
+            data = np.loadtxt(os.path.join(cur_dir, "results", "enet_%s.csv" % dtype),
+                              delimiter=",")
+
+            endog = data[:, 0]
+            exog = data[:, 1:]
+
+            fam = {"binomial" : sm.families.Binomial,
+                   "poisson" : sm.families.Poisson}[dtype]
+
+            for j in range(9):
+
+                vn = "rslt_%s_%d" % (dtype, j)
+                r_result = getattr(glmnet_r_results, vn)
+                L1_wt = r_result[0]
+                alpha = r_result[1]
+                params = r_result[2:]
+
+                model = GLM(endog, exog, family=fam())
+                sm_result = model.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                # Agreement is OK, see below for further check
+                assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
+
+                # The penalized log-likelihood that we are maximizing.
+                def plf(params):
+                    llf = model.loglike(params) / len(endog)
+                    llf = llf - alpha * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    return llf
+
+                # Confirm that we are doing better than glmnet.
+                from numpy.testing import assert_equal
+                llf_r = plf(params)
+                llf_sm = plf(sm_result.params)
+                assert_equal(np.sign(llf_sm - llf_r), 1)
+
 
 
 if __name__=="__main__":
