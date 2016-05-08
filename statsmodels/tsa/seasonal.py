@@ -18,7 +18,7 @@ def seasonal_mean(x, freq):
     return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
 
 
-def seasonal_decompose(x, model="additive", filt=None, freq=None):
+def seasonal_decompose(x, model="additive", filt=None, freq=None, nsides=2):
     """
     Parameters
     ----------
@@ -85,7 +85,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
         else:
             filt = np.repeat(1./freq, freq)
 
-    trend = convolution_filter(x, filt)
+    trend = convolution_filter(x, filt, nsides)
 
     # nan pad for conformability - convolve doesn't do it
     if model.startswith('m'):
