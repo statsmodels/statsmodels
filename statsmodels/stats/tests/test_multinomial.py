@@ -15,7 +15,7 @@ from statsmodels.stats._multinomial import (factmom_truncpoisson,
 def test_factmom_truncpoisson():
     # tests only the special case of poisson without truncation
 
-    n_moms, rate, low, upp = 4, np.array([5, 10, 20]), -1, 1000
+    n_moms, rate, low, upp = 4, np.array([5., 10, 20]), -1, 1000
     k = np.arange(1, n_moms + 1)[:, None]
 
     fm2 = rate**k

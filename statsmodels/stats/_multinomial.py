@@ -14,6 +14,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from __future__ import division
+
 import numpy as np
 from scipy import stats, special
 
