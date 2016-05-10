@@ -23,7 +23,11 @@ class TestTransform(SetupBoxCox):
         assert_raises(ValueError, self.bc.transform_boxcox, y)
 
     def test_invalid_bounds(self):
+        # more than two bounds
         assert_raises(ValueError, self.bc._est_lambda, self.x, (-3, 2, 3))
+
+        # upper bound <= lower bound
+        assert_raises(ValueError, self.bc._est_lambda, self.x, (2, -1))
 
     def test_unclear_methods(self):
         # Both _est_lambda and untransform have a method argument that should
