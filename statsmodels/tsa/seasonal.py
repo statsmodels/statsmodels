@@ -30,7 +30,8 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by two_sided.
     freq : int, optional
-        Frequency of the series. Overrides default periodicity of x if x is a pandas
+        Frequency of the series. Must be used if x is not  a pandas object.
+        Overrides default periodicity of x if x is a pandas
         object with a timeseries index.
     two_sided : bool
         The moving average method used in filtering.
