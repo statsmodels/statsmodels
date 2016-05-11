@@ -30,7 +30,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by two_sided.
     freq : int, optional
-        Frequency of the series. Must be used if x is not a pandas
+        Frequency of the series. Overrides default periodicity of x if x is a pandas
         object with a timeseries index.
     two_sided : bool
         The moving average method used in filtering.
@@ -70,18 +70,13 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
             raise ValueError("Multiplicative seasonality is not appropriate "
                              "for zero and negative values")
 
-    if pfreq is not None:
-        pfreq = freq_to_period(pfreq)
-        if freq and pfreq != freq:
-            raise ValueError("Inferred frequency of index and frequency "
-                             "don't match. This function does not re-sample")
-        else:
+    if freq is None:
+        if pfreq is not None:
+            pfreq = freq_to_period(pfreq)
             freq = pfreq
-
-    elif freq is None:
-        raise ValueError("You must specify a freq or x must be a "
-                         "pandas object with a timeseries index")
-
+        else:
+            raise ValueError("You must specify a freq or x must be a "
+                             "pandas object with a timeseries index")
 
     if filt is None:
         if freq % 2 == 0:  # split weights at ends
