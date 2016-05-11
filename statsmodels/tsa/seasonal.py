@@ -18,7 +18,7 @@ def seasonal_mean(x, freq):
     return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
 
 
-def seasonal_decompose(x, model="additive", filt=None, freq=None, nsides=2):
+def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True):
     """
     Parameters
     ----------
@@ -28,10 +28,14 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, nsides=2):
         Type of seasonal component. Abbreviations are accepted.
     filt : array-like
         The filter coefficients for filtering out the seasonal component.
-        The default is a symmetric moving average.
+        The concrete moving average method used in filtering is determined by two_sided.
     freq : int, optional
         Frequency of the series. Must be used if x is not a pandas
         object with a timeseries index.
+    two_sided : bool
+        The moving average method used in filtering.
+        If True (default), a centered moving average is computed using the filt.
+        If False, the filter coefficients are for past values only.
 
     Returns
     -------
@@ -85,6 +89,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, nsides=2):
         else:
             filt = np.repeat(1./freq, freq)
 
+    nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
 
     # nan pad for conformability - convolve doesn't do it
