@@ -81,7 +81,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
             return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
         if count == 0:
             ci_low = 0
-        else
+        else:
             ci_low = optimize.brentq(func, float_info.min, q_)
         if count == nobs:
             ci_upp = 1
