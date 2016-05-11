@@ -207,8 +207,8 @@ def test_add_lag_drop_noinsert():
 
 def test_freq_to_period():
     from pandas.tseries.frequencies import to_offset
-    freqs = ['A', 'AS-MAR', 'Q', 'QS', 'QS-APR', 'W', 'W-MON', 'B', 'D', 'H']
-    expected = [1, 1, 4, 4, 4, 52, 52, 52, 7, 24]
+    freqs = ['A', 'AS-MAR', 'Q', 'QS', 'QS-APR', 'W', 'W-MON', 'B', 'D', 'C', 'H']
+    expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 5, 24]
     for i, j in zip(freqs, expected):
         assert_equal(tools.freq_to_period(i), j)
         assert_equal(tools.freq_to_period(to_offset(i)), j)

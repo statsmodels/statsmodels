@@ -30,7 +30,8 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
         The filter coefficients for filtering out the seasonal component.
         The default is a symmetric moving average.
     freq : int, optional
-        Frequency of the series. Overrides default periodicity of x if x is a pandas
+        Frequency of the series. Must be used if x is not  a pandas object.
+        Overrides default periodicity of x if x is a pandas
         object with a timeseries index.
 
     Returns

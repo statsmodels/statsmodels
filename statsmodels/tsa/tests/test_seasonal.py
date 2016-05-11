@@ -15,6 +15,7 @@ class TestDecompose:
                                                  periods=len(data),
                                                  freq='Q'))
 
+
     def test_ndarray(self):
         res_add = seasonal_decompose(self.data.values, freq=4)
         seasonal = [62.46, 86.17, -88.38, -60.25, 62.46, 86.17, -88.38,
@@ -82,6 +83,8 @@ class TestDecompose:
 
     def test_pandas(self):
         res_add = seasonal_decompose(self.data, freq=4)
+        freq_override_data = self.data.index = DatetimeIndex(start='1/1/1951', periods=len(data), freq='A')
+        res_add_override = seasonal_decompose(freq_override_data, freq=4)
         seasonal = [62.46, 86.17, -88.38, -60.25, 62.46, 86.17, -88.38,
                     -60.25, 62.46, 86.17, -88.38, -60.25, 62.46, 86.17,
                     -88.38, -60.25, 62.46, 86.17, -88.38, -60.25,
@@ -100,11 +103,14 @@ class TestDecompose:
         assert_almost_equal(res_add.seasonal.values.squeeze(), seasonal, 2)
         assert_almost_equal(res_add.trend.values.squeeze(), trend, 2)
         assert_almost_equal(res_add.resid.values.squeeze(), random, 3)
+        assert_almost_equal(res_add_override.seasonal.values.squeeze(), seasonal, 2)
+        assert_almost_equal(res_add_override.trend.values.squeeze(), trend, 2)
+        assert_almost_equal(res_add_override.resid.values.squeeze(), random, 3)
         assert_equal(res_add.seasonal.index.values.squeeze(),
                             self.data.index.values)
 
         res_mult = seasonal_decompose(np.abs(self.data), 'm', freq=4)
-
+        res_mult_override = seasonal_decompose(np.abs(freq_override_data), 'm', freq=4)
         seasonal = [1.0815, 1.5538, 0.6716, 0.6931, 1.0815, 1.5538, 0.6716,
                     0.6931, 1.0815, 1.5538, 0.6716, 0.6931, 1.0815, 1.5538,
                     0.6716, 0.6931, 1.0815, 1.5538, 0.6716, 0.6931, 1.0815,
@@ -125,8 +131,12 @@ class TestDecompose:
         assert_almost_equal(res_mult.seasonal.values.squeeze(), seasonal, 4)
         assert_almost_equal(res_mult.trend.values.squeeze(), trend, 2)
         assert_almost_equal(res_mult.resid.values.squeeze(), random, 4)
+        assert_almost_equal(res_mult_override.seasonal.values.squeeze(), seasonal, 4)
+        assert_almost_equal(res_mult_override.trend.values.squeeze(), trend, 2)
+        assert_almost_equal(res_mult_override.resid.values.squeeze(), random, 4)
         assert_equal(res_mult.seasonal.index.values.squeeze(),
                             self.data.index.values)
+        assert_equal()
 
 
     def test_filt(self):
