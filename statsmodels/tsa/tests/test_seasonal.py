@@ -136,7 +136,6 @@ class TestDecompose:
         assert_almost_equal(res_mult_override.resid.values.squeeze(), random, 4)
         assert_equal(res_mult.seasonal.index.values.squeeze(),
                             self.data.index.values)
-        assert_equal()
 
 
     def test_filt(self):
