@@ -653,7 +653,7 @@ def freq_to_period(freq):
     elif freq == 'B' or freq == 'W' or freq.startswith('W-'):
         return 52
     elif freq == 'D' or freq == 'C' or freq.startswith('D-'):
-        return 365
+        return 7
     elif freq == 'H' or freq.startswith('H-'):
         return 24
     else:  # pragma : no cover
