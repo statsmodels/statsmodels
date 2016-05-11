@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import multivariate_normal
-from statsmodels.tsa.statespace.reprepresentation import Representation
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 
 class KimFilter(object):
@@ -52,10 +51,7 @@ class KimFilter(object):
                         'Provided regime switching matrix is not stochastic')
             self._regime_switch_probs = regime_switch_probs
         else:
-            self._regime_switch_probs = None 
-        
-        self._nobs = None
-        self.initial_regime_probs = None
+            self._regime_switch_probs = np.identity(k_regimes, dtype=dtype) 
 
     def _prepare_data_for_regimes(self, data, per_regime_dims):
 
@@ -81,6 +77,10 @@ class KimFilter(object):
         if not np.all(matrix.sum(axis=1) == 1):
             return False
         return True
+
+    @property
+    def regime_filters(self):
+        return self._regime_kalman_filters
 
     def _initialize_filter(self, **kwargs):
         
@@ -137,18 +137,15 @@ class KimFilter(object):
     
     def initialize_known_regime_probs(self, initial_regime_probs):
         
-        self.initial_regime_probs = initial_regime_probs
+        self._initial_regime_probs = initial_regime_probs
     
     def initialize_uniform_regime_probs(self):
         
         k_regimes = self._k_regimes
-        self.initial_regime_probs = np.ones((k_regimes,), dtype=self._dtype) \
+        self._initial_regime_probs = np.ones((k_regimes,), dtype=self._dtype) \
                 / k_regimes
 
     def initialize_stationary_regime_probs(self):
-        
-        if self._regime_switch_probs is None:
-            raise RuntimeError('No regime switching matrix provided')
         
         eigenvalues, eigenvectors = np.linalg.eig(self._regime_switch_probs.T)
         one_eigenvalue_indices = np.where(eigenvalues == 1)[0]
@@ -164,7 +161,7 @@ class KimFilter(object):
         if not np.all(candidate_eigenvector >= 0):
             raise RuntimeError(non_uniq_stat_distr_message)
 
-        self.initial_regime_probs = candidate_eigenvector / \
+        self._initial_regime_probs = candidate_eigenvector / \
                 np.linalg.norm(candidate_eigenvector)
 
     def _initialize_filters(self, filter_method=None, inversion_method=None,
@@ -183,15 +180,16 @@ class KimFilter(object):
             regime_filter._initialize_state(prefix=prefix,
                     complex_step=complex_step)
         
-        return kfilters
+        self._kfilters = kfilters
 
-    def _kalman_filter_step(self, t, kfilters, prev_regime, curr_regime,
-            state_buffer, state_cov_buffer, state_batteries, 
-            state_cov_batteries, forecast_error_batteries,
-            forecast_error_cov_batteries):
+    def _kalman_filter_step(self, t, prev_regime, curr_regime, state_buffer,
+            state_cov_buffer, state_batteries, state_cov_batteries,
+            forecast_error_batteries, forecast_error_cov_batteries):
         
-        curr_kfilter = kfilters[curr_regime]
-        prev_kfilter = kfilters[prev_regime]
+        #TODO check indexing order
+
+        curr_kfilter = self._kfilters[curr_regime]
+        prev_kfilter = self._kfilters[prev_regime]
         curr_regime_filter = \
                 self._regime_kalman_filters[curr_regime]
         prev_regime_filter = self._regime_kalman_filters[prev_regime]
@@ -231,7 +229,7 @@ class KimFilter(object):
         np.copyto(forecast_error_cov_batteries[prev_regime, curr_regime, :, :],
                 curr_kfilter.forecast_error_cov[:, :, t])
 
-    def _hamilton_filter_step(self, t, kfilters, filtered_curr_regime_probs,
+    def _hamilton_filter_step(self, t, filtered_curr_regime_probs,
             predicted_prev_and_curr_regime_probs,
             forecast_error_batteries,
             forecast_error_cov_batteries, 
@@ -242,7 +240,7 @@ class KimFilter(object):
         k_regimes = self._k_regimes
 
         if t == 0:
-            regime_probs = self.initial_regime_probs
+            regime_probs = self._initial_regime_probs
         else:
             regime_probs = filtered_curr_regime_probs
             
@@ -267,30 +265,52 @@ class KimFilter(object):
 
         obs_likelihood = predicted_obs_prev_and_curr_regime_probs.sum()
         
-        self.obs_likelihoods[t] = obs_likelihood
+        self._obs_likelihoods[t] = obs_likelihood
         
         np.divide(predicted_obs_prev_and_curr_regime_probs, obs_likelihood,
                 out=filtered_prev_and_curr_regime_probs)
         
         np.sum(filtered_prev_and_curr_regime_probs, axis=0,
-                out=filtered_curr_regime_probs)
+                out=filtered_curr_regime_probs)       
 
-    def _approximation_step(self, t, kfilters, curr_regime,
+    def _regime_uncond_filtering(self, t,
+            filtered_prev_and_curr_regime_probs, state_batteries,
+            weighted_state_batteries, state_cov_batteries,
+            weighted_state_cov_batteries):
+
+        k_regimes = self._k_regimes
+
+        np.multiply(filtered_prev_and_curr_regime_probs.reshape(k_regimes,
+                k_regimes, 1), state_batteries, out=weighted_state_batteries)
+
+        np.sum(weighted_state_batteries, axis=(0, 1),
+                out=self._filtered_states[t, :])
+
+        np.multiply(filtered_prev_and_curr_regime_probs.reshape(k_regimes,
+                k_regimes, 1, 1), state_cov_batteries,
+                out=weighted_state_cov_batteries)
+
+        np.sum(weighted_state_cov_batteries, axis=(0, 1),
+                out=self._filtered_state_covs[t, :, :])
+
+    def _approximation_step(self, t, curr_regime,
             filtered_prev_and_curr_regime_probs, state_batteries,
             weighted_states, weighted_states_sum, filtered_curr_regime_probs,
             state_biases, transposed_state_biases, state_bias_sqrs,
             state_cov_batteries, state_covs_and_state_bias_sqrs,
             weighted_state_covs_and_state_bias_sqrs,
             weighted_state_covs_and_state_bias_sqrs_sum):
-        
+       
+        #TODO: check indexing order
+
         k_states = self._k_states
 
-        curr_filter = kfilters[curr_regime]
+        curr_filter = self._kfilters[curr_regime]
         
         np.multiply(filtered_prev_and_curr_regime_probs[:,
                 curr_regime].reshape(-1, 1),
                 state_batteries[:, curr_regime, :], out=weighted_states)
-
+         
         np.sum(weighted_states, axis=0, out=weighted_states_sum)
 
         approx_state = curr_filter.filtered_state[:, t]
@@ -315,7 +335,7 @@ class KimFilter(object):
         np.multiply(filtered_prev_and_curr_regime_probs[:,
                 curr_regime].reshape(-1, 1, 1), state_covs_and_state_bias_sqrs,
                 out=weighted_state_covs_and_state_bias_sqrs)
-
+ 
         np.sum(weighted_state_covs_and_state_bias_sqrs, axis=0,
                 out=weighted_state_covs_and_state_bias_sqrs_sum)
 
@@ -329,20 +349,21 @@ class KimFilter(object):
         k_regimes = self._k_regimes
         dtype = self._dtype
 
-        if self._nobs is None:
+        if not hasattr(self, '_nobs'):
             raise RuntimeError(
                     'No endog data binded. Consider using bind() first')
         
         nobs = self._nobs
                 
-        kfilters = self._initialize_filters(**kwargs) 
+        self._initialize_filters(**kwargs) 
         
-        self.obs_likelihoods = np.zeros((nobs,), dtype=dtype)
+        self._obs_likelihoods = np.zeros((nobs,), dtype=dtype)
+        
+        self._filtered_states = np.zeros((nobs, k_states), dtype=dtype)
+        self._filtered_state_covs = np.zeros((nobs, k_states, k_states),
+                dtype=dtype)
 
-        if self._regime_switch_probs is None:
-            raise RuntimeError('No regime switching matrix provided')
-
-        if self.initial_regime_probs is None:
+        if not hasattr(self, '_initial_regime_probs'):
             try:
                 self.initialize_stationary_regime_probs()
             except RuntimeError:
@@ -373,6 +394,11 @@ class KimFilter(object):
         filtered_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes),
                 dtype=dtype)        
         
+        weighted_state_batteries = np.zeros((k_regimes, k_regimes, k_states),
+                dtype=dtype)
+        weighted_state_cov_batteries = np.zeros((k_regimes, k_regimes,
+                k_states, k_states), dtype=dtype)
+
         weighted_states = np.zeros((k_regimes, k_states), dtype=dtype)
         weighted_states_sum = np.zeros((k_states,), dtype=dtype)
         state_biases = np.zeros((k_regimes, k_states, 1), dtype=dtype)
@@ -392,24 +418,28 @@ class KimFilter(object):
             # Kalman filter
             for prev_regime in range(k_regimes):
                 for curr_regime in range(k_regimes):
-                    self._kalman_filter_step(t, kfilters, prev_regime,
-                            current_regime, state_buffer, state_cov_buffer,
-                            state_batteries, state_cov_batteries,
-                            forecast_error_batteries,
+                    self._kalman_filter_step(t, prev_regime, current_regime,
+                            state_buffer, state_cov_buffer, state_batteries,
+                            state_cov_batteries, forecast_error_batteries,
                             forecast_error_cov_batteries)
 
             # Hamilton filter
-            self._hamilton_filter_step(t, kfilters,
-                    filtered_curr_regime_probs,
+            self._hamilton_filter_step(t, filtered_curr_regime_probs,
                     predicted_prev_and_curr_regime_probs,
                     forecast_error_batteries, forecast_error_cov_batteries,
                     prev_and_curr_regime_cond_obs_probs,
                     predicted_obs_prev_and_curr_regime_probs,
                     filtered_prev_and_curr_regime_probs)
+            
+            # Collecting filtering results
+            self._regime_uncond_filtering(self, t,
+                    filtered_prev_and_curr_regime_probs, state_batteries,
+                    weighted_state_batteries, state_cov_batteries,
+                    weighted_state_cov_batteries)
 
             # Approximation
             for curr_regime in range(k_regimes):
-                self._approximation_step(t, kfilters, curr_regime,
+                self._approximation_step(t, curr_regime,
                         filtered_prev_and_curr_regime_probs, state_batteries,
                         weighted_states, weighted_states_sum,
                         filtered_curr_regime_probs, state_biases,
@@ -422,13 +452,27 @@ class KimFilter(object):
         
         loglikelihood_burn = max(loglikelihood_burn, self._loglikelihood_burn)
 
-        return np.log(self.obs_likelihoods[loglikelihood_burn:]).sum()
+        return np.log(self._obs_likelihoods[loglikelihood_burn:]).sum()
     
     def loglikeobs(self, loglikelihood_burn=0):
         
         loglikelihood_burn = max(loglikelihood_burn, self._loglikelihood_burn)
 
-        loglikelihoods = np.log(self.obs_likelihoods) 
+        loglikelihoods = np.log(self._obs_likelihoods) 
         loglikelihoods[:loglikelihood_burn] = 0
 
         return loglikelihoods
+    
+    @property
+    def initial_regime_probs():
+        return self._initial_regime_probs
+
+    @property
+    def filtered_states(self):
+
+        return self._filtered_states
+
+    @property
+    def filtered_state_covs(self):
+
+        return self._filtered_state_covs 
