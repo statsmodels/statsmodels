@@ -5,25 +5,26 @@ from statsmodels.tsa.regimeswitching.kim_filter import KimFilter
 from .results import results_kim_filter
 from numpy.testing import assert_allclose
 
-class Kim1994(object):
+class TestKim1994(object):
     
     @classmethod
     def setup_class(cls):
-        cls.dtype = float
+        cls.dtype = np.float64
         dtype = cls.dtype
         
         cls.true = results_kim_filter.kim_je
-        cls.true_cycle = np.array(cls.true['cycle'], dtype=dtype) 
+        cls.true_cycle = np.array(cls.true['cycle'], dtype=dtype)
 
         data = np.array(cls.true['data'], dtype=dtype)
         data = np.log(data)*100 
 
-        cls.obs = np.array(data[1:153] - data[:152], ndmin=2, dtype=dtype) 
+        cls.obs = np.array(data[1:152] - data[:151], dtype=dtype)
         
         cls.set_model_matrices()
 
-        cls.kfilter = cls.init_filter()
-        cls.kfilter.initialize_known(cls.initial_state_mean, cls.initial_state_cov)
+        cls.kim_filter = cls.init_filter()
+        cls.kim_filter.initialize_known(cls.initial_state_mean,
+                cls.initial_state_cov)
 
         cls.result = cls.run_filter() 
 
@@ -31,7 +32,7 @@ class Kim1994(object):
     def set_model_matrices(cls):
         dtype = cls.dtype
 
-        p, q, delta_0, delta_1, sigma, phi_1, phi_2 = cls.true['parameters']
+        p, q, phi_1, phi_2, sigma, delta_0, delta_1 = cls.true['parameters']
 
         cls.k_regimes = k_regimes = 2
         cls.k_endog = k_endog = 1
@@ -66,7 +67,7 @@ class Kim1994(object):
         
         initial_state_cov_vector = np.linalg.inv(np.eye(4, dtype=dtype) -
                 transition_outer_sqr).dot(cls.state_cov.reshape(-1, 1))
-
+        
         cls.initial_state_cov = initial_state_cov_vector.reshape(k_states,
                 k_states).T
 
@@ -92,7 +93,7 @@ class Kim1994(object):
 
     def test_loglike(self):
         assert_allclose(self.result['loglike'], self.true['loglike'],
-                rtol=1e-3)
+                atol=1e-3)
 
-    def test_filtered_state(self): 
-        assert_allclose(self.result['cycle'], self.true_cycle, rtol=1e-3)
+    def test_filtered_state(self):
+        assert_allclose(self.result['cycle'], self.true_cycle, atol=1e-2)

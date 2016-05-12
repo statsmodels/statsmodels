@@ -13,7 +13,7 @@ class KimFilter(object):
             selections=None, state_covs=None, regime_switch_probs=None,
             **kwargs):
 
-        if k_regimes == 1:
+        if k_regimes < 1:
             raise ValueError('Only multiple regimes are available.'
                     'Consider using regular KalmanFilter.')
         
@@ -114,17 +114,16 @@ class KimFilter(object):
         for regime_filter in self._regime_kalman_filters:
             regime_filter.bind(endog)
 
-        self._nobs = endog.shape[1]
-
+        self._nobs = self._regime_kalman_filters[0].nobs
+ 
     def initialize_known(self, initial_states, initial_state_covs):
         
         k_regimes = self._k_regimes
         regime_filters = self._regime_kalman_filters
         
-        initial_states = self._prepare_data_for_regimes(k_regimes,
-                initial_states, 1)
-        initial_state_covs = self._prepare_data_for_regimes(k_regimes,
-                initial_state_covs, 2)
+        initial_states = self._prepare_data_for_regimes(initial_states, 1)
+        initial_state_covs = self._prepare_data_for_regimes(initial_state_covs,
+                2)
         
         for i in range(k_regimes):
             regime_filters[i].initialize_known(initial_states[i],
@@ -205,19 +204,20 @@ class KimFilter(object):
             np.copyto(state_buffer, curr_kfilter.filtered_state[:, t - 1])
             np.copyto(state_cov_buffer,
                     curr_kfilter.filtered_state_cov[:, :, t - 1])
-            np.copyto(curr_kfilter.filtered_state[:, t - 1],
+            np.copyto(np.asarray(curr_kfilter.filtered_state[:, t - 1]),
                     prev_kfilter.filtered_state[:, t - 1])
-            np.copyto(curr_kfilter.filtered_state_cov[:, :, t - 1],
+            np.copyto(np.asarray(curr_kfilter.filtered_state_cov[:, :, t - 1]),
                     prev_kfilter.filtered_state_cov[:, :, t - 1])
-        
+                  
         next(curr_kfilter)
 
         if t == 0:
             curr_regime_filter._initial_state = state_buffer
             curr_regime_filter._initial_state_cov = state_cov_buffer
         else:
-            np.copyto(curr_kfilter.filtered_state[:, t - 1], state_buffer)
-            np.copyto(curr_kfilter.filtered_state_cov[:, :, t - 1],
+            np.copyto(np.asarray(curr_kfilter.filtered_state[:, t - 1]),
+                    state_buffer)
+            np.copyto(np.asarray(curr_kfilter.filtered_state_cov[:, :, t - 1]),
                     state_cov_buffer)
         
         np.copyto(state_batteries[prev_regime, curr_regime, :],
@@ -227,12 +227,13 @@ class KimFilter(object):
         np.copyto(forecast_error_batteries[prev_regime, curr_regime, :],
                 curr_kfilter.forecast_error[:, t])
         np.copyto(forecast_error_cov_batteries[prev_regime, curr_regime, :, :],
-                curr_kfilter.forecast_error_cov[:, :, t])
+                curr_kfilter.forecast_error_cov[:, :, t]) 
 
     def _hamilton_filter_step(self, t, filtered_curr_regime_probs,
             predicted_prev_and_curr_regime_probs,
             forecast_error_batteries,
-            forecast_error_cov_batteries, 
+            forecast_error_cov_batteries,
+            forecast_error_mean,
             prev_and_curr_regime_cond_obs_probs,
             predicted_obs_prev_and_curr_regime_probs,
             filtered_prev_and_curr_regime_probs):
@@ -255,9 +256,8 @@ class KimFilter(object):
                 forecast_error_cov = forecast_error_cov_batteries[prev_regime,
                         curr_regime, :, :]
                 prev_and_curr_regime_cond_obs_probs[prev_regime,
-                        curr_regime] = multivariate_normal.pdf(
-                        mean=forecast_error,
-                        cov=forecast_error_cov)
+                        curr_regime] = multivariate_normal.pdf(forecast_error,
+                        mean=forecast_error_mean, cov=forecast_error_cov)
         
         np.multiply(predicted_prev_and_curr_regime_probs,
                 prev_and_curr_regime_cond_obs_probs,
@@ -312,13 +312,13 @@ class KimFilter(object):
                 state_batteries[:, curr_regime, :], out=weighted_states)
          
         np.sum(weighted_states, axis=0, out=weighted_states_sum)
-
-        approx_state = curr_filter.filtered_state[:, t]
+        
+        approx_state = np.asarray(curr_filter.filtered_state[:, t])
 
         np.divide(weighted_states_sum,
-                filtered_current_regime_probs[current_regime],
-                out=approximate_state)
-        
+                filtered_curr_regime_probs[curr_regime],
+                out=approx_state)
+
         np.subtract(approx_state.reshape(1, -1, 1),
                 state_batteries[:, curr_regime, :].reshape(-1, k_states, 1),
                 out=state_biases)
@@ -329,8 +329,8 @@ class KimFilter(object):
 
         np.multiply(state_biases, transposed_state_biases, out=state_bias_sqrs)
 
-        np.sum(state_cov_batteries[:, curr_regime, :, :], state_bias_sqrs,
-                out=state_covs_and_bias_sqrs)
+        np.add(state_cov_batteries[:, curr_regime, :, :], state_bias_sqrs,
+                out=state_covs_and_state_bias_sqrs)
 
         np.multiply(filtered_prev_and_curr_regime_probs[:,
                 curr_regime].reshape(-1, 1, 1), state_covs_and_state_bias_sqrs,
@@ -341,10 +341,11 @@ class KimFilter(object):
 
         np.divide(weighted_state_covs_and_state_bias_sqrs_sum,
                 filtered_curr_regime_probs[curr_regime],
-                out=curr_filter.filtered_state_cov[:, :, t])
+                out=np.asarray(curr_filter.filtered_state_cov[:, :, t]))
 
     def filter(self, **kwargs):
         
+        k_endog = self._k_endog
         k_states = self._k_states
         k_regimes = self._k_regimes
         dtype = self._dtype
@@ -379,10 +380,11 @@ class KimFilter(object):
         state_cov_batteries = np.zeros((k_regimes, k_regimes, k_states,
                 k_states), dtype=dtype)
         
-        forecast_error_batteries = np.zeros((k_regimes, k_regimes, k_states),
+        forecast_error_batteries = np.zeros((k_regimes, k_regimes, k_endog),
                 dtype=dtype)
         forecast_error_cov_batteries = np.zeros((k_regimes, k_regimes,
-                k_states, k_states), dtype=dtype)
+                k_endog, k_endog), dtype=dtype)
+        forecast_error_mean = np.zeros((k_endog,), dtype=dtype)
 
         filtered_curr_regime_probs = np.zeros((k_regimes,), dtype=dtype)
         predicted_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes),
@@ -413,26 +415,26 @@ class KimFilter(object):
         weighted_state_covs_and_state_bias_sqrs_sum = np.zeros((k_states,
                 k_states), dtype=dtype)
 
-        for t in range(self.nobs):
-            
+        for t in range(nobs):
+             
             # Kalman filter
             for prev_regime in range(k_regimes):
                 for curr_regime in range(k_regimes):
-                    self._kalman_filter_step(t, prev_regime, current_regime,
+                    self._kalman_filter_step(t, prev_regime, curr_regime,
                             state_buffer, state_cov_buffer, state_batteries,
                             state_cov_batteries, forecast_error_batteries,
-                            forecast_error_cov_batteries)
+                            forecast_error_cov_batteries)  
 
             # Hamilton filter
             self._hamilton_filter_step(t, filtered_curr_regime_probs,
                     predicted_prev_and_curr_regime_probs,
                     forecast_error_batteries, forecast_error_cov_batteries,
-                    prev_and_curr_regime_cond_obs_probs,
+                    forecast_error_mean, prev_and_curr_regime_cond_obs_probs,
                     predicted_obs_prev_and_curr_regime_probs,
                     filtered_prev_and_curr_regime_probs)
             
             # Collecting filtering results
-            self._regime_uncond_filtering(self, t,
+            self._regime_uncond_filtering(t,
                     filtered_prev_and_curr_regime_probs, state_batteries,
                     weighted_state_batteries, state_cov_batteries,
                     weighted_state_cov_batteries)
