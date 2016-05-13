@@ -45,3 +45,17 @@ def test_predict_dates():
     # Out-of-sample forecasting should still extend the index appropriately
     fcast = res.forecast()
     assert_equal(fcast.index[0], index[-1])
+
+    # Simple differencing again, this time with a more complex differencing
+    # structure
+    mod = sarimax.SARIMAX(endog, order=(1, 2, 0), seasonal_order=(0, 1, 0, 4),
+                          simple_differencing=True)
+    res = mod.filter(mod.start_params)
+    pred = res.predict()
+    # In-sample prediction should lose the first 6 index values
+    assert_equal(mod.nobs, endog.shape[0] - (4 + 2))
+    assert_equal(len(pred), mod.nobs)
+    assert_equal(pred.index.values, index[4 + 2:-1].values)
+    # Out-of-sample forecasting should still extend the index appropriately
+    fcast = res.forecast()
+    assert_equal(fcast.index[0], index[-1])
