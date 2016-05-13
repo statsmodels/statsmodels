@@ -546,6 +546,8 @@ class SARIMAX(MLEModel):
         # Perform simple differencing if requested
         if (self.simple_differencing and
            (self.orig_k_diff > 0 or self.orig_k_seasonal_diff > 0)):
+            # Save the original length
+            orig_length = endog.shape[0]
             # Perform simple differencing
             endog = diff(endog.copy(), self.orig_k_diff,
                          self.orig_k_seasonal_diff, self.k_seasons)
@@ -556,6 +558,11 @@ class SARIMAX(MLEModel):
             # Reset the ModelData datasets
             self.data.endog, self.data.exog = (
                 self.data._convert_endog_exog(endog, exog))
+
+            # Reset dates, if provided
+            if self.data.dates is not None:
+                new_length = self.data.endog.shape[0]
+                self.data.dates = self.data.dates[orig_length - new_length:]
 
         # Reset the nobs
         self.nobs = endog.shape[0]
