@@ -1145,7 +1145,8 @@ class TestVARAutocovariances(object):
                         self.augmented_results.smoothed_state_cov[:3, 3:, 1:6],
                         atol=1e-4)
         assert_allclose(self.results.smoothed_state_autocov[:, :, 5:-1],
-                        self.augmented_results.smoothed_state_cov[:3, 3:, 6:])
+                        self.augmented_results.smoothed_state_cov[:3, 3:, 6:],
+                        atol=1e-7)
 
 
 class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
