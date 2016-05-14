@@ -83,7 +83,7 @@ class TestDecompose:
 
     def test_pandas(self):
         res_add = seasonal_decompose(self.data, freq=4)
-        freq_override_data = self.data
+        freq_override_data = self.data.copy()
         freq_override_data.index = DatetimeIndex(start='1/1/1951', periods=len(freq_override_data), freq='A')
         res_add_override = seasonal_decompose(freq_override_data, freq=4)
         seasonal = [62.46, 86.17, -88.38, -60.25, 62.46, 86.17, -88.38,
