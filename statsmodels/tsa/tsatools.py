@@ -654,7 +654,7 @@ def freq_to_period(freq):
         return 52
     elif freq == 'D':
         return 7
-    elif freq == 'C' or freq == 'B':
+    elif freq == 'B':
         return 5
     elif freq == 'H':
         return 24
