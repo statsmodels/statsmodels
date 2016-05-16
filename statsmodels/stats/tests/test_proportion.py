@@ -11,7 +11,8 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
                            assert_raises)
 
-from statsmodels.stats.proportion import proportion_confint
+from statsmodels.stats.proportion import (proportion_confint,
+                                          multinomial_proportions_confint)
 import statsmodels.stats.proportion as smprop
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
@@ -54,6 +55,31 @@ def test_proportion_effect_size():
     # example from blog
     es = smprop.proportion_effectsize(0.5, 0.4)
     assert_almost_equal(es, 0.2013579207903309, decimal=13)
+
+def test_confint_multinomial_proportions():
+    from .results.results_multinomial_proportions import res_multinomial
+
+    for ((method, description), values) in res_multinomial.items():
+        cis = multinomial_proportions_confint(values.proportions, 0.05,
+                                              method=method)
+        assert_almost_equal(
+            values.cis, cis, decimal=values.precision,
+            err_msg='"%s" method, %s' % (method, description))
+
+def test_multinomial_proportions_errors():
+    # Out-of-bounds values for alpha raise a ValueError
+    for alpha in [-.1, 0, 1, 1.1]:
+        assert_raises(ValueError, multinomial_proportions_confint,
+                      [5] * 50, alpha=alpha)
+    # Null values in `counts` are okay, but negative or zero values are not.
+    assert_raises(ValueError, multinomial_proportions_confint,
+                  np.arange(50))
+    assert_raises(ValueError, multinomial_proportions_confint,
+                  np.arange(50) - 1)
+    # Any unknown method is reported.
+    for method in ['unknown_method', 'sisok_method', 'unknown-glaz']:
+        assert_raises(NotImplementedError, multinomial_proportions_confint,
+                      [5] * 50, method=method)
 
 class CheckProportionMixin(object):
     def test_proptest(self):
