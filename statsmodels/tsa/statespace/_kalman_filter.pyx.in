@@ -380,6 +380,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self.ldwork = self.model.k_endog
 
         # Set the filter method
+        self.set_dimensions()
         self.set_filter_method(filter_method, True)
 
         # Initialize time and convergence status
@@ -556,9 +557,9 @@ cdef class {{prefix}}KalmanFilter(object):
         """
         if not filter_method == self.filter_method or force_reset:
             # Check for invalid filter methods
-            if filter_method & FILTER_COLLAPSED and self.k_endog < self.k_states:
-                raise RuntimeError('Cannot collapse observation vector it the'
-                                   ' state dimension is larger than the'
+            if filter_method & FILTER_COLLAPSED and self.k_endog <= self.k_states:
+                raise RuntimeError('Cannot collapse observation vector if the'
+                                   ' state dimension is equal to or larger than the'
                                    ' dimension of the observation vector.')
 
             # Change the smoother output flag
