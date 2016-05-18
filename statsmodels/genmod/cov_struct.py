@@ -79,7 +79,7 @@ class CovStruct(object):
            The expected values of endog for the cluster for which the
            covariance or correlation matrix will be returned
         index: integer
-           The index of the cluster for which the covariane or
+           The index of the cluster for which the covariance or
            correlation matrix will be returned
 
         Returns
@@ -1420,3 +1420,44 @@ class Equivalence(CovStruct):
     update.__doc__ = CovStruct.update.__doc__
     covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
 
+
+class Fixed(CovStruct):
+    """
+    A fixed (user-provided) working dependence structure.
+
+    Parameters
+    ----------
+    struct: sequence type
+      List of numpy array corresponding to the fixed structure for each group. 
+    is_cor: bool
+      If True, the family variance is used to convert the provided matrices to covariance matrices.  
+      If False, the provided matrices are treated as being `cov[endog | exog]` without further adjustment.
+    """
+
+    def __init__(self, struct, is_cor=True):
+
+        super(Fixed, self).__init__()
+        self._struct_inv = [np.linalg.inv(x) for x in struct]
+        self.struct = struct #list of numpy array
+        self.is_cor = is_cor
+
+    def update(self, params):
+
+       pass
+
+    def covariance_matrix(self, expval, index):
+
+        return self.struct[index], self.is_cor
+
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
+
+        vmati = self._struct_inv[index]
+        if self.is_cor:
+            sdi = 1 / stdev
+            vmati = vmati * np.outer(sdi, sdi)
+
+        return [np.dot(vmati, x) for x in rhs]
+
+    def summary(self):
+
+        return "Observations within a cluster are modeled as having a fixed dependence structure."

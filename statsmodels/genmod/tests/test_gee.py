@@ -1354,6 +1354,43 @@ class TestGEE(object):
             result1 = model1.fit(maxiter=2)
 
 
+    def test_fixed_covstruct(self):
+
+        n = 200
+        exog = np.random.normal(size=(n, 3))
+        exog[:, 0] = 1
+        groups = np.kron(np.arange(50), np.ones(4))
+        err = np.random.normal(size=n) + np.kron(np.random.normal(size=50), np.ones(4))
+        endog = exog.sum(1) + err
+
+        covmats = [np.eye(4) for i in range(50)]
+        
+        model1 = sm.GEE(endog, exog, groups, cov_struct=sm.cov_struct.Independence())
+        result1 = model1.fit()
+
+        model2 = sm.GEE(endog, exog, groups, cov_struct=sm.cov_struct.Fixed(covmats))
+        result2 = model2.fit()
+
+        assert_allclose(result1.params, result2.params, atol=1e-6)
+        assert_allclose(result1.tvalues, result2.tvalues, atol=1e-6)
+
+        model3 = sm.GEE(endog, exog, groups, cov_struct=sm.cov_struct.Exchangeable())
+        result3 = model3.fit()
+        
+        a = result3.cov_struct.dep_params
+        mat = a*np.ones((4, 4)) + (1 - a) * np.eye(4)
+        covmats = [mat for k in range(200)]
+
+        model4 = sm.GEE(endog, exog, groups, cov_struct=sm.cov_struct.Fixed(covmats))
+        result4 = model4.fit()
+
+        smry = result4.summary()
+
+        assert_allclose(result3.params, result4.params, atol=1e-6)
+        assert_allclose(result3.tvalues, result4.tvalues, atol=1e-6)
+
+
+
 class CheckConsistency(object):
 
     start_params = None
