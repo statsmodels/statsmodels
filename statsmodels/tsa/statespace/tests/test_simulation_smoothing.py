@@ -89,7 +89,7 @@ class MultivariateVARKnown(object):
         # Test with all inputs as zeros
         measurement_shocks = np.zeros((n, self.model.k_endog))
         state_shocks = np.zeros((n, self.model.ssm.k_posdef))
-        initial_state = np.zeros(self.model.k_endog)
+        initial_state = np.zeros(self.model.k_states)
         obs, states = self.model.ssm.simulate(
             nsimulations=n, measurement_shocks=measurement_shocks,
             state_shocks=state_shocks, initial_state=initial_state)
@@ -105,7 +105,7 @@ class MultivariateVARKnown(object):
             np.arange(n * self.model.k_endog) / 10.,
             (n, self.model.k_endog))
         state_shocks = np.zeros((n, self.model.ssm.k_posdef))
-        initial_state = np.zeros(self.model.k_endog)
+        initial_state = np.zeros(self.model.k_states)
         obs, states = self.model.ssm.simulate(
             nsimulations=n, measurement_shocks=measurement_shocks,
             state_shocks=state_shocks, initial_state=initial_state)
@@ -117,23 +117,27 @@ class MultivariateVARKnown(object):
 
     def test_simulate_2(self):
         n = 10
+        Z = self.model['design']
         T = self.model['transition']
 
         # Test with non-zero state shocks and initial state
         measurement_shocks = np.zeros((n, self.model.k_endog))
         state_shocks = np.ones((n, self.model.ssm.k_posdef))
-        initial_state = np.ones(self.model.k_endog) * 2.5
+        initial_state = np.ones(self.model.k_states) * 2.5
         obs, states = self.model.ssm.simulate(
             nsimulations=n, measurement_shocks=measurement_shocks,
             state_shocks=state_shocks, initial_state=initial_state)
 
-        desired = np.zeros((n, self.model.k_endog))
-        desired[0] = initial_state
+        desired_obs = np.zeros((n, self.model.k_endog))
+        desired_state = np.zeros((n, self.model.k_states))
+        desired_state[0] = initial_state
+        desired_obs[0] = np.dot(Z, initial_state)
         for i in range(1, n):
-            desired[i] = np.dot(T, desired[i-1]) + state_shocks[i]
+            desired_state[i] = np.dot(T, desired_state[i-1]) + state_shocks[i]
+            desired_obs[i] = np.dot(Z, desired_state[i])
 
-        assert_allclose(obs, desired)
-        assert_allclose(states, desired)
+        assert_allclose(obs, desired_obs)
+        assert_allclose(states, desired_state)
 
     def test_simulation_smoothing_0(self):
         # Simulation smoothing when setting all variates to zeros
@@ -174,8 +178,9 @@ class MultivariateVARKnown(object):
         assert_allclose(sim.generated_state, 0)
         assert_allclose(sim.generated_obs, 0)
         assert_allclose(sim.simulated_state, self.results.smoothed_state)
-        assert_allclose(sim.simulated_measurement_disturbance,
-                        self.results.smoothed_measurement_disturbance)
+        if not self.model.ssm.filter_collapsed:
+            assert_allclose(sim.simulated_measurement_disturbance,
+                            self.results.smoothed_measurement_disturbance)
         assert_allclose(sim.simulated_state_disturbance,
                         self.results.smoothed_state_disturbance)
 
@@ -224,7 +229,8 @@ class MultivariateVARKnown(object):
                 chol, measurement_disturbance_variates[t])
 
         generated_model = mlemodel.MLEModel(
-            generated_measurement_disturbance, k_states=3, k_posdef=3)
+            generated_measurement_disturbance, k_states=self.model.k_states,
+            k_posdef=self.model.ssm.k_posdef)
         for name in ['design', 'obs_cov', 'transition', 'selection', 'state_cov']:
             generated_model[name] = self.model[name]
         generated_model.initialize_approximate_diffuse(1e6)
@@ -232,10 +238,11 @@ class MultivariateVARKnown(object):
         generated_res = generated_model.ssm.smooth()
         simulated_state = (
             0 - generated_res.smoothed_state + self.results.smoothed_state)
-        simulated_measurement_disturbance = (
-            generated_measurement_disturbance.T -
-            generated_res.smoothed_measurement_disturbance +
-            self.results.smoothed_measurement_disturbance)
+        if not self.model.ssm.filter_collapsed:
+            simulated_measurement_disturbance = (
+                generated_measurement_disturbance.T -
+                generated_res.smoothed_measurement_disturbance +
+                self.results.smoothed_measurement_disturbance)
         simulated_state_disturbance = (
             0 - generated_res.smoothed_state_disturbance +
             self.results.smoothed_state_disturbance)
@@ -250,8 +257,9 @@ class MultivariateVARKnown(object):
         assert_allclose(sim.generated_obs,
                         generated_measurement_disturbance.T)
         assert_allclose(sim.simulated_state, simulated_state)
-        assert_allclose(sim.simulated_measurement_disturbance,
-                        simulated_measurement_disturbance)
+        if not self.model.ssm.filter_collapsed:
+            assert_allclose(sim.simulated_measurement_disturbance,
+                            simulated_measurement_disturbance)
         assert_allclose(sim.simulated_state_disturbance,
                         simulated_state_disturbance)
 
@@ -293,7 +301,7 @@ class MultivariateVARKnown(object):
         disturbance_variates = np.r_[
             measurement_disturbance_variates.ravel(),
             state_disturbance_variates.ravel()]
-        initial_state_variates = np.zeros(3)
+        initial_state_variates = np.zeros(self.model.k_states)
 
         # Compute some additional known quantities
         generated_measurement_disturbance = np.zeros(
@@ -322,7 +330,8 @@ class MultivariateVARKnown(object):
                                    generated_measurement_disturbance.T[:, t])
 
         generated_model = mlemodel.MLEModel(
-            generated_obs.T, k_states=3, k_posdef=3)
+            generated_obs.T, k_states=self.model.k_states,
+            k_posdef=self.model.ssm.k_posdef)
         for name in ['design', 'obs_cov', 'transition', 'selection', 'state_cov']:
             generated_model[name] = self.model[name]
         generated_model.initialize_approximate_diffuse(1e6)
@@ -331,10 +340,11 @@ class MultivariateVARKnown(object):
         simulated_state = (
             generated_state[:, :-1] - generated_res.smoothed_state +
             self.results.smoothed_state)
-        simulated_measurement_disturbance = (
-            generated_measurement_disturbance.T -
-            generated_res.smoothed_measurement_disturbance +
-            self.results.smoothed_measurement_disturbance)
+        if not self.model.ssm.filter_collapsed:
+            simulated_measurement_disturbance = (
+                generated_measurement_disturbance.T -
+                generated_res.smoothed_measurement_disturbance +
+                self.results.smoothed_measurement_disturbance)
         simulated_state_disturbance = (
             generated_state_disturbance.T -
             generated_res.smoothed_state_disturbance +
@@ -351,8 +361,9 @@ class MultivariateVARKnown(object):
         assert_allclose(sim.generated_state, generated_state)
         assert_allclose(sim.generated_obs, generated_obs)
         assert_allclose(sim.simulated_state, simulated_state)
-        assert_allclose(sim.simulated_measurement_disturbance.T,
-                        simulated_measurement_disturbance.T)
+        if not self.model.ssm.filter_collapsed:
+            assert_allclose(sim.simulated_measurement_disturbance.T,
+                            simulated_measurement_disturbance.T)
         assert_allclose(sim.simulated_state_disturbance,
                         simulated_state_disturbance)
 
@@ -384,13 +395,6 @@ class TestMultivariateVARKnown(MultivariateVARKnown):
         cls.true_llf = 39.01246166
 
 
-class TestMultivariateVARKnownCollapsed(MultivariateVARKnown):
-    @classmethod
-    def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownCollapsed, cls).setup_class(filter_collapsed=True)
-        cls.true_llf = 39.01246166
-
-
 class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
     """
     Notes
@@ -409,27 +413,11 @@ class TestMultivariateVARKnownMissingAll(MultivariateVARKnown):
         cls.true_llf = 1305.739288
 
 
-class TestMultivariateVARKnownMissingAllCollapsed(MultivariateVARKnown):
-    @classmethod
-    def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownMissingAllCollapsed, cls).setup_class(
-            missing='all', test_against_KFAS=False, filter_collapsed=True)
-        cls.true_llf = 1305.739288
-
-
 class TestMultivariateVARKnownMissingPartial(MultivariateVARKnown):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         super(TestMultivariateVARKnownMissingPartial, cls).setup_class(
             missing='partial', test_against_KFAS=False)
-        cls.true_llf = 1518.449598
-
-
-class TestMultivariateVARKnownMissingPartialCollapsed(MultivariateVARKnown):
-    @classmethod
-    def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownMissingPartialCollapsed, cls).setup_class(
-            missing='partial', test_against_KFAS=False, filter_collapsed=True)
         cls.true_llf = 1518.449598
 
 
@@ -441,13 +429,55 @@ class TestMultivariateVARKnownMissingMixed(MultivariateVARKnown):
         cls.true_llf = 1117.265303
 
 
-class TestMultivariateVARKnownMissingMixedCollapsed(MultivariateVARKnown):
-    @classmethod
-    def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARKnownMissingMixedCollapsed, cls).setup_class(
-            missing='mixed', test_against_KFAS=False, filter_collapsed=True)
-        cls.true_llf = 1117.265303
+class TestDFM(TestMultivariateVARKnown):
+    test_against_KFAS = False
 
+    @classmethod
+    def setup_class(cls, which='none', *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
+
+        # Data
+        dta = datasets.macrodata.load_pandas().data
+        dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:] * 400
+
+        if which == 'all':
+            obs.ix[:50, :] = np.nan
+            obs.ix[119:130, :] = np.nan
+        elif which == 'partial':
+            obs.ix[0:50, 0] = np.nan
+            obs.ix[119:130, 0] = np.nan
+        elif which == 'mixed':
+            obs.ix[0:50, 0] = np.nan
+            obs.ix[19:70, 1] = np.nan
+            obs.ix[39:90, 2] = np.nan
+            obs.ix[119:130, 0] = np.nan
+            obs.ix[119:130, 2] = np.nan
+
+        # Create the model with typical state space
+        mod = mlemodel.MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
+        mod['design'] = np.array([[-32.47143586, 17.33779024],
+                                  [-7.40264169, 1.69279859],
+                                  [-209.04702853, 125.2879374]])
+        mod['obs_cov'] = np.diag(
+            np.array([0.0622668, 1.95666886, 58.37473642]))
+        mod['transition'] = np.array([[0.29935707, 0.33289005],
+                                      [-0.7639868, 1.2844237]])
+        mod['selection'] = np.eye(2)
+        mod['state_cov'] = np.array([[1.2, -0.25],
+                                     [-0.25, 1.1]])
+        mod.initialize_approximate_diffuse(1e6)
+        mod.ssm.filter_univariate = True
+        mod.ssm.filter_collapsed = True
+        cls.model = mod
+        cls.results = mod.smooth([], return_ssm=True)
+
+        if not compatibility_mode:
+            cls.sim = cls.model.simulation_smoother()
+
+    def test_loglike(self):
+        pass
 
 class MultivariateVAR(object):
     """
