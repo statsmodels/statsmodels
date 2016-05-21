@@ -6,7 +6,7 @@ from scipy.optimize import brent
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.compat.numpy import np_new_unique
 
-from . import _prediction as pred
+from statsmodels.regression import _prediction as pred
 
 """
 Implementation of proportional hazards regression models for duration
@@ -1586,10 +1586,14 @@ class PHRegResults(base.LikelihoodModelResults):
                        cov_params=None, endog=None, strata=None,
                        offset=None, pred_type="lhr", **kwds):
 
-        return pred.get_prediction(self, exog=exog, transform=transform,
-                              row_labels=row_labels, cov_params=cov_params,
-                              endog=endog, strata=strata, offset=offset,
-                              pred_type=pred_type, **kwds)
+        # modify kwds to play nice with _prediction
+        kwds['cov_params'] = cov_params
+        kwds['endog'] = endog
+        kwds['strata'] = strata
+        kwds['offset'] = offset
+        kwds['pred_type'] = pred_type
+
+        return pred.get_prediction(self, exog=exog, transform=transform, pred_kwds=kwds)
 
     get_prediction.__doc__ = pred.get_prediction.__doc__
 
