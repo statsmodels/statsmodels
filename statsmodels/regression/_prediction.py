@@ -156,20 +156,39 @@ def get_prediction(self, exog=None, transform=True, weights=None,
            (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
             raise ValueError('weights has wrong shape')
 
+    else:
+        # this handles the case where we don't want to apply weights
+        weights = 1.
     ### end
 
     if pred_kwds is None:
         pred_kwds = {}
     predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
 
-    covb = self.cov_params()
-    var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
+    # handle var_pred_mean for the PHReg case
+    if 'pred_type' in pred_kwds:
+        cov_params = pred_kwds['cov_params']
+        if pred_kwds['pred_type'] == 'lhr':
+            # TODO: fix the handling of this
+            if cov_params is None:
+                cov_params = self.cov_params()
+            mat = np.dot(exog, cov_params)
+            var_pred_mean = (mat * exog).sum(1)
+        
+        else:
+            msg = "Type %s does not support get_prediction" % pred_type
+            raise ValueError(msg)
+
+    else:
+        covb = self.cov_params()
+        var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
 
     # TODO: check that we have correct scale, Refactor scale #???
     var_resid = self.scale / weights # self.mse_resid / weights
     # special case for now:
-    if self.cov_type == 'fixed scale':
-        var_resid = self.cov_kwds['scale'] / weights
+    if hasattr(self, 'cov_type'):
+        if self.cov_type == 'fixed scale':
+            var_resid = self.cov_kwds['scale'] / weights
 
     dist = ['norm', 't'][self.use_t]
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,
