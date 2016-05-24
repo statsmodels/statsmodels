@@ -482,8 +482,8 @@ class TestMixedLM(object):
         mod1 = MixedLM(endog, exog, groups, exog_re)
         # test the names
         assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
-        assert_(mod1.data.exog_re_names == ["Z1"])
-        assert_(mod1.data.exog_re_names_full == ["Z1 RE"])
+        assert_(mod1.data.exog_re_names == ["V1"])
+        assert_(mod1.data.exog_re_names_full == ["V1 RE"])
 
         rslt1 = mod1.fit()
 
@@ -736,7 +736,6 @@ def test_random_effects():
     assert_(len(re) == ngrp)
     assert_(isinstance(re[0], pd.Series))
     assert_(len(re[0]) == 2)
-
 
 if __name__ == "__main__":
 
