@@ -637,7 +637,10 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
-            self.data.param_names = self.exog_names + ['Group RE']
+            names = ['Group RE']
+            self.data.param_names = self.exog_names + names
+            self.data.exog_re_names = names
+            self.data.exog_re_names_full = names
 
         elif exog_re is not None:
             # Process exog_re the same way that exog is handled
