@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.regime_switching import markov_regression
 from numpy.testing import assert_equal, assert_allclose, assert_raises
+from nose.exc import SkipTest
 
 
 # See http://www.stata-press.com/data/r14/usmacro
@@ -399,106 +400,163 @@ mumpspc = [0.29791319, 0.41467956, 1.13061404, 1.23267496,
            0.05628902, 0.00924054]
 
 
-def test_fedfunds_const():
-    mod = markov_regression.MarkovRegression(fedfunds, k_regimes=2)
+class MarkovRegression(object):
+    @classmethod
+    def setup_class(cls, true, endog, atol=1e-5, rtol=1e-7, **kwargs):
+        cls.model = markov_regression.MarkovRegression(endog, **kwargs)
+        cls.true = true
+        cls.atol = atol
+        cls.rtol = rtol
 
-    # Test loglike against Stata
-    # See http://www.stata.com/manuals14/tsmswitch.pdf
-    params = np.r_[.9820939, .0503587, 3.70877, 9.556793, 2.107562**2]
-    assert_allclose(mod.loglike(params), -508.63592, atol=5)
+    def test_llf(self):
+        llf = self.model.loglike(self.true['params'])
+        assert_allclose(llf, self.true['llf'], atol=self.atol, rtol=self.rtol)
 
-    # Test fitting against Stata
-    res = mod.fit(disp=False)
-    assert_allclose(res.llf, -508.63592, atol=5)
+    def test_fit(self, **kwargs):
+        # Test fitting against Stata
+        res = self.model.fit(disp=False, **kwargs)
+        assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
+                        rtol=self.rtol)
 
-    # Test EM fitting (smoke test)
-    res_em = mod.fit_em()
-    assert_allclose(res_em.llf, -508.65856, atol=5)
-
-
-def test_fedfunds_const_L1():
-    mod = markov_regression.MarkovRegression(
-        fedfunds[1:], k_regimes=2, exog=fedfunds[:-1])
-
-    # Test loglike against Stata
-    # See http://www.stata.com/manuals14/tsmswitch.pdf
-    params = np.r_[.6378175, .1306295, .724457, -.0988764, .7631424, 1.061174,
-                   .6915759**2]
-    assert_allclose(mod.loglike(params), -264.71069, atol=5)
-
-    # Test fitting against Stata
-    res = mod.fit(disp=False)
-    assert_allclose(res.llf, -264.71069, atol=5)
-
-    # Test EM fitting (smoke test)
-    res_em = mod.fit_em()
-    assert_allclose(res_em.llf, -264.71103, atol=5)
+    def test_fit_em(self, **kwargs):
+        # Test EM fitting (smoke test)
+        res_em = self.model.fit_em(**kwargs)
+        assert_allclose(res_em.llf, self.true['llf_fit_em'], atol=self.atol,
+                        rtol=self.rtol)
 
 
-def test_fedfunds_const_L1_exog():
-    mod = markov_regression.MarkovRegression(
-        fedfunds[4:], k_regimes=2,
-        exog=np.c_[fedfunds[3:-1], ogap[4:], inf[4:]])
-
-    # Test loglike against Stata
-    # See http://www.stata.com/manuals14/tsmswitch.pdf
-    params = np.r_[.7279288, .2114578,
-                   .6554954, -.0944924,
-                   .8314458, .9292574,
-                   .1355425, .0343072,
-                   -.0273928, .2125275,
-                   .5764495**2]
-    assert_allclose(mod.loglike(params), -229.25614, atol=5)
-
-    # Test fitting against Stata
-    res = mod.fit(em_iter=10, maxiter=100, disp=False)
-    assert_allclose(res.llf, -229.25614, atol=5)
-
-    # Test EM fitting (smoke test)
-    res_em = mod.fit_em()
-    assert_allclose(res_em.llf, -229.25632, atol=5)
-
-    # Test 3-state loglike against Stata
-    mod = markov_regression.MarkovRegression(
-        fedfunds[4:], k_regimes=3,
-        exog=np.c_[fedfunds[3:-1], ogap[4:], inf[4:]])
-    params = np.r_[.7253684, .2564055, .1641252, .7994204, .6178282, .3821718,
-                   .5261292, -.0034106, .6015991,
-                   .8464551, .9690088, .4178913,
-                   .1201952, .0464136, .1075357,
-                   -.0425603, .1298906, .9099168,
-                   .438375**2]
-    assert_allclose(mod.loglike(params), -189.89493, atol=5)
+class TestFedFundsConst(MarkovRegression):
+    @classmethod
+    def setup_class(cls):
+        # See http://www.stata.com/manuals14/tsmswitch.pdf
+        true = {
+            'params': np.r_[.9820939, .0503587, 3.70877, 9.556793,
+                            2.107562**2],
+            'llf': -508.63592,
+            'llf_fit': -508.63592,
+            'llf_fit_em': -508.65856
+        }
+        super(TestFedFundsConst, cls).setup_class(true, fedfunds, k_regimes=2)
 
 
-def test_areturns_const_L1_variance():
-    mod = markov_regression.MarkovRegression(
-        areturns[2:], k_regimes=2, exog=areturns[1:-1],
-        switching_variance=True)
+class TestFedFundsConstL1(MarkovRegression):
+    @classmethod
+    def setup_class(cls):
+        # See http://www.stata.com/manuals14/tsmswitch.pdf
+        true = {
+            'params': np.r_[.6378175, .1306295, .724457, -.0988764,
+                            .7631424, 1.061174, .6915759**2],
+            'llf': -264.71069,
+            'llf_fit': -264.71069,
+            'llf_fit_em': -264.71103
+        }
+        super(TestFedFundsConstL1, cls).setup_class(
+            true, fedfunds[1:], k_regimes=2, exog=fedfunds[:-1])
 
-    # Test loglike against Stata
-    # See http://www.stata.com/manuals14/tsmswitch.pdf
-    params = np.r_[.7530865, .6825357, .7641424, 1.972771, .0790744, .527953,
-                   .5895792**2, 1.605333**2]
-    assert_allclose(mod.loglike(params), -745.7977, atol=4)
 
-    # Test fitting against Stata
-    res = mod.fit(em_iter=10, maxiter=100, disp=False)
-    assert_allclose(res.llf, -745.7977, atol=4)
+class TestFedFundsConstL1Exog(MarkovRegression):
+    @classmethod
+    def setup_class(cls):
+        # See http://www.stata.com/manuals14/tsmswitch.pdf
+        true = {
+            'params': np.r_[.7279288, .2114578, .6554954, -.0944924,
+                            .8314458, .9292574, .1355425, .0343072,
+                            -.0273928, .2125275, .5764495**2],
+            'llf': -229.25614,
+            'llf_fit': -229.25614,
+            'llf_fit_em': -229.25632
+        }
+        super(TestFedFundsConstL1Exog, cls).setup_class(
+            true, fedfunds[4:], k_regimes=2,
+            exog=np.c_[fedfunds[3:-1], ogap[4:], inf[4:]])
+
+    def test_fit(self, **kwargs):
+        kwargs.setdefault('em_iter', 10)
+        kwargs.setdefault('maxiter', 100)
+        super(TestFedFundsConstL1Exog, self).test_fit(**kwargs)
 
 
-def test_mumpspc_noconst_L1_variance():
-    mod = markov_regression.MarkovRegression(
-        mumpspc[1:], k_regimes=2, trend='nc', exog=mumpspc[:-1],
-        switching_variance=True)
+class TestFedFundsConstL1Exog(MarkovRegression):
+    @classmethod
+    def setup_class(cls):
+        # See http://www.stata.com/manuals14/tsmswitch.pdf
+        true = {
+            'params': np.r_[.7253684, .2564055, .1641252, .7994204, .6178282,
+                            .3821718,
+                            .5261292, -.0034106, .6015991,
+                            .8464551, .9690088, .4178913,
+                            .1201952, .0464136, .1075357,
+                            -.0425603, .1298906, .9099168,
+                            .438375**2],
+            'llf': -189.89493,
+            'llf_fit': None,
+            'llf_fit_em': None
+        }
+        super(TestFedFundsConstL1Exog, cls).setup_class(
+            true, fedfunds[4:], k_regimes=3,
+            exog=np.c_[fedfunds[3:-1], ogap[4:], inf[4:]])
 
-    # Test loglike against Stata
-    # See http://www.stata.com/manuals14/tsmswitch.pdf
-    params = np.r_[.762733, .1473767, .420275, .9847369, .0562405**2,
-                   .2611362**2]
-    assert_allclose(mod.loglike(params), 131.7225, atol=4)
+    def test_fit(self):
+        raise SkipTest
 
-    # Test fitting against Stata
-    res = mod.fit(disp=False)
-    assert_allclose(res.llf, 131.7225, atol=4)
+    def test_fit_em(self):
+        raise SkipTest
 
+
+class TestAreturnsConstL1Variance(MarkovRegression):
+    @classmethod
+    def setup_class(cls):
+        # See http://www.stata.com/manuals14/tsmswitch.pdf
+        true = {
+            'params': np.r_[.7530865, .6825357, .7641424, 1.972771, .0790744,
+                            .527953, .5895792**2, 1.605333**2],
+            'llf': -745.7977,
+            'llf_fit': -745.7977,
+            'llf_fit_em': None
+        }
+        super(TestAreturnsConstL1Variance, cls).setup_class(
+            true, areturns[1:], k_regimes=2, exog=areturns[:-1],
+            switching_variance=True)
+
+    def test_fit(self, **kwargs):
+        kwargs.setdefault('em_iter', 10)
+        kwargs.setdefault('maxiter', 100)
+        super(TestAreturnsConstL1Variance, self).test_fit(**kwargs)
+
+    def test_fit_em(self):
+        raise SkipTest
+
+
+class TestMumpspcNoconstL1Variance(MarkovRegression):
+    @classmethod
+    def setup_class(cls):
+        # See http://www.stata.com/manuals14/tsmswitch.pdf
+        true = {
+            'params': np.r_[.762733, .1473767, .420275, .9847369, .0562405**2,
+                            .2611362**2],
+            'llf': 131.7225,
+            'llf_fit': 131.7225,
+            'llf_fit_em': None
+        }
+        super(TestMumpspcNoconstL1Variance, cls).setup_class(
+            true, mumpspc[1:], k_regimes=2, trend='nc', exog=mumpspc[:-1],
+            switching_variance=True, atol=1e-4)
+
+    def test_fit_em(self):
+        raise SkipTest
+
+
+def test_conditional_likelihood():
+    pass
+
+
+def test_transform():
+    pass
+
+
+def test_start_params():
+    pass
+
+
+def test_param_names():
+    pass
