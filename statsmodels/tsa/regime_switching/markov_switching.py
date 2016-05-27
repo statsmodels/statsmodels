@@ -45,37 +45,60 @@ def py_hamilton_filter(initial_probabilities, transition,
     # Dimensions
     k_regimes = len(initial_probabilities)
     nobs = conditional_likelihoods.shape[-1]
+    # order is always at least 2
+    order = max(2, conditional_likelihoods.ndim - 1)
     dtype = conditional_likelihoods.dtype
 
     # Storage
+    # Pr[S_t = s_t | Y_t]
     filtered_marginal_probabilities = (
         np.zeros((k_regimes, nobs + 1), dtype=dtype))
-    filtered_marginal_probabilities[:, 0] = initial_probabilities
+    # Pr[S_t = s_t, ... S_{t-r} = s_{t-r} | Y_{t-1}]
+    # Has (order + 1)^k_regimes elements
     predicted_joint_probabilities = np.zeros(
-        (k_regimes, k_regimes, nobs), dtype=dtype)
+        (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
+    # f(y_t | Y_{t-1})
     joint_likelihoods = np.zeros((nobs,), dtype)
+    # Pr[S_t = s_t, ... S_{t-r+1} = s_{t-r+1} | Y_t]
+    # Has k_regimes^order elements
     filtered_joint_probabilities = np.zeros(
-        (k_regimes, k_regimes, nobs), dtype=dtype)
+        (k_regimes,) * order + (nobs + 1,), dtype=dtype)
+
+    # Initial probabilities
+    filtered_marginal_probabilities[:, 0] = initial_probabilities
+    tmp = np.copy(initial_probabilities)
+    shape = (k_regimes, k_regimes)
+    for i in range(1, order):
+        tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
+    filtered_joint_probabilities[..., 0] = tmp
+
+    # Reshape transition so we can use broadcasting
+    shape = (k_regimes, k_regimes)
+    shape += (1,) * (order-1)
+    shape += (nobs if transition.shape[-1] > 1 else 1,)
+    transition = np.reshape(transition, shape)
 
     # Hamilton filter iterations
     transition_t = 0
     for t in range(nobs):
         if transition.shape[-1] > 1:
             transition_t = t
-        # k_regimes x k_regimes
-        #             k_regimes
-        predicted_joint_probabilities[:, :, t] = (
-            transition[:, :, transition_t] *
-            filtered_marginal_probabilities[:, t])
+        predicted_joint_probabilities[..., t] = (
+            transition[..., transition_t] *
+            filtered_joint_probabilities[..., t])
 
-        tmp = (conditional_likelihoods[:, :, t] *
-               predicted_joint_probabilities[:, :, t])
+        tmp = (conditional_likelihoods[..., None, t] *
+               predicted_joint_probabilities[..., t])
         joint_likelihoods[t] = np.sum(tmp)
 
-        filtered_joint_probabilities[:, :, t] = tmp / joint_likelihoods[t]
+        filtered_joint_probabilities[..., t+1] = np.sum(
+            tmp / joint_likelihoods[t], axis=-1)
 
-        filtered_marginal_probabilities[:, t+1] = np.sum(
-            filtered_joint_probabilities[:, :, t], axis=1)
+        # Marginalize probabilities
+        tmp = filtered_joint_probabilities[..., t+1]
+        for i in range(1, tmp.ndim):
+            tmp = np.sum(tmp, axis=-1)
+        filtered_marginal_probabilities[:, t+1] = tmp
 
     return (filtered_marginal_probabilities, predicted_joint_probabilities,
             joint_likelihoods, filtered_joint_probabilities)
@@ -86,19 +109,30 @@ def py_kim_smoother(transition, filtered_marginal_probabilities,
                     filtered_joint_probabilities):
     # Dimensions
     k_regimes = filtered_joint_probabilities.shape[0]
-    nobs = filtered_joint_probabilities.shape[2]
+    nobs = filtered_joint_probabilities.shape[-1] - 1
+    order = filtered_joint_probabilities.ndim - 1
     dtype = filtered_joint_probabilities.dtype
 
     # Storage
     smoothed_joint_probabilities = np.zeros(
-        (k_regimes, k_regimes, nobs), dtype=dtype)
+        filtered_joint_probabilities.shape[:-1] + (nobs,), dtype=dtype)
     smoothed_marginal_probabilities = np.zeros((k_regimes, nobs), dtype=dtype)
 
     # t=T
-    smoothed_joint_probabilities[:, :, -1] = (
-        filtered_joint_probabilities[:, :, -1])
+    smoothed_joint_probabilities[..., -1] = (
+        filtered_joint_probabilities[..., -1])
     smoothed_marginal_probabilities[:, -1] = (
         filtered_marginal_probabilities[:, -1])
+
+    # Reshape transition so we can use broadcasting
+    shape = (k_regimes, k_regimes)
+    shape += (1,) * (order-1)
+    shape += (nobs if transition.shape[-1] > 1 else 1,)
+    transition = np.reshape(transition, shape)
+
+    # Integrate out S_{t-k+1}
+    predicted_joint_probabilities = np.sum(
+        predicted_joint_probabilities, axis=-2)
 
     # Kim smoother iterations
     transition_t = 0
@@ -106,17 +140,23 @@ def py_kim_smoother(transition, filtered_marginal_probabilities,
         if transition.shape[-1] > 1:
             transition_t = t+1
 
-        predicted_marginal_probability = np.sum(
-            predicted_joint_probabilities[:, :, t+1:t+2], axis=1)
+        # Compute S_{t+1}, S_t, ..., S_{t-k+1} | T
+        smoothed_joint_probability = (
+            (transition[..., transition_t] *
+             filtered_joint_probabilities[..., t+1]) *
+            (smoothed_joint_probabilities[..., t+1] /
+             predicted_joint_probabilities[..., t+1])[..., None])
 
-        smoothed_joint_probabilities[:, :, t] = (
-            smoothed_marginal_probabilities[:, t+1:t+2] *
-            filtered_marginal_probabilities[:, t+1:t+2].T *
-            transition[:, :, transition_t] /
-            predicted_marginal_probability)
+        # For the next iteration, integrate out S_{t+1}
+        smoothed_joint_probabilities[..., t] = np.sum(
+            smoothed_joint_probability, axis=0)
 
-        smoothed_marginal_probabilities[:, t] = np.sum(
-            smoothed_joint_probabilities[:, :, t], axis=0)
+        # Get smoothed marginal probabilities S_t | T by integrating out
+        # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
+        tmp = smoothed_joint_probabilities[..., t]
+        for i in range(1, tmp.ndim):
+            tmp = np.sum(tmp, axis=-1)
+        smoothed_marginal_probabilities[:, t] = tmp
 
     return smoothed_joint_probabilities, smoothed_marginal_probabilities
 
@@ -129,8 +169,10 @@ class MarkovSwitchingParams(object):
         self.k_parameters = OrderedDict()
         self.switching = OrderedDict()
         self.slices_purpose = OrderedDict()
-        self.relative_index_regime_purpose = [OrderedDict() for i in range(self.k_regimes)]
-        self.index_regime_purpose = [OrderedDict() for i in range(self.k_regimes)]
+        self.relative_index_regime_purpose = [
+            OrderedDict() for i in range(self.k_regimes)]
+        self.index_regime_purpose = [
+            OrderedDict() for i in range(self.k_regimes)]
         self.index_regime = [[] for i in range(self.k_regimes)]
 
     def __getitem__(self, key):
@@ -176,10 +218,12 @@ class MarkovSwitchingParams(object):
                 for j in range(self.k_regimes):
                     # Non-switching parameters
                     if not switching:
-                        self.relative_index_regime_purpose[j][key].append(offset)
+                        self.relative_index_regime_purpose[j][key].append(
+                            offset)
                     # Switching parameters
                     else:
-                        self.relative_index_regime_purpose[j][key].append(offset + j)
+                        self.relative_index_regime_purpose[j][key].append(
+                            offset + j)
                 offset += 1 if not switching else self.k_regimes
 
             for j in range(self.k_regimes):
@@ -537,7 +581,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         return approx_hess_cs(params, self.loglike)
 
     def fit(self, start_params=None, transformed=True, cov_type='opg',
-            cov_kwds=None, method='lbfgs', maxiter=50, full_output=1, disp=5,
+            cov_kwds=None, method='bfgs', maxiter=50, full_output=1, disp=0,
             callback=None, return_params=False, em_iter=5, **kwargs):
 
         if start_params is None:
@@ -547,10 +591,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             start_params = np.array(start_params, ndmin=1)
 
         # Get better start params through EM algorithm
-        if em_iter:
-            start_params = self.fit_em(start_params, transformed=transformed,
-                                       maxiter=em_iter, tolerance=0,
-                                       return_params=True)
+        if em_iter and not self.tvtp:
+            start_params = self._fit_em(start_params, transformed=transformed,
+                                        maxiter=em_iter, tolerance=0,
+                                        return_params=True)
             transformed = True
 
         if transformed:
@@ -579,9 +623,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return result
 
-    def fit_em(self, start_params=None, transformed=True, cov_type='opg',
-               cov_kwds=None, maxiter=50, tolerance=1e-6, full_output=True,
-               return_params=False, **kwargs):
+    def _fit_em(self, start_params=None, transformed=True, cov_type='opg',
+                cov_kwds=None, maxiter=50, tolerance=1e-6, full_output=True,
+                return_params=False, **kwargs):
 
         if start_params is None:
             start_params = self.start_params
@@ -641,27 +685,40 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Smooth at the given parameters
         result = self.smooth(params0, transformed=True, return_raw=True)
 
-        # Transition parameters (recall we're not supporting TVTP here)
+        transition = self._em_transition(result)
+        for i in range(self.k_regimes):
+            params1[self.parameters[i, 'transition']] = transition[i]
+
+        return result, params1
+
+    def _em_transition(self, result):
+        # Marginalize the smoothed joint probabilites to just S_t, S_{t-1} | T
+        tmp = result.smoothed_joint_probabilities
+        for i in range(tmp.ndim - 3):
+            tmp = np.sum(tmp, -2)
+        smoothed_joint_probabilities = tmp
+
+        # Transition parameters (recall we're not yet supporting TVTP here)
+        k_transition = len(self.parameters[0, 'transition'])
+        transition = np.zeros((self.k_regimes, k_transition))
         for i in range(self.k_regimes):  # S_{t_1}
-            _params1 = params1[self.parameters[i, 'transition']]
             for j in range(self.k_regimes - 1):  # S_t
-                _params1[j] = (
-                    np.sum(result.smoothed_joint_probabilities[j, i]) /
+                transition[i, j] = (
+                    np.sum(smoothed_joint_probabilities[j, i]) /
                     np.sum(result.smoothed_marginal_probabilities[i]))
 
             # It may be the case that due to rounding error this estimates
             # transition probabilities that sum to greater than one. If so,
             # re-scale the probabilities and warn the user that something
             # is not quite right
-            delta = np.sum(_params1) - 1
+            delta = np.sum(transition[i]) - 1
             if delta > 0:
                 warnings.warn('Invalid transition probabilities estimated in'
                               ' EM iteration; probabilities have been'
                               ' re-scaled to continue estimation.')
-                _params1 /= 1 + delta + 1e-6
-            params1[self.parameters[i, 'transition']] = _params1
+                transition[i] /= 1 + delta + 1e-6
 
-        return result, params1
+        return transition
 
     @property
     def start_params(self):
@@ -683,10 +740,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.tvtp:
             # TODO add support for exog_tvtp_names
             param_names[self.parameters['transition']] = [
-                'p[%d][%d].tvtp%d' % (j, i, k)
-                for j in range(self.k_regimes)
+                'p[%d->%d].tvtp%d' % (j, i, k)
                 for i in range(self.k_regimes-1)
-                for k in range(self.k_tvtp)]
+                for k in range(self.k_tvtp)
+                for j in range(self.k_regimes)
+                ]
         else:
             param_names[self.parameters['transition']] = [
                 'p[%d][%d]' % (j, i)
@@ -710,6 +768,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             offset = 0
             for i in range(self.k_regimes):
                 tmp = np.exp(unconstrained[self.parameters[i, 'transition']])
+                # Don't let transition probabilities be exactly equal to 1 or 0
+                # (causes problems with the optimizer)
                 constrained[self.parameters[i, 'transition']] = (
                     tmp / (1 + np.sum(tmp)))
 
@@ -782,6 +842,10 @@ class HamiltonFilterResults(object):
         self.llf_obs = np.log(self.joint_likelihoods)
         self.llf = np.sum(self.llf_obs)
 
+    @property
+    def expected_durations(self):
+        return 1 / (1 - np.diagonal(self.transition).squeeze())
+
 
 class KimSmootherResults(HamiltonFilterResults):
     def __init__(self, model, result):
@@ -845,7 +909,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                       'predicted_joint_probabilities',
                       'filtered_marginal_probabilities',
                       'filtered_joint_probabilities',
-                      'joint_likelihoods']
+                      'joint_likelihoods', 'expected_durations']
         for name in attributes:
             setattr(self, name, getattr(self.filter_results, name))
 

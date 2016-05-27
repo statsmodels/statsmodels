@@ -1,5 +1,5 @@
 """
-General tests for Markov switching models
+Tests for Markov Regression models
 
 Author: Chad Fulton
 License: BSD
@@ -420,7 +420,7 @@ class MarkovRegression(object):
 
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
-        res_em = self.model.fit_em(**kwargs)
+        res_em = self.model._fit_em(**kwargs)
         assert_allclose(res_em.llf, self.true['llf_fit_em'], atol=self.atol,
                         rtol=self.rtol)
 
@@ -434,7 +434,7 @@ class TestFedFundsConst(MarkovRegression):
                             2.107562**2],
             'llf': -508.63592,
             'llf_fit': -508.63592,
-            'llf_fit_em': -508.65856
+            'llf_fit_em': -508.65852
         }
         super(TestFedFundsConst, cls).setup_class(true, fedfunds, k_regimes=2)
 
@@ -448,7 +448,7 @@ class TestFedFundsConstL1(MarkovRegression):
                             .7631424, 1.061174, .6915759**2],
             'llf': -264.71069,
             'llf_fit': -264.71069,
-            'llf_fit_em': -264.71103
+            'llf_fit_em': -264.71153
         }
         super(TestFedFundsConstL1, cls).setup_class(
             true, fedfunds[1:], k_regimes=2, exog=fedfunds[:-1])
@@ -464,7 +464,7 @@ class TestFedFundsConstL1Exog(MarkovRegression):
                             -.0273928, .2125275, .5764495**2],
             'llf': -229.25614,
             'llf_fit': -229.25614,
-            'llf_fit_em': -229.25632
+            'llf_fit_em': -229.25624
         }
         super(TestFedFundsConstL1Exog, cls).setup_class(
             true, fedfunds[4:], k_regimes=2,
@@ -476,7 +476,7 @@ class TestFedFundsConstL1Exog(MarkovRegression):
         super(TestFedFundsConstL1Exog, self).test_fit(**kwargs)
 
 
-class TestFedFundsConstL1Exog(MarkovRegression):
+class TestFedFundsConstL1Exog3(MarkovRegression):
     @classmethod
     def setup_class(cls):
         # See http://www.stata.com/manuals14/tsmswitch.pdf
@@ -489,18 +489,12 @@ class TestFedFundsConstL1Exog(MarkovRegression):
                             -.0425603, .1298906, .9099168,
                             .438375**2],
             'llf': -189.89493,
-            'llf_fit': None,
-            'llf_fit_em': None
+            'llf_fit': -226.98822,
+            'llf_fit_em': -233.53193
         }
-        super(TestFedFundsConstL1Exog, cls).setup_class(
+        super(TestFedFundsConstL1Exog3, cls).setup_class(
             true, fedfunds[4:], k_regimes=3,
             exog=np.c_[fedfunds[3:-1], ogap[4:], inf[4:]])
-
-    def test_fit(self):
-        raise SkipTest
-
-    def test_fit_em(self):
-        raise SkipTest
 
 
 class TestAreturnsConstL1Variance(MarkovRegression):
@@ -512,7 +506,7 @@ class TestAreturnsConstL1Variance(MarkovRegression):
                             .527953, .5895792**2, 1.605333**2],
             'llf': -745.7977,
             'llf_fit': -745.7977,
-            'llf_fit_em': None
+            'llf_fit_em': -745.83654
         }
         super(TestAreturnsConstL1Variance, cls).setup_class(
             true, areturns[1:], k_regimes=2, exog=areturns[:-1],
@@ -522,9 +516,6 @@ class TestAreturnsConstL1Variance(MarkovRegression):
         kwargs.setdefault('em_iter', 10)
         kwargs.setdefault('maxiter', 100)
         super(TestAreturnsConstL1Variance, self).test_fit(**kwargs)
-
-    def test_fit_em(self):
-        raise SkipTest
 
 
 class TestMumpspcNoconstL1Variance(MarkovRegression):
@@ -536,14 +527,11 @@ class TestMumpspcNoconstL1Variance(MarkovRegression):
                             .2611362**2],
             'llf': 131.7225,
             'llf_fit': 131.7225,
-            'llf_fit_em': None
+            'llf_fit_em': 131.7175
         }
         super(TestMumpspcNoconstL1Variance, cls).setup_class(
             true, mumpspc[1:], k_regimes=2, trend='nc', exog=mumpspc[:-1],
             switching_variance=True, atol=1e-4)
-
-    def test_fit_em(self):
-        raise SkipTest
 
 
 def test_conditional_likelihood():

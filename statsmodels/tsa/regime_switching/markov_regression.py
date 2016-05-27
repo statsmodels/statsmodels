@@ -187,53 +187,78 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         # Inherited parameters
         result, params1 = super(MarkovRegression, self)._em_iteration(params0)
 
+        tmp = np.sqrt(result.smoothed_marginal_probabilities)
+
+        # params1[:2] = [0.72884601, 0.21149622]
+
         # Regression coefficients
+        coeffs = None
         if self._k_exog > 0:
-            # First, get coefficients as if all were switching
-            tmp = np.sqrt(result.smoothed_marginal_probabilities)
-            coeffs = np.zeros((self.k_regimes, self._k_exog))
-            for i in range(self.k_regimes):
-                _endog = tmp[i] * self.endog
-                _exog = tmp[i][:, np.newaxis] * self.exog
-                coeffs[i] = np.dot(np.linalg.pinv(_exog), _endog)
-
-            # Next, collapse the non-switching coefficients
-            for j in range(self._k_exog):
-                if not self.parameters.switching['exog'][j]:
-                    _coeff = 0
-                    for i in range(self.k_regimes):
-                        _coeff += np.sum(
-                            coeffs[i, j] *
-                            result.smoothed_marginal_probabilities[i])
-                    coeffs[:, j] = _coeff / self.nobs
-
+            coeffs = self._em_exog(result, self.endog, self.exog,
+                                   self.parameters.switching['exog'], tmp)
             for i in range(self.k_regimes):
                 params1[self.parameters[i, 'exog']] = coeffs[i]
 
         # Variances
-
-        # First, get variances as if it was switching
-        variances = np.zeros(self.k_regimes, dtype=params0.dtype)
-        for i in range(self.k_regimes):
-            if self._k_exog > 0:
-                beta = params1[self.parameters[i, 'exog']]
-                resid = self.endog - np.dot(self.exog, beta)
-            else:
-                resid = self.endog
-            variances[i] = (
-                np.sum(resid**2 * result.smoothed_marginal_probabilities[i]) /
-                np.sum(result.smoothed_marginal_probabilities[i]))
-
-        # Next, collapse if it is non-switching
-        if not self.switching_variance:
-            variance = 0
-            for i in range(self.k_regimes):
-                variance += np.sum(variances[i] *
-                                   result.smoothed_marginal_probabilities[i])
-            variances = variance / self.nobs
-        params1[self.parameters['variance']] = variances
+        params1[self.parameters['variance']] = self._em_variance(
+            result, self.endog, self.exog, coeffs, tmp)
+        # params1[self.parameters['variance']] = 0.33282116
 
         return result, params1
+
+    def _em_exog(self, result, endog, exog, switching, tmp=None):
+        k_exog = exog.shape[1]
+        coeffs = np.zeros((self.k_regimes, k_exog))
+
+        # First, estimate non-switching coefficients
+        if not np.all(switching):
+            nonswitching_exog = exog[:, ~switching]
+            nonswitching_coeffs = (
+                np.dot(np.linalg.pinv(nonswitching_exog), endog))
+            coeffs[:, ~switching] = nonswitching_coeffs
+            endog = endog - np.dot(nonswitching_exog, nonswitching_coeffs)
+
+        # Next, get switching coefficients
+        if np.any(switching):
+            switching_exog = exog[:, switching]
+            if tmp is None:
+                tmp = np.sqrt(result.smoothed_marginal_probabilities)
+            for i in range(self.k_regimes):
+                tmp_endog = tmp[i] * endog
+                tmp_exog = tmp[i][:, np.newaxis] * switching_exog
+                coeffs[i, switching] = (
+                    np.dot(np.linalg.pinv(tmp_exog), tmp_endog))
+
+        return coeffs
+
+    def _em_variance(self, result, endog, exog, betas, tmp=None):
+        k_exog = 0 if exog is None else exog.shape[1]
+
+        if self.switching_variance:
+            variance = np.zeros(self.k_regimes)
+            for i in range(self.k_regimes):
+                if k_exog > 0:
+                    resid = endog - np.dot(exog, betas[i])
+                else:
+                    resid = endog
+                variance[i] = (
+                    np.sum(resid**2 *
+                           result.smoothed_marginal_probabilities[i]) /
+                    np.sum(result.smoothed_marginal_probabilities[i]))
+        else:
+            variance = 0
+            if tmp is None:
+                tmp = np.sqrt(result.smoothed_marginal_probabilities)
+            for i in range(self.k_regimes):
+                tmp_endog = tmp[i] * endog
+                tmp_exog = tmp[i][:, np.newaxis] * exog
+                if k_exog > 0:
+                    resid = tmp_endog - np.dot(tmp_exog, betas[i])
+                else:
+                    resid = tmp_endog
+                variance += np.sum(resid**2)
+            variance /= self.nobs
+        return variance
 
     @property
     def start_params(self):
