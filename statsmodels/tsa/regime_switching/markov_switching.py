@@ -94,11 +94,11 @@ def py_hamilton_filter(initial_probabilities, transition,
         filtered_joint_probabilities[..., t+1] = np.sum(
             tmp / joint_likelihoods[t], axis=-1)
 
-        # Marginalize probabilities
-        tmp = filtered_joint_probabilities[..., t+1]
-        for i in range(1, tmp.ndim):
-            tmp = np.sum(tmp, axis=-1)
-        filtered_marginal_probabilities[:, t+1] = tmp
+    # Marginalize probabilities
+    filtered_marginal_probabilities = filtered_joint_probabilities
+    for i in range(1, filtered_marginal_probabilities.ndim - 1):
+        filtered_marginal_probabilities = np.sum(
+            filtered_marginal_probabilities, axis=-2)
 
     return (filtered_marginal_probabilities, predicted_joint_probabilities,
             joint_likelihoods, filtered_joint_probabilities)
