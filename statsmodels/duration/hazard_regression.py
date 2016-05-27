@@ -1586,14 +1586,20 @@ class PHRegResults(base.LikelihoodModelResults):
                        cov_params=None, endog=None, strata=None,
                        offset=None, pred_type="lhr", **kwds):
 
-        # modify kwds to play nice with _prediction
-        kwds['cov_params'] = cov_params
-        kwds['endog'] = endog
-        kwds['strata'] = strata
-        kwds['offset'] = offset
-        kwds['pred_type'] = pred_type
+        # since we can currently only do this with lhr do a check
+        if pred_type == "lhr":
+            # modify kwds to play nice with _prediction
+            kwds['endog'] = endog
+            kwds['strata'] = strata
+            kwds['offset'] = offset
+            kwds['pred_type'] = pred_type
 
-        return pred.get_prediction(self, exog=exog, transform=transform, pred_kwds=kwds)
+            return pred.get_prediction(self, exog=exog, transform=transform,
+                                       cov_params=cov_params, pred_kwds=kwds)
+
+        else:
+            msg = "Type %s does not support get_prediction" % pred_type
+            raise ValueError(msg)
 
     get_prediction.__doc__ = pred.get_prediction.__doc__
 

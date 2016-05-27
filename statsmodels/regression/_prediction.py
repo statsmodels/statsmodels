@@ -92,7 +92,7 @@ class PredictionResults(object):
 
 
 def get_prediction(self, exog=None, transform=True, weights=None,
-                   row_labels=None, pred_kwds=None):
+                   row_labels=None, cov_params=None, pred_kwds=None):
     """
     compute prediction results
 
@@ -110,9 +110,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     weights : array_like, optional
         Weights interpreted as in WLS, used for the variance of the predicted
         residual.
+    cov_params : array-like, optional
+        The covariance matrix of the estimated `params` vector
     args, kwargs :
         Some models can take additional arguments or keywords, see the
-        predict method of the model for the details.
 
     Returns
     -------
@@ -165,23 +166,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         pred_kwds = {}
     predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
 
-    # handle var_pred_mean for the PHReg case
-    if 'pred_type' in pred_kwds:
-        cov_params = pred_kwds['cov_params']
-        if pred_kwds['pred_type'] == 'lhr':
-            # TODO: fix the handling of this
-            if cov_params is None:
-                cov_params = self.cov_params()
-            mat = np.dot(exog, cov_params)
-            var_pred_mean = (mat * exog).sum(1)
-        
-        else:
-            msg = "Type %s does not support get_prediction" % pred_type
-            raise ValueError(msg)
+    if cov_params is None:
+        cov_params = self.cov_params()
 
-    else:
-        covb = self.cov_params()
-        var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
+    var_pred_mean = (exog * np.dot(cov_params, exog.T).T).sum(1)
 
     # TODO: check that we have correct scale, Refactor scale #???
     var_resid = self.scale / weights # self.mse_resid / weights
