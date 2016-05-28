@@ -152,6 +152,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
 
     init_args = dict([(k, getattr(model, k)) for k in model._init_keys
                       if k != "offset" and hasattr(model, k)])
+    init_args['hasconst'] = False
 
     fgh_list = [_gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
                 for k in range(k_exog)]
