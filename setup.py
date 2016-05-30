@@ -378,7 +378,8 @@ def get_data_files():
         r_ = relpath(r, start=curdir)
         if r_.endswith('results'):
             data_files.update({r_.replace(sep, ".") : ["*.csv",
-                                                       "*.txt"]})
+                                                       "*.txt",
+                                                       "*.dta"]})
 
     return data_files
 
