@@ -385,7 +385,7 @@ class KimFilter(object):
                 # Should I manage memory allocation here?
                 prev_and_curr_regime_cond_obs_logprobs[prev_regime,
                         curr_regime] = multivariate_normal_logpdf(forecast_error,
-                        mean=forecast_error_mean, cov=forecast_error_cov
+                        mean=forecast_error_mean, cov=forecast_error_cov)
         obs_loglikelihood = logsumexp(prev_and_curr_regime_cond_obs_logprobs,
                 b=predicted_prev_and_curr_regime_probs)
 
