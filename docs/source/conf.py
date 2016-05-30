@@ -34,7 +34,8 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
-              'github' # for GitHub links
+              'github',  # for GitHub links,
+              'numpydoc',
               ]
 
 import sphinx

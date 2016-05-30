@@ -438,7 +438,10 @@ if __name__ == "__main__":
         # Generate Cython sources, unless building from source release
         generate_cython()
     extras = {'docs': ['sphinx>=1.3.5',
-                       'nbconvert>=4.1.0',
+                       'nbconvert>=4.2.0',
+                       'jupyter_client',
+                       'ipykernel',
+                       'matplotlib',
                        'nbformat>=4.0.1',
                        'numpydoc>=0.6.0']}
 
