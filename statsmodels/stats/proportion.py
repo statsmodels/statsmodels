@@ -9,6 +9,7 @@ License: BSD-3
 from statsmodels.compat.python import lzip, range
 import numpy as np
 from scipy import stats, optimize
+from sys import float_info
 
 from statsmodels.stats.base import AllPairsResults
 #import statsmodels.stats.multitest as smt
@@ -77,20 +78,15 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     elif method == 'binom_test':
         # inverting the binomial test
         def func(qi):
-            #return stats.binom_test(qi * nobs, nobs, p=q_) - alpha #/ 2.
             return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
-        # Note: only approximate, step function at integer values of count
-        # possible problems if bounds are too narrow
-        # problem if we hit 0 or 1
-        #    brentq fails ValueError: f(a) and f(b) must have different signs
-        ci_low = optimize.brentq(func, q_ * 0.1, q_)
-        #ci_low = stats.binom_test(qi_low * nobs, nobs, p=q_)
-        #ci_low = np.floor(qi_low * nobs) / nobs
-        ub = np.minimum(q_ + 2 * (q_ - ci_low), 1)
-        ci_upp = optimize.brentq(func, q_, ub)
-        #ci_upp = stats.binom_test(qi_upp * nobs, nobs, p=q_)
-        #ci_upp = np.ceil(qi_upp * nobs) / nobs
-        # TODO: check if we should round up or down, or interpolate
+        if count == 0:
+            ci_low = 0
+        else:
+            ci_low = optimize.brentq(func, float_info.min, q_)
+        if count == nobs:
+            ci_upp = 1
+        else:
+            ci_upp = optimize.brentq(func, q_, 1. - float_info.epsilon)
 
     elif method == 'beta':
         ci_low = stats.beta.ppf(alpha_2 , count, nobs - count + 1)
