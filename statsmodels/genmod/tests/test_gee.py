@@ -580,6 +580,28 @@ class TestGEE(object):
             score_p = mod1.score_test_results["p-value"]
             assert_array_less(np.abs(wald_p - score_p), 0.02)
 
+    def test_constraint_covtype(self):
+        # Test constraints with different cov types
+        np.random.seed(6432)
+        n = 200
+        exog = np.random.normal(size=(n, 4))
+        endog = exog[:, 0] + exog[:, 1] + exog[:, 2]
+        endog += 3 * np.random.normal(size=n)
+        group = np.kron(np.arange(n / 4), np.ones(4))
+        L = np.array([[1., -1, 0, 0]])
+        R = np.array([0., ])
+        family = Gaussian()
+        va = Independence()
+        for cov_type in "robust", "naive", "bias_reduced":
+            model = GEE(endog, exog, group, family=family,
+                        cov_struct=va, constraint=(L, R))
+            result = model.fit(cov_type=cov_type)
+            result.standard_errors(cov_type=cov_type)
+            assert_allclose(result.cov_robust.shape, np.r_[4, 4])
+            assert_allclose(result.cov_naive.shape, np.r_[4, 4])
+            if cov_type == "bias_reduced":
+                assert_allclose(result.cov_robust_bc.shape, np.r_[4, 4])
+
     def test_linear(self):
         # library(gee)
 

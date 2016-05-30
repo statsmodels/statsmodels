@@ -915,7 +915,6 @@ class GEE(base.Model):
         cov_robust *= self.scaling_factor
         return cov_robust, cov_naive, cmat
 
-
     # Calculate the bias-corrected sandwich estimate of Mancl and
     # DeRouen.
     def _bc_covmat(self, cov_naive):
@@ -1056,6 +1055,7 @@ class GEE(base.Model):
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust', ddof_scale=None, scaling_factor=1.):
+        # Docstring attached below
 
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
@@ -1137,24 +1137,25 @@ class GEE(base.Model):
             bc_cov = self._bc_covmat(ncov)
 
         if self.constraint is not None:
-            if cov_type == "robust":
-                cov = bcov
-            elif cov_type == "naive":
-                cov = ncov
-            elif cov_type == "bias_reduced":
-                cov = bc_cov
-
-            mean_params, cov = self._handle_constraint(mean_params, cov)
+            x = mean_params.copy()
+            mean_params, bcov = self._handle_constraint(mean_params, bcov)
             if mean_params is None:
                 warnings.warn("Unable to estimate constrained GEE "
                               "parameters.", ConvergenceWarning)
                 return None
-            if cov_type == "robust":
-                bcov = cov
-            elif cov_type == "naive":
-                ncov = cov
-            elif cov_type == "bias_reduced":
-                bc_cov = cov
+
+            y, ncov = self._handle_constraint(x, ncov)
+            if y is None:
+                warnings.warn("Unable to estimate constrained GEE "
+                              "parameters.", ConvergenceWarning)
+                return None
+
+            if bc_cov is not None:
+                y, bc_cov = self._handle_constraint(x, bc_cov)
+                if x is None:
+                    warnings.warn("Unable to estimate constrained GEE "
+                                  "parameters.", ConvergenceWarning)
+                    return None
 
         scale = self.estimate_scale()
 
@@ -1248,8 +1249,8 @@ class GEE(base.Model):
         amat_11 = amat[0:red_p, 0:red_p]
         amat_12 = amat[0:red_p, red_p:]
 
-        score_cov = bmat_22 - \
-            np.dot(amat_12.T, np.linalg.solve(amat_11, bmat_12))
+        score_cov = bmat_22 - np.dot(amat_12.T,
+                                     np.linalg.solve(amat_11, bmat_12))
         score_cov -= np.dot(bmat_12.T,
                             np.linalg.solve(amat_11, amat_12))
         score_cov += np.dot(amat_12.T,
@@ -1347,8 +1348,8 @@ class GEEResults(base.LikelihoodModelResults):
             covariance_type = self.cov_type.lower()
             allowed_covariances = ["robust", "naive", "bias_reduced"]
             if covariance_type not in allowed_covariances:
-                msg = "GEE: `cov_type` must be one of " +\
-                    ", ".join(allowed_covariances)
+                msg = ("GEE: `cov_type` must be one of " +
+                       ", ".join(allowed_covariances))
                 raise ValueError(msg)
 
             if cov_type == "robust":
@@ -1383,8 +1384,8 @@ class GEEResults(base.LikelihoodModelResults):
         covariance_type = cov_type.lower()
         allowed_covariances = ["robust", "naive", "bias_reduced"]
         if covariance_type not in allowed_covariances:
-            msg = "GEE: `covariance_type` must be one of " +\
-                ", ".join(allowed_covariances)
+            msg = ("GEE: `covariance_type` must be one of " +
+                   ", ".join(allowed_covariances))
             raise ValueError(msg)
 
         if covariance_type == "robust":
@@ -1393,7 +1394,8 @@ class GEEResults(base.LikelihoodModelResults):
             return np.sqrt(np.diag(self.cov_naive))
         elif covariance_type == "bias_reduced":
             if self.cov_robust_bc is None:
-                raise ValueError("GEE: `bias_reduced` covariance not available")
+                raise ValueError(
+                    "GEE: `bias_reduced` covariance not available")
             return np.sqrt(np.diag(self.cov_robust_bc))
 
     # Need to override to allow for different covariance types.
