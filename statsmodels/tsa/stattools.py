@@ -918,7 +918,7 @@ def coint(y1, y2, regression="c"):
     """
     regression = regression.lower()
     if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood") % regression
+        raise ValueError("regression option %s not understood" % regression)
     y1 = np.asarray(y1)
     y2 = np.asarray(y2)
     if regression == 'c':
