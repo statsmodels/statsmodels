@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.misc import logsumexp
+from scipy.optimize import linprog
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 
 try:
@@ -266,23 +267,29 @@ class KimFilter(object):
                 / k_regimes
 
     def initialize_stationary_regime_probs(self):
+        # This is not really a linprog problem, but need to find any point with
+        # linear equation and unequation constraints
 
-        eigenvalues, eigenvectors = np.linalg.eig(self._regime_switch_probs)
-        one_eigenvalue_indices = np.where(eigenvalues == 1)[0]
+        k_regimes = self._k_regimes
+        dtype = self._dtype
 
-        non_uniq_stat_distr_message = 'Regime switching chain doesn\'t have ' \
-                'a unique stationary distribution'
+        c = np.ones((k_regimes,), dtype=dtype)
 
-        if one_eigenvalue_indices.shape[0] != 1:
-            raise RuntimeError(non_uniq_stat_distr_message)
+        a_eq = np.vstack((self._regime_switch_probs - \
+                np.identity(k_regimes, dtype=dtype),
+                np.ones((1, k_regimes), dtype=dtype)))
 
-        candidate_eigenvector = eigenvectors[:, one_eigenvalue_indices[0]]
+        b_eq = np.zeros((k_regimes + 1,), dtype=dtype)
+        b_eq[-1] = 1
 
-        if not np.all(candidate_eigenvector >= 0):
-            raise RuntimeError(non_uniq_stat_distr_message)
+        bounds = [(0, None) for _ in range(k_regimes)]
 
-        self._initial_regime_probs = candidate_eigenvector / \
-                np.linalg.norm(candidate_eigenvector)
+        linprog_res = linprog(c, A_eq=a_eq, b_eq=b_eq, bounds=bounds)
+
+        if not linprog_res.success:
+            raise RuntimeError('Regime switching chain doesn\'t have ' \
+                'a stationary distribution')
+        self._initial_regime_probs = linprog_res.x
 
     def _initialize_filters(self, filter_method=None, inversion_method=None,
             stability_method=None, conserve_memory=None, tolerance=None,
@@ -329,14 +336,6 @@ class KimFilter(object):
                     prev_kfilter.filtered_state_cov[:, :, t - 1])
 
         next(curr_kfilter)
-
-        # some hot fix, need to be removed later
-        p1 = np.asarray(curr_kfilter.predicted_state_cov[:, :, t])
-        f = np.asarray(curr_kfilter.forecast_error_cov[:, :, t])
-        h = curr_regime_filter.design[:, :, 0]
-        np.copyto(np.asarray(curr_kfilter.filtered_state_cov[:, :, t]),
-                p1 - h.dot(p1).T.dot(h.dot(p1))/f)
-
 
         if t == 0:
             curr_regime_filter._initial_state = state_buffer
@@ -386,8 +385,7 @@ class KimFilter(object):
                 # Should I manage memory allocation here?
                 prev_and_curr_regime_cond_obs_logprobs[prev_regime,
                         curr_regime] = multivariate_normal_logpdf(forecast_error,
-                        mean=forecast_error_mean, cov=forecast_error_cov)
-
+                        mean=forecast_error_mean, cov=forecast_error_cov
         obs_loglikelihood = logsumexp(prev_and_curr_regime_cond_obs_logprobs,
                 b=predicted_prev_and_curr_regime_probs)
 
@@ -516,6 +514,7 @@ class KimFilter(object):
             try:
                 self.initialize_stationary_regime_probs()
             except RuntimeError:
+                raise
                 self.initialize_uniform_regime_probs()
 
         # Allocation of buffers

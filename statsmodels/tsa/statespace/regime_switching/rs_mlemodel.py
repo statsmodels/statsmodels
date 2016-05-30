@@ -111,6 +111,18 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         raise NotImplementedError
 
+    def initialize_known_regime_probs(self, *args):
+
+        self.ssm.initialize_known_regime_probs(*args)
+
+    def initialize_uniform_regime_probs(self):
+
+        self.ssm.initialize_uniform_regime_probs()
+
+    def initialize_stationary_regime_probs(self):
+
+        self.ssm.initialize_stationary_regime_probs()
+
     def _get_params_vector(self, start_switch_probs, start_model_params):
 
         return np.hstack((start_switch_probs[:-1, :].ravel(),
