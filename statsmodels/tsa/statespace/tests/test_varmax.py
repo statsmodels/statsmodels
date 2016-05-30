@@ -12,7 +12,6 @@ import os
 import re
 
 import warnings
-from statsmodels.datasets import webuse
 from statsmodels.tsa.statespace import varmax
 from .results import results_varmax
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
@@ -583,8 +582,7 @@ class CheckFREDManufacturing(CheckVARMAX):
                  **kwargs):
         cls.true = true
         # 1960:Q1 - 1982:Q4
-        dta = webuse('manufac', 'http://www.stata-press.com/data/r12/')
-
+        dta = pd.read_stata(current_path + os.sep + 'results' + os.sep + 'manufac.dta')
         dta.index = dta.month
         dta['dlncaputil'] = dta['lncaputil'].diff()
         dta['dlnhours'] = dta['lnhours'].diff()
