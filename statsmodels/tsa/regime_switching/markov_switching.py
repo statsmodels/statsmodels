@@ -5,7 +5,7 @@ Author: Chad Fulton
 License: BSD
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import division, absolute_import #, print_function
 
 import warnings
 import numpy as np
@@ -45,16 +45,15 @@ def py_hamilton_filter(initial_probabilities, transition,
     # Dimensions
     k_regimes = len(initial_probabilities)
     nobs = conditional_likelihoods.shape[-1]
-    # order is always at least 2
-    order = max(2, conditional_likelihoods.ndim - 1)
+    order = conditional_likelihoods.ndim - 2
     dtype = conditional_likelihoods.dtype
 
     # Storage
     # Pr[S_t = s_t | Y_t]
     filtered_marginal_probabilities = (
-        np.zeros((k_regimes, nobs + 1), dtype=dtype))
+        np.zeros((k_regimes, nobs), dtype=dtype))
     # Pr[S_t = s_t, ... S_{t-r} = s_{t-r} | Y_{t-1}]
-    # Has (order + 1)^k_regimes elements
+    # Has k_regimes^(order+1) elements
     predicted_joint_probabilities = np.zeros(
         (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
     # f(y_t | Y_{t-1})
@@ -62,13 +61,13 @@ def py_hamilton_filter(initial_probabilities, transition,
     # Pr[S_t = s_t, ... S_{t-r+1} = s_{t-r+1} | Y_t]
     # Has k_regimes^order elements
     filtered_joint_probabilities = np.zeros(
-        (k_regimes,) * order + (nobs + 1,), dtype=dtype)
+        (k_regimes,) * (order + 1) + (nobs + 1,), dtype=dtype)
 
     # Initial probabilities
     filtered_marginal_probabilities[:, 0] = initial_probabilities
     tmp = np.copy(initial_probabilities)
     shape = (k_regimes, k_regimes)
-    for i in range(1, order):
+    for i in range(1, order + 1):
         tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
@@ -83,25 +82,32 @@ def py_hamilton_filter(initial_probabilities, transition,
     for t in range(nobs):
         if transition.shape[-1] > 1:
             transition_t = t
-        predicted_joint_probabilities[..., t] = (
-            transition[..., transition_t] *
-            filtered_joint_probabilities[..., t])
 
-        tmp = (conditional_likelihoods[..., None, t] *
+        # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
+        predicted_joint_probabilities[..., t] = (
+            # S_t | S_{t-1}
+            transition[..., transition_t] *
+            # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
+            filtered_joint_probabilities[..., t].sum(axis=-1))
+
+        # f(y_t, S_t, ..., S_{t-r} | t-1)
+        tmp = (conditional_likelihoods[..., t] *
                predicted_joint_probabilities[..., t])
+        # f(y_t | t-1)
         joint_likelihoods[t] = np.sum(tmp)
 
-        filtered_joint_probabilities[..., t+1] = np.sum(
-            tmp / joint_likelihoods[t], axis=-1)
+        # S_t, S_{t-1}, ..., S_{t-r} | t, stored at index t+1
+        filtered_joint_probabilities[..., t+1] = (
+            tmp / joint_likelihoods[t])
 
-    # Marginalize probabilities
-    filtered_marginal_probabilities = filtered_joint_probabilities
+    # S_t | t
+    filtered_marginal_probabilities = filtered_joint_probabilities[..., 1:]
     for i in range(1, filtered_marginal_probabilities.ndim - 1):
         filtered_marginal_probabilities = np.sum(
             filtered_marginal_probabilities, axis=-2)
 
     return (filtered_marginal_probabilities, predicted_joint_probabilities,
-            joint_likelihoods, filtered_joint_probabilities)
+            joint_likelihoods, filtered_joint_probabilities[..., 1:])
 
 
 def py_kim_smoother(transition, filtered_marginal_probabilities,
@@ -109,54 +115,47 @@ def py_kim_smoother(transition, filtered_marginal_probabilities,
                     filtered_joint_probabilities):
     # Dimensions
     k_regimes = filtered_joint_probabilities.shape[0]
-    nobs = filtered_joint_probabilities.shape[-1] - 1
-    order = filtered_joint_probabilities.ndim - 1
+    nobs = filtered_joint_probabilities.shape[-1]
+    order = filtered_joint_probabilities.ndim - 2
     dtype = filtered_joint_probabilities.dtype
 
     # Storage
     smoothed_joint_probabilities = np.zeros(
-        filtered_joint_probabilities.shape[:-1] + (nobs,), dtype=dtype)
+        (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
     smoothed_marginal_probabilities = np.zeros((k_regimes, nobs), dtype=dtype)
 
-    # t=T
+    # S_T, S_{T-1}, ..., S_{T-r} | T
     smoothed_joint_probabilities[..., -1] = (
         filtered_joint_probabilities[..., -1])
-    smoothed_marginal_probabilities[:, -1] = (
-        filtered_marginal_probabilities[:, -1])
 
     # Reshape transition so we can use broadcasting
     shape = (k_regimes, k_regimes)
-    shape += (1,) * (order-1)
+    shape += (1,) * (order)
     shape += (nobs if transition.shape[-1] > 1 else 1,)
     transition = np.reshape(transition, shape)
 
-    # Integrate out S_{t-k+1}
-    predicted_joint_probabilities = np.sum(
-        predicted_joint_probabilities, axis=-2)
-
     # Kim smoother iterations
     transition_t = 0
-    for t in range(nobs-2, -1, -1):
+    for t in range(nobs - 2, -1, -1):
         if transition.shape[-1] > 1:
             transition_t = t+1
 
-        # Compute S_{t+1}, S_t, ..., S_{t-k+1} | T
-        smoothed_joint_probability = (
-            (transition[..., transition_t] *
-             filtered_joint_probabilities[..., t+1]) *
-            (smoothed_joint_probabilities[..., t+1] /
-             predicted_joint_probabilities[..., t+1])[..., None])
+        # S_{t+1}, S_t, ..., S_{t-r+1} | t
+        # x = predicted_joint_probabilities[..., t]
+        x = (filtered_joint_probabilities[..., t] *
+             transition[..., transition_t])
+        # S_{t+1}, S_t, ..., S_{t-r+2} | T / S_{t+1}, S_t, ..., S_{t-r+2} | t
+        y = (smoothed_joint_probabilities[..., t+1] /
+             predicted_joint_probabilities[..., t+1])
+        # S_{t+1}, S_t, ..., S_{t-r+1} | T
+        smoothed_joint_probabilities[..., t] = (x * y[..., None]).sum(axis=0)
 
-        # For the next iteration, integrate out S_{t+1}
-        smoothed_joint_probabilities[..., t] = np.sum(
-            smoothed_joint_probability, axis=0)
-
-        # Get smoothed marginal probabilities S_t | T by integrating out
-        # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
-        tmp = smoothed_joint_probabilities[..., t]
-        for i in range(1, tmp.ndim):
-            tmp = np.sum(tmp, axis=-1)
-        smoothed_marginal_probabilities[:, t] = tmp
+    # Get smoothed marginal probabilities S_t | T by integrating out
+    # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
+    smoothed_marginal_probabilities = smoothed_joint_probabilities
+    for i in range(1, smoothed_marginal_probabilities.ndim - 1):
+        smoothed_marginal_probabilities = np.sum(
+            smoothed_marginal_probabilities, axis=-2)
 
     return smoothed_joint_probabilities, smoothed_marginal_probabilities
 
@@ -833,15 +832,6 @@ class HamiltonFilterResults(object):
                       'joint_likelihoods']
         for name in attributes:
             setattr(self, name, getattr(result, name))
-
-        # Eliminate the first filtered marginal probability, which is just the
-        # initial probabilities
-        # TODO remove conditional once the filter / smoother are finished
-        if self.filtered_marginal_probabilities.shape[-1] == self.nobs+1:
-            self.filtered_marginal_probabilities = (
-                self.filtered_marginal_probabilities[:, 1:])
-            self.filtered_joint_probabilities = (
-                self.filtered_joint_probabilities[..., 1:])
 
         self.llf_obs = np.log(self.joint_likelihoods)
         self.llf = np.sum(self.llf_obs)
