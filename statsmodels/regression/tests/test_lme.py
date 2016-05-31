@@ -482,9 +482,8 @@ class TestMixedLM(object):
         mod1 = MixedLM(endog, exog, groups, exog_re)
         # test the names
         assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
-        assert_(mod1.data.exog_re_names == ["V1"])
-        assert_(mod1.data.exog_re_names_full == ["V1 RE"])
-
+        assert_(mod1.data.exog_re_names == ["x_re1"])
+        assert_(mod1.data.exog_re_names_full == ["x_re1 RE"])
         rslt1 = mod1.fit()
 
         # Fit with a formula, passing groups as the actual values.
