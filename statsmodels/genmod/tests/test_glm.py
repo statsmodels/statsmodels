@@ -1012,7 +1012,7 @@ def test_gradient_irls():
                                                     method="newton")
 
                    assert_allclose(rslt_gradient.params,
-                                   rslt_irls.params, rtol=1e-6, atol=5e-6)
+                                   rslt_irls.params, rtol=1e-6, atol=5e-5)
 
                    assert_allclose(rslt_gradient.llf, rslt_irls.llf,
                                    rtol=1e-6, atol=1e-6)
@@ -1025,7 +1025,7 @@ def test_gradient_irls():
                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
 
-                   assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
+                   assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
 
 
 class CheckWtdDuplicationMixin(object):
@@ -1667,10 +1667,116 @@ class TestRegularized(object):
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
+class TestConvergence(object):
+    def __init__(self):
+        '''
+        Test Binomial family with canonical logit link using star98 dataset.
+        '''
+        from statsmodels.datasets.star98 import load
+        data = load()
+        data.exog = add_constant(data.exog, prepend=False)
+        self.model = GLM(data.endog, data.exog,
+                         family=sm.families.Binomial())
 
-if __name__=="__main__":
-    #run_module_suite()
-    #taken from Fernando Perez:
+    def _when_converged(self, atol=1e-8, rtol=0, tol_criterion='deviance'):
+        for i, dev in enumerate(self.res.fit_history[tol_criterion]):
+            orig = self.res.fit_history[tol_criterion][i]
+            new = self.res.fit_history[tol_criterion][i + 1]
+            if np.allclose(orig, new, atol=atol, rtol=rtol):
+                return i
+        raise ValueError('CONVERGENCE CHECK: It seems this doens\'t converge!')
+
+    def test_convergence_atol_only(self):
+        atol = 1e-8
+        rtol = 0
+        self.res = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_rtol_only(self):
+        atol = 0
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_atol_rtol(self):
+        atol = 1e-8
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_atol_only_params(self):
+        atol = 1e-8
+        rtol = 0
+        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion='params')
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol,
+                                                   tol_criterion='params')
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_rtol_only_params(self):
+        atol = 0
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion='params')
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol,
+                                                   tol_criterion='params')
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_atol_rtol_params(self):
+        atol = 1e-8
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion='params')
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol,
+                                                   tol_criterion='params')
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+
+if __name__ == "__main__":
+    # run_module_suite()
+    # taken from Fernando Perez:
     import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
+                   exit=False)

@@ -40,8 +40,9 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 __all__ = ['GLM']
 
 
-def _check_convergence(criterion, iteration, tol):
-    return not (np.fabs(criterion[iteration] - criterion[iteration-1]) > tol)
+def _check_convergence(criterion, iteration, atol, rtol):
+    return np.allclose(criterion[iteration], criterion[iteration + 1],
+                       atol=atol, rtol=rtol)
 
 
 class GLM(base.LikelihoodModel):
@@ -287,7 +288,7 @@ class GLM(base.LikelihoodModel):
         """
         Initialize a generalized linear model.
         """
-        #TODO: intended for public use?
+        # TODO: intended for public use?
         self.history = {'fittedvalues' : [],
                         'params' : [np.inf],
                         'deviance' : [np.inf]}
@@ -836,7 +837,7 @@ class GLM(base.LikelihoodModel):
         """
         Fits a generalized linear model for a given family.
 
-        parameters
+        Parameters
         ----------
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
@@ -877,9 +878,20 @@ class GLM(base.LikelihoodModel):
             values for gradient optimization.  Only relevant if
             `method` is set to something other than 'IRLS'.
 
-        Notes
-        -----
-        This method does not take any extra undocumented ``kwargs``.
+        If IRLS fitting used, the following additional parameters are
+        available:
+
+        atol : float, optional
+            The absolute tolerance criterion that must be satisfied. Defaults
+            to ``tol``. Convergence is attained when:
+            :math:`rtol * prior + atol > abs(current - prior)`
+        rtol : float, optional
+            The relative tolerance criterion that must be satisfied. Defaults
+            to 0 which means ``rtol`` is not used. Convergence is attained
+            when:
+            :math:`rtol * prior + atol > abs(current - prior)`
+        tol_criterion : str, optional
+            Defaults to ``'deviance'``. Can optionally be ``'params'``.
         """
         self.scaletype = scale
 
@@ -946,10 +958,15 @@ class GLM(base.LikelihoodModel):
         Fits a generalized linear model for a given family using
         iteratively reweighted least squares (IRLS).
         """
+        atol = kwargs.get('atol')
+        rtol = kwargs.get('rtol', 0.)
+        tol_criterion = kwargs.get('tol_criterion', 'deviance')
+        atol = tol if atol is None else atol
 
         endog = self.endog
         wlsexog = self.exog
         if start_params is None:
+            start_params = np.zeros(self.exog.shape[1], np.float)
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:
@@ -963,9 +980,9 @@ class GLM(base.LikelihoodModel):
 
         # first guess on the deviance is assumed to be scaled by 1.
         # params are none to start, so they line up with the deviance
-        history = dict(params=[None, start_params], deviance=[np.inf, dev])
+        history = dict(params=[np.inf, start_params], deviance=[np.inf, dev])
         converged = False
-        criterion = history['deviance']
+        criterion = history[tol_criterion]
         # This special case is used to get the likelihood for a specific
         # params vector.
         if maxiter == 0:
@@ -986,7 +1003,8 @@ class GLM(base.LikelihoodModel):
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
-            converged = _check_convergence(criterion, iteration, tol)
+            converged = _check_convergence(criterion, iteration + 1, atol,
+                                           rtol)
             if converged:
                 break
         self.mu = mu
