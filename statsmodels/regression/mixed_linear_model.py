@@ -1265,7 +1265,6 @@ class MixedLM(base.LikelihoodModel):
         if len(vc_var) > 0:
             return np.concatenate(vc_var)
         else:
-            1/0
             return np.empty(0)
 
 
