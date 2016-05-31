@@ -221,8 +221,10 @@ def _get_exog_re_names(self, exog_re):
         return [exog_re.name]
     elif isinstance(exog_re, list):
         return exog_re
-    return ["V{0}".format(k + 1) for k in range(exog_re.shape[1])]
 
+    # Default names
+    defnames = ["x_re{0:1d}".format(k + 1) for k in range(exog_re.shape[1])]
+    return defnames
 
 class MixedLMParams(object):
     """
