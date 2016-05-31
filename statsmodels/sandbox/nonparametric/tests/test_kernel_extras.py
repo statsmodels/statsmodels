@@ -1,10 +1,12 @@
+from unittest import TestCase
+
 import numpy as np
 import numpy.testing as npt
 
 from statsmodels.sandbox.nonparametric.kernel_extras import SemiLinear
 
 
-class MyTest(object):
+class MyTest(TestCase):
     def setUp(self):
         nobs = 60
         np.random.seed(123456)

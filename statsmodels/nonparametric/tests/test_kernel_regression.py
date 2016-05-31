@@ -1,3 +1,5 @@
+from unittest import TestCase
+
 import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
@@ -6,7 +8,7 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class MyTest(object):
+class MyTest(TestCase):
     def setUp(self):
         nobs = 60
         np.random.seed(123456)
