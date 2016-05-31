@@ -482,9 +482,8 @@ class TestMixedLM(object):
         mod1 = MixedLM(endog, exog, groups, exog_re)
         # test the names
         assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
-        assert_(mod1.data.exog_re_names == ["Z1"])
-        assert_(mod1.data.exog_re_names_full == ["Z1 RE"])
-
+        assert_(mod1.data.exog_re_names == ["x_re1"])
+        assert_(mod1.data.exog_re_names_full == ["x_re1 RE"])
         rslt1 = mod1.fit()
 
         # Fit with a formula, passing groups as the actual values.
@@ -693,6 +692,49 @@ def test_mixed_lm_wrapper():
     bse_re = result.bse_re
     assert_(bse_re.index.tolist() == re_names_full)
 
+def test_random_effects():
+
+    np.random.seed(23429)
+
+    # Default model (random effects only)
+    ngrp = 100
+    gsize = 10
+    rsd = 2
+    gsd = 3
+    mn = gsd*np.random.normal(size=ngrp)
+    gmn = np.kron(mn, np.ones(gsize))
+    y = gmn + rsd*np.random.normal(size=ngrp*gsize)
+    gr = np.kron(np.arange(ngrp), np.ones(gsize))
+    x = np.ones(ngrp * gsize)
+    model = MixedLM(y, x, groups=gr)
+    result = model.fit()
+    re = result.random_effects
+    assert_(isinstance(re, dict))
+    assert_(len(re) == ngrp)
+    assert_(isinstance(re[0], pd.Series))
+    assert_(len(re[0]) == 1)
+
+    # Random intercept only, set explicitly
+    model = MixedLM(y, x, exog_re=x, groups=gr)
+    result = model.fit()
+    re = result.random_effects
+    assert_(isinstance(re, dict))
+    assert_(len(re) == ngrp)
+    assert_(isinstance(re[0], pd.Series))
+    assert_(len(re[0]) == 1)
+
+    # Random intercept and slope
+    xr = np.random.normal(size=(ngrp*gsize, 2))
+    xr[:, 0] = 1
+    qp = np.linspace(-1, 1, gsize)
+    xr[:, 1] = np.kron(np.ones(ngrp), qp)
+    model = MixedLM(y, x, exog_re=xr, groups=gr)
+    result = model.fit()
+    re = result.random_effects
+    assert_(isinstance(re, dict))
+    assert_(len(re) == ngrp)
+    assert_(isinstance(re[0], pd.Series))
+    assert_(len(re[0]) == 2)
 
 if __name__ == "__main__":
 
