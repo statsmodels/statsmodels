@@ -836,8 +836,12 @@ class HamiltonFilterResults(object):
 
         # Eliminate the first filtered marginal probability, which is just the
         # initial probabilities
-        self.filtered_marginal_probabilities = (
-            self.filtered_marginal_probabilities[:, 1:])
+        # TODO remove conditional once the filter / smoother are finished
+        if self.filtered_marginal_probabilities.shape[-1] == self.nobs+1:
+            self.filtered_marginal_probabilities = (
+                self.filtered_marginal_probabilities[:, 1:])
+            self.filtered_joint_probabilities = (
+                self.filtered_joint_probabilities[..., 1:])
 
         self.llf_obs = np.log(self.joint_likelihoods)
         self.llf = np.sum(self.llf_obs)
