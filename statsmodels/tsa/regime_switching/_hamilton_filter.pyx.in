@@ -1,0 +1,84 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+Hamilton filter
+
+Author: Chad Fulton  
+License: Simplified-BSD
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+}}
+
+# Typical imports
+import numpy as np
+import warnings
+cimport numpy as np
+cimport cython
+
+cdef int FORTRAN = 1
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+
+def {{prefix}}hamilton_filter(int nobs, int k_regimes, int order,
+                              {{cython_type}} [:,:,:] transition,
+                              {{cython_type}} [:,:] conditional_likelihoods,
+                              {{cython_type}} [:] joint_likelihoods,
+                              {{cython_type}} [:,:] predicted_joint_probabilities,
+                              {{cython_type}} [:,:] filtered_joint_probabilities):
+    cdef int t, i, j, k, ix, transition_t = 0, time_varying_transition
+    cdef:
+        int k_regimes_order_m1 = k_regimes**(order - 1)
+        int k_regimes_order = k_regimes**order
+        int k_regimes_order_p1 = k_regimes**(order + 1)
+        {{cython_type}} [:] likelihoods, tmp
+
+    time_varying_transition = transition.shape[2] > 1
+    likelihoods = np.zeros(k_regimes_order_p1, dtype={{dtype}})
+    tmp = np.zeros(k_regimes_order, dtype={{dtype}})
+
+    for t in range(nobs):
+        if time_varying_transition:
+            transition_t = t
+
+        ix = 0
+        tmp[:] = 0
+        for j in range(k_regimes_order):
+            for i in range(k_regimes):
+                tmp[j] = tmp[j] + filtered_joint_probabilities[ix, t]
+                ix = ix + 1
+
+        ix = 0
+        for i in range(k_regimes):
+            for j in range(k_regimes):
+                for k in range(k_regimes_order_m1):
+                    predicted_joint_probabilities[ix, t] = (
+                        tmp[j * k_regimes_order_m1 + k] *
+                        transition[i, j, transition_t])
+                    ix += 1
+
+        for i in range(k_regimes_order_p1):
+            likelihoods[i] = (
+                predicted_joint_probabilities[i, t] *
+                conditional_likelihoods[i, t])
+            joint_likelihoods[t] = joint_likelihoods[t] + likelihoods[i]
+
+        for i in range(k_regimes_order_p1):
+            if joint_likelihoods[t] == 0:
+                filtered_joint_probabilities[i, t+1] = np.inf
+            else:
+                filtered_joint_probabilities[i, t+1] = (
+                    likelihoods[i] / joint_likelihoods[t])
+
+
+{{endfor}}

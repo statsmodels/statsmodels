@@ -22,6 +22,16 @@ from statsmodels.tools.tools import pinv_extended
 import statsmodels.base.wrapper as wrap
 
 
+from statsmodels.tsa.statespace.tools import find_best_blas_type
+from statsmodels.tsa.regime_switching._hamilton_filter import (
+    shamilton_filter, dhamilton_filter, chamilton_filter, zhamilton_filter)
+
+prefix_hamilton_filter_map = {
+    's': shamilton_filter, 'd': dhamilton_filter,
+    'c': chamilton_filter, 'z': zhamilton_filter
+}
+
+
 def _prepare_exog(exog):
     k_exog = 0
     if exog is not None:
@@ -71,34 +81,15 @@ def py_hamilton_filter(initial_probabilities, transition,
         tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
-    # Reshape transition so we can use broadcasting
-    shape = (k_regimes, k_regimes)
-    shape += (1,) * (order-1)
-    shape += (nobs if transition.shape[-1] > 1 else 1,)
-    transition = np.reshape(transition, shape)
-
-    # Hamilton filter iterations
-    transition_t = 0
-    for t in range(nobs):
-        if transition.shape[-1] > 1:
-            transition_t = t
-
-        # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
-        predicted_joint_probabilities[..., t] = (
-            # S_t | S_{t-1}
-            transition[..., transition_t] *
-            # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
-            filtered_joint_probabilities[..., t].sum(axis=-1))
-
-        # f(y_t, S_t, ..., S_{t-r} | t-1)
-        tmp = (conditional_likelihoods[..., t] *
-               predicted_joint_probabilities[..., t])
-        # f(y_t | t-1)
-        joint_likelihoods[t] = np.sum(tmp)
-
-        # S_t, S_{t-1}, ..., S_{t-r} | t, stored at index t+1
-        filtered_joint_probabilities[..., t+1] = (
-            tmp / joint_likelihoods[t])
+    prefix, dtype, _ = find_best_blas_type((
+        transition, conditional_likelihoods, joint_likelihoods,
+        predicted_joint_probabilities, filtered_joint_probabilities))
+    func = prefix_hamilton_filter_map[prefix]
+    func(nobs, k_regimes, order, transition,
+         conditional_likelihoods.reshape(k_regimes**(order+1), nobs),
+         joint_likelihoods,
+         predicted_joint_probabilities.reshape(k_regimes**(order+1), nobs),
+         filtered_joint_probabilities.reshape(k_regimes**(order+1), nobs+1))
 
     # S_t | t
     filtered_marginal_probabilities = filtered_joint_probabilities[..., 1:]
