@@ -675,9 +675,8 @@ def test_arima_predict_mle_dates():
     cpi = load_macrodata().data['cpi']
     res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1)
 
-    arima_forecasts = np.genfromtxt(open(
-        current_path + '/results/results_arima_forecasts_all_mle.csv', "rb"),
-                    delimiter=",", skip_header=1, dtype=float)
+    with open(current_path + '/results/results_arima_forecasts_all_mle.csv', "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
 
     fc = arima_forecasts[:,0]
     fcdyn = arima_forecasts[:,1]
@@ -734,9 +733,8 @@ def test_arima_predict_css_dates():
                        -0.118203728504945,
                        -0.938783134717947])
 
-    arima_forecasts = np.genfromtxt(open(
-        current_path + '/results/results_arima_forecasts_all_css.csv', "rb"),
-                    delimiter=",", skip_header=1, dtype=float)
+    with open(current_path + '/results/results_arima_forecasts_all_css.csv', "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
 
     fc = arima_forecasts[:,0]
     fcdyn = arima_forecasts[:,1]
@@ -775,10 +773,8 @@ def test_arima_predict_mle():
     cpi = load_macrodata().data['cpi']
     res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1)
     # fit the model so that we get correct endog length but use
-
-    arima_forecasts = np.genfromtxt(open(
-        current_path + '/results/results_arima_forecasts_all_mle.csv', "rb"),
-                    delimiter=",", skip_header=1, dtype=float)
+    with open(current_path + '/results/results_arima_forecasts_all_mle.csv', "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
     fc = arima_forecasts[:,0]
     fcdyn = arima_forecasts[:,1]
     fcdyn2 = arima_forecasts[:,2]
@@ -1158,9 +1154,8 @@ def test_arima_predict_css():
                       -0.118203728504945,
                       -0.938783134717947])
 
-    arima_forecasts = np.genfromtxt(open(
-        current_path + '/results/results_arima_forecasts_all_css.csv', "rb"),
-                    delimiter=",", skip_header=1, dtype=float)
+    with open(current_path + '/results/results_arima_forecasts_all_css.csv', "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
     fc = arima_forecasts[:,0]
     fcdyn = arima_forecasts[:,1]
     fcdyn2 = arima_forecasts[:,2]
@@ -1300,11 +1295,8 @@ def test_arima_predict_css_diffs():
     # we report mean, should we report constant?
     params[0] = params[0] / (1 - params[1:5].sum())
 
-
-    arima_forecasts = np.genfromtxt(open(
-        current_path + '/results/results_arima_forecasts_all_css_diff.csv',
-                        "rb"),
-                    delimiter=",", skip_header=1, dtype=float)
+    with open(current_path + '/results/results_arima_forecasts_all_css_diff.csv', "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
     fc = arima_forecasts[:,0]
     fcdyn = arima_forecasts[:,1]
     fcdyn2 = arima_forecasts[:,2]
@@ -1441,10 +1433,8 @@ def test_arima_predict_mle_diffs():
         0.113624958031799,
         0.939144026934634])
 
-    arima_forecasts = np.genfromtxt(open(
-        current_path + '/results/results_arima_forecasts_all_mle_diff.csv',
-                        "rb"),
-                    delimiter=",", skip_header=1, dtype=float)
+    with open(current_path + '/results/results_arima_forecasts_all_mle_diff.csv', "rb") as test_data:
+        arima_forecasts = np.genfromtxt(test_data, delimiter=",", skip_header=1, dtype=float)
     fc = arima_forecasts[:,0]
     fcdyn = arima_forecasts[:,1]
     fcdyn2 = arima_forecasts[:,2]

@@ -32,6 +32,7 @@ from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd
 from statsmodels.compat.numpy import npc_unique
+from statsmodels.compat.pandas import sort_values
 import statsmodels.tools.data as data_util
 from pandas.core.index import Index, MultiIndex
 
@@ -445,7 +446,7 @@ class Grouping(object):
                 out = out.sort_index()
             else:
                 out = pd.DataFrame(data, index=index)
-                out = out.sort(inplace=False)  # copies
+                out = out.sort_index(inplace=False)  # copies
             return np.array(out), out.index
         elif data_util._is_using_pandas(data, None):
             out = data

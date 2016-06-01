@@ -946,8 +946,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
             # user supplied start_params only get one chance
             return
         # try a little harder, should be handled in fit really
-        elif ((hasattr(error, 'message') and 'initial' not in error.message)
-              or 'initial' in str(error)):  # py2 and py3
+        elif ('initial' not in error.args[0] or 'initial' in str(error)):
             start_params = [.1] * sum(order)
             if trend == 'c':
                 start_params = [.1] + start_params

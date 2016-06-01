@@ -9,6 +9,7 @@ License: BSD-3
 
 import numpy as np
 
+from statsmodels.compat.python import string_types
 
 class StandardizeTransform(object):
     """class to reparameterize a model for standardized exog
@@ -51,6 +52,8 @@ class StandardizeTransform(object):
             const_idx = np.nonzero(self.scale == 0)[0]
             if len(const_idx) == 0:
                 const_idx = 'nc'
+            else:
+                const_idx = int(const_idx)
 
         if const_idx != 'nc':
             self.mean[const_idx] = 0
