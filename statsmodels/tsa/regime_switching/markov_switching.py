@@ -5,7 +5,7 @@ Author: Chad Fulton
 License: BSD
 """
 
-from __future__ import division, absolute_import #, print_function
+from __future__ import division, absolute_import, print_function
 
 import warnings
 import numpy as np
