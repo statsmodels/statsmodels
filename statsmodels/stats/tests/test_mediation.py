@@ -71,7 +71,8 @@ def test_framing_example():
               mediator_exog.columns.tolist().index("treat")]
     med_pos = outcome_exog.columns.tolist().index("emo")
 
-    med = Mediation(outcome_model, mediator_model, tx_pos, med_pos)
+    med = Mediation(outcome_model, mediator_model, tx_pos, med_pos,
+                    outcome_fit_kwargs={'atol':1e-11})
 
     np.random.seed(4231)
     para_rslt = med.fit(method='parametric', n_rep=100)
@@ -128,7 +129,8 @@ def test_framing_example_formula():
 
     mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
 
-    med = Mediation(outcome_model, mediator_model, "treat", "emo")
+    med = Mediation(outcome_model, mediator_model, "treat", "emo",
+                    outcome_fit_kwargs={'atol': 1e-11})
 
     np.random.seed(4231)
     med_rslt = med.fit(method='boot', n_rep=100)
