@@ -81,6 +81,76 @@ def py_hamilton_filter(initial_probabilities, transition,
         tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
+    # Reshape transition so we can use broadcasting
+    shape = (k_regimes, k_regimes)
+    shape += (1,) * (order-1)
+    shape += (nobs if transition.shape[-1] > 1 else 1,)
+    transition = np.reshape(transition, shape)
+
+    # Hamilton filter iterations
+    transition_t = 0
+    for t in range(nobs):
+        if transition.shape[-1] > 1:
+            transition_t = t
+
+        # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
+        predicted_joint_probabilities[..., t] = (
+            # S_t | S_{t-1}
+            transition[..., transition_t] *
+            # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
+            filtered_joint_probabilities[..., t].sum(axis=-1))
+
+        # f(y_t, S_t, ..., S_{t-r} | t-1)
+        tmp = (conditional_likelihoods[..., t] *
+               predicted_joint_probabilities[..., t])
+        # f(y_t | t-1)
+        joint_likelihoods[t] = np.sum(tmp)
+
+        # S_t, S_{t-1}, ..., S_{t-r} | t, stored at index t+1
+        filtered_joint_probabilities[..., t+1] = (
+            tmp / joint_likelihoods[t])
+
+    # S_t | t
+    filtered_marginal_probabilities = filtered_joint_probabilities[..., 1:]
+    for i in range(1, filtered_marginal_probabilities.ndim - 1):
+        filtered_marginal_probabilities = np.sum(
+            filtered_marginal_probabilities, axis=-2)
+
+    return (filtered_marginal_probabilities, predicted_joint_probabilities,
+            joint_likelihoods, filtered_joint_probabilities[..., 1:])
+
+
+def cy_hamilton_filter(initial_probabilities, transition,
+                       conditional_likelihoods):
+    # Dimensions
+    k_regimes = len(initial_probabilities)
+    nobs = conditional_likelihoods.shape[-1]
+    order = conditional_likelihoods.ndim - 2
+    dtype = conditional_likelihoods.dtype
+
+    # Storage
+    # Pr[S_t = s_t | Y_t]
+    filtered_marginal_probabilities = (
+        np.zeros((k_regimes, nobs), dtype=dtype))
+    # Pr[S_t = s_t, ... S_{t-r} = s_{t-r} | Y_{t-1}]
+    # Has k_regimes^(order+1) elements
+    predicted_joint_probabilities = np.zeros(
+        (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
+    # f(y_t | Y_{t-1})
+    joint_likelihoods = np.zeros((nobs,), dtype)
+    # Pr[S_t = s_t, ... S_{t-r+1} = s_{t-r+1} | Y_t]
+    # Has k_regimes^order elements
+    filtered_joint_probabilities = np.zeros(
+        (k_regimes,) * (order + 1) + (nobs + 1,), dtype=dtype)
+
+    # Initial probabilities
+    filtered_marginal_probabilities[:, 0] = initial_probabilities
+    tmp = np.copy(initial_probabilities)
+    shape = (k_regimes, k_regimes)
+    for i in range(1, order + 1):
+        tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
+    filtered_joint_probabilities[..., 0] = tmp
+
     prefix, dtype, _ = find_best_blas_type((
         transition, conditional_likelihoods, joint_likelihoods,
         predicted_joint_probabilities, filtered_joint_probabilities))
@@ -422,7 +492,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Apply the filter
         return ((transition, initial_probabilities, conditional_likelihoods) +
-                py_hamilton_filter(initial_probabilities, transition,
+                cy_hamilton_filter(initial_probabilities, transition,
                                    conditional_likelihoods))
 
     def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
