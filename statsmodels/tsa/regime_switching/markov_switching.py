@@ -694,7 +694,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             start_params = np.array(start_params, ndmin=1)
 
         if not transformed:
-            start_params = self.transform(start_params)
+            start_params = self.transform_params(start_params)
 
         # Sanity checks
         if self.tvtp:
