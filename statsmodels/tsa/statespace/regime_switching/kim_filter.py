@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.misc import logsumexp
-from scipy.optimize import linprog
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 
 try:
@@ -9,11 +8,15 @@ try:
 except ImportError:
     def multivariate_normal_logpdf(x, mean=None, cov=None):
         n = x.shape[0]
+        x = x.reshape(-1, 1)
+        mean = x.reshape(-1, 1)
         if np.linalg.matrix_rank(cov) < n:
             raise RuntimeError('Cov matrix is singular.')
         #TODO: to test this
-        return -0.5 * n * np.log(np.pi) - 0.5 * np.log(np.linalg.det(cov)) - \
+        logpdf = -0.5 * n * np.log(np.pi) - \
+                0.5 * np.log(np.linalg.det(cov)) - \
                 0.5 * (x - mean).T.dot(np.linalg.inv(cov)).dot(x - mean)
+        return logpdf
 
 class KimFilter(object):
     '''
@@ -21,9 +24,9 @@ class KimFilter(object):
     '''
 
     def __init__(self, k_endog, k_states, k_regimes, dtype=np.float64,
-            loglikelihood_burn=0, designs=None, obs_intercepts=None,
-            obs_covs=None, transitions=None, state_intercepts=None,
-            selections=None, state_covs=None, regime_switch_probs=None,
+            loglikelihood_burn=0, design=None, obs_intercept=None,
+            obs_cov=None, transition=None, state_intercept=None,
+            selection=None, state_cov=None, regime_transition=None,
             **kwargs):
 
         if k_regimes < 1:
@@ -37,58 +40,58 @@ class KimFilter(object):
         self._loglikelihood_burn = loglikelihood_burn
 
         self.per_regime_dims = {
-                'designs': 3,
-                'obs_intercepts': 2,
-                'obs_covs': 3,
-                'transitions': 3,
-                'state_intercepts': 2,
-                'selections': 3,
-                'state_covs': 3
+                'design': 3,
+                'obs_intercept': 2,
+                'obs_cov': 3,
+                'transition': 3,
+                'state_intercept': 2,
+                'selection': 3,
+                'state_cov': 3
         }
 
-        designs = self._prepare_data_for_regimes(designs,
-                self.per_regime_dims['designs'])
-        obs_intercepts = self._prepare_data_for_regimes(obs_intercepts,
-                self.per_regime_dims['obs_intercepts'])
-        obs_covs = self._prepare_data_for_regimes(obs_covs,
-                self.per_regime_dims['obs_covs'])
-        transitions = self._prepare_data_for_regimes(transitions,
-                self.per_regime_dims['transitions'])
-        state_intercepts = self._prepare_data_for_regimes(state_intercepts,
-                self.per_regime_dims['state_intercepts'])
-        selections = self._prepare_data_for_regimes(selections,
-                self.per_regime_dims['selections'])
-        state_covs = self._prepare_data_for_regimes(state_covs,
-                self.per_regime_dims['state_covs'])
+        design = self._prepare_data_for_regimes(design,
+                self.per_regime_dims['design'])
+        obs_intercept = self._prepare_data_for_regimes(obs_intercept,
+                self.per_regime_dims['obs_intercept'])
+        obs_cov = self._prepare_data_for_regimes(obs_cov,
+                self.per_regime_dims['obs_cov'])
+        transition = self._prepare_data_for_regimes(transition,
+                self.per_regime_dims['transition'])
+        state_intercept = self._prepare_data_for_regimes(state_intercept,
+                self.per_regime_dims['state_intercept'])
+        selection = self._prepare_data_for_regimes(selection,
+                self.per_regime_dims['selection'])
+        state_cov = self._prepare_data_for_regimes(state_cov,
+                self.per_regime_dims['state_cov'])
 
         # Kalman filters for each regime
 
         kwargs['alternate_timing'] = True
         self._regime_kalman_filters = [KalmanFilter(k_endog, k_states,
                 dtype=dtype, loglikelihood_burn=loglikelihood_burn,
-                design=designs[i], obs_intercept=obs_intercepts[i],
-                obs_cov=obs_covs[i], transition=transitions[i],
-                state_intercept=state_intercepts[i], selection=selections[i],
-                state_cov=state_covs[i], **kwargs) for i in range(k_regimes)]
+                design=design[i], obs_intercept=obs_intercept[i],
+                obs_cov=obs_cov[i], transition=transition[i],
+                state_intercept=state_intercept[i], selection=selection[i],
+                state_cov=state_cov[i], **kwargs) for i in range(k_regimes)]
 
-        self.set_regime_switch_probs(regime_switch_probs)
+        self.set_regime_transition(regime_transition)
 
-    def set_regime_switch_probs(self, regime_switch_probs):
+    def set_regime_transition(self, regime_transition):
 
         dtype = self._dtype
         k_regimes = self._k_regimes
 
-        if regime_switch_probs is not None:
-            regime_switch_probs = np.asarray(regime_switch_probs, dtype=dtype)
-            if regime_switch_probs.shape != (k_regimes, k_regimes):
-                raise ValueError('Regime switching matrix should have shape'
+        if regime_transition is not None:
+            regime_transition = np.asarray(regime_transition, dtype=dtype)
+            if regime_transition.shape != (k_regimes, k_regimes):
+                raise ValueError('Regime transition matrix should have shape'
                         ' (k_regimes, k_regimes)')
-            if not self._is_left_stochastic(regime_switch_probs):
+            if not self._is_left_stochastic(regime_transition):
                 raise ValueError(
-                        'Provided regime switching matrix is not stochastic')
-            self._regime_switch_probs = regime_switch_probs
+                        'Provided regime transition matrix is not stochastic')
+            self._regime_transition = regime_transition
         else:
-            self._regime_switch_probs = np.identity(k_regimes, dtype=dtype)
+            self._regime_transition = np.identity(k_regimes, dtype=dtype)
 
     def _prepare_data_for_regimes(self, data, per_regime_dims):
 
@@ -109,36 +112,28 @@ class KimFilter(object):
 
     def __getitem__(self, key):
 
-        if key == 'regime_switch_probs':
-            return self._regime_switch_probs
+        if key == 'regime_transition':
+            return self._regime_transition
 
-        if key not in self.per_regime_dims and \
-                key + 's' not in self.per_regime_dims:
+        if key not in self.per_regime_dims:
             raise IndexError('"%s" is an invalid state space matrix name.' \
                     % key)
-
-        if key[-1] == 's':
-            key = key[:-1]
 
         return np.asarray([regime_filter[key] for regime_filter in \
                 self._regime_kalman_filters])
 
     def __setitem__(self, key, value):
 
-        if key == 'regime_switch_probs':
-            self.set_regime_switch_probs(value)
+        if key == 'regime_transition':
+            self.set_regime_transition(value)
             return
 
-        if key not in self.per_regime_dims and \
-                key + 's' not in self.per_regime_dims:
+        if key not in self.per_regime_dims:
             raise IndexError('"%s" is an invalid state space matrix name.' \
                     % key)
 
-        if key[-1] == 's':
-            key = key[:-1]
-
         value = self._prepare_data_for_regimes(value,
-                self.per_regime_dims[key + 's'])
+                self.per_regime_dims[key])
 
         for regime_filter, regime_value in zip(self._regime_kalman_filters,
                 value):
@@ -238,18 +233,17 @@ class KimFilter(object):
 
         self._nobs = self._regime_kalman_filters[0].nobs
 
-    def initialize_known(self, initial_states, initial_state_covs):
+    def initialize_known(self, initial_state, initial_state_cov):
 
         k_regimes = self._k_regimes
         regime_filters = self._regime_kalman_filters
 
-        initial_states = self._prepare_data_for_regimes(initial_states, 1)
-        initial_state_covs = self._prepare_data_for_regimes(initial_state_covs,
-                2)
+        initial_state = self._prepare_data_for_regimes(initial_state, 1)
+        initial_state_cov = self._prepare_data_for_regimes(initial_state_cov, 2)
 
         for i in range(k_regimes):
-            regime_filters[i].initialize_known(initial_states[i],
-                    initial_state_covs[i])
+            regime_filters[i].initialize_known(initial_state[i],
+                    initial_state_cov[i])
 
     def initialize_stationary(self):
 
@@ -267,29 +261,21 @@ class KimFilter(object):
                 / k_regimes
 
     def initialize_stationary_regime_probs(self):
-        # This is not really a linprog problem, but need to find any point with
-        # linear equation and unequation constraints
 
         k_regimes = self._k_regimes
         dtype = self._dtype
 
-        c = np.ones((k_regimes,), dtype=dtype)
-
-        a_eq = np.vstack((self._regime_switch_probs - \
+        constraint_matrix = np.vstack((self._regime_transition - \
                 np.identity(k_regimes, dtype=dtype),
                 np.ones((1, k_regimes), dtype=dtype)))
 
-        b_eq = np.zeros((k_regimes + 1,), dtype=dtype)
-        b_eq[-1] = 1
+        candidate = np.linalg.pinv(constraint_matrix)[:, -1]
 
-        bounds = [(0, None) for _ in range(k_regimes)]
-
-        linprog_res = linprog(c, A_eq=a_eq, b_eq=b_eq, bounds=bounds)
-
-        if not linprog_res.success:
+        if np.any(candidate < 0):
             raise RuntimeError('Regime switching chain doesn\'t have ' \
                 'a stationary distribution')
-        self._initial_regime_probs = linprog_res.x
+
+        self._initial_regime_probs = candidate
 
     def _initialize_filters(self, filter_method=None, inversion_method=None,
             stability_method=None, conserve_memory=None, tolerance=None,
@@ -371,7 +357,7 @@ class KimFilter(object):
         else:
             regime_probs = filtered_curr_regime_probs
 
-        np.multiply(self._regime_switch_probs.transpose(),
+        np.multiply(self._regime_transition.transpose(),
                 regime_probs.reshape(-1, 1),
                 out=predicted_prev_and_curr_regime_probs)
 
@@ -386,6 +372,7 @@ class KimFilter(object):
                 prev_and_curr_regime_cond_obs_logprobs[prev_regime,
                         curr_regime] = multivariate_normal_logpdf(forecast_error,
                         mean=forecast_error_mean, cov=forecast_error_cov)
+
         obs_loglikelihood = logsumexp(prev_and_curr_regime_cond_obs_logprobs,
                 b=predicted_prev_and_curr_regime_probs)
 
@@ -446,12 +433,12 @@ class KimFilter(object):
 
             # Any value would be alright, since it is multiplied by zero weight
             # in the next iteration
-            approx_state = 0
+            approx_state[:] = 0
 
             approx_state_cov = \
                     np.asarray(curr_filter.filtered_state_cov[:, :, t])
 
-            approx_state_cov = 0
+            approx_state_cov[:, :] = 0
 
             return
 

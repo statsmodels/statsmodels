@@ -31,14 +31,14 @@ class Kim1994(object):
 
         p, q, phi_1, phi_2, sigma, delta_0, delta_1 = params
 
-        regime_switch_probs = np.zeros((k_regimes, k_regimes))
-        regime_switch_probs[:, :] = [[q, p], [1 - q, 1 - p]]
+        regime_transition = np.zeros((k_regimes, k_regimes))
+        regime_transition[:, :] = [[q, p], [1 - q, 1 - p]]
 
         design = np.zeros((k_endog, k_states, 1), dtype=dtype)
         design[0, :, 0] = [1, -1]
 
-        obs_intercepts = np.zeros((k_regimes, k_endog, 1), dtype=dtype)
-        obs_intercepts[:, 0, 0] = [delta_0, delta_0 + delta_1]
+        obs_intercept = np.zeros((k_regimes, k_endog, 1), dtype=dtype)
+        obs_intercept[:, 0, 0] = [delta_0, delta_0 + delta_1]
 
         transition = np.zeros((k_states, k_states, 1), dtype=dtype)
         transition[:, :, 0] = [[phi_1, phi_2], [1, 0]]
@@ -66,9 +66,9 @@ class Kim1994(object):
         initial_state_cov = initial_state_cov_vector.reshape(k_states,
                 k_states).T
 
-        return (regime_switch_probs,
+        return (regime_transition,
                 design,
-                obs_intercepts,
+                obs_intercept,
                 transition,
                 selection,
                 state_cov,

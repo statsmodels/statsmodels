@@ -41,35 +41,35 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         return model_params
 
-    def transform_switch_probs(self, unconstrained_switch_probs):
+    def transform_transition(self, unconstrained_transition):
         # to override, if needed
 
         k_regimes = self.k_regimes
 
-        unconstrained_switch_probs = unconstrained_switch_probs.reshape(
+        unconstrained_transition = unconstrained_transition.reshape(
                 (k_regimes - 1, k_regimes))
 
-        constrained_switch_probs = np.exp(unconstrained_switch_probs)
-        constrained_switch_probs /= \
-                (1 + constrained_switch_probs.sum(axis=0)).reshape((1, -1))
+        constrained_transition = np.exp(unconstrained_transition)
+        constrained_transition /= \
+                (1 + constrained_transition.sum(axis=0)).reshape((1, -1))
 
-        return constrained_switch_probs.ravel()
+        return constrained_transition.ravel()
 
-    def untransform_switch_probs(self, constrained_switch_probs):
+    def untransform_transition(self, constrained_transition):
         # to override, if needed
 
         k_regimes = self.k_regimes
         #TODO: pass as an argument?
         eps = 1e-8
-        constrained_switch_probs = \
-                constrained_switch_probs.reshape((k_regimes - 1, k_regimes))
-        unconstrained_switch_probs = np.array(constrained_switch_probs)
-        unconstrained_switch_probs[unconstrained_switch_probs == 0] = eps
-        unconstrained_switch_probs /= \
-                (1 - unconstrained_switch_probs.sum(axis=0)).reshape(1, -1)
-        unconstrained_switch_probs = np.log(unconstrained_switch_probs)
+        constrained_transition = \
+                constrained_transition.reshape((k_regimes - 1, k_regimes))
+        unconstrained_transition = np.array(constrained_transition)
+        unconstrained_transition[unconstrained_transition == 0] = eps
+        unconstrained_transition /= \
+                (1 - unconstrained_transition.sum(axis=0)).reshape(1, -1)
+        unconstrained_transition = np.log(unconstrained_transition)
 
-        return unconstrained_switch_probs.ravel()
+        return unconstrained_transition.ravel()
 
     def transform_model_params(self, unconstrained_model_params):
         # to override
@@ -85,22 +85,22 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         border = self.k_regimes * (self.k_regimes - 1)
 
-        constrained_switch_probs = \
-                self.transform_switch_probs(unconstrained[:border])
+        constrained_transition = \
+                self.transform_transition(unconstrained[:border])
         constrained_model_params = \
                 self.transform_model_params(unconstrained[border:])
 
-        return np.hstack((constrained_switch_probs, constrained_model_params))
+        return np.hstack((constrained_transition, constrained_model_params))
 
     def untransform_params(self, constrained):
 
         border = self.k_regimes * (self.k_regimes - 1)
 
-        unconstrained_switch_probs = \
-                self.untransform_switch_probs(constrained[:border])
+        unconstrained_transition = \
+                self.untransform_transition(constrained[:border])
         unconstrained_model_params = \
                 self.untransform_model_params(constrained[border:])
-        return np.hstack((unconstrained_switch_probs,
+        return np.hstack((unconstrained_transition,
                 unconstrained_model_params))
 
     def set_smoother_output(self, **kwargs):
@@ -123,9 +123,9 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         self.ssm.initialize_stationary_regime_probs()
 
-    def _get_params_vector(self, start_switch_probs, start_model_params):
+    def _get_params_vector(self, start_transition, start_model_params):
 
-        return np.hstack((start_switch_probs[:-1, :].ravel(),
+        return np.hstack((start_transition[:-1, :].ravel(),
                 start_model_params))
 
     def _get_explicit_params(self, constrained_params):
@@ -133,19 +133,19 @@ class RegimeSwitchingMLEModel(MLEModel):
         k_regimes = self.k_regimes
         border = k_regimes * (k_regimes - 1)
 
-        switch_probs = constrained_params[:border].reshape((-1, k_regimes))
-        switch_probs = np.vstack((switch_probs, np.ones((1, k_regimes),
+        transition = constrained_params[:border].reshape((-1, k_regimes))
+        transition = np.vstack((transition, np.ones((1, k_regimes),
                 dtype=self.ssm.dtype)))
 
         model_params = constrained_params[border:]
 
-        return (switch_probs, model_params)
+        return (transition, model_params)
 
-    def fit(self, start_switch_probs=None, start_model_params=None,
+    def fit(self, start_transition=None, start_model_params=None,
             fit_nonswitching_first=True, **kwargs):
 
-        if start_switch_probs is None:
-            start_switch_probs = np.identity(self.k_regimes,
+        if start_transition is None:
+            start_transition = np.identity(self.k_regimes,
                     dtype=self.ssm.dtype)
 
         if fit_nonswitching_first:
@@ -164,7 +164,7 @@ class RegimeSwitchingMLEModel(MLEModel):
             start_model_params = self.get_model_params(
                     nonswitching_model_params)
 
-        start_params = self._get_params_vector(start_switch_probs,
+        start_params = self._get_params_vector(start_transition,
                 start_model_params)
 
         kwargs['start_params'] = start_params

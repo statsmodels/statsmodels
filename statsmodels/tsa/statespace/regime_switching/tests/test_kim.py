@@ -15,16 +15,16 @@ class TestKim1994_KimFilter(Kim1994):
 
     @classmethod
     def init_filter(cls):
-        regime_switch_probs, design, obs_intercepts, transition, selection, \
+        regime_transition, design, obs_intercept, transition, selection, \
                 state_cov, initial_state_mean, initial_state_cov = \
                 cls.get_model_matrices(cls.dtype, cls.true['parameters'])
 
         kim_filter = KimFilter(cls.k_endog, cls.k_states, cls.k_regimes,
                 k_posdef=cls.k_posdef, dtype=cls.dtype,
-                loglikelihood_burn=cls.true['start'], designs=design,
-                obs_intercepts=obs_intercepts, transitions=transition,
-                selections=selection, state_covs=state_cov,
-                regime_switch_probs=regime_switch_probs)
+                loglikelihood_burn=cls.true['start'], design=design,
+                obs_intercept=obs_intercept, transition=transition,
+                selection=selection, state_cov=state_cov,
+                regime_transition=regime_transition)
 
         kim_filter.initialize_stationary_regime_probs()
         kim_filter.initialize_known(initial_state_mean, initial_state_cov)

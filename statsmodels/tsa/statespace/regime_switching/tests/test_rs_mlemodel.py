@@ -36,7 +36,7 @@ class Kim1994Model(RegimeSwitchingMLEModel):
 
         params = super(Kim1994Model, self).update(params, **kwargs)
 
-        self['regime_switch_probs'], self['design'], self['obs_intercepts'], \
+        self['regime_transition'], self['design'], self['obs_intercept'], \
                 self['transition'], self['selection'], self['state_cov'], \
                 initial_state_mean, initial_state_cov = \
                 Kim1994.get_model_matrices(self.ssm.dtype, params)
@@ -72,10 +72,10 @@ class TestKim1994_MLEModel(Kim1994):
                 np.array(cls.true['untransformed_start_parameters'],
                 dtype=cls.dtype))
 
-        start_switch_probs, start_model_params = \
+        start_transition, start_model_params = \
                 cls.model._get_explicit_params(constrained_start_params)
 
-        params = cls.model.fit(start_switch_probs=start_switch_probs,
+        params = cls.model.fit(start_transition=start_transition,
                 start_model_params=start_model_params,
                 fit_nonswitching_first=False,
                 return_params=True)
