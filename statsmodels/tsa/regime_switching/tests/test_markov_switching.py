@@ -117,7 +117,7 @@ def test_transition_matrix():
     # k_regimes = 3
     endog = np.ones(10)
     mod = markov_switching.MarkovSwitching(endog, k_regimes=3)
-    params = np.r_[[0, 0.2]*3, 1.]
+    params = np.r_[[0]*3, [0.2]*3, 1.]
     transition_matrix = np.zeros((3, 3, 1))
     transition_matrix[1, :, 0] = 0.2
     transition_matrix[2, :, 0] = 0.8
@@ -148,7 +148,8 @@ def test_transition_matrix():
     p21 = np.exp(coeffs1) / (1 + np.exp(coeffs1))
     transition_matrix[0, 1, :] = p21
     transition_matrix[1, 1, :] = 1 - p21
-    assert_allclose(mod.transition_matrix(params), transition_matrix)
+    assert_allclose(mod.transition_matrix(params), transition_matrix,
+                    atol=1e-10)
 
     # k_regimes = 3, tvtp
     endog = np.ones(10)
@@ -173,7 +174,7 @@ def test_transition_matrix():
     transition_matrix[2, 0, :] = (
         1 - np.sum(transition_matrix[:2, 0, :], axis=0))
     assert_allclose(mod.transition_matrix(params)[:, 0, :],
-                    transition_matrix[:, 0, :])
+                    transition_matrix[:, 0, :], atol=1e-10)
 
 
 def test_initial_probabilities():

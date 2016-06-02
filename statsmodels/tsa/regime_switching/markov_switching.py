@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from collections import OrderedDict
 
+from scipy.misc import logsumexp
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import Bunch
@@ -77,15 +78,15 @@ def py_hamilton_filter(initial_probabilities, transition,
     filtered_marginal_probabilities[:, 0] = initial_probabilities
     tmp = np.copy(initial_probabilities)
     shape = (k_regimes, k_regimes)
-    for i in range(1, order + 1):
-        tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
+    for i in range(order):
+        tmp = np.reshape(transition[..., i], shape + (1,) * i) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
     # Reshape transition so we can use broadcasting
     shape = (k_regimes, k_regimes)
     shape += (1,) * (order-1)
-    shape += (nobs if transition.shape[-1] > 1 else 1,)
-    transition = np.reshape(transition, shape)
+    shape += (transition.shape[-1],)
+    transition = np.reshape(transition, shape)[..., order:]
 
     # Hamilton filter iterations
     transition_t = 0
@@ -147,10 +148,18 @@ def cy_hamilton_filter(initial_probabilities, transition,
     filtered_marginal_probabilities[:, 0] = initial_probabilities
     tmp = np.copy(initial_probabilities)
     shape = (k_regimes, k_regimes)
-    for i in range(1, order + 1):
-        tmp = np.reshape(transition[..., 0], shape + (1,) * (i-1)) * tmp
+    transition_t = 0
+    for i in range(order):
+        if transition.shape[-1] > 1:
+            transition_t = i
+        tmp = np.reshape(transition[..., transition_t], shape + (1,) * i) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
+    # Get appropriate subset of transition matrix
+    if transition.shape[-1] > 1:
+        transition = transition[..., order:]
+
+    # Run Cython filter iterations
     prefix, dtype, _ = find_best_blas_type((
         transition, conditional_likelihoods, joint_likelihoods,
         predicted_joint_probabilities, filtered_joint_probabilities))
@@ -192,8 +201,12 @@ def py_kim_smoother(transition, filtered_marginal_probabilities,
     # Reshape transition so we can use broadcasting
     shape = (k_regimes, k_regimes)
     shape += (1,) * (order)
-    shape += (nobs if transition.shape[-1] > 1 else 1,)
+    shape += (transition.shape[-1],)
     transition = np.reshape(transition, shape)
+
+    # Get appropriate subset of transition matrix
+    if transition.shape[-1] > 1:
+        transition = transition[..., order:]
 
     # Kim smoother iterations
     transition_t = 0
@@ -406,8 +419,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             if transition is None:
                 transition = self.transition_matrix(params)
             if transition.ndim == 3:
-                transition = transition[:, :, 0]
-            m = self.k_regimes
+                transition = transition[..., 0]
+            m = transition.shape[0]
             A = np.c_[(np.eye(m) - transition).T, np.ones(m)].T
             try:
                 probabilities = np.linalg.pinv(A)[:, -1]
@@ -423,7 +436,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
     def _transition_matrix_tvtp(self, params):
         transition_matrix = np.zeros(
-            (self.k_regimes, self.k_regimes, self.nobs),
+            (self.k_regimes, self.k_regimes, len(self.exog_tvtp)),
             dtype=np.promote_types(np.float64, params.dtype))
 
         # Compute the predicted values from the regression
@@ -434,8 +447,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 np.reshape(coeffs, (self.k_regimes-1, self.k_tvtp)).T).T
 
         # Perform the logit transformation
-        tmp = np.exp(transition_matrix[:-1, :, :])
-        transition_matrix[:-1, :, :] = tmp / (1 + np.sum(tmp, axis=0))
+        tmp = np.c_[np.zeros((len(self.exog_tvtp), self.k_regimes, 1)),
+                    transition_matrix[:-1, :, :].T].T
+        transition_matrix[:-1, :, :] = np.exp(transition_matrix[:-1, :, :] -
+                                              logsumexp(tmp, axis=0))
 
         # Compute the last column of the transition matrix
         transition_matrix[-1, :, :] = (
@@ -469,7 +484,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                                                                 params.dtype))
             transition_matrix[:-1, :, 0] = np.reshape(
                 params[self.parameters['transition']],
-                (self.k_regimes, self.k_regimes - 1)).T
+                (self.k_regimes-1, self.k_regimes))
             transition_matrix[-1, :, 0] = (
                 1 - np.sum(transition_matrix[:-1, :, 0], axis=0))
         else:
@@ -807,9 +822,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 ]
         else:
             param_names[self.parameters['transition']] = [
-                'p[%d][%d]' % (j, i)
-                for j in range(self.k_regimes)
-                for i in range(self.k_regimes-1)]
+                'p[%d->%d]' % (j, i)
+                for i in range(self.k_regimes-1)
+                for j in range(self.k_regimes)]
 
         return param_names.tolist()
 
@@ -827,11 +842,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             # Transition probabilities
             offset = 0
             for i in range(self.k_regimes):
-                tmp = np.exp(unconstrained[self.parameters[i, 'transition']])
+                tmp1 = unconstrained[self.parameters[i, 'transition']]
+                tmp2 = np.r_[0, tmp1]
                 # Don't let transition probabilities be exactly equal to 1 or 0
                 # (causes problems with the optimizer)
-                constrained[self.parameters[i, 'transition']] = (
-                    tmp / (1 + np.sum(tmp)))
+                constrained[self.parameters[i, 'transition']] = np.exp(
+                    tmp1 - logsumexp(tmp2))
 
         # Do not do anything for the rest of the parameters
 
@@ -897,9 +913,14 @@ class HamiltonFilterResults(object):
         self.llf_obs = np.log(self.joint_likelihoods)
         self.llf = np.sum(self.llf_obs)
 
+        # Subset transition if necessary (e.g. for Markov autoregression)
+        diff = self.transition.shape[-1] - self.nobs
+        if self.transition.shape[-1] > 1 and diff > 0:
+            self.transition = self.transition[..., diff:]
+
     @property
     def expected_durations(self):
-        return 1 / (1 - np.diagonal(self.transition).squeeze())
+        return 1. / (1 - np.diagonal(self.transition).squeeze())
 
 
 class KimSmootherResults(HamiltonFilterResults):

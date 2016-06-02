@@ -114,8 +114,6 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if self._k_exog > 0:
             self.orig_exog = self.exog
             self.exog = self.exog[self.order:]
-        if self.tvtp:
-            self.exog_tvtp = self.exog_tvtp[self.order:]
 
         # Reset the ModelData datasets
         self.data.endog, self.data.exog = (

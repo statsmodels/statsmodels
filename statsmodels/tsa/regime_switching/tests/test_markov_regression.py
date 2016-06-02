@@ -918,16 +918,16 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
     def setup_class(cls):
         # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
-            'params': np.r_[.7253684, .2564055, .1641252, .7994204, .6178282,
-                            .3821718,
+            'params': np.r_[.7253684, .1641252, .6178282,
+                            .2564055, .7994204, .3821718,
                             .5261292, -.0034106, .6015991,
                             .8464551, .9690088, .4178913,
                             .1201952, .0464136, .1075357,
                             -.0425603, .1298906, .9099168,
                             .438375**2],
             'llf': -189.89493,
-            'llf_fit': -226.98822,
-            'llf_fit_em': -233.53193
+            'llf_fit': -226.77929,
+            'llf_fit_em': -226.88581
         }
         super(TestFedFundsConstL1Exog3, cls).setup_class(
             true, fedfunds[4:], k_regimes=3,
