@@ -51,6 +51,65 @@ def _prepare_exog(exog):
     return k_exog, exog
 
 
+def _logistic(x):
+    """
+    Note that this is not a vectorized function
+    """
+    x = np.array(x)
+    # np.exp(x) / (1 + np.exp(x))
+    if x.ndim == 0:
+        y = np.reshape(x, (1, 1, 1))
+    # np.exp(x[i]) / (1 + np.sum(np.exp(x[:])))
+    elif x.ndim == 1:
+        y = np.reshape(x, (len(x), 1, 1))
+    # np.exp(x[i,t]) / (1 + np.sum(np.exp(x[:,t])))
+    elif x.ndim == 2:
+        y = np.reshape(x, (x.shape[0], 1, x.shape[1]))
+    # np.exp(x[i,j,t]) / (1 + np.sum(np.exp(x[:,j,t])))
+    elif x.ndim == 3:
+        y = x
+    else:
+        raise NotImplementedError
+
+    tmp = np.c_[np.zeros((y.shape[-1], y.shape[1], 1)), y.T].T
+    evaluated = np.reshape(np.exp(y - logsumexp(tmp, axis=0)), x.shape)
+
+    return evaluated
+
+
+def _partials_logistic(x):
+    """
+    Note that this is not a vectorized function
+    """
+    tmp = _logistic(x)
+
+    # k
+    if tmp.ndim == 0:
+        return tmp - tmp**2
+    # k x k
+    elif tmp.ndim == 1:
+        partials = np.diag(tmp - tmp**2)
+    # k x k x t
+    elif tmp.ndim == 2:
+        partials = [np.diag(tmp[:, t] - tmp[:, t]**2)
+                    for t in range(tmp.shape[1])]
+        shape = tmp.shape[1], tmp.shape[0], tmp.shape[0]
+        partials = np.concatenate(partials).reshape(shape).transpose((1,2,0))
+    # k x k x j x t
+    else:
+        partials = [[np.diag(tmp[:, j, t] - tmp[:, j, t]**2)
+                     for t in range(tmp.shape[2])]
+                    for j in range(tmp.shape[1])]
+        shape = tmp.shape[1], tmp.shape[2], tmp.shape[0], tmp.shape[0]
+        partials = np.concatenate(partials).reshape(shape).transpose((2,3,0,1))
+
+    for i in range(tmp.shape[0]):
+        for j in range(i):
+            partials[i, j, ...] = -tmp[i, ...] * tmp[j, ...]
+            partials[j, i, ...] = partials[i, j, ...]
+    return partials
+
+
 def py_hamilton_filter(initial_probabilities, transition,
                        conditional_likelihoods):
     # Dimensions
