@@ -6,6 +6,7 @@ License: BSD
 """
 from __future__ import division, absolute_import, print_function
 
+import warnings
 import os
 import numpy as np
 import pandas as pd
@@ -224,7 +225,9 @@ class MarkovAutoregression(object):
 
     def test_fit(self, **kwargs):
         # Test fitting against Stata
-        res = self.model.fit(disp=False, **kwargs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = self.model.fit(disp=False, **kwargs)
         assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
                         rtol=self.rtol)
 
@@ -371,6 +374,11 @@ class TestHamiltonAR2Short(MarkovAutoregression):
         }
         super(TestHamiltonAR2Short, cls).setup_class(
             true, rgnp[-10:], k_regimes=2, order=2, switching_ar=False)
+
+    def test_fit_em(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            super(TestHamiltonAR2Short, self).test_fit_em()
 
     def test_filter_output(self, **kwargs):
         res = self.model.filter(self.true['params'])

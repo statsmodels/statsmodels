@@ -6,6 +6,7 @@ License: BSD
 """
 from __future__ import division, absolute_import, print_function
 
+import warnings
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.regime_switching import markov_regression
@@ -414,7 +415,9 @@ class MarkovRegression(object):
 
     def test_fit(self, **kwargs):
         # Test fitting against Stata
-        res = self.model.fit(disp=False, **kwargs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = self.model.fit(disp=False, **kwargs)
         assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
                         rtol=self.rtol)
 
