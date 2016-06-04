@@ -823,7 +823,7 @@ class MultiComparison(object):
         if len(self.groupsunique) < 2:
             raise ValueError('2 or more groups required for multiple comparisons')
 
-        self.datali = [data[self.groups == k] for k in self.groupsunique]
+        self.datali = [self.data[self.groups == k] for k in self.groupsunique]
         self.pairindices = np.triu_indices(len(self.groupsunique), 1)  #tuple
         self.nobs = self.data.shape[0]
         self.ngroups = len(self.groupsunique)

@@ -582,7 +582,8 @@ class CheckFREDManufacturing(CheckVARMAX):
                  **kwargs):
         cls.true = true
         # 1960:Q1 - 1982:Q4
-        dta = pd.read_stata(current_path + os.sep + 'results' + os.sep + 'manufac.dta')
+        with open(current_path + os.sep + 'results' + os.sep + 'manufac.dta', 'rb') as test_data:
+            dta = pd.read_stata(test_data)
         dta.index = dta.month
         dta['dlncaputil'] = dta['lncaputil'].diff()
         dta['dlnhours'] = dta['lnhours'].diff()
@@ -762,7 +763,6 @@ def test_misspecifications():
 
         varmax.VARMAX(endog, order=(1,1))
 
-        print(w)
         message = ('Estimation of VARMA(p,q) models is not generically robust,'
                    ' due especially to identification issues.')
         assert_equal(str(w[0].message), message)

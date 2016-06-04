@@ -271,11 +271,11 @@ class TestMixedLM(object):
 
         # First variance component
         subgroups1 = np.kron(np.arange(n / 4), np.ones(4))
-        errors += np.kron(2 * np.random.normal(size=n / 4), np.ones(4))
+        errors += np.kron(2 * np.random.normal(size=n // 4), np.ones(4))
 
         # Second variance component
         subgroups2 = np.kron(np.arange(n / 2), np.ones(2))
-        errors += np.kron(2 * np.random.normal(size=n / 2), np.ones(2))
+        errors += np.kron(2 * np.random.normal(size=n // 2), np.ones(2))
 
         # iid errors
         errors += np.random.normal(size=n)
@@ -431,11 +431,11 @@ class TestMixedLM(object):
         groups = np.kron(np.arange(n / 4), np.ones(4))
         errors = 0
         exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n / 4, 2))
+        slopes = np.random.normal(size=(n // 4, 2))
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
         errors += slopes.sum(1)
         ex_vc = np.random.normal(size=(n, 4))
-        slopes = np.random.normal(size=(n / 4, 4))
+        slopes = np.random.normal(size=(n // 4, 4))
         slopes[:, 2:] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * ex_vc
         errors += slopes.sum(1)
