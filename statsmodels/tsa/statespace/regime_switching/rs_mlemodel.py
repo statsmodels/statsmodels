@@ -27,22 +27,42 @@ class RegimeSwitchingMLEModel(MLEModel):
 
     @property
     def nonswitching_model_type(self):
-        # to override, if fitting nonswitching is performed
+        '''
+        To override, if fitting non-switching model is performed.
+        '''
 
         return MLEModel
 
     def get_model_params(self, nonswitching_model_params):
-        # to override, if fitting nonswitching is performed
-
+        '''
+        Note that switching model has two groups of parameters: parameters of
+        regime transition matrix and model parameters.
+        This method is used when non-switching fitting is done, and we need to
+        get switching model starting params.
+        To override, if fitting non-switching model is performed.
+        '''
         return nonswitching_model_params
 
     def get_nonswitching_model_params(self, model_params):
-        # to override, if fitting nonswitching is performed
+        '''
+        Note that switching model has two groups of parameters: parameters of
+        regime transition matrix and model parameters.
+        Used when switching model params are provided in fit method, and we
+        need to transform them into params for nonswitching model fitting.
+        To override, if fitting non-switching model is performed.
+        '''
 
         return model_params
 
     def transform_transition(self, unconstrained_transition):
-        # to override, if needed
+        '''
+        Note that switching model has two groups of parameters: parameters of
+        regime transition matrix and model parameters.
+        This is default implementation of logistic transformation of transition
+        matrix.
+        unconstrained_transition is a raveled transition matrix without last
+        row.
+        '''
 
         k_regimes = self.k_regimes
 
@@ -56,7 +76,14 @@ class RegimeSwitchingMLEModel(MLEModel):
         return constrained_transition.ravel()
 
     def untransform_transition(self, constrained_transition):
-        # to override, if needed
+        '''
+        Note that switching model has two groups of parameters: parameters of
+        regime transition matrix and model parameters.
+        This is default implementation of logistic transformation of transition
+        matrix.
+        constrained_transition is a raveled transformed transition matrix
+        without last row.
+        '''
 
         k_regimes = self.k_regimes
         #TODO: pass as an argument?
@@ -72,12 +99,20 @@ class RegimeSwitchingMLEModel(MLEModel):
         return unconstrained_transition.ravel()
 
     def transform_model_params(self, unconstrained_model_params):
-        # to override
+        '''
+        Note that switching model has two groups of parameters: parameters of
+        regime transition matrix and model parameters.
+        This method is to be overridden by user.
+        '''
 
         return np.array(unconstrained_model_params, ndmin=1)
 
     def untransform_model_params(self, constrained_model_params):
-        # to override
+        '''
+        Note that switching model has two groups of parameters: parameters of
+        regime transition matrix and model parameters.
+        This method is to be overridden by user.
+        '''
 
         return np.array(constrained_model_params, ndmin=1)
 
@@ -124,7 +159,6 @@ class RegimeSwitchingMLEModel(MLEModel):
         self.ssm.initialize_stationary_regime_probs()
 
     def _get_params_vector(self, start_transition, start_model_params):
-
         return np.hstack((start_transition[:-1, :].ravel(),
                 start_model_params))
 
@@ -144,10 +178,6 @@ class RegimeSwitchingMLEModel(MLEModel):
     def fit(self, start_transition=None, start_model_params=None,
             fit_nonswitching_first=True, **kwargs):
 
-        if start_transition is None:
-            start_transition = np.identity(self.k_regimes,
-                    dtype=self.ssm.dtype)
-
         if fit_nonswitching_first:
             nonswitching_model = self.nonswitching_model_type(
                     self.endog, self.k_states, exog=self.exog,
@@ -155,8 +185,12 @@ class RegimeSwitchingMLEModel(MLEModel):
                     **self._init_kwargs)
             nonswitching_kwargs = dict(kwargs)
             nonswitching_kwargs['return_params'] = True
-            nonswitching_model_params = self.get_nonswitching_model_params(
-                    start_model_params)
+            if start_model_params is not None:
+                nonswitching_model_params = self.get_nonswitching_model_params(
+                        start_model_params)
+            else:
+                nonswitching_model_params = None
+
             nonswitching_model_params = nonswitching_model.fit(
                     start_params=nonswitching_model_params,
                     **nonswitching_kwargs)
@@ -164,17 +198,30 @@ class RegimeSwitchingMLEModel(MLEModel):
             start_model_params = self.get_model_params(
                     nonswitching_model_params)
 
-        start_params = self._get_params_vector(start_transition,
-                start_model_params)
+        if start_transition is None and start_model_params is not None:
+            # Other heuristics?
+            start_transition = np.identity(self.k_regimes,
+                    dtype=self.ssm.dtype)
+
+        if start_transition is not None and start_model_params is None:
+            start_transition = None
+
+        if start_transition is None and start_model_params is None:
+            start_params = None
+        else:
+            start_params = self._get_params_vector(start_transition,
+                    start_model_params)
 
         kwargs['start_params'] = start_params
+        # smoothing is not defined yet
+        kwargs['return_params'] = True
         return super(RegimeSwitchingMLEModel, self).fit(**kwargs)
 
-    def smooth(self, **kwargs):
+    def smooth(self, *args, **kwargs):
 
         raise NotImplementedError
 
-    def simulation_smoother(self, **kwargs):
+    def simulation_smoother(self, *args, **kwargs):
 
         raise NotImplementedError
 

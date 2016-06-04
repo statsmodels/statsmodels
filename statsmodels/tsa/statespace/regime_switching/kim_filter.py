@@ -94,6 +94,10 @@ class KimFilter(object):
             self._regime_transition = np.identity(k_regimes, dtype=dtype)
 
     def _prepare_data_for_regimes(self, data, per_regime_dims):
+        '''
+        This duplicates representation matrix for every regime, if it's
+        provided in the only example.
+        '''
 
         k_regimes = self._k_regimes
 
@@ -251,16 +255,25 @@ class KimFilter(object):
             regime_filter.initialize_stationary()
 
     def initialize_known_regime_probs(self, initial_regime_probs):
+        '''
+        Initialization of marginal regime distribution at t=0.
+        '''
 
         self._initial_regime_probs = initial_regime_probs
 
     def initialize_uniform_regime_probs(self):
+        '''
+        Initialization of marginal regime distribution at t=0.
+        '''
 
         k_regimes = self._k_regimes
         self._initial_regime_probs = np.ones((k_regimes,), dtype=self._dtype) \
                 / k_regimes
 
     def initialize_stationary_regime_probs(self):
+        '''
+        Initialization of marginal regime distribution at t=0.
+        '''
 
         k_regimes = self._k_regimes
         dtype = self._dtype
@@ -608,6 +621,9 @@ class KimFilter(object):
 
     @property
     def initial_regime_probs():
+        '''
+        Marginal regime distribution at t=0.
+        '''
 
         return self._initial_regime_probs
 

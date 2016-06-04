@@ -2,6 +2,12 @@ import numpy as np
 from .results import results_kim_filter
 
 class Kim1994(object):
+    '''
+    Base class for Kim filter and switching MLE model test. Handles data
+    and transformation params to state space matrices.
+    See chapter 5.4.2 of Kim and Nelson book and
+    http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt for details.
+    '''
 
     @classmethod
     def setup_class(cls):
@@ -23,6 +29,10 @@ class Kim1994(object):
 
     @classmethod
     def get_model_matrices(cls, dtype, params):
+        '''
+        Transforms parameter vector into state space representation
+        matrices.
+        '''
 
         k_regimes = 2
         k_endog = 1

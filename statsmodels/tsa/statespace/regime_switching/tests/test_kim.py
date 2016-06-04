@@ -4,6 +4,11 @@ from statsmodels.tsa.statespace.regime_switching.kim_filter import KimFilter
 from kim1994 import Kim1994
 
 class TestKim1994_KimFilter(Kim1994):
+    '''
+    Kim filter test based on output of
+    http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt.
+    See chapter 5.4.2 of Kim and Nelson book and for details.
+    '''
 
     @classmethod
     def setup_class(cls):
