@@ -2,6 +2,8 @@ from statsmodels.compat.python import range, lrange, lzip
 import numpy as np
 import numpy.lib.recfunctions as nprf
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.data import _is_using_pandas
+from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
@@ -257,14 +259,15 @@ def detrend(x, order=1, axis=0):
         return resid
 
 
-def lagmat(x, maxlag, trim='forward', original='ex'):
-    '''create 2d array of lags
+def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
+    """
+    Create 2d array of lags
 
     Parameters
     ----------
     x : array_like, 1d or 2d
         data; if 2d, observation in rows and variables in columns
-    maxlag : int or sequence of ints
+    maxlag : int
         all lags from zero to maxlag are included
     trim : str {'forward', 'backward', 'both', 'none'} or None
         * 'forward' : trim invalid observations in front
@@ -278,6 +281,9 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
         * 'sep' : returns a tuple (original array, lagged values). The original
                   array is truncated to have the same number of rows as
                   the returned lagmat.
+    use_pandas : bool, optional
+        If true, returns a DataFrame when the input is a pandas
+        Series or DataFrame.  If false, return numpy ndarrays.
 
     Returns
     -------
@@ -313,45 +319,65 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
 
     Notes
     -----
-    TODO:
-    * allow list of lags additional to maxlag
-    * create varnames for columns
-    '''
-    x = np.asarray(x)
+    When using a pandas DataFrame or Series with use_pandas=True, trim can only
+    be 'forward' or 'both' since it is not possible to consistently extend index
+    values.
+    """
+    # TODO:  allow list of lags additional to maxlag
+    is_pandas = _is_using_pandas(x, None) and use_pandas
+    trim = 'none' if trim is None else trim
+    trim = trim.lower()
+    if is_pandas and trim in ('none', 'backward'):
+        raise ValueError("trim cannot be 'none' or 'forward' when used on "
+                         "Series or DataFrames")
+
+    xa = np.asarray(x)
     dropidx = 0
-    if x.ndim == 1:
-        x = x[:,None]
-    nobs, nvar = x.shape
-    if original in ['ex','sep']:
+    if xa.ndim == 1:
+        xa = xa[:, None]
+    nobs, nvar = xa.shape
+    if original in ['ex', 'sep']:
         dropidx = nvar
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
-    lm = np.zeros((nobs+maxlag, nvar*(maxlag+1)))
-    for k in range(0, int(maxlag+1)):
-        lm[maxlag-k:nobs+maxlag-k, nvar*(maxlag-k):nvar*(maxlag-k+1)] = x
-    if trim:
-        trimlower = trim.lower()
-    else:
-        trimlower = trim
-    if trimlower == 'none' or not trimlower:
-        startobs = 0
-        stopobs = len(lm)
-    elif trimlower == 'forward':
-        startobs = 0
-        stopobs = nobs+maxlag-k
-    elif trimlower == 'both':
-        startobs = maxlag
-        stopobs = nobs+maxlag-k
-    elif trimlower == 'backward':
-        startobs = maxlag
-        stopobs = len(lm)
+    lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
+    for k in range(0, int(maxlag + 1)):
+        lm[maxlag - k:nobs + maxlag - k,
+        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = xa
 
+    if trim in ('none', 'forward'):
+        startobs = 0
+    elif trim in ('backward', 'both'):
+        startobs = maxlag
     else:
         raise ValueError('trim option not valid')
-    if original == 'sep':
-        return lm[startobs:stopobs,dropidx:], x[startobs:stopobs]
+
+    if trim in ('none', 'backward'):
+        stopobs = len(lm)
     else:
-        return lm[startobs:stopobs,dropidx:]
+        stopobs = nobs
+
+    if is_pandas:
+        x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
+        columns = [str(col) for col in x_columns]
+        for lag in range(maxlag):
+            lag_str = str(lag + 1)
+            columns.extend([str(col) + '.L.' + lag_str for col in x_columns])
+        lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
+        lags = lm.iloc[startobs:]
+        if original in ('sep', 'ex'):
+            leads = lags[x_columns]
+            lags = lags.drop(x_columns, 1)
+    else:
+        lags = lm[startobs:stopobs, dropidx:]
+        if original == 'sep':
+            leads = lm[startobs:stopobs, :dropidx]
+
+    if original == 'sep':
+        return lags, leads
+    else:
+        return lags
+
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     '''generate lagmatrix for 2d array, columns arranged by variables
@@ -666,10 +692,3 @@ def freq_to_period(freq):
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
            'vec', 'vech', 'unvec', 'unvech']
-
-if __name__ == '__main__':
-    # sanity check, mainly for imports
-    x = np.random.normal(size=(100,2))
-    tmp = lagmat(x,2)
-    tmp = lagmat2ds(x,2)
-#    grangercausalitytests(x, 2)
