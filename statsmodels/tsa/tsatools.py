@@ -2,14 +2,12 @@ from statsmodels.compat.python import range, lrange, lzip
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
-from statsmodels.tools.data import
 from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
 
 def add_trend(X, trend="c", prepend=False, has_constant='skip'):
@@ -53,7 +51,8 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     trend = trend.lower()
     columns = ['const', 'trend', 'trend_squared']
     if trend == "c":  # handles structured arrays
-        return add_constant(X, prepend=prepend, has_constant=has_constant)
+        columns = columns[:1]
+        trendorder = 0
     elif trend == "ct" or trend == "t":
         columns = columns[:2]
         if trend == "t":
@@ -70,6 +69,7 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
         import pandas as pd
 
         if is_recarray:
+            descr = X.dtype.descr
             X = pd.DataFrame.from_records(X)
         elif isinstance(X, pd.Series):
             X = pd.DataFrame(X)
@@ -84,17 +84,25 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     trendarr = np.fliplr(trendarr)
     if trend == "t":
         trendarr = trendarr[:, 1]
-    # Constant if all have same value and non-zero
-    x_has_constant = np.any(np.logical_and(np.any(np.ptp(np.asanyarray(X), axis=0) == 0, axis=0),
-                                           np.all(X != 0.0, axis=0)))
 
-    if "c" in trend and x_has_constant:
-        if has_constant == 'raise':
-            raise ValueError("X already contains a constant")
-        elif has_constant == 'add':
-            pass
+    if "c" in trend:
+        if is_pandas or is_recarray:
+            # Mixed type protection
+            def safe_is_const(s):
+                try:
+                    return np.ptp(s) == 0.0 and np.any(s != 0.0)
+                except:
+                    return False
+            col_const = X.apply(safe_is_const, 0)
         else:
-            trendarr = trendarr[:, 1]
+            col_const = np.logical_and(np.any(np.ptp(np.asanyarray(X), axis=0) == 0, axis=0),
+                                       np.all(X != 0.0, axis=0))
+        if np.any(col_const):
+            if has_constant == 'raise':
+                raise ValueError("X already contains a constant")
+            elif has_constant == 'skip':
+                columns = columns[1:]
+                trendarr = trendarr[:, 1:]
 
     order = 1 if prepend else -1
     if is_recarray or is_pandas:
@@ -107,6 +115,10 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
 
     if is_recarray:
         X = X.to_records(index=False, convert_datetime64=False)
+        new_descr = X.dtype.descr
+        extra_col = len(new_descr) - len(descr)
+        descr = new_descr[:extra_col] + descr if prepend else descr + new_descr[-extra_col:]
+        X = X.astype(np.dtype(descr))
 
     return X
 

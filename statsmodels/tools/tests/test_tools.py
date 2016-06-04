@@ -31,7 +31,7 @@ class TestTools(TestCase):
     def test_add_constant_has_constant1d(self):
         x = np.ones(5)
         x = tools.add_constant(x, has_constant='skip')
-        assert_equal(x, np.ones(5))
+        assert_equal(x, np.ones((5,1)))
 
         assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
 

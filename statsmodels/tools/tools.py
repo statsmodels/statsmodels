@@ -9,7 +9,6 @@ from scipy.linalg import svdvals
 from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas import DataFrame
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -262,46 +261,8 @@ def add_constant(data, prepend=True, has_constant='skip'):
     When the input is recarray or a pandas Series or DataFrame, the added
     column's name is 'const'.
     """
-    is_recarray = _is_recarray(data)
-    if _is_using_pandas(data, None) or is_recarray:
-        from pandas import Series, DataFrame
-
-        if is_recarray:
-            data = DataFrame.from_records(data)
-        elif isinstance(data, Series):
-            data = DataFrame(data)
-        else:
-            data = data.copy()
-    else:
-        data = np.asarray(data)
-
-    var0 = data.var(0) == 0
-    if np.any(var0):
-        if has_constant == 'raise':
-            raise ValueError("data already contains a constant.")
-        elif has_constant == 'skip':
-            return data
-        elif has_constant == 'add':
-            pass
-        else:
-            raise ValueError("Option {0} not understood for "
-                             "has_constant.".format(has_constant))
-
-    const = np.ones((data.shape[0], 1))
-    if _is_using_pandas(data, None):
-        if prepend:
-            data.insert(0, 'const', const)
-        else:
-            data['const'] = const
-    else:
-        order = 1 if prepend else -1
-        data = [np.ones((data.shape[0], 1)), data]
-        data = np.column_stack(data[::order])
-
-    if is_recarray:
-        data = data.to_records(index=False, convert_datetime64=False)
-
-    return data
+    from statsmodels.tsa.tsatools import add_trend
+    return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
 
 
 def isestimable(C, D):

@@ -505,7 +505,7 @@ class TestAddTrend(unittest.TestCase):
         assert_raises(ValueError, tools.add_trend, X=df, trend='ct', has_constant='raise')
 
         skipped = tools.add_trend(self.c, trend='c')
-        assert_equal(skipped, self.c)
+        assert_equal(skipped, self.c[:,None])
 
         skipped_const = tools.add_trend(self.c, trend='ct', has_constant='skip')
         expected = np.vstack((self.c, self.t)).T
@@ -519,6 +519,13 @@ class TestAddTrend(unittest.TestCase):
         expected = np.vstack((self.c, self.c, self.t)).T
         assert_equal(added, expected)
 
+    def test_mixed_recarray(self):
+        dt = np.dtype([('c0', np.float64), ('c1', np.int8), ('c2', 'S4')])
+        ra = np.array([(1.0, 1, 'aaaa'), (1.1, 2, 'bbbb')], dtype=dt).view(np.recarray)
+        added = tools.add_trend(ra, trend='ct')
+        dt = np.dtype([('c0', np.float64), ('c1', np.int8), ('c2', 'S4'), ('const', np.float64), ('trend', np.float64)])
+        expected = np.array([(1.0, 1, 'aaaa', 1.0, 1.0), (1.1, 2, 'bbbb', 1.0, 2.0)], dtype=dt).view(np.recarray)
+        assert_equal(added, expected)
 
     def test_dataframe_duplicate(self):
         df = pd.DataFrame(self.arr_2d, columns=['const', 'trend'])
