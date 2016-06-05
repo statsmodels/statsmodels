@@ -251,8 +251,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
                 tmp = np.sqrt(result.smoothed_marginal_probabilities)
             for i in range(self.k_regimes):
                 tmp_endog = tmp[i] * endog
-                tmp_exog = tmp[i][:, np.newaxis] * exog
                 if k_exog > 0:
+                    tmp_exog = tmp[i][:, np.newaxis] * exog
                     resid = tmp_endog - np.dot(tmp_exog, betas[i])
                 else:
                     resid = tmp_endog
