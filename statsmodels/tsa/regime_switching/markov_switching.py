@@ -716,13 +716,22 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
     def fit(self, start_params=None, transformed=True, cov_type='opg',
             cov_kwds=None, method='bfgs', maxiter=50, full_output=1, disp=0,
-            callback=None, return_params=False, em_iter=5, **kwargs):
+            callback=None, return_params=False, em_iter=5, search_reps=0,
+            search_iter=5, search_scale=1., **kwargs):
 
         if start_params is None:
             start_params = self.start_params
             transformed = True
         else:
             start_params = np.array(start_params, ndmin=1)
+
+        # Random search for better start parameters
+        if search_reps > 0:
+            start_params = self._start_params_search(
+                search_reps, start_params=start_params,
+                transformed=transformed, em_iter=search_iter,
+                scale=search_scale)
+            transformed = True
 
         # Get better start params through EM algorithm
         if em_iter and not self.tvtp:
@@ -770,11 +779,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if not transformed:
             start_params = self.transform_params(start_params)
 
-        # Sanity checks
-        if self.tvtp:
-            raise NotImplementedError('The EM algorithm is not available with'
-                                      ' time-varying transition probabilities')
-
         # Perform expectation-maximization
         llf = []
         params = [start_params]
@@ -819,9 +823,15 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Smooth at the given parameters
         result = self.smooth(params0, transformed=True, return_raw=True)
 
-        transition = self._em_transition(result)
-        for i in range(self.k_regimes):
-            params1[self.parameters[i, 'transition']] = transition[i]
+        # The EM with TVTP is not yet supported, just return the previous
+        # iteration parameters
+        if self.tvtp:
+            params1[self.parameters['transition']] = (
+                params0[self.parameters['transition']])
+        else:
+            transition = self._em_transition(result)
+            for i in range(self.k_regimes):
+                params1[self.parameters[i, 'transition']] = transition[i]
 
         return result, params1
 
@@ -853,6 +863,53 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 transition[i] /= 1 + delta + 1e-6
 
         return transition
+
+    def _start_params_search(self, reps, start_params=None, transformed=True,
+                             em_iter=5, scale=1.):
+        if start_params is None:
+            start_params = self.start_params
+            transformed = True
+        else:
+            start_params = np.array(start_params, ndmin=1)
+
+        # Random search is over untransformed space
+        if transformed:
+            start_params = self.untransform_params(start_params)
+
+        # Construct the standard deviations
+        scale = np.array(scale, ndmin=1)
+        if scale.size == 1:
+            scale = np.ones(self.k_params) * scale
+        if not scale.size == self.k_params:
+            raise ValueError('Scale of variates for random start'
+                             ' parameter search must be given for each'
+                             ' parameter or as a single scalar.')
+
+        # Construct the random variates
+        variates = np.zeros((reps, self.k_params))
+        for i in range(self.k_params):
+            variates[:, i] = scale[i] * np.random.uniform(-0.5, 0.5, size=reps)
+
+        llf = self.loglike(start_params, transformed=False)
+        params = start_params
+        for i in range(reps):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                try:
+                    proposed_params = self._fit_em(
+                        start_params + variates[i], transformed=False,
+                        maxiter=em_iter, return_params=True)
+                    proposed_llf = self.loglike(proposed_params)
+
+                    if proposed_llf > llf:
+                        llf = proposed_llf
+                        params = self.untransform_params(proposed_params)
+                except:
+                    pass
+
+        # Return transformed parameters
+        return self.transform_params(params)
 
     @property
     def start_params(self):
