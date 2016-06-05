@@ -13,6 +13,7 @@ import pandas as pd
 from collections import OrderedDict
 
 from scipy.misc import logsumexp
+from scipy.stats import norm
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import Bunch
@@ -1068,6 +1069,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Dimensions
         self.nobs = model.nobs
+        self.k_regimes = model.k_regimes
 
         # Setup covariance matrix notes dictionary
         if not hasattr(self, 'cov_kwds'):
@@ -1198,7 +1200,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the outer
         product of gradients method.
         """
-        score_obs = self.model.score_obs(self.params, transformed=True)
+        score_obs = self.model.score_obs(self.params, transformed=True).T
         cov_params, singular_values = pinv_extended(
             np.inner(score_obs, score_obs))
 
@@ -1281,6 +1283,149 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         (array) The z-statistics for the coefficients.
         """
         return self.params / self.bse
+
+    def summary(self, alpha=.05, start=None, title=None, model_name=None,
+                display_params=True):
+        """
+        Summarize the Model
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for the confidence intervals. Default is 0.05.
+        start : int, optional
+            Integer of the start observation. Default is 0.
+        model_name : string
+            The name of the model used. Default is to use model class name.
+
+        Returns
+        -------
+        summary : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary
+        """
+        from statsmodels.iolib.summary import Summary
+
+        # Model specification results
+        model = self.model
+        if title is None:
+            title = 'Markov Switching Model Results'
+
+        if start is None:
+            start = 0
+        if self.data.dates is not None:
+            dates = self.data.dates
+            d = dates[start]
+            sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
+            d = dates[-1]
+            sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
+        else:
+            sample = [str(start), ' - ' + str(self.model.nobs)]
+
+        # Standardize the model name as a list of str
+        if model_name is None:
+            model_name = model.__class__.__name__
+
+        # Create the tables
+        if not isinstance(model_name, list):
+            model_name = [model_name]
+
+        top_left = [('Dep. Variable:', None)]
+        top_left.append(('Model:', [model_name[0]]))
+        for i in range(1, len(model_name)):
+            top_left.append(('', ['+ ' + model_name[i]]))
+        top_left += [
+            ('Date:', None),
+            ('Time:', None),
+            ('Sample:', [sample[0]]),
+            ('', [sample[1]])
+        ]
+
+        top_right = [
+            ('No. Observations:', [self.model.nobs]),
+            ('Log Likelihood', ["%#5.3f" % self.llf]),
+            ('AIC', ["%#5.3f" % self.aic]),
+            ('BIC', ["%#5.3f" % self.bic]),
+            ('HQIC', ["%#5.3f" % self.hqic])
+        ]
+
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
+        summary = Summary()
+        summary.add_table_2cols(self, gleft=top_left, gright=top_right,
+                                title=title)
+
+        # Make parameters tables for each regime
+        from statsmodels.iolib.summary import summary_params
+        import re
+        def make_table(self, mask, title, strip_end=True):
+            res = (self, self.params[mask], self.bse[mask],
+                   self.zvalues[mask], self.pvalues[mask],
+                   self.conf_int(alpha)[mask])
+
+            param_names = [
+                re.sub('\[\d+\]$', '', name) for name in
+                np.array(self.data.param_names)[mask].tolist()
+            ]
+
+            return summary_params(res, yname=None, xname=param_names,
+                                  alpha=alpha, use_t=False, title=title)
+
+        params = model.parameters
+        regime_masks = [[] for i in range(model.k_regimes)]
+        other_masks = {}
+        for key, switching in params.switching.items():
+            k_params = len(switching)
+            if key == 'transition':
+                continue
+            other_masks[key] = []
+
+            for i in range(k_params):
+                if switching[i]:
+                    for j in range(self.k_regimes):
+                        regime_masks[j].append(params[j, key][i])
+                else:
+                    other_masks[key].append(params[0, key][i])
+
+        for i in range(self.k_regimes):
+            mask = regime_masks[i]
+            if len(mask) > 0:
+                table = make_table(self, mask, 'Regime %d parameters' % i)
+                summary.tables.append(table)
+
+        mask = []
+        for key, _mask in other_masks.items():
+            mask = np.r_[mask, _mask]
+        if len(mask) > 0:
+            table = make_table(self, mask.tolist(), 'Non-switching parameters')
+            summary.tables.append(table)
+
+        # Transition parameters
+        mask = params['transition']
+        table = make_table(self, mask, 'Regime transition parameters')
+        summary.tables.append(table)
+
+        # Add warnings/notes, added to text format only
+        etext = []
+        if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
+            etext.append(self.cov_kwds['description'])
+        if self._rank < len(self.params):
+            etext.append("Covariance matrix is singular or near-singular,"
+                         " with condition number %6.3g. Standard errors may be"
+                         " unstable." % np.linalg.cond(self.cov_params()))
+
+        if etext:
+            etext = ["[{0}] {1}".format(i + 1, text)
+                     for i, text in enumerate(etext)]
+            etext.insert(0, "Warnings:")
+            summary.add_extra_txt(etext)
+
+        return summary
 
 
 class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
