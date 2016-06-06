@@ -929,7 +929,7 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
                             -.0425603, .1298906, .9099168,
                             .438375**2],
             'llf': -189.89493,
-            'llf_fit': -226.77929,
+            'llf_fit': -224.99419,
             'llf_fit_em': -226.88581
         }
         super(TestFedFundsConstL1Exog3, cls).setup_class(

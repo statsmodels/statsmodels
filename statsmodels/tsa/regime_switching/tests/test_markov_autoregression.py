@@ -490,7 +490,7 @@ class TestHamiltonAR4(MarkovAutoregression):
                             np.exp(-0.262658)**2, 0.013486, -0.057521,
                             -0.246983, -0.212923],
             'llf': -181.26339,
-            'llf_fit': -182.49818,
+            'llf_fit': -181.26339,
             'llf_fit_em': -183.85444
         }
         super(TestHamiltonAR4, cls).setup_class(
@@ -520,7 +520,7 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
                             .6677098**2, .3710719, .4621503, .7002937,
                             -.3206652],
             'llf': -179.32354,
-            'llf_fit': -179.38690,
+            'llf_fit': -179.38684,
             'llf_fit_em': -184.99606
         }
         super(TestHamiltonAR2Switch, cls).setup_class(
@@ -734,7 +734,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
                             1.027190, -0.719760,
                             np.exp(-0.217003)**2, 0.161489, 0.022536],
             'llf': -163.914049,
-            'llf_fit': -167.003262,
+            'llf_fit': -161.786477,
             'llf_fit_em': -163.914049
         }
         exog_tvtp = np.c_[np.ones(len(rgnp)), rec]
