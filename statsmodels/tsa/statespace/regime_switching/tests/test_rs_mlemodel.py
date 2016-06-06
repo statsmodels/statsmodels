@@ -130,7 +130,7 @@ class Kim1994WithMLEModel(Kim1994):
                 cls.model.transform_params(untransformed_params)
 
         start_transition, start_model_params = \
-                cls.model._get_explicit_params(constrained_start_params)
+                cls.model.get_explicit_params(constrained_start_params)
 
         params = cls.model.fit(start_transition=start_transition,
                 start_model_params=start_model_params,
