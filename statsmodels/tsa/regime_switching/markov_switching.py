@@ -715,7 +715,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return approx_hess_cs(params, self.loglike)
 
-    def fit(self, start_params=None, transformed=True, cov_type='opg',
+    def fit(self, start_params=None, transformed=True, cov_type='approx',
             cov_kwds=None, method='bfgs', maxiter=100, full_output=1, disp=0,
             callback=None, return_params=False, em_iter=5, search_reps=0,
             search_iter=5, search_scale=1., **kwargs):
