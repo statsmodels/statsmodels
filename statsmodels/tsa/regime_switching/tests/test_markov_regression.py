@@ -746,7 +746,8 @@ class TestFedFundsConst(MarkovRegression):
                             2.107562**2],
             'llf': -508.63592,
             'llf_fit': -508.63592,
-            'llf_fit_em': -508.65852
+            'llf_fit_em': -508.65852,
+            'bse_oim': np.r_[.0104002, .0268434, .1767083, .2999889, np.nan]
         }
         super(TestFedFundsConst, cls).setup_class(true, fedfunds, k_regimes=2)
 
@@ -754,6 +755,12 @@ class TestFedFundsConst(MarkovRegression):
         res = self.result
         assert_allclose(res.filtered_joint_probabilities,
                         fedfunds_const_filtered_joint_probabilities)
+
+    def test_bse(self):
+        # Can't compare last element of bse because we estimate sigma^2 rather
+        # than sigma^2
+        bse = self.result.cov_params_approx.diagonal()**0.5
+        assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-7)
 
 
 
@@ -889,10 +896,18 @@ class TestFedFundsConstL1(MarkovRegression):
                             .7631424, 1.061174, .6915759**2],
             'llf': -264.71069,
             'llf_fit': -264.71069,
-            'llf_fit_em': -264.71153
+            'llf_fit_em': -264.71153,
+            'bse_oim': np.r_[.1202616, .0495924, .2886657, .1183838, .0337234,
+                             .0185031, np.nan]
         }
         super(TestFedFundsConstL1, cls).setup_class(
             true, fedfunds[1:], k_regimes=2, exog=fedfunds[:-1])
+
+    def test_bse(self):
+        # Can't compare last element of bse because we estimate sigma^2 rather
+        # than sigma^2
+        bse = self.result.cov_params_approx.diagonal()**0.5
+        assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-6)
 
 
 class TestFedFundsConstL1Exog(MarkovRegression):
@@ -905,7 +920,10 @@ class TestFedFundsConstL1Exog(MarkovRegression):
                             -.0273928, .2125275, .5764495**2],
             'llf': -229.25614,
             'llf_fit': -229.25614,
-            'llf_fit_em': -229.25624
+            'llf_fit_em': -229.25624,
+            'bse_oim': np.r_[.0929915, .0641179, .1373889, .1279231, .0333236,
+                             .0270852, .0294113, .0240138, .0408057, .0297351,
+                             np.nan]
         }
         super(TestFedFundsConstL1Exog, cls).setup_class(
             true, fedfunds[4:], k_regimes=2,
@@ -915,6 +933,12 @@ class TestFedFundsConstL1Exog(MarkovRegression):
         kwargs.setdefault('em_iter', 10)
         kwargs.setdefault('maxiter', 100)
         super(TestFedFundsConstL1Exog, self).test_fit(**kwargs)
+
+    def test_bse(self):
+        # Can't compare last element of bse because we estimate sigma^2 rather
+        # than sigma^2
+        bse = self.result.cov_params_approx.diagonal()**0.5
+        assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-7)
 
 
 class TestFedFundsConstL1Exog3(MarkovRegression):
@@ -947,7 +971,9 @@ class TestAreturnsConstL1Variance(MarkovRegression):
                             .527953, .5895792**2, 1.605333**2],
             'llf': -745.7977,
             'llf_fit': -745.7977,
-            'llf_fit_em': -745.83654
+            'llf_fit_em': -745.83654,
+            'bse_oim': np.r_[.0634387, .0662574, .0782852, .2784204, .0301862,
+                             .0857841, np.nan, np.nan]
         }
         super(TestAreturnsConstL1Variance, cls).setup_class(
             true, areturns[1:], k_regimes=2, exog=areturns[:-1],
@@ -957,6 +983,12 @@ class TestAreturnsConstL1Variance(MarkovRegression):
         kwargs.setdefault('em_iter', 10)
         kwargs.setdefault('maxiter', 100)
         super(TestAreturnsConstL1Variance, self).test_fit(**kwargs)
+
+    def test_bse(self):
+        # Can't compare last two element of bse because we estimate sigma^2
+        # rather than sigma
+        bse = self.result.cov_params_approx.diagonal()**0.5
+        assert_allclose(bse[:-2], self.true['bse_oim'][:-2], atol=1e-7)
 
 
 class TestMumpspcNoconstL1Variance(MarkovRegression):
@@ -974,18 +1006,3 @@ class TestMumpspcNoconstL1Variance(MarkovRegression):
             true, mumpspc[1:], k_regimes=2, trend='nc', exog=mumpspc[:-1],
             switching_variance=True, atol=1e-4)
 
-
-def test_conditional_likelihood():
-    pass
-
-
-def test_transform():
-    pass
-
-
-def test_start_params():
-    pass
-
-
-def test_param_names():
-    pass

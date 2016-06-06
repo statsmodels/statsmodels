@@ -492,7 +492,9 @@ class TestHamiltonAR4(MarkovAutoregression):
                             -0.246983, -0.212923],
             'llf': -181.26339,
             'llf_fit': -181.26339,
-            'llf_fit_em': -183.85444
+            'llf_fit_em': -183.85444,
+            'bse_oim': np.r_[.0965189, .0377362, .2645396, .0745187, np.nan,
+                             .1199942, .137663, .1069103, .1105311, ]
         }
         super(TestHamiltonAR4, cls).setup_class(
             true, rgnp, k_regimes=2, order=4, switching_ar=False)
@@ -511,6 +513,13 @@ class TestHamiltonAR4(MarkovAutoregression):
         assert_allclose(res.smoothed_marginal_probabilities[1],
                         hamilton_ar4_smoothed, atol=1e-5)
 
+    def test_bse(self):
+        # Can't compare middle element of bse because we estimate sigma^2
+        # rather than sigma
+        bse = self.result.cov_params_approx.diagonal()**0.5
+        assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-6)
+        assert_allclose(bse[6:], self.true['bse_oim'][6:], atol=1e-6)
+
 
 class TestHamiltonAR2Switch(MarkovAutoregression):
     @classmethod
@@ -522,10 +531,19 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
                             -.3206652],
             'llf': -179.32354,
             'llf_fit': -179.38684,
-            'llf_fit_em': -184.99606
+            'llf_fit_em': -184.99606,
+            'bse_oim': np.r_[.1424841, .0994742, .2057086, .1225987, np.nan,
+                             .1754383, .1652473, .187409, .1295937]
         }
         super(TestHamiltonAR2Switch, cls).setup_class(
             true, rgnp, k_regimes=2, order=2)
+
+    def test_bse(self):
+        # Can't compare middle element of bse because we estimate sigma^2
+        # rather than sigma
+        bse = self.result.cov_params_approx.diagonal()**0.5
+        assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-7)
+        assert_allclose(bse[6:], self.true['bse_oim'][6:], atol=1e-7)
 
 
 hamilton_ar1_switch_filtered = [
