@@ -147,11 +147,12 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
         params = start_params.copy()
 
     converged = False
-    btol = 1e-8
+    btol = 1e-4
     params_zero = np.zeros(len(params), dtype=bool)
 
     init_args = dict([(k, getattr(model, k)) for k in model._init_keys
                       if k != "offset" and hasattr(model, k)])
+    init_args['hasconst'] = False
 
     fgh_list = [_gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
                 for k in range(k_exog)]
@@ -278,7 +279,16 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
     The argmin of the objective function.
     """
 
-    from scipy.optimize import brent
+    # Overview:
+    # We want to minimize L(x) + L1_wt*abs(x), where L() is a smooth
+    # loss function that includes the log-likelihood and L2 penalty.
+    # This is a 1-dimensional optimization.  If L(x) is exactly
+    # quadratic we can solve for the argmin exactly.  Otherwise we
+    # approximate L(x) with a quadratic function Q(x) and try to use
+    # the minimizer of Q(x) + L1_wt*abs(x).  But if this yields an
+    # uphill step for the actual target function L(x) + L1_wt*abs(x),
+    # then we fall back to a expensive line search.  The line search
+    # is never needed for OLS.
 
     x = start
     f = func(x, model)
@@ -286,9 +296,11 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
     c = hess(x, model)
     d = b - c*x
 
+    # The optimum is achieved by hard thresholding to zero
     if L1_wt > np.abs(d):
         return 0.
 
+    # x + h is the minimizer of the Q(x) + L1_wt*abs(x)
     if d >= 0:
         h = (L1_wt - b) / c
     elif d < 0:
@@ -296,10 +308,15 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
     else:
         return np.nan
 
+    # If the new point is not uphill for the target function, take it
+    # and return.  This check is a bit expensive and un-necessary for
+    # OLS
     f1 = func(x + h, model) + L1_wt*np.abs(x + h)
     if f1 <= f + L1_wt*np.abs(x) + 1e-10:
         return x + h
 
+    # Fallback for models where the loss is not quadratic
+    from scipy.optimize import brent
     x_opt = brent(func, args=(model,), brack=(x-1, x+1), tol=tol)
     return x_opt
 
