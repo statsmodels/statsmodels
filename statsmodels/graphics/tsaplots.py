@@ -9,11 +9,12 @@ from statsmodels.tsa.stattools import acf, pacf
 
 
 def _prepare_data_corr_plot(x, lags, zero):
+    zero = bool(zero)
     irregular = False if zero else True
     if lags is None:
         lags = np.arange(not zero, len(x))
     elif np.isscalar(lags):
-        lags = np.arange(not zero, int(lags) + 1) # +1 for zero lag
+        lags = np.arange(not zero, int(lags) + 1)  # +1 for zero lag
     else:
         irregular = True
         lags = np.asanyarray(lags).astype(np.int)
@@ -21,10 +22,12 @@ def _prepare_data_corr_plot(x, lags, zero):
 
     return lags, nlags, irregular
 
+
 def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs):
     if irregular:
         acf_x = acf_x[lags]
-        confint = confint[lags]
+        if confint is not None:
+            confint = confint[lags]
 
     if use_vlines:
         ax.vlines(lags, [0], acf_x, **kwargs)
@@ -38,18 +41,15 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
     ax.set_title(title)
 
     if confint is not None:
-        # center the confidence interval TODO: do in acf?
         if lags[0] == 0:
             lags = lags[1:]
             confint = confint[1:]
             acf_x = acf_x[1:]
-        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
-
-
+        ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=.25)
 
 
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
-            fft=False, zero=True, **kwargs):
+             fft=False, title='Autocorrelation', zero=True, **kwargs):
     """Plot the autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
@@ -78,7 +78,9 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
         If True, then denominators for autocovariance are n-k, otherwise n
     fft : bool, optional
         If True, computes the ACF via FFT.
-    zero: bool, optional
+    title : str, optional
+        Title to place on plot.  Default is 'Autocorrelation'
+    zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
     **kwargs : kwargs, optional
@@ -116,14 +118,14 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     else:
         acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
                              unbiased=unbiased)
-    title = 'Autocorrelation'
 
     _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
 
     return fig
 
-def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
-                use_vlines=True, zero=True, **kwargs):
+
+def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
+              title='Partial Autocorrelation', zero=True, **kwargs):
     """Plot the partial autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
@@ -157,7 +159,9 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
-    zero: bool, optional
+    title : str, optional
+        Title to place on plot.  Default is 'Partial Autocorrelation'
+    zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
     **kwargs : kwargs, optional
@@ -188,12 +192,11 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     confint = None
-    if alpha is  None:
-        acf_x  = pacf(x, nlags=nlags, alpha=alpha, method=method)
+    if alpha is None:
+        acf_x = pacf(x, nlags=nlags, alpha=alpha, method=method)
     else:
         acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
 
-    title = 'Partial Autocorrelation'
     _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
 
     return fig
@@ -313,22 +316,3 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
     xticklabels = ['q1', 'q2', 'q3', 'q4']
     return seasonal_plot(x.groupby(lambda y : y.quarter), xticklabels,
                          ylabel=ylabel, ax=ax)
-
-
-if __name__ == "__main__":
-    import pandas as pd
-
-    #R code to run to load that dataset in this directory
-    #data(co2)
-    #library(zoo)
-    #write.csv(as.data.frame(list(date=as.Date(co2), co2=coredata(co2))), "co2.csv", row.names=FALSE)
-    co2 = pd.read_csv("co2.csv", index_col=0, parse_dates=True)
-    month_plot(co2.co2)
-
-    #will work when dates are sorted
-    #co2 = sm.datasets.get_rdataset("co2", cache=True)
-
-    x = pd.Series(np.arange(20),
-                  index=pd.PeriodIndex(start='1/1/1990', periods=20, freq='Q'))
-    quarter_plot(x)
-
