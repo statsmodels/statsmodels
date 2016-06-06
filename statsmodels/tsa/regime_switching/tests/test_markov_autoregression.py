@@ -216,12 +216,13 @@ class MarkovAutoregression(object):
     def setup_class(cls, true, endog, atol=1e-5, rtol=1e-7, **kwargs):
         cls.model = markov_autoregression.MarkovAutoregression(endog, **kwargs)
         cls.true = true
+        cls.result = cls.model.smooth(cls.true['params'])
         cls.atol = atol
         cls.rtol = rtol
 
     def test_llf(self):
-        llf = self.model.loglike(self.true['params'])
-        assert_allclose(llf, self.true['llf'], atol=self.atol, rtol=self.rtol)
+        assert_allclose(self.result.llf, self.true['llf'], atol=self.atol,
+                        rtol=self.rtol)
 
     def test_fit(self, **kwargs):
         # Test fitting against Stata
@@ -381,7 +382,7 @@ class TestHamiltonAR2Short(MarkovAutoregression):
             super(TestHamiltonAR2Short, self).test_fit_em()
 
     def test_filter_output(self, **kwargs):
-        res = self.model.filter(self.true['params'])
+        res = self.result
 
         # Filtered
         assert_allclose(res.filtered_joint_probabilities,
@@ -395,7 +396,7 @@ class TestHamiltonAR2Short(MarkovAutoregression):
 
 
     def test_smoother_output(self, **kwargs):
-        res = self.model.smooth(self.true['params'])
+        res = self.result
 
         # Filtered
         assert_allclose(res.filtered_joint_probabilities,
@@ -497,14 +498,14 @@ class TestHamiltonAR4(MarkovAutoregression):
             true, rgnp, k_regimes=2, order=4, switching_ar=False)
 
     def test_filtered_regimes(self):
-        res = self.model.filter(self.true['params'])
+        res = self.result
         assert_equal(len(res.filtered_marginal_probabilities[1]),
                      self.model.nobs)
         assert_allclose(res.filtered_marginal_probabilities[1],
                         hamilton_ar4_filtered, atol=1e-5)
 
     def test_smoothed_regimes(self):
-        res = self.model.smooth(self.true['params'])
+        res = self.result
         assert_equal(len(res.smoothed_marginal_probabilities[1]),
                      self.model.nobs)
         assert_allclose(res.smoothed_marginal_probabilities[1],
@@ -601,19 +602,18 @@ class TestHamiltonAR1Switch(MarkovAutoregression):
         }
         super(TestHamiltonAR1Switch, cls).setup_class(
             true, rgnp, k_regimes=2, order=1)
-        cls.res = cls.model.smooth(cls.true['params'])
 
     def test_filtered_regimes(self):
-        assert_allclose(self.res.filtered_marginal_probabilities[0],
+        assert_allclose(self.result.filtered_marginal_probabilities[0],
                         hamilton_ar1_switch_filtered, atol=1e-5)
 
     def test_smoothed_regimes(self):
-        assert_allclose(self.res.smoothed_marginal_probabilities[0],
+        assert_allclose(self.result.smoothed_marginal_probabilities[0],
                         hamilton_ar1_switch_smoothed, atol=1e-5)
 
     def test_expected_durations(self):
         expected_durations = [6.883477, 1.863513]
-        assert_allclose(self.res.expected_durations, expected_durations,
+        assert_allclose(self.result.expected_durations, expected_durations,
                         atol=1e-5)
 
 
@@ -740,21 +740,20 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
         exog_tvtp = np.c_[np.ones(len(rgnp)), rec]
         super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
-        cls.res = cls.model.smooth(cls.true['params'])
 
     def test_fit_em(self):
         raise SkipTest
 
     def test_filtered_regimes(self):
-        assert_allclose(self.res.filtered_marginal_probabilities[0],
+        assert_allclose(self.result.filtered_marginal_probabilities[0],
                         hamilton_ar1_switch_tvtp_filtered, atol=1e-5)
 
     def test_smoothed_regimes(self):
-        assert_allclose(self.res.smoothed_marginal_probabilities[0],
+        assert_allclose(self.result.smoothed_marginal_probabilities[0],
                         hamilton_ar1_switch_tvtp_smoothed, atol=1e-5)
 
     def test_expected_durations(self):
-        assert_allclose(self.res.expected_durations, expected_durations,
+        assert_allclose(self.result.expected_durations, expected_durations,
                         rtol=1e-5, atol=1e-7)
 
 
@@ -778,8 +777,6 @@ class TestFilardo(MarkovAutoregression):
         super(TestFilardo, cls).setup_class(
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
-        cls.res = cls.model.smooth(cls.true['params'])
-
 
     def test_fit(self, **kwargs):
         raise SkipTest
@@ -788,15 +785,15 @@ class TestFilardo(MarkovAutoregression):
         raise SkipTest
 
     def test_filtered_regimes(self):
-        assert_allclose(self.res.filtered_marginal_probabilities[0],
+        assert_allclose(self.result.filtered_marginal_probabilities[0],
                         self.mar_filardo['filtered_0'].iloc[5:], atol=1e-5)
 
     def test_smoothed_regimes(self):
-        assert_allclose(self.res.smoothed_marginal_probabilities[0],
+        assert_allclose(self.result.smoothed_marginal_probabilities[0],
                         self.mar_filardo['smoothed_0'].iloc[5:], atol=1e-5)
 
     def test_expected_durations(self):
-        assert_allclose(self.res.expected_durations,
+        assert_allclose(self.result.expected_durations,
                         self.mar_filardo[['duration0', 'duration1']].iloc[5:],
                         rtol=1e-5, atol=1e-7)
 

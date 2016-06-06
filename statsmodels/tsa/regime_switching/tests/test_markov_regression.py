@@ -406,12 +406,13 @@ class MarkovRegression(object):
     def setup_class(cls, true, endog, atol=1e-5, rtol=1e-7, **kwargs):
         cls.model = markov_regression.MarkovRegression(endog, **kwargs)
         cls.true = true
+        cls.result = cls.model.smooth(cls.true['params'])
         cls.atol = atol
         cls.rtol = rtol
 
     def test_llf(self):
-        llf = self.model.loglike(self.true['params'])
-        assert_allclose(llf, self.true['llf'], atol=self.atol, rtol=self.rtol)
+        assert_allclose(self.result.llf, self.true['llf'], atol=self.atol,
+                        rtol=self.rtol)
 
     def test_fit(self, **kwargs):
         # Test fitting against Stata
@@ -750,7 +751,7 @@ class TestFedFundsConst(MarkovRegression):
         super(TestFedFundsConst, cls).setup_class(true, fedfunds, k_regimes=2)
 
     def test_filter_output(self, **kwargs):
-        res = self.model.filter(self.true['params'])
+        res = self.result
         assert_allclose(res.filtered_joint_probabilities,
                         fedfunds_const_filtered_joint_probabilities)
 
@@ -848,7 +849,7 @@ class TestFedFundsConstShort(MarkovRegression):
                                                       k_regimes=2)
 
     def test_filter_output(self, **kwargs):
-        res = self.model.filter(self.true['params'])
+        res = self.result
 
         # Filtered
         assert_allclose(res.filtered_joint_probabilities,
@@ -862,7 +863,7 @@ class TestFedFundsConstShort(MarkovRegression):
 
 
     def test_smoother_output(self, **kwargs):
-        res = self.model.smooth(self.true['params'])
+        res = self.result
 
         # Filtered
         assert_allclose(res.filtered_joint_probabilities,
