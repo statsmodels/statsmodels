@@ -7,8 +7,49 @@ from statsmodels.compat.pandas import sort_values
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
 
+
+def _prepare_data_corr_plot(x, lags, zero):
+    irregular = False if zero else True
+    if lags is None:
+        lags = np.arange(not zero, len(x))
+    elif np.isscalar(lags):
+        lags = np.arange(not zero, int(lags) + 1) # +1 for zero lag
+    else:
+        irregular = True
+        lags = np.asanyarray(lags).astype(np.int)
+    nlags = lags.max(0)
+
+    return lags, nlags, irregular
+
+def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs):
+    if irregular:
+        acf_x = acf_x[lags]
+        confint = confint[lags]
+
+    if use_vlines:
+        ax.vlines(lags, [0], acf_x, **kwargs)
+        ax.axhline(**kwargs)
+
+    kwargs.setdefault('marker', 'o')
+    kwargs.setdefault('markersize', 5)
+    kwargs.setdefault('linestyle', 'None')
+    ax.margins(.05)
+    ax.plot(lags, acf_x, **kwargs)
+    ax.set_title(title)
+
+    if confint is not None:
+        # center the confidence interval TODO: do in acf?
+        if lags[0] == 0:
+            lags = lags[1:]
+            confint = confint[1:]
+            acf_x = acf_x[1:]
+        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
+
+
+
+
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
-            fft=False, **kwargs):
+            fft=False, zero=True, **kwargs):
     """Plot the autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
@@ -20,9 +61,10 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    lags : array_like, optional
-        Array of lag values, used on horizontal axis.
-        If not given, ``lags=np.arange(len(corr))`` is used.
+    lags : int or array_like, optional
+        int or Array of lag values, used on horizontal axis. Uses
+        np.arange(lags) when lags is an int.  If not provided,
+        ``lags=np.arange(len(corr))`` is used.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
@@ -33,9 +75,12 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
         If False, only markers are plotted.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
     unbiased : bool
-       If True, then denominators for autocovariance are n-k, otherwise n
+        If True, then denominators for autocovariance are n-k, otherwise n
     fft : bool, optional
         If True, computes the ACF via FFT.
+    zero: bool, optional
+        Flag indicating whether to include the 0-lag autocorrelation.
+        Default is True.
     **kwargs : kwargs, optional
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
@@ -61,12 +106,7 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    if lags is None:
-        lags = np.arange(len(x))
-        nlags = len(lags) - 1
-    else:
-        nlags = lags
-        lags = np.arange(lags + 1) # +1 for zero lag
+    lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     confint = None
     # acf has different return type based on alpha
@@ -76,26 +116,14 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     else:
         acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
                              unbiased=unbiased)
+    title = 'Autocorrelation'
 
-    if use_vlines:
-        ax.vlines(lags, [0], acf_x, **kwargs)
-        ax.axhline(**kwargs)
-
-    kwargs.setdefault('marker', 'o')
-    kwargs.setdefault('markersize', 5)
-    kwargs.setdefault('linestyle', 'None')
-    ax.margins(.05)
-    ax.plot(lags, acf_x, **kwargs)
-    ax.set_title("Autocorrelation")
-
-    if confint is not None:
-        # center the confidence interval TODO: do in acf?
-        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
+    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
 
     return fig
 
 def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
-                use_vlines=True, **kwargs):
+                use_vlines=True, zero=True, **kwargs):
     """Plot the partial autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
@@ -107,9 +135,10 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    lags : array_like, optional
-        Array of lag values, used on horizontal axis.
-        If not given, ``lags=np.arange(len(corr))`` is used.
+    lags : int or array_like, optional
+        int or Array of lag values, used on horizontal axis. Uses
+        np.arange(lags) when lags is an int.  If not provided,
+        ``lags=np.arange(len(corr))`` is used.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
@@ -124,11 +153,13 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
-
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
+    zero: bool, optional
+        Flag indicating whether to include the 0-lag autocorrelation.
+        Default is True.
     **kwargs : kwargs, optional
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
@@ -154,12 +185,7 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    if lags is None:
-        lags = np.arange(len(x))
-        nlags = len(lags) - 1
-    else:
-        nlags = lags
-        lags = np.arange(lags + 1) # +1 for zero lag
+    lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     confint = None
     if alpha is  None:
@@ -167,23 +193,11 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
     else:
         acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
 
-    if use_vlines:
-        ax.vlines(lags, [0], acf_x, **kwargs)
-        ax.axhline(**kwargs)
-
-    # center the confidence interval TODO: do in acf?
-    kwargs.setdefault('marker', 'o')
-    kwargs.setdefault('markersize', 5)
-    kwargs.setdefault('linestyle', 'None')
-    ax.margins(.05)
-    ax.plot(lags, acf_x, **kwargs)
-    ax.set_title("Partial Autocorrelation")
-
-    if confint is not None:
-        # center the confidence interval TODO: do in acf?
-        ax.fill_between(lags, confint[:,0] - acf_x, confint[:,1] - acf_x, alpha=.25)
+    title = 'Partial Autocorrelation'
+    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
 
     return fig
+
 
 def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     """
