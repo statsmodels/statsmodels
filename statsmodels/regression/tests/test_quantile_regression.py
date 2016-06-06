@@ -115,102 +115,117 @@ def test_fitted_residuals():
 
 class TestEpanechnikovHsheatherQ75(TestCase, CheckModelResultsMixin):
     # Vincent Arel-Bundock also spot-checked q=.1
-
-    def setUp(self):
+    @classmethod
+    def setup_class(cls):
         data = sm.datasets.engel.load_pandas().data
         y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
-        self.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa', bandwidth='hsheather')
-        self.res2 = epanechnikov_hsheather_q75
+        cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa', bandwidth='hsheather')
+        cls.res2 = epanechnikov_hsheather_q75
 
 
 class TestEpanechnikovBofinger(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('epa', 'bofinger')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('epa', 'bofinger')
 
 
 class TestEpanechnikovChamberlain(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('epa', 'chamberlain')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('epa', 'chamberlain')
 
 
 class TestEpanechnikovHsheather(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('epa', 'hsheather')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('epa', 'hsheather')
 
 
 class TestGaussianBofinger(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('gau', 'bofinger')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('gau', 'bofinger')
 
 
 class TestGaussianChamberlain(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('gau', 'chamberlain')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('gau', 'chamberlain')
 
 
 class TestGaussianHsheather(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('gau', 'hsheather')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('gau', 'hsheather')
 
 
 class TestBiweightBofinger(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('biw', 'bofinger')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('biw', 'bofinger')
 
 
 class TestBiweightChamberlain(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('biw', 'chamberlain')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('biw', 'chamberlain')
 
 
 class TestBiweightHsheather(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('biw', 'hsheather')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('biw', 'hsheather')
 
 
 class TestCosineBofinger(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('cos', 'bofinger')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('cos', 'bofinger')
 
 
 class TestCosineChamberlain(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('cos', 'chamberlain')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('cos', 'chamberlain')
 
 
 class TestCosineHsheather(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('cos', 'hsheather')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('cos', 'hsheather')
 
 
 class TestParzeneBofinger(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('par', 'bofinger')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('par', 'bofinger')
 
 
 class TestParzeneChamberlain(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('par', 'chamberlain')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('par', 'chamberlain')
 
 
 class TestParzeneHsheather(TestCase, CheckModelResultsMixin):
-    def setUp(self):
-        self.res1, self.res2 = setup_fun('par', 'hsheather')
+    @classmethod
+    def setup_class(cls):
+        cls.res1, cls.res2 = setup_fun('par', 'hsheather')
 
-        # class TestTriangleBofinger(TestCase, CheckModelResultsMixin):
-        #
-        # def setUp(self):
-        # self.res1, self.res2 = setup_fun('tri', 'bofinger')
+# class TestTriangleBofinger(TestCase, CheckModelResultsMixin):
+#    @classmethod
+#    def setup_class(cls):
+#        cls.res1, cls.res2 = setup_fun('tri', 'bofinger')
 
-        # class TestTriangleChamberlain(TestCase, CheckModelResultsMixin):
-        #
-        # def setUp(self):
-        # self.res1, self.res2 = setup_fun('tri', 'chamberlain')
+# class TestTriangleChamberlain(TestCase, CheckModelResultsMixin):
+#    @classmethod
+#    def setup_class(cls):
+#        cls.res1, cls.res2 = setup_fun('tri', 'chamberlain')
 
-        # class TestTriangleHsheather(TestCase, CheckModelResultsMixin):
-        #
-        # def setUp(self):
-        # self.res1, self.res2 = setup_fun('tri', 'hsheather')
+# class TestTriangleHsheather(TestCase, CheckModelResultsMixin):
+#    @classmethod
+#    def setup_class(cls):
+#        cls.res1, cls.res2 = setup_fun('tri', 'hsheather')
 
 
 def test_zero_resid():
