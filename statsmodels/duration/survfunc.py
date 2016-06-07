@@ -4,7 +4,7 @@ from scipy.stats.distributions import chi2, norm
 from statsmodels.graphics import utils
 
 
-def _calc_survfunc_right(time, status):
+def _calc_survfunc_right(time, status, weights=None):
     """
     Calculate the survival function and its standard error for a single
     group.
@@ -13,21 +13,33 @@ def _calc_survfunc_right(time, status):
     time = np.asarray(time)
     status = np.asarray(status)
 
+    if len(time) != len(status):
+        raise ValueError("time and status must have the same length")
+
+    if weights is not None and (len(weights) != len(time)):
+        raise ValueError("weights, time and status must have the same length")
+
     # Convert the unique times to ranks (0, 1, 2, ...)
-    time, rtime = np.unique(time, return_inverse=True)
+    utime, rtime = np.unique(time, return_inverse=True)
 
     # Number of deaths at each unique time.
-    d = np.bincount(rtime, weights=status)
+    if weights is None:
+        d = np.bincount(rtime, weights=status)
+    else:
+        d = np.bincount(rtime, weights=status*weights)
 
     # Size of risk set just prior to each event time.
-    n = np.bincount(rtime)
+    if weights is None:
+        n = np.bincount(rtime)
+    else:
+        n = np.bincount(rtime, weights=weights)
     n = np.cumsum(n[::-1])[::-1]
 
     # Only retain times where an event occured.
     ii = np.flatnonzero(d > 0)
     d = d[ii]
     n = n[ii]
-    time = time[ii]
+    utime = utime[ii]
 
     # The survival function probabilities.
     sp = 1 - d / n.astype(np.float64)
@@ -35,13 +47,20 @@ def _calc_survfunc_right(time, status):
     sp = np.cumsum(sp)
     sp = np.exp(sp)
 
-    # Standard errors (Greenwood's formula).
-    se = d / (n * (n - d)).astype(np.float64)
-    se = np.cumsum(se)
-    se = np.sqrt(se)
-    se *= sp
+    # Standard errors
+    if weights is None:
+        # Greenwood's formula
+        se = d / (n * (n - d)).astype(np.float64)
+        se = np.cumsum(se)
+        se = np.sqrt(se)
+        se *= sp
+    else:
+        # Tsiatis' (1981) formula
+        se = d / (n * n).astype(np.float64)
+        se = np.cumsum(se)
+        se = np.sqrt(se)
 
-    return sp, se, time, n, d
+    return sp, se, utime, n, d
 
 
 class SurvfuncRight(object):
@@ -62,6 +81,8 @@ class SurvfuncRight(object):
         the event occurs after the given value in `time`.
     title : string
         Optional title used for plots and summary output.
+    freq_weights : array-like
+        Frequency weights
 
     Attributes
     ----------
@@ -80,12 +101,14 @@ class SurvfuncRight(object):
         in `surv_times`.
     """
 
-    def __init__(self, time, status, title=None):
+    def __init__(self, time, status, title=None, freq_weights=None):
 
         self.time = np.asarray(time)
         self.status = np.asarray(status)
+        if freq_weights is not None:
+            self.freq_weights = np.asarray(freq_weights)
         m = len(status)
-        x = _calc_survfunc_right(time, status)
+        x = _calc_survfunc_right(time, status, freq_weights)
         self.surv_prob = x[0]
         self.surv_prob_se = x[1]
         self.surv_times = x[2]

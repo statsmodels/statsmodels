@@ -238,3 +238,50 @@ def test_plot_km():
 
     if pdf_output:
         pdf.close()
+
+
+def test_weights1():
+    """
+    tm = c(1, 3, 5, 6, 7, 8, 8, 9, 3, 4, 1, 3, 2)
+    st = c(1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0)
+    wt = c(1, 2, 3, 2, 3, 1, 2, 1, 1, 2, 2, 3, 1)
+    library(survival)
+    sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
+    """
+
+    tm = np.r_[1, 3, 5, 6, 7, 8, 8, 9, 3, 4, 1, 3, 2]
+    st = np.r_[1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0]
+    wt = np.r_[1, 2, 3, 2, 3, 1, 2, 1, 1, 2, 2, 3, 1]
+
+    sf = SurvfuncRight(tm, st, "", freq_weights=wt)
+    assert_allclose(sf.surv_times, np.r_[1, 3, 6, 7, 9])
+    assert_allclose(sf.surv_prob,
+                    np.r_[0.875, 0.65625, 0.51041667, 0.29166667, 0.])
+    assert_allclose(sf.surv_prob_se,
+                    np.r_[0.07216878, 0.13307266, 0.20591185, 0.3219071, 1.05053519])
+
+def test_weights2():
+    """
+    tm = c(1, 3, 5, 6, 7, 2, 4, 6, 8, 10)
+    st = c(1, 1, 0, 1, 1, 1, 1, 0, 1, 1)
+    wt = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2)
+    library(survival)
+    sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
+    """
+
+    tm = np.r_[1, 3, 5, 6, 7, 2, 4, 6, 8, 10]
+    st = np.r_[1, 1, 0, 1, 1, 1, 1, 0, 1, 1]
+    wt = np.r_[1, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+    tm0 = np.r_[1, 3, 5, 6, 7, 2, 4, 6, 8, 10, 2, 4, 6, 8, 10]
+    st0 = np.r_[1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1]
+
+    sf0 = SurvfuncRight(tm, st, "", freq_weights=wt)
+    sf1 = SurvfuncRight(tm0, st0, "")
+
+    assert_allclose(sf0.surv_times, sf1.surv_times)
+    assert_allclose(sf0.surv_prob, sf1.surv_prob)
+
+    assert_allclose(sf0.surv_prob_se,
+                    np.r_[0.06666667, 0.1210311, 0.14694547,
+                          0.19524829, 0.23183377,
+                          0.30618115, 0.46770386, 0.84778942])
