@@ -7,6 +7,8 @@ from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
                            assert_almost_equal, assert_string_equal, TestCase)
 from nose.tools import (assert_true, assert_false, assert_raises)
+import pandas as pd
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
@@ -47,6 +49,54 @@ class TestTools(TestCase):
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.column_stack((np.ones(4), x)))
+
+    def test_add_constant_recarray(self):
+        dt = np.dtype([('', int), ('', '<S4'), ('', np.float32), ('', np.float64)])
+        x = np.array([(1, 'abcd', 1.0, 2.0),
+                      (7, 'abcd', 2.0, 4.0),
+                      (21, 'abcd', 2.0, 8.0)], dt)
+        x = x.view(np.recarray)
+        y = tools.add_constant(x)
+        assert_equal(y['const'],np.array([1.0,1.0,1.0]))
+        for f in x.dtype.fields:
+            assert_true(y[f].dtype == x[f].dtype)
+
+    def test_add_constant_series(self):
+        s = pd.Series([1.0,2.0,3.0])
+        output = tools.add_constant(s)
+        expected = pd.Series([1.0,1.0,1.0],name='const')
+        assert_series_equal(expected, output['const'])
+
+    def test_add_constant_dataframe(self):
+        df = pd.DataFrame([[1.0, 'a', 4], [2.0, 'bc', 9], [3.0, 'def', 16]])
+        output = tools.add_constant(df)
+        expected = pd.Series([1.0, 1.0, 1.0], name='const')
+        assert_series_equal(expected, output['const'])
+        dfc = df.copy()
+        dfc.insert(0, 'const', np.ones(3))
+        assert_frame_equal(dfc, output)
+
+    def test_add_constant_zeros(self):
+        a = np.zeros(100)
+        output = tools.add_constant(a)
+        assert_equal(output[:,0],np.ones(100))
+
+        s = pd.Series([0.0,0.0,0.0])
+        output = tools.add_constant(s)
+        expected = pd.Series([1.0, 1.0, 1.0], name='const')
+        assert_series_equal(expected, output['const'])
+
+        df = pd.DataFrame([[0.0, 'a', 4], [0.0, 'bc', 9], [0.0, 'def', 16]])
+        output = tools.add_constant(df)
+        dfc = df.copy()
+        dfc.insert(0, 'const', np.ones(3))
+        assert_frame_equal(dfc, output)
+
+        df = pd.DataFrame([[1.0, 'a', 0], [0.0, 'bc', 0], [0.0, 'def', 0]])
+        output = tools.add_constant(df)
+        dfc = df.copy()
+        dfc.insert(0, 'const', np.ones(3))
+        assert_frame_equal(dfc, output)
 
     def test_recipr(self):
         X = np.array([[2,1],[-1,0]])
