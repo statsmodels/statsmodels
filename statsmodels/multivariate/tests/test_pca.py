@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 
+import os
+import sys
 from unittest import TestCase
 import warnings
 
@@ -19,6 +21,7 @@ from statsmodels.multivariate.tests.results.datamlw import data, princomp1, prin
 from statsmodels.compat.numpy import nanmean
 
 DECIMAL_5 = .00001
+WIN32 = os.name == 'nt' and sys.maxsize < 2**33
 
 
 class TestPCA(TestCase):
@@ -275,6 +278,7 @@ class TestPCA(TestCase):
         project = pc.project
         assert_raises(ValueError, project, 6)
 
+    @skipif(WIN32)
     def test_replace_missing(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
