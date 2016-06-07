@@ -14,6 +14,7 @@ from collections import OrderedDict
 
 from scipy.misc import logsumexp
 from scipy.stats import norm
+from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import Bunch
@@ -397,12 +398,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
     """
 
-    def __init__(self, endog, k_regimes, exog_tvtp=None, exog=None, dates=None,
-                 freq=None, missing='none'):
+    def __init__(self, endog, k_regimes, order=0, exog_tvtp=None, exog=None,
+                 dates=None, freq=None, missing='none'):
 
         # Properties
         self.k_regimes = k_regimes
         self.tvtp = exog_tvtp is not None
+        # The order of the model may be overridden in subclasses
+        self.order = order
 
         # Exogenous data
         # TODO add checks for exog_tvtp consistent shape and indices
@@ -1031,6 +1034,7 @@ class HamiltonFilterResults(object):
         self.llf = np.sum(self.llf_obs)
 
         # Subset transition if necessary (e.g. for Markov autoregression)
+        # TODO replace with self.order
         diff = self.transition.shape[-1] - self.nobs
         if self.transition.shape[-1] > 1 and diff > 0:
             self.transition = self.transition[..., diff:]
@@ -1069,6 +1073,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Dimensions
         self.nobs = model.nobs
+        self.order = model.order
         self.k_regimes = model.k_regimes
 
         # Setup covariance matrix notes dictionary
@@ -1114,6 +1119,25 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 setattr(self, name, getattr(self.smoother_results, name))
             else:
                 setattr(self, name, None)
+
+        # Reshape some arrays to long-format
+        self.filtered_marginal_probabilities = (
+            self.filtered_marginal_probabilities.T)
+        if self.smoother_results is not None:
+            self.smoothed_marginal_probabilities = (
+                self.smoothed_marginal_probabilities.T)
+
+        # Make into Pandas arrays if using Pandas data
+        if isinstance(self.data, PandasData):
+            index = self.data.row_labels[self.order:]
+            if self.expected_durations.ndim > 1:                
+                self.expected_durations = pd.DataFrame(
+                    self.expected_durations, index=index)
+            self.filtered_marginal_probabilities = pd.DataFrame(
+                self.filtered_marginal_probabilities, index=index)
+            if self.smoother_results is not None:
+                self.smoothed_marginal_probabilities = pd.DataFrame(
+                    self.smoothed_marginal_probabilities, index=index)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         import statsmodels.stats.sandwich_covariance as sw
@@ -1440,8 +1464,6 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
                                    _attrs)
     _methods = {
         'forecast': 'dates',
-        'simulate': 'ynames',
-        'impulse_responses': 'ynames'
     }
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)

@@ -66,8 +66,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     """
 
-    def __init__(self, endog, k_regimes, trend='c', exog=None, exog_tvtp=None,
-                 switching_trend=True, switching_exog=True,
+    def __init__(self, endog, k_regimes, trend='c', exog=None, order=0,
+                 exog_tvtp=None, switching_trend=True, switching_exog=True,
                  switching_variance=False, dates=None, freq=None,
                  missing='none'):
 
@@ -101,8 +101,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         # Initialize the base model
         super(MarkovRegression, self).__init__(
-            endog, k_regimes, exog_tvtp=exog_tvtp, exog=exog, dates=dates,
-            freq=freq, missing=missing)
+            endog, k_regimes, order=order, exog_tvtp=exog_tvtp, exog=exog,
+            dates=dates, freq=freq, missing=missing)
 
         # Switching options
         if self.switching_trend is True or self.switching_trend is False:

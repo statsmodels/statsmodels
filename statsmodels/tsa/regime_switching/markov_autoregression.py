@@ -83,19 +83,19 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                  dates=None, freq=None, missing='none'):
 
         # Properties
-        self.order = order
         self.switching_ar = switching_ar
 
         # Switching options
         if self.switching_ar is True or self.switching_ar is False:
-            self.switching_ar = [self.switching_ar] * self.order
-        elif not len(self.switching_ar) == self.order:
+            self.switching_ar = [self.switching_ar] * order
+        elif not len(self.switching_ar) == order:
             raise ValueError('Invalid iterable passed to `switching_ar`.')
 
         # Initialize the base model
         super(MarkovAutoregression, self).__init__(
-            endog, k_regimes, trend=trend, exog=exog, exog_tvtp=exog_tvtp,
-            switching_trend=switching_trend, switching_exog=switching_exog,
+            endog, k_regimes, trend=trend, exog=exog, order=order,
+            exog_tvtp=exog_tvtp, switching_trend=switching_trend,
+            switching_exog=switching_exog,
             switching_variance=switching_variance, dates=dates, freq=freq,
             missing=missing)
 
