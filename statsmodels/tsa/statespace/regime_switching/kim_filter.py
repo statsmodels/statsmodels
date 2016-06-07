@@ -354,8 +354,7 @@ class KimFilter(object):
         np.copyto(forecast_error_cov_batteries[prev_regime, curr_regime, :, :],
                 curr_kfilter.forecast_error_cov[:, :, t])
 
-    def _hamilton_filter_step(self, t, filtered_curr_regime_probs,
-            predicted_prev_and_curr_regime_probs,
+    def _hamilton_filter_step(self, t, predicted_prev_and_curr_regime_probs,
             forecast_error_batteries,
             forecast_error_cov_batteries,
             forecast_error_mean,
@@ -368,11 +367,15 @@ class KimFilter(object):
         if t == 0:
             regime_probs = self._initial_regime_probs
         else:
-            regime_probs = filtered_curr_regime_probs
+            regime_probs = self._filtered_regime_probs[t - 1, :]
 
         np.multiply(self._regime_transition.transpose(),
                 regime_probs.reshape(-1, 1),
                 out=predicted_prev_and_curr_regime_probs)
+
+        # This is used in smoothing
+        np.sum(predicted_prev_and_curr_regime_probs, axis=0,
+                out=self._predicted_regime_probs[t, :])
 
         for prev_regime in range(k_regimes):
             for curr_regime in range(k_regimes):
@@ -405,7 +408,7 @@ class KimFilter(object):
                 out=filtered_prev_and_curr_regime_probs)
 
         np.sum(filtered_prev_and_curr_regime_probs, axis=0,
-                out=filtered_curr_regime_probs)
+                out=self._filtered_regime_probs[t, :])
 
     def _regime_uncond_filtering(self, t,
             filtered_prev_and_curr_regime_probs, state_batteries,
@@ -429,8 +432,8 @@ class KimFilter(object):
 
     def _approximation_step(self, t, curr_regime,
             filtered_prev_and_curr_regime_probs, state_batteries,
-            weighted_states, weighted_states_sum, filtered_curr_regime_probs,
-            state_biases, transposed_state_biases, state_bias_sqrs,
+            weighted_states, weighted_states_sum, state_biases,
+            transposed_state_biases, state_bias_sqrs,
             state_cov_batteries, state_covs_and_state_bias_sqrs,
             weighted_state_covs_and_state_bias_sqrs,
             weighted_state_covs_and_state_bias_sqrs_sum):
@@ -442,7 +445,7 @@ class KimFilter(object):
         approx_state = np.asarray(curr_filter.filtered_state[:, t])
 
         # Should be compared by eps?
-        if filtered_curr_regime_probs[curr_regime] == 0:
+        if self._filtered_regime_probs[t, curr_regime] == 0:
 
             # Any value would be alright, since it is multiplied by zero weight
             # in the next iteration
@@ -462,7 +465,7 @@ class KimFilter(object):
         np.sum(weighted_states, axis=0, out=weighted_states_sum)
 
         np.divide(weighted_states_sum,
-                filtered_curr_regime_probs[curr_regime],
+                self._filtered_regime_probs[t, curr_regime],
                 out=approx_state)
 
         np.subtract(approx_state.reshape(1, -1, 1),
@@ -486,7 +489,7 @@ class KimFilter(object):
                 out=weighted_state_covs_and_state_bias_sqrs_sum)
 
         np.divide(weighted_state_covs_and_state_bias_sqrs_sum,
-                filtered_curr_regime_probs[curr_regime],
+                self._filtered_regime_probs[t, curr_regime],
                 out=np.asarray(curr_filter.filtered_state_cov[:, :, t]))
 
     def filter(self, **kwargs):
@@ -505,6 +508,9 @@ class KimFilter(object):
         self._initialize_filters(**kwargs)
 
         self._obs_loglikelihoods = np.zeros((nobs,), dtype=dtype)
+
+        self._filtered_regime_probs = np.zeros((nobs, k_regimes), dtype=dtype)
+        self._predicted_regime_probs = np.zeros((nobs, k_regimes), dtype=dtype)
 
         self._filtered_states = np.zeros((nobs, k_states), dtype=dtype)
         self._filtered_state_covs = np.zeros((nobs, k_states, k_states),
@@ -533,7 +539,6 @@ class KimFilter(object):
                 k_endog, k_endog), dtype=dtype)
         forecast_error_mean = np.zeros((k_endog,), dtype=dtype)
 
-        filtered_curr_regime_probs = np.zeros((k_regimes,), dtype=dtype)
         predicted_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes),
                 dtype=dtype)
         prev_and_curr_regime_cond_obs_logprobs = np.zeros((k_regimes, k_regimes),
@@ -573,8 +578,7 @@ class KimFilter(object):
                             forecast_error_cov_batteries)
 
             # Hamilton filter
-            self._hamilton_filter_step(t, filtered_curr_regime_probs,
-                    predicted_prev_and_curr_regime_probs,
+            self._hamilton_filter_step(t, predicted_prev_and_curr_regime_probs,
                     forecast_error_batteries, forecast_error_cov_batteries,
                     forecast_error_mean,
                     prev_and_curr_regime_cond_obs_logprobs,
@@ -591,12 +595,63 @@ class KimFilter(object):
             for curr_regime in range(k_regimes):
                 self._approximation_step(t, curr_regime,
                         filtered_prev_and_curr_regime_probs, state_batteries,
-                        weighted_states, weighted_states_sum,
-                        filtered_curr_regime_probs, state_biases,
+                        weighted_states, weighted_states_sum, state_biases,
                         transposed_state_biases, state_bias_sqrs,
                         state_cov_batteries, state_covs_and_state_bias_sqrs,
                         weighted_state_covs_and_state_bias_sqrs,
                         weighted_state_covs_and_state_bias_sqrs_sum)
+
+    def get_smoothed_regime_probs(self, filter_first=True, **kwargs):
+        '''
+        p. 107 Kim-Nelson
+        '''
+
+        if filter_first:
+            self.filter(**kwargs)
+
+        dtype = self._dtype
+        nobs = self._nobs
+        k_regimes = self._k_regimes
+
+        smoothed_regime_probs = np.zeros((nobs, k_regimes), dtype=dtype)
+        smoothed_curr_and_next_regime_probs = np.zeros((nobs - 1, k_regimes,
+                k_regimes), dtype=dtype)
+
+        predicted_curr_and_next_regime_probs = np.zeros((k_regimes, k_regimes),
+                dtype=dtype)
+
+        filtered_curr_regime_cond_on_next = np.zeros((k_regimes, k_regimes),
+                dtype=dtype)
+
+        predicted_next_regime_prob_is_zero = np.zeros((k_regimes,), dtype=bool)
+
+        smoothed_regime_probs[-1, :] = self._filtered_regime_probs[-1, :]
+
+        for t in range(nobs - 2, -1, -1):
+
+            np.multiply(self._regime_transition.transpose(),
+                    self._filtered_regime_probs[t, :].reshape(-1, 1),
+                    out=predicted_curr_and_next_regime_probs)
+
+            np.equal(self._predicted_regime_probs[t + 1, :], 0,
+                    out=predicted_next_regime_prob_is_zero)
+
+            # Division by zero warnings, if predicted regime prob is zero?
+            np.divide(predicted_curr_and_next_regime_probs,
+                    self._predicted_regime_probs[t + 1, :].reshape(1, -1),
+                    out=filtered_curr_regime_cond_on_next)
+
+            filtered_curr_regime_cond_on_next[:,
+                    predicted_next_regime_prob_is_zero] = 0
+
+            np.multiply(smoothed_regime_probs[t + 1, :].reshape(1, -1),
+                    filtered_curr_regime_cond_on_next,
+                    out=smoothed_curr_and_next_regime_probs[t, :, :])
+
+            np.sum(smoothed_curr_and_next_regime_probs[t, :, :], axis=1,
+                    out=smoothed_regime_probs[t, :])
+
+        return (smoothed_regime_probs, smoothed_curr_and_next_regime_probs)
 
     def loglike(self, loglikelihood_burn=0, filter_first=True, **kwargs):
 
