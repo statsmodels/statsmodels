@@ -2,7 +2,7 @@
 Markov switching autoregression models
 
 Author: Chad Fulton
-License: BSD
+License: BSD-3
 """
 
 from __future__ import division, absolute_import, print_function
@@ -136,7 +136,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     def _resid(self, params):
         """
-        Compute residuals
+        Compute residuals conditional on the current period's regime and
+        the last `self.order` regimes.
         """
         params = np.array(params, ndmin=1)
 
@@ -191,6 +192,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return resid
 
     def _conditional_likelihoods(self, params):
+        """
+        Compute likelihoods conditional on the current period's regime and
+        the last `self.order` regimes.
+        """
         # Get the residuals
         resid = self._resid(params)
 
@@ -217,6 +222,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return super(MarkovAutoregression, self).smooth(*args, **kwargs)
 
     def _em_iteration(self, params0):
+        """
+        EM iteration
+        """
         # Inherited parameters
         result, params1 = markov_switching.MarkovSwitching._em_iteration(
             self, params0)
@@ -249,6 +257,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return result, params1
 
     def _em_autoregressive(self, result, betas, tmp=None):
+        """
+        EM step for autoregressive coefficients and variances
+        """
         if tmp is None:
             tmp = np.sqrt(result.smoothed_marginal_probabilities)
 
@@ -288,6 +299,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def start_params(self):
+        """
+        (array) Starting parameters for maximum likelihood estimation.
+        """
         # Inherited parameters
         params = markov_switching.MarkovSwitching.start_params.fget(self)
 
@@ -335,6 +349,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def param_names(self):
+        """
+        (list of str) List of human readable parameter names (for parameters
+        actually included in the model).
+        """
         # Inherited parameters
         param_names = np.array(
             markov_regression.MarkovRegression.param_names.fget(self),
@@ -352,6 +370,22 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return param_names.tolist()
 
     def transform_params(self, unconstrained):
+        """
+        Transform unconstrained parameters used by the optimizer to constrained
+        parameters used in likelihood evaluation
+
+        Parameters
+        ----------
+        unconstrained : array_like
+            Array of unconstrained parameters used by the optimizer, to be
+            transformed.
+
+        Returns
+        -------
+        constrained : array_like
+            Array of constrained parameters which may be used in likelihood
+            evalation.
+        """
         # Inherited parameters
         constrained = super(MarkovAutoregression, self).transform_params(
             unconstrained)
@@ -367,6 +401,21 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return constrained
 
     def untransform_params(self, constrained):
+        """
+        Transform constrained parameters used in likelihood evaluation
+        to unconstrained parameters used by the optimizer
+
+        Parameters
+        ----------
+        constrained : array_like
+            Array of constrained parameters used in likelihood evalution, to be
+            transformed.
+
+        Returns
+        -------
+        unconstrained : array_like
+            Array of unconstrained parameters used by the optimizer.
+        """
         # Inherited parameters
         unconstrained = super(MarkovAutoregression, self).untransform_params(
             constrained)
@@ -383,6 +432,35 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
 
 class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
+    r"""
+    Class to hold results from fitting a Markov switching autoregression model
+
+    Parameters
+    ----------
+    model : MarkovAutoregression instance
+        The fitted model instance
+    params : array
+        Fitted parameters
+    filter_results : HamiltonFilterResults or KimSmootherResults instance
+        The underlying filter and, optionally, smoother output
+    cov_type : string
+        The type of covariance matrix estimator to use. Can be one of 'approx',
+        'opg', 'robust', or 'none'.
+
+    Attributes
+    ----------
+    model : Model instance
+        A reference to the model that was fit.
+    filter_results : HamiltonFilterResults or KimSmootherResults instance
+        The underlying filter and, optionally, smoother output
+    nobs : float
+        The number of observations used to fit the model.
+    params : array
+        The parameters of the model.
+    scale : float
+        This is currently set to 1.0 and not used by the model or its results.
+
+    """
     pass
 
 

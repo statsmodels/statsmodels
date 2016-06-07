@@ -2,7 +2,7 @@
 General tests for Markov switching models
 
 Author: Chad Fulton
-License: BSD
+License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
 

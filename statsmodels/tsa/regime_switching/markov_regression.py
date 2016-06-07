@@ -2,7 +2,7 @@
 Markov switching regression models
 
 Author: Chad Fulton
-License: BSD
+License: BSD-3
 """
 
 from __future__ import division, absolute_import, print_function
@@ -15,7 +15,7 @@ from statsmodels.tsa.regime_switching import markov_switching
 
 class MarkovRegression(markov_switching.MarkovSwitching):
     """
-    Markov switching regression model
+    First-order k-regime Markov switching regression model
 
     Parameters
     ----------
@@ -29,6 +29,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         set `trend='nc'`. Default is an intercept.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
+    order : integer, optional
+        The order of the model describes the dependence of the likelihood on
+        previous regimes. This depends on the model in question and should be
+        set appropriately by subclasses.
     exog_tvtp : array_like, optional
         Array of exogenous or lagged variables to use in calculating
         time-varying transition probabilities (TVTP). TVTP is only used if this
@@ -53,6 +57,16 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     Notes
     -----
+    The model can be written as:
+
+    .. math::
+
+        y_t = a_{S_t} + x_t' \beta_{S_t} + \varepsilon_t \\
+        \varepsilon_t \sim N(0, \sigma_{S_t}^2)
+
+    i.e. the model is a dynamic linear regression where the coefficients and
+    the variance of the error term may be switching across regimes.
+
     The `trend` is accomodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
@@ -124,12 +138,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     def _resid(self, params):
         """
-        Compute residuals
+        Compute residuals conditional on the current regime
 
         Notes
         -----
-        This function should be overridden in subclassing models.
-
         In the base model (Markov switching regression), the parameters only
         depend on the regime in the current time period, so
         :math:`f(y \mid S_t, S_{t-1}) = f(y \mid S_t)`
@@ -158,6 +170,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return np.repeat(resid, self.k_regimes, axis=1)
 
     def _conditional_likelihoods(self, params):
+        """
+        Compute likelihoods conditional on the current period's regime
+        """
+
         # Get the residuals
         resid = self._resid(params)
 
@@ -184,12 +200,19 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return super(MarkovRegression, self).smooth(*args, **kwargs)
 
     def _em_iteration(self, params0):
+        """
+        EM iteration
+
+        Notes
+        -----
+        This uses the inherited _em_iteration method for computing the
+        non-TVTP transition probabilities and then performs the EM step for
+        regression coefficients and variances.
+        """
         # Inherited parameters
         result, params1 = super(MarkovRegression, self)._em_iteration(params0)
 
         tmp = np.sqrt(result.smoothed_marginal_probabilities)
-
-        # params1[:2] = [0.72884601, 0.21149622]
 
         # Regression coefficients
         coeffs = None
@@ -207,6 +230,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return result, params1
 
     def _em_exog(self, result, endog, exog, switching, tmp=None):
+        """
+        EM step for regression coefficients
+        """
         k_exog = exog.shape[1]
         coeffs = np.zeros((self.k_regimes, k_exog))
 
@@ -232,6 +258,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return coeffs
 
     def _em_variance(self, result, endog, exog, betas, tmp=None):
+        """
+        EM step for variances
+        """
         k_exog = 0 if exog is None else exog.shape[1]
 
         if self.switching_variance:
@@ -263,6 +292,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     @property
     def start_params(self):
         """
+        (array) Starting parameters for maximum likelihood estimation.
+
         Notes
         -----
         These are not very sophisticated and / or good. We set equal transition
@@ -300,6 +331,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     @property
     def param_names(self):
+        """
+        (list of str) List of human readable parameter names (for parameters
+        actually included in the model).
+        """
         # Inherited parameters
         param_names = np.array(
             markov_switching.MarkovSwitching.param_names.fget(self),
@@ -323,6 +358,22 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return param_names.tolist()
 
     def transform_params(self, unconstrained):
+        """
+        Transform unconstrained parameters used by the optimizer to constrained
+        parameters used in likelihood evaluation
+
+        Parameters
+        ----------
+        unconstrained : array_like
+            Array of unconstrained parameters used by the optimizer, to be
+            transformed.
+
+        Returns
+        -------
+        constrained : array_like
+            Array of constrained parameters which may be used in likelihood
+            evalation.
+        """
         # Inherited parameters
         constrained = super(MarkovRegression, self).transform_params(
             unconstrained)
@@ -338,6 +389,21 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return constrained
 
     def untransform_params(self, constrained):
+        """
+        Transform constrained parameters used in likelihood evaluation
+        to unconstrained parameters used by the optimizer
+
+        Parameters
+        ----------
+        constrained : array_like
+            Array of constrained parameters used in likelihood evalution, to be
+            transformed.
+
+        Returns
+        -------
+        unconstrained : array_like
+            Array of unconstrained parameters used by the optimizer.
+        """
         # Inherited parameters
         unconstrained = super(MarkovRegression, self).untransform_params(
             constrained)
@@ -354,6 +420,35 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
 
 class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
+    r"""
+    Class to hold results from fitting a Markov switching regression model
+
+    Parameters
+    ----------
+    model : MarkovRegression instance
+        The fitted model instance
+    params : array
+        Fitted parameters
+    filter_results : HamiltonFilterResults or KimSmootherResults instance
+        The underlying filter and, optionally, smoother output
+    cov_type : string
+        The type of covariance matrix estimator to use. Can be one of 'approx',
+        'opg', 'robust', or 'none'.
+
+    Attributes
+    ----------
+    model : Model instance
+        A reference to the model that was fit.
+    filter_results : HamiltonFilterResults or KimSmootherResults instance
+        The underlying filter and, optionally, smoother output
+    nobs : float
+        The number of observations used to fit the model.
+    params : array
+        The parameters of the model.
+    scale : float
+        This is currently set to 1.0 and not used by the model or its results.
+
+    """
     pass
 
 
