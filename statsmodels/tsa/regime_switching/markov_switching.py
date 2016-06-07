@@ -112,7 +112,7 @@ def _partials_logistic(x):
     return partials
 
 
-def py_hamilton_filter(initial_probabilities, transition,
+def py_hamilton_filter(initial_probabilities, regime_transition,
                        conditional_likelihoods):
     """
     Hamilton filter using pure Python
@@ -121,7 +121,7 @@ def py_hamilton_filter(initial_probabilities, transition,
     ----------
     initial_probabilities : array
         Array of initial probabilities, shaped (k_regimes,).
-    transition : array
+    regime_transition : array
         Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
         probabilities (k_regimes, k_regimes, nobs).
@@ -172,25 +172,25 @@ def py_hamilton_filter(initial_probabilities, transition,
     tmp = np.copy(initial_probabilities)
     shape = (k_regimes, k_regimes)
     for i in range(order):
-        tmp = np.reshape(transition[..., i], shape + (1,) * i) * tmp
+        tmp = np.reshape(regime_transition[..., i], shape + (1,) * i) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
-    # Reshape transition so we can use broadcasting
+    # Reshape regime_transition so we can use broadcasting
     shape = (k_regimes, k_regimes)
     shape += (1,) * (order-1)
-    shape += (transition.shape[-1],)
-    transition = np.reshape(transition, shape)[..., order:]
+    shape += (regime_transition.shape[-1],)
+    regime_transition = np.reshape(regime_transition, shape)[..., order:]
 
     # Hamilton filter iterations
     transition_t = 0
     for t in range(nobs):
-        if transition.shape[-1] > 1:
+        if regime_transition.shape[-1] > 1:
             transition_t = t
 
         # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
         predicted_joint_probabilities[..., t] = (
             # S_t | S_{t-1}
-            transition[..., transition_t] *
+            regime_transition[..., transition_t] *
             # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
             filtered_joint_probabilities[..., t].sum(axis=-1))
 
@@ -214,7 +214,7 @@ def py_hamilton_filter(initial_probabilities, transition,
             joint_likelihoods, filtered_joint_probabilities[..., 1:])
 
 
-def cy_hamilton_filter(initial_probabilities, transition,
+def cy_hamilton_filter(initial_probabilities, regime_transition,
                        conditional_likelihoods):
     """
     Hamilton filter using Cython inner loop
@@ -223,7 +223,7 @@ def cy_hamilton_filter(initial_probabilities, transition,
     ----------
     initial_probabilities : array
         Array of initial probabilities, shaped (k_regimes,).
-    transition : array
+    regime_transition : array
         Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
         probabilities (k_regimes, k_regimes, nobs).
@@ -277,21 +277,22 @@ def cy_hamilton_filter(initial_probabilities, transition,
     shape = (k_regimes, k_regimes)
     transition_t = 0
     for i in range(order):
-        if transition.shape[-1] > 1:
+        if regime_transition.shape[-1] > 1:
             transition_t = i
-        tmp = np.reshape(transition[..., transition_t], shape + (1,) * i) * tmp
+        tmp = np.reshape(regime_transition[..., transition_t],
+                         shape + (1,) * i) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
     # Get appropriate subset of transition matrix
-    if transition.shape[-1] > 1:
-        transition = transition[..., order:]
+    if regime_transition.shape[-1] > 1:
+        regime_transition = regime_transition[..., order:]
 
     # Run Cython filter iterations
     prefix, dtype, _ = find_best_blas_type((
-        transition, conditional_likelihoods, joint_likelihoods,
+        regime_transition, conditional_likelihoods, joint_likelihoods,
         predicted_joint_probabilities, filtered_joint_probabilities))
     func = prefix_hamilton_filter_map[prefix]
-    func(nobs, k_regimes, order, transition,
+    func(nobs, k_regimes, order, regime_transition,
          conditional_likelihoods.reshape(k_regimes**(order+1), nobs),
          joint_likelihoods,
          predicted_joint_probabilities.reshape(k_regimes**(order+1), nobs),
@@ -307,7 +308,7 @@ def cy_hamilton_filter(initial_probabilities, transition,
             joint_likelihoods, filtered_joint_probabilities[..., 1:])
 
 
-def py_kim_smoother(transition, filtered_marginal_probabilities,
+def py_kim_smoother(regime_transition, filtered_marginal_probabilities,
                     predicted_joint_probabilities,
                     filtered_joint_probabilities):
     """
@@ -315,7 +316,7 @@ def py_kim_smoother(transition, filtered_marginal_probabilities,
 
     Parameters
     ----------
-    transition : array
+    regime_transition : array
         Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
         probabilities (k_regimes, k_regimes, nobs).
@@ -363,23 +364,23 @@ def py_kim_smoother(transition, filtered_marginal_probabilities,
     # Reshape transition so we can use broadcasting
     shape = (k_regimes, k_regimes)
     shape += (1,) * (order)
-    shape += (transition.shape[-1],)
-    transition = np.reshape(transition, shape)
+    shape += (regime_transition.shape[-1],)
+    regime_transition = np.reshape(regime_transition, shape)
 
     # Get appropriate subset of transition matrix
-    if transition.shape[-1] > 1:
-        transition = transition[..., order:]
+    if regime_transition.shape[-1] > 1:
+        regime_transition = regime_transition[..., order:]
 
     # Kim smoother iterations
     transition_t = 0
     for t in range(nobs - 2, -1, -1):
-        if transition.shape[-1] > 1:
+        if regime_transition.shape[-1] > 1:
             transition_t = t+1
 
         # S_{t+1}, S_t, ..., S_{t-r+1} | t
         # x = predicted_joint_probabilities[..., t]
         x = (filtered_joint_probabilities[..., t] *
-             transition[..., transition_t])
+             regime_transition[..., transition_t])
         # S_{t+1}, S_t, ..., S_{t-r+2} | T / S_{t+1}, S_t, ..., S_{t-r+2} | t
         y = (smoothed_joint_probabilities[..., t+1] /
              predicted_joint_probabilities[..., t+1])
@@ -424,19 +425,20 @@ class MarkovSwitchingParams(object):
     For example, consider the following code:
 
         parameters = MarkovSwitchingParams(k_regimes=2)
-        parameters['transition'] = [1,1]
+        parameters['regime_transition'] = [1,1]
         parameters['exog'] = [0, 1]
 
-    This implies the model has 7 parameters: 4 "transition"-related parameters
-    (2 parameters that each switch according to regimes) and 3 "exog"-related
-    parameters (1 parameter that does not switch, and one 1 that does).
+    This implies the model has 7 parameters: 4 "regime_transition"-related
+    parameters (2 parameters that each switch according to regimes) and 3
+    "exog"-related parameters (1 parameter that does not switch, and one 1 that
+    does).
 
     The order of parameters is then:
 
-    1. The first "transition" parameter, regime 0
-    2. The first "transition" parameter, regime 1
-    3. The second "transition" parameter, regime 1
-    4. The second "transition" parameter, regime 1
+    1. The first "regime_transition" parameter, regime 0
+    2. The first "regime_transition" parameter, regime 1
+    3. The second "regime_transition" parameter, regime 1
+    4. The second "regime_transition" parameter, regime 1
     5. The first "exog" parameter
     6. The second "exog" parameter, regime 0
     7. The second "exog" parameter, regime 1
@@ -469,7 +471,7 @@ class MarkovSwitchingParams(object):
     with the named type strings as the keys. It can be used to get the total
     number of parameters of each type:
 
-    >>> parameters.k_parameters['transition']
+    >>> parameters.k_parameters['regime_transition']
     4
     >>> parameters.k_parameters['exog']
     3
@@ -617,7 +619,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         k_transition = self.k_regimes - 1
         if self.tvtp:
             k_transition *= self.k_tvtp
-        self.parameters['transition'] = [1] * k_transition
+        self.parameters['regime_transition'] = [1] * k_transition
 
         # Internal model properties: default is steady-state initialization
         self._initialization = 'steady-state'
@@ -641,7 +643,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         """
         if self.tvtp:
             raise ValueError('Cannot use steady-state initialization when'
-                             ' the transition matrix is time-varying.')
+                             ' the regime transition matrix is time-varying.')
 
         self._initialization = 'steady-state'
         self._initial_probabilities = None
@@ -659,18 +661,18 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             raise ValueError('Initial probabilities vector must sum to one.')
         self._initial_probabilities = probabilities
 
-    def initial_probabilities(self, params, transition=None):
+    def initial_probabilities(self, params, regime_transition=None):
         """
         Retrieve initial probabilities
         """
         params = np.array(params, ndmin=1)
         if self._initialization == 'steady-state':
-            if transition is None:
-                transition = self.transition_matrix(params)
-            if transition.ndim == 3:
-                transition = transition[..., 0]
-            m = transition.shape[0]
-            A = np.c_[(np.eye(m) - transition).T, np.ones(m)].T
+            if regime_transition is None:
+                regime_transition = self.regime_transition_matrix(params)
+            if regime_transition.ndim == 3:
+                regime_transition = regime_transition[..., 0]
+            m = regime_transition.shape[0]
+            A = np.c_[(np.eye(m) - regime_transition).T, np.ones(m)].T
             try:
                 probabilities = np.linalg.pinv(A)[:, -1]
             except np.linalg.LinAlgError:
@@ -683,31 +685,31 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return probabilities
 
-    def _transition_matrix_tvtp(self, params):
-        transition_matrix = np.zeros(
+    def _regime_transition_matrix_tvtp(self, params):
+        regime_transition_matrix = np.zeros(
             (self.k_regimes, self.k_regimes, len(self.exog_tvtp)),
             dtype=np.promote_types(np.float64, params.dtype))
 
         # Compute the predicted values from the regression
         for i in range(self.k_regimes):
-            coeffs = params[self.parameters[i, 'transition']]
-            transition_matrix[:-1, i, :] = np.dot(
+            coeffs = params[self.parameters[i, 'regime_transition']]
+            regime_transition_matrix[:-1, i, :] = np.dot(
                 self.exog_tvtp,
                 np.reshape(coeffs, (self.k_regimes-1, self.k_tvtp)).T).T
 
         # Perform the logistic transformation
         tmp = np.c_[np.zeros((len(self.exog_tvtp), self.k_regimes, 1)),
-                    transition_matrix[:-1, :, :].T].T
-        transition_matrix[:-1, :, :] = np.exp(transition_matrix[:-1, :, :] -
-                                              logsumexp(tmp, axis=0))
+                    regime_transition_matrix[:-1, :, :].T].T
+        regime_transition_matrix[:-1, :, :] = np.exp(
+            regime_transition_matrix[:-1, :, :] - logsumexp(tmp, axis=0))
 
         # Compute the last column of the transition matrix
-        transition_matrix[-1, :, :] = (
-            1 - np.sum(transition_matrix[:-1, :, :], axis=0))
+        regime_transition_matrix[-1, :, :] = (
+            1 - np.sum(regime_transition_matrix[:-1, :, :], axis=0))
 
-        return transition_matrix
+        return regime_transition_matrix
 
-    def transition_matrix(self, params):
+    def regime_transition_matrix(self, params):
         """
         Construct the left-stochastic transition matrix
 
@@ -728,18 +730,19 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         """
         params = np.array(params, ndmin=1)
         if not self.tvtp:
-            transition_matrix = np.zeros((self.k_regimes, self.k_regimes, 1),
-                                         dtype=np.promote_types(np.float64,
-                                                                params.dtype))
-            transition_matrix[:-1, :, 0] = np.reshape(
-                params[self.parameters['transition']],
+            regime_transition_matrix = np.zeros(
+                (self.k_regimes, self.k_regimes, 1),
+                dtype=np.promote_types(np.float64, params.dtype))
+            regime_transition_matrix[:-1, :, 0] = np.reshape(
+                params[self.parameters['regime_transition']],
                 (self.k_regimes-1, self.k_regimes))
-            transition_matrix[-1, :, 0] = (
-                1 - np.sum(transition_matrix[:-1, :, 0], axis=0))
+            regime_transition_matrix[-1, :, 0] = (
+                1 - np.sum(regime_transition_matrix[:-1, :, 0], axis=0))
         else:
-            transition_matrix = self._transition_matrix_tvtp(params)
+            regime_transition_matrix = (
+                self._regime_transition_matrix_tvtp(params))
 
-        return transition_matrix
+        return regime_transition_matrix
 
     def _conditional_likelihoods(self, params):
         """
@@ -750,19 +753,21 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         """
         raise NotImplementedError
 
-    def _filter(self, params, transition=None):
-        # Get the transition matrix if not provided
-        if transition is None:
-            transition = self.transition_matrix(params)
+    def _filter(self, params, regime_transition=None):
+        # Get the regime transition matrix if not provided
+        if regime_transition is None:
+            regime_transition = self.regime_transition_matrix(params)
         # Get the initial probabilities
-        initial_probabilities = self.initial_probabilities(params, transition)
+        initial_probabilities = self.initial_probabilities(
+            params, regime_transition)
 
         # Compute the conditional likelihoods
         conditional_likelihoods = self._conditional_likelihoods(params)
 
         # Apply the filter
-        return ((transition, initial_probabilities, conditional_likelihoods) +
-                cy_hamilton_filter(initial_probabilities, transition,
+        return ((regime_transition, initial_probabilities,
+                 conditional_likelihoods) +
+                cy_hamilton_filter(initial_probabilities, regime_transition,
                                    conditional_likelihoods))
 
     def filter(self, params, transformed=True, cov_type=None, cov_kwds=None,
@@ -808,7 +813,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.data.param_names = self.param_names
 
         # Get the result
-        names = ['transition', 'initial_probabilities',
+        names = ['regime_transition', 'initial_probabilities',
                  'conditional_likelihoods', 'filtered_marginal_probabilities',
                  'predicted_joint_probabilities', 'joint_likelihoods',
                  'filtered_joint_probabilities']
@@ -836,13 +841,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
     def _smooth(self, params, filtered_marginal_probabilities,
                 predicted_joint_probabilities,
-                filtered_joint_probabilities, transition=None):
-        # Get the transition matrix
-        if transition is None:
-            transition = self.transition_matrix(params)
+                filtered_joint_probabilities, regime_transition=None):
+        # Get the regime transition matrix
+        if regime_transition is None:
+            regime_transition = self.regime_transition_matrix(params)
 
         # Apply the smoother
-        return py_kim_smoother(transition, filtered_marginal_probabilities,
+        return py_kim_smoother(regime_transition,
+                               filtered_marginal_probabilities,
                                predicted_joint_probabilities,
                                filtered_joint_probabilities)
 
@@ -889,7 +895,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.data.param_names = self.param_names
 
         # Hamilton filter
-        names = ['transition', 'initial_probabilities',
+        names = ['regime_transition', 'initial_probabilities',
                  'conditional_likelihoods', 'filtered_marginal_probabilities',
                  'predicted_joint_probabilities', 'joint_likelihoods',
                  'filtered_joint_probabilities']
@@ -1236,18 +1242,19 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # The EM with TVTP is not yet supported, just return the previous
         # iteration parameters
         if self.tvtp:
-            params1[self.parameters['transition']] = (
-                params0[self.parameters['transition']])
+            params1[self.parameters['regime_transition']] = (
+                params0[self.parameters['regime_transition']])
         else:
-            transition = self._em_transition(result)
+            regime_transition = self._em_regime_transition(result)
             for i in range(self.k_regimes):
-                params1[self.parameters[i, 'transition']] = transition[i]
+                params1[self.parameters[i, 'regime_transition']] = (
+                    regime_transition[i])
 
         return result, params1
 
-    def _em_transition(self, result):
+    def _em_regime_transition(self, result):
         """
-        EM step for transition probabilities
+        EM step for regime transition probabilities
         """
 
         # Marginalize the smoothed joint probabilites to just S_t, S_{t-1} | T
@@ -1257,11 +1264,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         smoothed_joint_probabilities = tmp
 
         # Transition parameters (recall we're not yet supporting TVTP here)
-        k_transition = len(self.parameters[0, 'transition'])
-        transition = np.zeros((self.k_regimes, k_transition))
+        k_transition = len(self.parameters[0, 'regime_transition'])
+        regime_transition = np.zeros((self.k_regimes, k_transition))
         for i in range(self.k_regimes):  # S_{t_1}
             for j in range(self.k_regimes - 1):  # S_t
-                transition[i, j] = (
+                regime_transition[i, j] = (
                     np.sum(smoothed_joint_probabilities[j, i]) /
                     np.sum(result.smoothed_marginal_probabilities[i]))
 
@@ -1269,14 +1276,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             # transition probabilities that sum to greater than one. If so,
             # re-scale the probabilities and warn the user that something
             # is not quite right
-            delta = np.sum(transition[i]) - 1
+            delta = np.sum(regime_transition[i]) - 1
             if delta > 0:
-                warnings.warn('Invalid transition probabilities estimated in'
-                              ' EM iteration; probabilities have been'
-                              ' re-scaled to continue estimation.')
-                transition[i] /= 1 + delta + 1e-6
+                warnings.warn('Invalid regime transition probabilities'
+                              ' estimated in EM iteration; probabilities have'
+                              ' been re-scaled to continue estimation.')
+                regime_transition[i] /= 1 + delta + 1e-6
 
-        return transition
+        return regime_transition
 
     def _start_params_search(self, reps, start_params=None, transformed=True,
                              em_iter=5, scale=1.):
@@ -1360,9 +1367,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Transition probabilities
         if self.tvtp:
-            params[self.parameters['transition']] = 0.
+            params[self.parameters['regime_transition']] = 0.
         else:
-            params[self.parameters['transition']] = 1. / self.k_regimes
+            params[self.parameters['regime_transition']] = 1. / self.k_regimes
 
         return params
 
@@ -1377,14 +1384,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Transition probabilities
         if self.tvtp:
             # TODO add support for exog_tvtp_names
-            param_names[self.parameters['transition']] = [
+            param_names[self.parameters['regime_transition']] = [
                 'p[%d->%d].tvtp%d' % (j, i, k)
                 for i in range(self.k_regimes-1)
                 for k in range(self.k_tvtp)
                 for j in range(self.k_regimes)
                 ]
         else:
-            param_names[self.parameters['transition']] = [
+            param_names[self.parameters['regime_transition']] = [
                 'p[%d->%d]' % (j, i)
                 for i in range(self.k_regimes-1)
                 for j in range(self.k_regimes)]
@@ -1419,18 +1426,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Nothing to do for transition probabilities if TVTP
         if self.tvtp:
-            constrained[self.parameters['transition']] = (
-                unconstrained[self.parameters['transition']])
+            constrained[self.parameters['regime_transition']] = (
+                unconstrained[self.parameters['regime_transition']])
         # Otherwise do logistic transformation
         else:
             # Transition probabilities
             offset = 0
             for i in range(self.k_regimes):
-                tmp1 = unconstrained[self.parameters[i, 'transition']]
+                tmp1 = unconstrained[self.parameters[i, 'regime_transition']]
                 tmp2 = np.r_[0, tmp1]
-                # Don't let transition probabilities be exactly equal to 1 or 0
-                # (causes problems with the optimizer)
-                constrained[self.parameters[i, 'transition']] = np.exp(
+                constrained[self.parameters[i, 'regime_transition']] = np.exp(
                     tmp1 - logsumexp(tmp2))
 
         # Do not do anything for the rest of the parameters
@@ -1478,12 +1483,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Nothing to do for transition probabilities if TVTP
         if self.tvtp:
-            unconstrained[self.parameters['transition']] = (
-                constrained[self.parameters['transition']])
+            unconstrained[self.parameters['regime_transition']] = (
+                constrained[self.parameters['regime_transition']])
         # Otherwise reverse logistic transformation
         else:
             for i in range(self.k_regimes):
-                s = self.parameters[i, 'transition']
+                s = self.parameters[i, 'regime_transition']
                 if self.k_regimes == 2:
                     unconstrained[s] = -np.log(1. / constrained[s] - 1)
                 else:
@@ -1518,7 +1523,7 @@ class HamiltonFilterResults(object):
         The dimension of the observation series.
     k_regimes : int
         The number of unobserved regimes.
-    transition : array
+    regime_transition : array
         The regime transition matrix.
     initialization : str
         Initialization method for regime probabilities.
@@ -1545,7 +1550,7 @@ class HamiltonFilterResults(object):
         self.order = model.order
         self.k_regimes = model.k_regimes
 
-        attributes = ['transition', 'initial_probabilities',
+        attributes = ['regime_transition', 'initial_probabilities',
                       'conditional_likelihoods',
                       'predicted_joint_probabilities',
                       'filtered_marginal_probabilities',
@@ -1559,15 +1564,15 @@ class HamiltonFilterResults(object):
         self.llf = np.sum(self.llf_obs)
 
         # Subset transition if necessary (e.g. for Markov autoregression)
-        if self.transition.shape[-1] > 1 and self.order > 0:
-            self.transition = self.transition[..., self.order:]
+        if self.regime_transition.shape[-1] > 1 and self.order > 0:
+            self.regime_transition = self.regime_transition[..., self.order:]
 
     @property
     def expected_durations(self):
         """
         (array) Expected duration of a regime, possibly time-varying.
         """
-        return 1. / (1 - np.diagonal(self.transition).squeeze())
+        return 1. / (1 - np.diagonal(self.regime_transition).squeeze())
 
 
 class KimSmootherResults(HamiltonFilterResults):
@@ -1678,7 +1683,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 ' information matrix.')
 
         # Copy over arrays
-        attributes = ['transition', 'initial_probabilities',
+        attributes = ['regime_transition', 'initial_probabilities',
                       'conditional_likelihoods',
                       'predicted_joint_probabilities',
                       'filtered_marginal_probabilities',
@@ -2044,7 +2049,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         other_masks = {}
         for key, switching in params.switching.items():
             k_params = len(switching)
-            if key == 'transition':
+            if key == 'regime_transition':
                 continue
             other_masks[key] = []
 
@@ -2069,7 +2074,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             summary.tables.append(table)
 
         # Transition parameters
-        mask = params['transition']
+        mask = params['regime_transition']
         table = make_table(self, mask, 'Regime transition parameters')
         summary.tables.append(table)
 

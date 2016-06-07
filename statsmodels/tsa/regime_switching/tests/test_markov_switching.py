@@ -15,23 +15,23 @@ from numpy.testing import assert_equal, assert_allclose, assert_raises
 
 def test_params():
     def check_transtion_2(params):
-        assert_equal(params['transition'], np.s_[0:2])
-        assert_equal(params[0, 'transition'], [0])
-        assert_equal(params[1, 'transition'], [1])
-        assert_equal(params['transition', 0], [0])
-        assert_equal(params['transition', 1], [1])
+        assert_equal(params['regime_transition'], np.s_[0:2])
+        assert_equal(params[0, 'regime_transition'], [0])
+        assert_equal(params[1, 'regime_transition'], [1])
+        assert_equal(params['regime_transition', 0], [0])
+        assert_equal(params['regime_transition', 1], [1])
 
     def check_transition_3(params):
-        assert_equal(params['transition'], np.s_[0:6])
-        assert_equal(params[0, 'transition'], [0, 3])
-        assert_equal(params[1, 'transition'], [1, 4])
-        assert_equal(params[2, 'transition'], [2, 5])
-        assert_equal(params['transition', 0], [0, 3])
-        assert_equal(params['transition', 1], [1, 4])
-        assert_equal(params['transition', 2], [2, 5])
+        assert_equal(params['regime_transition'], np.s_[0:6])
+        assert_equal(params[0, 'regime_transition'], [0, 3])
+        assert_equal(params[1, 'regime_transition'], [1, 4])
+        assert_equal(params[2, 'regime_transition'], [2, 5])
+        assert_equal(params['regime_transition', 0], [0, 3])
+        assert_equal(params['regime_transition', 1], [1, 4])
+        assert_equal(params['regime_transition', 2], [2, 5])
 
     params = markov_switching.MarkovSwitchingParams(k_regimes=2)
-    params['transition'] = [1]
+    params['regime_transition'] = [1]
     assert_equal(params.k_params, 1 * 2)
     assert_equal(params[0], [0])
     assert_equal(params[1], [1])
@@ -49,7 +49,7 @@ def test_params():
     assert_equal(params['exog', 1], [2, 4])
 
     params = markov_switching.MarkovSwitchingParams(k_regimes=3)
-    params['transition'] = [1, 1]
+    params['regime_transition'] = [1, 1]
     assert_equal(params.k_params, 2 * 3)
     assert_equal(params[0], [0, 3])
     assert_equal(params[1], [1, 4])
@@ -113,7 +113,7 @@ def test_transition_matrix():
     params = np.r_[0., 0., 1.]
     transition_matrix = np.zeros((2, 2, 1))
     transition_matrix[1, :] = 1.
-    assert_allclose(mod.transition_matrix(params), transition_matrix)
+    assert_allclose(mod.regime_transition_matrix(params), transition_matrix)
 
     # k_regimes = 3
     endog = np.ones(10)
@@ -122,7 +122,7 @@ def test_transition_matrix():
     transition_matrix = np.zeros((3, 3, 1))
     transition_matrix[1, :, 0] = 0.2
     transition_matrix[2, :, 0] = 0.8
-    assert_allclose(mod.transition_matrix(params), transition_matrix)
+    assert_allclose(mod.regime_transition_matrix(params), transition_matrix)
 
     # k_regimes = 2, tvtp
     endog = np.ones(10)
@@ -134,7 +134,7 @@ def test_transition_matrix():
     # results in exp(0) / (1 + exp(0)) = 0.5 for all parameters; since it's
     # k_regimes=2 the remainder calculation is also 0.5.
     params = np.r_[0, 0, 0, 0]
-    assert_allclose(mod.transition_matrix(params), 0.5)
+    assert_allclose(mod.regime_transition_matrix(params), 0.5)
 
     # Manually compute the TVTP coefficients
     params = np.r_[1, 2, 1, 2]
@@ -149,7 +149,7 @@ def test_transition_matrix():
     p21 = np.exp(coeffs1) / (1 + np.exp(coeffs1))
     transition_matrix[0, 1, :] = p21
     transition_matrix[1, 1, :] = 1 - p21
-    assert_allclose(mod.transition_matrix(params), transition_matrix,
+    assert_allclose(mod.regime_transition_matrix(params), transition_matrix,
                     atol=1e-10)
 
     # k_regimes = 3, tvtp
@@ -162,7 +162,7 @@ def test_transition_matrix():
     # results in exp(0) / (1 + exp(0) + exp(0)) = 1/3 for all parameters;
     # since it's k_regimes=3 the remainder calculation is also 1/3.
     params = np.r_[[0]*12]
-    assert_allclose(mod.transition_matrix(params), 1 / 3)
+    assert_allclose(mod.regime_transition_matrix(params), 1 / 3)
 
     # Manually compute the TVTP coefficients for the first column
     params = np.r_[[0]*6, [2]*6]
@@ -174,7 +174,7 @@ def test_transition_matrix():
     transition_matrix[:2, 0, :] = tmp / (1 + np.sum(tmp, axis=0))
     transition_matrix[2, 0, :] = (
         1 - np.sum(transition_matrix[:2, 0, :], axis=0))
-    assert_allclose(mod.transition_matrix(params)[:, 0, :],
+    assert_allclose(mod.regime_transition_matrix(params)[:, 0, :],
                     transition_matrix[:, 0, :], atol=1e-10)
 
 
