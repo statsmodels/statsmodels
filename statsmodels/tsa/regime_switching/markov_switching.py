@@ -10,7 +10,7 @@ from __future__ import division, absolute_import, print_function
 import warnings
 import numpy as np
 import pandas as pd
-from collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 
 from scipy.misc import logsumexp
 from scipy.stats import norm
