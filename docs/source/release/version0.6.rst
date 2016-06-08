@@ -155,7 +155,7 @@ It is now possible to call out to X-12-ARIMA or X-13ARIMA-SEATS from statsmodels
 
     dta = sm.datasets.co2.load_pandas().data
     dta.co2.interpolate(inplace=True)
-    dta = dta.resample('M')
+    dta = dta.resample('M').last()
 
     res = sm.tsa.x13_arima_select_order(dta.co2)
     print(res.order, res.sorder)

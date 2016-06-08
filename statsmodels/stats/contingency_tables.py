@@ -124,7 +124,7 @@ class Table(object):
     categorical variables.
 
     References
-    ---------
+    ----------
     Definitions of residuals:
         https://onlinecourses.science.psu.edu/stat504/node/86
     """

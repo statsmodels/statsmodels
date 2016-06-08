@@ -242,14 +242,15 @@ class DescrStatsW(object):
         Returns
         -------
         quantiles : Series, DataFrame, or ndarray
-            If `return_pandas`=True, returns one of the following:
-            * data are 1d, `return_pandas`=True: a Series indexed by
-              the probability points.
-            * data are 2d, `return_pandas`=True: a DataFrame with
-              the probability points as row index and the variables
-              as column index.
-        If `return_pandas`=False, returns an ndarray containing the
-        same values as the Series/DataFrame.
+            If `return_pandas` = True, returns one of the following:
+              * data are 1d, `return_pandas` = True: a Series indexed by
+                the probability points.
+              * data are 2d, `return_pandas` = True: a DataFrame with
+                the probability points as row index and the variables
+                as column index.
+
+            If `return_pandas` = False, returns an ndarray containing the
+            same values as the Series/DataFrame.
 
         Notes
         -----

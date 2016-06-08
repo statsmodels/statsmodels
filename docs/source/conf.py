@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
+              # 'sphinx.ext.imgmath',
               'sphinx.ext.pngmath', 'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
@@ -65,7 +66,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = u'2009-2016, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True
@@ -136,7 +137,7 @@ pygments_style = 'sphinx'
 if 'htmlhelp' in sys.argv:
     #html_theme = 'statsmodels_htmlhelp'  #doesn't look nice yet
     html_theme = 'default'
-    print '################# using statsmodels_htmlhelp ############'
+    print('################# using statsmodels_htmlhelp ############')
 else:
     html_theme = 'statsmodels'
 
@@ -252,6 +253,10 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# imgmath options
+imgmath_image_format = 'png'
+imgmath_latex_preamble = r'\usepackage[active]{preview}'
+imgmath_use_preview = True
 # pngmath options
 # http://sphinx-doc.org/ext/math.html#module-sphinx.ext.pngmath
 pngmath_latex_preamble=r'\usepackage[active]{preview}' # + other custom stuff for inline math, such as non-default math fonts etc.
@@ -313,7 +318,7 @@ intersphinx_mapping = {
         'python' : ('http://docs.python.org/3.2', None),
         'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
         'patsy' : ('http://patsy.readthedocs.org/en/latest/', None),
-        'pandas' : ('http://pandas.pydata.org/pandas-docs/dev/', None),
+        'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None),
         }
 
 from os.path import dirname, abspath, join

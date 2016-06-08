@@ -14,6 +14,7 @@ Examples
 --------
 
 .. ipython:: python
+    :okwarning:
 
     # Load modules and data
     import statsmodels.api as sm

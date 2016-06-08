@@ -1,4 +1,4 @@
-.. currentmodule:: statsmodels.duration.hazard_regression
+.. currentmodule:: statsmodels.duration
 
 
 .. _duration:
@@ -169,12 +169,7 @@ Examples
    print(rslt.summary())
 
 
-Detailed examples can be found here:
-
-.. toctree::
-    :maxdepth: 2
-
-    examples/notebooks/generated/
+See :ref:`statsmodels-examples` for more detailed examples.
 
 
 There are some notebook examples on the Wiki:

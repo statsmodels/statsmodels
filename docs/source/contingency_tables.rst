@@ -11,8 +11,6 @@ tables, including methods for assessing independence, symmetry,
 homogeneity, and methods for working with collections of tables from a
 stratified population.
 
-.. note::
-
 The methods described here are mainly for two-way tables.  Multi-way
 tables can be analyzed using log-linear models.  Statsmodels does not
 currently have a dedicated API for loglinear modeling, but Poisson
@@ -85,7 +83,7 @@ that most strongly violate independence:
 
     print(table.table_orig)
     print(table.fittedvalues)
-    print(table.pearson_resids)
+    print(table.resid_pearson)
 
 In this example, compared to a sample from a population in which the
 rows and columns are independent, we have too many observations in the
@@ -102,7 +100,7 @@ statistic to see where the evidence for dependence is coming from.
 
 .. ipython:: python
 
-    rslt = table.nominal_association
+    rslt = table.test_nominal_association()
     print(rslt.pvalue)
     print(table.chi2_contribs)
 
@@ -121,7 +119,7 @@ these scores are set to the sequences 0, 1, ....  This gives the
 
 .. ipython:: python
 
-    rslt = table.ordinal_association()
+    rslt = table.test_ordinal_association()
     print(rslt.pvalue)
 
 We can assess the association in a :math:`r\times x` table by
@@ -269,7 +267,7 @@ methods and attributes.
     mat = np.asarray(data.data)
     tables = [np.reshape(x, (2, 2)) for x in mat]
 
-    st = sm.stats.StratifiedTables(tables)
+    st = sm.stats.StratifiedTable(tables)
     print(st.summary())
 
 
@@ -284,7 +282,7 @@ Module Reference
    Table
    Table2x2
    SquareTable
-   StratifiedTables
+   StratifiedTable
    mcnemar
    cochrans_q
 

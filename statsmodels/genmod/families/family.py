@@ -227,9 +227,9 @@ class Family(object):
 
         Parameters
         ----------
-        `endog` : array
+        endog : array
             Usually the endogenous response variable.
-        `mu` : array
+        mu : array
             Usually but not always the fitted mean response variable.
         freq_weights : array-like
             1d array of frequency weights. The default is 1.
@@ -241,6 +241,7 @@ class Family(object):
         llf : float
             The value of the loglikelihood evaluated at
             (endog,mu,freq_weights,scale) as defined below.
+
         Notes
         -----
         This is defined for each family.  endog and mu are not restricted to
@@ -1298,8 +1299,11 @@ class NegativeBinomial(Family):
 
         If :math:`Y_{i} > 0`:
 
-        :math:`piecewise_i = 2 * Y_i * \log(Y_i / \mu_i) - (2 / \alpha) *
-            (1 + \alpha * Y_i) * \ln(1 + \alpha * Y_i) / (1 + \alpha * \mu_i)`
+        .. math:
+
+           piecewise_i = 2 * Y_i * \log(Y_i / \mu_i) - (2 / \alpha) *
+            (1 + \alpha * Y_i) * \ln(1 + \alpha * Y_i) / (1 + \alpha * \mu_i)
+
         """
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero

@@ -41,11 +41,11 @@ Residual Diagnostics and Specification Tests
    :toctree: generated/
 
    acorr_ljungbox
-   acorr_breush_godfrey
+   acorr_breusch_godfrey
 
    HetGoldfeldQuandt
    het_goldfeldquandt
-   het_breushpagan
+   het_breuschpagan
    het_white
    het_arch
 
@@ -66,7 +66,7 @@ Residual Diagnostics and Specification Tests
 
    normal_ad
    kstest_normal
-   lillifors
+   lilliefors
 
 Outliers and influence measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -137,7 +137,7 @@ some tests for goodness of fit for univariate distributions
 
    normal_ad
    kstest_normal
-   lillifors
+   lilliefors
 
 Non-Parametric Tests
 --------------------
@@ -230,7 +230,6 @@ The following functions are not (yet) public
    ecdf
    get_tukeyQcrit
    homogeneous_subsets
-   line
    maxzero
    maxzerodown
    mcfdr

@@ -262,8 +262,8 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     >>> dta = sm.datasets.elnino.load_pandas().data
     >>> dta['YEAR'] = dta.YEAR.astype(int).astype(str)
     >>> dta = dta.set_index('YEAR').T.unstack()
-    >>> dates = map(lambda x : pd.datetools.parse_time_string('1 '+' '.join(x)),
-    ...                                        dta.index.values)
+    >>> dates = pd.to_datetime(list(map(lambda x : '-'.join(x) + '-1',
+    ...                                        dta.index.values)))
 
     >>> dta.index = pd.DatetimeIndex(dates, freq='M')
     >>> fig = sm.graphics.tsa.month_plot(dta)
