@@ -533,6 +533,12 @@ class TestMixedLM(object):
 
     def test_regularized(self):
 
+        import scipy
+        v = scipy.__version__.split(".")[1]
+        v = int(v)
+        if v < 16:
+            return
+
         np.random.seed(3453)
         exog = np.random.normal(size=(400, 5))
         groups = np.kron(np.arange(100), np.ones(4))
