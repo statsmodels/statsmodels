@@ -48,7 +48,7 @@ class Kim1994(object):
         design[0, :, 0] = [1, -1]
 
         obs_intercept = np.zeros((k_regimes, k_endog, 1), dtype=dtype)
-        obs_intercept[:, 0, 0] = [delta_0, delta_0 + delta_1]
+        obs_intercept[:, 0, 0] = [delta_0, delta_1]
 
         transition = np.zeros((k_states, k_states, 1), dtype=dtype)
         transition[:, :, 0] = [[phi_1, phi_2], [1, 0]]

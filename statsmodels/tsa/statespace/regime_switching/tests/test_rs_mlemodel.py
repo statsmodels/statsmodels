@@ -59,36 +59,51 @@ class Kim1994Model(RegimeSwitchingMLEModel):
     Switching model.
     '''
 
+    def __init__(self, *args, **kwargs):
+        '''
+        need to specify switching params
+        '''
+
+        super(Kim1994Model, self).__init__(*args, **kwargs)
+
+        self.parameters['phi'] = [False, False]
+        self.parameters['sigma'] = [False]
+        self.parameters['delta'] = [True]
+
     @property
     def nonswitching_model_type(self):
 
         return Linear_Kim1994Model
 
-    def get_model_params(self, nonswitching_model_params):
+    def update_params(self, params, nonswitching_params):
 
-        return np.hstack((nonswitching_model_params,
-                nonswitching_model_params[-1]))
+        params[self.parameters['phi']] = nonswitching_params[:2]
+        params[self.parameters['sigma']] = nonswitching_params[2]
+        # Without shifting a little we are stuck in local maximum
+        params[self.parameters[0, 'delta']] = nonswitching_params[3] - 1e-2
+        params[self.parameters[1, 'delta']] = nonswitching_params[3] + 1e-2
+        return params
 
-    def get_nonswitching_model_params(self, model_params):
+    def get_nonswitching_params(self, params):
 
         nonswitching_params = np.zeros((4,), dtype=self.ssm.dtype)
-        nonswitching_params[:3] = model_params[:3]
-        nonswitching_params[3] = (model_params[3] + model_params[4]) / 2.0
+        nonswitching_params[:2] = params[self.parameters['phi']]
+        nonswitching_params[2] = params[self.parameters['sigma']]
+        nonswitching_params[3] = params[self.parameters['delta']].mean()
         return nonswitching_params
 
-    def transform_model_params(self, unconstrained_model_params):
+    def transform_model_params(self, unconstrained):
 
-        constrained_model_params = np.array(unconstrained_model_params)
-        constrained_model_params[:2] = \
-                _transform_ar_coefs(unconstrained_model_params[:2])
-        return constrained_model_params
+        constrained = np.array(unconstrained)
+        constrained[self.parameters['phi']] = \
+                _transform_ar_coefs(unconstrained[self.parameters['phi']])
+        return constrained
 
-    def untransform_model_params(self, constrained_model_params):
-
-        unconstrained_model_params = np.array(constrained_model_params)
-        unconstrained_model_params[:2] = \
-                _untransform_ar_coefs(constrained_model_params[:2])
-        return unconstrained_model_params
+    def untransform_model_params(self, constrained):
+        unconstrained = np.array(constrained)
+        unconstrained[self.parameters['phi']] = \
+                _untransform_ar_coefs(constrained[self.parameters['phi']])
+        return unconstrained
 
     def update(self, params, **kwargs):
 
@@ -101,7 +116,6 @@ class Kim1994Model(RegimeSwitchingMLEModel):
 
         self.initialize_known(initial_state_mean, initial_state_cov)
         self.initialize_stationary_regime_probs()
-
 
 class Kim1994WithMLEModel(Kim1994):
     '''
@@ -125,24 +139,6 @@ class Kim1994WithMLEModel(Kim1994):
         return model
 
     @classmethod
-    def fit_model_generic(cls, untransformed_params, fit_nonswitching_first):
-        constrained_start_params = \
-                cls.model.transform_params(untransformed_params)
-
-        start_transition, start_model_params = \
-                cls.model.get_explicit_params(constrained_start_params)
-
-        params = cls.model.fit(start_transition=start_transition,
-                start_model_params=start_model_params,
-                fit_nonswitching_first=fit_nonswitching_first,
-                return_params=True)
-
-        return {
-                'loglike': cls.model.loglike(params, filter_first=False),
-                'params': params
-        }
-
-    @classmethod
     def fit_model(cls):
 
         raise NotImplementedError
@@ -155,7 +151,15 @@ class TestKim1994_MLEModel(Kim1994WithMLEModel):
 
     @classmethod
     def fit_model(cls):
-        return cls.fit_model_generic(cls.true['untransformed_start_parameters'], False)
+
+        params = cls.model.fit(start_params=np.array(
+            cls.true['untransformed_start_parameters'], dtype=cls.dtype),
+            transformed=False)
+
+        return {
+                'loglike': cls.model.loglike(params, filter_first=False),
+                'params': params
+        }
 
     def test_loglike(self):
         assert_allclose(self.result['loglike'], self.true['loglike'], rtol=1e-5)
@@ -171,8 +175,13 @@ class TestKim1994_MLEModelLinearFitFirst(Kim1994WithMLEModel):
 
     @classmethod
     def fit_model(cls):
-        return cls.fit_model_generic(np.array([1, 1, 1, 1, 1, 1, 1],
-            dtype=cls.dtype), True)
+
+        params = cls.model.fit(fit_nonswitching_first=True)
+
+        return {
+                'loglike': cls.model.loglike(params, filter_first=False),
+                'params': params
+        }
 
     def test_loglike(self):
         assert_allclose(self.result['loglike'], self.true['loglike'], rtol=1e-2)

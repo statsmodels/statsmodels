@@ -1,15 +1,34 @@
 import numpy as np
 from statsmodels.tsa.statespace.mlemodel import MLEModel
+from statsmodels.tsa.statespace.regime_switching.tools import \
+        MarkovSwitchingParams
 from statsmodels.tsa.statespace.regime_switching.kim_filter import KimFilter
 
 
 class RegimeSwitchingMLEModel(MLEModel):
 
-    def __init__(self, k_regimes, endog, k_states, exog=None, dates=None,
-            freq=None, **kwargs):
+    def __init__(self, k_regimes, endog, k_states,
+            param_k_regimes=None, exog=None, dates=None, freq=None,
+            **kwargs):
+        '''
+        param_k_regimes is specified in the case, when
+        regime_transition matrix in parameters is different from that in state
+        space representation, like it happens with MS-AR.
+        '''
 
         self.k_regimes = k_regimes
+
+        if param_k_regimes is None:
+            self.param_k_regimes = self.k_regimes
+        else:
+            self.param_k_regimes = param_k_regimes
+
         self._init_kwargs = kwargs
+
+        self.parameters = MarkovSwitchingParams(k_regimes)
+
+        self.parameters['regime_transition'] = [False] * \
+                self.param_k_regimes * (self.param_k_regimes - 1)
 
         super(RegimeSwitchingMLEModel, self).__init__(endog, k_states,
                 exog=exog, dates=dates, freq=freq, **kwargs)
@@ -33,119 +52,101 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         return MLEModel
 
-    def get_model_params(self, nonswitching_model_params):
+    def update_params(self, params, nonswitching_params):
         '''
-        Note that switching model has two groups of parameters: parameters of
-        regime transition matrix and model parameters.
         This method is used when non-switching fitting is done, and we need to
-        get switching model starting params.
-        To override, if fitting non-switching model is performed.
+        update switching model starting params using obtained non-switching
+        params. To override, if fitting non-switching model is performed.
         '''
-        return np.array(nonswitching_model_params, ndmin=1)
 
-    def get_nonswitching_model_params(self, model_params):
+        return np.array(params, ndmin=1)
+
+    def get_nonswitching_params(self, params):
         '''
-        Note that switching model has two groups of parameters: parameters of
-        regime transition matrix and model parameters.
         Used when switching model params are provided in fit method, and we
         need to transform them into params for nonswitching model fitting.
         To override, if fitting non-switching model is performed.
         '''
 
-        return np.array(model_params, ndmin=1)
+        return np.array(params, ndmin=1)
 
-    def transform_transition(self, unconstrained_transition, k_regimes=None):
+    def transform_regime_transition(self, unconstrained):
         '''
-        Note that switching model has two groups of parameters: parameters of
-        regime transition matrix and model parameters.
         This is default implementation of logistic transformation of transition
         matrix.
-        unconstrained_transition is a raveled transition matrix without last
+        unconstrained transition is a raveled transition matrix without last
         row.
-        k_regimes is specified in the case, when regime_transition matrix in
-        parameters is different from that in state space representation, like
-        it happens with MS-AR.
         '''
 
-        if k_regimes is None:
-            k_regimes = self.k_regimes
+        param_k_regimes = self.param_k_regimes
 
-        unconstrained_transition = unconstrained_transition.reshape(
-                (k_regimes - 1, k_regimes))
+        constrained = np.array(unconstrained)
+
+        unconstrained_transition = \
+                unconstrained[self.parameters['regime_transition']].reshape(
+                (param_k_regimes - 1, param_k_regimes))
 
         constrained_transition = np.exp(unconstrained_transition)
         constrained_transition /= \
                 (1 + constrained_transition.sum(axis=0)).reshape((1, -1))
 
-        return constrained_transition.ravel()
+        constrained[self.parameters['regime_transition']] = \
+                constrained_transition.ravel()
 
-    def untransform_transition(self, constrained_transition, k_regimes=None):
+        return constrained
+
+    def untransform_regime_transition(self, constrained):
         '''
-        Note that switching model has two groups of parameters: parameters of
-        regime transition matrix and model parameters.
         This is default implementation of logistic transformation of transition
         matrix.
-        constrained_transition is a raveled transformed transition matrix
+        constrained transition is a raveled transformed transition matrix
         without last row.
-        k_regimes is specified in the case, when regime_transition matrix in
-        parameters is different from that in state space representation, like
-        it happens with MS-AR.
         '''
 
-        if k_regimes is None:
-            k_regimes = self.k_regimes
+        param_k_regimes = self.param_k_regimes
+
+        unconstrained = np.array(constrained)
 
         #TODO: pass as an argument?
         eps = 1e-8
         constrained_transition = \
-                constrained_transition.reshape((k_regimes - 1, k_regimes))
+                constrained[self.parameters['regime_transition']].reshape(
+                (param_k_regimes - 1, param_k_regimes))
         unconstrained_transition = np.array(constrained_transition)
         unconstrained_transition[unconstrained_transition == 0] = eps
         unconstrained_transition /= \
                 (1 - unconstrained_transition.sum(axis=0)).reshape(1, -1)
         unconstrained_transition = np.log(unconstrained_transition)
 
-        return unconstrained_transition.ravel()
+        unconstrained[self.parameters['regime_transition']] = \
+                unconstrained_transition.ravel()
 
-    def transform_model_params(self, unconstrained_model_params):
+        return unconstrained
+
+    def transform_model_params(self, unconstrained):
         '''
-        Note that switching model has two groups of parameters: parameters of
-        regime transition matrix and model parameters.
+        Model params are all parameters except regime transition.
         This method is to be overridden by user.
         '''
 
-        return np.array(unconstrained_model_params, ndmin=1)
+        return np.array(unconstrained)
 
-    def untransform_model_params(self, constrained_model_params):
+    def untransform_model_params(self, constrained):
         '''
-        Note that switching model has two groups of parameters: parameters of
-        regime transition matrix and model parameters.
+        Model params are all parameters except regime transition.
         This method is to be overridden by user.
         '''
 
-        return np.array(constrained_model_params, ndmin=1)
+        return np.array(constrained)
 
     def transform_params(self, unconstrained):
 
-        border = self.k_regimes * (self.k_regimes - 1)
-
-        constrained_transition = \
-                self.transform_transition(unconstrained[:border])
-        constrained_model_params = \
-                self.transform_model_params(unconstrained[border:])
-
-        return np.hstack((constrained_transition, constrained_model_params))
+        return self.transform_model_params(
+                self.transform_regime_transition(unconstrained))
 
     def untransform_params(self, constrained):
-
-        border = self.k_regimes * (self.k_regimes - 1)
-
-        unconstrained_transition = \
-                self.untransform_transition(constrained[:border])
-        unconstrained_model_params = \
-                self.untransform_model_params(constrained[border:])
-        return np.hstack((unconstrained_transition,
-                unconstrained_model_params))
+        return self.untransform_model_params(
+                self.untransform_regime_transition(constrained))
 
     def set_smoother_output(self, **kwargs):
 
@@ -167,9 +168,8 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         self.ssm.initialize_stationary_regime_probs()
 
-    def _get_params_vector(self, start_transition, start_model_params):
-        return np.hstack((start_transition[:-1, :].ravel(),
-                start_model_params))
+    def get_params_vector(self, regime_transition, model_params):
+        return np.hstack((transition[:-1, :].ravel(), model_params))
 
     def get_explicit_params(self, constrained_params, k_regimes=None):
         '''
@@ -191,8 +191,21 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         return (transition, model_params)
 
-    def fit(self, start_transition=None, start_model_params=None,
-            fit_nonswitching_first=True, **kwargs):
+    @property
+    def start_params(self):
+        return self.transform_params(np.ones((self.parameters.k_params,),
+            dtype=self.ssm.dtype))
+
+    def fit(self, start_params=None, transformed=True,
+            set_equal_transition_probs=False, fit_nonswitching_first=False,
+            **kwargs):
+
+        if start_params is None:
+            start_params = self.start_params
+            transformed = True
+
+        if transformed == False:
+            start_params = self.transform_params(start_params)
 
         if fit_nonswitching_first:
             nonswitching_model = self.nonswitching_model_type(
@@ -201,32 +214,18 @@ class RegimeSwitchingMLEModel(MLEModel):
                     **self._init_kwargs)
             nonswitching_kwargs = dict(kwargs)
             nonswitching_kwargs['return_params'] = True
-            if start_model_params is not None:
-                nonswitching_model_params = self.get_nonswitching_model_params(
-                        start_model_params)
-            else:
-                nonswitching_model_params = None
-
-            nonswitching_model_params = nonswitching_model.fit(
-                    start_params=nonswitching_model_params,
+            start_nonswitching_params = \
+                    self.get_nonswitching_params(start_params)
+            nonswitching_params = nonswitching_model.fit(
+                    start_params=start_nonswitching_params,
                     **nonswitching_kwargs)
 
-            start_model_params = self.get_model_params(
-                    nonswitching_model_params)
+            start_params = self.update_params(start_params, nonswitching_params)
 
-        if start_transition is None and start_model_params is not None:
-            # Other heuristics?
-            start_transition = np.identity(self.k_regimes,
-                    dtype=self.ssm.dtype)
-
-        if start_transition is not None and start_model_params is None:
-            start_transition = None
-
-        if start_transition is None and start_model_params is None:
-            start_params = None
-        else:
-            start_params = self._get_params_vector(start_transition,
-                    start_model_params)
+        if set_equal_transition_probs:
+            start_params[self.parameters['regime_transition']] = \
+                    np.ones((self.param_k_regimes, self.param_k_regimes),
+                    dtype=self.ssm.dtype)[:-1, :].ravel() / self.param_k_regimes
 
         kwargs['start_params'] = start_params
         # smoothing is not defined yet

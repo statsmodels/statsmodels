@@ -1,4 +1,5 @@
-from collections import OrderDict
+import numpy as np
+from collections import OrderedDict
 
 class MarkovSwitchingParams(object):
     def __init__(self, k_regimes):
