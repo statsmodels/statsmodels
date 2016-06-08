@@ -1025,14 +1025,16 @@ class GLM(base.LikelihoodModel):
 
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=False, **kwargs):
+                        start_params=None, refit=False,
+                        partitions=None, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
         Parameters
         ----------
         method :
-            Only the `elastic_net` approach is currently implemented.
+            Can currently be `elastic_net` or `distributed`.  If
+            `distributed` calls `elastic_net` for each partition.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -1075,20 +1077,36 @@ class GLM(base.LikelihoodModel):
         zero_tol : float
             Coefficients below this threshold are treated as zero.
         """
-        from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
-
+        if method not in ["elastic_net", "distributed"]:
+            raise ValueError("method for fit_regularized must be elastic_net
+                              or distributed")
+        
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
+        
+        elif method == "elastic_net":
+            from statsmodels.base.elastic_net import fit_elasticnet
+            result = fit_elasticnet(self, method=method,
+                                    alpha=alpha,
+                                    start_params=start_params,
+                                    refit=refit,
+                                    **defaults)
 
-        result = fit_elasticnet(self, method=method,
-                                alpha=alpha,
-                                start_params=start_params,
-                                refit=refit,
-                                **defaults)
+        elif method == "distributed":
+
+            if partitions is None:
+                raise ValueError("distributed method requires a partition
+                                  number")
+
+            from statsmodels.base.distributed import fit_distributed
+            result = fit_distributed(self, method=method,
+                                     alpha=alpha,
+                                     start_params=start_params,
+                                     refit=refit,
+                                     partitions=partitions
+                                     **defaults)
 
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)

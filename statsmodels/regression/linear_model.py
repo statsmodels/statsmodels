@@ -761,7 +761,8 @@ class OLS(WLS):
         Parameters
         ----------
         method : string
-            Only the 'elastic_net' approach is currently implemented.
+            Can currently be `elastic_net` or `distributed`.  If
+            `distributed` calls `elastic_net` for each partition.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -819,18 +820,16 @@ class OLS(WLS):
         generalized linear models via coordinate descent.  Journal of
         Statistical Software 33(1), 1-22 Feb 2010.
         """
-
-        from statsmodels.base.elastic_net import fit_elasticnet
-
+       
         # In the future we could add support for other penalties, e.g. SCAD.
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
-
-        # Set default parameters.
+        if method not in ["elastic_net", "distributed"]:
+            raise ValueError("method for fit_regularized must be elastic_net
+                              or distributed")
+        
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
-
+        
         # If a scale parameter is passed in, the non-profile
         # likelihood (residual sum of squares divided by -2) is used,
         # otherwise the profile likelihood is used.
@@ -842,15 +841,34 @@ class OLS(WLS):
             loglike_kwds = {"scale": 1}
             score_kwds = {"scale": 1}
             hess_kwds = {"scale": 1}
+        
+        elif method == "elastic_net":
+            from statsmodels.base.elastic_net import fit_elasticnet
+            return fit_elasticnet(self, method=method,
+                                  alpha=alpha,
+                                  start_params=start_params,
+                                  loglike_kwds=loglike_kwds,
+                                  score_kwds=score_kwds,
+                                  hess_kwds=hess_kwds,
+                                  refit=refit,
+                                  **defaults)
 
-        return fit_elasticnet(self, method=method,
-                              alpha=alpha,
-                              start_params=start_params,
-                              loglike_kwds=loglike_kwds,
-                              score_kwds=score_kwds,
-                              hess_kwds=hess_kwds,
-                              refit=refit,
-                              **defaults)
+        elif method == "distributed":
+
+            if partitions is None:
+                raise ValueError("distributed method requires a partition
+                                  number")
+
+            from statsmodels.base.distributed import fit_distributed
+            return fit_distributed(self, method=method,
+                                   alpha=alpha,
+                                   start_params=start_params,
+                                   loglike_kwds=loglike_kwds,
+                                   score_kwds=score_kwds,
+                                   hess_kwds=hess_kwds,
+                                   refit=refit,
+                                   partitions=partitions
+                                   **defaults)
 
 
 class GLSAR(GLS):
