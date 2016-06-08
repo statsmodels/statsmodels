@@ -127,17 +127,22 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Parameters
         self.parameters['autoregressive'] = self.switching_ar
 
-        # Cache an array for holding residuals (no need to create it each time)
-        # We need to compute a different set of residuals for each of the
-        # possibly histories S_t, S_{t-1}, ..., S_{t-p}
-        # self._resid = np.zeros(
-        #     (self.k_regimes,) * (self.order + 1) + (self.nobs,))
-        self._resid_slices = [slice(None, None, None)] * (self.order + 1)
+        # Cache an array for holding slices
+        self._predict_slices = [slice(None, None, None)] * (self.order + 1)
 
-    def _resid(self, params):
+    def predict_conditional(self, params):
         """
-        Compute residuals conditional on the current period's regime and
-        the last `self.order` regimes.
+        In-sample prediction, conditional on the current and previous regime
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to create predictions.
+
+        Returns
+        -------
+        predict : array_like
+            Array of predictions conditional 
         """
         params = np.array(params, ndmin=1)
 
@@ -145,29 +150,25 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # y_t = x_t beta^{(S_t)} +
         #       \phi_1^{(S_t)} (y_{t-1} - x_{t-1} beta^{(S_t-1)}) + ...
         #       \phi_p^{(S_t)} (y_{t-p} - x_{t-p} beta^{(S_t-p)}) + eps_t
-        # self._resid is a (k_regimes x ... x k_regimes x nobs) matrix
-        # with dimension self.order + 2
-        # self._resid[0, ...] corresponds to S_{t} = 0, etc.
         if self._k_exog > 0:
             xb = []
             for i in range(self.k_regimes):
                 coeffs = params[self.parameters[i, 'exog']]
                 xb.append(np.dot(self.orig_exog, coeffs))
 
-        resid = np.zeros(
+        predict = np.zeros(
             (self.k_regimes,) * (self.order + 1) + (self.nobs,),
             dtype=np.promote_types(np.float64, params.dtype))
-        resid[:] = self.endog
         # Iterate over S_{t} = i
         for i in range(self.k_regimes):
             ar_coeffs = params[self.parameters[i, 'autoregressive']]
 
             # y_t - x_t beta^{(S_t)}
-            ix = self._resid_slices[:]
+            ix = self._predict_slices[:]
             ix[0] = i
             ix = tuple(ix)
             if self._k_exog > 0:
-                resid[ix] -= xb[i][self.order:]
+                predict[ix] += xb[i][self.order:]
 
             # Iterate over j = 2, .., p
             for j in range(1, self.order + 1):
@@ -175,7 +176,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                     # This gets a specific time-period / regime slice:
                     # S_{t} = i, S_{t-j} = k, across all other time-period /
                     # regime slices.
-                    ix = self._resid_slices[:]
+                    ix = self._predict_slices[:]
                     ix[0] = i
                     ix[j] = k
                     ix = tuple(ix)
@@ -183,13 +184,16 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                     start = self.order - j
                     end = -j
                     if self._k_exog > 0:
-                        resid[ix] -= ar_coeffs[j-1] * (
+                        predict[ix] += ar_coeffs[j-1] * (
                             self.orig_endog[start:end] - xb[k][start:end])
                     else:
-                        resid[ix] -= ar_coeffs[j-1] * (
+                        predict[ix] += ar_coeffs[j-1] * (
                             self.orig_endog[start:end])
 
-        return resid
+        return predict
+
+    def _resid(self, params):
+        return self.endog - self.predict_conditional(params)
 
     def _conditional_likelihoods(self, params):
         """

@@ -136,45 +136,45 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         self.parameters['exog'] = self.switching_coeffs
         self.parameters['variance'] = [1] if self.switching_variance else [0]
 
-    def _resid(self, params):
+    def predict_conditional(self, params):
         """
-        Compute residuals conditional on the current regime
+        In-sample prediction, conditional on the current regime
 
-        Notes
-        -----
-        In the base model (Markov switching regression), the parameters only
-        depend on the regime in the current time period, so
-        :math:`f(y \mid S_t, S_{t-1}) = f(y \mid S_t)`
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to perform filtering.
 
-        As in the transition matrix, the previous regime S_{t-1} is represented
-        as a column and the next regime S_t is represented as a row. Thus the
-        values should be the same across columns (i.e. for each value in a
-        given row).
+        Returns
+        -------
+        predict : array_like
+            Array of predictions conditional 
         """
         params = np.array(params, ndmin=1)
 
         # Since in the base model the values are the same across columns, we
         # only compute a single column, and then expand it below.
-        resid = np.zeros((self.k_regimes, 1, self.nobs), dtype=params.dtype)
+        predict = np.zeros((self.k_regimes, self.nobs), dtype=params.dtype)
 
         for i in range(self.k_regimes):
             # Predict
             if self._k_exog > 0:
                 coeffs = params[self.parameters[i, 'exog']]
-                resid[i, 0] = np.dot(self.exog, coeffs)
+                predict[i] = np.dot(self.exog, coeffs)
 
-            # Residual
-            resid[i] = self.endog - resid[i]
+        return predict
 
-        # Repeat across columns
-        return np.repeat(resid, self.k_regimes, axis=1)
+    def _resid(self, params):
+        predict = np.repeat(self.predict_conditional(params)[:, None, :],
+                            self.k_regimes, axis=1)
+        return self.endog - predict
 
     def _conditional_likelihoods(self, params):
         """
         Compute likelihoods conditional on the current period's regime
         """
 
-        # Get the residuals
+        # Get residuals
         resid = self._resid(params)
 
         # Compute the conditional likelihoods
