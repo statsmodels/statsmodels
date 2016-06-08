@@ -761,7 +761,8 @@ class OLS(WLS):
         Parameters
         ----------
         method : string
-            Only the 'elastic_net' approach is currently implemented.
+            Can currently be `elastic_net` or `distributed`.  If
+            `distributed` calls `elastic_net` for each partition.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -857,6 +858,7 @@ class OLS(WLS):
                               refit=refit,
                               check_step=False,
                               **defaults)
+
 
     def _fit_ridge(self, alpha):
         """
