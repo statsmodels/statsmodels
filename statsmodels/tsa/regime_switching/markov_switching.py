@@ -1567,6 +1567,19 @@ class HamiltonFilterResults(object):
         if self.regime_transition.shape[-1] > 1 and self.order > 0:
             self.regime_transition = self.regime_transition[..., self.order:]
 
+        # Cache for predicted marginal probabilities
+        self._predicted_marginal_probabilities = None
+
+    @property
+    def predicted_marginal_probabilities(self):
+        if self._predicted_marginal_probabilities is None:
+            self._predicted_marginal_probabilities = (
+                self.predicted_joint_probabilities)
+            for i in range(self._predicted_marginal_probabilities.ndim - 2):
+                self._predicted_marginal_probabilities = np.sum(
+                    self._predicted_marginal_probabilities, axis=-2)
+        return self._predicted_marginal_probabilities
+
     @property
     def expected_durations(self):
         """
@@ -1685,6 +1698,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         # Copy over arrays
         attributes = ['regime_transition', 'initial_probabilities',
                       'conditional_likelihoods',
+                      'predicted_marginal_probabilities',
                       'predicted_joint_probabilities',
                       'filtered_marginal_probabilities',
                       'filtered_joint_probabilities',
@@ -1701,6 +1715,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 setattr(self, name, None)
 
         # Reshape some arrays to long-format
+        self.predicted_marginal_probabilities = (
+            self.predicted_marginal_probabilities.T)
         self.filtered_marginal_probabilities = (
             self.filtered_marginal_probabilities.T)
         if self.smoother_results is not None:
@@ -1713,6 +1729,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             if self.expected_durations.ndim > 1:                
                 self.expected_durations = pd.DataFrame(
                     self.expected_durations, index=index)
+            self.predicted_marginal_probabilities = pd.DataFrame(
+                self.predicted_marginal_probabilities, index=index)
             self.filtered_marginal_probabilities = pd.DataFrame(
                 self.filtered_marginal_probabilities, index=index)
             if self.smoother_results is not None:
