@@ -45,16 +45,20 @@ if "%1" == "clean" (
 )
 
 if "%1" == "html" (
-	python %TOOLSPATH%/%EXAMPLEBUILD%
+    REM python %TOOLSPATH%/%EXAMPLEBUILD%
+	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
     python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
+	echo %SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	%SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	if errorlevel 1 exit /b 1
     xcopy /s source/examples/notebooks/generated/*.html %BUILDDIR%/html/examples/notebooks/generated
+	echo python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/index.html
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/index.html
+	echo python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/examples/index.html ../_static
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/examples/index.html ../_static
+	echo python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/dev/index.html ../_static
 	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/dev/index.html ../_static
-    if not exists %BUILDDIR%/html/examples/notebooks/generated mkdir %BUILDDIR%/html/examples/notebooks/generated
-
+    if NOT EXIST %BUILDDIR%/html/examples/notebooks/generated mkdir %BUILDDIR%\html\examples\notebooks\generated
 	echo.
 	echo.Build finished. The HTML pages are in %BUILDDIR%/html.
 	goto end
