@@ -744,6 +744,95 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return regime_transition_matrix
 
+    def predict(self, params, start=None, end=None, probabilities=None,
+                conditional=False):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        params : array
+            Parameters at which to form predictions
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        probabilities : string or array_like, optional
+            Specifies the weighting probabilities used in constructing the
+            prediction as a weighted average. If a string, can be 'predicted',
+            'filtered', or 'smoothed'. Otherwise can be an array of
+            probabilities to use. Default is smoothed.
+        conditional: boolean or int, optional
+            Whether or not to return predictions conditional on current or
+            past regimes. If False, returns a single vector of weighted
+            predictions. If True or 1, returns predictions conditional on the
+            current regime. For larger integers, returns predictions
+            conditional on the current regime and some number of past regimes.
+
+        Returns
+        -------
+        predict : array
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts.
+        """
+        if start is None:
+            start = 0
+
+        # Handle start and end (e.g. dates)
+        start = self._get_predict_start(start)
+        end, out_of_sample = self._get_predict_end(end)
+
+        # Perform in-sample prediction
+        predict = self.predict_conditional(params)
+        squeezed = np.squeeze(predict)
+
+        # Check if we need to do weighted averaging
+        if squeezed.ndim - 1 > conditional:
+            # Determine in-sample weighting probabilities
+            if probabilities is None or probabilities == 'smoothed':
+                results = self.smooth(params, return_raw=True)
+                probabilities = results.smoothed_joint_probabilities
+            elif probabilities == 'filtered':
+                results = self.filter(params, return_raw=True)
+                probabilities = results.filtered_joint_probabilities
+            elif probabilities == 'predicted':
+                results = self.filter(params, return_raw=True)
+                probabilities = results.predicted_joint_probabilities
+
+            # Compute weighted average
+            predict = (predict * probabilities)
+            for i in range(predict.ndim - 1 - int(conditional)):
+                predict = np.sum(predict, axis=-2)
+        else:
+            predict = squeezed
+
+        return predict[start:end + 1]
+
+    def predict_conditional(self, params):
+        """
+        In-sample prediction, conditional on the current, and possibly past,
+        regimes
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to perform prediction.
+
+        Returns
+        -------
+        predict : array_like
+            Array of predictions conditional on current, and possibly past,
+            regimes
+        """
+        raise NotImplementedError
+
     def _conditional_likelihoods(self, params):
         """
         Compute likelihoods conditional on the current period's regime (and
@@ -1906,7 +1995,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def predict(self, start=None, end=None, dynamic=False, **kwargs):
+    def predict(self, start=None, end=None, probabilities=None,
+                conditional=False):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1923,25 +2013,27 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : boolean, int, str, or datetime, optional
-            Integer offset relative to `start` at which to begin dynamic
-            prediction. Can also be an absolute date string to parse or a
-            datetime type (these are not interpreted as offsets).
-            Prior to this observation, true endogenous values will be used for
-            prediction; starting with this observation and continuing through
-            the end of prediction, forecasted endogenous values will be used
-            instead.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
+        probabilities : string or array_like, optional
+            Specifies the weighting probabilities used in constructing the
+            prediction as a weighted average. If a string, can be 'predicted',
+            'filtered', or 'smoothed'. Otherwise can be an array of
+            probabilities to use. Default is smoothed.
+        conditional: boolean or int, optional
+            Whether or not to return predictions conditional on current or
+            past regimes. If False, returns a single vector of weighted
+            predictions. If True or 1, returns predictions conditional on the
+            current regime. For larger integers, returns predictions
+            conditional on the current regime and some number of past regimes.
 
         Returns
         -------
-        forecast : array
+        predict : array
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
         """
-        raise NotImplementedError
+        return self.model.predict(self.params, start=start, end=end,
+                                  probabilities=probabilities,
+                                  conditional=conditional)
 
     def forecast(self, steps=1, **kwargs):
         """

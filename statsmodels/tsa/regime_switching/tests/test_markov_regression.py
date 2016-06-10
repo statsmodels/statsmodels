@@ -6,12 +6,16 @@ License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
 
+import os
 import warnings
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.regime_switching import markov_regression
 from numpy.testing import assert_equal, assert_allclose, assert_raises
 from nose.exc import SkipTest
+
+
+current_path = os.path.dirname(os.path.abspath(__file__))
 
 
 # See http://www.stata-press.com/data/r14/usmacro
@@ -740,6 +744,9 @@ fedfunds_const_filtered_joint_probabilities = np.array([[[
 class TestFedFundsConst(MarkovRegression):
     @classmethod
     def setup_class(cls):
+        path = (current_path + os.sep + 'results' + os.sep +
+                'results_predict_fedfunds.csv')
+        results = pd.read_csv(path)
         # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.9820939, .0503587, 3.70877, 9.556793,
@@ -747,7 +754,14 @@ class TestFedFundsConst(MarkovRegression):
             'llf': -508.63592,
             'llf_fit': -508.63592,
             'llf_fit_em': -508.65852,
-            'bse_oim': np.r_[.0104002, .0268434, .1767083, .2999889, np.nan]
+            'bse_oim': np.r_[.0104002, .0268434, .1767083, .2999889, np.nan],
+            'smoothed0': results['const_sm1'],
+            'smoothed1': results['const_sm2'],
+            'predict0': results['const_yhat1'],
+            'predict1': results['const_yhat2'],
+            'predict_predicted': results['const_pyhat'],
+            'predict_filtered': results['const_fyhat'],
+            'predict_smoothed': results['const_syhat'],
         }
         super(TestFedFundsConst, cls).setup_class(true, fedfunds, k_regimes=2)
 
@@ -755,6 +769,43 @@ class TestFedFundsConst(MarkovRegression):
         res = self.result
         assert_allclose(res.filtered_joint_probabilities,
                         fedfunds_const_filtered_joint_probabilities)
+
+    def test_smoothed_marginal_probabilities(self):
+        assert_allclose(self.result.smoothed_marginal_probabilities[:, 0],
+                        self.true['smoothed0'], atol=1e-6)
+        assert_allclose(self.result.smoothed_marginal_probabilities[:, 1],
+                        self.true['smoothed1'], atol=1e-6)
+
+    def test_predict(self):
+        # Predictions conditional on regime (the same no matter which
+        # probabilities are selected)
+        for name in ['predicted', 'filtered', 'smoothed', None]:
+            actual = self.model.predict(
+                self.true['params'], probabilities=name, conditional=True)
+            assert_allclose(actual[0],
+                            self.true['predict0'], atol=1e-6)
+            assert_allclose(actual[1],
+                            self.true['predict1'], atol=1e-6)
+
+        # Predicted
+        actual = self.model.predict(
+            self.true['params'], probabilities='predicted')
+        assert_allclose(actual, self.true['predict_predicted'], atol=1e-5)
+
+        # Filtered
+        actual = self.model.predict(
+            self.true['params'], probabilities='filtered')
+        assert_allclose(self.model.predict(self.true['params'],
+                                           probabilities='filtered'),
+                        self.true['predict_filtered'], atol=1e-5)
+
+        # Smoothed
+        actual = self.model.predict(
+            self.true['params'], probabilities='smoothed')
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+        actual = self.model.predict(
+            self.true['params'], probabilities=None)
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
 
     def test_bse(self):
         # Can't compare last element of bse because we estimate sigma^2 rather
@@ -913,6 +964,10 @@ class TestFedFundsConstL1(MarkovRegression):
 class TestFedFundsConstL1Exog(MarkovRegression):
     @classmethod
     def setup_class(cls):
+        path = (current_path + os.sep + 'results' + os.sep +
+                'results_predict_fedfunds.csv')
+        results = pd.read_csv(path)
+
         # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.7279288, .2114578, .6554954, -.0944924,
@@ -923,7 +978,10 @@ class TestFedFundsConstL1Exog(MarkovRegression):
             'llf_fit_em': -229.25624,
             'bse_oim': np.r_[.0929915, .0641179, .1373889, .1279231, .0333236,
                              .0270852, .0294113, .0240138, .0408057, .0297351,
-                             np.nan]
+                             np.nan],
+            'predict0': results.ix[4:, 'constL1exog_syhat1'],
+            'predict1': results.ix[4:, 'constL1exog_syhat2'],
+            'predict_smoothed': results.ix[4:, 'constL1exog_syhat'],
         }
         super(TestFedFundsConstL1Exog, cls).setup_class(
             true, fedfunds[4:], k_regimes=2,
@@ -933,6 +991,30 @@ class TestFedFundsConstL1Exog(MarkovRegression):
         kwargs.setdefault('em_iter', 10)
         kwargs.setdefault('maxiter', 100)
         super(TestFedFundsConstL1Exog, self).test_fit(**kwargs)
+
+    def test_predict(self):
+        # Predictions conditional on regime (the same no matter which
+        # probabilities are selected)
+        for name in ['predicted', 'filtered', 'smoothed', None]:
+            actual = self.model.predict(
+                self.true['params'], probabilities=name, conditional=True)
+            assert_allclose(actual[0],
+                            self.true['predict0'], atol=1e-5)
+            assert_allclose(actual[1],
+                            self.true['predict1'], atol=1e-5)
+
+        # Smoothed
+        actual = self.model.predict(
+            self.true['params'], probabilities='smoothed')
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-5)
+        actual = self.model.predict(
+            self.true['params'], probabilities=None)
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-5)
+
+        actual = self.result.predict(probabilities='smoothed')
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-5)
+        actual = self.result.predict(probabilities=None)
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-5)
 
     def test_bse(self):
         # Can't compare last element of bse because we estimate sigma^2 rather

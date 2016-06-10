@@ -61,7 +61,7 @@ rec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
        1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
-def test_resid():
+def test_predict():
     # AR(1) without mean, k_regimes=2
     endog = np.ones(10)
     mod = markov_autoregression.MarkovAutoregression(
@@ -524,6 +524,10 @@ class TestHamiltonAR4(MarkovAutoregression):
 class TestHamiltonAR2Switch(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
+        path = (current_path + os.sep + 'results' + os.sep +
+                'results_predict_rgnp.csv')
+        results = pd.read_csv(path)
+
         # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.3812383, .3564492, -.0055216, 1.195482,
@@ -533,10 +537,37 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
             'llf_fit': -179.38684,
             'llf_fit_em': -184.99606,
             'bse_oim': np.r_[.1424841, .0994742, .2057086, .1225987, np.nan,
-                             .1754383, .1652473, .187409, .1295937]
+                             .1754383, .1652473, .187409, .1295937],
+            'smoothed0': results.ix[3:, 'switchar2_sm1'],
+            'smoothed1': results.ix[3:, 'switchar2_sm2'],
+            'predict0': results.ix[3:, 'switchar2_yhat1'],
+            'predict1': results.ix[3:, 'switchar2_yhat2'],
+            'predict_predicted': results.ix[3:, 'switchar2_pyhat'],
+            'predict_filtered': results.ix[3:, 'switchar2_fyhat'],
+            'predict_smoothed': results.ix[3:, 'switchar2_syhat'],
         }
         super(TestHamiltonAR2Switch, cls).setup_class(
             true, rgnp, k_regimes=2, order=2)
+
+    def test_smoothed_marginal_probabilities(self):
+        assert_allclose(self.result.smoothed_marginal_probabilities[:, 0],
+                        self.true['smoothed0'], atol=1e-6)
+        assert_allclose(self.result.smoothed_marginal_probabilities[:, 1],
+                        self.true['smoothed1'], atol=1e-6)
+
+    def test_predict(self):
+        # Smoothed
+        actual = self.model.predict(
+            self.true['params'], probabilities='smoothed')
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+        actual = self.model.predict(
+            self.true['params'], probabilities=None)
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+
+        actual = self.result.predict(probabilities='smoothed')
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+        actual = self.result.predict(probabilities=None)
+        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
 
     def test_bse(self):
         # Can't compare middle element of bse because we estimate sigma^2

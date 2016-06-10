@@ -142,7 +142,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         Returns
         -------
         predict : array_like
-            Array of predictions conditional 
+            Array of predictions conditional on current, and possibly past,
+            regimes
         """
         params = np.array(params, ndmin=1)
 

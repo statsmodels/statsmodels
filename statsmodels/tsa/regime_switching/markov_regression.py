@@ -143,12 +143,13 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         Parameters
         ----------
         params : array_like
-            Array of parameters at which to perform filtering.
+            Array of parameters at which to perform prediction.
 
         Returns
         -------
         predict : array_like
-            Array of predictions conditional 
+            Array of predictions conditional on current, and possibly past,
+            regimes
         """
         params = np.array(params, ndmin=1)
 
@@ -162,10 +163,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
                 coeffs = params[self.parameters[i, 'exog']]
                 predict[i] = np.dot(self.exog, coeffs)
 
-        return predict
+        return predict[:, None, :]
 
     def _resid(self, params):
-        predict = np.repeat(self.predict_conditional(params)[:, None, :],
+        predict = np.repeat(self.predict_conditional(params),
                             self.k_regimes, axis=1)
         return self.endog - predict
 
