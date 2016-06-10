@@ -22,13 +22,34 @@ def test_plot_acf():
     ax = fig.add_subplot(111)
 
     ar = np.r_[1., -0.9]
-    ma = np.r_[1.,  0.9]
+    ma = np.r_[1., 0.9]
     armaprocess = tsp.ArmaProcess(ar, ma)
-    acf = armaprocess.acf(20)[:20]
+    rs = np.random.RandomState(1234)
+    acf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_acf(acf, ax=ax, lags=10)
     plot_acf(acf, ax=ax)
     plot_acf(acf, ax=ax, alpha=None)
 
     plt.close(fig)
+
+
+@dec.skipif(not have_matplotlib)
+def test_plot_acf_irregular():
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1., -0.9]
+    ma = np.r_[1., 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    acf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_acf(acf, ax=ax, lags=np.arange(1, 11))
+    plot_acf(acf, ax=ax, lags=10, zero=False)
+    plot_acf(acf, ax=ax, alpha=None, zero=False)
+
+    plt.close(fig)
+
 
 @dec.skipif(not have_matplotlib)
 def test_plot_pacf():
@@ -37,14 +58,32 @@ def test_plot_pacf():
     ax = fig.add_subplot(111)
 
     ar = np.r_[1., -0.9]
-    ma = np.r_[1.,  0.9]
+    ma = np.r_[1., 0.9]
     armaprocess = tsp.ArmaProcess(ar, ma)
-    pacf = armaprocess.pacf(20)[:20]
+    rs = np.random.RandomState(1234)
+    pacf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
     plot_pacf(pacf, ax=ax)
     plot_pacf(pacf, ax=ax, alpha=None)
 
     plt.close(fig)
 
+
+@dec.skipif(not have_matplotlib)
+def test_plot_pacf_irregular():
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1., -0.9]
+    ma = np.r_[1., 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    pacf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_pacf(pacf, ax=ax, lags=np.arange(1, 11))
+    plot_pacf(pacf, ax=ax, lags=10, zero=False)
+    plot_pacf(pacf, ax=ax, alpha=None, zero=False)
+
+    plt.close(fig)
 
 @dec.skipif(not have_matplotlib)
 def test_plot_month():
