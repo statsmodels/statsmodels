@@ -6,6 +6,17 @@ import statsmodels.base.wrapper as wrap
 import scipy.optimize as opt
 import numpy as np
 
+"""
+distributed regularized estimation.
+
+Routines for fitting regression models using a distributed
+approach outlined in 
+
+Jason D. Lee, Qiang Liu, Yuekai Sun and Jonathan E. Taylor.
+"Communication-Efficient Sparse Regression: A One-Shot Approach." 
+arXiv:1503.04337. 2015.
+"""
+
 
 # NOTE this is just a temporary function for testing
 def _generator(model, partitions):
