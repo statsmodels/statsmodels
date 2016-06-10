@@ -278,6 +278,8 @@ def _gen_dist_params(mod_gen, partitions, p, elastic_net_kwds,
         n = mod.exog.shape[0]
 
         # estimate beta_hat
+        # TODO probably should refer to elastic_net_kwds as something
+        # else in case other methods are added, regularized_kwds maybe
         beta_hat = mod.fit_regularized(**elastic_net_kwds).params
         beta_hat_l.append(beta_hat)
         
@@ -352,10 +354,8 @@ def fit_distributed(model, generator=None, partitions=1, threshold=0.,
 
     beta_tilde = _gen_debiased_params(beta_hat_l, grad_l, gamma_hat_l,
                                       partitions, p, threshold) 
-    bTilde = _gen_debiased_params(bHat_l, grad_l, gHat_l, tHat_l, partitions,
-                                  p, threshold)
 
-    return DistributedResults(model, bTilde)
+    return DistributedResults(model, beta_tilde)
 
 
 class DistributedResults(Results):
