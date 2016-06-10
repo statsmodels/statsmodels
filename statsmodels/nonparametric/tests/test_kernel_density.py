@@ -2,11 +2,13 @@ import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
 
+from unittest import TestCase
+
 import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class MyTest(object):
+class KDETestBase(TestCase):
     def setUp(self):
         nobs = 60
         np.random.seed(123456)
@@ -61,7 +63,7 @@ class MyTest(object):
         self.weights = np.random.random(nobs)
 
 
-class TestKDEUnivariate(MyTest):
+class TestKDEUnivariate(KDETestBase):
 
     def test_pdf_non_fft(self):
 
@@ -115,7 +117,7 @@ class TestKDEUnivariate(MyTest):
 
 
 
-class TestKDEMultivariate(MyTest):
+class TestKDEMultivariate(KDETestBase):
     @dec.slow
     def test_pdf_mixeddata_CV_LS(self):
         dens_u = nparam.KDEMultivariate(data=[self.c1, self.o, self.o2],
@@ -261,7 +263,7 @@ class TestKDEMultivariate(MyTest):
         npt.assert_equal(dens.bw, bw_user)
 
 
-class TestKDEMultivariateConditional(MyTest):
+class TestKDEMultivariateConditional(KDETestBase):
     @dec.slow
     def test_mixeddata_CV_LS(self):
         dens_ls = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
