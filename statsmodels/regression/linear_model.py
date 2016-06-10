@@ -754,7 +754,9 @@ class OLS(WLS):
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, profile_scale=False,
-                        refit=False, **kwargs):
+                        refit=False, distributed=False,
+                        generator=None, partitions=None,
+                        threshold=0., **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
@@ -778,6 +780,18 @@ class OLS(WLS):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        distributed : bool
+            If True, the model uses distributed methods for fitting,
+            will raise an error if True and partitions is None.
+        generator : function
+            generator used to partition the model, allows for handling
+            of out of memory/parallel computing.
+        partitions : scalar 
+            The number of partitions desired for the distributed
+            estimation.
+        threshold : scalar or array-like 
+            The threshold below which coefficients are zeroed out,
+            only used for distributed estimation
 
         Returns
         -------
@@ -820,11 +834,6 @@ class OLS(WLS):
         generalized linear models via coordinate descent.  Journal of
         Statistical Software 33(1), 1-22 Feb 2010.
         """
-       
-        # In the future we could add support for other penalties, e.g. SCAD.
-        if method not in ["elastic_net", "distributed"]:
-            raise ValueError("method for fit_regularized must be elastic_net
-                              or distributed")
         
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
@@ -841,8 +850,29 @@ class OLS(WLS):
             loglike_kwds = {"scale": 1}
             score_kwds = {"scale": 1}
             hess_kwds = {"scale": 1}
+       
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularized must be elastic_net")
+            
+        if distributed: 
+            if partitions is None:
+                raise ValueError("distributed method requires a `partitions`" + 
+                                 " argument")
+
+            defaults.update({"method": method, "start_params": start_params,
+                             "refit": refit, "alpha": alpha,
+                             "profile_scale": profile_scale})
+            from statsmodels.base.distributed_estimation import fit_distributed
+            return fit_distributed(self,
+                                   score_kwds=score_kwds,
+                                   hess_kwds=hess_kwds,
+                                   partitions=partitions,
+                                   generator=generator,
+                                   threshold=threshold,
+                                   elastic_net_kwds=defaults)
         
-        elif method == "elastic_net":
+        else: 
             from statsmodels.base.elastic_net import fit_elasticnet
             return fit_elasticnet(self, method=method,
                                   alpha=alpha,
@@ -852,23 +882,6 @@ class OLS(WLS):
                                   hess_kwds=hess_kwds,
                                   refit=refit,
                                   **defaults)
-
-        elif method == "distributed":
-
-            if partitions is None:
-                raise ValueError("distributed method requires a partition
-                                  number")
-
-            from statsmodels.base.distributed import fit_distributed
-            return fit_distributed(self, method=method,
-                                   alpha=alpha,
-                                   start_params=start_params,
-                                   loglike_kwds=loglike_kwds,
-                                   score_kwds=score_kwds,
-                                   hess_kwds=hess_kwds,
-                                   refit=refit,
-                                   partitions=partitions
-                                   **defaults)
 
 
 class GLSAR(GLS):
