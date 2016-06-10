@@ -1079,39 +1079,40 @@ class GLM(base.LikelihoodModel):
         """
 
         if method not in ["elastic_net", "distributed"]:
-            raise ValueError("method for fit_regularized must be elastic_net
-                              or distributed")
+            raise ValueError("method for fit_regularized must be elastic_net " +
+                             "or distributed")
         
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
         
-        elif method == "elastic_net":
-            from statsmodels.base.elastic_net import fit_elasticnet
-            result = fit_elasticnet(self, method=method,
-                                    alpha=alpha,
-                                    start_params=start_params,
-                                    refit=refit,
-                                    **defaults)
+        #elif method == "elastic_net":
+        #    from statsmodels.base.elastic_net import fit_elasticnet
+        #    result = fit_elasticnet(self, method=method,
+        #                            alpha=alpha,
+        #                            start_params=start_params,
+        #                            refit=refit,
+        #                            **defaults)
 
-        elif method == "distributed":
+        #elif method == "distributed":
 
-            if partitions is None:
-                raise ValueError("distributed method requires a partition
-                                  number")
+        #    if partitions is None:
+        #        raise ValueError("distributed method requires a partition " +
+        #                         "number")
+                
+        #    defaults.update({"method": method, "start_params": star_params,
+        #                     "refit": refit, "loglike_kwds": loglike_kwds})
 
-            from statsmodels.base.distributed import fit_distributed
-            result = fit_distributed(self, method=method,
-                                     alpha=alpha,
-                                     start_params=start_params,
-                                     refit=refit,
-                                     partitions=partitions
-                                     **defaults)
+        #    from statsmodels.base.distributed import fit_distributed
+        #    result = fit_distributed(self,
+        #                             alpha=alpha,
+        #                             partitions=partitions
+        #                             elastic_net_kwds=defaults)
 
-        self.mu = self.predict(result.params)
-        self.scale = self.estimate_scale(self.mu)
+        #self.mu = self.predict(result.params)
+        #self.scale = self.estimate_scale(self.mu)
 
-        return result
+        return None
 
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
