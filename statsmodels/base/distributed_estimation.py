@@ -74,20 +74,35 @@ def _gen_grad(beta_hat, n, alpha, L1_wt, score_kwds):
     return grad
 
 
-def _gen_wdesign_mat(mod, beta_hat, n, alpha, L1_wt, hess_kwds):
+def _gen_wdesign_mat(mod, beta_hat, n, hess_kwds):
     """
+    generates the weighted design matrix necessary to generate
+    the approximate inverse covariance matrix
+
+    Parameters
+    ----------
+    mod : statsmodels model class
+        The model for the current machine.
     beta_hat : array-like
         The estimated coefficients for the current machine.
+    n : scalar
+        sample size for current machine
+    hess_kwds : dict-like or None
+        Keyword arguments for the hessian function.
+
+    Returns
+    -------
+    An array-like object, updated design matrix, same dimension
+    as mod.exog
     """
     
-    # TODO this is not being handled completely properly, need to
-    # fix
-    #hess = -mod.hessian(np.r_[beta_hat], **hess_kwds)[0,0] / n
-    #hess += alpha * (1 - L1_wt)
-    #X_beta = np.eye(n)
-    #np.fill_diagonal(X_beta, hess)
-    #return X_beta.dot(mod.exog)
-    return mod.exog
+    if isinstance(mod, OLS):
+        return mod.exog
+    if isinstance(mod, GLM):
+        factor = mod.hessian_factor(np.r_[beta_hat], **hess_kwds)
+        W = np.diag(factor)
+        return W.dot(mod.exog)
+    # TODO need to handle duration and other linear model classes
 
 
 def _gen_gamma_hat(X_beta, pi, p, n, alpha):
@@ -271,7 +286,7 @@ def _gen_dist_params(mod_gen, partitions, p, elastic_net_kwds,
         grad_l.append(grad)
 
         # generate weighted design matrix
-        X_beta = _gen_wdesign_mat(mod, beta_hat, n, alpha, L1_wt, hess_kwds)
+        X_beta = _gen_wdesign_mat(mod, beta_hat, n, hess_kwds)
 
         # now we loop over the subset of variables assigned to the
         # current machine and estimate gamma_hat and tau_hat for
