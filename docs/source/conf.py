@@ -45,13 +45,6 @@ if sphinx.__version__ == '1.1.3':
            "See https://github.com/statsmodels/statsmodels/issues/1002")
     extensions.remove('sphinx.ext.inheritance_diagram')
 
-# plot_directive is broken on old matplotlib
-from matplotlib import __version__ as mpl_version
-from distutils.version import LooseVersion
-if LooseVersion(mpl_version) < LooseVersion('1.0.1'):
-    extensions.remove('matplotlib.sphinxext.plot_directive')
-    extensions.append('numpy_ext.plot_directive')
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

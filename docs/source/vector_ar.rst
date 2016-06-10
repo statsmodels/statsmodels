@@ -290,6 +290,7 @@ The estimated coefficients for the dynamic model are returned as a
 example, all of the model coefficients by equation or by date:
 
 .. ipython:: python
+   :okwarning:
 
     import datetime as dt
 
