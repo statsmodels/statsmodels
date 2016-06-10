@@ -74,20 +74,35 @@ def _gen_grad(beta_hat, n, alpha, L1_wt, score_kwds):
     return grad
 
 
-def _gen_wdesign_mat(mod, beta_hat, n, alpha, L1_wt, hess_kwds):
+def _gen_wdesign_mat(mod, beta_hat, n, hess_kwds):
     """
+    generates the weighted design matrix necessary to generate
+    the approximate inverse covariance matrix
+
+    Parameters
+    ----------
+    mod : statsmodels model class
+        The model for the current machine.
     beta_hat : array-like
         The estimated coefficients for the current machine.
+    n : scalar
+        sample size for current machine
+    hess_kwds : dict-like or None
+        Keyword arguments for the hessian function.
+
+    Returns
+    -------
+    An array-like object, updated design matrix, same dimension
+    as mod.exog
     """
     
-    # TODO this is not being handled completely properly, need to
-    # fix
-    #hess = -mod.hessian(np.r_[beta_hat], **hess_kwds)[0,0] / n
-    #hess += alpha * (1 - L1_wt)
-    #X_beta = np.eye(n)
-    #np.fill_diagonal(X_beta, hess)
-    #return X_beta.dot(mod.exog)
-    return mod.exog
+    if isinstance(mod, OLS):
+        return mod.exog
+    if isinstance(mod, GLM):
+        factor = mod.hessian_factor(np.r_[beta_hat], **hess_kwds)
+        W = np.diag(factor)
+        return W.dot(mod.exog)
+    # TODO need to handle duration and other linear model classes
 
 
 def _gen_gamma_hat(X_beta, pi, p, n, alpha):
@@ -263,6 +278,8 @@ def _gen_dist_params(mod_gen, partitions, p, elastic_net_kwds,
         n = mod.exog.shape[0]
 
         # estimate beta_hat
+        # TODO probably should refer to elastic_net_kwds as something
+        # else in case other methods are added, regularized_kwds maybe
         beta_hat = mod.fit_regularized(**elastic_net_kwds).params
         beta_hat_l.append(beta_hat)
         
@@ -271,7 +288,7 @@ def _gen_dist_params(mod_gen, partitions, p, elastic_net_kwds,
         grad_l.append(grad)
 
         # generate weighted design matrix
-        X_beta = _gen_wdesign_mat(mod, beta_hat, n, alpha, L1_wt, hess_kwds)
+        X_beta = _gen_wdesign_mat(mod, beta_hat, n, hess_kwds)
 
         # now we loop over the subset of variables assigned to the
         # current machine and estimate gamma_hat and tau_hat for
@@ -337,10 +354,8 @@ def fit_distributed(model, generator=None, partitions=1, threshold=0.,
 
     beta_tilde = _gen_debiased_params(beta_hat_l, grad_l, gamma_hat_l,
                                       partitions, p, threshold) 
-    bTilde = _gen_debiased_params(bHat_l, grad_l, gHat_l, tHat_l, partitions,
-                                  p, threshold)
 
-    return DistributedResults(model, bTilde)
+    return DistributedResults(model, beta_tilde)
 
 
 class DistributedResults(Results):
