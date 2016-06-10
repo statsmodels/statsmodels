@@ -1,7 +1,9 @@
 from statsmodels.base.elastic_net import fit_elasticnet
 from statsmodels.base.model import Results
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.regress.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, GLS, GLSAR
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.duration.hazard_regression import PHReg
 import statsmodels.base.wrapper as wrap
 import scipy.optimize as opt
 import numpy as np
@@ -42,12 +44,14 @@ def _generator(model, partitions):
         ii += int(n_part)
 
 
-def _gen_grad(beta_hat, n, alpha, L1_wt, score_kwds):
+def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
     """
     generates the log-likelihood gradient for the debiasing
 
     Parameters
     ----------
+    mod : statsmodels model class
+        The model for the current machine.
     beta_hat : array-like
         The estimated coefficients for the current machine.
     n : scalar
@@ -106,12 +110,18 @@ def _gen_wdesign_mat(mod, beta_hat, n, hess_kwds):
     An array-like object, updated design matrix, same dimension
     as mod.exog
     """
-    
+   
+    if isinstance(mod, GLS):
+        raise TypeError("GLS currently not supported for dist estimation")
+    if isinstance(mod, GLSAR):
+        raise TypeError("GLSAR currently not supported for dist estimation")
+    if isinstance(mod, PHReg):
+        raise TypeError("PHReg currently not supported for dist estimation")
     if isinstance(mod, OLS):
         return mod.exog
     if isinstance(mod, GLM):
         factor = mod.hessian_factor(np.r_[beta_hat], **hess_kwds)
-        W = np.diag(factor)
+        W = np.diag(np.sqrt(factor))
         return W.dot(mod.exog)
     # TODO need to handle duration and other linear model classes
 
@@ -151,7 +161,7 @@ def _gen_gamma_hat(X_beta, pi, p, n, alpha):
     ind = range(pi) + range(pi + 1, p)
 
     # TODO use elastic net optimization routine directly
-    tmod = sm.OLS(X_beta[:, pi], X_beta[:, ind])
+    tmod = OLS(X_beta[:, pi], X_beta[:, ind])
 
     #def func(gamma):
     #    d = np.linalg.norm(X_beta[:, pi] - X_beta[:, ind].dot(gamma))**2
@@ -295,7 +305,7 @@ def _gen_dist_params(mod_gen, partitions, p, elastic_net_kwds,
         beta_hat_l.append(beta_hat)
         
         # generate gradient
-        grad = _gen_grad(beta_hat, n, alpha, L1_wt, score_kwds)
+        grad = _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds)
         grad_l.append(grad)
 
         # generate weighted design matrix
@@ -333,6 +343,7 @@ def _gen_debiased_params(beta_hat_l, grad_l, gamma_hat_l, tau_hat_l,
     grad_mn = np.zeros(p)
     for grad in grad_l:
         grad_mn += grad
+    # TODO fix this
     grad_mn = grad_mn / (partitions ** 2)
 
     theta_hat = _gen_theta_hat(gamma_hat_l, tau_hat_l, p)
@@ -341,7 +352,7 @@ def _gen_debiased_params(beta_hat_l, grad_l, gamma_hat_l, tau_hat_l,
 
     beta_tilde[np.abs(beta_tilde) < threshold] = 0
 
-    return beta_tilde
+    return beta_tilde, beta_mn
 
 
 def fit_distributed(model, generator=None, partitions=1, threshold=0.,
