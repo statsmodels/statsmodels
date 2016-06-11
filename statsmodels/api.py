@@ -15,6 +15,7 @@ from .discrete.discrete_model import (Poisson, Logit, Probit,
 from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg
+from .imputation.mice import MICE, MICEData
 from .nonparametric import api as nonparametric
 from . import distributions
 from .__init__ import test

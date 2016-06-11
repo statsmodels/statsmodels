@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from statsmodels.sandbox.mice import mice
+from statsmodels.imputation import mice
 import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_allclose, dec
 
