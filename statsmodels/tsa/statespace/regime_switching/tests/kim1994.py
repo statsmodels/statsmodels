@@ -1,5 +1,5 @@
 import numpy as np
-from .results import results_kim_filter
+from .results import results_kim1994
 
 class Kim1994(object):
     '''
@@ -19,11 +19,11 @@ class Kim1994(object):
         cls.k_states = 2
         cls.k_posdef = 1
 
-        cls.true = results_kim_filter.kim_je
+        cls.true = results_kim1994.kim_je
         cls.true_cycle = np.array(cls.true['cycle'], dtype=dtype)
 
         data = np.array(cls.true['data'], dtype=dtype)
-        data = np.log(data)*100
+        data = np.log(data) * 100
 
         cls.obs = np.array(data[1:152] - data[:151], dtype=dtype)
 

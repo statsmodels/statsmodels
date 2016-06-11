@@ -603,6 +603,8 @@ class KimFilter(object):
 
     def get_smoothed_regime_probs(self, filter_first=True, **kwargs):
         '''
+        this is tested in test_ms_ar.py
+
         p. 107 Kim-Nelson
         '''
 
@@ -691,3 +693,13 @@ class KimFilter(object):
     def filtered_state_covs(self):
 
         return self._filtered_state_covs
+
+    @property
+    def filtered_regime_probs(self):
+
+        return self._filtered_regime_probs
+
+    @property
+    def predicted_regime_probs(self):
+
+        return self._predicted_regime_probs

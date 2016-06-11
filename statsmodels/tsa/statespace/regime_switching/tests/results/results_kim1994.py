@@ -2,7 +2,7 @@
 Data for Kim filter and switching MLE model testing.
 Copied from http://econ.korea.ac.kr/~cjkim/MARKOV/data/kim_je.prn and from
 http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt optimization results.
-See chapter 5.4.2 of Kim and Nelson book and for details.
+See chapter 5.4.2 of Kim and Nelson book for details.
 '''
 
 kim_je = {

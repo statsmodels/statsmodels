@@ -1,3 +1,4 @@
+import numpy as np
 from statsmodels.tsa.statespace.regime_switching.rs_mlemodel import \
         RegimeSwitchingMLEModel
 from statsmodels.tsa.statespace.regime_switching.tools import \
@@ -64,7 +65,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
     '''
 
     def __init__(self, k_ar_regimes, order, endog, switching_ar=False,
-            switching_mean=True, switching_variance=True, exog=None,
+            switching_mean=False, switching_variance=False, exog=None,
             k_exog=None, **kwargs):
         '''
         order - the order of autoregressive lag polynomial
@@ -85,6 +86,12 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         else:
             self.k_exog = None
 
+        endog = endog.ravel()
+
+        self.endog_head = endog[:order]
+
+        endog = endog[order:]
+
         if isinstance(switching_ar, bool):
             self.switching_ar = [switching_ar] * order
         else:
@@ -99,7 +106,11 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         self.switching_mean = switching_mean
         self.switching_variance = switching_variance
 
-        self.parameters = MarkovSwitchingParams(k_ar_regimes)
+        kwargs['k_posdef'] = 1
+
+        super(MarkovAutoregression, self).__init__(k_ar_regimes**(order + 1),
+                endog, order, param_k_regimes=k_ar_regimes, exog=exog, **kwargs)
+
         if self.k_exog is not None:
             self.parameters['exog'] = [False] * self.k_exog
         self.parameters['autoregressive'] = self.switching_ar
@@ -107,54 +118,43 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         self.parameters['mean'] = [self.switching_mean]
         self.parameters['variance'] = [self.switching_variance]
 
-        kwargs['k_posdef'] = 1
-
-        super(MarkovAutoregression, self).__init__(k_ar_regimes**(order + 1),
-                endog, order, **kwargs)
-
     def nonswitching_model_type(self):
 
         return _NonswitchingAutoregression
 
-    def get_model_params(self, nonswitching_model_params):
+    def update_params(self, params, nonswitching_params):
         '''
-        nonswitching_model_params = (mean exog_regression_coefs ar_coefs var)
-        model_params = (exog_regression_coefs ar_coefs means vars)
+        nonswitching_params = (mean exog_regression_coefs ar_coefs var)
         '''
 
         dtype = self.ssm.dtype
         order = self.order
         k_ar_regimes = self.k_ar_regimes
 
-        model_params = np.zeros((self.parameters.k_params,), dtype=dtype)
-
         offset = 0
 
-        model_params[self.parameters['mean']] = \
-                nonswitching_model_params[offset]
+        params[self.parameters['mean']] = nonswitching_params[offset]
 
         offset += 1
 
         if self.k_exog is not None:
-            model_params[self.parameters['exog']] = \
-                    nonswitching_model_params[offset:offset + self.k_exog]
+            params[self.parameters['exog']] = \
+                    nonswitching_params[offset:offset + self.k_exog]
             offset += self.k_exog
 
         # TODO: check if order of coefs is the same
-        ar_coefs = nonswitching_model_params[offset:offset + order]
+        ar_coefs = nonswitching_params[offset:offset + order]
         for i in range(k_ar_regimes):
-            model_params[self.parameters[i, 'autoregressive']] = ar_coefs
+            params[self.parameters[i, 'autoregressive']] = ar_coefs
         offset += order
 
-        model_params[self.parameters['variance']] = \
-                nonswitching_model_params[offset]
+        params[self.parameters['variance']] = nonswitching_params[offset]
 
-        return model_params
+        return params
 
-    def get_nonswitching_model_params(self, model_params):
+    def get_nonswitching_params(self, params):
         '''
-        nonswitching_model_params = (mean exog_regression_coefs ar_coefs var)
-        model_params = (exog_regression_coefs ar_coefs means vars)
+        nonswitching_params = (mean exog_regression_coefs ar_coefs var)
         '''
 
         dtype = self.ssm.dtype
@@ -163,54 +163,48 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         if self.k_exog is not None:
             exog_regression_coefs = \
-                    model_params[self.parameters['exog']].tolist()
+                    params[self.parameters['exog']].tolist()
         else:
             exog_regression_coefs = []
 
         ar_coefs = np.zeros((k_ar_regimes, order), dtype=dtype)
 
         for i in range(k_ar_regimes):
-            ar_coefs[i] = model_params[self.parameters[i, 'autoregressive']]
+            ar_coefs[i] = params[self.parameters[i, 'autoregressive']]
 
         ar_coefs = ar_coefs.mean(axis=0).tolist()
 
-        mean = [model_params[self.parameters['mean']].mean()]
-        variance = [model_params[self.parameters['variance']].mean()]
+        mean = [params[self.parameters['mean']].mean()]
+        variance = [params[self.parameters['variance']].mean()]
 
         return np.array(mean + exog_regression_coefs + ar_coefs + var,
                 dtype=dtype)
 
-    def transform_model_params(self, unconstrained_model_params):
-        '''
-        model_params = (exog_regression_coefs ar_coefs means vars)
-        '''
+    def transform_model_params(self, unconstrained):
 
         k_ar_regimes = self.k_ar_regimes
 
-        constrained_model_params = super(MarkovAutoregression,
-                self).transform_model_params(unconstrained_model_params)
+        constrained = super(MarkovAutoregression,
+                self).transform_model_params(unconstrained)
 
         # Keeping variance positive
         s = self.parameters['variance']
-        constrained_model_params[s] = constrained_model_params[s]**2
+        constrained[s] = unconstrained[s]**2
 
-        return constrained_model_params
+        return constrained
 
-    def untransform_model_params(self, constrained_model_params):
-        '''
-        model_params = (exog_regression_coefs ar_coefs means vars)
-        '''
+    def untransform_model_params(self, constrained):
 
         k_ar_regimes = self.k_ar_regimes
 
-        unconstrained_model_params = super(MarkovAutoregression,
-                self).untransform_model_params(constrained_model_params)
+        unconstrained = super(MarkovAutoregression,
+                self).untransform_model_params(constrained)
 
         # Keeping variance positive
         s = self.parameters['variance']
-        unconstrained_model_params[s] = unconstrained_model_params[s]**0.5
+        unconstrained[s] = constrained[s]**0.5
 
-        return unconstrained_model_params
+        return unconstrained
 
     def get_ar_coef_regimes(self, regime_index):
         '''
@@ -218,12 +212,14 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         from extended regime (tuple (S_t, S_{t-1}, ..., S_{t-order})) index
         '''
 
+        order = self.order
+
         k_ar_regimes = self.k_ar_regimes
 
         regimes_suffix = regime_index // k_ar_regimes
-            for ar_coef_index in range(order):
-                yield regimes_suffix % k_ar_regimes
-                regimes_suffix /= k_ar_regimes
+        for ar_coef_index in range(order):
+            yield regimes_suffix % k_ar_regimes
+            regimes_suffix /= k_ar_regimes
 
     def update(self, params, **kwargs):
         '''
@@ -240,8 +236,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         params = super(MarkovAutoregression, self).update(params, **kwargs)
 
-        ar_regime_transition, model_params = self.get_explicit_params(params,
-                k_regimes=self.k_ar_regimes)
+        ar_regime_transition = self._get_param_regime_transition(params)
 
         # Extended transition_matrix for state space representation
         # Every regime here is a tuple (S_t, S_{t-1}, ..., S_{t-order})
@@ -266,9 +261,11 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         self['regime_transition'] = regime_transition
 
+        # exog coefs
+
         if self.k_exog is not None:
             exog_intercept_term = self.exog.dot(
-                    model_params[self.parameters['exog']].reshape(-1, 1)
+                    params[self.parameters['exog']].reshape(-1, 1)
                     ).reshape((1, -1))
 
         # Ar coefs
@@ -276,15 +273,16 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         ar_coefs = np.zeros((k_ar_regimes, order), dtype=dtype)
 
         for i in range(k_ar_regimes):
-            ar_coefs[i] = model_params[self.parameters[i, 'autoregressive']]
+            ar_coefs[i] = params[self.parameters[i, 'autoregressive']]
 
         transition = np.zeros((k_regimes, order, order, 1), dtype=dtype)
 
         for regime_index in range(k_regimes):
+            transition[regime_index, :-1, 1:, 0] = np.identity(order - 1)
             for ar_coef_index, ar_regime in zip(range(order),
                     self.get_ar_coef_regimes(regime_index)):
                 transition[regime_index, ar_coef_index, 0, 0] = \
-                        ar_coefs[ar_coef_index, ar_regime]
+                        ar_coefs[ar_regime, ar_coef_index]
 
         self['transition'] = transition
 
@@ -297,34 +295,70 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
                 obs_intercept[regime_index, :, :] = exog_intercept_term
                 curr_ar_regime = regime_index % k_ar_regimes
                 obs_intercept[regime_index, :, :] += \
-                        model_params[self.parameters[curr_ar_regime, 'mean']]
+                        params[self.parameters[curr_ar_regime, 'mean']]
         else:
             obs_intercept = np.zeros((k_regimes, 1, 1), dtype=dtype)
             for regime_index in range(k_regimes):
                 curr_ar_regime = regime_index % k_ar_regimes
                 obs_intercept[regime_index, 0, 0] = \
-                        model_params[self.parameters[curr_ar_regime, 'mean']]
+                        params[self.parameters[curr_ar_regime, 'mean']]
 
         self['obs_intercept'] = obs_intercept
 
         # Switching variances
 
         state_cov = np.zeros((k_regimes, 1, 1, 1), dtype=dtype)
-        state_cov[:, 0, 0, 0] = model_params[self.parameters['variance']]
+        state_cov[:, 0, 0, 0] = params[self.parameters['variance']]
 
         self['state_cov'] = state_cov
 
         # Other matrices
 
-        self['selection'] = np.zeros((order, 1, 1), dtype=dtype)
-        self['selection'][0, 0, 0] = 1
+        selection = np.zeros((order, 1, 1), dtype=dtype)
+        selection[0, 0, 0] = 1
 
-        self['design'] = np.zeros((1, order, 1), dtype=dtype)
-        self['design'][0, 0, 0] = 1
+        self['selection'] = selection
+
+        design = np.zeros((1, order, 1), dtype=dtype)
+        design[0, 0, 0] = 1
+
+        self['design'] = design
 
         # obs_cov and state_intercept is zero by default
 
-    def _em_iteration(self, params, **kwargs):
+        # initialization
+
+        # zero state is known a priori
+        initial_state_cov = np.zeros((order, order), dtype=dtype)
+
+        initial_state = np.zeros((k_regimes, order), dtype=dtype)
+
+        for regime_index in range(k_regimes):
+
+            curr_regime_ar_coefs = np.zeros((order,), dtype=dtype)
+            curr_regime_ar_means = np.zeros((order, ), dtype=dtype)
+
+            curr_ar_regime = regime_index % k_ar_regimes
+            for ar_coef_index, ar_regime in zip(range(order),
+                    self.get_ar_coef_regimes(regime_index)):
+                curr_regime_ar_coefs[ar_coef_index] = \
+                        ar_coefs[ar_regime, ar_coef_index]
+                curr_regime_ar_means[ar_coef_index] = \
+                        params[self.parameters[ar_regime, 'mean']]
+
+            initial_state[regime_index, 0] = self.endog_head[-1] - \
+                    curr_regime_ar_means[0]
+
+            for i in range(1, order):
+                for j in range(i, order):
+                    initial_state[regime_index, i] += \
+                            curr_regime_ar_coefs[j] * \
+                            (self.endog_head[order - 2 + i - j] - \
+                            curr_regime_ar_means[j])
+
+        self.initialize_known(initial_state, initial_state_cov)
+
+    def _em_iteration(self, params):
         '''
         params = (transition_matrix(not extended) exog_regression_coefs
         ar_coefs means vars)
@@ -339,10 +373,10 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         # obtaining smoothed probs
 
-        self.update(params, **kwargs)
+        self.update(params)
 
         smoothed_regime_probs, smoothed_curr_and_next_regime_probs = \
-                sels.ssm.get_smoothed_regime_probs(**kwargs)
+                sels.ssm.get_smoothed_regime_probs()
 
         # preparing data for regression em iteration
 
@@ -372,7 +406,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
                 markov_regression_endog, markov_regression_exog,
                 smoothed_regime_probs, smoothed_curr_and_next_regime_probs)
 
-        model_params = np.zeros((self.parameters.k_params,), dtype=dtype)
+        new_params = np.zeros((self.parameters.k_params,), dtype=dtype)
 
         ar_regime_transition = np.zeros((k_ar_regimes, k_ar_regimes),
                 dtype=dtype)
@@ -400,6 +434,8 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
                 ar_regime_transition[curr_ar_regime, prev_ar_regime] = \
                         regime_transition[curr_regime_index, prev_regime_index]
 
+        self._set_param_regime_transition(new_params, ar_regime_transition)
+
         # variance recovery
 
         for regime_index in range(k_regimes):
@@ -408,13 +444,13 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
             s = self.parameters[ar_regime, 'variance']
 
             # For debug; remove after testing
-            if model_params[s] != 0 and \
-                    model_params[s] != variances[regime_index]:
+            if new_params[s] != 0 and \
+                    new_params[s] != variances[regime_index]:
                 raise RuntimeError(
                         'EM-algorithm bug: {0} variance is not equal to {1}'.format(
-                        model_params[s], variances[regime_index]))
+                        new_params[s], variances[regime_index]))
 
-            model_params[s] = variances[regime_index]
+            new_params[s] = variances[regime_index]
 
         # ar coefs recovery
 
@@ -437,7 +473,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
                 ar_coefs[ar_regime, ar_coef_index] = coefs[regime_index, ar_coef_index]
 
         for i in range(k_ar_regimes):
-            model_params[i, 'autoregressive'] = ar_coefs[i, :]
+            new_params[i, 'autoregressive'] = ar_coefs[i, :]
 
         # mean recovery
         # Mean values for k_ar_regimes can be obtained via system of linear
@@ -469,13 +505,26 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
                     system_coeficients, intercept_terms))
 
         if self.switching_mean:
-            model_params['mean'] = ar_means
+            new_params['mean'] = ar_means
         else:
             # ar means should be all the same
-            model_params['mean'] = ar_means.mean()
+            new_params['mean'] = ar_means.mean()
 
-        return self.get_params_vector(ar_regime_transition, model_params)
+        return new_params
 
-    #def fit():
+    def fit_em_algorithm(self, start_params=None, transformed=True,
+            em_iterations=5):
 
-    #    pass
+        if start_params is None:
+            start_params = self.start_params
+            transformed = True
+
+        if not transformed:
+            start_params = self.transform_params(start_params)
+
+        params = start_params
+
+        for i in range(em_iterations):
+            params = self._em_iteration(params)
+
+        return start_params

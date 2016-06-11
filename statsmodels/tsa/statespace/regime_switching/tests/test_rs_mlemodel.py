@@ -157,7 +157,7 @@ class TestKim1994_MLEModel(Kim1994WithMLEModel):
             transformed=False)
 
         return {
-                'loglike': cls.model.loglike(params, filter_first=False),
+                'loglike': cls.model.loglike(params),
                 'params': params
         }
 
@@ -179,7 +179,7 @@ class TestKim1994_MLEModelLinearFitFirst(Kim1994WithMLEModel):
         params = cls.model.fit(fit_nonswitching_first=True)
 
         return {
-                'loglike': cls.model.loglike(params, filter_first=False),
+                'loglike': cls.model.loglike(params),
                 'params': params
         }
 

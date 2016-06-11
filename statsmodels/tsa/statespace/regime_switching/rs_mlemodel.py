@@ -25,7 +25,7 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         self._init_kwargs = kwargs
 
-        self.parameters = MarkovSwitchingParams(k_regimes)
+        self.parameters = MarkovSwitchingParams(self.param_k_regimes)
 
         self.parameters['regime_transition'] = [False] * \
                 self.param_k_regimes * (self.param_k_regimes - 1)
@@ -168,28 +168,25 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         self.ssm.initialize_stationary_regime_probs()
 
-    def get_params_vector(self, regime_transition, model_params):
-        return np.hstack((transition[:-1, :].ravel(), model_params))
+    def _get_param_regime_transition(self, constrained_params):
 
-    def get_explicit_params(self, constrained_params, k_regimes=None):
-        '''
-        k_regimes is specified in the case, when regime_transition matrix in
-        parameters is different from that in state space representation, like
-        it happens with MS-AR.
-        '''
+        dtype = self.ssm.dtype
+        param_k_regimes = self.param_k_regimes
 
-        if k_regimes is None:
-            k_regimes = self.k_regimes
+        regime_transition = np.zeros((param_k_regimes, param_k_regimes),
+                dtype=dtype)
+        regime_transition[:-1, :] = constrained_params[
+                self.parameters['regime_transition']].reshape((-1,
+                param_k_regimes))
 
-        border = k_regimes * (k_regimes - 1)
+        regime_transition[-1, :] = 1 - regime_transition[:-1, :].sum(axis=0)
 
-        transition = constrained_params[:border].reshape((-1, k_regimes))
-        transition = np.vstack((transition, np.ones((1, k_regimes),
-                dtype=self.ssm.dtype)))
+        return regime_transition
 
-        model_params = constrained_params[border:]
+    def _set_param_regime_transition(self, constrained_params, regime_transition):
 
-        return (transition, model_params)
+        constrained_params[self.parameters['regime_transition']] = \
+                regime_transition[:-1, :].ravel()
 
     @property
     def start_params(self):
@@ -204,7 +201,7 @@ class RegimeSwitchingMLEModel(MLEModel):
             start_params = self.start_params
             transformed = True
 
-        if transformed == False:
+        if not transformed:
             start_params = self.transform_params(start_params)
 
         if fit_nonswitching_first:
@@ -232,11 +229,89 @@ class RegimeSwitchingMLEModel(MLEModel):
         kwargs['return_params'] = True
         return super(RegimeSwitchingMLEModel, self).fit(**kwargs)
 
+    def filter(self, params, transformed=True, complex_step=False, **kwargs):
+
+        self.update(params, transformed=transformed, complex_step=complex_step)
+
+        #if complex_step:
+        #    kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+
+        self.ssm.filter(complex_step=complex_step, **kwargs)
+
+    def get_smoothed_regime_probs(self, params, transformed=True,
+            complex_step=False, **kwargs):
+
+        self.update(params, transformed=True, complex_step=complex_step)
+
+        kwargs['filter_first'] = True
+
+        return self.ssm.get_smoothed_regime_probs(**kwargs)
+
     def smooth(self, *args, **kwargs):
 
         raise NotImplementedError
 
     def simulation_smoother(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _forecast_error_partial_derivatives(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def observed_information_matrix(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def opg_information_matrix(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _score_complex_step(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _score_finite_difference(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _score_harvey(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def score_obs_harvey(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def score(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def score_obs(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def hessian(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _hessian_oim(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _hessian_opg(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _hessian_finite_difference(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def _hessian_complex_step(self, *args, **kwargs):
+
+        raise NotImplementedError
+
+    def transform_jacobian(self, *args, **kwargs):
 
         raise NotImplementedError
 
