@@ -107,7 +107,6 @@ class SurvfuncRight(object):
         self.status = np.asarray(status)
         if freq_weights is not None:
             self.freq_weights = np.asarray(freq_weights)
-        m = len(status)
         x = _calc_survfunc_right(time, status, freq_weights)
         self.surv_prob = x[0]
         self.surv_prob_se = x[1]
@@ -115,7 +114,6 @@ class SurvfuncRight(object):
         self.n_risk = x[3]
         self.n_events = x[4]
         self.title = "" if not title else title
-
 
     def plot(self, ax=None):
         """
@@ -141,7 +139,6 @@ class SurvfuncRight(object):
 
         return plot_survfunc(self, ax)
 
-
     def quantile(self, p):
         """
         Estimated quantile of a survival distribution.
@@ -162,7 +159,6 @@ class SurvfuncRight(object):
             return np.nan
 
         return self.surv_times[ii[0]]
-
 
     def quantile_ci(self, p, alpha=0.05, method='cloglog'):
         """
@@ -203,20 +199,20 @@ class SurvfuncRight(object):
 
         method = method.lower()
         if method == "cloglog":
-            g = lambda x : np.log(-np.log(x))
-            gprime = lambda x : -1 / (x * np.log(x))
+            g = lambda x: np.log(-np.log(x))
+            gprime = lambda x: -1 / (x * np.log(x))
         elif method == "linear":
-            g = lambda x : x
-            gprime = lambda x : 1
+            g = lambda x: x
+            gprime = lambda x: 1
         elif method == "log":
-            g = lambda x : np.log(x)
-            gprime = lambda x : 1 / x
+            g = lambda x: np.log(x)
+            gprime = lambda x: 1 / x
         elif method == "logit":
-            g = lambda x : np.log(x / (1 - x))
-            gprime = lambda x : 1 / (x * (1 - x))
+            g = lambda x: np.log(x / (1 - x))
+            gprime = lambda x: 1 / (x * (1 - x))
         elif method == "asinsqrt":
-            g = lambda x : np.arcsin(np.sqrt(x))
-            gprime = lambda x : 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
+            g = lambda x: np.arcsin(np.sqrt(x))
+            gprime = lambda x: 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
         else:
             raise ValueError("unknown method")
 
@@ -236,7 +232,6 @@ class SurvfuncRight(object):
 
         return lb, ub
 
-
     def summary(self):
         """
         Return a summary of the estimated survival function.
@@ -253,7 +248,6 @@ class SurvfuncRight(object):
         df["num events"] = self.n_events
 
         return df
-
 
     def simultaneous_cb(self, alpha=0.05, method="hw", transform="log"):
         """
@@ -287,7 +281,8 @@ class SurvfuncRight(object):
 
         method = method.lower()
         if method != "hw":
-            raise ValueError("only the Hall-Wellner (hw) method is implemented")
+            msg = "only the Hall-Wellner (hw) method is implemented"
+            raise ValueError(msg)
 
         if alpha != 0.05:
             raise ValueError("alpha must be set to 0.05")
@@ -314,7 +309,6 @@ class SurvfuncRight(object):
             raise ValueError("Unknown transform")
 
         return lcb, ucb
-
 
 
 def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
@@ -442,7 +436,8 @@ def _survdiff(time, status, group, weight_type, gr, **kwargs):
             weights = np.sqrt(n)
         elif weight_type == "fh":
             if "fh_p" not in kwargs:
-                raise ValueError("weight_type type 'fh' requires specification of fh_p")
+                msg = "weight_type type 'fh' requires specification of fh_p"
+                raise ValueError(msg)
             fh_p = kwargs["fh_p"]
             # Calculate the survivor function directly to avoid the
             # overhead of creating a SurvfuncRight object
@@ -467,7 +462,6 @@ def _survdiff(time, status, group, weight_type, gr, **kwargs):
         var = np.dot(weights[ix]**2, var[ix])
 
     return obs, var
-
 
 
 def plot_survfunc(survfuncs, ax=None):
@@ -531,7 +525,8 @@ def plot_survfunc(survfuncs, ax=None):
 
         label = getattr(sf, "title", "Group %d" % (gx + 1))
 
-        li, = ax.step(surv_times, surv_prob, '-', label=label, lw=2, where='post')
+        li, = ax.step(surv_times, surv_prob, '-', label=label, lw=2,
+                      where='post')
 
         # Plot the censored points.
         ii = np.flatnonzero(np.logical_not(sf.status))

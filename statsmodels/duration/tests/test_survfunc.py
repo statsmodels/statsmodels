@@ -1,5 +1,6 @@
 import numpy as np
-from statsmodels.duration.survfunc import SurvfuncRight, survdiff, plot_survfunc
+from statsmodels.duration.survfunc import (
+    SurvfuncRight, survdiff, plot_survfunc)
 from numpy.testing import assert_allclose
 from numpy.testing import dec
 import pandas as pd
@@ -10,7 +11,6 @@ pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
@@ -21,7 +21,6 @@ def close_or_save(pdf, fig):
         pdf.savefig(fig)
     else:
         plt.close(fig)
-
 
 
 """
@@ -37,19 +36,21 @@ ix = c(rep(1, length(ti1)), rep(2, length(ti2)))
 sd = survdiff(Surv(ti, st) ~ ix)
 """
 
-
 ti1 = np.r_[3, 1, 2, 3, 2, 1, 5, 3]
 st1 = np.r_[0, 1, 1, 1, 0, 0, 1, 0]
 times1 = np.r_[1, 2, 3, 5]
 surv_prob1 = np.r_[0.8750000, 0.7291667, 0.5468750, 0.0000000]
 surv_prob_se1 = np.r_[0.1169268, 0.1649762, 0.2005800, np.nan]
+n_risk1 = np.r_[8, 6, 4, 1]
+n_events1 = np.r_[1.,  1.,  1.,  1.]
 
 ti2 = np.r_[1, 1, 2, 3, 7, 1, 5, 3, 9]
 st2 = np.r_[0, 1, 0, 0, 1, 0, 1, 0, 1]
 times2 = np.r_[1, 5, 7, 9]
 surv_prob2 = np.r_[0.8888889, 0.5925926, 0.2962963, 0.0000000]
 surv_prob_se2 = np.r_[0.1047566, 0.2518034, 0.2444320, np.nan]
-
+n_risk2 = np.r_[9, 3, 2, 1]
+n_events2 = np.r_[1., 1., 1., 1.]
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fp = os.path.join(cur_dir, 'results', 'bmt.csv')
@@ -57,27 +58,25 @@ bmt = pd.read_csv(fp)
 
 
 def test_survfunc1():
-    """
-    Test where all times have at least 1 event.
-    """
+    # Test where all times have at least 1 event.
 
     sr = SurvfuncRight(ti1, st1)
-
     assert_allclose(sr.surv_prob, surv_prob1, atol=1e-5, rtol=1e-5)
     assert_allclose(sr.surv_prob_se, surv_prob_se1, atol=1e-5, rtol=1e-5)
     assert_allclose(sr.surv_times, times1)
+    assert_allclose(sr.n_risk, n_risk1)
+    assert_allclose(sr.n_events, n_events1)
 
 
 def test_survfunc2():
-    """
-    Test where some times have no events.
-    """
+    # Test where some times have no events.
 
     sr = SurvfuncRight(ti2, st2)
-
     assert_allclose(sr.surv_prob, surv_prob2, atol=1e-5, rtol=1e-5)
     assert_allclose(sr.surv_prob_se, surv_prob_se2, atol=1e-5, rtol=1e-5)
     assert_allclose(sr.surv_times, times2)
+    assert_allclose(sr.n_risk, n_risk2)
+    assert_allclose(sr.n_events, n_events2)
 
 
 def test_survdiff_basic():
@@ -104,11 +103,15 @@ def test_simultaneous_cb():
 
     ti = sf.surv_times.tolist()
     ix = [ti.index(x) for x in (110, 122, 129, 172)]
-    assert_allclose(lcb1[ix], np.r_[0.43590582, 0.42115592, 0.4035897, 0.38785927])
-    assert_allclose(ucb1[ix], np.r_[0.93491636, 0.89776803, 0.87922239, 0.85894181])
+    assert_allclose(lcb1[ix], np.r_[0.43590582, 0.42115592,
+                                    0.4035897, 0.38785927])
+    assert_allclose(ucb1[ix], np.r_[0.93491636, 0.89776803,
+                                    0.87922239, 0.85894181])
 
-    assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378, 0.45595321, 0.43341115])
-    assert_allclose(ucb2[ix], np.r_[0.96465636,  0.92745068,  0.90885428, 0.88796708])
+    assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378,
+                                    0.45595321, 0.43341115])
+    assert_allclose(ucb2[ix], np.r_[0.96465636,  0.92745068,
+                                    0.90885428, 0.88796708])
 
 
 def test_bmt():
@@ -118,11 +121,11 @@ def test_bmt():
 
     # Confidence intervals for 25% percentile of the survival
     # distribution (for "ALL" subjects), taken from the SAS web site
-    cb = {"linear" : [107, 276],
-          "cloglog" : [86, 230],
-          "log" : [107, 332],
-          "asinsqrt" : [104, 276],
-          "logit" : [104, 230]}
+    cb = {"linear": [107, 276],
+          "cloglog": [86, 230],
+          "log": [107, 332],
+          "asinsqrt": [104, 276],
+          "logit": [104, 230]}
 
     dfa = bmt[bmt.Group == "ALL"]
 
@@ -155,9 +158,11 @@ def test_survdiff():
     assert_allclose(stat, 15.38787, atol=1e-4, rtol=1e-4)
     stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="tw")
     assert_allclose(stat, 14.98382, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh", fh_p=0.5)
+    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh",
+                       fh_p=0.5)
     assert_allclose(stat, 14.46866, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh", fh_p=1)
+    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh",
+                       fh_p=1)
     assert_allclose(stat, 14.84500, atol=1e-4, rtol=1e-4)
 
     # 5 strata
@@ -215,8 +220,9 @@ def test_plot_km():
     ax = fig.get_axes()[0]
     ax.set_position([0.1, 0.1, 0.64, 0.8])
     ha, lb = ax.get_legend_handles_labels()
-    leg = fig.legend([ha[k] for k in (0,2,4)], [lb[k] for k in (0,2,4)],
-                     'center right')
+    fig.legend([ha[k] for k in (0, 2, 4)],
+               [lb[k] for k in (0, 2, 4)],
+               'center right')
     close_or_save(pdf, fig)
 
     # Simultaneous CB for BMT data
@@ -241,13 +247,11 @@ def test_plot_km():
 
 
 def test_weights1():
-    """
-    tm = c(1, 3, 5, 6, 7, 8, 8, 9, 3, 4, 1, 3, 2)
-    st = c(1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0)
-    wt = c(1, 2, 3, 2, 3, 1, 2, 1, 1, 2, 2, 3, 1)
-    library(survival)
-    sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
-    """
+    # tm = c(1, 3, 5, 6, 7, 8, 8, 9, 3, 4, 1, 3, 2)
+    # st = c(1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0)
+    # wt = c(1, 2, 3, 2, 3, 1, 2, 1, 1, 2, 2, 3, 1)
+    # library(survival)
+    # sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
 
     tm = np.r_[1, 3, 5, 6, 7, 8, 8, 9, 3, 4, 1, 3, 2]
     st = np.r_[1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0]
@@ -258,16 +262,16 @@ def test_weights1():
     assert_allclose(sf.surv_prob,
                     np.r_[0.875, 0.65625, 0.51041667, 0.29166667, 0.])
     assert_allclose(sf.surv_prob_se,
-                    np.r_[0.07216878, 0.13307266, 0.20591185, 0.3219071, 1.05053519])
+                    np.r_[0.07216878, 0.13307266, 0.20591185, 0.3219071,
+                          1.05053519])
+
 
 def test_weights2():
-    """
-    tm = c(1, 3, 5, 6, 7, 2, 4, 6, 8, 10)
-    st = c(1, 1, 0, 1, 1, 1, 1, 0, 1, 1)
-    wt = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2)
-    library(survival)
-    sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
-    """
+    # tm = c(1, 3, 5, 6, 7, 2, 4, 6, 8, 10)
+    # st = c(1, 1, 0, 1, 1, 1, 1, 0, 1, 1)
+    # wt = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2)
+    # library(survival)
+    # sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
 
     tm = np.r_[1, 3, 5, 6, 7, 2, 4, 6, 8, 10]
     st = np.r_[1, 1, 0, 1, 1, 1, 1, 0, 1, 1]
