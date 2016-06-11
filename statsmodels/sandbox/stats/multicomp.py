@@ -813,7 +813,7 @@ class MultiComparison(object):
                 # warn and keep only observations with label in group_order
                 import warnings
                 warnings.warn('group_order does not contain all groups:' +
-                              ' dropping observations')
+                              ' dropping observations', UserWarning)
 
                 mask_keep = self.groupintlab != -999
                 self.groupintlab = self.groupintlab[mask_keep]
