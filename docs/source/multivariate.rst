@@ -10,7 +10,7 @@ This section includes methods and algorithms from multivariate statistics.
 
 
 Principal Component Analysis
-""""""""""""""""""""""""""""
+----------------------------
 
 .. autosummary::
    :toctree: generated/

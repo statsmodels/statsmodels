@@ -24,12 +24,12 @@ from .graphics import api as graphics
 from .stats import api as stats
 from .emplike import api as emplike
 from .duration import api as duration
+from .multivariate.pca import PCA
 
 from .formula import api as formula
 
 from .iolib.smpickle import load_pickle as load
 
-from .tools.pca import PCA
 from .tools.print_version import show_versions
 from .tools.web import webdoc
 

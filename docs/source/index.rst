@@ -118,6 +118,8 @@ Table of Contents
    nonparametric
    gmm
    contingency_tables
+   imputation
+   multivariate
    emplike
    miscmodels
    distributions

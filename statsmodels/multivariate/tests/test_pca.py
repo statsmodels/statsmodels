@@ -14,8 +14,8 @@ try:
 except ImportError:
     missing_matplotlib = True
 
-from statsmodels.tools.pca import PCA
-from statsmodels.tools.tests.results.datamlw import data, princomp1, princomp2
+from statsmodels.multivariate.pca import PCA
+from statsmodels.multivariate.tests.results.datamlw import data, princomp1, princomp2
 from statsmodels.compat.numpy import nanmean
 
 DECIMAL_5 = .00001

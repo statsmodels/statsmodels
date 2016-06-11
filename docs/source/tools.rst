@@ -46,9 +46,6 @@ insufficiently tested.
 
 .. currentmodule:: statsmodels.tools
 
-
-
-
 .. _numdiff:
 
 Numerical Differentiation
