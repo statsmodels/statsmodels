@@ -46,14 +46,7 @@ insufficiently tested.
 
 .. currentmodule:: statsmodels.tools
 
-Principal Component Analysis
-""""""""""""""""""""""""""""
 
-.. autosummary::
-   :toctree: generated/
-
-   pca.PCA
-   pca.pca
 
 
 .. _numdiff:
