@@ -17,7 +17,8 @@ working on the code and allows you to easily contribute your changes to the
 codebase. It also keeps a complete history of all changes to the code, so you
 can easily undo changes or see when a change was made, by whom, and why.
 
-To install and configure Git, and to setup SSH keys, see `this page <https://help.github.com/articles/set-up-git>`_.
+To install and configure Git, and to setup SSH keys, see
+`setting up git <https://help.github.com/articles/set-up-git>`_.
 
 To learn more about Git, you may want to visit: 
 
@@ -38,8 +39,9 @@ Forking and cloning
 After setting up git, you need to fork the main `statsmodels` repository. To do
 this, visit the `statsmodels project page
 <https://github.com/statsmodels/statsmodels>`_ and hit the fork button (see
-`this page <https://help.github.com/articles/fork-a-repo>`_ for details). This
-should take you to your fork's page.
+instructions for
+`forking a repo <https://help.github.com/articles/fork-a-repo>`_ for details).
+This should take you to your fork's page.
 
 Then, you want to clone the fork to your machine::
 

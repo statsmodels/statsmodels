@@ -715,7 +715,7 @@ class KalmanFilter(Representation):
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None):
-        """
+        r"""
         Simulate a new time series following the state space model
 
         Parameters

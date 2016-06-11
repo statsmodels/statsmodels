@@ -13,6 +13,7 @@ from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       MNLogit, NegativeBinomial)
 from .tsa import api as tsa
+from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg
 from .nonparametric import api as nonparametric
 from . import distributions

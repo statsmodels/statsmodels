@@ -32,8 +32,8 @@ error variance, i.e. errors are homoscedastic. The tests differ in which kind
 of heteroscedasticity is considered as alternative hypothesis. They also vary
 in the power of the test for different types of heteroscedasticity.
 
-:py:func:`het_breushpagan <statsmodels.stats.diagnostic.het_breushpagan>`
-    Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
+:py:func:`het_breuschpagan <statsmodels.stats.diagnostic.het_breuschpagan>`
+    Lagrange Multiplier Heteroscedasticity Test by Breusch-Pagan
 
 :py:func:`het_white <statsmodels.stats.diagnostic.het_white>`
     Lagrange Multiplier Heteroscedasticity Test by White
@@ -56,8 +56,8 @@ They assume that observations are ordered by time.
   - Ljung-Box test for no autocorrelation of residuals
   - also returns Box-Pierce statistic
 
-:py:func:`acorr_breush_godfrey <statsmodels.stats.diagnostic.acorr_breush_godfrey>`
-  - Breush-Pagan test for no autocorrelation of residuals
+:py:func:`acorr_breusch_godfrey <statsmodels.stats.diagnostic.acorr_breusch_godfrey>`
+  - Breusch-Pagan test for no autocorrelation of residuals
 
 
 missing
@@ -152,9 +152,9 @@ Normality tests in scipy stats
 :py:func:`normal_ad <statsmodels.stats.diagnostic.normal_ad>`
   - Anderson Darling test for normality with estimated mean and variance
 
-:py:func:`kstest_normal <statsmodels.stats.diagnostic.kstest_normal>` :py:func:`lillifors <statsmodels.stats.diagnostic.lillifors>`
-  Lillifors test for normality, this is a Kolmogorov-Smirnov tes with for
-  normality with estimated mean and variance. lillifors is an alias for
+:py:func:`kstest_normal <statsmodels.stats.diagnostic.kstest_normal>` :py:func:`lilliefors <statsmodels.stats.diagnostic.lilliefors>`
+  Lilliefors test for normality, this is a Kolmogorov-Smirnov tes with for
+  normality with estimated mean and variance. lilliefors is an alias for
   kstest_normal
 
 qqplot, scipy.stats.probplot

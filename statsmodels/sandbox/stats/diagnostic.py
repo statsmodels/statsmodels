@@ -531,10 +531,13 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     else:
         return lm, lmpval, fval, fpval
 
+
+msg = "Use acorr_breusch_godfrey, acorr_breush_godfrey will be removed " \
+      "in 0.9 \n (Note: misspelling missing 'c'),"
+
 acorr_breush_godfrey = np.deprecate(acorr_breusch_godfrey, 'acorr_breush_godfrey',
                                'acorr_breusch_godfrey',
-                               "Use acorr_breusch_godfrey, acorr_breush_godfrey will be "
-                               "removed in 0.9 \n(Note: misspelling missing 'c')")
+                               msg)
 
 
 def het_breuschpagan(resid, exog_het):

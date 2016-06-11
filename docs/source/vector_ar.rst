@@ -290,6 +290,9 @@ The estimated coefficients for the dynamic model are returned as a
 example, all of the model coefficients by equation or by date:
 
 .. ipython:: python
+   :okwarning:
+
+    import datetime as dt
 
     var.coefs
 
@@ -297,7 +300,7 @@ example, all of the model coefficients by equation or by date:
     var.coefs.minor_xs('A').info()
 
     # coefficients on 11/30/2001
-    var.coefs.major_xs(datetime(2001, 11, 30)).T
+    var.coefs.major_xs(dt.datetime(2001, 11, 30)).T
 
 Dynamic forecasts for a given number of steps ahead can be produced using the
 `forecast` function and return a :class:`pandas.DataMatrix` object:

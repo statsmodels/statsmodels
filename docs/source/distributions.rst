@@ -19,6 +19,7 @@ Empirical Distributions
 
    ECDF
    StepFunction
+   monotone_fn_inverter
 
 Distribution Extras
 -------------------

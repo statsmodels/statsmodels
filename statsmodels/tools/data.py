@@ -95,7 +95,8 @@ def _is_using_ndarray(endog, exog):
 
 
 def _is_using_pandas(endog, exog):
-    klasses = (pd.Series, pd.DataFrame, pd.WidePanel)
+    # TODO: Remove WidePanel when finished with it
+    klasses = (pd.Series, pd.DataFrame, pd.WidePanel, pd.Panel)
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 

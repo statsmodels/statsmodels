@@ -8,7 +8,7 @@ COPYRIGHT   = """Included with permission of the author."""
 TITLE       = """Affairs dataset"""
 SOURCE      = """
 Fair, Ray. 1978. "A Theory of Extramarital Affairs," `Journal of Political
-    Economy`, February, 45-61.
+Economy`, February, 45-61.
 
 The data is available at http://fairmodel.econ.yale.edu/rayfair/pdf/2011b.htm
 """

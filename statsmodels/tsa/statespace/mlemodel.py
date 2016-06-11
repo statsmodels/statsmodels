@@ -1390,7 +1390,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def simulate(self, params, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None):
-        """
+        r"""
         Simulate a new time series following the state space model
 
         Parameters
@@ -2168,7 +2168,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             `(k_endog, 2, lags)`. If the method is called as
             `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
             holds the results of the Ljung-Box test (as would be returned by
-            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i`th
+            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
             endogenous variable.
 
         Notes
@@ -2376,7 +2376,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None):
-        """
+        r"""
         Simulate a new time series following the state space model
 
         Parameters

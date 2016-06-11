@@ -1,5 +1,7 @@
 :orphan:
 
+.. _statsmodels-examples:
+
 Statsmodels Examples
 ====================
 

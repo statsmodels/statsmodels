@@ -160,7 +160,7 @@ Major Bugs fixed
 
 * Bullet
 * list
-* use :ghissue:`XXX` to link to issue.
+* use ``:ghissue:`XXX``` to link to issue.
 
 Backwards incompatible changes and deprecations
 -----------------------------------------------
