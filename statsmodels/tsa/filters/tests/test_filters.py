@@ -676,8 +676,8 @@ class TestFilters(object):
         expected = self.expected.recurse_init_na
         np.testing.assert_almost_equal(res, expected)
 
-        np.testing.assert_raises(ValueError, recursive_filter, x,
-                                 [.75, .25, .5], [150, 100])
+        assert_raises(ValueError, recursive_filter, x,
+                      [.75, .25, .5], [150, 100])
 
     def test_pandas(self):
         start = datetime(1951, 3, 31)
