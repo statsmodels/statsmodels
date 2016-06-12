@@ -274,8 +274,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
     global minimum is returned in one step.  Otherwise numerical
     bisection is used.
 
-    Returns:
-    --------
+    Returns
+    -------
     The argmin of the objective function.
     """
 

@@ -164,10 +164,12 @@ class Model(object):
 
     @property
     def endog_names(self):
+        """Names of endogenous variables"""
         return self.data.ynames
 
     @property
     def exog_names(self):
+        """Names of exogenous variables"""
         return self.data.xnames
 
     def fit(self):

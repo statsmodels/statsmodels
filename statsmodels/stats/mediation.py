@@ -259,8 +259,8 @@ class Mediation(object):
         """
         Fit a regression model to assess mediation.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         method : string
             Either 'parametric' or 'bootstrap'.
         n_rep : integer

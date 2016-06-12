@@ -32,7 +32,7 @@ for each variable.
 Classes
 -------
 
-.. currentmodule:: statsmodels.distributions.empirical_distribution
+.. currentmodule:: statsmodels.imputation.mice
 
 .. autosummary::
    :toctree: generated/
@@ -44,4 +44,6 @@ Classes
 Implementation Details
 ----------------------
 
-Internally, this function uses `pandas.isnull <pandas:http://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_. Anything that returns True from this function will be treated as missing data.
+Internally, this function uses
+`pandas.isnull <pandas:http://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_.
+Anything that returns True from this function will be treated as missing data.

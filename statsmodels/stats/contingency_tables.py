@@ -705,8 +705,8 @@ class Table2x2(SquareTable):
         """
         P-value for a hypothesis test about the odds ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the odds ratio.
         """
@@ -718,8 +718,8 @@ class Table2x2(SquareTable):
         """
         P-value for a hypothesis test about the log odds ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the log odds ratio.
         """
@@ -797,8 +797,8 @@ class Table2x2(SquareTable):
         """
         p-value for a hypothesis test about the risk ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the risk ratio.
         """
@@ -810,8 +810,8 @@ class Table2x2(SquareTable):
         """
         p-value for a hypothesis test about the log risk ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the log risk ratio.
         """
