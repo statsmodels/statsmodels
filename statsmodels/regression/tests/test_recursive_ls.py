@@ -60,29 +60,29 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
-def test_recursive_resid():
+def test_resid_recursive():
     mod = RecursiveLS(endog, exog)
     res = mod.fit()
 
     # Test the recursive residuals against those from R (strucchange)
     # Due to initialization issues, we get more agreement as we get
     # farther from the initial values.
-    assert_allclose(res.recursive_resid[2:10].T,
+    assert_allclose(res.resid_recursive[2:10].T,
                     results_R.ix[:7, 'rec_resid'], atol=1e-2, rtol=1e-3)
-    assert_allclose(res.recursive_resid[9:20].T,
+    assert_allclose(res.resid_recursive[9:20].T,
                     results_R.ix[7:17, 'rec_resid'], atol=1e-3, rtol=1e-4)
-    assert_allclose(res.recursive_resid[19:].T,
+    assert_allclose(res.resid_recursive[19:].T,
                     results_R.ix[17:, 'rec_resid'], atol=1e-4, rtol=1e-4)
 
     # Test the RLS estimates against those from Stata (cusum6)
-    assert_allclose(res.recursive_resid[3:],
+    assert_allclose(res.resid_recursive[3:],
                     results_stata.ix[3:, 'rr'], atol=1e-3)
 
     # Test the RLS estimates against statsmodels estimates
     mod_ols = OLS(endog, exog)
     res_ols = mod_ols.fit()
-    desired_recursive_resid = recursive_olsresiduals(res_ols)[4][2:]
-    assert_allclose(res.recursive_resid[2:], desired_recursive_resid,
+    desired_resid_recursive = recursive_olsresiduals(res_ols)[4][2:]
+    assert_allclose(res.resid_recursive[2:], desired_resid_recursive,
                     atol=1e-4, rtol=1e-4)
 
 
@@ -102,9 +102,9 @@ def test_cusum():
     # Here we explicitly reverse engineer our cusum to match their to show the
     # equivalence
     llb = res.loglikelihood_burn
-    cusum = res.cusum * np.std(res.recursive_resid[llb:], ddof=1)
-    cusum -= res.recursive_resid[llb]
-    cusum /= np.std(res.recursive_resid[llb+1:], ddof=1)
+    cusum = res.cusum * np.std(res.resid_recursive[llb:], ddof=1)
+    cusum -= res.resid_recursive[llb]
+    cusum /= np.std(res.resid_recursive[llb+1:], ddof=1)
     cusum = cusum[1:]
     assert_allclose(cusum, results_stata.ix[3:, 'cusum'], atol=1e-3, rtol=1e-3)
 
@@ -137,7 +137,7 @@ def test_stata():
     res = mod.fit()
     llb = res.loglikelihood_burn
 
-    assert_allclose(res.recursive_resid[3:], results_stata.ix[3:, 'rr'],
+    assert_allclose(res.resid_recursive[3:], results_stata.ix[3:, 'rr'],
                     atol=1e-4, rtol=1e-4)
     assert_allclose(res.cusum, results_stata.ix[3:, 'cusum'], atol=1e-4)
     assert_allclose(res.cusum_squares, results_stata.ix[3:, 'cusum2'],

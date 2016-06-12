@@ -270,13 +270,13 @@ class RecursiveLSResults(MLEResults):
         return out
 
     @cache_readonly
-    def recursive_resid(self):
+    def resid_recursive(self):
         """
         Recursive residuals
 
         Returns
         -------
-        recursive_resid : array_like
+        resid_recursive : array_like
             An array of length `nobs` holding the recursive
             residuals.
 
@@ -336,8 +336,8 @@ class RecursiveLSResults(MLEResults):
 
         """
         llb = self.loglikelihood_burn
-        return (np.cumsum(self.recursive_resid[self.loglikelihood_burn:]) /
-                np.std(self.recursive_resid[llb:], ddof=1))
+        return (np.cumsum(self.resid_recursive[self.loglikelihood_burn:]) /
+                np.std(self.resid_recursive[llb:], ddof=1))
 
     @cache_readonly
     def cusum_squares(self):
@@ -373,7 +373,7 @@ class RecursiveLSResults(MLEResults):
            Series B (Methodological) 37 (2): 149-92.
 
         """
-        numer = np.cumsum(self.recursive_resid[self.loglikelihood_burn:]**2)
+        numer = np.cumsum(self.resid_recursive[self.loglikelihood_burn:]**2)
         denom = numer[-1]
         return numer / denom
 
