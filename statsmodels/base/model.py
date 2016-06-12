@@ -1159,8 +1159,12 @@ class LikelihoodModelResults(Results):
 
         >>> T_test = results.t_test(r)
         >>> print(T_test)
-        <T contrast: effect=-1829.2025687192481, sd=455.39079425193762,
-        t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
+                                     Test for Constraints
+        ==============================================================================
+                         coef    std err          t      P>|t|      [0.025      0.975]
+        ------------------------------------------------------------------------------
+        c0         -1829.2026    455.391     -4.017      0.003   -2859.368    -799.037
+        ==============================================================================
         >>> T_test.effect
         -1829.2025687192481
         >>> T_test.sd
@@ -1179,6 +1183,14 @@ class LikelihoodModelResults(Results):
         >>> hypotheses = 'GNPDEFL = GNP, UNEMP = 2, YEAR/1829 = 1'
         >>> t_test = results.t_test(hypotheses)
         >>> print(t_test)
+                                     Test for Constraints
+        ==============================================================================
+                         coef    std err          t      P>|t|      [0.025      0.975]
+        ------------------------------------------------------------------------------
+        c0            15.0977     84.937      0.178      0.863    -177.042     207.238
+        c1            -2.0202      0.488     -8.231      0.000      -3.125      -0.915
+        c2             1.0001      0.249      0.000      1.000       0.437       1.563
+        ==============================================================================
 
         See Also
         ---------
@@ -1281,8 +1293,7 @@ class LikelihoodModelResults(Results):
         significantly different from zero.
 
         >>> print(results.f_test(A))
-        <F contrast: F=330.28533923463488, p=4.98403052872e-10,
-         df_denom=9, df_num=6>
+        <F test: F=array([[ 330.28533923]]), p=4.984030528700946e-10, df_denom=9, df_num=6>
 
         Compare this to
 
@@ -1298,8 +1309,7 @@ class LikelihoodModelResults(Results):
         are equal.
 
         >>> print(results.f_test(B))
-        <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9,
-         df_num=2>
+        <F test: F=array([[ 9.74046187]]), p=0.005605288531708235, df_denom=9, df_num=2>
 
         Alternatively, you can specify the hypothesis tests using a string
 
@@ -1311,6 +1321,7 @@ class LikelihoodModelResults(Results):
         >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
         >>> f_test = results.f_test(hypotheses)
         >>> print(f_test)
+        <F test: F=array([[ 144.17976065]]), p=6.322026217355609e-08, df_denom=9, df_num=3>
 
         See Also
         --------
@@ -1468,8 +1479,7 @@ class LikelihoodModelResults(Results):
 
         Examples
         --------
-        >>> res_ols = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)",
-                          data).fit()
+        >>> res_ols = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", data).fit()
         >>> res_ols.wald_test_terms()
         <class 'statsmodels.stats.contrast.WaldTestResults'>
                                                   F                P>F  df constraint  df denom

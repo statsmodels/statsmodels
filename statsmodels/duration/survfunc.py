@@ -123,6 +123,10 @@ class SurvfuncRight(object):
         --------
         Change the line color:
 
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.get_rdataset("flchain", "survival").data
+        >>> df = data.loc[data.sex == "F", :]
+        >>> sf = sm.SurvfuncRight(df["futime"], df["death"])
         >>> fig = sf.plot()
         >>> ax = fig.get_axes()[0]
         >>> li = ax.get_lines()
@@ -482,11 +486,17 @@ def plot_survfunc(survfuncs, ax=None):
     --------
     Add a legend:
 
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.duration.survfunc import plot_survfunc
+    >>> data = sm.datasets.get_rdataset("flchain", "survival").data
+    >>> df = data.loc[data.sex == "F", :]
+    >>> sf0 = sm.SurvfuncRight(df["futime"], df["death"])
+    >>> sf1 = sm.SurvfuncRight(3.0 * df["futime"], df["death"])
     >>> fig = plot_survfunc([sf0, sf1])
     >>> ax = fig.get_axes()[0]
     >>> ax.set_position([0.1, 0.1, 0.64, 0.8])
     >>> ha, lb = ax.get_legend_handles_labels()
-    >>> leg = fig.legend((ha[0], ha[2]), (lb[0], lb[2]), 'center right')
+    >>> leg = fig.legend((ha[0], ha[1]), (lb[0], lb[1]), 'center right')
 
     Change the line colors:
 
@@ -495,9 +505,7 @@ def plot_survfunc(survfuncs, ax=None):
     >>> ax.set_position([0.1, 0.1, 0.64, 0.8])
     >>> ha, lb = ax.get_legend_handles_labels()
     >>> ha[0].set_color('purple')
-    >>> ha[1].set_color('purple')
-    >>> ha[2].set_color('orange')
-    >>> ha[3].set_color('orange')
+    >>> ha[1].set_color('orange')
     """
 
     fig, ax = utils.create_mpl_ax(ax)

@@ -40,8 +40,8 @@ def mixture_rvs(prob, size, dist, kwargs=None):
 
     >>> from scipy import stats
     >>> prob = [.75,.25]
-    >>> Y = mixture_rvs(prob, 5000, dist=[stats.norm, stats.norm], kwargs =
-                (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+    >>> Y = mixture_rvs(prob, 5000, dist=[stats.norm, stats.norm],
+    ...                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
     """
     if len(prob) != len(dist):
         raise ValueError("You must provide as many probabilities as distributions")
@@ -86,6 +86,8 @@ class MixtureDistribution(object):
 
         Parameters
         ----------
+        x : array-like
+            Array containing locations where the PDF should be evaluated
         prob : array-like
             Probability of sampling from each distribution in dist
         dist : array-like
@@ -101,10 +103,14 @@ class MixtureDistribution(object):
         distributions norm(-1,.5) and norm(1,.5) and we want to sample from the
         first with probability .75 and the second with probability .25.
 
+        >>> import numpy as np
         >>> from scipy import stats
+        >>> from statsmodels.distributions.mixture_rvs import MixtureDistribution
+        >>> x = np.arange(-4.0, 4.0, 0.01)
         >>> prob = [.75,.25]
-        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm], kwargs =
-                    (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+        >>> mixture = MixtureDistribution()
+        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm],
+        ...                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
         """
         if len(prob) != len(dist):
             raise ValueError("You must provide as many probabilities as distributions")
@@ -130,6 +136,8 @@ class MixtureDistribution(object):
 
         Parameters
         ----------
+        x : array-like
+            Array containing locations where the CDF should be evaluated
         prob : array-like
             Probability of sampling from each distribution in dist
         size : int
@@ -147,10 +155,14 @@ class MixtureDistribution(object):
         distributions norm(-1,.5) and norm(1,.5) and we want to sample from the
         first with probability .75 and the second with probability .25.
 
+        >>> import numpy as np
         >>> from scipy import stats
+        >>> from statsmodels.distributions.mixture_rvs import MixtureDistribution
+        >>> x = np.arange(-4.0, 4.0, 0.01)
         >>> prob = [.75,.25]
-        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm], kwargs =
-                    (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+        >>> mixture = MixtureDistribution()
+        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm],
+        ...                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
         """
         if len(prob) != len(dist):
             raise ValueError("You must provide as many probabilities as distributions")

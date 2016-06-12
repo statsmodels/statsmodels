@@ -441,29 +441,29 @@ class AFTResults(OptAFT):
         Examples
         -------
 
-        import statsmodels.api as sm
-        import numpy as np
+        >>> import statsmodels.api as sm
+        >>> import numpy as np
 
         # Test parameter is .05 in one regressor no intercept model
-        data=sm.datasets.heart.load()
-        y = np.log10(data.endog)
-        x = data.exog
-        cens = data.censors
-        model = sm.emplike.emplikeAFT(y, x, cens)
-        res=model.test_beta([0], [0])
-        >>>res
-        >>>(1.4657739632606308, 0.22601365256959183)
+        >>> data=sm.datasets.heart.load()
+        >>> y = np.log10(data.endog)
+        >>> x = data.exog
+        >>> cens = data.censors
+        >>> model = sm.emplike.emplikeAFT(y, x, cens)
+        >>> res=model.test_beta([0], [0])
+        >>> res
+        (1.4657739632606308, 0.22601365256959183)
 
         #Test slope is 0 in  model with intercept
 
-        data=sm.datasets.heart.load()
-        y = np.log10(data.endog)
-        x = data.exog
-        cens = data.censors
-        model = sm.emplike.emplikeAFT(y, sm.add_constant(x), cens)
-        res=model.test_beta([0], [1])
-        >>>res
-        >>>(4.623487775078047, 0.031537049752572731)
+        >>> data=sm.datasets.heart.load()
+        >>> y = np.log10(data.endog)
+        >>> x = data.exog
+        >>> cens = data.censors
+        >>> model = sm.emplike.emplikeAFT(y, sm.add_constant(x), cens)
+        >>> res = model.test_beta([0], [1])
+        >>> res
+        (4.623487775078047, 0.031537049752572731)
 
         """
         censors = self.model.censors
