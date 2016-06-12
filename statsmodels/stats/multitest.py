@@ -451,8 +451,8 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     """
     Calculate local FDR values for a list of Z-scores.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     zscores : array-like
         A vector of Z-scores
     null_proportion : float

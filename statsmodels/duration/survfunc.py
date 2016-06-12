@@ -253,8 +253,8 @@ class SurvfuncRight(object):
         """
         Returns a simultaneous confidence band for the survival function.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         alpha : float
             `1 - alpha` is the desired simultaneous coverage
             probability for the confidence region.  Currently alpha
@@ -339,7 +339,7 @@ def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
     strata : array-like
         Optional stratum indicators for a stratified test
 
-    Returns:
+    Returns
     --------
     chisq : The chi-square (1 degree of freedom) distributed test
             statistic value
@@ -468,8 +468,8 @@ def plot_survfunc(survfuncs, ax=None):
     """
     Plot one or more survivor functions.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     survfuncs : object or array-like
         A single SurvfuncRight object, or a list or SurvfuncRight
         objects that are plotted together.

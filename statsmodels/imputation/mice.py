@@ -641,8 +641,8 @@ class MICEData(object):
         points are colored according to whether the values are
         observed or imputed.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         col1_name : string
             The variable to be plotted on the horizontal axis.
         col2_name : string
@@ -662,8 +662,8 @@ class MICEData(object):
         ax : matplotlib axes object
             Axes on which to plot, created if not provided.
 
-        Returns:
-        --------
+        Returns
+        -------
         The matplotlib figure on which the plot id drawn.
         """
 
@@ -749,8 +749,8 @@ class MICEData(object):
         """
         Plot fitted versus imputed or observed values as a scatterplot.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         col_name : string
             The variable to be plotted on the horizontal axis.
         lowess_args : dict-like
@@ -768,8 +768,8 @@ class MICEData(object):
         ax : matplotlib axes object
             Axes on which to plot, created if not provided.
 
-        Returns:
-        --------
+        Returns
+        -------
         The matplotlib figure on which the plot is drawn.
         """
 
@@ -846,8 +846,8 @@ class MICEData(object):
         """
         Display imputed values for one variable as a histogram.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         col_name : string
             The name of the variable to be plotted.
         ax : matplotlib axes
@@ -863,8 +863,8 @@ class MICEData(object):
             Keyword arguments to be passed to pyplot.hist when
             creating the histogram for all values.
 
-        Returns:
-        --------
+        Returns
+        -------
         The matplotlib figure on which the histograms were drawn
         """
 

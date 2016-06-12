@@ -69,7 +69,7 @@ class ELOriginRegress(object):
 
         Returns
         -------
-        Results: class
+        Results : class
             Empirical likelihood regression class
 
         """

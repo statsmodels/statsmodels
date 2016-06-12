@@ -300,11 +300,14 @@ class Factor(Term):
         """
         Retrieve the column corresponding to key in a Formula.
 
-        :Parameters:
-            key : one of the Factor's keys
+        Parameters
+        ----------
+        key : Factor key
+            one of the Factor's keys
 
-        :Returns: ndarray corresponding to key, when evaluated in
-                  current namespace
+        Returns
+        -------
+        ndarray corresponding to key, when evaluated in current namespace
         """
         if not self.ordinal:
             i = self.names().index('(%s==%s)' % (self.termname, str(key)))

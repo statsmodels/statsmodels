@@ -22,7 +22,6 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -39,11 +38,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'numpydoc',
               ]
 
-import sphinx
-if sphinx.__version__ == '1.1.3':
-    print ("WARNING: Not building inheritance diagrams on sphinx 1.1.3. "
-           "See https://github.com/statsmodels/statsmodels/issues/1002")
-    extensions.remove('sphinx.ext.inheritance_diagram')
+ipython_savefig_dir = '../build/html/_static'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -271,7 +266,7 @@ man_pages = [
 epub_title = u'statsmodels'
 epub_author = u'Josef Perktold, Skipper Seabold'
 epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+epub_copyright = u'2009-2016, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
