@@ -277,11 +277,16 @@ def detrend(x, order=1, axis=0):
         x = x.T
     elif x.ndim > 2:
         raise NotImplementedError('x.ndim > 2 is not implemented until it is needed')
-    # could use a polynomial, but this should work also with 2d x, but maybe not yet
+
     nobs = x.shape[0]
-    trends = np.vander(np.arange(float(nobs)), N=order + 1)
-    beta = np.linalg.pinv(trends).dot(x)
-    resid = x - np.dot(trends, beta)
+    if order == 0:
+        # Special case demean
+        resid = x - x.mean(axis=0)
+    else:
+        trends = np.vander(np.arange(float(nobs)), N=order + 1)
+        beta = np.linalg.pinv(trends).dot(x)
+        resid = x - np.dot(trends, beta)
+
     if x.ndim == 2 and int(axis) == 1:
         resid = resid.T
 

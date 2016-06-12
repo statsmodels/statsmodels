@@ -261,8 +261,28 @@ def add_constant(data, prepend=True, has_constant='skip'):
     When the input is recarray or a pandas Series or DataFrame, the added
     column's name is 'const'.
     """
-    from statsmodels.tsa.tsatools import add_trend
-    return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
+    if _is_using_pandas(data, None) or _is_recarray(data):
+        from statsmodels.tsa.tsatools import add_trend
+        return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
+
+    # Special case for NumPy
+    x = np.asanyarray(data)
+    if x.ndim == 1:
+        x = x[:,None]
+    elif x.ndim > 2:
+        raise ValueError('Only implementd 2-dimensional arrays')
+
+    is_nonzero_const = np.ptp(x, axis=0) == 0
+    is_nonzero_const &= np.all(x != 0.0, axis=0)
+    if is_nonzero_const.any():
+        if has_constant == 'skip':
+            return x
+        elif has_constant == 'raise':
+            raise ValueError("data already contains a constant")
+
+    x = [np.ones(x.shape[0]), x]
+    x = x if prepend else x[::-1]
+    return np.column_stack(x)
 
 
 def isestimable(C, D):
