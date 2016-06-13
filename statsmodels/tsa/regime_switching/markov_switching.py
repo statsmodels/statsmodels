@@ -1946,10 +1946,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         """
         (array) The predicted values of the model. An (nobs x k_endog) array.
         """
-        # This is a (k_endog x nobs array; don't want to squeeze in case of
-        # the corner case where nobs = 1 (mostly a concern in the predict or
-        # forecast functions, but here also to maintain consistency)
-        raise NotImplementedError
+        return self.model.predict(self.params)
 
     @cache_readonly
     def hqic(self):
@@ -1987,10 +1984,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         """
         (array) The model residuals. An (nobs x k_endog) array.
         """
-        # This is a (k_endog x nobs array; don't want to squeeze in case of
-        # the corner case where nobs = 1 (mostly a concern in the predict or
-        # forecast functions, but here also to maintain consistency)
-        raise NotImplementedError
+        return self.model.endog - self.fittedvalues
 
     @cache_readonly
     def zvalues(self):
