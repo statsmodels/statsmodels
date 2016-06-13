@@ -684,6 +684,8 @@ class RecursiveLSResults(MLEResults):
 
         ax.legend(loc=legend_loc)
 
+        return fig
+
 
 class RecursiveLSResultsWrapper(MLEResultsWrapper):
     _attrs = {}
