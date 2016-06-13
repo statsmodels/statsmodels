@@ -75,7 +75,7 @@ class TestExpandedNormal(TestCase):
 
     def test_coefficients(self):
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', UserWarning)
+            warnings.simplefilter('ignore', RuntimeWarning)
             # 3rd order in n**(1/2)
             ne3 = ExpandedNormal([0., 1., 1.])
             assert_allclose(ne3._coef, [1., 0., 0., 1./6])
@@ -104,7 +104,7 @@ class TestExpandedNormal(TestCase):
         N, df = 6, 15
         cum = [_chi2_cumulant(n+1, df) for n in range(N)]
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
+            warnings.simplefilter("ignore", RuntimeWarning)
             ne = ExpandedNormal(cum, name='edgw_chi2')
 
         # compare the moments
@@ -135,14 +135,14 @@ class TestExpandedNormal(TestCase):
 
     def test_pdf_no_roots(self):
         with warnings.catch_warnings():
-            warnings.simplefilter("error", UserWarning)
+            warnings.simplefilter("error", RuntimeWarning)
             ne = ExpandedNormal([0, 1])
             ne = ExpandedNormal([0, 1, 0.1, 0.1])
 
     def test_pdf_has_roots(self):
         with warnings.catch_warnings():
-            warnings.simplefilter("error", UserWarning)
-            assert_raises(UserWarning, ExpandedNormal, [0, 1, 101])
+            warnings.simplefilter("error", RuntimeWarning)
+            assert_raises(RuntimeWarning, ExpandedNormal, [0, 1, 101])
 
 
 ## stolen verbatim from scipy/stats/tests/test_continuous_extra.py

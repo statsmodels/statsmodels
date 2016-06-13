@@ -11,7 +11,7 @@ from numpy import genfromtxt#, concatenate
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
 import os
-
+import warnings
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -266,43 +266,51 @@ class TestKPSS(SetupKPSS):
     """
 
     def test_fail_nonvector_input(self):
-        kpss(self.x)  # should be fine
+        with warnings.catch_warnings(record=True) as w:
+            kpss(self.x)  # should be fine
 
         x = np.random.rand(20, 2)
         assert_raises(ValueError, kpss, x)
 
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
-        kpss(self.x, 'c')
-        kpss(self.x, 'C')
-        kpss(self.x, 'ct')
-        kpss(self.x, 'CT')
+        with warnings.catch_warnings(record=True) as w:
+            kpss(self.x, 'c')
+            kpss(self.x, 'C')
+            kpss(self.x, 'ct')
+            kpss(self.x, 'CT')
 
         assert_raises(ValueError, kpss, self.x, "unclear hypothesis")
 
     def test_teststat(self):
-        kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
+        with warnings.catch_warnings(record=True) as w:
+            kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
-        kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
+        with warnings.catch_warnings(record=True) as w:
+            kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
-        kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
+        with warnings.catch_warnings(record=True) as w:
+            kpss_stat, pval, lags, crits = kpss(self.x, 'c', 3)
         assert_equal(pval, 0.01)
 
-        kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
+        with warnings.catch_warnings(record=True) as w:
+            kpss_stat, pval, lags, crits = kpss(self.x, 'ct', 3)
         assert_equal(pval, 0.01)
 
     def test_store(self):
-        kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
+        with warnings.catch_warnings(record=True) as w:
+            kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
         assert_equal(store.lags, 3)
 
     def test_lags(self):
-        kpss_stat, pval, lags, crits = kpss(self.x, 'c')
+        with warnings.catch_warnings(record=True) as w:
+            kpss_stat, pval, lags, crits = kpss(self.x, 'c')
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
         # assert_warns(UserWarning, kpss, self.x)
 

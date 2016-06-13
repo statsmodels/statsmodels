@@ -21,10 +21,10 @@ from .tools import (
 )
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
-
+from statsmodels.tools.sm_exceptions import (EstimationWarning,
+    ValueWarning)
 
 class VARMAX(MLEModel):
     r"""
@@ -149,7 +149,8 @@ class VARMAX(MLEModel):
         # Warn for VARMA model
         if self.k_ar > 0 and self.k_ma > 0:
             warn('Estimation of VARMA(p,q) models is not generically robust,'
-                 ' due especially to identification issues.')
+                 ' due especially to identification issues.',
+                 EstimationWarning)
 
         # Exogenous data
         self.k_exog = 0
@@ -815,7 +816,7 @@ class VARMAXResults(MLEResults):
                         kwargs[name] = mat[:, :, -_out_of_sample:]
         elif self.model.k_exog == 0 and exog is not None:
             warn('Exogenous array provided to predict, but additional data not'
-                 ' required. `exog` argument ignored.')
+                 ' required. `exog` argument ignored.', ValueWarning)
 
         return super(VARMAXResults, self).predict(
             start=start, end=end, exog=exog, dynamic=dynamic, **kwargs

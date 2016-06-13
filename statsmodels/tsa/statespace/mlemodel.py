@@ -21,8 +21,8 @@ from statsmodels.tools.numdiff import (
 )
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
-from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import pinv_extended, Bunch
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 import warnings
@@ -1234,7 +1234,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         warnings.warn('Calculation of the Hessian using finite differences'
                       ' is usually subject to substantial approximation'
-                      ' errors.')
+                      ' errors.', PrecisionWarning)
 
         if not approx_centered:
             epsilon = _get_epsilon(params, 3, None, len(params))

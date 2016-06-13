@@ -5,13 +5,15 @@ Created on Fri Mar 01 14:56:56 2013
 
 Author: Josef Perktold
 """
+import warnings
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
 
 from statsmodels.stats.proportion import proportion_confint
 import statsmodels.stats.proportion as smprop
-import warnings
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+
 
 class Holder(object):
     pass
@@ -315,7 +317,7 @@ def test_power_ztost_prop():
     assert_almost_equal(power, 0.8204, decimal=4) # PASS example
 
     with warnings.catch_warnings():  # python >= 2.6
-        warnings.simplefilter("ignore")
+        warnings.simplefilter("ignore", HypothesisTestWarning)
         power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
                                         p_alt=0.5, alpha=0.05, discrete=False,
                                         dist='binom')[0]

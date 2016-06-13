@@ -93,7 +93,7 @@ from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
-
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 qcrit = '''
   2     3     4     5     6     7     8     9     10
@@ -813,7 +813,7 @@ class MultiComparison(object):
                 # warn and keep only observations with label in group_order
                 import warnings
                 warnings.warn('group_order does not contain all groups:' +
-                              ' dropping observations', UserWarning)
+                              ' dropping observations', ValueWarning)
 
                 mask_keep = self.groupintlab != -999
                 self.groupintlab = self.groupintlab[mask_keep]

@@ -31,6 +31,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 from statsmodels import iolib
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 
 
@@ -559,7 +560,9 @@ class SquareTable(Table):
         try:
             statistic = n_obs * np.dot(d, np.linalg.solve(vmat, d))
         except np.linalg.LinAlgError:
-            warnings.warn("Unable to invert covariance matrix")
+            import warnings
+            warnings.warn("Unable to invert covariance matrix",
+                          SingularMatrixWarning)
             b = _Bunch()
             b.statistic = np.nan
             b.pvalue = np.nan

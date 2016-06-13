@@ -168,7 +168,7 @@ class ExpandedNormal(rv_continuous):
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():
             mesg = 'PDF has zeros at %s ' % r
-            warnings.warn(mesg, UserWarning)
+            warnings.warn(mesg, RuntimeWarning)
 
         kwds.update({'name': name,
                      'momtype': 0})   # use pdf, not ppf in self.moment()
