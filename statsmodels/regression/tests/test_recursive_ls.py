@@ -40,9 +40,45 @@ dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 endog = dta['cpi']
 exog = add_constant(dta['m1'])
 
+
+def test_endog():
+    # Tests for numpy input
+    mod = RecursiveLS(endog.values, exog.values)
+    res = mod.fit()
+
+    # Test the RLS estimates against OLS estimates
+    mod_ols = OLS(endog, exog)
+    res_ols = mod_ols.fit()
+    assert_allclose(res.params, res_ols.params)
+
+    # Tests for 1-dim exog
+    mod = RecursiveLS(endog, dta['m1'].values)
+    res = mod.fit()
+
+    # Test the RLS estimates against OLS estimates
+    mod_ols = OLS(endog, dta['m1'])
+    res_ols = mod_ols.fit()
+    assert_allclose(res.params, res_ols.params)
+
+
+def test_filter():
+    # Basic test for filtering
+    mod = RecursiveLS(endog, exog)
+    res = mod.filter()
+
+    # Test the RLS estimates against OLS estimates
+    mod_ols = OLS(endog, exog)
+    res_ols = mod_ols.fit()
+    assert_allclose(res.params, res_ols.params, atol=1e-5, rtol=1e-4)
+
+
 def test_estimates():
     mod = RecursiveLS(endog, exog)
     res = mod.fit()
+
+    # Test for start_params
+    assert_equal(mod.start_params, 0)
+
 
     # Test the RLS coefficient estimates against those from R (quantreg)
     # Due to initialization issues, we get more agreement as we get
@@ -56,6 +92,69 @@ def test_estimates():
 
     # Test the RLS estimates against OLS estimates
     mod_ols = OLS(endog, exog)
+    res_ols = mod_ols.fit()
+    assert_allclose(res.params, res_ols.params)
+
+
+def test_plots():
+    if not have_matplotlib:
+        raise SkipTest
+
+    exog = add_constant(dta[['m1', 'pop']])
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
+
+    # Basic plot
+    fig = res.plot_recursive_coefficient()
+    plt.close(fig)
+
+    # Specific variable
+    fig = res.plot_recursive_coefficient(variables=['m1'])
+    plt.close(fig)
+
+    # All variables
+    fig = res.plot_recursive_coefficient(variables=[0, 'm1', 'pop'])
+    plt.close(fig)
+
+    # Basic plot
+    fig = res.plot_cusum()
+    plt.close(fig)
+
+    # Other alphas
+    for alpha in [0.01, 0.10]:
+        fig = res.plot_cusum(alpha=alpha)
+        plt.close(fig)
+
+    # Invalid alpha
+    assert_raises(ValueError, res.plot_cusum, alpha=0.123)
+
+    # Basic plot
+    fig = res.plot_cusum_squares()
+    plt.close(fig)
+
+    # Numpy input (no dates)
+    mod = RecursiveLS(endog.values, exog.values)
+    res = mod.fit()
+
+    # Basic plot
+    fig = res.plot_recursive_coefficient()
+    plt.close(fig)
+
+    # Basic plot
+    fig = res.plot_cusum()
+    plt.close(fig)
+
+    # Basic plot
+    fig = res.plot_cusum_squares()
+    plt.close(fig)
+
+
+def test_from_formula():
+    mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+    res = mod.fit()
+
+    # Test the RLS estimates against OLS estimates
+    mod_ols = OLS.from_formula('cpi ~ m1', data=dta)
     res_ols = mod_ols.fit()
     assert_allclose(res.params, res_ols.params)
 
@@ -127,6 +226,10 @@ def test_cusum():
         alpha=0.05, ddof=0, points=np.arange(llb, res.nobs))
     desired_bounds = recursive_olsresiduals(res_ols)[-1]
     assert_allclose(actual_bounds, desired_bounds)
+
+    # Test for invalid calls
+    assert_raises(ValueError, res._cusum_squares_significance_bounds,
+                  alpha=0.123)
 
 
 def test_stata():
