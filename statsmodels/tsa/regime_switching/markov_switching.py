@@ -1997,7 +1997,10 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         """
         (array) The z-statistics for the coefficients.
         """
-        return self.params / self.bse
+        zvalues = self.params / self.bse
+        if not self.model.tvtp:
+            zvalues[self.model.parameters['regime_transition']] = None
+        return zvalues
 
     def predict(self, start=None, end=None, probabilities=None,
                 conditional=False):
