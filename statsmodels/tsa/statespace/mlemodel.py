@@ -1659,6 +1659,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res._rank = 0
             res.cov_kwds['description'] = (
                 'No parameters estimated.')
+        elif cov_type == 'custom':
+            res.cov_type = kwargs['custom_cov_type']
+            res.cov_params_default = kwargs['custom_cov_params']
+            res.cov_kwds['description'] = kwargs['custom_description']
+            res._rank = np.linalg.matrix_rank(res.cov_params_default)
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
