@@ -54,8 +54,8 @@ class TestBDSSequence(CheckBDS):
     """
     def __init__(self):
         self.results = results[results[0] == 1]
-        self.bds_stats = np.array(self.results[2][1:], ndmin=2)
-        self.pvalues = np.array(self.results[3][1:], ndmin=2)
+        self.bds_stats = np.array(self.results[2][1:])
+        self.pvalues = np.array(self.results[3][1:])
 
         self.data = data[0][data[0].notnull()]
         self.res = bds(self.data, 5)
@@ -67,8 +67,8 @@ class TestBDSNormal(CheckBDS):
     """
     def __init__(self):
         self.results = results[results[0] == 2]
-        self.bds_stats = np.array(self.results[2][1:], ndmin=2)
-        self.pvalues = np.array(self.results[3][1:], ndmin=2)
+        self.bds_stats = np.array(self.results[2][1:])
+        self.pvalues = np.array(self.results[3][1:])
 
         self.data = data[1][data[1].notnull()]
         self.res = bds(self.data, 5)
@@ -80,8 +80,8 @@ class TestBDSCombined(CheckBDS):
     """
     def __init__(self):
         self.results = results[results[0] == 3]
-        self.bds_stats = np.array(self.results[2][1:], ndmin=2)
-        self.pvalues = np.array(self.results[3][1:], ndmin=2)
+        self.bds_stats = np.array(self.results[2][1:])
+        self.pvalues = np.array(self.results[3][1:])
 
         self.data = data[2][data[2].notnull()]
         self.res = bds(self.data, 5)
@@ -97,8 +97,8 @@ class TestBDSGDPC1(CheckBDS):
     """
     def __init__(self):
         self.results = results[results[0] == 4]
-        self.bds_stats = np.array(self.results[2][1:], ndmin=2)
-        self.pvalues = np.array(self.results[3][1:], ndmin=2)
+        self.bds_stats = np.array(self.results[2][1:])
+        self.pvalues = np.array(self.results[3][1:])
 
         self.data = data[3][data[3].notnull()]
         self.res = bds(self.data, 5)
