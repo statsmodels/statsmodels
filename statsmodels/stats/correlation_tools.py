@@ -616,6 +616,12 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     thresholded correlation matrix with a PSD matrix as follows, where
     `corr` is the input correlation matrix.
 
+    >>> import numpy as np
+    >>> from statsmodels.stats.correlation_tools import corr_nearest_factor
+    >>> np.random.seed(1234)
+    >>> b = 1.5 - np.random.rand(10, 1)
+    >>> x = np.random.randn(100,1).dot(b.T) + np.random.randn(100,10)
+    >>> corr = np.corrcoef(x.T)
     >>> corr = corr * (np.abs(corr) >= 0.3)
     >>> rslt = corr_nearest_factor(corr, 3)
     """
@@ -728,6 +734,11 @@ def cov_nearest_factor_homog(cov, rank):
     is not positive semidefinite.  We can approximate a hard
     thresholded covariance matrix with a PSD matrix as follows:
 
+    >>> import numpy as np
+    >>> np.random.seed(1234)
+    >>> b = 1.5 - np.random.rand(10, 1)
+    >>> x = np.random.randn(100,1).dot(b.T) + np.random.randn(100,10)
+    >>> cov = np.cov(x)
     >>> cov = cov * (np.abs(cov) >= 0.3)
     >>> rslt = cov_nearest_factor_homog(cov, 3)
     """
@@ -805,7 +816,11 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     and stored in sparse form, with all entries smaller than 0.3
     treated as 0.
 
-    >>> cmat = corr_thresholded(X, 0.3)
+    >>> import numpy as np
+    >>> np.random.seed(1234)
+    >>> b = 1.5 - np.random.rand(10, 1)
+    >>> x = np.random.randn(100,1).dot(b.T) + np.random.randn(100,10)
+    >>> cmat = corr_thresholded(x, 0.3)
     """
 
     nrow, ncol = data.shape

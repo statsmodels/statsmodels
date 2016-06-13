@@ -480,6 +480,9 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     --------
     Basic use (the null Z-scores are taken to be standard normal):
 
+    >>> from statsmodels.stats.multitest import local_fdr
+    >>> import numpy as np
+    >>> zscores = np.random.randn(30)
     >>> fdr = local_fdr(zscores)
 
     Use a Gaussian null distribution estimated from the data:

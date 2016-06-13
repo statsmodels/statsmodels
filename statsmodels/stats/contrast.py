@@ -215,16 +215,14 @@ class Contrast(object):
 
     Examples
     --------
-    >>> import numpy.random as R
     >>> import statsmodels.api as sm
+    >>> from statsmodels.stats.contrast import Contrast
     >>> import numpy as np
-    >>> R.seed(54321)
-    >>> X = R.standard_normal((40,10))
-
-    Get a contrast
-
+    >>> np.random.seed(54321)
+    >>> X = np.random.standard_normal((40,10))
+    # Get a contrast
     >>> new_term = np.column_stack((X[:,0], X[:,2]))
-    >>> c = sm.contrast.Contrast(new_term, X)
+    >>> c = Contrast(new_term, X)
     >>> test = [[1] + [0]*9, [0]*2 + [1] + [0]*7]
     >>> np.allclose(c.contrast_matrix, test)
     True
@@ -233,19 +231,19 @@ class Contrast(object):
 
     >>> P = np.dot(X, np.linalg.pinv(X))
     >>> resid = np.identity(40) - P
-    >>> noise = np.dot(resid,R.standard_normal((40,5)))
+    >>> noise = np.dot(resid,np.random.standard_normal((40,5)))
     >>> new_term2 = np.column_stack((noise,X[:,2]))
     >>> c2 = Contrast(new_term2, X)
     >>> print(c2.contrast_matrix)
     [ -1.26424750e-16   8.59467391e-17   1.56384718e-01  -2.60875560e-17
-  -7.77260726e-17  -8.41929574e-18  -7.36359622e-17  -1.39760860e-16
-   1.82976904e-16  -3.75277947e-18]
+    -7.77260726e-17  -8.41929574e-18  -7.36359622e-17  -1.39760860e-16
+    1.82976904e-16  -3.75277947e-18]
 
     Get another contrast
 
     >>> zero = np.zeros((40,))
     >>> new_term3 = np.column_stack((zero,X[:,2]))
-    >>> c3 = sm.contrast.Contrast(new_term3, X)
+    >>> c3 = Contrast(new_term3, X)
     >>> test2 = [0]*2 + [1] + [0]*7
     >>> np.allclose(c3.contrast_matrix, test2)
     True

@@ -69,9 +69,11 @@ class Mediation(object):
     --------
     A basic mediation analysis using formulas:
 
-    >>> probit = sm.families.links.probit
+    >>> import statsmodels.api as sm
+    >>> import statsmodels.genmod.families.links as links
+    >>> probit = links.probit
     >>> outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat + age + educ + gender + income",
-                                        data, family=sm.families.Binomial(link=probit))
+    ...                                     data, family=sm.families.Binomial(link=probit))
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
     >>> med = Mediation(outcome_model, mediator_model, "treat", "emo").fit()
     >>> med.summary()
@@ -81,17 +83,18 @@ class Mediation(object):
     interactions involving the treatment or mediator variables this
     approach will not work, you must use formulas.
 
+    >>> import patsy
     >>> outcome = np.asarray(data["cong_mesg"])
     >>> outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
-                                  return_type='dataframe')
+    ...                              return_type='dataframe')
     >>> probit = sm.families.links.probit
     >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit))
     >>> mediator = np.asarray(data["emo"])
     >>> mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
-                                 return_type='dataframe')
+    ...                               return_type='dataframe')
     >>> mediator_model = sm.OLS(mediator, mediator_exog)
     >>> tx_pos = [outcome_exog.columns.tolist().index("treat"),
-    >>>           mediator_exog.columns.tolist().index("treat")]
+    ...           mediator_exog.columns.tolist().index("treat")]
     >>> med_pos = outcome_exog.columns.tolist().index("emo")
     >>> med = Mediation(outcome_model, mediator_model, tx_pos, med_pos).fit()
     >>> med.summary()
@@ -101,11 +104,11 @@ class Mediation(object):
 
     >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
     >>> outcome_model = sm.GLM.from_formula(fml, data,
-    >>>                                     family=sm.families.Binomial())
+    ...                                      family=sm.families.Binomial())
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)
     >>> moderators = {"age" : 20}
     >>> med = Mediation(outcome_model, mediator_model, "treat", "emo",
-                        moderators=moderators).fit()
+    ...                 moderators=moderators).fit()
 
     References
     ----------
