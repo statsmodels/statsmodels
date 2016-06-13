@@ -685,20 +685,24 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return probabilities
 
-    def _regime_transition_matrix_tvtp(self, params):
+    def _regime_transition_matrix_tvtp(self, params, exog_tvtp=None):
+        if exog_tvtp is None:
+            exog_tvtp = self.exog_tvtp
+        nobs = len(exog_tvtp)
+
         regime_transition_matrix = np.zeros(
-            (self.k_regimes, self.k_regimes, len(self.exog_tvtp)),
+            (self.k_regimes, self.k_regimes, nobs),
             dtype=np.promote_types(np.float64, params.dtype))
 
         # Compute the predicted values from the regression
         for i in range(self.k_regimes):
             coeffs = params[self.parameters[i, 'regime_transition']]
             regime_transition_matrix[:-1, i, :] = np.dot(
-                self.exog_tvtp,
+                exog_tvtp,
                 np.reshape(coeffs, (self.k_regimes-1, self.k_tvtp)).T).T
 
         # Perform the logistic transformation
-        tmp = np.c_[np.zeros((len(self.exog_tvtp), self.k_regimes, 1)),
+        tmp = np.c_[np.zeros((nobs, self.k_regimes, 1)),
                     regime_transition_matrix[:-1, :, :].T].T
         regime_transition_matrix[:-1, :, :] = np.exp(
             regime_transition_matrix[:-1, :, :] - logsumexp(tmp, axis=0))
@@ -709,7 +713,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return regime_transition_matrix
 
-    def regime_transition_matrix(self, params):
+    def regime_transition_matrix(self, params, exog_tvtp=None):
         """
         Construct the left-stochastic transition matrix
 
@@ -740,7 +744,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 1 - np.sum(regime_transition_matrix[:-1, :, 0], axis=0))
         else:
             regime_transition_matrix = (
-                self._regime_transition_matrix_tvtp(params))
+                self._regime_transition_matrix_tvtp(params, exog_tvtp))
 
         return regime_transition_matrix
 
