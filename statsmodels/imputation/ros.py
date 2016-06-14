@@ -11,7 +11,7 @@ Company: Geosyntec Consultants (Portland, OR)
 2016-06-14
 
 """
-
+from __future__ import division
 import warnings
 
 import numpy
