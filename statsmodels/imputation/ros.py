@@ -8,9 +8,10 @@ values of a dataset.
 
 Author: Paul M. Hobson
 Company: Geosyntec Consultants (Portland, OR)
-2016-06-14
+Date: 2016-06-14
 
 """
+
 from __future__ import division
 import warnings
 
@@ -21,7 +22,9 @@ import pandas
 
 def _ros_sort(df, result, censorship, warn=False):
     """
-    This function prepares a dataframe for ROS. It sorts ascending with
+    This function prepares a dataframe for ROS.
+
+    It sorts ascending with
     left-censored observations first. Censored results larger than the
     maximum uncensored results are removed from the dataframe.
 
@@ -199,8 +202,11 @@ def cohn_numbers(df, result, censorship):
 
 
 def _detection_limit_index(res, cohn):
-    """ Helper function to create an array of indices for the detection
-    limits (cohn) corresponding to each data point.
+    """
+    Locates the corresponding detection limit for each observation.
+
+    Basically, creates an array of indices for the detection limits
+    (Cohn numbers) corresponding to each data point.
 
     Parameters
     ----------
@@ -232,8 +238,10 @@ def _detection_limit_index(res, cohn):
 
 def _ros_group_rank(df, dl_idx, censorship):
     """
-    Ranks each result within the groups defined by the record's
-    detection limit index and censorship.
+    Ranks each result within the data groups.
+
+    In this case, the groups are defined by the record's detection
+    limit index and censorship status.
 
     Parameters
     ----------
@@ -265,18 +273,22 @@ def _ros_group_rank(df, dl_idx, censorship):
 
 def _ros_plot_pos(row, censorship, cohn):
     """
-    Compute the ROS plotting position for a result based on its rank,
-    censorship, detection limit index.
+    ROS-specific plotting positions.
+
+    Computes the plotting position for an observation based on its rank,
+    censorship status, and detection limit index.
 
     Parameters
     ----------
     row : pandas.Series or dict-like
         Full observation (row) from a censored dataset. Requires a
         'rank', 'detection_limit', and `censorship` column.
+
     censorship : str
         Name of the column in the dataframe that indicates that a
         result is left-censored. (i.e., True -> censored,
         False -> uncensored)
+
     cohn : pandas.DataFrame
         Dataframe of Cohn numbers.
 
@@ -323,8 +335,10 @@ def _norm_plot_pos(results):
 
 def plotting_positions(df, censorship, cohn):
     """
-    Compute the ROS plotting positions for results based on their rank,
-    censorship, detection limit index.
+    Compute the plotting positions for the observations.
+
+    The ROS-specific plotting postions are based on the observations'
+    rank, censorship status, and corresponding detection limit.
 
     Parameters
     ----------
@@ -358,8 +372,11 @@ def plotting_positions(df, censorship, cohn):
     return plot_pos
 
 
-def _ros_estimate(df, result, censorship, transform_in, transform_out):
-    """ Computed the estimated censored from the best-fit line of a
+def _impute(df, result, censorship, transform_in, transform_out):
+    """
+    Executes the basic regression on order stat (ROS) proceedure.
+
+    Uses ROS to impute censored from the best-fit line of a
     probability plot of the uncensored values.
 
     Parameters
@@ -413,6 +430,8 @@ def _ros_estimate(df, result, censorship, transform_in, transform_out):
 
 def _do_ros(df, result, censorship, transform_in, transform_out):
     """
+    Dataframe-centric function to impute censored valies with ROS.
+
     Prepares a dataframe for, and then esimates the values of a censored
     dataset using Regression on Order Statistics
 
@@ -455,7 +474,7 @@ def _do_ros(df, result, censorship, transform_in, transform_out):
           .assign(rank=lambda df: _ros_group_rank(df, 'det_limit_index', censorship))
           .assign(plot_pos=lambda df: plotting_positions(df, censorship, cohn))
           .assign(Zprelim=lambda df: stats.norm.ppf(df['plot_pos']))
-          .pipe(_ros_estimate, result, censorship, transform_in, transform_out)
+          .pipe(_impute, result, censorship, transform_in, transform_out)
     )
 
     return modeled
@@ -466,12 +485,12 @@ def impute_ros(result, censorship, df=None, min_uncensored=2,
            transform_in=numpy.log, transform_out=numpy.exp,
            as_array=True):
     """
-    Impute censored dataset using Regression on Order Statistics (ROS)
-    or simple substitution if insufficient uncensored data exists.
+    Impute censored dataset using Regression on Order Statistics (ROS).
 
     Method described in *Nondetects and Data Analysis* by Dennis R.
     Helsel (John Wiley, 2005) to estimate the left-censored (non-detect)
-    values of a dataset.
+    values of a dataset. When there is insufficient non-censorded data,
+    simple substitution is used.
 
     Parameters
     ----------

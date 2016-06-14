@@ -323,7 +323,7 @@ def test_plotting_positions():
     npt.assert_array_almost_equal(results, expected)
 
 
-def test__ros_estimate():
+def test__impute():
     expected = numpy.array([
          3.11279729,   3.60634338,   4.04602788,   4.04602788,
          4.71008116,   6.14010906,   6.97841457,   2.        ,
@@ -335,7 +335,7 @@ def test__ros_estimate():
         16.77      ,  17.81      ,  19.16      ,  19.19      ,
         19.64      ,  20.18      ,  22.97
     ])
-    df = load_advanced_data().pipe(ros._ros_estimate, 'conc', 'censored',
+    df = load_advanced_data().pipe(ros._impute, 'conc', 'censored',
                                    numpy.log, numpy.exp)
     result = df['final'].values
     npt.assert_array_almost_equal(result, expected)
