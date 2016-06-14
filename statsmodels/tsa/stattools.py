@@ -3,7 +3,6 @@ Statistical tools for time series analysis
 """
 from statsmodels.compat.python import (iteritems, range, lrange, string_types, lzip,
                                 zip, map)
-from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
 from numpy.linalg import LinAlgError
@@ -15,8 +14,8 @@ from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa.arima_model import ARMA
-from statsmodels.tools.sm_exceptions import InterpolationWarning
-from statsmodels.base.data import MissingDataError
+from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
+
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
@@ -1089,40 +1088,6 @@ def has_missing(data):
     Returns True if 'data' contains missing entries, otherwise False
     """
     return np.isnan(np.sum(data))
-
-def missing_handler(data, missing):
-    """
-    Pre-processes missing data
-    
-    Parameters
-    ----
-    data : 1d numpy array
-        The data array, possibly containing NaNs
-    missing : str 
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs
-        are to be treated. If 'none', no changes are made to the
-        data. If 'drop', the NaN entries are removed. If 'raise', NaNs
-        in the data will give rise to an error of type
-        MissingDataError.
-
-    Returns
-    -------
-    1d numpy array
-
-    """
-    missing = missing.lower()
-    if missing not in ['none', 'drop', 'raise']:
-        raise ValueError("missing option %s not understood" % missing)
-    if missing == 'none':
-        return data
-    contains_missing = np.isnan(np.sum(data))
-    if not contains_missing: 
-        return data
-    if missing == 'raise':
-        raise MissingDataError("NaNs were encountered in the data")
-    elif missing == 'drop':
-        return data[~np.isnan(data)]
-
 
 
 def kpss(x, regression='c', lags=None, store=False):

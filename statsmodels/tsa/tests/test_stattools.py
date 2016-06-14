@@ -12,7 +12,7 @@ from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
 import os
 import warnings
-from statsmodels.base.data import MissingDataError
+from statsmodels.tools.sm_exceptions import MissingDataError
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6

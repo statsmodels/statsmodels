@@ -1999,7 +1999,7 @@ def test_arima_dates_startatend():
 
 
 def test_arma_missing():
-    from statsmodels.base.data import MissingDataError
+    from statsmodels.tools.sm_exceptions import MissingDataError
     # bug 1343
     y = np.random.random(40)
     y[-1] = np.nan
