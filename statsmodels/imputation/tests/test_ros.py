@@ -362,7 +362,7 @@ def test__do_ros():
 
 class CheckROSMixin(object):
     def test_ros_df(self):
-        result = ros.ROS(self.rescol, self.cencol, df=self.df)
+        result = ros.impute_ros(self.rescol, self.cencol, df=self.df)
         npt.assert_array_almost_equal(
             sorted(result),
             sorted(self.expected_final),
@@ -370,7 +370,7 @@ class CheckROSMixin(object):
         )
 
     def test_ros_arrays(self):
-        result = ros.ROS(self.df[self.rescol], self.df[self.cencol], df=None)
+        result = ros.impute_ros(self.df[self.rescol], self.df[self.cencol], df=None)
         npt.assert_array_almost_equal(
             sorted(result),
             sorted(self.expected_final),
