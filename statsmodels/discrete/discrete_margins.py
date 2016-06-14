@@ -54,7 +54,7 @@ def _isdummy(X):
     >>> X[:,1:3] = np.random.randn(15,2)
     >>> ind = _isdummy(X)
     >>> ind
-    array([ True, False, False,  True,  True], dtype=bool)
+    array([0, 3, 4])
     """
     X = np.asarray(X)
     if X.ndim > 1:
@@ -93,7 +93,7 @@ def _iscount(X):
     >>> X[:,1:3] = np.random.randn(15,2)
     >>> ind = _iscount(X)
     >>> ind
-    array([ True, False, False,  True,  True], dtype=bool)
+    array([0, 3, 4])
     """
     X = np.asarray(X)
     remainder = np.logical_and(np.logical_and(np.all(X % 1. == 0, axis = 0),

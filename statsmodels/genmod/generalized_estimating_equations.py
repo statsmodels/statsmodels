@@ -370,7 +370,7 @@ _gee_example = """
     >>> va = sm.cov_struct.Autoregressive()
     >>> model = sm.GEE(endog, exog, group, family=family, cov_struct=va)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 
     Use formulas to fit a Poisson GLM with independent working
     dependence:
@@ -381,7 +381,7 @@ _gee_example = """
     >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject",
                                  data, cov_struct=ind, family=fam)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 
     Equivalent, using the formula API:
 
@@ -392,7 +392,7 @@ _gee_example = """
     >>> model = smf.gee("y ~ age + trt + base", "subject",
                     data, cov_struct=ind, family=fam)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 """
 
 _gee_ordinal_example = """
@@ -403,7 +403,7 @@ _gee_ordinal_example = """
     >>> gor = sm.cov_struct.GlobalOddsRatio("ordinal")
     >>> model = sm.OrdinalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 
     Using formulas:
 
@@ -411,7 +411,7 @@ _gee_ordinal_example = """
     >>> model = smf.ordinal_gee("y ~ x1 + x2", groups, data,
                                     cov_struct=gor)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 """
 
 _gee_nominal_example = """
@@ -422,7 +422,7 @@ _gee_nominal_example = """
     >>> gor = sm.cov_struct.GlobalOddsRatio("nominal")
     >>> model = sm.NominalGEE(endog, exog, groups, cov_struct=gor)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 
     Using formulas:
 
@@ -430,7 +430,7 @@ _gee_nominal_example = """
     >>> model = sm.NominalGEE.from_formula("y ~ x1 + x2", groups,
                      data, cov_struct=gor)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 
     Using the formula API:
 
@@ -438,7 +438,7 @@ _gee_nominal_example = """
     >>> model = smf.nominal_gee("y ~ x1 + x2", groups, data,
                                 cov_struct=gor)
     >>> result = model.fit()
-    >>> print result.summary()
+    >>> print(result.summary())
 """
 
 
@@ -2025,8 +2025,8 @@ class OrdinalGEEResults(GEEResults):
         'age' is not included below in the map, it is held fixed at
         its mean value.
 
-        >> ev = [{"sex": 1}, {"sex": 0}]
-        >> rslt.distribution_plot(exog_values=ev)
+        >>> ev = [{"sex": 1}, {"sex": 0}]
+        >>> rslt.distribution_plot(exog_values=ev)
         """
 
         from statsmodels.graphics import utils as gutils
