@@ -17,7 +17,7 @@ changes
 2013-02-25 : add chisquare_power, effectsize and "value"
 
 '''
-from statsmodels.compat.python import range, lrange
+from statsmodels.compat.python import range, lrange, string_types
 import numpy as np
 from scipy import stats
 
@@ -117,7 +117,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
-    if np.isfinite(lambd) == True:  # check whether lambd is a number
+    if not isinstance(lambd, string_types):
         a = lambd
     else:
         if   lambd == 'loglikeratio': a = 0

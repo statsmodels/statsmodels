@@ -182,9 +182,10 @@ def proportion_effectsize(prop1, prop2, method='normal'):
 
     Examples
     --------
-    >>> smpr.proportion_effectsize(0.5, 0.4)
+    >>> import statsmodels.api as sm
+    >>> sm.stats.proportion_effectsize(0.5, 0.4)
     0.20135792079033088
-    >>> smpr.proportion_effectsize([0.3, 0.4, 0.5], 0.4)
+    >>> sm.stats.proportion_effectsize([0.3, 0.4, 0.5], 0.4)
     array([-0.21015893,  0.        ,  0.20135792])
 
     '''
