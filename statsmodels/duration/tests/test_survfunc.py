@@ -1,6 +1,7 @@
 import numpy as np
 from statsmodels.duration.survfunc import (
-    SurvfuncRight, survdiff, plot_survfunc)
+    SurvfuncRight, survdiff, plot_survfunc,
+    CumIncidencefuncRight)
 from numpy.testing import assert_allclose
 from numpy.testing import dec
 import pandas as pd
@@ -289,3 +290,38 @@ def test_weights2():
                     np.r_[0.06666667, 0.1210311, 0.14694547,
                           0.19524829, 0.23183377,
                           0.30618115, 0.46770386, 0.84778942])
+
+
+def test_incidence():
+    # Check estimates in R:
+    # ftime = c(1, 1, 2, 4, 4, 4, 6, 6, 7, 8, 9, 9, 9, 1, 2, 2, 4, 4)
+    # fstat = c(1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    # cuminc(ftime, fstat)
+    #
+    # The standard errors agree with Stata, not with R (cmprisk
+    # package), which uses a different SE formula from Aalen (1978)
+
+    ftime = np.r_[1, 1, 2, 4, 4, 4, 6, 6, 7, 8, 9, 9, 9, 1, 2, 2, 4, 4]
+    fstat = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    ci = CumIncidencefuncRight(ftime, fstat)
+
+    irate = [np.array([0.11111111, 0.17037037, 0.17037037, 0.17037037, 0.17037037,
+                       0.17037037, 0.17037037]),
+             np.array([0.        , 0.        , 0.20740741, 0.20740741, 0.20740741,
+                       0.20740741, 0.20740741]),
+             np.array([0.        , 0.        , 0.        , 0.17777778, 0.26666667,
+                       0.26666667, 0.26666667])]
+    assert_allclose(irate[0], ci.irate[0])
+    assert_allclose(irate[1], ci.irate[1])
+    assert_allclose(irate[2], ci.irate[2])
+
+    irate_se = [np.array([0.07407407, 0.08976251, 0.08976251, 0.08976251, 0.08976251,
+                          0.08976251, 0.08976251]),
+                np.array([0.        , 0.        , 0.10610391, 0.10610391, 0.10610391,
+                          0.10610391, 0.10610391]),
+                np.array([0.        , 0.        , 0.        , 0.11196147, 0.12787781,
+                          0.12787781, 0.12787781])]
+    assert_allclose(irate_se[0], ci.irate_se[0])
+    assert_allclose(irate_se[1], ci.irate_se[1])
+    assert_allclose(irate_se[2], ci.irate_se[2])
