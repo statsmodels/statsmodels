@@ -12,7 +12,7 @@ from numpy.testing import assert_equal, assert_almost_equal, assert_
 from statsmodels.tools.eval_measures import (
     maxabs, meanabs, medianabs, medianbias, mse, rmse, stde, vare,
     aic, aic_sigma, aicc, aicc_sigma, bias, bic, bic_sigma,
-    hqic, hqic_sigma, iqr)
+    hqic, hqic_sigma, iqr, nash_sutcliff, kling_gupta)
 
 
 def test_eval_measures():
@@ -67,6 +67,15 @@ def test_eval_measures():
                  np.array([ 31.25,  31.25,  31.25,  31.25,  31.25]))
     assert_equal(vare(x, y, axis=1),
                  np.array([ 2.,  2.,  2.,  2.]))
+
+    assert_equal(nash_sutcliff(x, x),
+                 np.array([1., 1., 1., 1., 1.]))
+    assert_equal(nash_sutcliff(x[:, 0], y[:, 0]), -np.inf)
+    assert_equal(nash_sutcliff(x, y, varient='standard'),
+                 nash_sutcliff(x, y, varient='modified', j=2))
+    assert_equal(kling_gupta(x, x, method='2009'),
+                 kling_gupta(x, x, method='2012'))
+
 
 def test_ic():
     #test information criteria

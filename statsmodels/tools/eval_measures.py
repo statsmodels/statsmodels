@@ -8,6 +8,8 @@ License: BSD-3
 
 """
 import numpy as np
+import scipy
+import scipy.stats
 
 
 def mse(x1, x2, axis=0):
@@ -573,6 +575,159 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     if not islog:
         sigma2 = np.log(sigma2)
     return sigma2 + hqic(0, nobs, df_modelwc) / nobs
+
+
+def nash_sutcliff(mod, obs, axis=0, varient='standard', j=1):
+    """Nash–Sutcliffe model efficiency coefficient (NSE)
+
+    Parameters
+    ----------
+    mod : array_like
+        Model estimates.
+    obs : array_like
+        Observations.
+    axis : int
+       axis along which the summary statistic is calculated
+    varient : str
+        Varient of the Nash-Sutcliffe model to use. Valid options are
+        {'standard', 'modified', 'relative'}. Default is 'standard'. The
+        standard option is equivalent to calculating the `rsquared` value.
+    j : int
+        The exponent to be used in the computation of the modified varient
+        Nash-Sutcliffe effciency. The default value is j=1.
+
+    Returns
+    -------
+    nse : ndarray or float
+       Nash–Sutcliffe model efficiency coefficient along given axis.
+
+    Notes
+    -----
+    If ``mod`` and ``obs`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass, for example
+    numpy matrices will silently produce an incorrect result.
+
+    References
+    ----------
+    Krause, P., Boyle, D. P., and Bäse, F.: Comparison of different efficiency
+    criteria for hydrological model assessment, Adv. Geosci., 5, 89-97, 2005.
+
+    Legates and McCabe, 1999. Evaluating the use of "goodness-of-fit" measures
+    in hydrologic and hydroclimatic model validation. Water Resources Research.
+    v35 i1. 233-241.
+
+    http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient
+    """
+    mod = np.asanyarray(mod)
+    obs = np.asanyarray(obs)
+
+    # Mean values
+    mean_obs = np.mean(obs, axis=axis)
+
+    if varient.lower() in ('standard'):
+        n = ((obs - mod) ** 2).sum(axis=axis)
+        d = ((obs - mean_obs) ** 2).sum(axis=axis)
+    elif varient.lower() == 'modified':
+        if j <= 0:
+            raise ValueError('Invalid value for j, must greater than zero')
+        n = (np.abs(obs - mod) ** j).sum(axis=axis)
+        d = (np.abs(obs - mean_obs) ** j).sum(axis=axis)
+    elif varient.lower() == 'relative':
+        n = (((obs - mod) / obs) ** 2).sum(axis=axis)
+        d = (((obs - mean_obs) / mean_obs) ** 2).sum(axis=axis)
+    else:
+        raise ValueError('Unknown value for varient: %s' % varient)
+
+    return 1 - (n / d)
+
+
+def kling_gupta(mod, obs, axis=0, s=(1., 1., 1.), method='2009'):
+    """Kling-Gupta model efficiency coefficient (NSE)
+
+    Parameters
+    ----------
+    mod : array_like
+        Model estimates.
+    obs : array_like
+        Observations.
+    axis : int
+        axis along which the summary statistic is calculated
+    s : tuple of 3 ints
+        Scaling factors.
+    method : str
+
+
+    Returns
+    -------
+    kge : ndarray or float
+       Kling-Gupta model efficiency coefficient along given axis.
+
+    Notes
+    -----
+    If ``mod`` and ``obs`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass, for example
+    numpy matrices will silently produce an incorrect result.
+
+    References
+    ----------
+    Hoshin V. Gupta, Harald Kling, Koray K. Yilmaz, Guillermo F. Martinez,
+    Decomposition of the mean squared error and NSE performance criteria:
+    Implications for improving hydrological modelling, Journal of Hydrology,
+    Volume 377, Issues 1-2, 20 October 2009, Pages 80-91,
+    DOI: 10.1016/j.jhydrol.2009.08.003. ISSN 0022-1694.
+
+    Kling, H., M. Fuchs, and M. Paulin (2012), Runoff conditions in the
+    upper Danube basin under an ensemble of climate change scenarios,
+    Journal of Hydrology, Volumes 424-425, 6 March 2012, Pages 264-277,
+    DOI:10.1016/j.jhydrol.2012.01.011.
+    """
+    mod = np.asanyarray(mod)
+    obs = np.asanyarray(obs)
+
+    # Mean values
+    mean_mod = np.mean(mod, axis=axis)
+    mean_obs = np.mean(obs, axis=axis)
+
+    # Standard deviations
+    sigma_mod = np.std(mod, axis=axis)
+    sigma_obs = np.std(obs, axis=axis)
+
+    # Pearson product-moment correlation coefficient
+    r = np.corrcoef(mod, obs)[0, 1]  # needs to support axis!
+
+    # alpha is a measure of relative variability between modeled and observed
+    # values (See Ref1)
+    alpha = sigma_mod / sigma_obs
+
+    # beta is the ratio between the mean of the simulated values to the mean of
+    # observations
+    beta = mean_mod / mean_obs
+
+    # cv_mod is the coefficient of variation of the simulated values
+    # [dimensionless]
+    # cv_obs is the coefficient of variation of the observations
+    # [dimensionless]
+    cv_mod = sigma_mod / mean_mod
+    cv_obs = sigma_obs / mean_obs
+
+    # gamma is the variability ratio, which is used instead of alpha (See Ref2)
+    gamma = cv_mod / cv_obs
+
+    # Variability ratio depending on 'method'
+    if method == '2012':
+        vr = gamma
+    elif method == '2009':
+        vr = alpha
+    else:
+        raise ValueError('Unknown method %s' % method)
+
+    # KGE Computation
+    kge = 1 - np.sqrt((s[0] * (r - 1)) ** 2
+                      + (s[1] * (vr - 1)) ** 2
+                      + (s[2] * (beta - 1)) ** 2)
+    return kge
 
 
 # from var_model.py, VAR only? separates neqs and k_vars per equation
