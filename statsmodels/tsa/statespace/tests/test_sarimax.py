@@ -32,6 +32,8 @@ try:
 except ImportError:
     have_matplotlib = False
 
+IS_WINDOWS = os.name == 'nt'
+
 
 class TestSARIMAXStatsmodels(object):
     """
@@ -1058,7 +1060,8 @@ class SARIMAXCoverageTest(object):
         model2 = sarimax.SARIMAX(endog, exog, **kwargs)
         res1 = self.model.filter(self.true_params)
         res2 = model2.filter(self.true_params)
-        assert_allclose(res2.llf, res1.llf, rtol=1e-13)
+        rtol = 1e-6 if IS_WINDOWS else 1e-13
+        assert_allclose(res2.llf, res1.llf, rtol=rtol)
 
 
 class Test_ar(SARIMAXCoverageTest):
