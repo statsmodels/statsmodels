@@ -716,7 +716,7 @@ class Cell(object):
         elif datatype in fmt:
             if "replacements" in fmt:
                 if isinstance(data, str):
-                    for repl in fmt["replacements"]:
+                    for repl in sorted(fmt["replacements"]):
                         data = data.replace(repl, fmt["replacements"][repl])
 
             dfmt = fmt.get(datatype)
@@ -878,7 +878,8 @@ default_latex_fmt = dict(
     stub=r'\textbf{%s}',
     empty='',
     missing='--',
-    replacements={"%" : "\%", ">" : "$>$", "|" : "$|$"}
+    #replacements will be processed in lexicographical order
+    replacements={"#" : "\#", "$" : "\$", "%" : "\%", "&" : "\&", ">" : "$>$", "_" : "\_", "|" : "$|$"} 
 )
 
 default_fmts = dict(
