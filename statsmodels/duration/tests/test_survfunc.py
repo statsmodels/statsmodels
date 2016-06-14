@@ -306,22 +306,29 @@ def test_incidence():
 
     ci = CumIncidencefuncRight(ftime, fstat)
 
-    irate = [np.array([0.11111111, 0.17037037, 0.17037037, 0.17037037, 0.17037037,
-                       0.17037037, 0.17037037]),
-             np.array([0.        , 0.        , 0.20740741, 0.20740741, 0.20740741,
-                       0.20740741, 0.20740741]),
-             np.array([0.        , 0.        , 0.        , 0.17777778, 0.26666667,
-                       0.26666667, 0.26666667])]
+    irate = [np.array([0.11111111, 0.17037037, 0.17037037, 0.17037037,
+                       0.17037037, 0.17037037, 0.17037037]),
+             np.array([0., 0., 0.20740741, 0.20740741,
+                       0.20740741, 0.20740741, 0.20740741]),
+             np.array([0., 0., 0., 0.17777778,
+                       0.26666667, 0.26666667, 0.26666667])]
     assert_allclose(irate[0], ci.irate[0])
     assert_allclose(irate[1], ci.irate[1])
     assert_allclose(irate[2], ci.irate[2])
 
-    irate_se = [np.array([0.07407407, 0.08976251, 0.08976251, 0.08976251, 0.08976251,
-                          0.08976251, 0.08976251]),
-                np.array([0.        , 0.        , 0.10610391, 0.10610391, 0.10610391,
+    irate_se = [np.array([0.07407407, 0.08976251, 0.08976251, 0.08976251,
+                          0.08976251, 0.08976251, 0.08976251]),
+                np.array([0., 0., 0.10610391, 0.10610391, 0.10610391,
                           0.10610391, 0.10610391]),
-                np.array([0.        , 0.        , 0.        , 0.11196147, 0.12787781,
+                np.array([0., 0., 0., 0.11196147, 0.12787781,
                           0.12787781, 0.12787781])]
     assert_allclose(irate_se[0], ci.irate_se[0])
     assert_allclose(irate_se[1], ci.irate_se[1])
     assert_allclose(irate_se[2], ci.irate_se[2])
+
+    # Simple check for frequency weights
+    weights = np.ones(len(ftime))
+    ciw = CumIncidencefuncRight(ftime, fstat, freq_weights=weights)
+    assert_allclose(ci.irate[0], ciw.irate[0])
+    assert_allclose(ci.irate[1], ciw.irate[1])
+    assert_allclose(ci.irate[2], ciw.irate[2])

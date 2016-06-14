@@ -4,7 +4,8 @@ from scipy.stats.distributions import chi2, norm
 from statsmodels.graphics import utils
 
 
-def _calc_survfunc_right(time, status, weights=None, compress=True, retall=True):
+def _calc_survfunc_right(time, status, weights=None, compress=True,
+                         retall=True):
     """
     Calculate the survival function and its standard error for a single
     group.
@@ -65,7 +66,8 @@ def _calc_incidence_right(time, status, weights=None):
 
     # Calculate the all-cause survival function.
     status0 = (status >= 1).astype(np.float64)
-    sp, utime, rtime, n, d = _calc_survfunc_right(time, status0, weights, compress=False, retall=False)
+    sp, utime, rtime, n, d = _calc_survfunc_right(time, status0, weights,
+                                                  compress=False, retall=False)
 
     ngrp = status.max()
 
@@ -76,7 +78,8 @@ def _calc_incidence_right(time, status, weights=None):
         if weights is None:
             d0 = np.bincount(rtime, weights=status0, minlength=len(utime))
         else:
-            d0 = np.bincount(rtime, weights=status*weights0, minlength=min(utime))
+            d0 = np.bincount(rtime, weights=status0*weights,
+                             minlength=min(utime))
         d.append(d0)
 
     # The cumulative incidence function probabilities.
@@ -91,11 +94,12 @@ def _calc_incidence_right(time, status, weights=None):
     #
     # http://www.stata-journal.com/sjpdf.html?articlenum=st0059
     #
-    # Dinse, G. E. and M. G. Larson. 1986. A note on semi-Markov models for partially
-    # censored data. Biometrika 73: 379–386.
+    # Dinse, G. E. and M. G. Larson. 1986. A note on semi-Markov models
+    # for partially censored data. Biometrika 73: 379–386.
     #
-    # Marubini, E. and M. G. Valsecchi. 1995. Analysing Survival Data from Clinical Trials
-    # and Observational Studies. Chichester, UK: John Wiley & Sons.
+    # Marubini, E. and M. G. Valsecchi. 1995. Analysing Survival Data
+    # from Clinical Trials and Observational Studies. Chichester, UK:
+    # John Wiley & Sons.
     if weights is not None:
         return ip, None, utime
     se = []
