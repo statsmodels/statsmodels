@@ -119,6 +119,140 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         raise NotImplementedError('method "%s" is not available' % method)
     return ci_low, ci_upp
 
+
+class Holder(object):
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
+
+def _delta_blaker(count, n, prob, q2d=None):
+    """
+    delta function of Lecoutre and Poitevineau 2016 for upper confidence limit
+
+    """
+    x, n, p = count, n, prob
+    p2 = stats.binom.cdf(x, n, p)
+    q2 = stats.binom.isf(p2, n, p)
+
+    if q2d is None:
+        q2d = q2
+
+    pd2 = np.asarray(p2).copy()
+    delta2a = pd2 - stats.binom.sf(q2d, n, p)
+    delta2b = pd2 - stats.binom.sf(q2d - 1, n, p)
+
+    p2 += stats.binom.sf(q2, n, p)
+
+    return q2, delta2a, delta2b
+
+
+def accept_binom(count, n, prob):
+    """acceptance function of Blaker for a binomial proportion
+
+    """
+
+    x, n, p = count, n, prob
+
+    p1 = stats.binom.sf(x - 1, n, p)
+    q1 = stats.binom.ppf(p1, n, p)
+    pd1 = np.asarray(p1).copy()
+    p1 +- stats.binom.cdf(q1, n, p)
+    delta1 = pd1 - stats.binom.cdf(q1, n, p)
+
+    p2 = stats.binom.cdf(x, n, p)
+    q2 = stats.binom.isf(p2, n, p)
+    pd2 = np.asarray(p2).copy()
+    p2 += stats.binom.sf(q2, n, p)
+    delta2 = pd2 - stats.binom.sf(q2, n, p)
+
+    return np.minimum(p1, p2), p1, p2, delta1, delta2
+
+
+def proportion_confint_baker(count, n, alpha=0.05, check=False):
+    """Find confidence interval for binomial proportion using Blaker's exact
+
+    The exact confidence interval of Blaker is a subset of the exact central
+    confidence interval of Clopper-Pearson
+
+    This is only for two sided alternative, one-sided is Clopper-Pearson
+
+    Parameters
+    ----------
+    count : int or array
+        number of successes
+    nobs : int
+        total number of trials
+    alpha : float in (0, 1)
+        significance level, default 0.05
+    check : bool
+        temporary option, checks the
+
+    Returns
+    -------
+    ci_low, ci_upp : float
+        lower and upper confidence level with coverage at least 1-alpha.
+    res : results instance
+        this holds additional results as attributes
+
+    Notes
+    -----
+
+    Currently there are some duplicate calculations in here to compare two
+    numerical procedures to find the confidence interval. The rootfinding
+    method for Blaker's method might not find the wider confidence interval if
+    the acceptance function has multiple crossings with alpha in the relevant
+    range.
+    The second method is an adaptation of Lecoutre and Poitevineau 2016
+    which should have a unique zero of the criterion function, but is currently
+    only implemented for the upper limit of the confidence interval, and might
+    not have the correct corner solutions yet.
+    This duplication will be removed after the function is verified for more
+    cases.
+
+    """
+    low_exact, upp_exact = proportion_confint(count, n, alpha=alpha, method='beta')
+    low_exact2, upp_exact2 = proportion_confint(count, n, alpha=2 * alpha,
+                                                method='beta')
+
+    # find zero for Blake's acceptance function, may not be most extreme zero
+    func = lambda p_: accept_binom(count, n, p_)[0] - alpha
+    eps = 1e-10
+    low, upp = 0, 1
+    if count > 0:
+        low = optimize.brentq(func, low_exact - eps, low_exact2 + eps)
+    if count < n:
+        upp = optimize.brentq(func, upp_exact2 - eps, upp_exact + eps)
+
+    #Todo: add check that solution satisfies func >= 0, and smaller outside
+
+    # check upper with Lecoutre, Poitevineau 2016
+    delta = accept_binom(count, n, upp)[-1]
+
+    q2d = _delta_blaker(count, n, upp_exact, q2d=None)[0]
+
+
+    # find the zero of the delta function, using blaker as lower bound
+    uppd = np.nan
+    if count < n and check:
+        func_d = lambda p_: _delta_blaker(count, n, p_, q2d=q2d)[-1]
+        uppd = optimize.brentq(func_d, upp - eps, upp_exact + eps)
+
+    # find the zero of the delta function, using exact as bounds
+    upp_delta = np.nan
+    if count < n:
+        func_d = lambda p_: _delta_blaker(count, n, p_, q2d=q2d)[-1]
+        upp_delta = optimize.brentq(func_d, upp_exact2 - eps, upp_exact + eps)
+
+
+    res = Holder(confint = (low, upp),
+                 confint_exact_centered = (low_exact, upp_exact),
+                 confint_exact_centered2 = (low_exact2, upp_exact2),
+                 delta=delta, upp_delta=upp_delta, uppd=uppd)
+
+    return low, upp, res
+
+
+
 def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
                                   method='normal'):
     '''find sample size to get desired confidence interval length
