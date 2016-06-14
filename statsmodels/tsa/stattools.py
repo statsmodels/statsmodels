@@ -276,6 +276,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
                        "unit root")
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
+        resstore._str = 'Augmented Dickey-Fuller Test Results'
         return adfstat, pvalue, critvalues, resstore
     else:
         if not autolag:
