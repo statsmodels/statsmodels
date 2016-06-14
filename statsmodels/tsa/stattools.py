@@ -3,17 +3,20 @@ Statistical tools for time series analysis
 """
 from statsmodels.compat.python import (iteritems, range, lrange, string_types, lzip,
                                 zip, map)
+from statsmodels.compat.scipy import _next_regular
+
 import numpy as np
 from numpy.linalg import LinAlgError
 from scipy import stats
+
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant, Bunch
 from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa.arima_model import ARMA
-from statsmodels.compat.scipy import _next_regular
 from statsmodels.tools.sm_exceptions import InterpolationWarning
+from statsmodels.base.data import MissingDataError
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
@@ -286,7 +289,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-def acovf(x, unbiased=False, demean=True, fft=False):
+def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     '''
     Autocovariance for 1D
 
@@ -301,6 +304,8 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     fft : bool
         If True, use FFT convolution.  This method should be preferred
         for long time series.
+    missing : str
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. 
 
     Returns
     -------
@@ -310,6 +315,8 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
         raise ValueError("x must be 1d. Got %d dims." % x.ndim)
+
+    x = missing_handler(x, missing)
     n = len(x)
 
     if demean:
@@ -362,7 +369,8 @@ def q_stat(x, nobs, type="ljungbox"):
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None):
+def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
+        confint=None, missing='none'):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -384,6 +392,8 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None):
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett\'s formula.
+    missing : str, optional
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. 
 
     Returns
     -------
@@ -407,6 +417,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None):
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimtor.
     '''
+    x = missing_handler(x, missing)
     nobs = len(x)
     d = nobs  # changes if unbiased
     if not fft:
@@ -510,7 +521,7 @@ def pacf_ols(x, nlags=40):
     return np.array(pacf)
 
 
-def pacf(x, nlags=40, method='ywunbiased', alpha=None):
+def pacf(x, nlags=40, method='ywunbiased', alpha=None, missing='none'):
     '''Partial autocorrelation estimated
 
     Parameters
@@ -535,6 +546,9 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
 
+    missing : str, optional
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. 
+
     Returns
     -------
     pacf : 1d array
@@ -547,7 +561,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     This solves yule_walker equations or ols for each desired lag
     and contains currently duplicate calculations.
     '''
-
+    x = missing_handler(x, missing)
     if method == 'ols':
         ret = pacf_ols(x, nlags=nlags)
     elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
@@ -1056,6 +1070,35 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
 
     return Bunch(**res)
 
+def missing_handler(data, missing):
+    """
+    Pre-processes missing data
+    
+    Parameters
+    ----
+    data : 1d numpy array
+        The data array, possibly containing NaNs
+    missing : str 
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. If 'none', no changes are made to the data. If 'drop', the NaN entries are removed. If 'raise', NaNs in the data will give rise to an error of type MissingDataError.
+
+    Returns
+    -------
+    1d numpy array
+
+    """
+    if missing not in ['none', 'drop', 'raise']:
+        raise ValueError("missing option %s not understood" % missing)
+    if missing == 'none':
+        return data
+    contains_missing = np.isnan(np.sum(data))
+    if not contains_missing: 
+        return data
+    if missing == 'raise':
+        raise MissingDataError("NaNs were encountered in the data")
+    elif missing == 'drop':
+        return data[~np.isnan(data)]
+
+
 
 def kpss(x, regression='c', lags=None, store=False):
     """
@@ -1209,3 +1252,19 @@ if __name__ == "__main__":
 #    pacfyw = pacf_yw(x, nlags=40, method="mle")
     y = np.random.normal(size=(100, 2))
     grangercausalitytests(y, 2)
+
+# tests for missing data
+#    xn = data['realgdp']
+#    xn[0] = np.nan
+#    print xn
+#    print missing_handler(xn, 'drop')
+#    print missing_handler(xn, 'raise')
+#    print acovf(xn)
+#    print acovf(xn, missing='drop')
+#    print acovf(xn, missing='raise')
+#    print acf(xn)
+#    print acf(xn, missing='drop')
+#    print acf(xn, missing='raise')
+#    print pacf(xn)
+#    print pacf(xn, missing='drop')
+#    print pacf(xn, missing='raise')
