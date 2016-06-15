@@ -210,10 +210,18 @@ class TimeSeriesModel(base.LikelihoodModel):
                 end = nobs
 
         elif freq is None: # should have a date with freq = None
+            print('#'*80)
+            print(freq)
+            print(type(freq))
+            print('#'*80)
             raise ValueError("When freq is None, you must give an integer "
                              "index for end.")
 
         else:
+            print('#'*80)
+            print(freq)
+            print(type(freq))
+            print('#'*80)
             raise ValueError("no rule for interpreting end")
 
         return end, out_of_sample
