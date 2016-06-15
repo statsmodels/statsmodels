@@ -79,7 +79,7 @@ def _calc_incidence_right(time, status, weights=None):
             d0 = np.bincount(rtime, weights=status0, minlength=len(utime))
         else:
             d0 = np.bincount(rtime, weights=status0*weights,
-                             minlength=min(utime))
+                             minlength=len(utime))
         d.append(d0)
 
     # The cumulative incidence function probabilities.
@@ -90,16 +90,6 @@ def _calc_incidence_right(time, status, weights=None):
         ip.append(ip0)
 
     # The standard error of the cumulative incidence function.
-    # xReferences:
-    #
-    # http://www.stata-journal.com/sjpdf.html?articlenum=st0059
-    #
-    # Dinse, G. E. and M. G. Larson. 1986. A note on semi-Markov models
-    # for partially censored data. Biometrika 73: 379–386.
-    #
-    # Marubini, E. and M. G. Valsecchi. 1995. Analysing Survival Data
-    # from Clinical Trials and Observational Studies. Chichester, UK:
-    # John Wiley & Sons.
     if weights is not None:
         return ip, None, utime
     se = []
@@ -160,11 +150,23 @@ class CumIncidencefuncRight(object):
     ----------
     times : array-like
         The distinct times at which the incidence rates are estimated
-    irate : list of arrays
-        irate[k] contains the estimated cumulative incidence rates
-        for outcome k
-    irate_se : list of arrays
-        The standard errors for the values in `irate`.
+    cinc : list of arrays
+        cinc[k-1] contains the estimated cumulative incidence rates
+        for outcome k=1,2,...
+    cinc_se : list of arrays
+        The standard errors for the values in `cinc`.
+
+    References
+    ----------
+    The Stata stcompet procedure:
+        http://www.stata-journal.com/sjpdf.html?articlenum=st0059
+
+    Dinse, G. E. and M. G. Larson. 1986. A note on semi-Markov models
+    for partially censored data. Biometrika 73: 379-386.
+
+    Marubini, E. and M. G. Valsecchi. 1995. Analysing Survival Data
+    from Clinical Trials and Observational Studies. Chichester, UK:
+    John Wiley & Sons.
     """
 
     def __init__(self, time, status, title=None, freq_weights=None):
@@ -175,8 +177,8 @@ class CumIncidencefuncRight(object):
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
         x = _calc_incidence_right(time, status, freq_weights)
-        self.irate = x[0]
-        self.irate_se = x[1]
+        self.cinc = x[0]
+        self.cinc_se = x[1]
         self.times = x[2]
         self.title = "" if not title else title
 
