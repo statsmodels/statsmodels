@@ -312,6 +312,12 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     -------
     acovf : array
         autocovariance function
+
+    References
+    -----------
+    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
+           and amplitude modulation. Sankhya: The Indian Journal of
+           Statistics, Series A, pp.383-392.
     '''
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
@@ -452,6 +458,13 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
 
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimtor.
+
+    References
+    ----------
+    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
+       and amplitude modulation. Sankhya: The Indian Journal of
+       Statistics, Series A, pp.383-392.
+
     """
     nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
