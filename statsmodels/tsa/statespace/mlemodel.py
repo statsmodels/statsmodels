@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.python import long
 
 import numpy as np
 import pandas as pd
@@ -2308,7 +2309,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecast : array
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        if isinstance(steps, int):
+        if isinstance(steps, (int, long)):
             end = self.nobs+steps-1
         else:
             end = steps
@@ -2373,7 +2374,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecast : array
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        if isinstance(steps, int):
+        if isinstance(steps, (int, long)):
             end = self.nobs+steps-1
         else:
             end = steps

@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.python import long
 
 from warnings import warn
 
@@ -309,18 +310,18 @@ class SARIMAX(MLEModel):
         # Assume that they are given from lowest degree to highest, that all
         # degrees except for the constant are included, and that they are
         # boolean vectors (0 for not included, 1 for included).
-        if isinstance(order[0], int):
+        if isinstance(order[0], (int, long)):
             self.polynomial_ar = np.r_[1., np.ones(order[0])]
         else:
             self.polynomial_ar = np.r_[1., order[0]]
-        if isinstance(order[2], int):
+        if isinstance(order[2], (int, long)):
             self.polynomial_ma = np.r_[1., np.ones(order[2])]
         else:
             self.polynomial_ma = np.r_[1., order[2]]
         # Assume that they are given from lowest degree to highest, that the
         # degrees correspond to (1*s, 2*s, ..., P*s), and that they are
         # boolean vectors (0 for not included, 1 for included).
-        if isinstance(seasonal_order[0], int):
+        if isinstance(seasonal_order[0], (int, long)):
             self.polynomial_seasonal_ar = np.r_[
                 1.,  # constant
                 ([0] * (self.k_seasons - 1) + [1]) * seasonal_order[0]
@@ -333,7 +334,7 @@ class SARIMAX(MLEModel):
                 self.polynomial_seasonal_ar[(i + 1) * self.k_seasons] = (
                     seasonal_order[0][i]
                 )
-        if isinstance(seasonal_order[2], int):
+        if isinstance(seasonal_order[2], (int, long)):
             self.polynomial_seasonal_ma = np.r_[
                 1.,  # constant
                 ([0] * (self.k_seasons - 1) + [1]) * seasonal_order[2]

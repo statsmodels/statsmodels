@@ -2,7 +2,7 @@
 Statistical tools for time series analysis
 """
 from statsmodels.compat.python import (iteritems, range, lrange, string_types,
-                                       lzip, zip)
+                                       lzip, zip, long)
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
@@ -200,7 +200,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         store = True
 
     trenddict = {None: 'nc', 0: 'c', 1: 'ct', 2: 'ctt'}
-    if regression is None or isinstance(regression, int):
+    if regression is None or isinstance(regression, (int, long)):
         regression = trenddict[regression]
     regression = regression.lower()
     if regression not in ['c', 'nc', 'ct', 'ctt']:

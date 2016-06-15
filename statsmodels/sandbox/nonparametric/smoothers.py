@@ -8,6 +8,8 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=E0611
 # pylint: disable-msg=E1101
 from __future__ import print_function
+from statsmodels.compat.python import long
+
 import numpy as np
 from . import kernels
 #import numbers
@@ -70,7 +72,7 @@ class KernelSmoother(object):
         xth sample point - so they are closer together where the data
         is denser.
         """
-        if isinstance(x, int):
+        if isinstance(x, (int, long)):
             sorted_x = np.array(self.x)
             sorted_x.sort()
             confx = sorted_x[::x]

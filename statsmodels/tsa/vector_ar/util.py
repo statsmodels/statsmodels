@@ -1,14 +1,12 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compat.python import range, string_types, asbytes
+from statsmodels.compat.python import range, string_types, asbytes, long
 import numpy as np
 import scipy.stats as stats
-import scipy.linalg as L
 import scipy.linalg.decomp as decomp
 
 import statsmodels.tsa.tsatools as tsa
-from scipy.linalg import cholesky
 
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
@@ -208,7 +206,7 @@ def get_index(lst, name):
     try:
         result = lst.index(name)
     except Exception:
-        if not isinstance(name, int):
+        if not isinstance(name, (int, long)):
             raise
         result = name
     return result

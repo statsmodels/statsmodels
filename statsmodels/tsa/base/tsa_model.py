@@ -1,4 +1,4 @@
-from statsmodels.compat.python import lrange
+from statsmodels.compat.python import lrange, long
 import statsmodels.base.model as base
 from statsmodels.base import data
 import statsmodels.base.wrapper as wrap
@@ -178,7 +178,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                         raise err # should never get here
             self._make_predict_dates() # attaches self.data.predict_dates
 
-        elif isinstance(end, int) and dates is not None:
+        elif isinstance(end, (int, long)) and dates is not None:
             try:
                 self.data.predict_end = dates[end]
             except IndexError as err:
@@ -203,7 +203,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
             self._make_predict_dates()
 
-        elif isinstance(end, int):
+        elif isinstance(end, (int, long)):
             nobs = len(self.data.endog) - 1 # is an index
             if end > nobs:
                 out_of_sample = end - nobs
@@ -242,8 +242,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                 from pandas import DateRange
                 dates = DateRange(dtstart, dtend, offset = pandas_freq).values
         # handle
-        elif freq is None and (isinstance(dtstart, int) and
-                               isinstance(dtend, int)):
+        elif freq is None and (isinstance(dtstart, (int, long)) and
+                               isinstance(dtend, (int, long))):
             from pandas import Index
             dates = Index(lrange(dtstart, dtend+1))
         # if freq is None and dtstart and dtend aren't integers, we're
