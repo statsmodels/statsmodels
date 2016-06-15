@@ -157,9 +157,7 @@ class TestACF(CheckCorrGram):
 
 
 class TestACF_FFT(CheckCorrGram):
-    """
-    Test Autocorrelation Function using FFT
-    """
+    # Test Autocorrelation Function using FFT
     def __init__(self):
         self.acf = self.results['acvarfft']
         self.qstat = self.results['Q1']
@@ -173,9 +171,7 @@ class TestACF_FFT(CheckCorrGram):
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
         
 class TestACFMissing(CheckCorrGram):
-    """
-    Test Autocorrelation Function using Missing
-    """
+    # Test Autocorrelation Function using Missing
     def __init__(self):
         self.x = np.concatenate((np.array([np.nan]),self.x))
         self.acf = self.results['acvar'] # drop and conservative

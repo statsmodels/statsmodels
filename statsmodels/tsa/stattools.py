@@ -3,6 +3,7 @@ Statistical tools for time series analysis
 """
 from statsmodels.compat.python import (iteritems, range, lrange, string_types, lzip,
                                 zip, map)
+from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
 from numpy.linalg import LinAlgError
@@ -356,8 +357,9 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
 
     if fft:
         nobs = len(xo)
-        Frf = np.fft.fft(xo, n=nobs * 2)
-        acov = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d[n - 1:]
+        n = _next_regular(2 * nobs + 1)
+        Frf = np.fft.fft(xo, n=n)
+        acov = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d[nobs - 1:]
         acov = acov.real
     else:
         acov = (np.correlate(xo, xo, 'full') / d)[n - 1:]
