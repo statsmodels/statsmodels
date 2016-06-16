@@ -1,8 +1,9 @@
-import statsmodels.api as sm
 import pandas as pd
 import patsy
 import numpy as np
 import warnings
+
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 """
 A predict-like function that constructs means and pointwise or
@@ -166,7 +167,8 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     unmatched = list(unmatched)
     if len(unmatched) > 0:
         warnings.warn("%s in data frame but not in summaries or values."
-                      % ", ".join(["'%s'" % x for x in unmatched]))
+                      % ", ".join(["'%s'" % x for x in unmatched]),
+                      ValueWarning)
 
     # Initialize at zero so each column can be converted to any dtype.
     ix = range(num_points)
@@ -223,7 +225,8 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
     unmatched = list(unmatched)
     if len(unmatched) > 0:
         warnings.warn("%s in model but not in `summaries` or `values`."
-                      % ", ".join(["'%s'" % x for x in unmatched]))
+                      % ", ".join(["'%s'" % x for x in unmatched]),
+                      ValueWarning)
 
     # The values of the 'focus variable' are a sequence of percentiles
     pctls = np.linspace(0, 100, num_points).tolist()

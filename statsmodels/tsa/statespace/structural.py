@@ -17,6 +17,7 @@ from statsmodels.tsa.tsatools import lagmat
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.sm_exceptions import ValueWarning, OutputWarning, SpecificationWarning
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
     unconstrain_stationary_univariate
@@ -338,7 +339,7 @@ class UnobservedComponents(MLEModel):
                 if not getattr(self, attribute) is False:
                     warn("Value of `%s` may be overridden when the trend"
                          " component is specified using a model string."
-                         % attribute)
+                         % attribute, SpecificationWarning)
                     setattr(self, attribute, False)
 
             # Now set the correct specification
@@ -406,7 +407,7 @@ class UnobservedComponents(MLEModel):
         # Check for a model that makes sense
         if trend and not level:
             warn("Trend component specified without level component;"
-                 " deterministic level component added.")
+                 " deterministic level component added.", SpecificationWarning)
             self.level = True
             self.stochastic_level = False
 
@@ -417,7 +418,7 @@ class UnobservedComponents(MLEModel):
                 (self.cycle and self.stochastic_cycle) or
                 self.autoregressive):
             warn("Specified model does not contain a stochastic element;"
-                 " irregular component added.")
+                 " irregular component added.", SpecificationWarning)
             self.irregular = True
 
         if self.seasonal and self.seasonal_period < 2:
@@ -1232,10 +1233,11 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.regression:
             if spec.mle_regression:
+                import warnings
                 warnings.warn('Regression coefficients estimated via maximum'
                               ' likelihood. Estimated coefficients are'
                               ' available in the parameters list, not as part'
-                              ' of the state vector.')
+                              ' of the state vector.', OutputWarning)
             else:
                 offset = int(spec.trend + spec.level +
                              spec.seasonal * (spec.seasonal_period - 1) +
@@ -1516,8 +1518,9 @@ class UnobservedComponentsResults(MLEResults):
                     else:
                         kwargs[name] = mat[:, :, -_out_of_sample:]
         elif self.model.k_exog == 0 and exog is not None:
+            # TODO: UserWarning
             warn('Exogenous array provided to predict, but additional data not'
-                 ' required. `exog` argument ignored.')
+                 ' required. `exog` argument ignored.', ValueWarning)
 
         return super(UnobservedComponentsResults, self).predict(
             start=start, end=end, exog=exog, dynamic=dynamic, **kwargs

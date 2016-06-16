@@ -13,6 +13,7 @@ from .representation import OptionWrapper, Representation, FrozenRepresentation
 from .tools import (
     prefix_kalman_filter_map, validate_vector_shape, validate_matrix_shape
 )
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 # Define constants
 FILTER_CONVENTIONAL = 0x01     # Durbin and Koopman (2012), Chapter 4
@@ -981,7 +982,7 @@ class KalmanFilter(Representation):
                     continue
                 if representation[name].shape[-1] == 1:
                     if name in kwargs:
-                        warn(warning % (name, name))
+                        warn(warning % (name, name), ValueWarning)
                 elif name not in kwargs:
                     raise ValueError(exception % name)
                 else:
@@ -1449,12 +1450,12 @@ class FilterResults(FrozenRepresentation):
                                  ' first observation in the sample.')
             elif dynamic > end:
                 warn('Dynamic prediction specified to begin after the end of'
-                     ' prediction, and so has no effect.')
+                     ' prediction, and so has no effect.', ValueWarning)
                 dynamic = None
             elif dynamic > self.nobs:
                 warn('Dynamic prediction specified to begin during'
                      ' out-of-sample forecasting period, and so has no'
-                     ' effect.')
+                     ' effect.', ValueWarning)
                 dynamic = None
 
             # Get the total size of the desired dynamic forecasting component
@@ -1489,7 +1490,7 @@ class FilterResults(FrozenRepresentation):
                     continue
                 if representation[name].shape[-1] == 1:
                     if name in kwargs:
-                        warn(warning % (name, name))
+                        warn(warning % (name, name), ValueWarning)
                 elif name not in kwargs:
                     raise ValueError(exception % name)
                 else:

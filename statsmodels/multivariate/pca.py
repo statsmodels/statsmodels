@@ -10,7 +10,8 @@ import pandas as pd
 
 from statsmodels.compat.python import range
 from statsmodels.compat.numpy import nanmean
-
+from statsmodels.tools.sm_exceptions import (ValueWarning,
+                                             EstimationWarning)
 
 def _norm(x):
     return np.sqrt(np.sum(x * x))
@@ -234,7 +235,7 @@ class PCA(object):
             warn = 'The requested number of components is more than can be ' \
                    'computed from data. The maximum number of components is ' \
                    'the minimum of the number of observations or variables'
-            warnings.warn(warn)
+            warnings.warn(warn, ValueWarning)
             self._ncomp = min_dim
 
         self._method = method
@@ -359,7 +360,7 @@ class PCA(object):
                    '{original} series, the GLS estimates are based on only ' \
                    '{effective} (effective) ' \
                    'series.'.format(original=nvar, effective=eff_series)
-            warnings.warn(warn)
+            warnings.warn(warn, EstimationWarning)
 
         self.weights = weights
 
@@ -533,7 +534,7 @@ class PCA(object):
 
                 warn = 'Only {num:d} eigenvalues are positive.  The is the ' \
                        'maximum number of components that can be extracted.'
-                warnings.warn(warn.format(num=num_good))
+                warnings.warn(warn.format(num=num_good), EstimationWarning)
 
                 self._ncomp = num_good
                 vals[num_good:] = np.finfo(np.float64).tiny

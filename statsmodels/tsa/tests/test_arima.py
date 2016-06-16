@@ -2233,9 +2233,11 @@ def test_arima_fit_mutliple_calls():
     y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
     mod = ARIMA(y, (1, 0, 2))
     # Make multiple calls to fit
-    mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+    with warnings.catch_warnings(record=True) as w:
+        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
-    mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+    with warnings.catch_warnings(record=True) as w:
+        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
 if __name__ == "__main__":

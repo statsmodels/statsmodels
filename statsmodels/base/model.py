@@ -9,6 +9,7 @@ from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
@@ -689,7 +690,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 # I don't want to raise after we have already fit()
                 import warnings
-                warnings.warn('more exog_names than parameters', UserWarning)
+                warnings.warn('more exog_names than parameters', ValueWarning)
 
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__

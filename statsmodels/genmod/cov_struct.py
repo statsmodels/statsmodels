@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from scipy import linalg as spl
 from collections import defaultdict
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.sm_exceptions import (ConvergenceWarning, OutputWarning,
+                                             NotImplementedWarning)
 import warnings
 
 """
@@ -365,9 +366,9 @@ class Nested(CovStruct):
         super(Nested, self).initialize(model)
 
         if self.model.weights is not None:
-            warnings.warn(
-                "weights not implemented for nested cov_struct, using "
-                "unweighted covariance estimate")
+            warnings.warn("weights not implemented for nested cov_struct, "
+                          "using unweighted covariance estimate",
+                          NotImplementedWarning)
 
         # A bit of processing of the nest data
         id_matrix = np.asarray(self.model.dep_data)
@@ -682,9 +683,9 @@ class Autoregressive(CovStruct):
     def update(self, params):
 
         if self.model.weights is not None:
-            warnings.warn(
-                "weights not implemented for autoregressive cov_struct, "
-                "using unweighted covariance estimate")
+            warnings.warn("weights not implemented for autoregressive "
+                          "cov_struct, using unweighted covariance estimate",
+                          NotImplementedWarning)
 
         endog = self.model.endog_li
         time = self.model.time_li
@@ -912,9 +913,9 @@ class GlobalOddsRatio(CategoricalCovStruct):
         super(GlobalOddsRatio, self).initialize(model)
 
         if self.model.weights is not None:
-            warnings.warn(
-                "weights not implemented for GlobalOddsRatio cov_struct, "
-                "using unweighted covariance estimate")
+            warnings.warn("weights not implemented for GlobalOddsRatio "
+                          "cov_struct, using unweighted covariance estimate",
+                          NotImplementedWarning)
 
         # Need to restrict to between-subject pairs
         cpp = []
@@ -1323,9 +1324,9 @@ class Equivalence(CovStruct):
         super(Equivalence, self).initialize(model)
 
         if self.model.weights is not None:
-            warnings.warn(
-                "weights not implemented for equalence cov_struct, using "
-                "unweighted covariance estimate")
+            warnings.warn("weights not implemented for equalence cov_struct, "
+                          "using unweighted covariance estimate",
+                          NotImplementedWarning)
 
         if not hasattr(self, 'pairs'):
             self._pairs_from_labels()
@@ -1341,7 +1342,7 @@ class Equivalence(CovStruct):
                     if not np.all(j1 == j2):
                         warnings.warn(
                             "equivalence class contains both variance "
-                            "and covariance parameters")
+                            "and covariance parameters", OutputWarning)
                     self._var_classes.add(lb)
                     self.dep_params[lb] = 1
 

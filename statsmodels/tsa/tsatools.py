@@ -1,11 +1,14 @@
 from statsmodels.compat.python import range, lrange, lzip
+
 import numpy as np
 import numpy.lib.recfunctions as nprf
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.data import _is_using_pandas
 from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
+
+from statsmodels.tools.tools import add_constant
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 
 def add_trend(X, trend="c", prepend=False, has_constant='skip'):
@@ -152,8 +155,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             if insert > len(names):
                 import warnings
                 warnings.warn("insert > number of variables, inserting at the"
-                              " last position",
-                              UserWarning)
+                              " last position", ValueWarning)
             ins_idx = insert
 
         first_names = list(names[:ins_idx])
@@ -203,8 +205,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
                 insert = x.shape[1]
                 import warnings
                 warnings.warn("insert > number of variables, inserting at the"
-                              " last position",
-                              UserWarning)
+                              " last position", ValueWarning)
             ins_idx = insert
 
         ndlags = lagmat(contemp, lags, trim='Both')

@@ -35,7 +35,8 @@ from statsmodels.graphics._regressionplots_doc import (
 # need import in module instead of lazily to copy `__doc__`
 from . import _prediction as pred
 
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
+                                             DomainWarning)
 
 __all__ = ['GLM']
 
@@ -243,7 +244,8 @@ class GLM(base.LikelihoodModel):
         if (family is not None) and not isinstance(family.link, tuple(family.safe_links)):
             import warnings
             warnings.warn("The %s link function does not respect the domain of the %s family." %
-                          (family.link.__class__.__name__, family.__class__.__name__))
+                          (family.link.__class__.__name__, family.__class__.__name__),
+                          DomainWarning)
 
         if exposure is not None:
             exposure = np.log(exposure)

@@ -8,6 +8,7 @@ import statsmodels.api as sm
 from statsmodels.miscmodels.count import PoissonGMLE, PoissonOffsetGMLE, \
                         PoissonZiGMLE
 from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 
 DEC = 4
@@ -175,5 +176,5 @@ class TestPoissonZi(CompareMixin):
         mod1 = PoissonOffsetGMLE(mod.endog, mod.exog, offset=mod.offset)
         from numpy.testing import assert_warns
         mod1.data.xnames = mod1.data.xnames * 2
-        assert_warns(UserWarning, mod1.fit, disp=0)
+        assert_warns(ValueWarning, mod1.fit, disp=0)
 

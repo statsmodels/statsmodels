@@ -8,11 +8,12 @@ from numpy.linalg import LinAlgError
 from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant, Bunch
-from .tsatools import lagmat, lagmat2ds, add_trend
-from .adfvalues import mackinnonp, mackinnoncrit
-from ._bds import bds
+from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
+from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
+from statsmodels.tsa._bds import bds
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.compat.scipy import _next_regular
+from statsmodels.tools.sm_exceptions import InterpolationWarning
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
@@ -1151,9 +1152,9 @@ def kpss(x, regression='c', lags=None, store=False):
     p_value = np.interp(kpss_stat, crit, pvals)
 
     if p_value == pvals[-1]:
-        warn("p-value is smaller than the indicated p-value")
+        warn("p-value is smaller than the indicated p-value", InterpolationWarning)
     elif p_value == pvals[0]:
-        warn("p-value is greater than the indicated p-value")
+        warn("p-value is greater than the indicated p-value", InterpolationWarning)
 
     crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
 

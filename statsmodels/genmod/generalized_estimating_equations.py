@@ -41,7 +41,9 @@ import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
-                                             IterationLimitWarning)
+                                             DomainWarning,
+                                             IterationLimitWarning,
+                                             ValueWarning)
 import warnings
 
 from statsmodels.graphics._regressionplots_doc import (
@@ -464,7 +466,8 @@ class GEE(base.Model):
                 msg = ("The {0} link function does not respect the "
                        "domain of the {1} family.")
                 warnings.warn(msg.format(family.link.__class__.__name__,
-                                         family.__class__.__name__))
+                                         family.__class__.__name__),
+                              DomainWarning)
 
         self.missing = missing
         self.dep_data = dep_data
@@ -1722,7 +1725,8 @@ class GEEResults(base.LikelihoodModelResults):
         """
 
         if self.model.constraint is not None:
-            warnings.warn("marginal effects ignore constraints")
+            warnings.warn("marginal effects ignore constraints",
+                          ValueWarning)
 
         return GEEMargins(self, (at, method, atexog, dummy, count))
 
@@ -2267,7 +2271,8 @@ class NominalGEE(GEE):
         """
 
         if offset_exposure is not None:
-            warnings.warn("Offset/exposure ignored for the multinomial family")
+            warnings.warn("Offset/exposure ignored for the multinomial family",
+                          ValueWarning)
 
         lpr = np.dot(exog, params)
         expval = np.exp(lpr)

@@ -12,7 +12,7 @@ from scipy import stats, optimize
 from sys import float_info
 
 from statsmodels.stats.base import AllPairsResults
-#import statsmodels.stats.multitest as smt
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''confidence interval for a binomial proportion
@@ -246,7 +246,7 @@ def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
     #print mean_upp, np.sqrt(var_upp), crit, var_upp
     if np.any(k_low > k_upp):   #vectorize
         import warnings
-        warnings.warn("no overlap, power is zero", UserWarning)
+        warnings.warn("no overlap, power is zero", HypothesisTestWarning)
     std_alt = np.sqrt(var_alt)
     z_low = (k_low - mean_alt - continuity[0] * 0.5 / nobs) / std_alt
     z_upp = (k_upp - mean_alt + continuity[1] * 0.5 / nobs) / std_alt

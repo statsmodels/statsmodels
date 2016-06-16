@@ -7,10 +7,14 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 from collections import namedtuple
-import numpy as np
-from .representation import OptionWrapper
-from .kalman_filter import KalmanFilter, FilterResults
 import warnings
+
+import numpy as np
+
+from statsmodels.tsa.statespace.representation import OptionWrapper
+from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
+                                                      FilterResults)
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 SMOOTHER_STATE = 0x01          # Durbin and Koopman (2012), Chapter 4.4.2
 SMOOTHER_STATE_COV = 0x02      # ibid., Chapter 4.4.3
@@ -463,7 +467,8 @@ class KalmanSmoother(KalmanFilter):
         if not run_filter and (not kfilter.t == self.nobs or create_filter):
             run_filter = True
             warnings.warn('Despite `run_filter=False`, Kalman filtering was'
-                          ' performed because filtering was not complete.')
+                          ' performed because filtering was not complete.',
+                          ValueWarning)
         if run_filter:
             self._initialize_state(prefix=prefix, complex_step=complex_step)
             kfilter()
