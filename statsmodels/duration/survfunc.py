@@ -4,20 +4,12 @@ from scipy.stats.distributions import chi2, norm
 from statsmodels.graphics import utils
 
 
-def _calc_survfunc_right(time, status, weights=None):
+def _calc_survfunc_right(time, status, weights=None, compress=True,
+                         retall=True):
     """
     Calculate the survival function and its standard error for a single
     group.
     """
-
-    time = np.asarray(time)
-    status = np.asarray(status)
-
-    if len(time) != len(status):
-        raise ValueError("time and status must have the same length")
-
-    if weights is not None and (len(weights) != len(time)):
-        raise ValueError("weights, time and status must have the same length")
 
     # Convert the unique times to ranks (0, 1, 2, ...)
     utime, rtime = np.unique(time, return_inverse=True)
@@ -36,16 +28,20 @@ def _calc_survfunc_right(time, status, weights=None):
     n = np.cumsum(n[::-1])[::-1]
 
     # Only retain times where an event occured.
-    ii = np.flatnonzero(d > 0)
-    d = d[ii]
-    n = n[ii]
-    utime = utime[ii]
+    if compress:
+        ii = np.flatnonzero(d > 0)
+        d = d[ii]
+        n = n[ii]
+        utime = utime[ii]
 
     # The survival function probabilities.
     sp = 1 - d / n.astype(np.float64)
     sp = np.log(sp)
     sp = np.cumsum(sp)
     sp = np.exp(sp)
+
+    if not retall:
+        return sp, utime, rtime, n, d
 
     # Standard errors
     if weights is None:
@@ -60,14 +56,141 @@ def _calc_survfunc_right(time, status, weights=None):
         se = np.cumsum(se)
         se = np.sqrt(se)
 
-    return sp, se, utime, n, d
+    return sp, se, utime, rtime, n, d
+
+
+def _calc_incidence_right(time, status, weights=None):
+    """
+    Calculate the cumulative incidence function and its standard error.
+    """
+
+    # Calculate the all-cause survival function.
+    status0 = (status >= 1).astype(np.float64)
+    sp, utime, rtime, n, d = _calc_survfunc_right(time, status0, weights,
+                                                  compress=False, retall=False)
+
+    ngrp = status.max()
+
+    # Number of cause-specific deaths at each unique time.
+    d = []
+    for k in range(ngrp):
+        status0 = (status == k + 1).astype(np.float64)
+        if weights is None:
+            d0 = np.bincount(rtime, weights=status0, minlength=len(utime))
+        else:
+            d0 = np.bincount(rtime, weights=status0*weights,
+                             minlength=len(utime))
+        d.append(d0)
+
+    # The cumulative incidence function probabilities.
+    ip = []
+    sp0 = np.r_[1, sp[:-1]] / n
+    for k in range(ngrp):
+        ip0 = np.cumsum(sp0 * d[k])
+        ip.append(ip0)
+
+    # The standard error of the cumulative incidence function.
+    if weights is not None:
+        return ip, None, utime
+    se = []
+    da = sum(d)
+    for k in range(ngrp):
+
+        ra = da / (n * (n - da))
+        v = ip[k]**2 * np.cumsum(ra)
+        v -= 2 * ip[k] * np.cumsum(ip[k] * ra)
+        v += np.cumsum(ip[k]**2 * ra)
+
+        ra = (n - d[k]) * d[k] / n
+        v += np.cumsum(sp0**2 * ra)
+
+        ra = sp0 * d[k] / n
+        v -= 2 * ip[k] * np.cumsum(ra)
+        v += 2 * np.cumsum(ip[k] * ra)
+
+        se.append(np.sqrt(v))
+
+    return ip, se, utime
+
+
+def _checkargs(time, status, freq_weights):
+
+    if len(time) != len(status):
+        raise ValueError("time and status must have the same length")
+
+    if freq_weights is not None and (len(freq_weights) != len(time)):
+        raise ValueError("weights, time and status must have the same length")
+
+
+class CumIncidenceRight(object):
+    """
+    Estimation and inference for a cumulative incidence function.
+
+    If J = 1, 2, ... indicates the event type, the cumulative
+    incidence function for cause j is:
+
+    I(t, j) = P(T <= t and J=j)
+
+    Only right censoring is supported.  If frequency weights are provided,
+    the point estimate is returned without a standard error.
+
+    Parameters
+    ----------
+    time : array-like
+        An array of times (censoring times or event times)
+    status : array-like
+        If status >= 1 indicates which event occured at time t.  If
+        status = 0, the subject was censored at time t.
+    title : string
+        Optional title used for plots and summary output.
+    freq_weights : array-like
+        Optional frequency weights
+
+    Attributes
+    ----------
+    times : array-like
+        The distinct times at which the incidence rates are estimated
+    cinc : list of arrays
+        cinc[k-1] contains the estimated cumulative incidence rates
+        for outcome k=1,2,...
+    cinc_se : list of arrays
+        The standard errors for the values in `cinc`.
+
+    References
+    ----------
+    The Stata stcompet procedure:
+        http://www.stata-journal.com/sjpdf.html?articlenum=st0059
+
+    Dinse, G. E. and M. G. Larson. 1986. A note on semi-Markov models
+    for partially censored data. Biometrika 73: 379-386.
+
+    Marubini, E. and M. G. Valsecchi. 1995. Analysing Survival Data
+    from Clinical Trials and Observational Studies. Chichester, UK:
+    John Wiley & Sons.
+    """
+
+    def __init__(self, time, status, title=None, freq_weights=None):
+
+        _checkargs(time, status, freq_weights)
+        time = self.time = np.asarray(time)
+        status = self.status = np.asarray(status)
+        if freq_weights is not None:
+            freq_weights = self.freq_weights = np.asarray(freq_weights)
+        x = _calc_incidence_right(time, status, freq_weights)
+        self.cinc = x[0]
+        self.cinc_se = x[1]
+        self.times = x[2]
+        self.title = "" if not title else title
 
 
 class SurvfuncRight(object):
     """
     Estimation and inference for a survival function.
 
-    Only right censoring is supported.
+    The survival function S(t) = P(T > t) is the probability that an
+    event time T is greater than t.
+
+    This class currently only supports right censoring.
 
     Parameters
     ----------
@@ -82,7 +205,7 @@ class SurvfuncRight(object):
     title : string
         Optional title used for plots and summary output.
     freq_weights : array-like
-        Frequency weights
+        Optional frequency weights
 
     Attributes
     ----------
@@ -103,16 +226,17 @@ class SurvfuncRight(object):
 
     def __init__(self, time, status, title=None, freq_weights=None):
 
-        self.time = np.asarray(time)
-        self.status = np.asarray(status)
+        _checkargs(time, status, freq_weights)
+        time = self.time = np.asarray(time)
+        status = self.status = np.asarray(status)
         if freq_weights is not None:
-            self.freq_weights = np.asarray(freq_weights)
+            freq_weights = self.freq_weights = np.asarray(freq_weights)
         x = _calc_survfunc_right(time, status, freq_weights)
         self.surv_prob = x[0]
         self.surv_prob_se = x[1]
         self.surv_times = x[2]
-        self.n_risk = x[3]
-        self.n_events = x[4]
+        self.n_risk = x[4]
+        self.n_events = x[5]
         self.title = "" if not title else title
 
     def plot(self, ax=None):
