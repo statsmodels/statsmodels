@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
-from statsmodels.tsa.statespace.regime_switching.api import MarkovAutoregression
+from statsmodels.tsa.statespace.regime_switching.api import \
+        MarkovAutoregression
 from .results import results_hamilton1989
 
 
@@ -52,8 +53,8 @@ class TestHamilton1989_Filtering(Hamilton1989):
                 rtol=1e-3)
 
     def test_probs(self):
-        assert_allclose(self.result['pr_tt0'], self.true['pr_tt0'], atol=1e-1)
-        assert_allclose(self.result['pr_tl0'], self.true['pr_tl0'], atol=1e-1)
+        assert_allclose(self.result['pr_tt0'], self.true['pr_tt0'], rtol=1e-2)
+        assert_allclose(self.result['pr_tl0'], self.true['pr_tl0'], rtol=1e-2)
 
 
 class TestHamilton1989_Smoothing(Hamilton1989):
@@ -65,20 +66,19 @@ class TestHamilton1989_Smoothing(Hamilton1989):
 
         params = np.array(cls.true['parameters'], dtype=cls.dtype)
 
-        cls.model.filter(params)
+        smoothed_regime_probs, smoothed_curr_and_next_regime_probs = \
+                cls.model.get_smoothed_regime_probs(params)
 
-        smoothed_regime_probs, _ = \
-                cls.model.ssm.get_smoothed_regime_probs(filter_first=False)
         cls.result = {
-                'smooth0': smoothed_regime_probs[:, ::2].sum(axis=1)
+                'smooth0': smoothed_regime_probs[:, 0]
         }
 
     def test_probs(self):
         assert_allclose(self.result['smooth0'], self.true['smooth0'],
-                atol=0.25)
+                rtol=1e-2)
 
 
-class TestHamilton1989_MLE(Hamilton1989):
+class aTestHamilton1989_MLE(Hamilton1989):
 
     @classmethod
     def setup_class(cls):
@@ -104,3 +104,22 @@ class TestHamilton1989_MLE(Hamilton1989):
     def test_params(self):
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=1e-2)
+
+
+class aTestHamilton1989_EM(Hamilton1989):
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestHamilton1989_EM, cls).setup_class()
+
+        np.random.seed(seed=1)
+
+        random_start_params = np.random.normal(size=9)
+
+        params = cls.model.fit_em_algorithm(start_params=random_start_params,
+                transformed=False)
+
+    def test_loglike(self):
+        assert_allclose(self.result['loglike'], self.true['loglike'],
+                rtol=1e-3)

@@ -52,4 +52,4 @@ class TestKim1994_KimFilter(Kim1994):
                 rtol=1e-6)
 
     def test_filtered_state(self):
-        assert_allclose(self.result['cycle'], self.true_cycle, rtol=1e-2)
+        assert_allclose(self.result['cycle'], self.true_cycle, rtol=2e-3)

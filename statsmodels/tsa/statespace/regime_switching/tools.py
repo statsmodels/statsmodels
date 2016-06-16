@@ -1,6 +1,30 @@
 import numpy as np
 from collections import OrderedDict
 
+
+class RegimePartition(object):
+    '''
+    Partition of regimes set, which represents upper class of regimes.
+    This is used in MS AR smoothing for the moment.
+    '''
+
+    def __init__(self, partition):
+        '''
+        Partition is an array of size ``k_regimes``, which contains indices
+        encoding a subset in partition for every regime. Indices are taken
+        from continuous segment of integer numbers starting from zero, e.g.
+        [0, 1, 2, 0, 1, 2] for partition of six regimes
+        '''
+        self.size = max(partition) + 1
+        self._partition = np.array(partition)
+
+    def get_subset_index(self, regime):
+        return self._partition[regime]
+
+    def get_mask(self, subset_index):
+        return self._partition == subset_index
+
+
 class MarkovSwitchingParams(object):
     def __init__(self, k_regimes):
         self.k_regimes = k_regimes
