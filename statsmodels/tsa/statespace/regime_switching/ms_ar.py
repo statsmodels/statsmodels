@@ -422,9 +422,6 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         new_params = np.zeros((self.parameters.k_params,), dtype=dtype)
 
-
-        raise Exception('//////')
-
         # ar regime transition recovery
 
         ar_regime_transition = np.zeros((k_ar_regimes, k_ar_regimes),

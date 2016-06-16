@@ -78,7 +78,7 @@ class TestHamilton1989_Smoothing(Hamilton1989):
                 rtol=1e-2)
 
 
-class aTestHamilton1989_MLE(Hamilton1989):
+class TestHamilton1989_MLE(Hamilton1989):
 
     @classmethod
     def setup_class(cls):
@@ -106,7 +106,7 @@ class aTestHamilton1989_MLE(Hamilton1989):
                 rtol=1e-2)
 
 
-class aTestHamilton1989_EM(Hamilton1989):
+class TestHamilton1989_EM(Hamilton1989):
 
     @classmethod
     def setup_class(cls):
