@@ -1,8 +1,8 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat.python import (iteritems, range, lrange, string_types, lzip,
-                                zip, map)
+from statsmodels.compat.python import (iteritems, range, lrange, string_types,
+                                       lzip, zip)
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
@@ -290,7 +290,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
 
 def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
-    '''
+    """
     Autocovariance for 1D
 
     Parameters
@@ -318,7 +318,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
-    '''
+    """
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
         raise ValueError("x must be 1d. Got %d dims." % x.ndim)
