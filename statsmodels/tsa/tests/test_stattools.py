@@ -7,11 +7,12 @@ from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
                            assert_raises, dec, assert_)
-from numpy import genfromtxt#, concatenate
+from numpy import genfromtxt
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
 import os
 import warnings
+from statsmodels.tools.sm_exceptions import MissingDataError
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -156,9 +157,7 @@ class TestACF(CheckCorrGram):
 
 
 class TestACF_FFT(CheckCorrGram):
-    """
-    Test Autocorrelation Function using FFT
-    """
+    # Test Autocorrelation Function using FFT
     def __init__(self):
         self.acf = self.results['acvarfft']
         self.qstat = self.results['Q1']
@@ -170,7 +169,45 @@ class TestACF_FFT(CheckCorrGram):
     def test_qstat(self):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
+        
+class TestACFMissing(CheckCorrGram):
+    # Test Autocorrelation Function using Missing
+    def __init__(self):
+        self.x = np.concatenate((np.array([np.nan]),self.x))
+        self.acf = self.results['acvar'] # drop and conservative
+        self.qstat = self.results['Q1']
+        self.res_drop = acf(self.x, nlags=40, qstat=True, alpha=.05, 
+                            missing='drop')
+        self.res_conservative = acf(self.x, nlags=40, qstat=True, alpha=.05, 
+                                    missing='conservative')       
+        self.acf_none = np.empty(40) * np.nan # lags 1 to 40 inclusive
+        self.qstat_none = np.empty(40) * np.nan
+        self.res_none = acf(self.x, nlags=40, qstat=True, alpha=.05,
+                        missing='none')
+    
+    def test_raise(self):
+        assert_raises(MissingDataError, acf, self.x, nlags=40, 
+                      qstat=True, alpha=.05, missing='raise')
+                      
+    def test_acf_none(self):
+        assert_almost_equal(self.res_none[0][1:41], self.acf_none, DECIMAL_8)
+    
+    def test_acf_drop(self):
+        assert_almost_equal(self.res_drop[0][1:41], self.acf, DECIMAL_8)
+    
+    def test_acf_conservative(self):
+        assert_almost_equal(self.res_conservative[0][1:41], self.acf, 
+                            DECIMAL_8)
 
+    def test_qstat_none(self):
+        #todo why is res1/qstat 1 short
+        assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
+    
+# how to do this test? the correct q_stat depends on whether nobs=len(x) is 
+# used when x contains NaNs or whether nobs<len(x) when x contains NaNs
+#    def test_qstat_drop(self):
+#        assert_almost_equal(self.res_drop[2][:40], self.qstat, DECIMAL_3)
+        
 
 class TestPACF(CheckCorrGram):
     def __init__(self):
