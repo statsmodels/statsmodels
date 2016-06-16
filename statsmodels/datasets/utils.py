@@ -1,6 +1,6 @@
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
-                                       cPickle, urljoin, BytesIO)
+                                       cPickle, urljoin, BytesIO, long)
 import sys
 import shutil
 from os import environ
@@ -77,7 +77,7 @@ class Dataset(dict):
 def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     names = list(data.dtype.names)
 
-    if isinstance(endog_idx, int):
+    if isinstance(endog_idx, (int, long)):
         endog = array(data[names[endog_idx]], dtype=dtype)
         endog_name = names[endog_idx]
         endog_idx = [endog_idx]
@@ -116,7 +116,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
     data = DataFrame(data, dtype=dtype)
     names = data.columns
 
-    if isinstance(endog_idx, int):
+    if isinstance(endog_idx, (int, long)):
         endog_name = names[endog_idx]
         endog = data[endog_name]
         if exog_idx is None:
@@ -128,7 +128,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
-        elif isinstance(exog_idx, int):
+        elif isinstance(exog_idx, (int, long)):
             exog = data.filter([names[exog_idx]])
         else:
             exog = data.filter(names[exog_idx])

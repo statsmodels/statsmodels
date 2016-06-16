@@ -17,7 +17,7 @@ from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from nose.exc import SkipTest
-from .results import results_sarimax
+from statsmodels.tsa.statespace.tests.results import results_sarimax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

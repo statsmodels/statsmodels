@@ -1,7 +1,7 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range
+from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range, long
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
@@ -146,7 +146,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
     if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
             raise IndexError("col is None and the input array is not 1d")
-        if isinstance(col, int):
+        if isinstance(col, (int, long)):
             col = data.dtype.names[col]
         if col is None and data.dtype.names and len(data.dtype.names) == 1:
             col = data.dtype.names[0]
@@ -200,7 +200,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         if not isinstance(data, np.ndarray):
             raise NotImplementedError("Array-like objects are not supported")
 
-        if isinstance(col, int):
+        if isinstance(col, (int, long)):
             offset = data.shape[1]          # need error catching here?
             tmp_arr = np.unique(data[:, col])
             tmp_dummy = (tmp_arr[:, np.newaxis] == data[:, col]).astype(float)

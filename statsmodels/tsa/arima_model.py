@@ -5,7 +5,7 @@
 #       packages such as gretl and X12-ARIMA
 
 from __future__ import absolute_import
-from statsmodels.compat.python import string_types, range
+from statsmodels.compat.python import string_types, range, long
 # for 2to3 with extensions
 
 from datetime import datetime
@@ -646,7 +646,7 @@ class ARMA(tsbase.TimeSeriesModel):
             else:
                 start = k_ar
             self._set_predict_start_date(start)  # else it's done in super
-        elif isinstance(start, int):
+        elif isinstance(start, (int, long)):
             start = super(ARMA, self)._get_predict_start(start)
         else:  # should be on a date
             #elif 'mle' not in method or dynamic: # should be on a date
@@ -1014,7 +1014,7 @@ class ARIMA(ARMA):
                 start = 0
             else:
                 start = k_ar
-        elif isinstance(start, int):
+        elif isinstance(start, (int, long)):
                 start -= k_diff
                 try:  # catch when given an integer outside of dates index
                     start = super(ARIMA, self)._get_predict_start(start,

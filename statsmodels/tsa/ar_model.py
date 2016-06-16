@@ -1,5 +1,5 @@
 from __future__ import division
-from statsmodels.compat.python import iteritems, range, string_types, lmap
+from statsmodels.compat.python import iteritems, range, string_types, lmap, long
 
 import numpy as np
 from numpy import dot, identity
@@ -153,7 +153,7 @@ class AR(tsbase.TimeSeriesModel):
                 start = 0
             else:  # can't do presample fit for cmle or dynamic
                 start = k_ar
-        elif isinstance(start, int):
+        elif isinstance(start, (int, long)):
             start = super(AR, self)._get_predict_start(start)
         else:  # should be a date
             start = _validate(start, k_ar, self.data.dates, method)

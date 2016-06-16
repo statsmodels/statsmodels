@@ -1,4 +1,4 @@
-from statsmodels.compat.python import range, lrange, lzip
+from statsmodels.compat.python import range, lrange, lzip, long
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
@@ -169,7 +169,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             raise IndexError("col is None and the input array is not 1d")
         elif len(names) == 1:
             col = names[0]
-        if isinstance(col, int):
+        if isinstance(col, (int, long)):
             col = x.dtype.names[col]
         contemp = x[col]
 
