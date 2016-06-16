@@ -19,7 +19,7 @@ def _make_dictnames(tmp_arr, offset=0):
     """
     col_map = {}
     for i, col_name in enumerate(tmp_arr):
-        col_map.update({i+offset : col_name})
+        col_map.update({i + offset: col_name})
     return col_map
 
 
@@ -184,7 +184,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
                     tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
-                dt = lzip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
+                dt = lzip(tmp_arr, [tmp_dummy.dtype.str] * len(tmp_arr))
                 # preserve array type
                 return np.array(lmap(tuple, tmp_dummy.tolist()),
                                 dtype=dt).view(type(data))
@@ -202,7 +202,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise NotImplementedError("Array-like objects are not supported")
 
         if isinstance(col, int):
-            offset = data.shape[1]          # need error catching here?
+            offset = data.shape[1]  # need error catching here?
             tmp_arr = np.unique(data[:, col])
             tmp_dummy = (tmp_arr[:, np.newaxis] == data[:, col]).astype(float)
             tmp_dummy = tmp_dummy.swapaxes(1, 0)
@@ -233,9 +233,18 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise IndexError("The index %s is not understood" % col)
 
 
+def _data_has_constant(data):
+    # if max-min (ptp) is zero, all rows are identical
+    ptp_is_zero = (np.ptp(data, axis=0) == 0)
+
+    # zero columns aren't constants
+    first_row_is_not_zero = (data[0] != 0)
+    return np.any(ptp_is_zero & first_row_is_not_zero)
+
+
 def _series_add_constant(data, prepend, has_constant):
     const = np.ones_like(data)
-    if data.var() == 0:
+    if _data_has_constant(data.values):
         if has_constant == 'raise':
             raise ValueError("data already contains a constant.")
         elif has_constant == 'skip':
@@ -249,13 +258,14 @@ def _series_add_constant(data, prepend, has_constant):
         columns = [data.name, 'const']
     else:
         columns = ['const', data.name]
-    results = DataFrame({data.name : data, 'const' : const}, columns=columns)
+    results = DataFrame({data.name: data, 'const': const}, columns=columns)
     return results
 
 
 def _dataframe_add_constant(data, prepend, has_constant):
     # check for const.
-    if np.any(data.var(0) == 0):
+
+    if _data_has_constant(data.as_matrix()):
         if has_constant == 'raise':
             raise ValueError("data already contains a constant.")
         elif has_constant == 'skip':
@@ -292,8 +302,9 @@ def add_constant(data, prepend=True, has_constant='skip'):
     prepend : bool
         True and the constant is prepended rather than appended.
     has_constant : str {'raise', 'add', 'skip'}
-        Behavior if `data` already has a constant. The default will return
-        data without adding another constant. If 'raise', will raise an
+        Behavior if `data` already has a constant (i.e. a column of
+        identical non-zero values). The default will return data
+        without adding another constant. If 'raise', will raise an
         error if a constant is present. Using 'add' will duplicate the
         constant, if one is present. Has no effect for structured or
         recarrays. There is no checking for a constant in this case.
@@ -310,8 +321,7 @@ def add_constant(data, prepend=True, has_constant='skip'):
     else:
         data = np.asarray(data)
     if not data.dtype.names:
-        var0 = data.var(0) == 0
-        if np.any(var0):
+        if _data_has_constant(data):
             if has_constant == 'raise':
                 raise ValueError("data already contains a constant.")
             elif has_constant == 'skip':
@@ -394,7 +404,7 @@ def pinv_extended(X, rcond=1e-15):
     cutoff = rcond * np.maximum.reduce(s)
     for i in range(min(n, m)):
         if s[i] > cutoff:
-            s[i] = 1./s[i]
+            s[i] = 1. / s[i]
         else:
             s[i] = 0.
     res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis],
@@ -553,9 +563,11 @@ class Bunch(dict):
     """
     Returns a dict-like object with keys accessible via attribute lookup.
     """
+
     def __init__(self, **kw):
         dict.__init__(self, kw)
         self.__dict__ = self
+
 
 webuse = np.deprecate(webuse,
                       old_name='statsmodels.tools.tools.webuse',
