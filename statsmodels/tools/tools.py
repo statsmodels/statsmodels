@@ -7,9 +7,8 @@ import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 from scipy.linalg import svdvals
 from statsmodels.datasets import webuse
-from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas import DataFrame
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -233,108 +232,57 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise IndexError("The index %s is not understood" % col)
 
 
-def _series_add_constant(data, prepend, has_constant):
-    const = np.ones_like(data)
-    if data.var() == 0:
-        if has_constant == 'raise':
-            raise ValueError("data already contains a constant.")
-        elif has_constant == 'skip':
-            return data
-        elif has_constant == 'add':
-            pass
-        else:
-            raise ValueError("Option {0} not understood for "
-                             "has_constant.".format(has_constant))
-    if not prepend:
-        columns = [data.name, 'const']
-    else:
-        columns = ['const', data.name]
-    results = DataFrame({data.name : data, 'const' : const}, columns=columns)
-    return results
-
-
-def _dataframe_add_constant(data, prepend, has_constant):
-    # check for const.
-    if np.any(data.var(0) == 0):
-        if has_constant == 'raise':
-            raise ValueError("data already contains a constant.")
-        elif has_constant == 'skip':
-            return data
-        elif has_constant == 'add':
-            pass
-        else:
-            raise ValueError("Option {0} not understood for "
-                             "has_constant.".format(has_constant))
-    if prepend:
-        data.insert(0, 'const', 1)
-    else:
-        data['const'] = 1
-    return data
-
-
-def _pandas_add_constant(data, prepend, has_constant):
-    from pandas import Series
-    if isinstance(data, Series):
-        return _series_add_constant(data, prepend, has_constant)
-    else:
-        return _dataframe_add_constant(data, prepend, has_constant)
-
-
 # TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True, has_constant='skip'):
     """
-    This appends a column of ones to an array if prepend==False.
+    Adds a column of ones to an array
 
     Parameters
     ----------
     data : array-like
         `data` is the column-ordered design matrix
     prepend : bool
-        True and the constant is prepended rather than appended.
+        If true, the constant is in the first column.  Else the constant is
+        appended (last column).
     has_constant : str {'raise', 'add', 'skip'}
-        Behavior if `data` already has a constant. The default will return
+        Behavior if ``data'' already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if a constant is present. Using 'add' will duplicate the
-        constant, if one is present. Has no effect for structured or
-        recarrays. There is no checking for a constant in this case.
+        constant, if one is present.
 
     Returns
     -------
-    data : array
-        The original array with a constant (column of ones) as the first or
-        last column.
+    data : array, recarray or DataFrame
+        The original values with a constant (column of ones) as the first or
+        last column. Returned value depends on input type.
+
+    Notes
+    -----
+    When the input is recarray or a pandas Series or DataFrame, the added
+    column's name is 'const'.
     """
-    if _is_using_pandas(data, None):
-        # work on a copy
-        return _pandas_add_constant(data.copy(), prepend, has_constant)
-    else:
-        data = np.asarray(data)
-    if not data.dtype.names:
-        var0 = data.var(0) == 0
-        if np.any(var0):
-            if has_constant == 'raise':
-                raise ValueError("data already contains a constant.")
-            elif has_constant == 'skip':
-                return data
-            elif has_constant == 'add':
-                pass
-            else:
-                raise ValueError("Option {0} not understood for "
-                                 "has_constant.".format(has_constant))
-        data = np.column_stack((data, np.ones((data.shape[0], 1))))
-        if prepend:
-            return np.roll(data, 1, 1)
-    else:
-        return_rec = data.__class__ is np.recarray
-        if prepend:
-            ones = np.ones((data.shape[0], 1), dtype=[('const', float)])
-            data = nprf.append_fields(ones, data.dtype.names,
-                                      [data[i] for i in data.dtype.names],
-                                      usemask=False, asrecarray=return_rec)
-        else:
-            data = nprf.append_fields(data, 'const', np.ones(data.shape[0]),
-                                      usemask=False, asrecarray=return_rec)
-    return data
+    if _is_using_pandas(data, None) or _is_recarray(data):
+        from statsmodels.tsa.tsatools import add_trend
+        return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
+
+    # Special case for NumPy
+    x = np.asanyarray(data)
+    if x.ndim == 1:
+        x = x[:,None]
+    elif x.ndim > 2:
+        raise ValueError('Only implementd 2-dimensional arrays')
+
+    is_nonzero_const = np.ptp(x, axis=0) == 0
+    is_nonzero_const &= np.all(x != 0.0, axis=0)
+    if is_nonzero_const.any():
+        if has_constant == 'skip':
+            return x
+        elif has_constant == 'raise':
+            raise ValueError("data already contains a constant")
+
+    x = [np.ones(x.shape[0]), x]
+    x = x if prepend else x[::-1]
+    return np.column_stack(x)
 
 
 def isestimable(C, D):

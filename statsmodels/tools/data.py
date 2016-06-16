@@ -113,3 +113,10 @@ def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
+
+
+def _is_recarray(data):
+    """
+    Returns true if data is a recarray
+    """
+    return isinstance(data, np.core.recarray)

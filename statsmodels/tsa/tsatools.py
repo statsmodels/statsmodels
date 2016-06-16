@@ -2,16 +2,16 @@ from statsmodels.compat.python import range, lrange, lzip
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
+import pandas as pd
 from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
 
-def add_trend(X, trend="c", prepend=False, has_constant='skip'):
+def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     """
     Adds a trend and/or constant to an array.
 
@@ -32,6 +32,13 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
         constant. 'skip' will return the data without change. 'skip' is the
         default.
 
+    Returns
+    -------
+    y : array, recarray or DataFrame
+        The original data with the additional trend columns.  If x is a
+        recarray or pandas Series or DataFrame, then the trend column names
+        are 'const', 'trend' and 'trend_squared'.
+
     Notes
     -----
     Returns columns as ["ctt","ct","c"] whenever applicable. There is currently
@@ -39,57 +46,81 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
 
     See also
     --------
-    statsmodels.add_constant
+    statsmodels.tools.add_constant
     """
-    #TODO: could be generalized for trend of aribitrary order
+    # TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
-    if trend == "c":    # handles structured arrays
-        return add_constant(X, prepend=prepend, has_constant=has_constant)
+    columns = ['const', 'trend', 'trend_squared']
+    if trend == "c":  # handles structured arrays
+        columns = columns[:1]
+        trendorder = 0
     elif trend == "ct" or trend == "t":
+        columns = columns[:2]
+        if trend == "t":
+            columns = columns[1:2]
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
     else:
         raise ValueError("trend %s not understood" % trend)
 
-    X = np.asanyarray(X)
-    nobs = len(X)
-    trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    is_recarray = _is_recarray(x)
+    is_pandas = _is_using_pandas(x, None) or is_recarray
+    if is_pandas or is_recarray:
+        if is_recarray:
+            descr = x.dtype.descr
+            x = pd.DataFrame.from_records(x)
+        elif isinstance(x, pd.Series):
+            x = pd.DataFrame(x)
+        else:
+            x = x.copy()
+    else:
+        x = np.asanyarray(x)
+
+    nobs = len(x)
+    trendarr = np.vander(np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1)
     # put in order ctt
     trendarr = np.fliplr(trendarr)
     if trend == "t":
-        trendarr = trendarr[:,1]
-    if not X.dtype.names:
-        # check for constant
-        if "c" in trend and np.any(np.ptp(X, axis=0) == 0):
-            if has_constant == 'raise':
-                raise ValueError("X already contains a constant")
-            elif has_constant == 'add':
-                pass
-            elif has_constant == 'skip' and trend == "ct":
-                trendarr = trendarr[:, 1]
+        trendarr = trendarr[:, 1]
 
-        if not prepend:
-            X = np.column_stack((X, trendarr))
+    if "c" in trend:
+        if is_pandas or is_recarray:
+            # Mixed type protection
+            def safe_is_const(s):
+                try:
+                    return np.ptp(s) == 0.0 and np.any(s != 0.0)
+                except:
+                    return False
+            col_const = x.apply(safe_is_const, 0)
         else:
-            X = np.column_stack((trendarr, X))
+            col_const = np.logical_and(np.any(np.ptp(np.asanyarray(x), axis=0) == 0, axis=0),
+                                       np.all(x != 0.0, axis=0))
+        if np.any(col_const):
+            if has_constant == 'raise':
+                raise ValueError("x already contains a constant")
+            elif has_constant == 'skip':
+                columns = columns[1:]
+                trendarr = trendarr[:, 1:]
+
+    order = 1 if prepend else -1
+    if is_recarray or is_pandas:
+        trendarr = pd.DataFrame(trendarr, index=x.index, columns=columns)
+        x = [trendarr, x]
+        x = pd.concat(x[::order], 1)
     else:
-        return_rec = data.__clas__ is np.recarray
-        if trendorder == 1:
-            if trend == "ct":
-                dt = [('const',float),('trend',float)]
-            else:
-                dt = [('trend', float)]
-        elif trendorder == 2:
-            dt = [('const',float),('trend',float),('trend_squared', float)]
-        trendarr = trendarr.view(dt)
-        if prepend:
-            X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in X.dtype.names], usemask=False, asrecarray=return_rec)
-        else:
-            X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=False, asrecarray=return_rec)
-    return X
+        x = [trendarr, x]
+        x = np.column_stack(x[::order])
+
+    if is_recarray:
+        x = x.to_records(index=False, convert_datetime64=False)
+        new_descr = x.dtype.descr
+        extra_col = len(new_descr) - len(descr)
+        descr = new_descr[:extra_col] + descr if prepend else descr + new_descr[-extra_col:]
+        x = x.astype(np.dtype(descr))
+
+    return x
+
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
@@ -219,8 +250,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         return np.column_stack((x[lags:,first_cols],ndlags,
                     x[lags:,last_cols]))
 
+
 def detrend(x, order=1, axis=0):
-    '''detrend an array with a trend of given order along axis 0 or 1
+    """
+    Detrend an array with a trend of given order along axis 0 or 1
 
     Parameters
     ----------
@@ -239,25 +272,25 @@ def detrend(x, order=1, axis=0):
     detrended data series : ndarray
         The detrended series is the residual of the linear regression of the
         data on the trend of given order.
+    """
+    if x.ndim == 2 and int(axis) == 1:
+        x = x.T
+    elif x.ndim > 2:
+        raise NotImplementedError('x.ndim > 2 is not implemented until it is needed')
 
-
-    '''
-    x = np.asarray(x)
     nobs = x.shape[0]
     if order == 0:
-        return x - np.expand_dims(x.mean(axis), axis)
+        # Special case demean
+        resid = x - x.mean(axis=0)
     else:
-        if x.ndim == 2 and lrange(2)[axis]==1:
-            x = x.T
-        elif x.ndim > 2:
-            raise NotImplementedError('x.ndim>2 is not implemented until it is needed')
-        #could use a polynomial, but this should work also with 2d x, but maybe not yet
-        trends = np.vander(np.arange(nobs).astype(float), N=order+1)
-        beta = np.linalg.lstsq(trends, x)[0]
+        trends = np.vander(np.arange(float(nobs)), N=order + 1)
+        beta = np.linalg.pinv(trends).dot(x)
         resid = x - np.dot(trends, beta)
-        if x.ndim == 2 and lrange(2)[axis]==1:
-            resid = resid.T
-        return resid
+
+    if x.ndim == 2 and int(axis) == 1:
+        resid = resid.T
+
+    return resid
 
 
 def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
