@@ -122,7 +122,7 @@ def _checkargs(time, status, freq_weights):
         raise ValueError("weights, time and status must have the same length")
 
 
-class CumIncidencefuncRight(object):
+class CumIncidenceRight(object):
     """
     Estimation and inference for a cumulative incidence function.
 

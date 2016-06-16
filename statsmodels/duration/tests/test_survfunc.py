@@ -1,7 +1,7 @@
 import numpy as np
 from statsmodels.duration.survfunc import (
     SurvfuncRight, survdiff, plot_survfunc,
-    CumIncidencefuncRight)
+    CumIncidenceRight)
 from numpy.testing import assert_allclose
 from numpy.testing import dec
 import pandas as pd
@@ -304,7 +304,7 @@ def test_incidence():
     ftime = np.r_[1, 1, 2, 4, 4, 4, 6, 6, 7, 8, 9, 9, 9, 1, 2, 2, 4, 4]
     fstat = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    ci = CumIncidencefuncRight(ftime, fstat)
+    ci = CumIncidenceRight(ftime, fstat)
 
     cinc = [np.array([0.11111111, 0.17037037, 0.17037037, 0.17037037,
                        0.17037037, 0.17037037, 0.17037037]),
@@ -328,7 +328,7 @@ def test_incidence():
 
     # Simple check for frequency weights
     weights = np.ones(len(ftime))
-    ciw = CumIncidencefuncRight(ftime, fstat, freq_weights=weights)
+    ciw = CumIncidenceRight(ftime, fstat, freq_weights=weights)
     assert_allclose(ci.cinc[0], ciw.cinc[0])
     assert_allclose(ci.cinc[1], ciw.cinc[1])
     assert_allclose(ci.cinc[2], ciw.cinc[2])
