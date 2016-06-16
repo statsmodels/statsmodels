@@ -2,6 +2,7 @@ from statsmodels.compat.python import range, lrange, lzip
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
+import pandas as pd
 from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
@@ -10,7 +11,7 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
 
-def add_trend(X, trend="c", prepend=False, has_constant='skip'):
+def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     """
     Adds a trend and/or constant to an array.
 
@@ -63,22 +64,20 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
     else:
         raise ValueError("trend %s not understood" % trend)
 
-    is_recarray = _is_recarray(X)
-    is_pandas = _is_using_pandas(X, None) or is_recarray
+    is_recarray = _is_recarray(x)
+    is_pandas = _is_using_pandas(x, None) or is_recarray
     if is_pandas or is_recarray:
-        import pandas as pd
-
         if is_recarray:
-            descr = X.dtype.descr
-            X = pd.DataFrame.from_records(X)
-        elif isinstance(X, pd.Series):
-            X = pd.DataFrame(X)
+            descr = x.dtype.descr
+            x = pd.DataFrame.from_records(x)
+        elif isinstance(x, pd.Series):
+            x = pd.DataFrame(x)
         else:
-            X = X.copy()
+            x = x.copy()
     else:
-        X = np.asanyarray(X)
+        x = np.asanyarray(x)
 
-    nobs = len(X)
+    nobs = len(x)
     trendarr = np.vander(np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1)
     # put in order ctt
     trendarr = np.fliplr(trendarr)
@@ -93,34 +92,35 @@ def add_trend(X, trend="c", prepend=False, has_constant='skip'):
                     return np.ptp(s) == 0.0 and np.any(s != 0.0)
                 except:
                     return False
-            col_const = X.apply(safe_is_const, 0)
+            col_const = x.apply(safe_is_const, 0)
         else:
-            col_const = np.logical_and(np.any(np.ptp(np.asanyarray(X), axis=0) == 0, axis=0),
-                                       np.all(X != 0.0, axis=0))
+            col_const = np.logical_and(np.any(np.ptp(np.asanyarray(x), axis=0) == 0, axis=0),
+                                       np.all(x != 0.0, axis=0))
         if np.any(col_const):
             if has_constant == 'raise':
-                raise ValueError("X already contains a constant")
+                raise ValueError("x already contains a constant")
             elif has_constant == 'skip':
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
 
     order = 1 if prepend else -1
     if is_recarray or is_pandas:
-        trendarr = pd.DataFrame(trendarr, index=X.index, columns=columns)
-        X = [trendarr, X]
-        X = pd.concat(X[::order], 1)
+        trendarr = pd.DataFrame(trendarr, index=x.index, columns=columns)
+        x = [trendarr, x]
+        x = pd.concat(x[::order], 1)
     else:
-        X = [trendarr, X]
-        X = np.column_stack(X[::order])
+        x = [trendarr, x]
+        x = np.column_stack(x[::order])
 
     if is_recarray:
-        X = X.to_records(index=False, convert_datetime64=False)
-        new_descr = X.dtype.descr
+        x = x.to_records(index=False, convert_datetime64=False)
+        new_descr = x.dtype.descr
         extra_col = len(new_descr) - len(descr)
         descr = new_descr[:extra_col] + descr if prepend else descr + new_descr[-extra_col:]
-        X = X.astype(np.dtype(descr))
+        x = x.astype(np.dtype(descr))
 
-    return X
+    return x
+
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """

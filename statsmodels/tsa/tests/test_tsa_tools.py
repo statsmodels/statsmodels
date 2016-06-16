@@ -498,11 +498,11 @@ class TestAddTrend(unittest.TestCase):
         assert_equal(expected, appended)
 
     def test_duplicate_const(self):
-        assert_raises(ValueError, tools.add_trend, X=self.c, trend='c', has_constant='raise')
-        assert_raises(ValueError, tools.add_trend, X=self.c, trend='ct', has_constant='raise')
+        assert_raises(ValueError, tools.add_trend, x=self.c, trend='c', has_constant='raise')
+        assert_raises(ValueError, tools.add_trend, x=self.c, trend='ct', has_constant='raise')
         df = pd.DataFrame(self.c)
-        assert_raises(ValueError, tools.add_trend, X=df, trend='c', has_constant='raise')
-        assert_raises(ValueError, tools.add_trend, X=df, trend='ct', has_constant='raise')
+        assert_raises(ValueError, tools.add_trend, x=df, trend='c', has_constant='raise')
+        assert_raises(ValueError, tools.add_trend, x=df, trend='ct', has_constant='raise')
 
         skipped = tools.add_trend(self.c, trend='c')
         assert_equal(skipped, self.c[:,None])
@@ -546,7 +546,7 @@ class TestAddTrend(unittest.TestCase):
         assert_equal(tools.add_trend(self.arr_2d, trend='ctt', prepend=True), base)
 
     def test_unknown_trend(self):
-        assert_raises(ValueError, tools.add_trend, X=self.arr_1d, trend='unknown')
+        assert_raises(ValueError, tools.add_trend, x=self.arr_1d, trend='unknown')
 
 if __name__ == '__main__':
     import nose
