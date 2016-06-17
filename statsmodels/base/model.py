@@ -659,6 +659,30 @@ class GenericLikelihoodModel(LikelihoodModel):
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
 
+    def hessian_obs(self, params, scale=None, diag=True):
+        """
+        hessian second derivative of the loglikelihood for each observation.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        diag : bool
+            Whether to return the diag of the 3d mat
+
+        Returns
+        -------
+        hessian_obs : ndarray, 2d
+            The second derivative of the loglikelihood function evaluated at
+            params for each observation.
+        """
+
+        raise NotImplementedError
+
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
         """

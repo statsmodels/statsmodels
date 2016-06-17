@@ -421,7 +421,7 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which Hessian is evaluated
+            parameter at which score is evaluated
         scale : None or float
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
@@ -505,6 +505,36 @@ class GLM(base.LikelihoodModel):
             oim_factor /= scale
 
         return oim_factor
+    
+
+    def hessian_obs(self, params, scale=None, diag=True):
+        """
+        hessian second derivative of the loglikelihood for each observation.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        diag : bool
+            Whether to return the diag of the 3d mat
+
+        Returns
+        -------
+        hessian_obs : ndarray, 2d
+            The second derivative of the loglikelihood function evaluated at
+            params for each observation.
+        """
+
+        if diag:
+            hessian_factor = self.hessian_factor(params, scale=scale)
+            return np.diag(hessian_factor[:, None])
+
+        else:
+            raise NotImplementedError("diag False is not supported")
 
 
     def hessian(self, params, scale=None, observed=True):
@@ -531,6 +561,7 @@ class GLM(base.LikelihoodModel):
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         hess = -np.dot(self.exog.T * factor, self.exog)
         return hess
+
 
     def information(self, params, scale=None):
         """
@@ -1023,20 +1054,16 @@ class GLM(base.LikelihoodModel):
         glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
 
-
+    
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=False,
-                        distributed=False,
-                        generator=None, partitions=None,
-                        threshold=0., **kwargs):
+                        start_params=None, refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
         Parameters
         ----------
         method :
-            Can currently be `elastic_net` or `distributed`.  If
-            `distributed` calls `elastic_net` for each partition.
+            Only the `elastic_net` approach is currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -1048,18 +1075,6 @@ class GLM(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
-        distributed : bool
-            If True, the model uses distributed methods for fitting,
-            will raise an error if True and partitions is None.
-        generator : function
-            generator used to partition the model, allows for handling
-            of out of memory/parallel computing.
-        partitions : scalar 
-            The number of partitions desired for the distributed
-            estimation.
-        threshold : scalar or array-like 
-            The threshold below which coefficients are zeroed out,
-            only used for distributed estimation
 
         Returns
         -------
@@ -1091,36 +1106,21 @@ class GLM(base.LikelihoodModel):
         zero_tol : float
             Coefficients below this threshold are treated as zero.
         """
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularied must be elastic_net")
 
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
-        
-        # In the future we could add support for other penalties, e.g. SCAD.
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
-        
-        if distributed: 
-            if partitions is None:
-                raise ValueError("distributed method requires a `partitions`" + 
-                                 " argument")
-        
-            defaults.update({"method": method, "start_params": start_params,
-                             "refit": refit, "alpha": alpha})
-            from statsmodels.base.distributed_estimation import fit_distributed
-            result = fit_distributed(self,
-                                     partitions=partitions,
-                                     generator=generator,
-                                     threshold=threshold,
-                                     elastic_net_kwds=defaults)
-        else: 
-            from statsmodels.base.elastic_net import fit_elasticnet
-            result = fit_elasticnet(self, method=method,
-                                    alpha=alpha,
-                                    start_params=start_params,
-                                    refit=refit,
-                                    **defaults)
-        
+
+        result = fit_elasticnet(self, method=method,
+                                alpha=alpha,
+                                start_params=start_params,
+                                refit=refit,
+                                **defaults)
+
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)
 

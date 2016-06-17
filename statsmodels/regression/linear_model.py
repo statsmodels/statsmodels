@@ -750,21 +750,47 @@ class OLS(WLS):
             return -self._wexog_xprod / scale
 
         return hess
+    
 
+    def hessian_obs(self, params, scale=None, diag=True):
+        """
+        hessian second derivative of the loglikelihood for each observation.
 
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        diag : bool
+            Whether to return the diag of the 3d mat
+
+        Returns
+        -------
+        hessian_obs : ndarray, 2d
+            The second derivative of the loglikelihood function evaluated at
+            params for each observation.
+        """
+
+        if diag:
+            return np.diag(np.ones(self.exog.shape[1]))
+
+        else:
+            raise NotImplementedError("diag False is not supported")
+
+    
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, profile_scale=False,
-                        refit=False, distributed=False,
-                        generator=None, partitions=None,
-                        threshold=0., **kwargs):
+                        refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
 
         Parameters
         ----------
         method : string
-            Can currently be `elastic_net` or `distributed`.  If
-            `distributed` calls `elastic_net` for each partition.
+            Only the 'elastic_net' approach is currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -780,18 +806,6 @@ class OLS(WLS):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
-        distributed : bool
-            If True, the model uses distributed methods for fitting,
-            will raise an error if True and partitions is None.
-        generator : function
-            generator used to partition the model, allows for handling
-            of out of memory/parallel computing.
-        partitions : scalar 
-            The number of partitions desired for the distributed
-            estimation.
-        threshold : scalar or array-like 
-            The threshold below which coefficients are zeroed out,
-            only used for distributed estimation
 
         Returns
         -------
@@ -834,11 +848,18 @@ class OLS(WLS):
         generalized linear models via coordinate descent.  Journal of
         Statistical Software 33(1), 1-22 Feb 2010.
         """
-        
+
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularied must be elastic_net")
+
+        # Set default parameters.
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
-        
+
         # If a scale parameter is passed in, the non-profile
         # likelihood (residual sum of squares divided by -2) is used,
         # otherwise the profile likelihood is used.
@@ -850,38 +871,15 @@ class OLS(WLS):
             loglike_kwds = {"scale": 1}
             score_kwds = {"scale": 1}
             hess_kwds = {"scale": 1}
-       
-        # In the future we could add support for other penalties, e.g. SCAD.
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
-            
-        if distributed: 
-            if partitions is None:
-                raise ValueError("distributed method requires a `partitions`" + 
-                                 " argument")
 
-            defaults.update({"method": method, "start_params": start_params,
-                             "refit": refit, "alpha": alpha,
-                             "profile_scale": profile_scale})
-            from statsmodels.base.distributed_estimation import fit_distributed
-            return fit_distributed(self,
-                                   score_kwds=score_kwds,
-                                   hess_kwds=hess_kwds,
-                                   partitions=partitions,
-                                   generator=generator,
-                                   threshold=threshold,
-                                   elastic_net_kwds=defaults)
-        
-        else: 
-            from statsmodels.base.elastic_net import fit_elasticnet
-            return fit_elasticnet(self, method=method,
-                                  alpha=alpha,
-                                  start_params=start_params,
-                                  loglike_kwds=loglike_kwds,
-                                  score_kwds=score_kwds,
-                                  hess_kwds=hess_kwds,
-                                  refit=refit,
-                                  **defaults)
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              start_params=start_params,
+                              loglike_kwds=loglike_kwds,
+                              score_kwds=score_kwds,
+                              hess_kwds=hess_kwds,
+                              refit=refit,
+                              **defaults)
 
 
 class GLSAR(GLS):
