@@ -1915,7 +1915,7 @@ class RegressionResults(base.LikelihoodModelResults):
                   #TODO: we need more options here
 
         Reminder:
-        `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
+        `use_correction` in "hac-groupsum" and "hac-panel" is not bool,
         needs to be in [False, 'hac', 'cluster']
 
         TODO: Currently there is no check for extra or misspelled keywords,
@@ -1924,6 +1924,14 @@ class RegressionResults(base.LikelihoodModelResults):
         """
 
         import statsmodels.stats.sandwich_covariance as sw
+
+        #normalize names
+        if cov_type == 'nw-panel':
+            cov_type = 'hac-panel'
+        if cov_type == 'nw-groupsum':
+            cov_type = 'hac-groupsum'
+        if 'kernel' in kwds:
+            kwds['weights_func'] = kwds.pop('kernel')
 
         # TODO: make separate function that returns a robust cov plus info
         use_self = kwds.pop('use_self', False)
@@ -1942,7 +1950,7 @@ class RegressionResults(base.LikelihoodModelResults):
         res.use_t = use_t
 
         adjust_df = False
-        if cov_type in ['cluster', 'nw-panel', 'nw-groupsum']:
+        if cov_type in ['cluster', 'hac-panel', 'hac-groupsum']:
             df_correction = kwds.get('df_correction', None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False: # i.e. in [None, True]:
@@ -2021,7 +2029,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
 
-        elif cov_type == 'nw-panel':
+        elif cov_type == 'hac-panel':
             #cluster robust standard errors
             res.cov_kwds['time'] = time = kwds['time']
             #TODO: nlags is currently required
@@ -2042,7 +2050,7 @@ class RegressionResults(base.LikelihoodModelResults):
                                                 use_correction=use_correction)
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
-        elif cov_type == 'nw-groupsum':
+        elif cov_type == 'hac-groupsum':
             # Driscoll-Kraay standard errors
             res.cov_kwds['time'] = time = kwds['time']
             #TODO: nlags is currently required
