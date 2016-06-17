@@ -1402,6 +1402,13 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
         return chain_dot(Ainv, self.cov_resid, Ainv.T)
 
+
+    @property
+    def sigma_u(self):
+        import warnings
+        warnings.warn('sigma_u is deprecated, use cov_resid', DeprecationWarning)
+        return self.cov_resid
+
 #------------------------------------------------------------
 # Estimation-related things
 
