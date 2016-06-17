@@ -5,7 +5,8 @@ import unittest
 from statsmodels.compat.python import zip
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal, assert_equal, assert_raises
+from numpy.testing import (assert_array_almost_equal, assert_equal,
+    assert_raises, assert_array_equal)
 import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 
@@ -547,6 +548,116 @@ class TestAddTrend(unittest.TestCase):
 
     def test_unknown_trend(self):
         assert_raises(ValueError, tools.add_trend, x=self.arr_1d, trend='unknown')
+
+
+class TestLagmat2DS(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        data = sm.datasets.macrodata.load()
+        cls.macro_data = data.data[['year', 'quarter', 'realgdp', 'cpi']]
+        cls.random_data = np.random.randn(100)
+        year = cls.macro_data['year']
+        quarter = cls.macro_data['quarter']
+        cls.macro_df = pd.DataFrame.from_records(cls.macro_data)
+        index = [str(int(yr)) + '-Q' + str(int(qu))
+                 for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]
+        cls.macro_df.index = index
+        cls.series = cls.macro_df.cpi
+
+    @staticmethod
+    def _prepare_expected(data, lags, trim='front'):
+        t, k = data.shape
+        expected = np.zeros((t + lags, (lags + 1) * k))
+        for col in range(k):
+            for i in range(lags + 1):
+                if i < lags:
+                    expected[i:-lags + i, (lags + 1) * col + i] = data[:, col]
+                else:
+                    expected[i:, (lags + 1) * col + i] = data[:, col]
+        if trim == 'front':
+            expected = expected[:-lags]
+        return expected
+
+    def test_lagmat2ds_numpy(self):
+        data = self.macro_df
+        npdata = data.values
+        lagmat = sm.tsa.lagmat2ds(npdata, 2)
+        expected = self._prepare_expected(npdata, 2)
+        assert_array_equal(lagmat, expected)
+
+        lagmat = sm.tsa.lagmat2ds(npdata[:, :2], 3)
+        expected = self._prepare_expected(npdata[:, :2], 3)
+        assert_array_equal(lagmat, expected)
+
+        npdata = self.series.values
+        lagmat = sm.tsa.lagmat2ds(npdata, 5)
+        expected = self._prepare_expected(npdata[:, None], 5)
+        assert_array_equal(lagmat, expected)
+
+    def test_lagmat2ds_pandas(self):
+        data = self.macro_df
+        lagmat = sm.tsa.lagmat2ds(data, 2)
+        expected = self._prepare_expected(data.values, 2)
+        assert_array_equal(lagmat, expected)
+
+        lagmat = sm.tsa.lagmat2ds(data.iloc[:, :2], 3, trim='both')
+        expected = self._prepare_expected(data.values[:, :2], 3)
+        expected = expected[3:]
+        assert_array_equal(lagmat, expected)
+
+        data = self.series
+        lagmat = sm.tsa.lagmat2ds(data, 5)
+        expected = self._prepare_expected(data.values[:, None], 5)
+        assert_array_equal(lagmat, expected)
+
+    def test_lagmat2ds_use_pandas(self):
+        data = self.macro_df
+        lagmat = sm.tsa.lagmat2ds(data, 2, use_pandas=True)
+        expected = self._prepare_expected(data.values, 2)
+        cols = []
+        for c in data:
+            for lags in range(3):
+                if lags == 0:
+                    cols.append(c)
+                else:
+                    cols.append(c + '.L.' + str(lags))
+        expected = pd.DataFrame(expected, index=data.index, columns=cols)
+        assert_frame_equal(lagmat, expected)
+
+        lagmat = sm.tsa.lagmat2ds(data.iloc[:, :2], 3, use_pandas=True, trim='both')
+        expected = self._prepare_expected(data.values[:, :2], 3)
+        cols = []
+        for c in data.iloc[:, :2]:
+            for lags in range(4):
+                if lags == 0:
+                    cols.append(c)
+                else:
+                    cols.append(c + '.L.' + str(lags))
+        expected = pd.DataFrame(expected, index=data.index, columns=cols)
+        expected = expected.iloc[3:]
+        assert_frame_equal(lagmat, expected)
+
+        data = self.series
+        lagmat = sm.tsa.lagmat2ds(data, 5, use_pandas=True)
+        expected = self._prepare_expected(data.values[:, None], 5)
+
+        cols = []
+        c = data.name
+        for lags in range(6):
+            if lags == 0:
+                cols.append(c)
+            else:
+                cols.append(c + '.L.' + str(lags))
+
+        expected = pd.DataFrame(expected, index=data.index, columns=cols)
+        assert_frame_equal(lagmat, expected)
+
+    def test_3d_error(self):
+        data = np.array(2)
+        assert_raises(TypeError, sm.tsa.lagmat2ds, data, 5)
+
+        data = np.zeros((100,2,2))
+        assert_raises(TypeError, sm.tsa.lagmat2ds, data, 5)
 
 if __name__ == '__main__':
     import nose
