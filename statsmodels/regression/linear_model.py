@@ -752,6 +752,35 @@ class OLS(WLS):
         return hess
 
 
+    def hessian_obs(self, params, scale=None, diag=True):
+        """
+        hessian second derivative of the loglikelihood for each observation.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        diag : bool
+            Whether to return the diag of the 3d mat
+
+        Returns
+        -------
+        hessian_obs : ndarray, 2d
+            The second derivative of the loglikelihood function evaluated at
+            params for each observation.
+        """
+
+        if diag:
+            return np.diag(np.ones(self.exog.shape[1]))
+
+        else:
+            raise NotImplementedError("diag False is not supported")
+
+
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
@@ -761,8 +790,7 @@ class OLS(WLS):
         Parameters
         ----------
         method : string
-            Can currently be `elastic_net` or `distributed`.  If
-            `distributed` calls `elastic_net` for each partition.
+            Only the 'elastic_net' approach is currently implemented.
         alpha : scalar or array-like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
