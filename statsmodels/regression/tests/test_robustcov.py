@@ -594,6 +594,17 @@ class TestOLSRobustClusterNWP(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
 
+    def test_keyword(self):
+        # check corrected keyword
+        res_ols = self.res1.get_robustcov_results('hac-panel',
+                                                  time=self.time,
+                                                  maxlags=4,
+                                                  use_correction='hac',
+                                                  use_t=True,
+                                                  df_correction=False)
+        assert_allclose(res_ols.bse, self.res1.bse, rtol=1e-12)
+
+
 # TODO: low precision/agreement
 class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
