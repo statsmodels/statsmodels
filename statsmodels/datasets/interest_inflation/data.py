@@ -61,3 +61,7 @@ def _get_data():
         data = recfromtxt(f, delimiter=",",
                           names=True, dtype=float)
         return data
+        
+def __str__():
+    return "e6"
+
