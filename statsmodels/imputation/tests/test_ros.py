@@ -1,5 +1,7 @@
 from __future__ import division
 
+__test__ = False
+
 import sys
 from textwrap import dedent
 
