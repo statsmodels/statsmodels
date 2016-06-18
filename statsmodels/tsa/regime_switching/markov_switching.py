@@ -578,6 +578,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
 
+    Notes
+    -----
+    This model is new and API stability is not guaranteed, although changes
+    will be made in a backwards compatible way if possible.
+
     References
     ----------
     Kim, Chang-Jin, and Charles R. Nelson. 1999.

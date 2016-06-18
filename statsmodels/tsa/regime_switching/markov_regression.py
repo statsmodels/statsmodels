@@ -57,6 +57,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     Notes
     -----
+    This model is new and API stability is not guaranteed, although changes
+    will be made in a backwards compatible way if possible.
+
     The model can be written as:
 
     .. math::

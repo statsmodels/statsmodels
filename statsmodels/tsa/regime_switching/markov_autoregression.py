@@ -64,6 +64,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     Notes
     -----
+    This model is new and API stability is not guaranteed, although changes
+    will be made in a backwards compatible way if possible.
+
     The `trend` is accomodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
