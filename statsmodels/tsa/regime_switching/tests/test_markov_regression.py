@@ -414,6 +414,9 @@ class MarkovRegression(object):
         cls.atol = atol
         cls.rtol = rtol
 
+        # Smoke test for summary
+        cls.result.summary()
+
     def test_llf(self):
         assert_allclose(self.result.llf, self.true['llf'], atol=self.atol,
                         rtol=self.rtol)
