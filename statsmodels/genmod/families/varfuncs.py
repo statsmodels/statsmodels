@@ -25,7 +25,7 @@ class VarianceFunction(object):
 
     See also
     --------
-    statsmodels.family.family
+    statsmodels.genmod.families.family
     """
 
     def __call__(self, mu):
