@@ -6,19 +6,16 @@ from statsmodels.tsa.statespace.regime_switching.tools import \
         MarkovSwitchingParams
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-def _em_iteration_for_markov_regression(dtype, k_ar_regimes, endog, exog,
+def _em_iteration_for_markov_regression(dtype, k_regimes, endog, exog,
         smoothed_regime_probs, smoothed_curr_and_next_regime_probs):
     '''
-    This logic is slightly different to described in [1], but probably makes
-    sence and probably is equivalent in the scenario it is used in.
-
-    [1] - Kim-Nelson p. 77
+    Kim-Nelson p. 77
     '''
 
-    coefs = np.zeros((k_ar_regimes, exog.shape[1]), dtype=dtype)
-    variances = np.zeros((k_ar_regimes,), dtype=dtype)
+    coefs = np.zeros((k_regimes, exog.shape[1]), dtype=dtype)
+    variances = np.zeros((k_regimes,), dtype=dtype)
 
-    for regime in range(k_ar_regimes):
+    for regime in range(k_regimes):
         regression_exog = exog * \
                 np.sqrt(smoothed_regime_probs[:, regime].reshape(-1, 1))
         regression_endog = endog * np.sqrt(smoothed_regime_probs[:, regime])
@@ -211,9 +208,9 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         return unconstrained
 
-    def get_ar_coef_regimes(self, regime_index):
+    def get_ar_mean_regimes(self, regime_index):
         '''
-        get ar coeficient regimes
+        get ar mean regimes
         from extended regime (tuple (S_t, S_{t-1}, ..., S_{t-order})) index
         '''
 
@@ -293,11 +290,9 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         transition = np.zeros((k_regimes, order, order, 1), dtype=dtype)
 
         for regime_index in range(k_regimes):
+            curr_ar_regime = regime_index % k_ar_regimes
             transition[regime_index, :-1, 1:, 0] = np.identity(order - 1)
-            for ar_coef_index, ar_regime in zip(range(order),
-                    self.get_ar_coef_regimes(regime_index)):
-                transition[regime_index, ar_coef_index, 0, 0] = \
-                        ar_coefs[ar_regime, ar_coef_index]
+            transition[regime_index, :, 0, 0] = ar_coefs[curr_ar_regime, :]
 
         self['transition'] = transition
 
@@ -350,15 +345,14 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         for regime_index in range(k_regimes):
 
-            curr_regime_ar_coefs = np.zeros((order,), dtype=dtype)
+            curr_ar_regime = regime_index % k_ar_regimes
+
+            curr_regime_ar_coefs = ar_coefs[curr_ar_regime, :]
             curr_regime_ar_means = np.zeros((order, ), dtype=dtype)
 
-            curr_ar_regime = regime_index % k_ar_regimes
-            for ar_coef_index, ar_regime in zip(range(order),
-                    self.get_ar_coef_regimes(regime_index)):
-                curr_regime_ar_coefs[ar_coef_index] = \
-                        ar_coefs[ar_regime, ar_coef_index]
-                curr_regime_ar_means[ar_coef_index] = \
+            for ar_lag_index, ar_regime in zip(range(order),
+                    self.get_ar_mean_regimes(regime_index)):
+                curr_regime_ar_means[ar_lag_index] = \
                         params[self.parameters[ar_regime, 'mean']]
 
             initial_state[regime_index, 0] = self.endog_head[-1] - \
@@ -374,12 +368,6 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         self.initialize_known(initial_state, initial_state_cov)
 
     def _em_iteration(self, params):
-        '''
-        params = (transition_matrix(not extended) exog_regression_coefs
-        ar_coefs means vars)
-
-        Kim-Nelson p.77
-        '''
 
         dtype = self.ssm.dtype
         order = self.order
@@ -416,7 +404,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         # regression em iteration
 
         coefs, variances, ar_regime_transition = \
-                _em_iteration_for_markov_regression(dtype, k_regimes,
+                _em_iteration_for_markov_regression(dtype, k_ar_regimes,
                 markov_regression_endog, markov_regression_exog,
                 smoothed_regime_probs, smoothed_curr_and_next_regime_probs)
 
@@ -424,104 +412,50 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         # ar regime transition recovery
 
-        ar_regime_transition = np.zeros((k_ar_regimes, k_ar_regimes),
-                dtype=dtype)
-
-        for prev_regime_index, curr_regime_index, prev_ar_regime, \
-                curr_ar_regime in self._iterate_regimes():
-
-            # For debug; remove after testing
-            if ar_regime_transition[curr_ar_regime, prev_ar_regime] != 0 and \
-                    np.abs(ar_regime_transition[curr_ar_regime, prev_ar_regime] - \
-                    regime_transition[curr_regime_index, prev_regime_index]) > 1e-5:
-                raise RuntimeError(
-                        'EM-algorithm bug: {0} prob is not equal to {1}'.format(
-                        ar_regime_transition[curr_ar_regime, prev_ar_regime],
-                        regime_transition[curr_regime_index, prev_regime_index]))
-
-            ar_regime_transition[curr_ar_regime, prev_ar_regime] = \
-                    regime_transition[curr_regime_index, prev_regime_index]
-
         self._set_param_regime_transition(new_params, ar_regime_transition)
 
         # ar coefs recovery
 
         ar_coefs = np.zeros((k_ar_regimes, order), dtype=dtype)
+        ar_coefs[:, :] = coefs[:, :order]
 
-        for regime_index in range(k_regimes):
-
-            for ar_coef_index, ar_regime in zip(range(order),
-                    self.get_ar_coef_regimes(regime_index)):
-
-                # For debug; remove after testing
-                if ar_coefs[ar_regime, ar_coef_index] != 0 and \
-                        np.abs(ar_coefs[ar_regime, ar_coef_index] - \
-                        coefs[regime_index, ar_coef_index]) > 1e-5:
-                    raise RuntimeError(
-                            'EM-algorithm bug: {0} ar coef is not equal to {1}'.format(
-                            ar_coefs[ar_regime, ar_coef_index],
-                            coefs[regime_index, ar_coef_index]))
-
-                ar_coefs[ar_regime, ar_coef_index] = coefs[regime_index, ar_coef_index]
+        ar_coefs[:, ~np.array(self.switching_ar)] = \
+                ar_coefs[:, ~np.array(self.switching_ar)].mean(axis=0)
 
         for i in range(k_ar_regimes):
             new_params[self.parameters[i, 'autoregressive']] = ar_coefs[i, :]
 
         # variance recovery
 
-        for regime_index in range(k_regimes):
-
-            ar_regime = regime_index % k_ar_regimes
-            s = self.parameters[ar_regime, 'variance']
-
-            # For debug; remove after testing
-            if new_params[s] != 0 and \
-                    np.abs(new_params[s] - variances[regime_index]) > 1e-5:
-                raise RuntimeError(
-                        'EM-algorithm bug: {0} variance is not equal to {1}'.format(
-                        new_params[s], variances[regime_index]))
-
-            new_params[s] = variances[regime_index]
+        if self.switching_variance:
+            new_params[self.parameters['variance']] = variances
+        else:
+            new_params[self.parameters['variance']] = variances.mean()
 
         # mean recovery
-        # Mean values for k_ar_regimes can be obtained via system of linear
-        # equations solving, since intercept is a linear combination of them
-
-        system_coeficients = np.zeros((k_regimes, k_ar_regimes),
-                dtype=dtype)
 
         intercept_terms = coefs[:, order]
 
-        for regime_index in range(k_regimes):
+        ar_means = np.zeros((k_ar_regimes,), dtype=dtype)
 
-            curr_ar_regime = regime_index % k_ar_regimes
+        #ar_means[:] = intercept_terms
 
-            system_coeficients[regime_index, curr_ar_regime] = 1
-
-            for ar_coef_index, ar_regime in zip(range(order),
-                    self.get_ar_coef_regimes(regime_index)):
-                system_coeficients[regime_index, ar_regime] -= \
-                        ar_coefs[ar_regime, ar_coef_index]
-
-        ar_means, residuals = np.linalg.lstsq(system_coeficients,
-                intercept_terms)[:2]
-
-        # For debug; remove after testing
-        if np.abs(residuals) > 1e-5:
-            raise RuntimeError(
-                    'EM-algorithm bug: {0}, {1} system has no solution'.format(
-                    system_coeficients, intercept_terms))
+        multiplier = 1 - coefs[:, :order].sum(axis=1)
+        ar_means[multiplier == 0] = 0
+        ar_means[multiplier != 0] = intercept_terms / multiplier
 
         if self.switching_mean:
             new_params[self.parameters['mean']] = ar_means
         else:
-            # ar means should be all the same
             new_params[self.parameters['mean']] = ar_means.mean()
 
         return new_params
 
-    def fit_em_algorithm(self, start_params=None, transformed=True,
-            em_iterations=5):
+    def fit_em(self, start_params=None, transformed=True,
+            em_iterations=3):
+        '''
+        Fits EM algorithm one time with given start params
+        '''
 
         if start_params is None:
             start_params = self.start_params
@@ -531,14 +465,48 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
             start_params = self.transform_params(start_params)
 
         params = start_params
+
         for i in range(em_iterations):
             params = self._em_iteration(params)
 
         return params
 
-    def get_smoothed_regime_probs(self, params, return_extended_matrices=False,
+    def fit_em_with_random_starts(self, seed=1, em_optimizations=50,
+            em_iterations=10, return_loglike=False):
+        '''
+        Fits EM algorithm several times with random starts and chooses the
+        best params vector
+        random_scale - scale parameters of numpy.random.normal
+        '''
+
+        np.random.seed(seed=seed)
+
+        best_loglike = None
+        best_params = None
+
+        for i in range(em_optimizations):
+            random_start_params = np.random.normal(
+                    size=self.parameters.k_params)
+            try:
+                params = self.fit_em(start_params=random_start_params,
+                    transformed=False, em_iterations=em_iterations)
+                loglike = self.loglike(params)
+            except:
+                # sometimes random parameters can be invalid at some point
+                continue
+            if best_params is None or loglike > best_loglike:
+                best_params = params
+                best_loglike = loglike
+
+        if return_loglike:
+            return (best_params, best_loglike)
+        else:
+            return best_params
+
+    def get_smoothed_regime_probs(self, params, return_extended_probs=False,
             **kwargs):
         '''
+        return_extended_probs - returns state space smoothed regime probs.
         this is overridden, because this method returns smoothed AR
         regimes, rather then state space regimes.
         '''
@@ -549,14 +517,31 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         nobs = self.nobs
         dtype = self.ssm.dtype
 
-        partition = RegimePartition(list(range(k_ar_regimes)) * \
-                (k_ar_regimes**order))
-
-        kwargs['regime_partition'] = partition
-
-        # these are smoothed AR regimes
+        # these are smoothed state space regimes
         smoothed_regime_probs, smoothed_curr_and_next_regime_probs = \
                 super(MarkovAutoregression,
                 self).get_smoothed_regime_probs(params, **kwargs)
 
-        return smoothed_regime_probs, smoothed_curr_and_next_regime_probs
+        if return_extended_probs:
+            return smoothed_regime_probs, smoothed_curr_and_next_regime_probs
+
+        if 'regime_partition' in kwargs and kwargs['regime_partition'] is None:
+            raise ValueError('regime_partition argument can be applied only ' \
+                    'for extended probabilities')
+
+        smoothed_ar_regime_probs = np.zeros((nobs, k_ar_regimes), dtype=dtype)
+
+        for i in range(k_ar_regimes):
+            smoothed_ar_regime_probs[:, i] = smoothed_regime_probs[:,
+                    i::k_ar_regimes].sum(axis=1)
+
+        smoothed_curr_and_next_ar_regime_probs = np.zeros((nobs - 1,
+                k_ar_regimes, k_ar_regimes), dtype=dtype)
+
+        for i in range(k_ar_regimes):
+            for j in range(k_ar_regimes):
+                smoothed_curr_and_next_ar_regime_probs[:, i, j] = \
+                        smoothed_curr_and_next_regime_probs[:,
+                        i::k_ar_regimes, j::k_ar_regimes].sum(axis=(1, 2))
+
+        return smoothed_ar_regime_probs, smoothed_curr_and_next_ar_regime_probs

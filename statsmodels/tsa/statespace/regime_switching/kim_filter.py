@@ -532,7 +532,6 @@ class KimFilter(object):
             try:
                 self.initialize_stationary_regime_probs()
             except RuntimeError:
-                raise
                 self.initialize_uniform_regime_probs()
 
         # Allocation of buffers
@@ -671,6 +670,8 @@ class KimFilter(object):
     def get_smoothed_regime_probs(self, filter_first=True,
             regime_partition=None, **kwargs):
         '''
+        Get smoothed marginal (smoothed_regime_logprobs) and joint
+        (smoothed_curr_and_next_regime_logprobs) regime probabilities.
         regime_partition (RegimePartition instance) is used when we need
         smoothed probs of subsets of regimes, forming a partition of the
         regimes set. This subsets can be considered as superior regimes.
