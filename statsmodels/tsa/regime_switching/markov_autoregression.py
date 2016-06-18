@@ -246,7 +246,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         # Autoregressive
         if self.order > 0:
-            if True or self._k_exog > 0:
+            if self._k_exog > 0:
                 ar_coeffs, variance = self._em_autoregressive(
                     result, coeffs)
             else:
