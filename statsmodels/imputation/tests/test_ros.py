@@ -25,11 +25,10 @@ def load_basic_data():
         "10.82,=\n11.00,ND\n11.25,=\n11.25,=\n12.20,=\n14.92,=\n16.77,=\n"
         "17.81,=\n19.16,=\n19.19,=\n19.64,=\n20.18,=\n22.97,=\n"
     )
-    df = (
-        pandas.read_csv(raw_csv)
-            .assign(conc=lambda df: df['res'])
-            .assign(censored=lambda df: df['qual'] == 'ND')
-    )
+    df = pandas.read_csv(raw_csv)
+    df.loc[:, 'conc'] = df['res']
+    df.loc[:, 'censored'] = df['qual'] == 'ND'
+
     return df
 
 
@@ -243,7 +242,9 @@ class Test_cohn_numbers(object):
         pdtest.assert_frame_equal(result, self.expected_baseline)
 
     def test_no_NDs(self):
-        result = ros.cohn_numbers(self.df.assign(qual=False), result='conc', censorship='qual')
+        _df = self.df.copy()
+        _df['qual'] = False
+        result = ros.cohn_numbers(_df, result='conc', censorship='qual')
         ntools.assert_tuple_equal(result.shape, (0, 6))
 
 
@@ -337,8 +338,8 @@ def test__impute():
         16.77      ,  17.81      ,  19.16      ,  19.19      ,
         19.64      ,  20.18      ,  22.97
     ])
-    df = load_advanced_data().pipe(ros._impute, 'conc', 'censored',
-                                   numpy.log, numpy.exp)
+    df = load_advanced_data()
+    df = ros._impute(df, 'conc', 'censored', numpy.log, numpy.exp)
     result = df['final'].values
     npt.assert_array_almost_equal(result, expected)
 
@@ -356,8 +357,8 @@ def test__do_ros():
         19.64      ,  20.18      ,  22.97
     ])
 
-    df = load_basic_data().pipe(ros._do_ros, 'conc', 'censored',
-                                numpy.log, numpy.exp)
+    df = load_basic_data()
+    df = ros._do_ros(df, 'conc', 'censored', numpy.log, numpy.exp)
     result = df['final'].values
     npt.assert_array_almost_equal(result, expected)
 
