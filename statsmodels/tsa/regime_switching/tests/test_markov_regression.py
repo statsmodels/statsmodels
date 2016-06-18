@@ -746,12 +746,12 @@ fedfunds_const_filtered_joint_probabilities = np.array([[[
 
 
 class TestFedFundsConst(MarkovRegression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
         path = (current_path + os.sep + 'results' + os.sep +
                 'results_predict_fedfunds.csv')
         results = pd.read_csv(path)
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.9820939, .0503587, 3.70877, 9.556793,
                             2.107562**2],
@@ -896,10 +896,11 @@ fedfunds_const_short_smoothed_joint_probabilities = np.array([[[
            3.26771544e-11,   3.58315175e-11,   3.89203762e-11,
            7.56083358e-10]]])
 
+
 class TestFedFundsConstShort(MarkovRegression):
+    # This is just a set of regression tests
     @classmethod
     def setup_class(cls):
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.9820939, .0503587, 3.70877, 9.556793,
                             2.107562**2],
@@ -959,9 +960,9 @@ class TestFedFundsConstShort(MarkovRegression):
 
 
 class TestFedFundsConstL1(MarkovRegression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.6378175, .1306295, .724457, -.0988764,
                             .7631424, 1.061174, .6915759**2],
@@ -982,13 +983,13 @@ class TestFedFundsConstL1(MarkovRegression):
 
 
 class TestFedFundsConstL1Exog(MarkovRegression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
         path = (current_path + os.sep + 'results' + os.sep +
                 'results_predict_fedfunds.csv')
         results = pd.read_csv(path)
 
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.7279288, .2114578, .6554954, -.0944924,
                             .8314458, .9292574, .1355425, .0343072,
@@ -1044,9 +1045,9 @@ class TestFedFundsConstL1Exog(MarkovRegression):
 
 
 class TestFedFundsConstL1Exog3(MarkovRegression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.7253684, .1641252, .6178282,
                             .2564055, .7994204, .3821718,
@@ -1070,9 +1071,9 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
 
 
 class TestAreturnsConstL1Variance(MarkovRegression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.7530865, .6825357, .7641424, 1.972771, .0790744,
                             .527953, .5895792**2, 1.605333**2],
@@ -1099,9 +1100,9 @@ class TestAreturnsConstL1Variance(MarkovRegression):
 
 
 class TestMumpspcNoconstL1Variance(MarkovRegression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.762733, .1473767, .420275, .9847369, .0562405**2,
                             .2611362**2],

@@ -364,6 +364,7 @@ hamilton_ar2_short_smoothed_joint_probabilities = np.array([[[[
 
 
 class TestHamiltonAR2Short(MarkovAutoregression):
+    # This is just a set of regression tests
     @classmethod
     def setup_class(cls):
         true = {
@@ -393,7 +394,6 @@ class TestHamiltonAR2Short(MarkovAutoregression):
         if desired.ndim > res.predicted_joint_probabilities.ndim:
             desired = desired.sum(axis=-2)
         assert_allclose(res.predicted_joint_probabilities, desired)
-
 
     def test_smoother_output(self, **kwargs):
         res = self.result
@@ -522,13 +522,13 @@ class TestHamiltonAR4(MarkovAutoregression):
 
 
 class TestHamiltonAR2Switch(MarkovAutoregression):
+    # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
         path = (current_path + os.sep + 'results' + os.sep +
                 'results_predict_rgnp.csv')
         results = pd.read_csv(path)
 
-        # See http://www.stata.com/manuals14/tsmswitch.pdf
         true = {
             'params': np.r_[.3812383, .3564492, -.0055216, 1.195482,
                             .6677098**2, .3710719, .4621503, .7002937,
@@ -806,7 +806,6 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
                         rtol=1e-5, atol=1e-7)
 
 
-
 class TestFilardo(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
@@ -845,4 +844,3 @@ class TestFilardo(MarkovAutoregression):
         assert_allclose(self.result.expected_durations,
                         self.mar_filardo[['duration0', 'duration1']].iloc[5:],
                         rtol=1e-5, atol=1e-7)
-
