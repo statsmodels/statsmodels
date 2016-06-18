@@ -183,15 +183,15 @@ def cohn_numbers(df, result, censorship):
             DLs = numpy.hstack([df[result].min(), DLs])
 
         # create a dataframe
-        cohn = (
-            pandas.DataFrame(DLs, columns=['lower_dl'])
-                .assign(upper_dl=lambda df: set_upper_limit(df))
-                .assign(nuncen_above=lambda df: df.apply(nuncen_above, axis=1))
-                .assign(nobs_below=lambda df: df.apply(nobs_below, axis=1))
-                .assign(ncen_equal=lambda df: df.apply(ncen_equal, axis=1))
-                .reindex(range(DLs.shape[0] + 1))
-                .assign(prob_exceedance=lambda df: compute_PE(df['nuncen_above'], df['nobs_below']))
-        )
+        # (editted for pandas 0.14 compatibility; see commit 63f162e
+        #  when `pipe` and `assign` are available)
+        cohn = pandas.DataFrame(DLs, columns=['lower_dl'])
+        cohn.loc[:, 'upper_dl'] = set_upper_limit(cohn)
+        cohn.loc[:, 'nuncen_above'] = cohn.apply(nuncen_above, axis=1)
+        cohn.loc[:, 'nobs_below'] = cohn.apply(nobs_below, axis=1)
+        cohn.loc[:, 'ncen_equal'] = cohn.apply(ncen_equal, axis=1)
+        cohn = cohn.reindex(range(DLs.shape[0] + 1))
+        cohn.loc[:, 'prob_exceedance'] = compute_PE(cohn['nuncen_above'], cohn['nobs_below'])
 
     else:
         dl_cols = ['lower_dl', 'upper_dl', 'nuncen_above',
@@ -263,10 +263,13 @@ def _ros_group_rank(df, dl_idx, censorship):
 
     """
 
+    # (editted for pandas 0.14 compatibility; see commit 63f162e
+    #  when `pipe` and `assign` are available)
+    ranks = df.copy()
+    ranks.loc[:, 'rank'] = 1
     ranks = (
-        df.assign(rank=1)
-          .groupby(by=[dl_idx, censorship])['rank']
-          .transform(lambda g: g.cumsum())
+        ranks.groupby(by=[dl_idx, censorship])['rank']
+             .transform(lambda g: g.cumsum())
     )
     return ranks
 
@@ -420,10 +423,10 @@ def _impute(df, result, censorship, transform_in, transform_out):
     slope, intercept = fit_params[:2]
 
     # model the data based on the best-fit curve
-    df = (
-        df.assign(estimated=transform_out(slope * df['Zprelim'][censored_mask] + intercept))
-          .assign(final=lambda df: numpy.where(df[censorship], df['estimated'], df[result]))
-    )
+    # (editted for pandas 0.14 compatibility; see commit 63f162e
+    #  when `pipe` and `assign` are available)
+    df.loc[:, 'estimated'] = transform_out(slope * df['Zprelim'][censored_mask] + intercept)
+    df.loc[:, 'final'] = numpy.where(df[censorship], df['estimated'], df[result])
 
     return df
 
@@ -468,16 +471,15 @@ def _do_ros(df, result, censorship, transform_in, transform_out):
     # compute the Cohn numbers
     cohn = cohn_numbers(df, result=result, censorship=censorship)
 
-    modeled = (
-        df.pipe(_ros_sort, result=result, censorship=censorship)
-          .assign(det_limit_index=lambda df: df[result].apply(_detection_limit_index, args=(cohn,)))
-          .assign(rank=lambda df: _ros_group_rank(df, 'det_limit_index', censorship))
-          .assign(plot_pos=lambda df: plotting_positions(df, censorship, cohn))
-          .assign(Zprelim=lambda df: stats.norm.ppf(df['plot_pos']))
-          .pipe(_impute, result, censorship, transform_in, transform_out)
-    )
+    # (editted for pandas 0.14 compatibility; see commit 63f162e
+    #  when `pipe` and `assign` are available)
+    modeled = _ros_sort(df, result=result, censorship=censorship)
+    modeled.loc[:, 'det_limit_index'] = modeled[result].apply(_detection_limit_index, args=(cohn,))
+    modeled.loc[:, 'rank'] = _ros_group_rank(modeled, 'det_limit_index', censorship)
+    modeled.loc[:, 'plot_pos'] = plotting_positions(modeled, censorship, cohn)
+    modeled.loc[:, 'Zprelim'] = stats.norm.ppf(modeled['plot_pos'])
 
-    return modeled
+    return _impute(modeled, result, censorship, transform_in, transform_out)
 
 
 def impute_ros(result, censorship, df=None, min_uncensored=2,
@@ -557,14 +559,23 @@ def impute_ros(result, censorship, df=None, min_uncensored=2,
     fraction_censored = N_censored / N_observations
 
     # add plotting positions if there are no censored values
+    # (editted for pandas 0.14 compatibility; see commit 63f162e
+    #  when `pipe` and `assign` are available)
     if N_censored == 0:
-        output = df[[result, censorship]].assign(final=df[result])
+        output = df[[result, censorship]]
+        output.loc[:, 'final'] = df[result]
 
     # substitute w/ fraction of the DLs if there's insufficient
     # uncensored data
+    # (editted for pandas 0.14 compatibility; see commit 63f162e
+    #  when `pipe` and `assign` are available)
     elif (N_uncensored < min_uncensored) or (fraction_censored > max_fraction_censored):
-        final = numpy.where(df[censorship], df[result] * substitution_fraction, df[result])
-        output = df.assign(final=final)[[result, censorship, 'final']]
+        output = df[[result, censorship]]
+        output.loc[:, 'final'] = numpy.where(
+            df[censorship],
+            df[result] * substitution_fraction,
+            df[result]
+        )
 
     # normal ROS stuff
     else:
