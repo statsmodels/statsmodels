@@ -285,6 +285,17 @@ class TestDerivativeFun1(CheckDerivativeMixin):
         return (-x*2*(y-np.dot(x, params))[:,None])  #TODO: check shape
 
 
+def test_dtypes():
+    def f(x):
+        return 2*x
+
+    desired = np.array([[2, 0],
+                        [0, 2]])
+    assert_allclose(approx_fprime(np.array([1, 2]), f), desired)
+    assert_allclose(approx_fprime(np.array([1., 2.]), f), desired)
+    assert_allclose(approx_fprime(np.array([1.+0j, 2.+0j]), f), desired)
+
+
 if __name__ == '__main__':
 
     epsilon = 1e-6
