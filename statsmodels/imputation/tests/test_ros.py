@@ -273,7 +273,7 @@ def test__ros_group_rank():
 
     result = ros._ros_group_rank(df, 'dl_idx', 'params')
     expected = pandas.Series([1, 2, 1, 1, 2, 3, 1, 1, 2, 4, 2, 3], name='rank')
-    pdtest.assert_series_equal(result, expected)
+    pdtest.assert_series_equal(result.astype(int), expected.astype(int))
 
 
 class Test__ros_plot_pos(object):
