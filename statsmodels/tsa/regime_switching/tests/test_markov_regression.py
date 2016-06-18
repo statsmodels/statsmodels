@@ -1039,12 +1039,17 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
                             -.0425603, .1298906, .9099168,
                             .438375**2],
             'llf': -189.89493,
-            'llf_fit': -224.99419,
+            'llf_fit': -182.27188,
             'llf_fit_em': -226.88581
         }
         super(TestFedFundsConstL1Exog3, cls).setup_class(
             true, fedfunds[4:], k_regimes=3,
             exog=np.c_[fedfunds[3:-1], ogap[4:], inf[4:]])
+
+    def test_fit(self, **kwargs):
+        kwargs['search_reps'] = 20
+        np.random.seed(1234)
+        super(TestFedFundsConstL1Exog3, self).test_fit(**kwargs)
 
 
 class TestAreturnsConstL1Variance(MarkovRegression):
@@ -1090,4 +1095,3 @@ class TestMumpspcNoconstL1Variance(MarkovRegression):
         super(TestMumpspcNoconstL1Variance, cls).setup_class(
             true, mumpspc[1:], k_regimes=2, trend='nc', exog=mumpspc[:-1],
             switching_variance=True, atol=1e-4)
-
