@@ -1742,6 +1742,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         This is currently set to 1.0 and not used by the model or its results.
 
     """
+    use_t = False
+
     def __init__(self, model, params, results, cov_type='opg', cov_kwds=None,
                  **kwargs):
         self.data = model.data
@@ -1971,30 +1973,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         return self.model.loglike(self.params)
 
     @cache_readonly
-    def pvalues(self):
-        """
-        (array) The p-values associated with the z-statistics of the
-        coefficients. Note that the coefficients are assumed to have a Normal
-        distribution.
-        """
-        return norm.sf(np.abs(self.zvalues)) * 2
-
-    @cache_readonly
     def resid(self):
         """
         (array) The model residuals. An (nobs x k_endog) array.
         """
         return self.model.endog - self.fittedvalues
-
-    @cache_readonly
-    def zvalues(self):
-        """
-        (array) The z-statistics for the coefficients.
-        """
-        zvalues = self.params / self.bse
-        if not self.model.tvtp:
-            zvalues[self.model.parameters['regime_transition']] = None
-        return zvalues
 
     def predict(self, start=None, end=None, probabilities=None,
                 conditional=False):
@@ -2144,7 +2127,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         import re
         def make_table(self, mask, title, strip_end=True):
             res = (self, self.params[mask], self.bse[mask],
-                   self.zvalues[mask], self.pvalues[mask],
+                   self.tvalues[mask], self.pvalues[mask],
                    self.conf_int(alpha)[mask])
 
             param_names = [
@@ -2209,7 +2192,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
 class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'zvalues': 'columns',
         'cov_params_approx': 'cov',
         'cov_params_default': 'cov',
         'cov_params_opg': 'cov',
