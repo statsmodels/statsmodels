@@ -51,8 +51,8 @@ def _ros_sort(df, observations, censorship, warn=False):
     """
 
     # separate uncensored data from censored data
-    censored = df[df[censorship]].sort_values(by=observations)
-    uncensored = df[~df[censorship]].sort_values(by=observations)
+    censored = df[df[censorship]].sort(observations, axis=0)
+    uncensored = df[~df[censorship]].sort(observations, axis=0)
 
     if censored[observations].max() > uncensored[observations].max():
         censored = censored[censored[observations] <= uncensored[observations].max()]
