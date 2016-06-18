@@ -238,13 +238,13 @@ class Test_cohn_numbers(object):
 
 
     def test_baseline(self):
-        result = ros.cohn_numbers(self.df, result='conc', censorship='censored')
+        result = ros.cohn_numbers(self.df, observations='conc', censorship='censored')
         pdtest.assert_frame_equal(result, self.expected_baseline)
 
     def test_no_NDs(self):
         _df = self.df.copy()
         _df['qual'] = False
-        result = ros.cohn_numbers(_df, result='conc', censorship='qual')
+        result = ros.cohn_numbers(_df, observations='conc', censorship='qual')
         ntools.assert_tuple_equal(result.shape, (0, 6))
 
 
