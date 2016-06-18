@@ -419,7 +419,7 @@ class Test_ROS_HelselAppendixB(CheckROSMixin):
         'nuncen_above': numpy.array([3.0, 6.0, numpy.nan]),
         'nobs_below': numpy.array([6.0, 12.0, numpy.nan]),
         'ncen_equal': numpy.array([6.0, 3.0, numpy.nan]),
-        'prob_exceedance': numpy.array([0.5555, 0.3333, 0.0]),
+        'prob_exceedance': numpy.array([0.55556, 0.33333, 0.0]),
     })
 
 
@@ -458,7 +458,7 @@ class Test_ROS_HelselArsenic(CheckROSMixin):
         'nuncen_above': numpy.array([6.0, 1.0, 2.0, 2.0, numpy.nan]),
         'nobs_below': numpy.array([0.0, 7.0, 12.0, 22.0, numpy.nan]),
         'ncen_equal': numpy.array([0.0, 1.0, 4.0, 8.0, numpy.nan]),
-        'prob_exceedance': numpy.array([1.0, 0.3125, 0.2143, 0.0833, 0.0]),
+        'prob_exceedance': numpy.array([1.0, 0.3125, 0.21429, 0.0833, 0.0]),
     })
 
 
@@ -587,7 +587,7 @@ class Test_ROS_OneND(CheckROSMixin):
         'nuncen_above': numpy.array([17.0, numpy.nan]),
         'nobs_below': numpy.array([1.0, numpy.nan]),
         'ncen_equal': numpy.array([1.0, numpy.nan]),
-        'prob_exceedance': numpy.array([0.9444, 0.0]),
+        'prob_exceedance': numpy.array([0.94444, 0.0]),
     })
 
 
