@@ -178,6 +178,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     elif cov_type == 'HAC':
         maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
         res.cov_kwds['maxlags'] = maxlags
+        weights_func = kwds.get('weights_func', sw.weights_bartlett)
+        res.cov_kwds['weights_func'] = weights_func
         use_correction = kwds.get('use_correction', False)
         res.cov_kwds['use_correction'] = use_correction
         res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
@@ -185,6 +187,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
              'sample correction') % (maxlags, ['without', 'with'][use_correction])
 
         res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
+                                             weights_func=weights_func,
                                              use_correction=use_correction)
     elif cov_type == 'cluster':
         #cluster robust standard errors, one- or two-way
