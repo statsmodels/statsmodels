@@ -2340,7 +2340,7 @@ class OLSResults(RegressionResults):
 
         See also
         --------
-        :class:`statsmodels.stats.outliers_influence.OLSInfluence`
+        statsmodels.stats.outliers_influence.OLSInfluence
         """
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)

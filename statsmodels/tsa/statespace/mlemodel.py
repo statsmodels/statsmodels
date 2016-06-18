@@ -400,7 +400,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         --------
         statsmodels.base.model.LikelihoodModel.fit
         MLEResults
-
         """
         if start_params is None:
             start_params = self.start_params

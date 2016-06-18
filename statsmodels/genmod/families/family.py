@@ -253,12 +253,12 @@ class Family(object):
 
     def resid_anscombe(self, endog, mu):
         """
-        The Anscome residuals.
+        The Anscombe residuals.
 
         See also
         --------
-        statsmodels.families.family.Family docstring and the `resid_anscombe`
-        for the individual families for more information.
+        statsmodels.genmod.families.family.Family docstring and the
+        `resid_anscombe` for the individual families for more information.
         """
         raise NotImplementedError
 

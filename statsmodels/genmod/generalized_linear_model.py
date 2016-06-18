@@ -139,7 +139,7 @@ class GLM(base.LikelihoodModel):
 
     See also
     --------
-    statsmodels.genmod.families.family
+    statsmodels.genmod.families.family.Family
     :ref:`families`
     :ref:`links`
 
@@ -644,7 +644,7 @@ class GLM(base.LikelihoodModel):
 
         See also
         --------
-        statsmodels.glm.fit for more information
+        statsmodels.genmod.generalized_linear_model.GLM.fit for more information
         """
         if not self.scaletype:
             if isinstance(self.family, (families.Binomial, families.Poisson)):

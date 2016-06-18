@@ -389,7 +389,7 @@ class RLMResults(base.LikelihoodModelResults):
 
     See also
     --------
-    statsmodels.model.LikelihoodModelResults
+    statsmodels.base.model.LikelihoodModelResults
     """
 
 

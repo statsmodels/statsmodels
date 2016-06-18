@@ -46,7 +46,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
 
     See also
     --------
-    statsmodels.tools.add_constant
+    statsmodels.tools.tools.add_constant
     """
     # TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
