@@ -10,7 +10,8 @@ import os
 import warnings
 import numpy as np
 import pandas as pd
-from statsmodels.tsa.regime_switching import markov_regression
+from statsmodels.tsa.regime_switching import (markov_switching,
+                                              markov_regression)
 from numpy.testing import assert_equal, assert_allclose, assert_raises
 from nose.exc import SkipTest
 
@@ -907,7 +908,7 @@ class TestFedFundsConstShort(MarkovRegression):
             'llf_fit_em': -7.8554974
         }
         super(TestFedFundsConstShort, cls).setup_class(true, fedfunds[-10:],
-                                                      k_regimes=2)
+                                                       k_regimes=2)
 
     def test_filter_output(self, **kwargs):
         res = self.result
@@ -921,7 +922,6 @@ class TestFedFundsConstShort(MarkovRegression):
         if desired.ndim > res.predicted_joint_probabilities.ndim:
             desired = desired.sum(axis=-2)
         assert_allclose(res.predicted_joint_probabilities, desired)
-
 
     def test_smoother_output(self, **kwargs):
         res = self.result
@@ -939,6 +939,23 @@ class TestFedFundsConstShort(MarkovRegression):
         # Smoothed, last entry
         assert_allclose(res.smoothed_joint_probabilities,
                         fedfunds_const_short_smoothed_joint_probabilities)
+
+    def test_py_hamilton_filter(self):
+        mod = self.model
+        params = self.true['params']
+
+        regime_transition = mod.regime_transition_matrix(params)
+        initial_probabilities = mod.initial_probabilities(
+            params, regime_transition)
+        conditional_likelihoods = mod._conditional_likelihoods(params)
+
+        actual = markov_switching.py_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        desired = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+
+        for i in range(3):
+            assert_allclose(actual[i], desired[i])
 
 
 class TestFedFundsConstL1(MarkovRegression):

@@ -179,7 +179,11 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
     shape = (k_regimes, k_regimes)
     shape += (1,) * (order-1)
     shape += (regime_transition.shape[-1],)
-    regime_transition = np.reshape(regime_transition, shape)[..., order:]
+    regime_transition = np.reshape(regime_transition, shape)
+
+    # Get appropriate subset of transition matrix
+    if regime_transition.shape[-1] > 1:
+        regime_transition = regime_transition[..., order:]
 
     # Hamilton filter iterations
     transition_t = 0
