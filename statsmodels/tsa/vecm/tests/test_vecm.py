@@ -4,7 +4,10 @@ import pandas
 import scipy
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.tsa.base.datetools import dates_from_str
-from statsmodels.tsa.vecm.vecm import VECM
+import statsmodels.api as sm
+from statsmodels.tsa.vecm.vecm import VECM # TODO: possible to use sm here to shorten path?
+import re
+import os
 
 
 datasets = []
@@ -41,10 +44,12 @@ def load_results_jmulti():
     sections = ["Gamma", "C", "alpha", "beta"]
         
     for deterministic_terms in deterministic_terms_list:
-        file = datasets[0].__str__()+'_'+source+'_'+deterministic_terms+'.txt'
-
-        if deterministic_terms in ['', 'lt']:
-            del(section_regex[1])
+        directory = "results"
+        file = datasets[0].__str__()+'_'+source+'_'+deterministic_terms+'.txt' # TODO:
+                                                          # loop over several datasets
+        file = os.path.join(directory, file)
+        if deterministic_terms in ['', 'lt']: # TODO: check if jmulti lacks Deterministic
+            del(section_regex[1])             #       section if det. term == 'lt'
             del(sections[1])
         results = dict.fromkeys(sections)
 
@@ -63,7 +68,7 @@ def load_results_jmulti():
                 if section == len(sections):
                     break
             regex_numbers = re.compile("\s-?\d+\.\d+")
-            matrix_col = re.findall(reg, line)
+            matrix_col = re.findall(regex_numbers, line)
             if matrix_col == []:
                 #print("No values found, continue.")
                 continue
