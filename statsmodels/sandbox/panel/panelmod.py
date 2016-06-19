@@ -14,7 +14,7 @@ import numpy as np
 
 __all__ = ["PanelModel"]
 
-from pandas import Panel, __version__
+from pandas import Panel
 
 
 def group(X):

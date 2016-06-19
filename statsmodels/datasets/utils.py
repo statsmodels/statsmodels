@@ -1,6 +1,6 @@
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
-                                       cPickle, urljoin, BytesIO, long)
+                                       cPickle, urljoin, BytesIO, long, PY3)
 import sys
 import shutil
 from os import environ
@@ -166,7 +166,7 @@ def _get_cache(cache):
 
 
 def _cache_it(data, cache_path):
-    if sys.version_info[0] >= 3:
+    if PY3:
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
@@ -177,7 +177,7 @@ def _cache_it(data, cache_path):
 
 
 def _open_cache(cache_path):
-    if sys.version_info[0] >= 3:
+    if PY3:
         # NOTE: don't know why but decode('zip') doesn't work on my
         # Python 3 build
         import zlib
@@ -235,7 +235,7 @@ def _get_dataset_meta(dataname, package, cache):
                  "datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
     # Python 3
-    if sys.version[0] == '3':  # pragma: no cover
+    if PY3:  # pragma: no cover
         data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
