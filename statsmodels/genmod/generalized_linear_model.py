@@ -165,12 +165,8 @@ class GLM(base.LikelihoodModel):
     basic results with nonrobust or heteroscedasticity robust ``cov_type``. Other
     robust covariance types have not yet been verified, and at least the small sample
     correction is currently not based on the correct total frequency count.
-    It is not yet desided whether all the different types of residuals will be
-    based on weighted residuals. Currently, deviance and pearson residuals,
-    as well as working and response residuals are weighted, while Anscombe
-    residuals are unweighted. Consequently, Pearson and deviance residuals
-    provide a correct measure for the scale and dispersion, but will be
-    proportional to the frequency weights for outlier measures.
+    It has not yet been decided whether all the different types of residuals will be
+    based on weighted residuals. Currently, residuals are not weighted.
 
 
     **Attributes**
