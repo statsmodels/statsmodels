@@ -1105,7 +1105,8 @@ class VARResults(VARProcess):
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = util.varsim(coefs, intercept, sigma_u,
+                              seed=seed, steps=nobs+burn)
             sim = sim[burn:]
             ma_coll[i,:,:,:] = fill_coll(sim)
 
@@ -1156,8 +1157,6 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-        if seed is not None:
-            np.random.seed(seed=seed)
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
@@ -1176,7 +1175,8 @@ class VARResults(VARProcess):
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = util.varsim(coefs, intercept, sigma_u,
+                              seed=seed, steps=nobs+burn)
             sim = sim[burn:]
             ma_coll[i,:,:,:] = fill_coll(sim)
 

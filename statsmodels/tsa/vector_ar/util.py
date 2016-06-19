@@ -186,9 +186,8 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     Simulate simple VAR(p) process with known coefficients, intercept, white
     noise covariance, etc.
     """
-    if seed is not None:
-        np.random.seed(seed=seed)
-    from numpy.random import multivariate_normal as rmvnorm
+    rs = np.random.RandomState(seed=seed)
+    rmvnorm = rs.multivariate_normal
     p, k, k = coefs.shape
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))

@@ -1266,8 +1266,8 @@ class Equivalence(CovStruct):
         except TypeError:
             # workaround for old numpy that can't call unique with complex
             # dtypes
-            np.random.seed(4234)
-            bmat = np.dot(mat, np.random.uniform(size=mat.shape[1]))
+            rs = np.random.RandomState(4234)
+            bmat = np.dot(mat, rs.uniform(size=mat.shape[1]))
             _, idx = np.unique(bmat, return_index=True)
         mat = mat[idx, :]
 
