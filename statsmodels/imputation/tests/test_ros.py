@@ -614,7 +614,7 @@ class Test_HalfDLs_80pctNDs(CheckROSMixin):
         'nuncen_above': numpy.array([0., 0., 0., 0., 0., 0., 0., 3., numpy.nan]),
         'nobs_below': numpy.array([6., 7., 8., 9., 12., 13., 14., 15., numpy.nan]),
         'ncen_equal': numpy.array([6., 1., 1., 1., 3., 1., 1., 1., numpy.nan]),
-        'prob_exceedance': numpy.array([0.1667] * 8 + [0.]),
+        'prob_exceedance': numpy.array([0.16667] * 8 + [0.]),
     })
 
 
