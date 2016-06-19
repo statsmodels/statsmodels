@@ -15,8 +15,7 @@ import numpy as np
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
-from statsmodels.tsa.vector_ar.var_model import VAR
-
+from statsmodels.tsa.vector_ar.var_model import VAR, select_order_fit
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                            assert_allclose)
@@ -27,6 +26,8 @@ DECIMAL_5 = 5
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
+
+#TODO: test_whiteness and test_normality needs a test
 
 class CheckVAR(object):
     # just so pylint won't complain
@@ -77,7 +78,7 @@ class CheckVAR(object):
         assert_almost_equal(self.res1.fpe, self.res2.fpe)
 
     def test_detsig(self):
-        assert_almost_equal(self.res1.detomega, self.res2.detsig)
+        assert_almost_equal(self.res1.det_cov_resid, self.res2.detsig)
 
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
@@ -109,9 +110,9 @@ class RResults(object):
         from .results.results_var_data import var_results
         data = var_results.__dict__
 
-        self.names = data['coefs'].dtype.names
-        self.params = data['coefs'].view((float, len(self.names)), type=np.ndarray)
-        self.stderr = data['stderr'].view((float, len(self.names)), type=np.ndarray)
+        self.endog_names = data['coefs'].dtype.names
+        self.params = data['coefs'].view((float, len(self.endog_names)), type=np.ndarray)
+        self.stderr = data['stderr'].view((float, len(self.endog_names)), type=np.ndarray)
 
         self.irf = data['irf'].item()
         self.orth_irf = data['orthirf'].item()
@@ -126,7 +127,7 @@ class RResults(object):
         self.hqic = crit['hqic'][0]
         self.fpe = crit['fpe'][0]
 
-        self.detomega = data['detomega'][0]
+        self.det_cov_resid = data['detomega'][0]
         self.loglike = data['loglike'][0]
 
         self.nahead = int(data['nahead'][0])
@@ -161,19 +162,17 @@ def have_matplotlib():
 
 class CheckIRF(object):
 
-    ref = None; res = None; irf = None
-    k = None
-
     #---------------------------------------------------------------------------
     # IRF tests
 
     def test_irf_coefs(self):
-        self._check_irfs(self.irf.irfs, self.ref.irf)
-        self._check_irfs(self.irf.orth_irfs, self.ref.orth_irf)
+        self._check_irfs(self.irf.irfs, self.res2.irf)
+        self._check_irfs(self.irf.orth_irfs, self.res2.orth_irf)
 
     def _check_irfs(self, py_irfs, r_irfs):
-        for i, name in enumerate(self.res.names):
-            ref_irfs = r_irfs[name].view((float, self.k), type=np.ndarray)
+        for i, name in enumerate(self.res1.names):
+            ref_irfs = r_irfs[name].view((float, self.neqs), type=np.ndarray)
+
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
@@ -238,214 +237,230 @@ class TestVARResults(CheckIRF, CheckFEVD):
         cls.p = 2
 
         cls.data = get_macrodata()
-        cls.model = VAR(cls.data)
-        cls.names = cls.model.endog_names
+        cls.model = VAR(cls.data, cls.p)
+        cls.endog_names = cls.model.endog_names
 
-        cls.ref = RResults()
-        cls.k = len(cls.ref.names)
-        cls.res = cls.model.fit(maxlags=cls.p)
+        # results from R vars
+        cls.res2 = RResults()
+        cls.neqs = len(cls.res2.endog_names)
+        cls.res1 = cls.model.fit()
 
-        cls.irf = cls.res.irf(cls.ref.nirfs)
-        cls.nahead = cls.ref.nahead
+        cls.irf = cls.res1.irf(cls.res2.nirfs)
+        cls.nahead = cls.res2.nahead
 
-        cls.fevd = cls.res.fevd()
+        cls.fevd = cls.res1.fevd()
 
     def test_constructor(self):
         # make sure this works with no names
         ndarr = self.data.view((float, 3), type=np.ndarray)
-        model = VAR(ndarr)
-        res = model.fit(self.p)
+        model = VAR(ndarr, self.p)
+        res = model.fit()
+
 
     def test_names(self):
-        assert_equal(self.model.endog_names, self.ref.names)
+        assert_equal(self.model.endog_names, self.res2.endog_names)
 
-        model2 = VAR(self.data)
-        assert_equal(model2.endog_names, self.ref.names)
+        model2 = VAR(self.data, 2)
+        assert_equal(model2.endog_names, self.res2.endog_names)
 
     def test_get_eq_index(self):
-        assert(type(self.res.names) is list)
+        assert(isinstance(self.res1.names, list))
 
-        for i, name in enumerate(self.names):
-            idx = self.res.get_eq_index(i)
-            idx2 = self.res.get_eq_index(name)
+        for i, name in enumerate(self.endog_names):
+            idx = self.res1.get_eq_index(i)
+            idx2 = self.res1.get_eq_index(name)
 
             assert_equal(idx, i)
             assert_equal(idx, idx2)
 
-        assert_raises(Exception, self.res.get_eq_index, 'foo')
+        assert_raises(Exception, self.res1.get_eq_index, 'foo')
 
     def test_repr(self):
         # just want this to work
-        foo = str(self.res)
-        bar = repr(self.res)
+        foo = str(self.res1)
+        bar = repr(self.res1)
 
     def test_params(self):
-        assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
 
+    #TODO: smoke test
     def test_cov_params(self):
         # do nothing for now
-        self.res.cov_params
+        self.res1.cov_params
 
+    #TODO: smoke test
     def test_cov_ybar(self):
-        self.res.cov_ybar()
+        self.res1.cov_ybar()
 
+    #TODO: smoke test
     def test_tstat(self):
-        self.res.tvalues
+        self.res1.tvalues
 
+    #TODO: smoke test
     def test_pvalues(self):
-        self.res.pvalues
+        self.res1.pvalues
 
     def test_summary(self):
-        summ = self.res.summary()
-
+        summ = self.res1.summary()
 
     def test_detsig(self):
-        assert_almost_equal(self.res.detomega, self.ref.detomega)
+        assert_almost_equal(self.res1.det_cov_resid, self.res2.det_cov_resid)
 
     def test_aic(self):
-        assert_almost_equal(self.res.aic, self.ref.aic)
+        assert_almost_equal(self.res1.aic, self.res2.aic)
 
     def test_bic(self):
-        assert_almost_equal(self.res.bic, self.ref.bic)
+        assert_almost_equal(self.res1.bic, self.res2.bic)
 
     def test_hqic(self):
-        assert_almost_equal(self.res.hqic, self.ref.hqic)
+        assert_almost_equal(self.res1.hqic, self.res2.hqic)
 
     def test_fpe(self):
-        assert_almost_equal(self.res.fpe, self.ref.fpe)
+        assert_almost_equal(self.res1.fpe, self.res2.fpe)
 
     def test_lagorder_select(self):
+        # smoke tests but tested for correctness elsewhere
         ics = ['aic', 'fpe', 'hqic', 'bic']
 
+        #TODO: this resets exog_names in model
         for ic in ics:
-            res = self.model.fit(maxlags=10, ic=ic, verbose=True)
+            res = select_order_fit(self.data, maxlags=10, ic=ic, verbose=True)
 
-        assert_raises(Exception, self.model.fit, ic='foo')
+        assert_raises(Exception, select_order_fit, Y=self.data, ic='foo')
 
     def test_nobs(self):
-        assert_equal(self.res.nobs, self.ref.nobs)
+        assert_equal(self.res1.nobs, self.res2.nobs)
 
     def test_stderr(self):
-        assert_almost_equal(self.res.stderr, self.ref.stderr, DECIMAL_4)
+        assert_almost_equal(self.res1.stderr, self.res2.stderr, DECIMAL_4)
 
     def test_loglike(self):
-        assert_almost_equal(self.res.llf, self.ref.loglike)
+        assert_almost_equal(self.res1.llf, self.res2.loglike)
 
     def test_ma_rep(self):
-        ma_rep = self.res.ma_rep(self.nahead)
-        assert_almost_equal(ma_rep, self.ref.ma_rep)
+        ma_rep = self.res1.ma_rep(self.nahead)
+        assert_almost_equal(ma_rep, self.res2.ma_rep)
 
     #--------------------------------------------------
     # Lots of tests to make sure stuff works...need to check correctness
 
     def test_causality(self):
-        causedby = self.ref.causality['causedby']
+        causedby = self.res2.causality['causedby']
 
-        for i, name in enumerate(self.names):
-            variables = self.names[:i] + self.names[i + 1:]
-            result = self.res.test_causality(name, variables, kind='f')
+        for i, name in enumerate(self.endog_names):
+            variables = self.endog_names[:i] + self.endog_names[i + 1:]
+            result = self.res1.test_causality(name, variables, kind='f')
             assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
 
-            rng = lrange(self.k)
+            rng = lrange(self.neqs)
             rng.remove(i)
-            result2 = self.res.test_causality(i, rng, kind='f')
+            result2 = self.res1.test_causality(i, rng, kind='f')
             assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
 
             # make sure works
-            result = self.res.test_causality(name, variables, kind='wald')
+            result = self.res1.test_causality(name, variables, kind='wald')
 
         # corner cases
-        _ = self.res.test_causality(self.names[0], self.names[1])
-        _ = self.res.test_causality(0, 1)
+        _ = self.res1.test_causality(self.endog_names[0], self.endog_names[1])
+        _ = self.res1.test_causality(0, 1)
 
-        assert_raises(Exception,self.res.test_causality, 0, 1, kind='foo')
+        assert_raises(Exception,self.res1.test_causality, 0, 1, kind='foo')
 
+    #TODO: smoke test
     def test_select_order(self):
-        result = self.model.fit(10, ic='aic', verbose=True)
-        result = self.model.fit(10, ic='fpe', verbose=True)
+        result = select_order_fit(self.data, 10, ic='aic', verbose=True)
+        result = select_order_fit(self.data, 10, ic='fpe', verbose=True)
 
-        # bug
-        model = VAR(self.model.endog)
-        model.select_order()
+        ic = VAR.select_order(self.model.endog, verbose=False)
 
     def test_is_stable(self):
         # may not necessarily be true for other datasets
-        assert(self.res.is_stable(verbose=True))
+        assert(self.res1.is_stable(verbose=True))
 
+    #TODO: smoke test
     def test_acf(self):
         # test that it works...for now
-        acfs = self.res.acf(10)
+        acfs = self.res1.acf(10)
 
         # defaults to nlags=lag_order
-        acfs = self.res.acf()
+        acfs = self.res1.acf()
         assert(len(acfs) == self.p + 1)
 
+    #TODO: smoke test
     def test_acorr(self):
-        acorrs = self.res.acorr(10)
+        acorrs = self.res1.acorr(10)
 
+    #TODO: smoke test
     def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
+        point = self.res1.forecast(y=None, steps=5)
 
+    #TODO: smoke test
     def test_forecast_interval(self):
-        y = self.res.y[:-self.p:]
-        point, lower, upper = self.res.forecast_interval(y, 5)
+        point, lower, upper = self.res1.forecast_interval(y=None, steps=5)
 
     def test_plot_sim(self):
         if not have_matplotlib():
             raise nose.SkipTest
 
-        self.res.plotsim(steps=100)
+        self.res1.plotsim(steps=100)
         close_plots()
 
     def test_plot(self):
         if not have_matplotlib():
             raise nose.SkipTest
 
-        self.res.plot()
+        self.res1.plot()
         close_plots()
 
     def test_plot_acorr(self):
         if not have_matplotlib():
             raise nose.SkipTest
 
-        self.res.plot_acorr()
+        self.res1.plot_acorr()
         close_plots()
 
     def test_plot_forecast(self):
         if not have_matplotlib():
             raise nose.SkipTest
 
-        self.res.plot_forecast(5)
+        self.res1.plot_forecast(5)
         close_plots()
 
     def test_reorder(self):
         #manually reorder
         data = self.data.view((float,3), type=np.ndarray)
-        names = self.names
-        data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
+        names = self.endog_names
+        data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1),
+                          data[:,1,None], axis=1)
         names2 = []
         names2.append(names[2])
         names2.append(names[0])
         names2.append(names[1])
-        res2 = VAR(data2).fit(maxlags=self.p)
+
+        from pandas import DataFrame
+        data2 = DataFrame(data2, columns=names2)
+        res2 = VAR(data2.to_records(index=False), self.p).fit()
 
         #use reorder function
-        res3 = self.res.reorder(['realinv','realgdp', 'realcons'])
+        res3 = self.res1.reorder(['realinv','realgdp', 'realcons'])
 
         #check if the main results match
         assert_almost_equal(res2.params, res3.params)
-        assert_almost_equal(res2.sigma_u, res3.sigma_u)
+        assert_almost_equal(res2.cov_resid, res3.cov_resid)
         assert_almost_equal(res2.bic, res3.bic)
         assert_almost_equal(res2.stderr, res3.stderr)
 
     def test_pickle(self):
         fh = BytesIO()
         #test wrapped results load save pickle
-        self.res.save(fh)
+        self.res1.save(fh)
         fh.seek(0,0)
-        res_unpickled = self.res.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res))
+        res_unpickled = self.res1.__class__.load(fh)
+        assert_(type(res_unpickled) is type(self.res1))
 
+    #TODO: test these
+    def test_wrappers(self):
+        pass
 
 class E1_Results(object):
     """
@@ -509,13 +524,15 @@ class TestVARResultsLutkepohl(object):
     def __init__(self):
         self.p = 2
         sdata, dates = get_lutkepohl_data('e1')
-
+        names = sdata.dtype.names
         data = data_util.struct_to_ndarray(sdata)
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='Q')
-        self.res = self.model.fit(maxlags=self.p)
+        from pandas import DataFrame
+        dta= DataFrame(adj_data[:-16], index=dates[1:-16], columns=names)
+        self.model = VAR(dta, self.p)
+        self.res = self.model.fit()
         self.irf = self.res.irf(10)
         self.lut = E1_Results()
 

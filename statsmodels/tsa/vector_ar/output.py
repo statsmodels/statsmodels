@@ -62,8 +62,8 @@ class VARSummary(object):
         header_dec_below=None,
     )
 
-    def __init__(self, estimator):
-        self.model = estimator
+    def __init__(self, results):
+        self.results = results
         self.summary = self.make()
 
     def __repr__(self):
@@ -85,16 +85,16 @@ class VARSummary(object):
     def _header_table(self):
         import time
 
-        model = self.model
+        results = self.results
 
         t = time.localtime()
 
         # TODO: change when we allow coef restrictions
-        # ncoefs = len(model.beta)
+        # ncoefs = len(results.beta)
 
         # Header information
         part1title = "Summary of Regression Results"
-        part1data = [[model._model_type],
+        part1data = [[results._model_type],
                      ["OLS"], #TODO: change when fit methods change
                      [time.strftime("%a, %d, %b, %Y", t)],
                      [time.strftime("%H:%M:%S", t)]]
@@ -113,7 +113,7 @@ class VARSummary(object):
         # use results if wanted?
         # Handle overall fit statistics
 
-        model = self.model
+        results = self.results
 
 
         part2Lstubs = ('No. of Equations:',
@@ -124,8 +124,10 @@ class VARSummary(object):
                        'HQIC:',
                        'FPE:',
                        'Det(Omega_mle):')
-        part2Ldata = [[model.neqs], [model.nobs], [model.llf], [model.aic]]
-        part2Rdata = [[model.bic], [model.hqic], [model.fpe], [model.detomega]]
+        part2Ldata = [[results.neqs], [results.nobs], [results.llf],
+                      [results.aic]]
+        part2Rdata = [[results.bic], [results.hqic], [results.fpe],
+                      [results.det_cov_resid]]
         part2Lheader = None
         part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
                              txt_fmt = self.part2_fmt)
@@ -136,24 +138,23 @@ class VARSummary(object):
         return str(part2L)
 
     def _coef_table(self):
-        model = self.model
-        k = model.neqs
+        results = self.results
+        k = results.neqs
 
-        Xnames = self.model.exog_names
+        Xnames = self.results.model.exog_names
 
-        data = lzip(model.params.T.ravel(),
-                   model.stderr.T.ravel(),
-                   model.tvalues.T.ravel(),
-                   model.pvalues.T.ravel())
+        data = lzip(results.params.T.ravel(),
+                    results.stderr.T.ravel(),
+                    results.tvalues.T.ravel(),
+                    results.pvalues.T.ravel())
 
         header = ('coefficient','std. error','t-stat','prob')
 
         buf = StringIO()
-        dim = k * model.k_ar + model.k_trend
+        dim = k * results.k_ar + results.k_trend
         for i in range(k):
-            section = "Results for equation %s" % model.names[i]
+            section = "Results for equation %s" % results.names[i]
             buf.write(section + '\n')
-            #print >> buf, section
 
             table = SimpleTable(data[dim * i : dim * (i + 1)], header,
                                 Xnames, title=None, txt_fmt = self.default_fmt)
@@ -166,10 +167,10 @@ class VARSummary(object):
 
     def _resid_info(self):
         buf = StringIO()
-        names = self.model.names
+        names = self.results.model.endog_names
 
         buf.write("Correlation matrix of residuals" + '\n')
-        buf.write(pprint_matrix(self.model.resid_corr, names, names) + '\n')
+        buf.write(pprint_matrix(self.results.resid_corr, names, names) + '\n')
 
         return buf.getvalue()
 

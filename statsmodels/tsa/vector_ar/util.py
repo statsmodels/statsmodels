@@ -8,29 +8,63 @@ import scipy.linalg.decomp as decomp
 
 import statsmodels.tsa.tsatools as tsa
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Auxiliary functions for estimation
-def get_var_endog(y, lags, trend='c', has_constant='skip'):
+
+def get_forecast_X(nobs, trend, lags, steps):
+    """
+    Returns X for forecasting steps forecasts from nobs.
+
+    Parameters
+    ----------
+    nobs : int
+        Starting value for forecasts
+    trend : str ('nc', 'c', 'ct', 'ctt')
+        Trend
+    steps : int
+        Number of forecasts produced
+
+    Examples
+    --------
+    >>> get_forecast_X(200, 'ctt', 4, 4)
+    array([[     1.,    201.,  40000.],
+           [     1.,    202.,  40401.],
+           [     1.,    203.,  40804.],
+           [     1.,    204.,  41616.]])
+    """
+    trendorder = get_trendorder(trend)
+    if trendorder == 0:
+        return
+    return np.fliplr(np.vander(np.arange(nobs + 1,
+                                         nobs + steps + 1,
+                                         dtype=float), trendorder))
+
+
+def get_lagged_y(y, lags, trend='c', has_constant='skip'):
     """
     Make predictor matrix for VAR(p) process
 
-    Z := (Z_0, ..., Z_T).T (T x Kp)
-    Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
+    X := (X_0, ..., X_T).T (T x Kp)
+    X_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
 
     Ref: Lutkepohl p.70 (transposed)
 
     has_constant can be 'raise', 'add', or 'skip'. See add_constant.
     """
     nobs = len(y)
+    # pad with zeros so trend is correct
+    y = np.r_[np.zeros((lags, y.shape[1])), y]
     # Ravel C order, need to put in descending order
-    Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
+    X = np.array([y[t-lags : t][::-1].ravel() for t in range(lags,
+                                                             nobs + lags)])
 
     # Add constant, trend, etc.
     if trend != 'nc':
-        Z = tsa.add_trend(Z, prepend=True, trend=trend,
+        X = tsa.add_trend(X, prepend=True, trend=trend,
                           has_constant=has_constant)
 
-    return Z
+
+    return X[lags:]
 
 def get_trendorder(trend='c'):
     # Handle constant, etc.
@@ -66,12 +100,12 @@ def make_lag_names(names, lag_order, trendorder=1):
             lag_names.append('L'+str(i)+'.'+name)
 
     # handle the constant name
-    if trendorder != 0:
-        lag_names.insert(0, 'const')
-    if trendorder > 1:
-        lag_names.insert(0, 'trend')
     if trendorder > 2:
         lag_names.insert(0, 'trend**2')
+    if trendorder > 1:
+        lag_names.insert(0, 'trend')
+    if trendorder != 0:
+        lag_names.insert(0, 'const')
 
     return lag_names
 
@@ -205,9 +239,10 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
 def get_index(lst, name):
     try:
         result = lst.index(name)
-    except Exception:
+
+    except ValueError:
         if not isinstance(name, (int, long)):
-            raise
+            raise ValueError("No variable named %s in endog_names" %name)
         result = name
     return result
     #method used repeatedly in Sims-Zha error bands
