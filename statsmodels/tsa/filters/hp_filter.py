@@ -68,6 +68,12 @@ def hpfilter(X, lamb=1600):
     K[i,j] = -2 if i == j + 1
     K[i,j] = 0 otherwise
 
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.cf_filter.cffilter
+    statsmodels.tsa.seasonal.seasonal_decompose
+
     References
     ----------
     Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An

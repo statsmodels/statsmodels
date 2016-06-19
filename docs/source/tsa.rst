@@ -193,6 +193,7 @@ Time Series Filters
    filters.filtertools.miso_lfilter
    filters.filtertools.fftconvolve3
    filters.filtertools.fftconvolveinv
+   seasonal.seasonal_decompose
 
 
 TSA Tools
