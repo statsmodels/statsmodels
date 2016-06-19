@@ -20,6 +20,8 @@ def seasonal_mean(x, freq):
 
 def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True):
     """
+    Seasonal decomposition using moving averages
+
     Parameters
     ----------
     x : array-like
@@ -58,6 +60,9 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
 
     See Also
     --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.cf_filter.xffilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
     statsmodels.tsa.filters.convolution_filter
     """
     _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)

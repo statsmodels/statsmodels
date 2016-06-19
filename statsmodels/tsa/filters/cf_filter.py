@@ -56,6 +56,13 @@ def cffilter(X, low=6, high=32, drift=True):
     >>> plt.show()
 
     .. plot:: plots/cff_plot.py
+
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
+    statsmodels.tsa.seasonal.seasonal_decompose
+
     """
     #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.
