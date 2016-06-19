@@ -546,3 +546,37 @@ class TestNanDot(object):
         test_res = tools.nan_dot(self.mx_6, self.mx_6)
         expected_res = np.array([[  7.,  10.], [ 15.,  22.]])
         assert_array_equal(test_res, expected_res)
+
+class TestEnsure2d(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        x = np.arange(400.0).reshape((100,4))
+        cls.df = pd.DataFrame(x, columns = ['a','b','c','d'])
+        cls.series = cls.df.iloc[:,0]
+        cls.ndarray = x
+
+    def test_enfore_numpy(self):
+        results = tools._ensure_2d(self.df, True)
+        assert_array_equal(results[0], self.ndarray)
+        assert_array_equal(results[1], self.df.columns)
+        results = tools._ensure_2d(self.series, True)
+        assert_array_equal(results[0], self.ndarray[:,[0]])
+        assert_array_equal(results[1], self.df.columns[0])
+
+    def test_pandas(self):
+        results = tools._ensure_2d(self.df, False)
+        assert_frame_equal(results[0], self.df)
+        assert_array_equal(results[1], self.df.columns)
+
+        results = tools._ensure_2d(self.series, False)
+        assert_frame_equal(results[0], self.df.iloc[:,[0]])
+        assert_equal(results[1], self.df.columns[0])
+
+    def test_numpy(self):
+        results = tools._ensure_2d(self.ndarray)
+        assert_array_equal(results[0], self.ndarray)
+        assert_equal(results[1], None)
+
+        results = tools._ensure_2d(self.ndarray[:,0])
+        assert_array_equal(results[0], self.ndarray[:,[0]])
+        assert_equal(results[1], None)
