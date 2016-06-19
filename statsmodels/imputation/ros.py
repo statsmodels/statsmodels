@@ -371,7 +371,7 @@ def plotting_positions(df, censorship, cohn):
     # correctly sort the plotting positions of the ND data:
     ND_plotpos = plot_pos[df[censorship]]
     ND_plotpos.values.sort()
-    plot_pos.loc[df[censorship]] = ND_plotpos
+    plot_pos[df[censorship]] = ND_plotpos
 
     return plot_pos
 
