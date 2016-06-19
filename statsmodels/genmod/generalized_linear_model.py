@@ -330,8 +330,12 @@ class GLM(base.LikelihoodModel):
             if len(freq_weights.shape) > 1:
                 raise ValueError("freq weights has too many dimensions")
 
+        # internal flag to store whether freq_weights were not None
+        self._has_freq_weights = (self.freq_weights is not None)
         if self.freq_weights is None:
             self.freq_weights = np.ones((endog.shape[0]))
+            # TODO: check do we want to keep None as sentinel for freq_weights
+
         if np.shape(self.freq_weights) == () and self.freq_weights > 1:
             self.freq_weights = (self.freq_weights *
                                  np.ones((endog.shape[0])))
@@ -1272,6 +1276,15 @@ class GLMResults(base.LikelihoodModelResults):
             self.use_t = False    # TODO: class default
         else:
             self.use_t = use_t
+
+        # temporary warning
+        ct = (cov_type == 'nonrobust') or (cov_type.startswith('HC'))
+        if self.model._has_freq_weights and not ct:
+            import warnings
+            from statsmodels.tools.sm_exceptions import SpecificationWarning
+            warnings.warn('cov_type not fully supported with freq_weights',
+                          SpecificationWarning)
+
         if cov_type == 'nonrobust':
             self.cov_type = 'nonrobust'
             self.cov_kwds = {'description' : 'Standard Errors assume that the ' +

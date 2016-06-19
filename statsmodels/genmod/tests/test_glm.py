@@ -1183,14 +1183,18 @@ class TestWtdGlmPoissonClu(CheckWtdDuplicationMixin):
 
         gid = np.arange(1, len(self.endog) + 1) // 2
         fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gid, 'use_correction':False})
-        self.res1 = GLM(self.endog, self.exog,
-                        freq_weights=self.weight,
-                        family=sm.families.Poisson()).fit(**fit_kwds)
-        gidr = np.repeat(gid, self.weight)
-        fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gidr, 'use_correction':False})
-        self.res2 = GLM(self.endog_big, self.exog_big,
-                        family=sm.families.Poisson()).fit(start_params=start_params,
-                                                          **fit_kwds)
+
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.res1 = GLM(self.endog, self.exog,
+                            freq_weights=self.weight,
+                            family=sm.families.Poisson()).fit(**fit_kwds)
+            gidr = np.repeat(gid, self.weight)
+            fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gidr, 'use_correction':False})
+            self.res2 = GLM(self.endog_big, self.exog_big,
+                            family=sm.families.Poisson()).fit(start_params=start_params,
+                                                              **fit_kwds)
 
 
 class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
