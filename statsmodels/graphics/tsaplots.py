@@ -212,18 +212,26 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     grouped_x : iterable of DataFrames
         Should be a GroupBy object (or similar pair of group_names and groups
         as DataFrames) with a DatetimeIndex or PeriodIndex
+    xticklabels : list of str
+        List of season labels, one for each group.
+    ylabel : str
+        Lable for y axis
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
     """
     fig, ax = utils.create_mpl_ax(ax)
     start = 0
     ticks = []
     for season, df in grouped_x:
         df = df.copy() # or sort balks for series. may be better way
-        sort_values(df, inplace=True)
+        df.sort_index()
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())
         ax.plot(x_plot, df.values, 'k')
-        ax.hlines(df.values.mean(), x_plot[0], x_plot[-1], colors='k')
+        ax.hlines(df.values.mean(), x_plot[0], x_plot[-1], colors='r',
+                  linewidth=3)
         start += nobs
 
     ax.set_xticks(ticks)
