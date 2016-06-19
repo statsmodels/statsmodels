@@ -329,10 +329,11 @@ def clear_data_home(data_home=None):
     data_home = get_data_home(data_home)
     shutil.rmtree(data_home)
 
-def check_internet():
+def check_internet(url=None):
     """Check if internet is available"""
+    url = "https://github.com" if url is None else url
     try:
-        urlopen("https://github.com")
+        urlopen(url)
     except URLError as err:
         return False
     return True
