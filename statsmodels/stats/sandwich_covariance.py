@@ -217,7 +217,7 @@ def cov_hc3(results):
 
 #---------------------------------------
 
-def _get_sandwich_arrays(results):
+def _get_sandwich_arrays(results, cov_type=''):
     """Helper function to get scores from results
 
     Parameters
@@ -227,7 +227,7 @@ def _get_sandwich_arrays(results):
     if isinstance(results, tuple):
         # assume we have jac and hessian_inv
         jac, hessian_inv = results
-        jac = np.asarray(jac)
+        xu = jac = np.asarray(jac)
         hessian_inv = np.asarray(hessian_inv)
     elif hasattr(results, 'model'):
         if hasattr(results, '_results'):
@@ -246,7 +246,7 @@ def _get_sandwich_arrays(results):
             hessian_inv = np.asarray(results.normalized_cov_params)
 
         # experimental support for freq_weights
-        if hasattr(results.model, 'freq_weights'):
+        if hasattr(results.model, 'freq_weights') and not cov_type == 'clu':
             # we don't want to square the weights in the covariance calculations
             # assumes that freq_weights are incorporated in score_obs or equivalent
             # assumes xu/score_obs is 2D
@@ -542,7 +542,7 @@ def cov_cluster(results, group, use_correction=True):
 
     '''
     #TODO: currently used version of groupsums requires 2d resid
-    xu, hessian_inv = _get_sandwich_arrays(results)
+    xu, hessian_inv = _get_sandwich_arrays(results, cov_type='clu')
 
     if not hasattr(group, 'dtype') or group.dtype != np.dtype('int'):
         clusters, group = np.unique(group, return_inverse=True)

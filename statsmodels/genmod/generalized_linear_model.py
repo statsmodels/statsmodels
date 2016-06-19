@@ -165,12 +165,8 @@ class GLM(base.LikelihoodModel):
     basic results with nonrobust or heteroscedasticity robust ``cov_type``. Other
     robust covariance types have not yet been verified, and at least the small sample
     correction is currently not based on the correct total frequency count.
-    It is not yet desided whether all the different types of residuals will be
-    based on weighted residuals. Currently, deviance and pearson residuals,
-    as well as working and response residuals are weighted, while Anscombe
-    residuals are unweighted. Consequently, Pearson and deviance residuals
-    provide a correct measure for the scale and dispersion, but will be
-    proportional to the frequency weights for outlier measures.
+    It has not yet been decided whether all the different types of residuals will be
+    based on weighted residuals. Currently, residuals are not weighted.
 
 
     **Attributes**
@@ -334,8 +330,12 @@ class GLM(base.LikelihoodModel):
             if len(freq_weights.shape) > 1:
                 raise ValueError("freq weights has too many dimensions")
 
+        # internal flag to store whether freq_weights were not None
+        self._has_freq_weights = (self.freq_weights is not None)
         if self.freq_weights is None:
             self.freq_weights = np.ones((endog.shape[0]))
+            # TODO: check do we want to keep None as sentinel for freq_weights
+
         if np.shape(self.freq_weights) == () and self.freq_weights > 1:
             self.freq_weights = (self.freq_weights *
                                  np.ones((endog.shape[0])))
@@ -1276,6 +1276,15 @@ class GLMResults(base.LikelihoodModelResults):
             self.use_t = False    # TODO: class default
         else:
             self.use_t = use_t
+
+        # temporary warning
+        ct = (cov_type == 'nonrobust') or (cov_type.startswith('HC'))
+        if self.model._has_freq_weights and not ct:
+            import warnings
+            from statsmodels.tools.sm_exceptions import SpecificationWarning
+            warnings.warn('cov_type not fully supported with freq_weights',
+                          SpecificationWarning)
+
         if cov_type == 'nonrobust':
             self.cov_type = 'nonrobust'
             self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
