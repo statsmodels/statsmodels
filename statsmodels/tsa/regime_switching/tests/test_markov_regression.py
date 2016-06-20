@@ -749,8 +749,8 @@ class TestFedFundsConst(MarkovRegression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = (current_path + os.sep + 'results' + os.sep +
-                'results_predict_fedfunds.csv')
+        path = os.path.join(current_path, 'results',
+                            'results_predict_fedfunds.csv')
         results = pd.read_csv(path)
         true = {
             'params': np.r_[.9820939, .0503587, 3.70877, 9.556793,
@@ -986,8 +986,8 @@ class TestFedFundsConstL1Exog(MarkovRegression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = (current_path + os.sep + 'results' + os.sep +
-                'results_predict_fedfunds.csv')
+        path = os.path.join(current_path, 'results',
+                            'results_predict_fedfunds.csv')
         results = pd.read_csv(path)
 
         true = {

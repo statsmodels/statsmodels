@@ -525,8 +525,8 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = (current_path + os.sep + 'results' + os.sep +
-                'results_predict_rgnp.csv')
+        path = os.path.join(current_path, 'results',
+                            'results_predict_rgnp.csv')
         results = pd.read_csv(path)
 
         true = {
@@ -809,7 +809,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
 class TestFilardo(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
-        path = current_path + os.sep + 'results' + os.sep + 'mar_filardo.csv'
+        path = os.path.join(current_path, 'results', 'mar_filardo.csv')
         cls.mar_filardo = pd.read_csv(path)
         true = {
             'params': np.r_[4.35941747, -1.6493936, 1.7702123, 0.9945672,
