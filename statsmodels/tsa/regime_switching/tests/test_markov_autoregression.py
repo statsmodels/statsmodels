@@ -820,8 +820,9 @@ class TestFilardo(MarkovAutoregression):
             'llf_fit': -586.5718,
             'llf_fit_em': -586.5718
         }
-        endog = cls.mar_filardo['dlip'].iloc[1:]
-        exog_tvtp = add_constant(cls.mar_filardo['dmdlleading'].iloc[:-1])
+        endog = cls.mar_filardo['dlip'].iloc[1:].values
+        exog_tvtp = add_constant(
+            cls.mar_filardo['dmdlleading'].iloc[:-1].values)
         super(TestFilardo, cls).setup_class(
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
@@ -833,11 +834,11 @@ class TestFilardo(MarkovAutoregression):
         raise SkipTest
 
     def test_filtered_regimes(self):
-        assert_allclose(self.result.filtered_marginal_probabilities.ix[:, 0],
+        assert_allclose(self.result.filtered_marginal_probabilities[:, 0],
                         self.mar_filardo['filtered_0'].iloc[5:], atol=1e-5)
 
     def test_smoothed_regimes(self):
-        assert_allclose(self.result.smoothed_marginal_probabilities.ix[:, 0],
+        assert_allclose(self.result.smoothed_marginal_probabilities[:, 0],
                         self.mar_filardo['smoothed_0'].iloc[5:], atol=1e-5)
 
     def test_expected_durations(self):
