@@ -22,6 +22,7 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.sm_exceptions import EstimationWarning
 import statsmodels.base.wrapper as wrap
 
 
@@ -1382,7 +1383,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             if delta > 0:
                 warnings.warn('Invalid regime transition probabilities'
                               ' estimated in EM iteration; probabilities have'
-                              ' been re-scaled to continue estimation.')
+                              ' been re-scaled to continue estimation.',
+                              EstimationWarning)
                 regime_transition[i] /= 1 + delta + 1e-6
 
         return regime_transition
