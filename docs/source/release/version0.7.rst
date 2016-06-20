@@ -8,11 +8,18 @@ Release 0.7.0
 =============
 
 Release summary
+---------------
+
+**Note:** This version has never been officially released. Several models have
+been refactored, improved or bugfixed in 0.8.
+
 
 The following major new features appear in this version.
 
 Principal Component Analysis
 ----------------------------
+
+Author: Kevin Sheppard
 
 A new class-based Principal Component Analysis has been added.  This
 class replaces the function-based PCA that previously existed in the
@@ -47,6 +54,8 @@ class-based PCA implementation.
 Regression graphics for GLM/GEE
 -------------------------------
 
+Author: Kerby Shedden
+
 Added variable plots, partial residual plots, and CERES residual plots
 are available for GLM and GEE models by calling the methods
 `plot_added_variable`, `plot_partial_residuals`, and
@@ -54,6 +63,8 @@ are available for GLM and GEE models by calling the methods
 
 State Space Models
 ------------------
+
+Author: Chad Fulton
 
 State space methods provide a flexible structure for the estimation and
 analysis of a wide class of time series models. The Statsmodels implementation
@@ -115,6 +126,8 @@ models. See below for more details.
 Time Series Models (ARIMA) with Seasonal Effects
 ------------------------------------------------
 
+Author: Chad Fulton
+
 A model for estimating seasonal autoregressive integrated moving average models
 with exogenous regressors (SARIMAX) has been added by taking advantage of the
 new state space functionality. It can be used very similarly to the existing
@@ -146,33 +159,100 @@ effects.
    res = mod.fit()
    print res.summary()
 
+
+Generalized Estimating Equations GEE
+------------------------------------
+
+Author: Kerby Shedden
+
+Enhancements and performance improvements for GEE:
+
+* EquivalenceClass covariance structure allows covariances to be specified by
+  arbitrary collections of equality constraints #2188
+* add weights #2090
+* refactored margins #2158
+
+
+MixedLM
+-------
+
+Author: Kerby Shedden with Saket Choudhary
+
+Enhancements to MixedLM (#2363): added variance components support for
+MixedLM allowing a wider range of random effects structures to be specified;
+also performance improvements from use of sparse matrices internally for
+random effects design matrices.
+
+
 Other important new features
 ----------------------------
 
-* Bullet
-* List
-* of
-* new
-* features
+* GLM: add scipy-based gradient optimization to fit #1961 (Kerby Shedden)
+* wald_test_terms: new method of LikelihoodModels to compute wald tests (F or chi-square)
+  for terms or sets of coefficients #2132  (Josef Perktold)
+* add cov_type with fixed scale in WLS to allow chi2-fitting #2137 #2143
+  (Josef Perktold, Christoph Deil)
+* VAR: allow generalized IRF and FEVD computation #2067 (Josef Perktold)
+* get_prediction new method for full prediction results (new API convention)
+
+
 
 Major Bugs fixed
 ----------------
 
-* Bullet
-* list
-* use ``:ghissue:`XXX``` to link to issue.
+* see github issues for a full list
+* bug in ARMA/ARIMA predict with `exog` #2470
+* bugs in VAR
+* x13: python 3 compatibility
+
+
 
 Backwards incompatible changes and deprecations
 -----------------------------------------------
 
 * List backwards incompatible changes
 
+
 Development summary and credits
 -------------------------------
 
-A blurb about the number of changes and the contributors list.
+
 
 .. note::
 
-   Obtained by running ``git log v0.6.0..HEAD --format='* %aN <%aE>' | sed 's/@/\-at\-/' | sed 's/<>//' | sort -u``.
+Thanks to all of the contributors for the 0.7 release:
 
+.. note::
+
+   * Alex Griffing
+   * Antony Lee
+   * Chad Fulton
+   * Christoph Deil
+   * Daniel Sullivan
+   * Hans-Martin von Gaudecker
+   * Jan Schulz
+   * Joey Stockermans
+   * Josef Perktold
+   * Kerby Shedden
+   * Kevin Sheppard
+   * Kiyoto Tamura
+   * Louis-Philippe Lemieux Perreault
+   * Padarn Wilson
+   * Ralf Gommers
+   * Saket Choudhary
+   * Skipper Seabold
+   * Tom Augspurger
+   * Trent Hauck
+   * Vincent Arel-Bundock
+   * chebee7i
+   * donbeo
+   * gliptak
+   * hlin117
+   * jerry dumblauskas
+   * jonahwilliams
+   * kiyoto
+   * neilsummers
+   * waynenilsen
+
+These lists of names are automatically generated based on git log, and may not be
+complete.
