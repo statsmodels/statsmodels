@@ -775,7 +775,7 @@ class OLS(WLS):
         """
 
         if diag:
-            return np.diag(np.ones(self.exog.shape[1]))
+            return np.diag(np.ones(self.exog.shape[0]))
 
         else:
             raise NotImplementedError("diag False is not supported")
