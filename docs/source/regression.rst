@@ -175,7 +175,7 @@ results class of the other linear models.
 
    QuantRegResults
 
-.. currentmodule:: statsmodels.regression.quantile_regression
+.. currentmodule:: statsmodels.regression.recursive_ls
 
 .. autosummary::
    :toctree: generated/
