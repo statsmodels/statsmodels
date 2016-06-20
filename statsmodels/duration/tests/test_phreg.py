@@ -336,11 +336,12 @@ class TestPHReg(object):
 
         mod = PHReg(endog, exog, status)
         rslt = mod.fit()
-        rslt.predict(return_object=True)
+        rslt.predict()
         for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
-            rslt.predict(pred_type=pred_type, return_object=True)
+            rslt.predict(pred_type=pred_type)
+            rslt.predict(endog=endog[0:10], pred_type=pred_type)
             rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
-                         pred_type=pred_type, return_object=True)
+                         pred_type=pred_type)
 
     def test_get_distribution(self):
         # Smoke test
@@ -405,24 +406,6 @@ class TestPHReg(object):
                 llf_r = plf(params)
                 llf_sm = plf(sm_result.params)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
-
-    # Simulation based test of survival quantiles.
-    def test_qsurv(self):
-
-        np.random.seed(34249)
-        n = 100
-        p = 4
-        xmat = np.zeros((n, 1))
-        xmat[n/2:] = 1
-        expval = np.exp(-xmat)
-        time = np.random.exponential(expval)
-
-        mod = PHReg(time, xmat)
-        rslt = mod.fit()
-        qsurv = rslt.predict(pred_type='qsurv', prob=0.5)
-
-        # smoke test
-        assert_allclose(np.r_[qsurv[0], qsurv[-1]], np.r_[0.72573760409939703, 0.28558443438847758])
 
 
 if  __name__=="__main__":

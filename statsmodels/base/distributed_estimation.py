@@ -2,6 +2,8 @@ from statsmodels.base.elastic_net import fit_elasticnet
 from statsmodels.base.model import Results
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
+#from statsmodels.genmod.generalized_linear_model import GLM
+#from statsmodels.genmod.families import Binomial
 import statsmodels.base.wrapper as wrap
 import numpy as np
 
@@ -9,42 +11,20 @@ import numpy as np
 distributed regularized estimation.
 
 Routines for fitting regression models using a distributed
-approach outlined in 
+approach outlined in
 
 Jason D. Lee, Qiang Liu, Yuekai Sun and Jonathan E. Taylor.
-"Communication-Efficient Sparse Regression: A One-Shot Approach." 
-arXiv:1503.04337. 2015.
+"Communication-Efficient Sparse Regression: A One-Shot Approach."
+arXiv:1503.04337. 2015. http://arxiv.org/abs/1503.04337.
+
+Currently the primary usecase is for out of memory computation,
+this approach currently does not support mutli-core processing
+and processing must be handled sequentially.
 """
 
 
-# TODO this is just a temporary function for testing it is
-# also currently out of date
-def _generator(model, partitions):
-    """
-    yields the partitioned model
-    """
-
-    n_exog = model.exog.shape[0]
-    n_part = np.floor(n_exog / partitions)
-
-    # TODO this is memory inefficient and should be
-    # fixed
-    exog = model.exog.copy()
-    endog = model.endog.copy()
-
-    ii = 0
-    while ii < n_exog:
-        jj = int(min(ii + n_part, n_exog))
-        tmodel = model
-        tmodel.exog = exog[ii:jj, :].copy()
-        tmodel.endog = endog[ii:jj].copy()
-        yield tmodel
-        ii += int(n_part)
-
-
 def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
-    """
-    generates the log-likelihood gradient for the debiasing
+    """generates the log-likelihood gradient for the debiasing
 
     Parameters
     ----------
@@ -65,15 +45,15 @@ def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
         a ridge fit, if 1 it is a lasso fit.
     score_kwds : dict-like or None
         Keyword arguments for the score function.
-    
+
     Returns
     -------
     An array-like object of the same dimension as beta_hat
-   
+
     Notes
     -----
     In general:
-    
+
     nabla l_k(beta)
 
     For the simple linear case:
@@ -88,8 +68,7 @@ def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
 
 
 def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
-    """
-    generates the weighted design matrix necessary to generate
+    """generates the weighted design matrix necessary to generate
     the approximate inverse covariance matrix
 
     Parameters
@@ -106,14 +85,13 @@ def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
     An array-like object, updated design matrix, same dimension
     as mod.exog
     """
-   
-    return mod.hessian_obs(np.r_[beta_hat], **hess_kwds)
+
     # TODO need to handle duration and other linear model classes
+    return np.sqrt(mod.hessian_obs(np.r_[beta_hat], **hess_kwds)).dot(mod.exog)
 
 
 def _gen_gamma_hat(X_beta, pi, p, n, alpha):
-    """
-    generates the gamma hat values for the pith variable, used to
+    """generates the gamma hat values for the pith variable, used to
     estimate theta hat.
 
     Parameters
@@ -142,25 +120,25 @@ def _gen_gamma_hat(X_beta, pi, p, n, alpha):
     gamma_hat_i = arg min 1/(2n) ||X_beta,i - X_beta,-i gamma||_2^2
                           + alpha ||gamma||_1
     """
-   
-    ind = range(pi) + range(pi + 1, p)
+
+    # TODO this is not a very elegant solution, we can't concat
+    # range in Py 3 because it is now a generator.
+    ind = list(range(pi)) + list(range(pi + 1, p))
 
     # TODO use elastic net optimization routine directly
     tmod = OLS(X_beta[:, pi], X_beta[:, ind])
 
-    #def func(gamma):
-    #    d = np.linalg.norm(X_beta[:, pi] - X_beta[:, ind].dot(gamma))**2
-    #    d = d / (2 * n) + alpha * np.linalg.norm(gamma, 1)
-    #    return d
-
+    # TODO this is currently going to fail with some alpha
+    # values, the issue is that may have an array for of
+    # alphas for beta hat and we want each individual element
+    # here
     gamma_hat = tmod.fit_regularized(alpha=alpha).params
-    #gamma_hat = opt.minimize(func, np.ones(p - 1)).x
+
     return gamma_hat
 
 
 def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
-    """
-    generates the tau hat value for the pith variable, used to
+    """generates the tau hat value for the pith variable, used to
     estimate theta hat.
 
     Parameters
@@ -192,21 +170,20 @@ def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
                      + alpha ||gamma||_1)
     """
 
-    ind = range(pi) + range(pi + 1, p)
+    ind = list(range(pi)) + list(range(pi + 1, p))
     d = np.linalg.norm(X_beta[:, pi] - X_beta[:, ind].dot(gamma_hat))**2
     d = np.sqrt(d / n + alpha * np.linalg.norm(gamma_hat, 1))
     return d
 
 
 def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
-    """
-    generates the theta hat matrix
+    """generates the theta hat matrix
 
     Parameters
     ----------
     gamma_hat_l : list
         A list of array-like object where each object corresponds to
-        the gamma hat values for the corresponding variable, should 
+        the gamma hat values for the corresponding variable, should
         be length p.
     tau_hat_l : list
         A list of scalars where each scalar corresponds to the tau hat
@@ -217,26 +194,25 @@ def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
     Returns
     ------
     An array-like object, p x p matrix
-   
+
     Notes
     -----
 
     theta_hat_j = - 1 / tau_hat_j [gamma_hat_j,1,...,1,...gamma_hat_j,p]
     """
-    
+
     theta_hat = np.eye(p)
     for pi in range(p):
-        ind = range(pi) + range(pi + 1, p)
+        ind = list(range(pi)) + list(range(pi + 1, p))
         theta_hat[pi,ind] = gamma_hat_l[pi]
         theta_hat[pi,:] = (- 1. / tau_hat_l[pi]**2) * theta_hat[pi,:]
 
     return theta_hat
 
 
-def _est_regularized_distributed(mod, mnum, partitions, score_kwds=None,
-                                 hess_kwds=None, fit_kwds=None):
-    """
-    generates the regularized fitted parameters, is the default
+def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
+                                 score_kwds=None, hess_kwds=None):
+    """generates the regularized fitted parameters, is the default
     estimation_method for distributed_estimation
 
     Parameters
@@ -247,12 +223,12 @@ def _est_regularized_distributed(mod, mnum, partitions, score_kwds=None,
         Index of current machine
     partitions : scalar
         Total number of machines
+    fit_kwds : dict-like or None
+        Keyword arguments to be given to fit_regularized
     score_kwds : dict-like or None
         Keyword arguments for the score function.
     hess_kwds : dict-like or None
         Keyword arguments for the Hessian function.
-    fit_kwds : dict-like or None
-        Keyword arguments to be given to fit_regularized
 
     Returns
     -------
@@ -263,15 +239,24 @@ def _est_regularized_distributed(mod, mnum, partitions, score_kwds=None,
         A list of array like objects for tau hat
     """
 
-    # TODO this is currently going to fail with some alpha
-    # values
-    alpha = fit_kwds["alpha"]
-    L1_wt = fit_kwds["L1_wt"]
+    score_kwds = {} if score_kwds is None else score_kwds
+    hess_kwds = {} if hess_kwds is None else hess_kwds
+
+    if fit_kwds is None:
+        raise ValueError("_est_regularized_distributed currently " +
+                         "requires that fit_kwds not be None.")
+    else:
+        alpha = fit_kwds["alpha"]
+
+    if "L1_wt" in fit_kwds:
+        L1_wt = fit_kwds["L1_wt"]
+    else:
+        L1_wt = 1
 
     n, p = mod.exog.shape
-    p_part = int(np.floor(p / partitions)
+    p_part = int(np.ceil((1. * p) / partitions))
 
-    beta_hat = mod.fit_regularized(**fit_kwargs).params
+    beta_hat = mod.fit_regularized(**fit_kwds).params
     grad = _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds)
 
     X_beta = _gen_wdesign_mat(mod, beta_hat, hess_kwds)
@@ -279,7 +264,7 @@ def _est_regularized_distributed(mod, mnum, partitions, score_kwds=None,
     gamma_hat_l = []
     tau_hat_l = []
     for pi in range(mnum * p_part, min((mnum + 1) * p_part, p)):
-        
+
         gamma_hat = _gen_gamma_hat(X_beta, pi, p, n, alpha)
         gamma_hat_l.append(gamma_hat)
 
@@ -290,11 +275,19 @@ def _est_regularized_distributed(mod, mnum, partitions, score_kwds=None,
 
 
 def _join_debiased(model_results_l, partitions, threshold=0):
-    """
-    """
+    """joins the results from each run of _est_regularized_distributed
+    and returns the debiased estimate of the coefficients
 
-    # TODO currently the way we extract p is roundabout, should be
-    # handled better but ideally not as an argument to _join_debiased
+    Parameters
+    ----------
+    model_results_l : list
+        A list of tuples each one containing the beta_hat, grad,
+        gamma_hat and tau_hat values for each partition.
+    partitions : scalar
+        The number of partitions that the data will be split into.
+    threshold : scalar
+        The threshold at which the coefficients will be cut.
+    """
 
     beta_hat_l = []
     grad_l = []
@@ -312,13 +305,12 @@ def _join_debiased(model_results_l, partitions, threshold=0):
     beta_mn = np.zeros(p)
     for beta_hat in beta_hat_l:
         beta_mn += beta_hat
-    beta_mn = beta_mn / partitions
+    beta_mn /= partitions
 
     grad_mn = np.zeros(p)
     for grad in grad_l:
         grad_mn += grad
-    # TODO fix this
-    grad_mn = grad_mn / (partitions ** 2)
+    grad_mn *= -1. / partitions
 
     theta_hat = _gen_theta_hat(gamma_hat_l, tau_hat_l, p)
 
@@ -327,28 +319,53 @@ def _join_debiased(model_results_l, partitions, threshold=0):
     beta_tilde[np.abs(beta_tilde) < threshold] = 0
 
     return beta_tilde
+#    return beta_tilde, beta_mn, theta_hat, grad_mn, gamma_hat_l, theta_hat.dot(grad_mn)
 
 
-def distributed_estimation(endog_generator, exog_generator, partitions,
+def distributed_estimation(data_generator, partitions,
                            model_class=None, init_kwds=None, fit_kwds=None,
                            estimation_method=None, estimation_kwds=None,
-                           join_method=None, join_kwargs=None):
-    """
-    This functions handles a general approach to distributed estimation,
+                           join_method=None, join_kwds=None):
+    """This functions handles a general approach to distributed estimation,
     the user is expected to provide generators for the data as well as
     a model and methods for performing the estimation and recombining
     the results
 
-    Paramters
+    Parameters
     ---------
+    data_generator : generator
+        A generator that produces a sequence of tuples where the first
+        element in the tuple corresponds to an endog array and the
+        element corresponds to an exog array.
+    partitions : scalar
+        The number of partitions that the data will be split into.
+    model_class : statsmodels model class
+        The model class which will be used for estimation. If None
+        this defaults to OLS.
+    init_kwds : dict-like or None
+        Keywords needed for initializing the model, in addition to
+        endog and exog.
+    fit_kwds : dict-like or None
+        Keywords needed for the model fitting.
+    estimation_method : function or None
+        The function that performs the estimation for each partition.
+        If None this defaults to _est_regularized_distributed.
+    estimation_kwds : dict-like or None
+        Keywords to be passed to estimation_method.
+    join_method : function or None
+        The function used to recombine the results from each partition.
+        If None this defaults to _join_debiased.
 
     Returns
     -------
 
-    Notes
-    -----
-
+    join_method result.  For the default _join_debiased, it returns a
+    p length array.
     """
+
+    init_kwds = {} if init_kwds is None else init_kwds
+    estimation_kwds = {} if estimation_kwds is None else estimation_kwds
+    join_kwds = {} if join_kwds is None else join_kwds
 
     # set defaults
     if model_class is None:
@@ -368,41 +385,16 @@ def distributed_estimation(endog_generator, exog_generator, partitions,
     # TODO given that we already have an example where generators should
     # produce more than just exog and endog (partition for variables)
     # this should probably be handled differently
-    for endog, exog in zip(endog_generator, exog_generator):
-        
+    for endog, exog in data_generator:
+
         model = model_class(endog, exog, **init_kwds)
 
         # TODO possibly fit_kwds should be handled within
         # estimation_kwds to make more general?
-        results = estimation_method(model, mnum, partitions, **estimation_kwds,
-                                    fit_kwds)
+        results = estimation_method(model, mnum, partitions, fit_kwds,
+                                    **estimation_kwds)
         model_results_l.append(results)
 
         mnum += 1
 
-    return join_method(model_results_l, **join_kwds)
-
-
-# TODO This doesn't work with the current implementation, need
-# to determine the best way to handle results
-class DistributedResults(Results):
-
-    def __init__(self, model, params):
-        super(DistributedResults, self).__init__(model, params)
-
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params)
-
-
-class DistributedResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {
-        'params': 'columns',
-        'resid': 'rows',
-        'fittedvalues': 'rows',
-    }
-
-    _wrap_attrs = _attrs
-
-wrap.populate_wrapper(DistributedResultsWrapper,
-                      DistributedResults)
+    return join_method(model_results_l, partitions, **join_kwds)

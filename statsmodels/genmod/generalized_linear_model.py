@@ -531,7 +531,7 @@ class GLM(base.LikelihoodModel):
 
         if diag:
             hessian_factor = self.hessian_factor(params, scale=scale)
-            return np.diag(hessian_factor[:, None])
+            return np.diag(hessian_factor)
 
         else:
             raise NotImplementedError("diag False is not supported")
