@@ -67,6 +67,21 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     This model is new and API stability is not guaranteed, although changes
     will be made in a backwards compatible way if possible.
 
+    The model can be written as:
+
+    .. math::
+
+        y_t = a_{S_t} + x_t' \beta_{S_t} + \phi_{1, S_t}
+        (y_{t-1} - a_{S_{t-1}} - x_{t-1}' \beta_{S_{t-1}}) + \dots +
+        (y_{t-p} - a_{S_{t-p}} - x_{t-p}' \beta_{S_{t-p}}) + \dots +
+        \varepsilon_t \\
+        \varepsilon_t \sim N(0, \sigma_{S_t}^2)
+
+    i.e. the model is an autoregression with where the autoregressive
+    coefficients, the mean of the process (possibly including trend or
+    regression effects) and the variance of the error term may be switching
+    across regimes.
+
     The `trend` is accomodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
