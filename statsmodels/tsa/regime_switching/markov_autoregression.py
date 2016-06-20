@@ -18,7 +18,7 @@ from statsmodels.tsa.statespace.tools import (
 
 
 class MarkovAutoregression(markov_regression.MarkovRegression):
-    """
+    r"""
     Markov switching regression model
 
     Parameters
@@ -73,7 +73,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         y_t = a_{S_t} + x_t' \beta_{S_t} + \phi_{1, S_t}
         (y_{t-1} - a_{S_{t-1}} - x_{t-1}' \beta_{S_{t-1}}) + \dots +
-        (y_{t-p} - a_{S_{t-p}} - x_{t-p}' \beta_{S_{t-p}}) + \dots +
+        \phi_{p, S_t} (y_{t-p} - a_{S_{t-p}} - x_{t-p}' \beta_{S_{t-p}}) +
         \varepsilon_t \\
         \varepsilon_t \sim N(0, \sigma_{S_t}^2)
 
@@ -237,12 +237,14 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         kwargs.setdefault('results_wrapper_class',
                           MarkovAutoregressionResultsWrapper)
         return super(MarkovAutoregression, self).filter(*args, **kwargs)
+    filter.__doc__ = markov_regression.MarkovRegression.filter.__doc__
 
     def smooth(self, *args, **kwargs):
         kwargs.setdefault('results_class', MarkovAutoregressionResults)
         kwargs.setdefault('results_wrapper_class',
                           MarkovAutoregressionResultsWrapper)
         return super(MarkovAutoregression, self).smooth(*args, **kwargs)
+    smooth.__doc__ = markov_regression.MarkovRegression.smooth.__doc__
 
     def _em_iteration(self, params0):
         """
