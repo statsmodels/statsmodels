@@ -145,9 +145,12 @@ class KimFilter(object):
 
     def _is_left_stochastic(self, matrix):
 
-        if np.any(matrix < 0):
+        eps = 1e-8
+
+        if np.any(matrix < -eps):
             return False
-        if not np.all(matrix.sum(axis=0) == 1):
+        matrix[matrix < 0] = 0
+        if not np.all(np.fabs(matrix.sum(axis=0) - 1) < eps):
             return False
         return True
 
@@ -285,9 +288,13 @@ class KimFilter(object):
 
         candidate = np.linalg.pinv(constraint_matrix)[:, -1]
 
-        if np.any(candidate < 0):
+        eps = 1e-8
+
+        if np.any(candidate < -eps):
             raise RuntimeError('Regime switching chain doesn\'t have ' \
                 'a stationary distribution')
+
+        candidate[candidate < 0] = 0
 
         self._initial_regime_logprobs = np.log(candidate)
 
@@ -407,9 +414,13 @@ class KimFilter(object):
 
         self._obs_loglikelihoods[t] = obs_loglikelihood
 
-        np.subtract(predicted_prev_and_curr_regime_and_obs_logprobs,
-                obs_loglikelihood,
-                out=filtered_prev_and_curr_regime_logprobs)
+        # Condition to avoid -np.inf - (-np.inf) operation
+        if obs_loglikelihood != -np.inf:
+            np.subtract(predicted_prev_and_curr_regime_and_obs_logprobs,
+                    obs_loglikelihood,
+                    out=filtered_prev_and_curr_regime_logprobs)
+        else:
+            filtered_prev_and_curr_regime_logprobs[:, :] = -np.inf
 
         self._filtered_regime_logprobs[t, :] = logsumexp(
                 filtered_prev_and_curr_regime_logprobs, axis=0)
@@ -499,6 +510,7 @@ class KimFilter(object):
         # I spent some time to figure this out.
         np.sum(weighted_state_covs_and_state_bias_sqrs, axis=0,
                 out=approx_state_cov)
+
         np.copyto(np.asarray(curr_filter.filtered_state_cov[:, :, t]),
                 approx_state_cov)
 
@@ -596,7 +608,7 @@ class KimFilter(object):
                                 state_cov_batteries, forecast_error_batteries,
                                 forecast_error_cov_batteries)
 
-           # Hamilton filter
+            # Hamilton filter
             self._hamilton_filtering_step(t,
                     predicted_prev_and_curr_regime_logprobs,
                     forecast_error_batteries, forecast_error_cov_batteries,
@@ -732,9 +744,14 @@ class KimFilter(object):
                     filtered_regime_logprobs[t, :].reshape(-1, 1),
                     out=predicted_curr_and_next_regime_logprobs)
 
-            np.subtract(predicted_curr_and_next_regime_logprobs,
-                    predicted_regime_logprobs[t + 1, :].reshape(1, -1),
-                    out=filtered_curr_regime_cond_on_next_logprobs)
+            for i in range(partition_size):
+                # Condition to avoid -np.inf - (-np.inf) operation
+                if predicted_regime_logprobs[t + 1, i] != -np.inf:
+                    np.subtract(predicted_curr_and_next_regime_logprobs[:, i],
+                            predicted_regime_logprobs[t + 1, i],
+                            out=filtered_curr_regime_cond_on_next_logprobs[:, i])
+                else:
+                    filtered_curr_regime_cond_on_next_logprobs[:, i] = -np.inf
 
             np.add(smoothed_regime_logprobs[t + 1, :].reshape(1, -1),
                     filtered_curr_regime_cond_on_next_logprobs,

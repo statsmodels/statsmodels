@@ -16,9 +16,6 @@ class Hamilton1989(object):
         cls.order = 4
 
         cls.true = results_hamilton1989.hmt4_kim
-        cls.true_pr_tt0 = np.array(cls.true['pr_tt0'], dtype=dtype)
-        cls.true_pr_tl0 = np.array(cls.true['pr_tl0'], dtype=dtype)
-        cls.true_smooth0 = np.array(cls.true['smooth0'], dtype=dtype)
 
         data = np.array(cls.true['data'], dtype=dtype)
         data = np.log(data) * 100
@@ -93,10 +90,8 @@ class TestHamilton1989_MLE(Hamilton1989):
                 cls.true['untransformed_start_parameters'], dtype=cls.dtype),
                 transformed=False)
 
-        cls.model.filter(params)
-
         cls.result = {
-                'loglike': cls.model.ssm.loglike(filter_first=False),
+                'loglike': cls.model.loglike(params),
                 'params': params
         }
 
@@ -118,6 +113,8 @@ class TestHamilton1989_EM(Hamilton1989):
 
         # It takes some time to run 50 sessions of EM-algorithm
         params = cls.model.fit_em_with_random_starts()
+
+        params = cls.model.normalize_params(params)
 
         cls.result = {
                 'loglike': cls.model.loglike(params),

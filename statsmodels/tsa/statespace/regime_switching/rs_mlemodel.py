@@ -87,6 +87,7 @@ class RegimeSwitchingMLEModel(MLEModel):
                 (param_k_regimes - 1, param_k_regimes))
 
         constrained_transition = np.exp(unconstrained_transition)
+
         constrained_transition /= \
                 (1 + constrained_transition.sum(axis=0)).reshape((1, -1))
 
@@ -147,6 +148,17 @@ class RegimeSwitchingMLEModel(MLEModel):
     def untransform_params(self, constrained):
         return self.untransform_model_params(
                 self.untransform_regime_transition(constrained))
+
+    def normalize_params(self, params, transformed=True):
+        '''
+        Parameters vector depends on permutation of regimes in it, which means
+        that several different vectors can represent the only model
+        configuration. To compare configurations (e.g. for testing), we need to
+        normalize parameters.
+        To override, if needed.
+        '''
+
+        raise NotImplementedError
 
     def set_smoother_output(self, **kwargs):
 

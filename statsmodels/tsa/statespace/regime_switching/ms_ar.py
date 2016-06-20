@@ -20,17 +20,33 @@ def _em_iteration_for_markov_regression(dtype, k_regimes, endog, exog,
                 np.sqrt(smoothed_regime_probs[:, regime].reshape(-1, 1))
         regression_endog = endog * np.sqrt(smoothed_regime_probs[:, regime])
 
+        # may raise an Exception
         coefs[regime, :] = np.linalg.lstsq(regression_exog, regression_endog)[0]
 
         sqr_residuals = (endog - \
                 exog.dot(coefs[regime, :].reshape(-1, 1)).ravel())**2
 
-        variances[regime] = \
-                np.sum(sqr_residuals * smoothed_regime_probs[:, regime]) / \
-                np.sum(smoothed_regime_probs[:, regime])
+        marginal_regime_prob_sum = np.sum(smoothed_regime_probs[:, regime])
 
-    ar_regime_transition = np.sum(smoothed_curr_and_next_regime_probs,
-            axis=0) / np.sum(smoothed_regime_probs[:-1], axis=0).reshape(-1, 1)
+        if marginal_regime_prob_sum != 0:
+            variances[regime] = \
+                    np.sum(sqr_residuals * smoothed_regime_probs[:, regime]) / \
+                    marginal_regime_prob_sum
+        else:
+            # any value would be alright?
+            variances[regime] = 1
+
+    joint_prob_sum = np.sum(smoothed_curr_and_next_regime_probs, axis=0)
+
+    marginal_prob_sum = np.sum(smoothed_regime_probs[:-1], axis=0)
+
+    ar_regime_transition = np.zeros((k_regimes, k_regimes), dtype=dtype)
+
+    ar_regime_transition[marginal_prob_sum == 0, :] = 1.0/k_regimes
+
+    ar_regime_transition[marginal_prob_sum != 0, :] = \
+            joint_prob_sum[marginal_prob_sum != 0] / \
+            marginal_prob_sum[marginal_prob_sum != 0].reshape(-1, 1)
 
     # to make matrix left-stochastic
     ar_regime_transition = ar_regime_transition.transpose()
@@ -208,6 +224,57 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         return unconstrained
 
+    def normalize_params(self, params, transformed=True):
+
+        dtype = self.ssm.dtype
+        k_ar_regimes = self.k_ar_regimes
+        order = self.order
+
+        if not transformed:
+            params = self.transform_params(params)
+
+        regime_sort_keys = [() for _ in range(k_ar_regimes)]
+
+        if self.switching_mean:
+            for i in range(k_ar_regimes):
+                regime_sort_keys[i] += (params[self.parameters[i, 'mean']],)
+
+        if self.switching_variance:
+            for i in range(k_ar_regimes):
+                regime_sort_keys[i] += \
+                        (params[self.parameters[i, 'variance']],)
+
+        if any(self.switching_ar):
+            for i in range(k_ar_regimes):
+                regime_sort_keys[i] += tuple(params[self.parameters[i,
+                        'autoregressive']])
+
+        regime_permutation = sorted(range(k_ar_regimes),
+                key=lambda regime:regime_sort_keys[regime])
+
+        ar_regime_transition = self._get_param_regime_transition(params)
+        new_ar_regime_transition = np.zeros((k_ar_regimes, k_ar_regimes),
+                dtype=dtype)
+
+        for i in range(k_ar_regimes):
+            for j in range(k_ar_regimes):
+                new_ar_regime_transition[i, j] = \
+                        ar_regime_transition[regime_permutation[i],
+                        regime_permutation[j]]
+
+        new_params = np.zeros((self.parameters.k_params,), dtype=dtype)
+
+        self._set_param_regime_transition(new_params, new_ar_regime_transition)
+
+        for i in range(k_ar_regimes):
+            new_params[self.parameters[i]] = \
+                    params[self.parameters[regime_permutation[i]]]
+
+        if not transformed:
+            new_params = self.untransform_params(new_params)
+
+        return new_params
+
     def get_ar_mean_regimes(self, regime_index):
         '''
         get ar mean regimes
@@ -318,7 +385,9 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         # Switching variances
 
         state_cov = np.zeros((k_regimes, 1, 1, 1), dtype=dtype)
-        state_cov[:, 0, 0, 0] = params[self.parameters['variance']]
+        for i in range(k_regimes):
+            state_cov[i, 0, 0, 0] = params[self.parameters[i % k_ar_regimes,
+                    'variance']]
 
         self['state_cov'] = state_cov
 
@@ -465,7 +534,6 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
             start_params = self.transform_params(start_params)
 
         params = start_params
-
         for i in range(em_iterations):
             params = self._em_iteration(params)
 
@@ -485,15 +553,18 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         best_params = None
 
         for i in range(em_optimizations):
+
             random_start_params = np.random.normal(
                     size=self.parameters.k_params)
+
+            # Params can be invalid at some point
             try:
                 params = self.fit_em(start_params=random_start_params,
                     transformed=False, em_iterations=em_iterations)
                 loglike = self.loglike(params)
             except:
-                # sometimes random parameters can be invalid at some point
                 continue
+
             if best_params is None or loglike > best_loglike:
                 best_params = params
                 best_loglike = loglike
