@@ -13,8 +13,8 @@ Release summary
 ---------------
 
 The main features of this release are several new time series models based
-on the statespace framework, multiple imputation using MICE and many other
-enhancements. The codebase also has been updated to be compatible with
+on the statespace framework, multiple imputation using MICE as well as many
+other enhancements. The codebase also has been updated to be compatible with
 recent numpy and pandas releases.
 
 Statsmodels is using now github to store the updated documentation which
@@ -101,7 +101,9 @@ Imputation by regression on Order Statistic  #3019 (Paul Hobson)
 Time Series Analysis
 --------------------
 
-KPSS stationarity, unit root test #2775? (N-Wouda)
+Markov Switching Model #2980 (Chad Fulton)
+
+KPSS stationarity, unit root test #2775 (N-Wouda)
 
 BDS nonlinear dependence test #934 (Chad Fulton)
 
@@ -149,7 +151,7 @@ several existing functions have received improvements
 * acf, pacf, acovf: option for missing handling #3020 (joesnacks ?)
 * acf, pacf plots: allow array of lags #2989 (Kevin Sheppard)
 * io SimpleTable (summary): allow names with special characters #3015 (tvanessa ?)
-* tsa tools lagmat: pandas support #2310 (Kevin Sheppard)
+* tsa tools lagmat, lagmat2ds: pandas support #2310 #3042 (Kevin Sheppard)
 * CompareMeans: from_data, summary methods #2754 (Valery Tyumen)
 
 
@@ -157,17 +159,14 @@ several existing functions have received improvements
 Major Bugs fixed
 ----------------
 
-* Bullet
-* list
-* use :ghissue:`XXX` to link to issue.
+* see github issues
 
 Backwards incompatible changes and deprecations
 -----------------------------------------------
 
-* List backwards incompatible changes
 * ???
-
-* PCA moved compared to 0.7
+* predict now returns a pandas Series if the exog argument is a DataFrame
+* PCA moved to multivariate compared to 0.7
 
 
 Development summary and credits
@@ -187,8 +186,77 @@ and the general maintainer and code reviewer
 Additionally, many users contributed by participation in github issues and
 providing feedback.
 
+Thanks to all of the contributors for the 0.8 release:
 
 .. note::
 
-   Obtained by running ``git log v0.6.0..HEAD --format='* %aN <%aE>' | sed 's/@/\-at\-/' | sed 's/<>//' | sort -u``.
+   * Ashish
+   * Brendan
+   * Brendan Condon
+   * BrianLondon
+   * Chad Fulton
+   * Chris Fonnesbeck
+   * Christoph T. Weidemann
+   * James Kerns
+   * Josef Perktold
+   * Kerby Shedden
+   * Kevin Sheppard
+   * Leoyzen
+   * Matthew Brett
+   * Niels Wouda
+   * Paul Hobson
+   * Pierre Barbier de Reuille
+   * Pietro Battiston
+   * Ralf Gommers
+   * Roman Ring
+   * Skipper Seabold
+   * Soren Fuglede Jorgensen
+   * Thomas Cokelaer
+   * Tom Augspurger
+   * ValeryTyumen
+   * Vanessa
+   * Yaroslav Halchenko
+   * joesnacks
+   * kokes
+   * matiumerca
+   * rlan
+   * ssktotoro
+   * thequackdaddy
+   * vegcev
 
+Thanks to all of the contributors for the 0.7 release:
+
+.. note::
+
+   * Alex Griffing
+   * Antony Lee
+   * Chad Fulton
+   * Christoph Deil
+   * Daniel Sullivan
+   * Hans-Martin von Gaudecker
+   * Jan Schulz
+   * Joey Stockermans
+   * Josef Perktold
+   * Kerby Shedden
+   * Kevin Sheppard
+   * Kiyoto Tamura
+   * Louis-Philippe Lemieux Perreault
+   * Padarn Wilson
+   * Ralf Gommers
+   * Saket Choudhary
+   * Skipper Seabold
+   * Tom Augspurger
+   * Trent Hauck
+   * Vincent Arel-Bundock
+   * chebee7i
+   * donbeo
+   * gliptak
+   * hlin117
+   * jerry dumblauskas
+   * jonahwilliams
+   * kiyoto
+   * neilsummers
+   * waynenilsen
+
+These lists of names are automatically generated based on git log, and may not be
+complete.
