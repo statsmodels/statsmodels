@@ -1,4 +1,6 @@
 import statsmodels.tsa.base.tsa_model as tsbase
+import numpy as np
+import scipy
 
 # VECM class: for known or unknown VECM
 
@@ -34,32 +36,31 @@ class VECM(tsbase.TimeSeriesModel):
         """#TODO: docstring + implementation
         pass
 
-    def fit(self, maxlags=None, method='ols', ic=None, trend='c',
-            verbose=False):
+    def fit(self, max_diff_lags=None, method='ml', ic=None, 
+            deterministic_terms='', verbose=False, coint_rank=None):
         """
         Fit the VECM
 
         Parameters
         ----------
-        maxlags : int
+        max_diff_lags : int
             Maximum number of lags to check for order selection, defaults to
-            12 * (nobs/100.)**(1./4), see select_order function
-        method : {'ols'}
-            Estimation method to use
+            12 * (nobs/100.)**(1./4), see select_order function ##### ##### ##### #####
+        method : {'ls', 'egls', 'ml'}
+            Estimation method to use.
         ic : {'aic', 'fpe', 'hqic', 'bic', None}
-            Information criterion to use for VAR order selection.
+            Information criterion to use for VECM order selection.
             aic : Akaike
             fpe : Final prediction error
             hqic : Hannan-Quinn
             bic : Bayesian a.k.a. Schwarz
-        verbose : bool, default False
-            Print order selection output to the screen
-        trend, str {"c", "ct", "ctt", "nc"}
-            "c" - add constant
-            "ct" - constant and trend
-            "ctt" - constant, linear and quadratic trend
-            "nc" - co constant, no trend
-            Note that these are prepended to the columns of the dataset.
+        deterministic terms, str {"", "c", "lt", "s"}
+            "" - no deterministic terms
+            "c" - constant
+            "lt" - linear trend
+            "s" - seasonal terms
+            Combinations of these are possible (e.g. "clt" for linear trend 
+            with intercept)
 
         Notes
         -----
@@ -69,43 +70,43 @@ class VECM(tsbase.TimeSeriesModel):
         -------
         est : VARResults
         """#TODO: docstring + implementation
-        print("fit called") #TODO: delete this line
         
         #TODO: trend
         
-        # select number of lags
+        # select number of lags (=p-1)
         if ic is None:
-            if maxlags is None:
-                lags = 1
+            if max_diff_lags is None:
+                diff_lags = 1
             else:
-                lags = maxlags
+                diff_lags = max_diff_lags
         else:
-            selections = self.select_order(maxlags=maxlags, verbose=verbose)
+            selections = self.select_order(max_diff_lags=max_diff_lags, verbose=verbose)
             if ic not in selections:
                 raise Exception("%s not recognized, must be among %s"
                                 % (ic, sorted(selections)))
-            lags = selections[ic]
+            diff_lags = selections[ic]
             if verbose:
-                print('Using %d based on %s criterion' %  (lags, ic))
-        print(lags)
+                print('Using %d based on %s criterion' %  (diff_lags, ic))
         
         # estimate parameters
-        self._estimate_vecm(lags)
+        if method=='ls':
+            return self._estimate_vecm_ls(diff_lags, deterministic_terms)
+        elif method == 'egls':
+            if coint_rank is None:
+                coint_rank = 1
+            return self._estimate_vecm_egls(diff_lags, deterministic_terms, coint_rank)
+        elif method == 'ml':
+            if coint_rank is None:
+                coint_rank = 1
+            return self._estimate_vecm_ml(diff_lags, deterministic_terms, coint_rank)
+        else:
+            raise Exception("%s not recognized, must be among %s"
+                            % (method, ("ls", "egls", "ml")))
         
-    def _estimate_vecm(self, lags):
-        """
-        lags : int
-        offset : int
-            Periods to drop from beginning-- for order selection so it's an
-            apples-to-apples comparison
-        trend : string or None
-            As per above
-        """#TODO: docstring + implementation
-        pass
 
-    def estimation_matrices(data, diff_lags, deterministic_terms):
+    def estimation_matrices(self, diff_lags, deterministic_terms):
         p = diff_lags+1
-        y_all = data.values.T
+        y_all = self.endog.T#######################superclass turning DataFrame into ndarray?
         K = y_all.shape[0]
         
         y_1_T = y_all[:, p:]
@@ -131,7 +132,7 @@ class VECM(tsbase.TimeSeriesModel):
         
         return y_all, y_1_T, Delta_y_all, Delta_y_1_T, y_minus1, Delta_x
 
-    def _ls_Pi_Gamma(Delta_y_1_T, y_minus1, Delta_x, deterministic_terms):
+    def _ls_Pi_Gamma(self, Delta_y_1_T, y_minus1, Delta_x, deterministic_terms):
         mat1 = np.hstack((Delta_y_1_T.dot(y_minus1.T), Delta_y_1_T.dot(Delta_x.T)))
 
         B = y_minus1.dot(Delta_x.T)
@@ -152,10 +153,10 @@ class VECM(tsbase.TimeSeriesModel):
 
         return (Pi_hat, Gamma_hat, Sigma_u_hat)
 
-    def ls_estimator(data, diff_lags, deterministic_terms):    
+    def _estimate_vecm_ls(self, diff_lags, deterministic_terms):    
         # deterministic_terms \in \{'c', 'lt', 's'\} c=constant, lt=linear trend, s=seasonal terms
 
-        y_all, y_1_T, Delta_y_all, Delta_y_1_T, y_minus1, Delta_x = estimation_matrices(data, diff_lags, deterministic_terms)
+        y_all, y_1_T, Delta_y_all, Delta_y_1_T, y_minus1, Delta_x = self.estimation_matrices(diff_lags, deterministic_terms)
         K = y_all.shape[0]
         T = y_1_T.shape[1]
 
@@ -170,14 +171,14 @@ class VECM(tsbase.TimeSeriesModel):
         
         return {"Pi_hat": Pi_hat, "Gamma_hat": Gamma_hat, "Sigma_u_hat": Sigma_u_hat}        
 
-    def _M_and_R_matrices(T, Delta_x, Delta_y_1_T, y_minus1):
+    def _M_and_R_matrices(self, T, Delta_x, Delta_y_1_T, y_minus1):
         M = np.identity(T) - Delta_x.T.dot(np.linalg.inv(Delta_x.dot(Delta_x.T))).dot(Delta_x)
         R_0 = Delta_y_1_T.dot(M)
         R_1 = y_minus1.dot(M)
         return (M, R_0, R_1)
     
-    def egls_estimator(data, diff_lags, deterministic_terms='', r=1):    
-        _ya, y_1_T, _Dya, Delta_y_1_T, y_minus1, Delta_x = estimation_matrices(data, diff_lags, deterministic_terms)
+    def _estimate_vecm_egls(self, diff_lags, deterministic_terms='', r=1):    
+        _ya, y_1_T, _Dya, Delta_y_1_T, y_minus1, Delta_x = self.estimation_matrices(diff_lags, deterministic_terms)
         K = y_all.shape[0]
         T = y_1_T.shape[1]
         
@@ -186,7 +187,7 @@ class VECM(tsbase.TimeSeriesModel):
         #print("yminus1: " + str(y_minus1.shape) + ",  DX.shape: "+str(Delta_x.shape))
         alpha_hat = Pi_hat[:, :r]
         
-        M, R_0, R_1 = _M_and_R_matrices(T, Delta_x, Delta_y_1_T, y_minus1)
+        M, R_0, R_1 = self._M_and_R_matrices(T, Delta_x, Delta_y_1_T, y_minus1)
         R_11 = R_1[:r]
         R_12 = R_1[r:]
         #print("Sigma_u_hat: \n"+str(Sigma_u_hat))
@@ -199,13 +200,14 @@ class VECM(tsbase.TimeSeriesModel):
         print(alpha_hat.round(3))
         print("beta")
         print(beta_hhat.round(3))
+        return {"alpha":alpha_hat, "beta":beta_hhat}
     
-    def ml_estimator(data, diff_lags, deterministic_terms='', r=1):
-        _ya, y_1_T, _Dya, Delta_y_1_T, y_minus1, Delta_x = estimation_matrices(data, diff_lags, deterministic_terms)
+    def _estimate_vecm_ml(self, diff_lags, deterministic_terms='', r=1):
+        y_all, y_1_T, _Dya, Delta_y_1_T, y_minus1, Delta_x = self.estimation_matrices(diff_lags, deterministic_terms)
         K = y_all.shape[0]
         T = y_1_T.shape[1]
         
-        M, R_0, R_1 = _M_and_R_matrices(T, Delta_x, Delta_y_1_T, y_minus1)
+        M, R_0, R_1 = self._M_and_R_matrices(T, Delta_x, Delta_y_1_T, y_minus1)
         S = np.bmat([[Ri.dot(Rj.T)/T for Rj in [R_0, R_1]] for Ri in [R_0, R_1]])
         S00 = S[:K, :K]
         S01 = S[:K, K:]
@@ -215,7 +217,8 @@ class VECM(tsbase.TimeSeriesModel):
 
         v = np.linalg.eig(S11_ * S10 * S00.I * S01 * S11_)[1]
         m_beta_tilde = (v[:,:r].T * S11_).T
-        m_beta_tilde = m_beta_tilde * m_beta_tilde[:r,:r].I # normalize such that eye(r) forms the first r rows of beta tilde
+        # normalize beta tilde such that eye(r) forms the first r rows of it:
+        m_beta_tilde = m_beta_tilde * m_beta_tilde[:r,:r].I 
         m_alpha_tilde = S01 * m_beta_tilde * (m_beta_tilde.T * S11 * m_beta_tilde).I
 
         m_Delta_y_1_T = np.matrix(Delta_y_1_T)
@@ -224,26 +227,19 @@ class VECM(tsbase.TimeSeriesModel):
         m_Gamma_tilde = (m_Delta_y_1_T - m_alpha_tilde*m_beta_tilde.T*m_y_minus1) * m_Delta_x.T * (m_Delta_x * m_Delta_x.T).I
         m_temp = (m_Delta_y_1_T - m_alpha_tilde*m_beta_tilde.T*m_y_minus1 - m_Gamma_tilde*m_Delta_x)
         m_Sigma_u_tilde = m_temp * m_temp.T / T
-        print("alpha")
-        print(m_alpha_tilde)
-        print("beta")
-        print(m_beta_tilde)
-        print("==> Pi")
-        print(m_alpha_tilde*m_beta_tilde.T)
-        print("Gamma")
-        print(m_Gamma_tilde)
-        print("Sigma_u")
-        print(m_Sigma_u_tilde)
         
+        return {"alpha":np.array(m_alpha_tilde), "beta":np.array(m_beta_tilde),
+                "Gamma":np.array(m_Gamma_tilde), "Sigma":np.array(m_Sigma_u_tilde)}
 
-    def select_order(self, maxlags=None, verbose=True):
+
+    def select_order(self, max_diff_lags=None, verbose=True):
         """
         Compute lag order selections based on each of the available information
         criteria
 
         Parameters
         ----------
-        maxlags : int
+        max_diff_lags : int
             if None, defaults to 12 * (nobs/100.)**(1./4)
         verbose : bool, default True
             If True, print table of info criteria and selected orders
