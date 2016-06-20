@@ -448,6 +448,7 @@ class AR(tsbase.TimeSeriesModel):
                                         full_output=0, trend=trend,
                                         maxiter=35, disp=-1)
 
+                bestlag = 0
                 if np.abs(fit.tvalues[-1]) >= stop:
                     bestlag = lag
                     break

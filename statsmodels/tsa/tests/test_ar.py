@@ -303,6 +303,20 @@ def test_ar_select_order():
     res = ar.select_order(maxlag=12, ic='aic')
     assert_(res == 2)
 
+# GH 2658
+def test_ar_select_order_tstat():
+    rs = np.random.RandomState(123)
+    tau = 25
+    y = rs.randn(tau)
+    ts = Series(y, index=DatetimeIndex(start='1/1/1990', periods=tau,
+                                   freq='M'))
+
+    ar = AR(ts)
+    res = ar.select_order(maxlag=5, ic='t-stat')
+    assert_equal(res, 0)
+
+
+
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):
 #    def setup(self):
