@@ -413,8 +413,10 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
         return lags
 
 
-def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
-    '''generate lagmatrix for 2d array, columns arranged by variables
+def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
+              use_pandas=False):
+    """
+    Generate lagmatrix for 2d array, columns arranged by variables
 
     Parameters
     ----------
@@ -433,6 +435,9 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
         * 'backward' : trim invalid initial observations
         * 'both' : trim invalid observations on both sides
         * 'none' : no trimming of observations
+    use_pandas : bool, optional
+        If true, returns a DataFrame when the input is a pandas
+        Series or DataFrame.  If false, return numpy ndarrays.
 
     Returns
     -------
@@ -441,15 +446,39 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
 
     Notes
     -----
-    very inefficient for unequal lags, just done for convenience
-    '''
+    Inefficient implementation for unequal lags, implemented for convenience
+    """
+
     if maxlagex is None:
         maxlagex = maxlag0
     maxlag = max(maxlag0, maxlagex)
+    is_pandas = _is_using_pandas(x, None)
+
+    if x.ndim == 1:
+        if is_pandas:
+            x = pd.DataFrame(x)
+        else:
+            x = x[:, None]
+    elif x.ndim == 0 or x.ndim > 2:
+        raise TypeError('Only supports 1 and 2-dimensional data.')
+
     nobs, nvar = x.shape
-    lagsli = [lagmat(x[:,0], maxlag, trim=trim, original='in')[:,:maxlag0+1]]
-    for k in range(1,nvar):
-        lagsli.append(lagmat(x[:,k], maxlag, trim=trim, original='in')[:,dropex:maxlagex+1])
+
+    if is_pandas and use_pandas:
+        lags = lagmat(x.iloc[:, 0], maxlag, trim=trim,
+                      original='in', use_pandas=True)
+        lagsli = [lags.iloc[:, :maxlag0 + 1]]
+        for k in range(1, nvar):
+            lags = lagmat(x.iloc[:, k], maxlag, trim=trim,
+                          original='in', use_pandas=True)
+            lagsli.append(lags.iloc[:, dropex:maxlagex + 1])
+        return pd.concat(lagsli, axis=1)
+    elif is_pandas:
+        x = np.asanyarray(x)
+
+    lagsli = [lagmat(x[:, 0], maxlag, trim=trim, original='in')[:, :maxlag0 + 1]]
+    for k in range(1, nvar):
+        lagsli.append(lagmat(x[:, k], maxlag, trim=trim, original='in')[:, dropex:maxlagex + 1])
     return np.column_stack(lagsli)
 
 def vec(mat):
@@ -726,3 +755,4 @@ def freq_to_period(freq):
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
            'vec', 'vech', 'unvec', 'unvech']
+
