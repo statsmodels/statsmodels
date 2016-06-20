@@ -281,6 +281,18 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
 
 def _join_debiased(model_results_l, partitions, threshold=0):
     """
+    joins the results from each run of _est_regularized_distributed
+    and returns the debiased estimate of the coefficients
+
+    Parameters
+    ----------
+    model_results_l : list
+        A list of tuples each one containing the beta_hat, grad,
+        gamma_hat and tau_hat values for each partition.
+    partitions : scalar
+        The number of partitions that the data will be split into.
+    threshold : scalar
+        The threshold at which the coefficients will be cut.
     """
 
     # TODO currently the way we extract p is roundabout, should be
@@ -329,15 +341,36 @@ def distributed_estimation(endog_generator, exog_generator, partitions,
     a model and methods for performing the estimation and recombining
     the results
 
-    Paramters
+    Parameters
     ---------
+    endog_generator : generator
+        A generator to produce a sequence of endog arrays.
+    exog_generator : generator
+        A generator to produce a sequence of exog arrays.
+    partitions : scalar
+        The number of partitions that the data will be split into.
+    model_class : statsmodels model class
+        The model class which will be used for estimation. If None
+        this defaults to OLS.
+    init_kwds : dict-like or None
+        Keywords needed for initializing the model, in addition to
+        endog and exog.
+    fit_kwds : dict-like or None
+        Keywords needed for the model fitting.
+    estimation_method : function or None
+        The function that performs the estimation for each partition.
+        If None this defaults to _est_regularized_distributed.
+    estimation_kwds : dict-like or None
+        Keywords to be passed to estimation_method.
+    join_method : function or None
+        The function used to recombine the results from each partition.
+        If None this defaults to _join_debiased.
 
     Returns
     -------
 
-    Notes
-    -----
-
+    join_method result.  For the default _join_debiased, it returns a
+    p length array.
     """
 
     init_kwds = {} if init_kwds is None else init_kwds
