@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_
+from numpy.testing import assert_, assert_allclose
 import pandas
 import scipy
 import statsmodels.datasets.interest_inflation.data as e6
@@ -10,27 +10,29 @@ import re
 import os
 
 
+atol = 0.005 # absolute tolerance
+rtol = 0.01  # relative tolerance
 datasets = []
 data        = {}
 results_ref = {}
 results_sm  = {}
+deterministic_terms_list = ['', 'c', 'cs', 'clt']#['', 'c', 'clt'] TODO: add more combinations
 
-def load_data(data_set): # TODO: make this function compatible with other datasets
+def load_data(dataset): # TODO: make this function compatible with other datasets
                     #       by passing 'year', 'quarter', ..., 'R' as parameter
                     #       ('year' and 'quarter' only necessery if other datasets
                     #       not quaterly.
-    iidata = data_set.load_pandas()
+    iidata = dataset.load_pandas()
     mdata = iidata.data
     dates = mdata[['year', 'quarter']].astype(int).astype(str)
     quarterly = dates["year"] + "Q" + dates["quarter"]
     quarterly = dates_from_str(quarterly)
     mdata = mdata[['Dp','R']]
     mdata.index = pandas.DatetimeIndex(quarterly)
-    data[data_set] = mdata
+    data[dataset] = mdata
 
-def load_results_jmulti():
+def load_results_jmulti(dataset):
     source = 'jmulti'
-    deterministic_terms_list = ['', 'c', 'cs', 'clt']
 
     results_per_deterministic_terms = dict.fromkeys(deterministic_terms_list)
 
@@ -39,16 +41,15 @@ def load_results_jmulti():
     regex_alpha = re.compile("Loading coefficients")
     regex_beta  = re.compile("Estimated cointegration relation")
     regex_VAR   = re.compile("VAR REPRESENTATION")
-    
-    section_regex = [regex_Gamma, regex_C, regex_alpha, regex_beta, regex_VAR]
-    sections = ["Gamma", "C", "alpha", "beta"]
         
     for deterministic_terms in deterministic_terms_list:
         directory = "results"
-        file = datasets[0].__str__()+'_'+source+'_'+deterministic_terms+'.txt' # TODO:
-                                                          # loop over several datasets
+        file = dataset.__str__()+'_'+source+'_'+deterministic_terms+'.txt'
         file = os.path.join(directory, file)
+        section_regex = [regex_Gamma, regex_C, regex_alpha, regex_beta, regex_VAR]
+        sections = ["Gamma", "C", "alpha", "beta"]
         if deterministic_terms in ['', 'lt']: # TODO: check if jmulti lacks Deterministic
+            print("no section CONST")
             del(section_regex[1])             #       section if det. term == 'lt'
             del(sections[1])
         results = dict.fromkeys(sections)
@@ -81,15 +82,66 @@ def load_results_jmulti():
         results_per_deterministic_terms[deterministic_terms] = results
     return results_per_deterministic_terms
 
+def load_results_statsmodels(dataset):
+    results_per_deterministic_terms = dict.fromkeys(deterministic_terms_list)
+    for deterministic_terms in deterministic_terms_list:
+        model = VECM(data[dataset])
+        results_per_deterministic_terms[deterministic_terms] = model.fit(
+                                        max_diff_lags=3, method='ml', 
+                                        deterministic_terms=deterministic_terms)
+    return results_per_deterministic_terms
+
+def build_err_msg(ds, dt, parameter_str):
+    err_msg = "Error in " + parameter_str + " for:\n"
+    err_msg = err_msg + "- Dataset: " + ds.__str__() + "\n"
+    err_msg = err_msg + "- Deterministic terms: " + (dt if dt!='' else 'no det. terms')
+    return err_msg
+
+def test_ml_Gamma():
+
+    for ds in datasets:
+        for dt in deterministic_terms_list:
+            err_msg = build_err_msg(ds, dt, "Gamma")
+            obtained = results_sm[ds][dt]["Gamma"]
+            desired  = results_ref[ds][dt]["Gamma"]
+            cols = desired.shape[1]
+            if obtained.shape[1] > cols:
+                obtained = obtained[:, :cols]
+            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+def test_ml_alpha():
+    for ds in datasets:
+        for dt in deterministic_terms_list:
+            err_msg = build_err_msg(ds, dt, "alpha")
+            obtained = results_sm[ds][dt]["alpha"]
+            desired  = results_ref[ds][dt]["alpha"]
+            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+def test_ml_beta():
+    for ds in datasets:
+        for dt in deterministic_terms_list:
+            err_msg = build_err_msg(ds, dt, "beta")
+            obtained = results_sm[ds][dt]["beta"]
+            desired  = results_ref[ds][dt]["beta"].T # beta transposed in JMulTi
+            rows = desired.shape[0]
+            if obtained.shape[0] > rows:
+                obtained = obtained[:rows]
+            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+
 def setup():
-    datasets.append(e6)
+    datasets.append(e6) # append more data sets for more test cases.
+    
     for ds in datasets:
         load_data(ds)
-        results_ref[ds] = load_results_jmulti()
-        results_sm[ds] = VECM(data[ds]) # TODO: call VECM more often 
-                                        # (with different deterministic_terms
-        # TODO: yield test for each dataset ds and each value of deterministic terms
-
+        results_ref[ds] = load_results_jmulti(ds)
+        results_sm[ds] = load_results_statsmodels(ds)
+        #print("JMulTi:")
+        #print(results_ref[ds])
+        #print("===============================================")
+        #print("statsmodels:")
+        #print(results_sm[ds])
+       # TODO: yield test for each dataset ds and each value of deterministic terms
 
 if __name__ == "__main__":
     np.testing.run_module_suite()
