@@ -20,6 +20,7 @@ import scipy.stats as stats
 from statsmodels.tools.decorators import (cache_readonly,
                                                   resettable_cache)
 import statsmodels.regression.linear_model as lm
+import statsmodels.regression._tools as reg_tools
 import statsmodels.robust.norms as norms
 import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
@@ -277,8 +278,8 @@ class RLM(base.LikelihoodModel):
         converged = 0
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
-            wls_results = lm.WLS(self.endog, self.exog,
-                                 weights=self.weights).fit()
+            wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
+                                                weights=self.weights).fit(cov=False)
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             history = self._update_history(wls_results, history, conv)

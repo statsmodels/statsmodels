@@ -17,6 +17,7 @@ Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
 McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
+from statsmodels.compat.numpy import np_matrix_rank
 
 import numpy as np
 from . import families
@@ -25,7 +26,8 @@ from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
+import statsmodels.regression._tools as reg_tools
+
 
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -998,7 +1000,8 @@ class GLM(base.LikelihoodModel):
                             self.family.weights(mu))
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
                         - self._offset_exposure)
-            wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
+            wls_results = reg_tools._MinimalWLS(wlsendog, wlsexog, self.weights).fit(cov=False,
+                                                                                     method='lstsq')
             lin_pred = np.dot(self.exog, wls_results.params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
@@ -1009,6 +1012,7 @@ class GLM(base.LikelihoodModel):
             converged = _check_convergence(criterion, iteration + 1, atol,
                                            rtol)
             if converged:
+                wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
                 break
         self.mu = mu
 
