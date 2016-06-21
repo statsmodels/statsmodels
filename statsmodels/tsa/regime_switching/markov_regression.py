@@ -14,7 +14,7 @@ from statsmodels.tsa.regime_switching import markov_switching
 
 
 class MarkovRegression(markov_switching.MarkovSwitching):
-    """
+    r"""
     First-order k-regime Markov switching regression model
 
     Parameters
@@ -196,12 +196,14 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         kwargs.setdefault('results_wrapper_class',
                           MarkovRegressionResultsWrapper)
         return super(MarkovRegression, self).filter(*args, **kwargs)
+    filter.__doc__ = markov_switching.MarkovSwitching.filter.__doc__
 
     def smooth(self, *args, **kwargs):
         kwargs.setdefault('results_class', MarkovRegressionResults)
         kwargs.setdefault('results_wrapper_class',
                           MarkovRegressionResultsWrapper)
         return super(MarkovRegression, self).smooth(*args, **kwargs)
+    smooth.__doc__ = markov_switching.MarkovSwitching.smooth.__doc__
 
     def _em_iteration(self, params0):
         """

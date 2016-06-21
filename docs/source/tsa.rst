@@ -8,9 +8,10 @@ Time Series analysis :mod:`tsa`
 ===============================
 
 :mod:`statsmodels.tsa` contains model classes and functions that are useful
-for time series analysis. This currently includes univariate autoregressive models (AR),
+for time series analysis. Basic models include univariate autoregressive models (AR),
 vector autoregressive models (VAR) and univariate autoregressive moving average models
-(ARMA). It also includes descriptive statistics for time series, for example autocorrelation, partial
+(ARMA). Non-linear models include Markov switching dynamic regression and
+autoregression. It also includes descriptive statistics for time series, for example autocorrelation, partial
 autocorrelation function and periodogram, as well as the corresponding theoretical properties
 of ARMA or related processes. It also includes methods to work with autoregressive and
 moving average lag-polynomials.
@@ -41,6 +42,8 @@ structure is within statsmodels.tsa is
  - tsatools : additional helper functions, to create arrays of lagged variables,
    construct regressors for trend, detrend and similar.
  - filters : helper function for filtering time series
+ - regime_switching : Markov switching dynamic regression and autoregression
+   models
 
 
 
@@ -143,6 +146,15 @@ estimation are available for vector autoregressive processes.
    vector_ar.dynamic.DynamicVAR
 
 .. seealso:: tutorial :ref:`VAR documentation <var>`
+
+Regime switching models
+"""""""""""""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   regime_switching.markov_regression.MarkovRegression
+   regime_switching.markov_autoregression.MarkovAutoregression
 
 ARMA Process
 """"""""""""

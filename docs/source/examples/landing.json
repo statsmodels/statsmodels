@@ -19,6 +19,11 @@
           "img": "../_static/images/quantile_regression.png"
         },
         {
+          "text": "Recursive Least Squares",
+          "target": "notebooks/generated/recursive_ls.html",
+          "img": "../_static/images/recursive_ls.png"
+        },
+        {
           "text": "Regression Diagnostics",
           "target": "notebooks/generated/regression_diagnostics.html",
           "img": "../_static/images/regression_diagnostics.png"
@@ -141,6 +146,16 @@
             "text": "Time Series Filters",
             "target": "notebooks/generated/tsa_filters.html",
             "img": "../_static/images/tsa_filters.png"
+        },
+        {
+            "text": "Markov switching dynamic regression",
+            "target": "notebooks/generated/markov_regression.html",
+            "img": "../_static/images/markov_regression.png"
+        },
+        {
+            "text": "Markov switching autoregression",
+            "target": "notebooks/generated/markov_autoregression.html",
+            "img": "../_static/images/markov_autoregression.png"
         }
           ]
   },
