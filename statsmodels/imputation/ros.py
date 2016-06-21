@@ -545,6 +545,9 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
         imputed through ROS or substituted as a fraction of the
         detection limit.
 
+    Notes
+    -----
+    This function requires pandas 0.14 or more recent.
     """
 
     # process arrays into a dataframe, if necessary
