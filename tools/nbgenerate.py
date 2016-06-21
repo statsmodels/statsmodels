@@ -107,7 +107,7 @@ def do_one(nb, to=None, execute=None, allow_errors=None, timeout=None, kernel_na
     return dst
 
 def do(fp=None, directory=None, to='html', execute=True,
-       allow_errors=True, timeout=1000, kernel_name=''):
+       allow_errors=True, timeout=1000, kernel_name=None):
     if fp is None:
         nbs = find_notebooks(directory)
     else:
@@ -152,7 +152,7 @@ parser.add_argument("--allow_errors", type=bool, default=True,
                     help="Allow errors while executing")
 parser.add_argument("--timeout", type=int, default=1000,
                     help="Seconds to allow for each cell before timing out")
-parser.add_argument("--kernel_name", type=str, default='',
+parser.add_argument("--kernel_name", type=str, default=None,
                     help="Name of kernel to execute with")
 
 def main():
