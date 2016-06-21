@@ -1,7 +1,5 @@
 from __future__ import division
 
-__test__ = False
-
 import sys
 from textwrap import dedent
 
@@ -15,6 +13,9 @@ import pandas
 from statsmodels.imputation import ros
 from statsmodels.compat.python import StringIO
 
+if pandas.__version__.split('.')[1] <  '14':
+    __test__ = False
+
 
 @ntools.nottest
 def load_basic_data():
@@ -25,11 +26,10 @@ def load_basic_data():
         "10.82,=\n11.00,ND\n11.25,=\n11.25,=\n12.20,=\n14.92,=\n16.77,=\n"
         "17.81,=\n19.16,=\n19.19,=\n19.64,=\n20.18,=\n22.97,=\n"
     )
-    df = (
-        pandas.read_csv(raw_csv)
-            .assign(conc=lambda df: df['res'])
-            .assign(censored=lambda df: df['qual'] == 'ND')
-    )
+    df = pandas.read_csv(raw_csv)
+    df.loc[:, 'conc'] = df['res']
+    df.loc[:, 'censored'] = df['qual'] == 'ND'
+
     return df
 
 
@@ -239,11 +239,13 @@ class Test_cohn_numbers(object):
 
 
     def test_baseline(self):
-        result = ros.cohn_numbers(self.df, result='conc', censorship='censored')
+        result = ros.cohn_numbers(self.df, observations='conc', censorship='censored')
         pdtest.assert_frame_equal(result, self.expected_baseline)
 
     def test_no_NDs(self):
-        result = ros.cohn_numbers(self.df.assign(qual=False), result='conc', censorship='qual')
+        _df = self.df.copy()
+        _df['qual'] = False
+        result = ros.cohn_numbers(_df, observations='conc', censorship='qual')
         ntools.assert_tuple_equal(result.shape, (0, 6))
 
 
@@ -274,7 +276,7 @@ def test__ros_group_rank():
 
     result = ros._ros_group_rank(df, 'dl_idx', 'params')
     expected = pandas.Series([1, 2, 1, 1, 2, 3, 1, 1, 2, 4, 2, 3], name='rank')
-    pdtest.assert_series_equal(result, expected)
+    pdtest.assert_series_equal(result.astype(int), expected.astype(int))
 
 
 class Test__ros_plot_pos(object):
@@ -337,8 +339,8 @@ def test__impute():
         16.77      ,  17.81      ,  19.16      ,  19.19      ,
         19.64      ,  20.18      ,  22.97
     ])
-    df = load_advanced_data().pipe(ros._impute, 'conc', 'censored',
-                                   numpy.log, numpy.exp)
+    df = load_advanced_data()
+    df = ros._impute(df, 'conc', 'censored', numpy.log, numpy.exp)
     result = df['final'].values
     npt.assert_array_almost_equal(result, expected)
 
@@ -356,8 +358,8 @@ def test__do_ros():
         19.64      ,  20.18      ,  22.97
     ])
 
-    df = load_basic_data().pipe(ros._do_ros, 'conc', 'censored',
-                                numpy.log, numpy.exp)
+    df = load_basic_data()
+    df = ros._do_ros(df, 'conc', 'censored', numpy.log, numpy.exp)
     result = df['final'].values
     npt.assert_array_almost_equal(result, expected)
 
@@ -420,7 +422,7 @@ class Test_ROS_HelselAppendixB(CheckROSMixin):
         'nuncen_above': numpy.array([3.0, 6.0, numpy.nan]),
         'nobs_below': numpy.array([6.0, 12.0, numpy.nan]),
         'ncen_equal': numpy.array([6.0, 3.0, numpy.nan]),
-        'prob_exceedance': numpy.array([0.5555, 0.3333, 0.0]),
+        'prob_exceedance': numpy.array([0.55556, 0.33333, 0.0]),
     })
 
 
@@ -459,7 +461,7 @@ class Test_ROS_HelselArsenic(CheckROSMixin):
         'nuncen_above': numpy.array([6.0, 1.0, 2.0, 2.0, numpy.nan]),
         'nobs_below': numpy.array([0.0, 7.0, 12.0, 22.0, numpy.nan]),
         'ncen_equal': numpy.array([0.0, 1.0, 4.0, 8.0, numpy.nan]),
-        'prob_exceedance': numpy.array([1.0, 0.3125, 0.2143, 0.0833, 0.0]),
+        'prob_exceedance': numpy.array([1.0, 0.3125, 0.21429, 0.0833, 0.0]),
     })
 
 
@@ -588,7 +590,7 @@ class Test_ROS_OneND(CheckROSMixin):
         'nuncen_above': numpy.array([17.0, numpy.nan]),
         'nobs_below': numpy.array([1.0, numpy.nan]),
         'ncen_equal': numpy.array([1.0, numpy.nan]),
-        'prob_exceedance': numpy.array([0.9444, 0.0]),
+        'prob_exceedance': numpy.array([0.94444, 0.0]),
     })
 
 
@@ -615,7 +617,7 @@ class Test_HalfDLs_80pctNDs(CheckROSMixin):
         'nuncen_above': numpy.array([0., 0., 0., 0., 0., 0., 0., 3., numpy.nan]),
         'nobs_below': numpy.array([6., 7., 8., 9., 12., 13., 14., 15., numpy.nan]),
         'ncen_equal': numpy.array([6., 1., 1., 1., 3., 1., 1., 1., numpy.nan]),
-        'prob_exceedance': numpy.array([0.1667] * 8 + [0.]),
+        'prob_exceedance': numpy.array([0.16667] * 8 + [0.]),
     })
 
 
