@@ -44,22 +44,80 @@ Building on the statespace framework and models added in 0.7, this release
 includes additional models that build on it.
 Authored by Chad Fulton largely during GSOC 2015
 
-Kalman Smoother #2434
+Kalman Smoother
+^^^^^^^^^^^^^^^
 
-Postestimation #2566
+The Kalman smoother (introduced in #2434) allows making inference on the
+unobserved state vector at each point in time using data from the entire
+sample. In addition to this improved inference, the Kalman smoother is required
+for future improvements such as simulation smoothing and the expectation
+maximization (EM) algorithm.
 
-Diagnostics #2431
+As a result of this improvement, all state space models now inherit a `smooth`
+method for producing results with smoothed state estimates. In addition, the
+`fit` method will return results with smoothed estimates at the maximum
+likelihood estimates.
 
-Unobserved Components #2432
+Postestimation
+^^^^^^^^^^^^^^
 
-Multivariate Models - VARMAX, Dynamic Factors #2563
+Improved post-estimation output is now available to all state space models
+(introduced in #2566). This includes the new methods `get_prediction` and
+`get_forecast`, providing standard errors and confidence intervals as well
+as point estimates, `simulate`, providing simulation of time series following
+the given state space process, and `impulse_responses`, allowing computation
+of impulse responses due to innovations to the state vector.
 
-recursive least squares in regression #2830
+Diagnostics
+^^^^^^^^^^^
 
-other
+A number of general diagnostic tests on the residuals from state space
+estimation are now available to all state space models (introduced in #2431).
+These include:
 
-* improved missing data handling #2770, #2809
-* ongoing refactoring and bug fixes in fringes and corner cases
+* `test_normality` implements the Jarque-Bera test for normality of residuals
+* `test_heteroskedasticity` implements a test for homoskedasticity of
+  residuals similar to the Goldfeld-Quandt test
+* `test_serial_correlation` implements the Ljung-Box (or Box-Pierce) test for
+  serial correlation of residuals
+
+These test statistics are also now included in the `summary` method output. In
+addition, a `plot_diagnostics` method is available which provides four plots
+to visually assess model fit.
+
+Unobserved Components
+^^^^^^^^^^^^^^^^^^^^^
+
+The class of univariate Unobserved Components models (also known as structural
+time series models) are now available (introduced in #2432). This includes as
+special cases the local level model and local linear trend model. Generically
+it allows decomposing a time series into trend, cycle, seasonal, and
+irregular components, optionally with exogenous regressors and / or
+autoregressive errors.
+
+Multivariate Models
+^^^^^^^^^^^^^^^^^^^
+
+Two standard multivariate econometric models - vector autoregressive
+moving-average model with exogenous regressors (VARMAX) and Dynamic Factors
+models - are now available (introduced in #2563). The first is a popular
+reduced form method of exploring the covariance in several time series, and the
+second is a popular reduced form method of extracting a small number of common
+factors from a large dataset of observed series.
+
+Recursive least squares
+^^^^^^^^^^^^^^^^^^^^^^^
+
+A model for recursive least squares, also known as expanding-window OLS, is
+now available in `statsmodels.regression` (introduced in #2830).
+
+Miscellaneous
+^^^^^^^^^^^^^
+
+Other improvements to the state space framework include:
+
+* Improved missing data handling #2770, #2809
+* Ongoing refactoring and bug fixes in fringes and corner cases
 
 
 New functionality in statistics
@@ -101,11 +159,21 @@ Imputation by regression on Order Statistic  #3019 (Paul Hobson)
 Time Series Analysis
 --------------------
 
-Markov Switching Model #2980 (Chad Fulton)
+Markov Switching Models
+^^^^^^^^^^^^^^^^^^^^^^^
 
-KPSS stationarity, unit root test #2775 (N-Wouda)
+Markov switching dynamic regression and autoregression models are now
+available (introduced in #2980 by Chad Fulton). These models allow regression
+effects and / or autoregressive dynamics to differ depending on an unobserved
+"regime"; in Markov switching models, the regimes are assumed to transition
+according to a Markov process.
 
-BDS nonlinear dependence test #934 (Chad Fulton)
+Statistics
+^^^^^^^^^^
+
+* KPSS stationarity, unit root test #2775 (N-Wouda)
+* The Brock Dechert Scheinkman (BDS) test for nonlinear dependence is now
+  available (introduced in #934 by Chad Fulton)
 
 
 Penalized Estimation
