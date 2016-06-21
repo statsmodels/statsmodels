@@ -17,7 +17,7 @@ X = np.random.standard_normal((40,10))
 namespace = {}
 terms = []
 for i in range(10):
-    name = '%s' % string.uppercase[i]
+    name = '%s' % string.ascii_uppercase[i]
     namespace[name] = X[:,i]
     terms.append(formula.Term(name))
 

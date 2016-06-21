@@ -232,10 +232,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
 
     # find sample frequencies and perform chisquare test
     #TODO: move to compatibility.py
-    if np.__version__ < '1.5':
-        freq,hsupp = np.histogram(rvs, histsupp, new=True)
-    else:
-        freq,hsupp = np.histogram(rvs,histsupp)
+    freq, hsupp = np.histogram(rvs,histsupp)
     cdfs = distfn.cdf(distsupp,*arg)
     (chis,pval) = stats.chisquare(np.array(freq),n*distmass)
 
@@ -320,10 +317,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     histsupp[0] = distfn.a
 
     # find sample frequencies and perform chisquare test
-    if np.__version__ < '1.5':
-        freq,hsupp = np.histogram(rvs, histsupp, new=True)
-    else:
-        freq,hsupp = np.histogram(rvs,histsupp)
+    freq,hsupp = np.histogram(rvs,histsupp)
     #freq,hsupp = np.histogram(rvs,histsupp,new=True)
     cdfs = distfn.cdf(distsupp,*arg)
     return np.array(freq), n*distmass, histsupp

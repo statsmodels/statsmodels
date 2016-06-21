@@ -653,19 +653,6 @@ def test_bind():
     # Test invalid C-contiguous
     assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(2,5)))
 
-    if NumpyVersion(np.__version__) < '0.10.0':
-        mod = Representation(1, k_states=2)
-        # Test valid F-contiguous
-        mod.bind(np.asfortranarray(np.arange(10).reshape(1,10)))
-        assert_equal(mod.nobs, 10)
-        # Test valid C-contiguous
-        mod.bind(np.arange(10).reshape(10,1))
-        assert_equal(mod.nobs, 10)
-        # Test invalid F-contiguous
-        assert_raises(ValueError, lambda: mod.bind(np.asfortranarray(np.arange(10).reshape(10,1))))
-        # Test invalid C-contiguous
-        assert_raises(ValueError, lambda: mod.bind(np.arange(10).reshape(1,10)))
-
 
 def test_initialization():
     # Test Kalman filter initialization
