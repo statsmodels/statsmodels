@@ -8,7 +8,8 @@ Author: Josef Perktold
 import warnings
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
+from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
+                           assert_raises)
 
 from statsmodels.stats.proportion import proportion_confint
 import statsmodels.stats.proportion as smprop
@@ -17,6 +18,8 @@ from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 class Holder(object):
     pass
+
+
 
 def test_confint_proportion():
     from .results.results_proportion import res_binom, res_binom_methods
@@ -162,6 +165,25 @@ class TestProportion(CheckProportionMixin):
         res_prop_test_1.method = '1-sample proportions test without continuity correction'
         res_prop_test_1.data_name = 'smokers2[1] out of patients[1], null probability 0.9'
         self.res_prop_test_1 = res_prop_test_1
+
+    # GH 2969
+    def test_default_values(self):
+        count = np.array([5, 12])
+        nobs = np.array([83, 99])
+        stat, pval = smprop.proportions_ztest(count, nobs, value=None)
+        assert_almost_equal(stat, -1.4078304151258787)
+        assert_almost_equal(pval, 0.15918129181156992)
+
+    # GH 2779
+    def test_scalar(self):
+        count = 5
+        nobs = 83
+        value = 0.05
+        stat, pval = smprop.proportions_ztest(count, nobs, value=value)
+        assert_almost_equal(stat, 0.392126026314)
+        assert_almost_equal(pval, 0.694965098115)
+
+        assert_raises(ValueError, smprop.proportions_ztest, count, nobs, value=None)
 
 
 def test_binom_test():
