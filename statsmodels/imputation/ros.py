@@ -566,7 +566,7 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
     # (editted for pandas 0.14 compatibility; see commit 63f162e
     #  when `pipe` and `assign` are available)
     if N_censored == 0:
-        output = df[[observations, censorship]]
+        output = df[[observations, censorship]].copy()
         output.loc[:, 'final'] = df[observations]
 
     # substitute w/ fraction of the DLs if there's insufficient
@@ -574,12 +574,10 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
     # (editted for pandas 0.14 compatibility; see commit 63f162e
     #  when `pipe` and `assign` are available)
     elif (N_uncensored < min_uncensored) or (fraction_censored > max_fraction_censored):
-        output = df[[observations, censorship]]
-        output.loc[:, 'final'] = numpy.where(
-            df[censorship],
-            df[observations] * substitution_fraction,
-            df[observations]
-        )
+        output = df[[observations, censorship]].copy()
+        output.loc[:, 'final'] = df[observations]
+        output.loc[df[censorship], 'final'] *= substitution_fraction
+
 
     # normal ROS stuff
     else:
