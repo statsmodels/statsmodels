@@ -14,6 +14,7 @@ from sys import float_info
 from statsmodels.stats.base import AllPairsResults
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
+
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''confidence interval for a binomial proportion
 
@@ -514,7 +515,8 @@ def _table_proportion(count, nobs):
 
 def proportions_ztest(count, nobs, value=None, alternative='two-sided',
                       prop_var=False):
-    '''test for proportions based on normal (z) test
+    """
+    Test for proportions based on normal (z) test
 
     Parameters
     ----------
@@ -522,14 +524,15 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
         the number of successes in nobs trials. If this is array_like, then
         the assumption is that this represents the number of successes for
         each independent sample
-    nobs : integer
+    nobs : integer or array-like
         the number of trials or observations, with the same length as
         count.
-    value : None or float or array_like
+    value : float, array_like or None, optional
         This is the value of the null hypothesis equal to the proportion in the
         case of a one sample test. In the case of a two-sample test, the
         null hypothesis is that prop[0] - prop[1] = value, where prop is the
-        proportion in the two samples
+        proportion in the two samples. If not provided value = 0 and the null
+        is prop[0] = prop[1]
     alternative : string in ['two-sided', 'smaller', 'larger']
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
@@ -541,7 +544,6 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
         can be specified to calculate this variance. Common use case is to
         use the proportion under the Null hypothesis to specify the variance
         of the proportion estimate.
-        TODO: change options similar to propotion_ztost ?
 
     Returns
     -------
@@ -550,30 +552,50 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
     p-value : float
         p-value for the z-test
 
+    Examples
+    --------
+    >>> count = 5
+    >>> nobs = 83
+    >>> value = .05
+    >>> stat, pval = proportions_ztest(count, nobs, value)
+    >>> print('{0:0.3f}'.format(pval))
+    0.695
+
+    >>> import numpy as np
+    >>> from statsmodels.stats.proportion import proportions_ztest
+    >>> count = np.array([5, 12])
+    >>> nobs = np.array([83, 99])
+    >>> stat, pval = proportions_ztest(counts, nobs)
+    >>> print('{0:0.3f}'.format(pval))
+    0.159
 
     Notes
     -----
     This uses a simple normal test for proportions. It should be the same as
-    running the mean z-test on the data encoded 1 for event and 0 for no event,
-    so that the sum corresponds to count.
+    running the mean z-test on the data encoded 1 for event and 0 for no event
+    so that the sum corresponds to the count.
 
     In the one and two sample cases with two-sided alternative, this test
     produces the same p-value as ``proportions_chisquare``, since the
     chisquare is the distribution of the square of a standard normal
     distribution.
-    (TODO: verify that this really holds)
+    """
+    # TODO: verify that this really holds
+    # TODO: add continuity correction or other improvements for small samples
+    # TODO: change options similar to propotion_ztost ?
 
-    TODO: add continuity correction or other improvements for small samples.
-
-    '''
     count = np.asarray(count)
     nobs = np.asarray(nobs)
     
-    if nobs.size == 1 :
-        nobs = nobs * np.ones(len(count))
+    if nobs.size == 1:
+        nobs = nobs * np.ones_like(count)
 
     prop = count * 1. / nobs
     k_sample = np.size(prop)
+    if value is None:
+        if k_sample == 1:
+            raise ValueError('value must be provided for a 1-sample test')
+        value = 0
     if k_sample == 1:
         diff = prop - value
     elif k_sample == 2:
