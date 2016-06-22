@@ -1,4 +1,4 @@
-*** Wed, 15 Jun 2016 10:41:40 ***
+*** Tue, 21 Jun 2016 11:30:21 ***
 VEC REPRESENTATION
 endogenous variables:     Dp R 
 exogenous variables:       

@@ -229,7 +229,7 @@ class VECM(tsbase.TimeSeriesModel):
         m_Sigma_u_tilde = m_temp * m_temp.T / T
         
         return {"alpha":np.array(m_alpha_tilde), "beta":np.array(m_beta_tilde),
-                "Gamma":np.array(m_Gamma_tilde), "Sigma":np.array(m_Sigma_u_tilde)}
+                "Gamma":np.array(m_Gamma_tilde), "Sigma_u":np.array(m_Sigma_u_tilde)}
 
 
     def select_order(self, max_diff_lags=None, verbose=True):
