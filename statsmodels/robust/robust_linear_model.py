@@ -279,7 +279,7 @@ class RLM(base.LikelihoodModel):
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
             wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
-                                                weights=self.weights).fit(cov=False)
+                                                weights=self.weights).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             history = self._update_history(wls_results, history, conv)

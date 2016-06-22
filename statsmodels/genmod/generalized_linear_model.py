@@ -1000,8 +1000,7 @@ class GLM(base.LikelihoodModel):
                             self.family.weights(mu))
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
                         - self._offset_exposure)
-            wls_results = reg_tools._MinimalWLS(wlsendog, wlsexog, self.weights).fit(cov=False,
-                                                                                     method='lstsq')
+            wls_results = reg_tools._MinimalWLS(wlsendog, wlsexog, self.weights).fit(method='lstsq')
             lin_pred = np.dot(self.exog, wls_results.params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
@@ -1012,9 +1011,11 @@ class GLM(base.LikelihoodModel):
             converged = _check_convergence(criterion, iteration + 1, atol,
                                            rtol)
             if converged:
-                wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
                 break
         self.mu = mu
+
+        if maxiter > 0:  # Only if iterative used
+            wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
 
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,

@@ -2,7 +2,7 @@ from collections import namedtuple
 import numpy as np
 
 _MinimalWLSResults = namedtuple('_MinimalWLSResults',
-                                ['params', 'normalized_cov_params', 'resid',
+                                ['params', 'resid',
                                  'model', 'fittedvalues', 'scale'])
 _MinimalWLSModel = namedtuple('_MinimalWLSModel', ['weights'])
 
@@ -50,14 +50,12 @@ class _MinimalWLS(object):
         else:
             self.wexog = w_half[:, None] * exog
 
-    def fit(self, cov=True, method='pinv'):
+    def fit(self, method='pinv'):
         """
         Minimal implementation of WLS optimized for performance.
 
         Parameters
         ----------
-        cov : bool, optional
-            Flag indicating whether to the compute normalized covariance
         method : str, optional
             Method to use to estimate parameters.  "pinv", "qr" or "lstsq"
 
@@ -75,7 +73,6 @@ class _MinimalWLS(object):
               * params : Estimated parameters
               * fittedvalues : Fit values using original data
               * resid : Residuals using original data
-              * normalized_cov_params
               * model : namedtuple with one field, weights
               * scale : scale computed using weighted residuals
 
@@ -87,23 +84,14 @@ class _MinimalWLS(object):
         --------
         statsmodels.regression.linear_model.WLS
         """
-        normalized_cov_params = None
         if method == 'pinv':
             pinv_wexog = np.linalg.pinv(self.wexog)
             params = pinv_wexog.dot(self.wendog)
-            if cov:
-                normalized_cov_params = np.dot(pinv_wexog,
-                                               np.transpose(pinv_wexog))
         elif method == 'qr':
             Q, R = np.linalg.qr(self.wexog)
             params = np.linalg.solve(R, np.dot(Q.T, self.wendog))
-            if cov:
-                normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
         else:
             params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog)
-            if cov:
-                normalized_cov_params = np.linalg.inv(np.dot(self.wexog.T,
-                                                             self.wexog))
 
         model = _MinimalWLSModel(weights=self.weights)
         fitted_values = self.exog.dot(params)
@@ -114,5 +102,4 @@ class _MinimalWLS(object):
 
         return _MinimalWLSResults(params=params, fittedvalues=fitted_values,
                                   resid=resid,
-                                  normalized_cov_params=normalized_cov_params,
                                   model=model, scale=scale)

@@ -19,25 +19,21 @@ class TestMinimalWLS(TestCase):
 
     def test_equivalence_with_wls(self):
         res = WLS(self.endog1, self.exog1).fit()
-        minres = _MinimalWLS(self.endog1, self.exog1).fit(cov=True)
+        minres = _MinimalWLS(self.endog1, self.exog1).fit()
         assert_allclose(res.params, minres.params)
-        assert_allclose(res.normalized_cov_params, minres.normalized_cov_params)
         assert_allclose(res.resid, minres.resid)
 
         res = WLS(self.endog2, self.exog2).fit()
-        minres = _MinimalWLS(self.endog2, self.exog2).fit(cov=True)
+        minres = _MinimalWLS(self.endog2, self.exog2).fit()
         assert_allclose(res.params, minres.params)
-        assert_allclose(res.normalized_cov_params, minres.normalized_cov_params)
         assert_allclose(res.resid, minres.resid)
 
         res = WLS(self.endog1, self.exog1, weights=self.weights1).fit()
-        minres = _MinimalWLS(self.endog1, self.exog1, weights=self.weights1).fit(cov=True)
+        minres = _MinimalWLS(self.endog1, self.exog1, weights=self.weights1).fit()
         assert_allclose(res.params, minres.params)
-        assert_allclose(res.normalized_cov_params, minres.normalized_cov_params)
         assert_allclose(res.resid, minres.resid)
 
         res = WLS(self.endog2, self.exog2, weights=self.weights2).fit()
-        minres = _MinimalWLS(self.endog2, self.exog2, weights=self.weights2).fit(cov=True)
+        minres = _MinimalWLS(self.endog2, self.exog2, weights=self.weights2).fit()
         assert_allclose(res.params, minres.params)
-        assert_allclose(res.normalized_cov_params, minres.normalized_cov_params)
         assert_allclose(res.resid, minres.resid)
