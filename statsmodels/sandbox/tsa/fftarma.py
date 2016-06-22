@@ -239,9 +239,9 @@ class ArmaFft(ArmaProcess):
 
         builds two arrays (number of roots, number of frequencies)
         '''
-        return self.spdroots_(self.arroots, self.maroots, w)
+        return self._spdroots(self.arroots, self.maroots, w)
 
-    def spdroots_(self, arroots, maroots, w):
+    def _spdroots(self, arroots, maroots, w):
         '''spectral density for frequency using polynomial roots
 
         builds two arrays (number of roots, number of frequencies)
