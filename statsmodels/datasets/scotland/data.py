@@ -84,4 +84,4 @@ def _get_data():
     with open(filepath + '/scotvote.csv',"rb") as f:
         data = np.recfromtxt(f, delimiter=",",
                              names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
-        return data
+    return data
