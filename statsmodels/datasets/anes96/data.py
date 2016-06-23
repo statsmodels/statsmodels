@@ -123,4 +123,4 @@ def _get_data():
         logpopul = log(data['popul'] + .1)
         data = nprf.append_fields(data, 'logpopul', logpopul, usemask=False,
                                   asrecarray=True)
-        return data
+    return data

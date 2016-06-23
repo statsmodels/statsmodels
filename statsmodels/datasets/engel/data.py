@@ -62,4 +62,4 @@ def _get_data():
     with open(filepath + '/engel.csv', 'rb') as f:
         data = np.recfromtxt(f,
                              delimiter=",", names = True, dtype=float)
-        return data
+    return data
