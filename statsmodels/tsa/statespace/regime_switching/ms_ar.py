@@ -59,7 +59,7 @@ class _NonswitchingAutoregression(SARIMAX):
     SARIMAX wrapper, simplifying it to AR(p) model
     '''
 
-    def __init__(self, endog, order, exog=None, dtype=np.float64, **kwargs):
+    def __init__(self, endog, order, exog=None, dtype=np.float64):
 
         mle_regression = True
 
@@ -136,9 +136,14 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         self.parameters['mean'] = [self.switching_mean]
         self.parameters['variance'] = [self.switching_variance]
 
-    def nonswitching_model_type(self):
+    def get_nonswitching_model(self):
 
-        return _NonswitchingAutoregression
+        exog = None
+        if hasattr(self, 'exog'):
+            exog = self.exog
+
+        return _NonswitchingAutoregression(self.endog, self.order, exog=exog,
+                dtype=self.ssm.dtype)
 
     def update_params(self, params, nonswitching_params):
         '''
@@ -224,14 +229,10 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         return unconstrained
 
-    def normalize_params(self, params, transformed=True):
+    def get_normal_regimes_permutation(self, params):
 
-        dtype = self.ssm.dtype
         k_ar_regimes = self.k_ar_regimes
         order = self.order
-
-        if not transformed:
-            params = self.transform_params(params)
 
         regime_sort_keys = [() for _ in range(k_ar_regimes)]
 
@@ -249,33 +250,12 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
                 regime_sort_keys[i] += tuple(params[self.parameters[i,
                         'autoregressive']])
 
-        regime_permutation = sorted(range(k_ar_regimes),
+        permutation = sorted(range(k_ar_regimes),
                 key=lambda regime:regime_sort_keys[regime])
 
-        ar_regime_transition = self._get_param_regime_transition(params)
-        new_ar_regime_transition = np.zeros((k_ar_regimes, k_ar_regimes),
-                dtype=dtype)
+        return permutation
 
-        for i in range(k_ar_regimes):
-            for j in range(k_ar_regimes):
-                new_ar_regime_transition[i, j] = \
-                        ar_regime_transition[regime_permutation[i],
-                        regime_permutation[j]]
-
-        new_params = np.zeros((self.parameters.k_params,), dtype=dtype)
-
-        self._set_param_regime_transition(new_params, new_ar_regime_transition)
-
-        for i in range(k_ar_regimes):
-            new_params[self.parameters[i]] = \
-                    params[self.parameters[regime_permutation[i]]]
-
-        if not transformed:
-            new_params = self.untransform_params(new_params)
-
-        return new_params
-
-    def get_ar_mean_regimes(self, regime_index):
+    def _get_ar_mean_regimes(self, regime_index):
         '''
         get ar mean regimes
         from extended regime (tuple (S_t, S_{t-1}, ..., S_{t-order})) index
@@ -310,9 +290,6 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
     def update(self, params, **kwargs):
         '''
-        params = (transition_matrix(not extended) exog_regression_coefs
-        ar_coefs means vars)
-
         Durbin-Koopman, page 46
         '''
 
@@ -420,7 +397,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
             curr_regime_ar_means = np.zeros((order, ), dtype=dtype)
 
             for ar_lag_index, ar_regime in zip(range(order),
-                    self.get_ar_mean_regimes(regime_index)):
+                    self._get_ar_mean_regimes(regime_index)):
                 curr_regime_ar_means[ar_lag_index] = \
                         params[self.parameters[ar_regime, 'mean']]
 
@@ -544,7 +521,6 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         '''
         Fits EM algorithm several times with random starts and chooses the
         best params vector
-        random_scale - scale parameters of numpy.random.normal
         '''
 
         np.random.seed(seed=seed)

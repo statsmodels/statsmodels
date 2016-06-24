@@ -7,8 +7,7 @@ from statsmodels.tsa.statespace.regime_switching.kim_filter import KimFilter
 
 class RegimeSwitchingMLEModel(MLEModel):
 
-    def __init__(self, k_regimes, endog, k_states,
-            param_k_regimes=None, exog=None, dates=None, freq=None,
+    def __init__(self, k_regimes, endog, k_states, param_k_regimes=None,
             **kwargs):
         '''
         param_k_regimes is specified in the case, when
@@ -30,8 +29,7 @@ class RegimeSwitchingMLEModel(MLEModel):
         self.parameters['regime_transition'] = [False] * \
                 self.param_k_regimes * (self.param_k_regimes - 1)
 
-        super(RegimeSwitchingMLEModel, self).__init__(endog, k_states,
-                exog=exog, dates=dates, freq=freq, **kwargs)
+        super(RegimeSwitchingMLEModel, self).__init__(endog, k_states, **kwargs)
 
     def initialize_statespace(self, **kwargs):
 
@@ -44,13 +42,13 @@ class RegimeSwitchingMLEModel(MLEModel):
 
         self.k_endog = self.ssm.k_endog
 
-    @property
-    def nonswitching_model_type(self):
+    def get_nonswitching_model(self):
         '''
+        Returns non-switching model instance
         To override, if fitting non-switching model is performed.
         '''
 
-        return MLEModel
+        raise NotImplementedError
 
     def update_params(self, params, nonswitching_params):
         '''
@@ -149,16 +147,64 @@ class RegimeSwitchingMLEModel(MLEModel):
         return self.untransform_model_params(
                 self.untransform_regime_transition(constrained))
 
-    def normalize_params(self, params, transformed=True):
+    def _permute_regimes(self, params, permutation):
+        '''
+        `permutation` is provided by `get_normal_regimes_permutation` method.
+        This method is used in `normalize_regimes` method.
+        '''
+
+        param_k_regimes = self.param_k_regimes
+        dtype = self.ssm.dtype
+
+        ar_regime_transition = self._get_param_regime_transition(params)
+        new_ar_regime_transition = np.zeros((param_k_regimes, param_k_regimes),
+                dtype=dtype)
+
+        for i in range(param_k_regimes):
+            for j in range(param_k_regimes):
+                new_ar_regime_transition[i, j] = \
+                        ar_regime_transition[permutation[i],
+                        permutation[j]]
+
+        new_params = np.zeros((self.parameters.k_params,), dtype=dtype)
+
+        self._set_param_regime_transition(new_params, new_ar_regime_transition)
+
+        for i in range(param_k_regimes):
+            new_params[self.parameters[i]] = \
+                    params[self.parameters[permutation[i]]]
+
+        return new_params
+
+    def get_normal_regimes_permutation(self, params):
         '''
         Parameters vector depends on permutation of regimes in it, which means
         that several different vectors can represent the only model
         configuration. To compare configurations (e.g. for testing), we need to
         normalize parameters.
-        To override, if needed.
+        This method should be overridden, if required, to return a permutation
+        of indices [0, ..., k_regimes], later used to permute parameters in
+        normalize_params.
+        `params` is supposed to be constrained here.
         '''
 
-        raise NotImplementedError
+        param_k_regimes = self.param_k_regimes
+
+        # Identity permutation
+        return list(range(param_k_regimes))
+
+    def normalize_params(self, params, transformed=True):
+
+        if not transformed:
+            params = self.transform_params(params)
+
+        permutation = self.get_normal_regimes_permutation(params)
+        params = self._permute_regimes(params, permutation)
+
+        if not transformed:
+            params = self.untransform_params(params)
+
+        return params
 
     def set_smoother_output(self, **kwargs):
 
@@ -217,10 +263,7 @@ class RegimeSwitchingMLEModel(MLEModel):
             start_params = self.transform_params(start_params)
 
         if fit_nonswitching_first:
-            nonswitching_model = self.nonswitching_model_type(
-                    self.endog, self.k_states, exog=self.exog,
-                    dates=self.data.dates, freq=self.data.freq,
-                    **self._init_kwargs)
+            nonswitching_model = self.get_nonswitching_model()
             nonswitching_kwargs = dict(kwargs)
             nonswitching_kwargs['return_params'] = True
             start_nonswitching_params = \

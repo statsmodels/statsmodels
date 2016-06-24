@@ -70,10 +70,10 @@ class Kim1994Model(RegimeSwitchingMLEModel):
         self.parameters['sigma'] = [False]
         self.parameters['delta'] = [True]
 
-    @property
-    def nonswitching_model_type(self):
+    def get_nonswitching_model(self):
 
-        return Linear_Kim1994Model
+        return Linear_Kim1994Model(endog=self.endog, k_states=self.k_states,
+                k_posdef=1)
 
     def update_params(self, params, nonswitching_params):
 
@@ -144,7 +144,7 @@ class Kim1994WithMLEModel(Kim1994):
         raise NotImplementedError
 
 
-class TestKim1994_MLEModel(Kim1994WithMLEModel):
+class aTestKim1994_MLEModel(Kim1994WithMLEModel):
     '''
     Test for equivalence with kim_je example.
     '''
