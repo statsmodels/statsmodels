@@ -161,11 +161,11 @@ def test_distributed_estimation():
 
     fit = distributed_estimation(zip(endogGen(y, 1), exogGen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(endogGen(y, 2), exogGen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(endogGen(y, 2), exogGen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(endogGen(y, 3), exogGen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(endogGen(y, 3), exogGen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(endogGen(y, 50), exogGen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(endogGen(y, 50), exogGen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
 
     fit = distributed_estimation(zip(endogGen(y, 1), exogGen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
