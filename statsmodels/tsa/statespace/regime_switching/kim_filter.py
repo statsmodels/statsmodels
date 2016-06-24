@@ -418,8 +418,8 @@ class KimFilter(object):
             filtered_prev_and_curr_regime_logprobs,
             filtered_prev_cond_on_curr_regime_logprobs,
             state_batteries, weighted_states, state_biases,
-            transposed_state_biases, state_bias_sqrs,
-            state_cov_batteries, state_covs_and_state_bias_sqrs,
+            state_bias_sqrs, state_cov_batteries,
+            state_covs_and_state_bias_sqrs,
             weighted_state_covs_and_state_bias_sqrs, approx_state_cov):
 
         k_states = self._k_states
@@ -460,11 +460,8 @@ class KimFilter(object):
                 state_batteries[:, curr_regime, :].reshape(-1, k_states, 1),
                 out=state_biases)
 
-        np.subtract(approx_state.reshape(1, 1, -1),
-                state_batteries[:, curr_regime, :].reshape(-1, 1, k_states),
-                out=transposed_state_biases)
-
-        np.multiply(state_biases, transposed_state_biases, out=state_bias_sqrs)
+        np.multiply(state_biases, state_biases.transpose((0, 2, 1)),
+                out=state_bias_sqrs)
 
         np.add(state_cov_batteries[:, curr_regime, :, :], state_bias_sqrs,
                 out=state_covs_and_state_bias_sqrs)
@@ -538,8 +535,6 @@ class KimFilter(object):
                 dtype=dtype)
         weighted_states = np.zeros((k_regimes, k_states), dtype=dtype)
         state_biases = np.zeros((k_regimes, k_states, 1), dtype=dtype)
-        transposed_state_biases = np.zeros((k_regimes, 1, k_states),
-                dtype=dtype)
         state_bias_sqrs = np.zeros((k_regimes, k_states, k_states),
                 dtype=dtype)
         state_covs_and_state_bias_sqrs = np.zeros((k_regimes, k_states,
@@ -584,8 +579,8 @@ class KimFilter(object):
                         filtered_prev_and_curr_regime_logprobs,
                         filtered_prev_cond_on_curr_regime_logprobs,
                         state_batteries, weighted_states, state_biases,
-                        transposed_state_biases, state_bias_sqrs,
-                        state_cov_batteries, state_covs_and_state_bias_sqrs,
+                        state_bias_sqrs, state_cov_batteries,
+                        state_covs_and_state_bias_sqrs,
                         weighted_state_covs_and_state_bias_sqrs,
                         approx_state_cov)
 
