@@ -11,17 +11,20 @@ import numpy as np
 distributed regularized estimation.
 
 Routines for fitting regression models using a distributed
-approach outlined in 
+approach outlined in
 
 Jason D. Lee, Qiang Liu, Yuekai Sun and Jonathan E. Taylor.
-"Communication-Efficient Sparse Regression: A One-Shot Approach." 
-arXiv:1503.04337. 2015.
+"Communication-Efficient Sparse Regression: A One-Shot Approach."
+arXiv:1503.04337. 2015. http://arxiv.org/abs/1503.04337.
+
+Currently the primary usecase is for out of memory computation,
+this approach currently does not support mutli-core processing
+and processing must be handled sequentially.
 """
 
 
 def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
-    """
-    generates the log-likelihood gradient for the debiasing
+    """generates the log-likelihood gradient for the debiasing
 
     Parameters
     ----------
@@ -42,15 +45,15 @@ def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
         a ridge fit, if 1 it is a lasso fit.
     score_kwds : dict-like or None
         Keyword arguments for the score function.
-    
+
     Returns
     -------
     An array-like object of the same dimension as beta_hat
-   
+
     Notes
     -----
     In general:
-    
+
     nabla l_k(beta)
 
     For the simple linear case:
@@ -65,8 +68,7 @@ def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
 
 
 def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
-    """
-    generates the weighted design matrix necessary to generate
+    """generates the weighted design matrix necessary to generate
     the approximate inverse covariance matrix
 
     Parameters
@@ -84,17 +86,12 @@ def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
     as mod.exog
     """
 
-#    X_beta = np.sqrt(mod.hessian_obs(np.r_[beta_hat], **hess_kwds)).dot(mod.exog)
-#    X_beta = X_beta - X_beta.mean(0) / X_beta.std(0)
-#    return X_beta
-    return np.sqrt(mod.hessian_obs(np.r_[beta_hat], **hess_kwds)).dot(mod.exog)
-#    return mod.exog
     # TODO need to handle duration and other linear model classes
+    return np.sqrt(mod.hessian_obs(np.r_[beta_hat], **hess_kwds)).dot(mod.exog)
 
 
 def _gen_gamma_hat(X_beta, pi, p, n, alpha):
-    """
-    generates the gamma hat values for the pith variable, used to
+    """generates the gamma hat values for the pith variable, used to
     estimate theta hat.
 
     Parameters
@@ -123,25 +120,25 @@ def _gen_gamma_hat(X_beta, pi, p, n, alpha):
     gamma_hat_i = arg min 1/(2n) ||X_beta,i - X_beta,-i gamma||_2^2
                           + alpha ||gamma||_1
     """
-   
-    ind = range(pi) + range(pi + 1, p)
+
+    # TODO this is not a very elegant solution, we can't concat
+    # range in Py 3 because it is now a generator.
+    ind = list(range(pi)) + list(range(pi + 1, p))
 
     # TODO use elastic net optimization routine directly
     tmod = OLS(X_beta[:, pi], X_beta[:, ind])
-    #tmod = GLM(X_beta[:, pi], X_beta[:, ind], family=Binomial())
 
     # TODO this is currently going to fail with some alpha
     # values, the issue is that may have an array for of
     # alphas for beta hat and we want each individual element
     # here
     gamma_hat = tmod.fit_regularized(alpha=alpha).params
-    
+
     return gamma_hat
 
 
 def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
-    """
-    generates the tau hat value for the pith variable, used to
+    """generates the tau hat value for the pith variable, used to
     estimate theta hat.
 
     Parameters
@@ -173,21 +170,20 @@ def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
                      + alpha ||gamma||_1)
     """
 
-    ind = range(pi) + range(pi + 1, p)
+    ind = list(range(pi)) + list(range(pi + 1, p))
     d = np.linalg.norm(X_beta[:, pi] - X_beta[:, ind].dot(gamma_hat))**2
     d = np.sqrt(d / n + alpha * np.linalg.norm(gamma_hat, 1))
     return d
 
 
 def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
-    """
-    generates the theta hat matrix
+    """generates the theta hat matrix
 
     Parameters
     ----------
     gamma_hat_l : list
         A list of array-like object where each object corresponds to
-        the gamma hat values for the corresponding variable, should 
+        the gamma hat values for the corresponding variable, should
         be length p.
     tau_hat_l : list
         A list of scalars where each scalar corresponds to the tau hat
@@ -198,16 +194,16 @@ def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
     Returns
     ------
     An array-like object, p x p matrix
-   
+
     Notes
     -----
 
     theta_hat_j = - 1 / tau_hat_j [gamma_hat_j,1,...,1,...gamma_hat_j,p]
     """
-    
+
     theta_hat = np.eye(p)
     for pi in range(p):
-        ind = range(pi) + range(pi + 1, p)
+        ind = list(range(pi)) + list(range(pi + 1, p))
         theta_hat[pi,ind] = gamma_hat_l[pi]
         theta_hat[pi,:] = (- 1. / tau_hat_l[pi]**2) * theta_hat[pi,:]
 
@@ -216,8 +212,7 @@ def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
 
 def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
                                  score_kwds=None, hess_kwds=None):
-    """
-    generates the regularized fitted parameters, is the default
+    """generates the regularized fitted parameters, is the default
     estimation_method for distributed_estimation
 
     Parameters
@@ -269,7 +264,7 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
     gamma_hat_l = []
     tau_hat_l = []
     for pi in range(mnum * p_part, min((mnum + 1) * p_part, p)):
-        
+
         gamma_hat = _gen_gamma_hat(X_beta, pi, p, n, alpha)
         gamma_hat_l.append(gamma_hat)
 
@@ -280,8 +275,7 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
 
 
 def _join_debiased(model_results_l, partitions, threshold=0):
-    """
-    joins the results from each run of _est_regularized_distributed
+    """joins the results from each run of _est_regularized_distributed
     and returns the debiased estimate of the coefficients
 
     Parameters
@@ -294,9 +288,6 @@ def _join_debiased(model_results_l, partitions, threshold=0):
     threshold : scalar
         The threshold at which the coefficients will be cut.
     """
-
-    # TODO currently the way we extract p is roundabout, should be
-    # handled better but ideally not as an argument to _join_debiased
 
     beta_hat_l = []
     grad_l = []
@@ -314,14 +305,14 @@ def _join_debiased(model_results_l, partitions, threshold=0):
     beta_mn = np.zeros(p)
     for beta_hat in beta_hat_l:
         beta_mn += beta_hat
-    beta_mn = beta_mn / partitions
+    beta_mn /= partitions
 
     grad_mn = np.zeros(p)
     for grad in grad_l:
         grad_mn += grad
-    grad_mn = -grad_mn / partitions
+    grad_mn *= -1. / partitions
 
-    theta_hat = _gen_theta_hat(gamma_hat_l, tau_hat_l, p) 
+    theta_hat = _gen_theta_hat(gamma_hat_l, tau_hat_l, p)
 
     beta_tilde = beta_mn + theta_hat.dot(grad_mn)
 
@@ -331,22 +322,21 @@ def _join_debiased(model_results_l, partitions, threshold=0):
 #    return beta_tilde, beta_mn, theta_hat, grad_mn, gamma_hat_l, theta_hat.dot(grad_mn)
 
 
-def distributed_estimation(endog_generator, exog_generator, partitions,
+def distributed_estimation(data_generator, partitions,
                            model_class=None, init_kwds=None, fit_kwds=None,
                            estimation_method=None, estimation_kwds=None,
                            join_method=None, join_kwds=None):
-    """
-    This functions handles a general approach to distributed estimation,
+    """This functions handles a general approach to distributed estimation,
     the user is expected to provide generators for the data as well as
     a model and methods for performing the estimation and recombining
     the results
 
     Parameters
     ---------
-    endog_generator : generator
-        A generator to produce a sequence of endog arrays.
-    exog_generator : generator
-        A generator to produce a sequence of exog arrays.
+    data_generator : generator
+        A generator that produces a sequence of tuples where the first
+        element in the tuple corresponds to an endog array and the
+        element corresponds to an exog array.
     partitions : scalar
         The number of partitions that the data will be split into.
     model_class : statsmodels model class
@@ -395,8 +385,8 @@ def distributed_estimation(endog_generator, exog_generator, partitions,
     # TODO given that we already have an example where generators should
     # produce more than just exog and endog (partition for variables)
     # this should probably be handled differently
-    for endog, exog in zip(endog_generator, exog_generator):
-        
+    for endog, exog in data_generator:
+
         model = model_class(endog, exog, **init_kwds)
 
         # TODO possibly fit_kwds should be handled within
