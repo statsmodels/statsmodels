@@ -104,4 +104,4 @@ def _get_data():
         data['NABOVE'] = nbelow # successes
         data['NBELOW'] = nabove - nbelow # now failures
 
-        return data
+    return data
