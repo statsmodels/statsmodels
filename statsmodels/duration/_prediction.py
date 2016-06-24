@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Fri Dec 19 11:29:18 2014
-
-Author: Josef Perktold
-License: BSD-3
-
+This is a bare-bones version of _prediction from regression for
+duration
 """
 
 import numpy as np
@@ -13,12 +9,11 @@ from scipy import stats
 # this is similar to ContrastResults after t_test, partially copied and adjusted
 class PredictionResults(object):
 
-    def __init__(self, predicted_mean, var_pred_mean, var_resid,
+    def __init__(self, predicted_mean, var_pred_mean,
                  df=None, dist=None, row_labels=None):
         self.predicted_mean = predicted_mean
         self.var_pred_mean = var_pred_mean
         self.df = df
-        self.var_resid = var_resid
         self.row_labels = row_labels
 
         if dist is None or dist == 'norm':
@@ -30,10 +25,6 @@ class PredictionResults(object):
         else:
             self.dist = dist
             self.dist_args = ()
-
-    @property
-    def se_obs(self):
-        return np.sqrt(self.var_pred_mean + self.var_resid)
 
     @property
     def se_mean(self):
@@ -59,7 +50,7 @@ class PredictionResults(object):
 
         """
 
-        se = self.se_obs if obs else self.se_mean
+        se = self.se_mean
 
         q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
         lower = self.predicted_mean - q * se
@@ -91,8 +82,9 @@ class PredictionResults(object):
         return res
 
 
-def get_prediction(self, exog=None, transform=True, weights=None,
-                   row_labels=None, pred_kwds=None):
+def get_prediction(self, exog=None, transform=True, row_labels=None,
+                   cov_params=None, endog=None, strata=None,
+                   offset=None, pred_type=None, pred_kwds=None):
     """
     compute prediction results
 
@@ -107,9 +99,6 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    weights : array_like, optional
-        Weights interpreted as in WLS, used for the variance of the predicted
-        residual.
     args, kwargs :
         Some models can take additional arguments or keywords, see the
         predict method of the model for the details.
@@ -143,35 +132,34 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         exog = np.atleast_2d(exog)  # needed in count model shape[1]
     else:
         exog = self.model.exog
-        if weights is None:
-            weights = getattr(self.model, 'weights', None)
+
+    if endog is None:
+        endog = self.model.endog
 
         if row_labels is None:
             row_labels = getattr(self.model.data, 'row_labels', None)
-
-    # need to handle other arrays, TODO: is delegating to model possible ?
-    if weights is not None:
-        weights = np.asarray(weights)
-        if (weights.size > 1 and
-           (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
-            raise ValueError('weights has wrong shape')
 
     ### end
 
     if pred_kwds is None:
         pred_kwds = {}
-    predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
+    predicted_mean = self.model.predict(self.params, exog=exog,
+                                        cov_params=cov_params, endog=endog,
+                                        strata=strata, offset=offset,
+                                        pred_type=pred_type, **pred_kwds)
 
-    covb = self.cov_params()
-    var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
-
-    # TODO: check that we have correct scale, Refactor scale #???
-    var_resid = self.scale / weights # self.mse_resid / weights
-    # special case for now:
-    if self.cov_type == 'fixed scale':
-        var_resid = self.cov_kwds['scale'] / weights
+    if pred_type == "lhr":
+        # TODO fix the handling of this
+        if cov_params is None:
+            cov_params = self.cov_params()
+        mat = np.dot(exog, cov_params)
+        var_pred_mean = (mat * exog).sum(1)
+    
+    else:
+        msg = "Type %s does not support get_prediction" % pred_type
+        raise ValueError(msg)
 
     dist = ['norm', 't'][self.use_t]
-    return PredictionResults(predicted_mean, var_pred_mean, var_resid,
+    return PredictionResults(predicted_mean, var_pred_mean,
                              df=self.df_resid, dist=dist,
                              row_labels=row_labels)
