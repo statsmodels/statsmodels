@@ -3,20 +3,6 @@ from scipy.misc import logsumexp
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from .tools import RegimePartition
 
-def _multivariate_normal_logpdf(x, mean=None, cov=None):
-    n = x.shape[0]
-    x = x.reshape(-1, 1)
-    mean = mean.reshape(-1, 1)
-
-    if np.linalg.matrix_rank(cov) < n:
-        raise RuntimeError('Cov matrix is singular.')
-
-    logpdf = -0.5 * n * (np.log(np.pi) + np.log(2)) - \
-            0.5 * np.log(np.linalg.det(cov)) - \
-            0.5 * (x - mean).T.dot(np.linalg.inv(cov)).dot(x - mean)
-
-    return logpdf
-
 
 class KimFilter(object):
     '''
@@ -334,7 +320,7 @@ class KimFilter(object):
 
     def _kalman_filter_step(self, t, prev_regime, curr_regime, state_buffer,
             state_cov_buffer, state_batteries, state_cov_batteries,
-            forecast_error_batteries, forecast_error_cov_batteries):
+            prev_and_curr_regime_cond_obs_logprobs):
 
         curr_kfilter = self._kfilters[curr_regime]
         prev_kfilter = self._kfilters[prev_regime]
@@ -374,36 +360,19 @@ class KimFilter(object):
                 curr_kfilter.filtered_state[:, t])
         np.copyto(state_cov_batteries[prev_regime, curr_regime, :, :],
                 curr_kfilter.filtered_state_cov[:, :, t])
-        np.copyto(forecast_error_batteries[prev_regime, curr_regime, :],
-                curr_kfilter.forecast_error[:, t])
-        np.copyto(forecast_error_cov_batteries[prev_regime, curr_regime, :, :],
-                curr_kfilter.forecast_error_cov[:, :, t])
+
+        # This is more related to hamilton step, but loglikelihood is
+        # internally calculated inside `next` call.
+        prev_and_curr_regime_cond_obs_logprobs[prev_regime, curr_regime] = \
+                curr_kfilter.loglikelihood[t]
 
     def _hamilton_filtering_step(self, t,
             predicted_prev_and_curr_regime_logprobs,
-            forecast_error_batteries, forecast_error_cov_batteries,
-            forecast_error_mean, prev_and_curr_regime_cond_obs_logprobs,
+            prev_and_curr_regime_cond_obs_logprobs,
             predicted_prev_and_curr_regime_and_obs_logprobs,
             filtered_prev_and_curr_regime_logprobs):
 
         k_regimes = self._k_regimes
-
-        for prev_regime in range(k_regimes):
-            for curr_regime in range(k_regimes):
-                # This condition optimizes calculation time in case of sparse
-                # regime transition  matrix (as it happens in MS AR)
-                if predicted_prev_and_curr_regime_logprobs[prev_regime, \
-                        curr_regime] != -np.inf:
-                    forecast_error = forecast_error_batteries[prev_regime,
-                            curr_regime, :]
-                    forecast_error_cov = forecast_error_cov_batteries[prev_regime,
-                        curr_regime, :, :]
-
-                    # Should I manage memory allocation here?
-                    prev_and_curr_regime_cond_obs_logprobs[prev_regime,
-                            curr_regime] = _multivariate_normal_logpdf(
-                            forecast_error, mean=forecast_error_mean,
-                            cov=forecast_error_cov)
 
         np.add(prev_and_curr_regime_cond_obs_logprobs,
                 predicted_prev_and_curr_regime_logprobs,
@@ -556,12 +525,6 @@ class KimFilter(object):
         state_cov_batteries = np.zeros((k_regimes, k_regimes, k_states,
                 k_states), dtype=dtype)
 
-        forecast_error_batteries = np.zeros((k_regimes, k_regimes, k_endog),
-                dtype=dtype)
-        forecast_error_cov_batteries = np.zeros((k_regimes, k_regimes,
-                k_endog, k_endog), dtype=dtype)
-        forecast_error_mean = np.zeros((k_endog,), dtype=dtype)
-
         predicted_prev_and_curr_regime_logprobs = np.zeros((k_regimes,
                 k_regimes), dtype=dtype)
         prev_and_curr_regime_cond_obs_logprobs = np.zeros((k_regimes,
@@ -605,14 +568,12 @@ class KimFilter(object):
                             curr_regime] != -np.inf:
                         self._kalman_filter_step(t, prev_regime, curr_regime,
                                 state_buffer, state_cov_buffer, state_batteries,
-                                state_cov_batteries, forecast_error_batteries,
-                                forecast_error_cov_batteries)
+                                state_cov_batteries,
+                                prev_and_curr_regime_cond_obs_logprobs)
 
             # Hamilton filter
             self._hamilton_filtering_step(t,
                     predicted_prev_and_curr_regime_logprobs,
-                    forecast_error_batteries, forecast_error_cov_batteries,
-                    forecast_error_mean,
                     prev_and_curr_regime_cond_obs_logprobs,
                     predicted_prev_and_curr_regime_and_obs_logprobs,
                     filtered_prev_and_curr_regime_logprobs)
