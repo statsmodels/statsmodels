@@ -46,6 +46,7 @@ NOTE        = """
         Indicator Code - The World Bank Series code
         1960 - 2013 - The fertility rate for the given year
 """
+from statsmodels.compat import lzip, lmap
 
 import numpy as np
 import pandas as pd
@@ -64,9 +65,9 @@ def load():
     """
     data = _get_data()
     names = data.columns.tolist()
-    dtype = zip(names, ['a45', 'a3', 'a40', 'a14'] + ['<f8'] * 54)
-    data = map(tuple, data.values.tolist())
-    dataset = du.Dataset(data=np.array(data, dtype=dtype), names=names)
+    dtype = lzip(names, ['a45', 'a3', 'a40', 'a14'] + ['<f8'] * 54)
+    data = lmap(tuple, data.values.tolist())
+    dataset = du.Dataset(data=np.array(data, dtype=dtype).view(np.recarray), names=names)
     return dataset
 
 

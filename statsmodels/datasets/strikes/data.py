@@ -68,4 +68,4 @@ def _get_data():
     filepath = dirname(abspath(__file__))
     with open(filepath + '/strikes.csv', 'rb') as f:
         data = recfromtxt(f, delimiter=",", names=True, dtype=float)
-        return data
+    return data
