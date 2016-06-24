@@ -8,7 +8,7 @@
     padding-left: 30px;
 }
 
-.examples-page h1, h2, h3 {
+.examples-page h1, .examples-page h2, .examples-page h3 {
     padding-left: 30px; /* to make up for margin above */
 }
 
