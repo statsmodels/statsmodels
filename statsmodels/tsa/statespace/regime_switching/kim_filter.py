@@ -422,6 +422,7 @@ class KimFilter(object):
             state_covs_and_state_bias_sqrs,
             weighted_state_covs_and_state_bias_sqrs, approx_state_cov):
 
+        k_regimes = self._k_regimes
         k_states = self._k_states
 
         curr_filter = self._kfilters[curr_regime]
@@ -456,12 +457,12 @@ class KimFilter(object):
 
         np.sum(weighted_states, axis=0, out=approx_state)
 
-        np.subtract(approx_state.reshape(1, -1, 1),
-                state_batteries[:, curr_regime, :].reshape(-1, k_states, 1),
+        np.subtract(approx_state, state_batteries[:, curr_regime, :],
                 out=state_biases)
 
-        np.multiply(state_biases, state_biases.transpose((0, 2, 1)),
-                out=state_bias_sqrs)
+        for i in range(k_regimes):
+            np.outer(state_biases[i], state_biases[i],
+                    out=state_bias_sqrs[i])
 
         np.add(state_cov_batteries[:, curr_regime, :, :], state_bias_sqrs,
                 out=state_covs_and_state_bias_sqrs)
@@ -534,7 +535,7 @@ class KimFilter(object):
         filtered_prev_cond_on_curr_regime_logprobs = np.zeros((k_regimes,),
                 dtype=dtype)
         weighted_states = np.zeros((k_regimes, k_states), dtype=dtype)
-        state_biases = np.zeros((k_regimes, k_states, 1), dtype=dtype)
+        state_biases = np.zeros((k_regimes, k_states), dtype=dtype)
         state_bias_sqrs = np.zeros((k_regimes, k_states, k_states),
                 dtype=dtype)
         state_covs_and_state_bias_sqrs = np.zeros((k_regimes, k_states,

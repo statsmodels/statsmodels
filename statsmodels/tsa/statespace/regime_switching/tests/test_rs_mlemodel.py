@@ -144,7 +144,7 @@ class Kim1994WithMLEModel(Kim1994):
         raise NotImplementedError
 
 
-class aTestKim1994_MLEModel(Kim1994WithMLEModel):
+class TestKim1994_MLEModel(Kim1994WithMLEModel):
     '''
     Test for equivalence with kim_je example.
     '''
