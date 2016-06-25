@@ -2386,7 +2386,7 @@ class NominalGEEResults(GEEResults):
         link = self.model.family.link.inverse
         ncut = self.model.family.ncut
 
-        k = self.model.exog.shape[1] / ncut
+        k = int(self.model.exog.shape[1] / ncut)
         exog_means = self.model.exog.mean(0)[0:k]
         exog_names = self.model.exog_names[0:k]
         exog_names = [x.split("[")[0] for x in exog_names]

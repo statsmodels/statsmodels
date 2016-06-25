@@ -1,12 +1,12 @@
 import numpy as np
 
 import statsmodels.api as sm
-from numpy.testing import dec
+from numpy.testing import dec, assert_equal, assert_raises
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
                   plot_added_variable, plot_partial_residuals,
-                  plot_ceres_residuals)
+                  plot_ceres_residuals, influence_plot, plot_leverage_resid2)
 from pandas import Series, DataFrame
 
 try:
@@ -88,6 +88,25 @@ class TestPlot(object):
             add_lowess(ax)
 
         close_or_save(pdf, fig)
+
+    @dec.skipif(not have_matplotlib)
+    def test_plot_influence(self):
+        fig = influence_plot(self.res)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        plt.close(fig)
+
+        fig = influence_plot(self.res, criterion='DFFITS')
+        assert_equal(isinstance(fig, plt.Figure), True)
+        plt.close(fig)
+
+        assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
+
+    @dec.skipif(not have_matplotlib)
+    def test_plot_leverage_resid2(self):
+        fig = plot_leverage_resid2(self.res)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        plt.close(fig)
+
 
 class TestPlotPandas(TestPlot):
     def setup(self):
