@@ -38,7 +38,7 @@ def test_gen_grad():
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
     mod = OLS(y, X)
-    grad = _gen_grad(mod, beta, 50, 0.01, 1, {})
+    grad = _gen_grad(mod, beta, 0.01, 1, {})
     assert_equal(grad.shape, beta.shape)
 
 

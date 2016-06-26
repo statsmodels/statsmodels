@@ -293,7 +293,7 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
     p_part = int(np.ceil((1. * p) / partitions))
 
     params = mod.fit_regularized(**fit_kwds).params
-    grad = _gen_grad(mod, params, n_obs, alpha, L1_wt, score_kwds) / n_obs
+    grad = _gen_grad(mod, params, alpha, L1_wt, score_kwds) / n_obs
 
     X_beta = _gen_wdesign_mat(mod, params, hess_kwds)
 
