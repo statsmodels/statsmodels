@@ -3,7 +3,7 @@ from numpy.testing import assert_equal, assert_
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import Binomial
-from statsmodels.base.distributed_estimation import _gen_grad, _gen_wdesign_mat, _gen_gamma_hat, _gen_tau_hat, _gen_theta_hat, _est_regularized_distributed, _join_debiased, distributed_estimation
+from statsmodels.base.distributed_estimation import _gen_grad, _gen_wdesign_mat, _gen_gamma_hat, _gen_tau_hat, _gen_theta_hat, _est_regularized_distributed, _join_debiased, fit_distributed
 
 
 def _exog_gen(exog, partitions):
@@ -64,7 +64,7 @@ def test_gen_gamma_hat():
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
     mod = OLS(y, X)
-    ghat = _gen_gamma_hat(X, 0, 3, 50, 0.01)
+    ghat = _gen_gamma_hat(X, 0, 0.01)
     assert_equal(ghat.shape, (2,))
 
 
@@ -76,7 +76,7 @@ def test_gen_tau_hat():
     beta = np.random.normal(size=3)
     mod = OLS(y, X)
     ghat = np.random.normal(size=2)
-    that = _gen_tau_hat(X, ghat, 0, 3, 50, 0.01)
+    that = _gen_tau_hat(X, ghat, 0, 0.01)
     assert_(isinstance(that, float))
 
 
@@ -90,8 +90,8 @@ def test_gen_theta_hat():
     ghat_l = []
     that_l = []
     for i in range(3):
-        ghat = _gen_gamma_hat(X, i, 3, 50, 0.01)
-        that = _gen_tau_hat(X, ghat, i, 3, 50, 0.01)
+        ghat = _gen_gamma_hat(X, i, 0.01)
+        that = _gen_tau_hat(X, ghat, i, 0.01)
         ghat_l.append(ghat)
         that_l.append(that)
     theta_hat = _gen_theta_hat(ghat_l, that_l, 3)
@@ -167,20 +167,20 @@ def test_distributed_estimation():
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
 
-    fit = distributed_estimation(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
 
-    fit = distributed_estimation(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = fit_distributed(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
