@@ -505,7 +505,7 @@ class GLM(base.LikelihoodModel):
             oim_factor /= scale
 
         return oim_factor
-    
+
 
     def hessian_obs(self, params, scale=None, diag=True):
         """
@@ -531,7 +531,7 @@ class GLM(base.LikelihoodModel):
 
         if diag:
             hessian_factor = self.hessian_factor(params, scale=scale)
-            return np.diag(hessian_factor)
+            return hessian_factor
 
         else:
             raise NotImplementedError("diag False is not supported")
@@ -1054,7 +1054,7 @@ class GLM(base.LikelihoodModel):
         glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
 
-    
+
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
         """

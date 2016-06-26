@@ -6,7 +6,7 @@ from statsmodels.genmod.families import Binomial
 from statsmodels.base.distributed_estimation import _gen_grad, _gen_wdesign_mat, _gen_gamma_hat, _gen_tau_hat, _gen_theta_hat, _est_regularized_distributed, _join_debiased, distributed_estimation
 
 
-def exogGen(exog, partitions):
+def _exog_gen(exog, partitions):
     """partitions exog data"""
 
     n_exog = exog.shape[0]
@@ -18,7 +18,7 @@ def exogGen(exog, partitions):
         yield exog[ii:jj, :]
         ii += int(n_part)
 
-def endogGen(endog, partitions):
+def _endog_gen(endog, partitions):
     """partitions endog data"""
 
     n_endog = endog.shape[0]
@@ -33,6 +33,7 @@ def endogGen(endog, partitions):
 
 def test_gen_grad():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -43,6 +44,7 @@ def test_gen_grad():
 
 def test_gen_wdesign_mat():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -57,6 +59,7 @@ def test_gen_wdesign_mat():
 
 def test_gen_gamma_hat():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -67,6 +70,7 @@ def test_gen_gamma_hat():
 
 def test_gen_tau_hat():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -78,6 +82,7 @@ def test_gen_tau_hat():
 
 def test_gen_theta_hat():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -95,6 +100,7 @@ def test_gen_theta_hat():
 
 def test_est_regularized_distributed():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -133,6 +139,7 @@ def test_est_regularized_distributed():
 
 def test_join_debiased():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
@@ -155,24 +162,25 @@ def test_join_debiased():
 
 def test_distributed_estimation():
 
+    np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
 
-    fit = distributed_estimation(zip(endogGen(y, 1), exogGen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(endogGen(y, 2), exogGen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(endogGen(y, 3), exogGen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(endogGen(y, 50), exogGen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
 
-    fit = distributed_estimation(zip(endogGen(y, 1), exogGen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(endogGen(y, 2), exogGen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(endogGen(y, 3), exogGen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    fit = distributed_estimation(zip(endogGen(y, 50), exogGen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
+    fit = distributed_estimation(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)

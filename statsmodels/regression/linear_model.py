@@ -750,7 +750,7 @@ class OLS(WLS):
             return -self._wexog_xprod / scale
 
         return hess
-    
+
 
     def hessian_obs(self, params, scale=None, diag=True):
         """
@@ -775,12 +775,12 @@ class OLS(WLS):
         """
 
         if diag:
-            return np.diag(np.ones(self.exog.shape[0]))
+            return np.ones(self.exog.shape[0])
 
         else:
             raise NotImplementedError("diag False is not supported")
 
-    
+
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, profile_scale=False,
                         refit=False, **kwargs):
@@ -2660,4 +2660,3 @@ if __name__ == "__main__":
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """
-

@@ -446,7 +446,7 @@ class PHReg(model.LikelihoodModel):
 
         return results
 
-    
+
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
         """
@@ -515,7 +515,7 @@ class PHReg(model.LikelihoodModel):
                               refit=refit,
                               **defaults)
 
-        
+
     def loglike(self, params):
         """
         Returns the log partial likelihood function evaluated at
