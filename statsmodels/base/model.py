@@ -676,9 +676,9 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         Returns
         -------
-        hessian_obs : ndarray, 2d
+        hessian_obs : array
             The second derivative of the loglikelihood function evaluated at
-            params for each observation.
+            params for each observation. Only the diagonal is returned.
         """
 
         raise NotImplementedError
