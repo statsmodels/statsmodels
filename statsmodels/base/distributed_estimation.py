@@ -50,10 +50,15 @@ debiasing procedure.
 
     This is the estimate of the approximate inverse covariance
     matrix.  This is used to debiase the coefficient average
-    along with the average gradient.
+    along with the average gradient.  For the OLS case,
+    theta_hat is an approximation for
+
+        (1 / n X^T X)^{-1}
+
+    formed by node-wise regression.
 """
 
-def _gen_grad(mod, params, n_obs, alpha, L1_wt, score_kwds):
+def _gen_grad(mod, params, alpha, L1_wt, score_kwds):
     """generates the log-likelihood gradient for the debiasing
 
     Parameters
@@ -62,8 +67,6 @@ def _gen_grad(mod, params, n_obs, alpha, L1_wt, score_kwds):
         The model for the current machine.
     params : array-like
         The estimated coefficients for the current machine.
-    n_obs : scalar
-        machine specific sample size.
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
@@ -84,14 +87,16 @@ def _gen_grad(mod, params, n_obs, alpha, L1_wt, score_kwds):
     -----
     In general:
 
-    nabla l_k(params)
+    gradient l_k(params)
+
+    where k corresponds to the index of the machine
 
     For the simple linear case:
 
-    X^T(y - X^T params) / n_obs
+    X^T(y - X^T params)
     """
 
-    grad = -mod.score(np.r_[params], **score_kwds) / n_obs
+    grad = -mod.score(np.r_[params], **score_kwds)
     # this second part comes from the elastic net penalty
     grad += alpha * (1 - L1_wt)
     return grad
@@ -288,7 +293,7 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
     p_part = int(np.ceil((1. * p) / partitions))
 
     params = mod.fit_regularized(**fit_kwds).params
-    grad = _gen_grad(mod, params, n_obs, alpha, L1_wt, score_kwds)
+    grad = _gen_grad(mod, params, n_obs, alpha, L1_wt, score_kwds) / n_obs
 
     X_beta = _gen_wdesign_mat(mod, params, hess_kwds)
 
