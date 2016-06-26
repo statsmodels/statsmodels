@@ -37,9 +37,9 @@ class TestGarciaPerron1996_Filtering(GarciaPerron1996):
 
         params = np.array(cls.true['parameters'], dtype=cls.dtype)
 
-        cls.model.filter(params)
+        results = cls.model.filter(params)
 
-        predicted_regime_probs = cls.model.ssm.predicted_regime_probs
+        predicted_regime_probs = results.predicted_regime_probs
 
         pr_probs = np.zeros((predicted_regime_probs.shape[0], 3),
                 dtype=cls.dtype)
@@ -48,7 +48,7 @@ class TestGarciaPerron1996_Filtering(GarciaPerron1996):
             pr_probs[:, i] = predicted_regime_probs[:, i::3].sum(axis=1)
 
         cls.result = {
-                'loglike': cls.model.ssm.loglike(filter_first=False),
+                'loglike': results.loglike(),
                 'pr_probs': pr_probs
         }
 

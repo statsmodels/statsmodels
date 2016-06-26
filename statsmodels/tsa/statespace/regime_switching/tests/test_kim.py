@@ -40,11 +40,11 @@ class TestKim1994_KimFilter(Kim1994):
     def run_filter(cls):
         cls.kim_filter.bind(cls.obs)
 
-        cls.kim_filter.filter()
+        results = cls.kim_filter.filter()
 
         return {
-            'loglike': cls.kim_filter.loglike(filter_first=False),
-            'cycle': cls.kim_filter.filtered_states[cls.true['start']:, 0]
+            'loglike': results.loglike(),
+            'cycle': results.filtered_states[cls.true['start']:, 0]
         }
 
     def test_loglike(self):

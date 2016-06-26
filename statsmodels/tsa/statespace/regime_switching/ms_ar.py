@@ -1,10 +1,8 @@
 import numpy as np
 from .tools import RegimePartition
-from statsmodels.tsa.statespace.regime_switching.rs_mlemodel import \
-        RegimeSwitchingMLEModel
-from statsmodels.tsa.statespace.regime_switching.tools import \
-        MarkovSwitchingParams
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+from .switching_mlemodel import SwitchingMLEModel
+from .kim_smoother import KimSmootherResults
+from statsmodels.tsa.statespace.api import SARIMAX
 
 def _em_iteration_for_markov_regression(dtype, k_regimes, endog, exog,
         smoothed_regime_probs, smoothed_curr_and_next_regime_probs):
@@ -77,7 +75,7 @@ class _NonswitchingAutoregression(SARIMAX):
                 enforce_stationarity=False)
 
 
-class MarkovAutoregression(RegimeSwitchingMLEModel):
+class MarkovAutoregression(SwitchingMLEModel):
     '''
     Markov switching autoregressive model
     '''
@@ -422,8 +420,11 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
 
         # obtaining smoothed probs
 
-        smoothed_regime_probs, smoothed_curr_and_next_regime_probs = \
-                self.get_smoothed_regime_probs(params)
+        msar_results = self.smooth(params, return_extended_probs=False)
+
+        smoothed_regime_probs = msar_results.smoothed_regime_probs
+        smoothed_curr_and_next_regime_probs = \
+                msar_results.smoothed_curr_and_next_regime_probs
 
         # preparing data for regression em iteration
 
@@ -529,7 +530,7 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
         best_params = None
 
         for i in range(em_optimizations):
-
+            print(i)
             random_start_params = np.random.normal(
                     size=self.parameters.k_params)
 
@@ -544,51 +545,80 @@ class MarkovAutoregression(RegimeSwitchingMLEModel):
             if best_params is None or loglike > best_loglike:
                 best_params = params
                 best_loglike = loglike
+                print(best_params)
+                print(best_loglike)
 
         if return_loglike:
             return (best_params, best_loglike)
         else:
             return best_params
 
-    def get_smoothed_regime_probs(self, params, return_extended_probs=False,
-            **kwargs):
+    def smooth(self, params, return_extended_probs=True, **kwargs):
         '''
-        return_extended_probs - returns state space smoothed regime probs.
+        return_extended_probs=True - returns state space smoothed regime probs.
         this is overridden, because this method returns smoothed AR
         regimes, rather then state space regimes.
         '''
 
-        k_regimes = self.k_regimes
+        results = None
+
+        if not return_extended_probs:
+
+            if 'regime_partition' in kwargs and \
+                    kwargs['regime_partition'] is not None:
+                raise ValueError('regime_partition argument can be applied ' \
+                        'only for extended probabilities')
+
+            results = MSARSmootherResults(self.ssm, self.k_ar_regimes)
+            kwargs['results'] = results
+
+        return super(MarkovAutoregression, self).smooth(params,  **kwargs)
+
+
+class MSARSmootherResults(KimSmootherResults):
+    '''
+    Stores smoothed AR regime probabilities, rather than smoothed state-space
+    probabilities.
+    '''
+
+    def __init__(self, model, k_ar_regimes):
+
+        self.k_ar_regimes = k_ar_regimes
+
+        super(MSARSmootherResults, self).__init__(model)
+
+    def update_smoother(self, smoother):
+
         k_ar_regimes = self.k_ar_regimes
-        order = self.order
-        nobs = self.nobs
-        dtype = self.ssm.dtype
 
-        # these are smoothed state space regimes
-        smoothed_regime_probs, smoothed_curr_and_next_regime_probs = \
-                super(MarkovAutoregression,
-                self).get_smoothed_regime_probs(params, **kwargs)
+        smoothed_regime_probs = np.exp(smoother.smoothed_regime_logprobs)
 
-        if return_extended_probs:
-            return smoothed_regime_probs, smoothed_curr_and_next_regime_probs
-
-        if 'regime_partition' in kwargs and kwargs['regime_partition'] is None:
-            raise ValueError('regime_partition argument can be applied only ' \
-                    'for extended probabilities')
-
-        smoothed_ar_regime_probs = np.zeros((nobs, k_ar_regimes), dtype=dtype)
+        self.smoothed_ar_regime_probs = np.zeros((smoothed_regime_probs.shape[0],
+                k_ar_regimes), dtype=smoothed_regime_probs.dtype)
 
         for i in range(k_ar_regimes):
-            smoothed_ar_regime_probs[:, i] = smoothed_regime_probs[:,
+            self.smoothed_ar_regime_probs[:, i] = smoothed_regime_probs[:,
                     i::k_ar_regimes].sum(axis=1)
 
-        smoothed_curr_and_next_ar_regime_probs = np.zeros((nobs - 1,
-                k_ar_regimes, k_ar_regimes), dtype=dtype)
+        smoothed_curr_and_next_regime_probs = \
+                np.exp(smoother.smoothed_curr_and_next_regime_logprobs)
+
+        self.smoothed_curr_and_next_ar_regime_probs = np.zeros((
+                smoothed_curr_and_next_regime_probs.shape[0], k_ar_regimes,
+                k_ar_regimes), dtype=smoothed_curr_and_next_regime_probs.dtype)
 
         for i in range(k_ar_regimes):
             for j in range(k_ar_regimes):
-                smoothed_curr_and_next_ar_regime_probs[:, i, j] = \
+                self.smoothed_curr_and_next_ar_regime_probs[:, i, j] = \
                         smoothed_curr_and_next_regime_probs[:,
                         i::k_ar_regimes, j::k_ar_regimes].sum(axis=(1, 2))
 
-        return smoothed_ar_regime_probs, smoothed_curr_and_next_ar_regime_probs
+    @property
+    def smoothed_regime_probs(self):
+
+        return self.smoothed_ar_regime_probs
+
+    @property
+    def smoothed_curr_and_next_regime_probs(self):
+
+        return self.smoothed_curr_and_next_ar_regime_probs

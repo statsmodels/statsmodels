@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace.api import MLEModel
 from statsmodels.tsa.statespace.regime_switching.api import \
-        RegimeSwitchingMLEModel
+        SwitchingMLEModel
 from kim1994 import Kim1994
 
 
@@ -54,7 +54,7 @@ class Linear_Kim1994Model(MLEModel):
         self.initialize_known(initial_state_mean, initial_state_cov)
 
 
-class Kim1994Model(RegimeSwitchingMLEModel):
+class Kim1994Model(SwitchingMLEModel):
     '''
     Switching model.
     '''
@@ -119,7 +119,7 @@ class Kim1994Model(RegimeSwitchingMLEModel):
 
 class Kim1994WithMLEModel(Kim1994):
     '''
-    Basic class for testing RegimeSwitchingMLEModel.
+    Basic class for testing SwitchingMLEModel.
     '''
 
     @classmethod

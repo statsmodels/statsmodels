@@ -1,11 +1,10 @@
 import numpy as np
-from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.regime_switching.tools import \
-        MarkovSwitchingParams
-from statsmodels.tsa.statespace.regime_switching.kim_filter import KimFilter
+from statsmodels.tsa.statespace.api import MLEModel
+from .tools import MarkovSwitchingParams
+from .kim_smoother import KimSmoother
 
 
-class RegimeSwitchingMLEModel(MLEModel):
+class SwitchingMLEModel(MLEModel):
 
     def __init__(self, k_regimes, endog, k_states, param_k_regimes=None,
             **kwargs):
@@ -29,13 +28,13 @@ class RegimeSwitchingMLEModel(MLEModel):
         self.parameters['regime_transition'] = [False] * \
                 self.param_k_regimes * (self.param_k_regimes - 1)
 
-        super(RegimeSwitchingMLEModel, self).__init__(endog, k_states, **kwargs)
+        super(SwitchingMLEModel, self).__init__(endog, k_states, **kwargs)
 
     def initialize_statespace(self, **kwargs):
 
         endog = self.endog.T
 
-        self.ssm = KimFilter(endog.shape[0], self.k_states, self.k_regimes,
+        self.ssm = KimSmoother(endog.shape[0], self.k_states, self.k_regimes,
                 **kwargs)
 
         self.ssm.bind(endog)
@@ -282,29 +281,21 @@ class RegimeSwitchingMLEModel(MLEModel):
         kwargs['start_params'] = start_params
         # smoothing is not defined yet
         kwargs['return_params'] = True
-        return super(RegimeSwitchingMLEModel, self).fit(**kwargs)
+        return super(SwitchingMLEModel, self).fit(**kwargs)
 
     def filter(self, params, transformed=True, complex_step=False, **kwargs):
 
         self.update(params, transformed=transformed, complex_step=complex_step)
 
-        #if complex_step:
-        #    kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
+        return self.ssm.filter(complex_step=complex_step, **kwargs)
 
-        self.ssm.filter(complex_step=complex_step, **kwargs)
-
-    def get_smoothed_regime_probs(self, params, transformed=True,
-            complex_step=False, **kwargs):
+    def smooth(self, params, transformed=True, complex_step=False, **kwargs):
 
         self.update(params, transformed=True, complex_step=complex_step)
 
-        kwargs['filter_first'] = True
+        kwargs['run_filter'] = True
 
-        return self.ssm.get_smoothed_regime_probs(**kwargs)
-
-    def smooth(self, *args, **kwargs):
-
-        raise NotImplementedError
+        return self.ssm.smooth(complex_step=complex_step, **kwargs)
 
     def simulation_smoother(self, *args, **kwargs):
 

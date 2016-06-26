@@ -35,13 +35,13 @@ class TestHamilton1989_Filtering(Hamilton1989):
 
         params = np.array(cls.true['parameters'], dtype=cls.dtype)
 
-        cls.model.filter(params)
+        results = cls.model.filter(params)
 
         cls.result = {
-                'loglike': cls.model.ssm.loglike(filter_first=False),
-                'pr_tt0': cls.model.ssm.filtered_regime_probs[:, \
+                'loglike': results.loglike(),
+                'pr_tt0': results.filtered_regime_probs[:, \
                         ::2].sum(axis=1),
-                'pr_tl0': cls.model.ssm.predicted_regime_probs[:, \
+                'pr_tl0': results.predicted_regime_probs[:, \
                         ::2].sum(axis=1)
         }
 
@@ -65,12 +65,11 @@ class TestHamilton1989_Smoothing(Hamilton1989):
 
         partition = RegimePartition([0, 1] * 16)
 
-        smoothed_regime_probs, smoothed_curr_and_next_regime_probs = \
-                cls.model.get_smoothed_regime_probs(params,
-                return_extended_probs=True, regime_partition=partition)
+        results = cls.model.smooth(params, return_extended_probs=True,
+                regime_partition=partition)
 
         cls.result = {
-                'smooth0': smoothed_regime_probs[:, 0]
+                'smooth0': results.smoothed_regime_probs[:, 0]
         }
 
     def test_probs(self):
