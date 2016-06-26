@@ -20,20 +20,53 @@ arXiv:1503.04337. 2015. http://arxiv.org/abs/1503.04337.
 Currently the primary usecase is for out of memory computation,
 this approach currently does not support mutli-core processing
 and processing must be handled sequentially.
+
+
+There are several variables that are taken from the source paper
+for which the interpretation may not be directly clear from the
+code, these are mostly used to help form the estimate of the
+approximate inverse covariance matrix as part of the
+debiasing procedure.
+
+    X_beta
+
+    A weighted design matrix used to perform the node-wise
+    regression procedure.
+
+    gamma_hat
+
+    gamma_hat is produced as part of the node-wise regression
+    procedure used to produce the approximate inverse covariance
+    matrix.  One is produced for each variable using the
+    LASSO.
+
+    tau_hat
+
+    tau_hat is produced using the gamma_hat values for each
+    p to produce weights to reweight the gamma_hat values which
+    are ultimately used to form theta_hat.
+
+    theta_hat
+
+    This is the estimate of the approximate inverse covariance
+    matrix.  This is used to debiase the coefficient average
+    along with the average gradient.  For the OLS case,
+    theta_hat is an approximation for
+
+        (1 / n X^T X)^{-1}
+
+    formed by node-wise regression.
 """
 
-
-def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
+def _gen_grad(mod, params, alpha, L1_wt, score_kwds):
     """generates the log-likelihood gradient for the debiasing
 
     Parameters
     ----------
     mod : statsmodels model class
         The model for the current machine.
-    beta_hat : array-like
+    params : array-like
         The estimated coefficients for the current machine.
-    n : scalar
-        machine specific sample size.
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
@@ -48,26 +81,28 @@ def _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds):
 
     Returns
     -------
-    An array-like object of the same dimension as beta_hat
+    An array-like object of the same dimension as params
 
     Notes
     -----
     In general:
 
-    nabla l_k(beta)
+    gradient l_k(params)
+
+    where k corresponds to the index of the machine
 
     For the simple linear case:
 
-    X^T(y - X^T beta) / n
+    X^T(y - X^T params)
     """
 
-    grad = -mod.score(np.r_[beta_hat], **score_kwds) / n
+    grad = -mod.score(np.r_[params], **score_kwds)
     # this second part comes from the elastic net penalty
     grad += alpha * (1 - L1_wt)
     return grad
 
 
-def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
+def _gen_wdesign_mat(mod, params, hess_kwds):
     """generates the weighted design matrix necessary to generate
     the approximate inverse covariance matrix
 
@@ -75,7 +110,7 @@ def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
     ----------
     mod : statsmodels model class
         The model for the current machine.
-    beta_hat : array-like
+    params : array-like
         The estimated coefficients for the current machine.
     hess_kwds : dict-like or None
         Keyword arguments for the hessian function.
@@ -87,10 +122,11 @@ def _gen_wdesign_mat(mod, beta_hat, hess_kwds):
     """
 
     # TODO need to handle duration and other linear model classes
-    return np.sqrt(mod.hessian_obs(np.r_[beta_hat], **hess_kwds)).dot(mod.exog)
+    rhess = np.sqrt(mod.hessian_obs(np.array(params), **hess_kwds))
+    return rhess[:, None] * mod.exog
 
 
-def _gen_gamma_hat(X_beta, pi, p, n, alpha):
+def _gen_gamma_hat(X_beta, pi, alpha):
     """generates the gamma hat values for the pith variable, used to
     estimate theta hat.
 
@@ -100,10 +136,6 @@ def _gen_gamma_hat(X_beta, pi, p, n, alpha):
         The weighted design matrix for the current machine
     pi : scalar
         Index of the current variable
-    p : scalar
-        Number of variables
-    n : scalar
-        sample size of current machine
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
@@ -121,23 +153,23 @@ def _gen_gamma_hat(X_beta, pi, p, n, alpha):
                           + alpha ||gamma||_1
     """
 
-    # TODO this is not a very elegant solution, we can't concat
-    # range in Py 3 because it is now a generator.
-    ind = list(range(pi)) + list(range(pi + 1, p))
+    p = X_beta.shape[1]
+    # handle array alphas
+    if not np.isscalar(alpha):
+        alpha = alpha[ind]
+
+    ind = list(range(p))
+    ind.pop(pi)
 
     # TODO use elastic net optimization routine directly
     tmod = OLS(X_beta[:, pi], X_beta[:, ind])
 
-    # TODO this is currently going to fail with some alpha
-    # values, the issue is that may have an array for of
-    # alphas for beta hat and we want each individual element
-    # here
     gamma_hat = tmod.fit_regularized(alpha=alpha).params
 
     return gamma_hat
 
 
-def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
+def _gen_tau_hat(X_beta, gamma_hat, pi, alpha):
     """generates the tau hat value for the pith variable, used to
     estimate theta hat.
 
@@ -149,10 +181,6 @@ def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
         The gamma_hat values for the current variable
     pi : scalar
         Index of the current variable
-    p : scalar
-        Number of variables
-    n : scalar
-        sample size of current machine
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
@@ -170,7 +198,14 @@ def _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha):
                      + alpha ||gamma||_1)
     """
 
-    ind = list(range(pi)) + list(range(pi + 1, p))
+    n, p = X_beta.shape
+    # handle array alphas
+    if not np.isscalar(alpha):
+        alpha = alpha[ind]
+
+    ind = list(range(p))
+    ind.pop(pi)
+
     d = np.linalg.norm(X_beta[:, pi] - X_beta[:, ind].dot(gamma_hat))**2
     d = np.sqrt(d / n + alpha * np.linalg.norm(gamma_hat, 1))
     return d
@@ -203,7 +238,8 @@ def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
 
     theta_hat = np.eye(p)
     for pi in range(p):
-        ind = list(range(pi)) + list(range(pi + 1, p))
+        ind = list(range(p))
+        ind.pop(pi)
         theta_hat[pi,ind] = gamma_hat_l[pi]
         theta_hat[pi,:] = (- 1. / tau_hat_l[pi]**2) * theta_hat[pi,:]
 
@@ -253,25 +289,25 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
     else:
         L1_wt = 1
 
-    n, p = mod.exog.shape
+    n_obs, p = mod.exog.shape
     p_part = int(np.ceil((1. * p) / partitions))
 
-    beta_hat = mod.fit_regularized(**fit_kwds).params
-    grad = _gen_grad(mod, beta_hat, n, alpha, L1_wt, score_kwds)
+    params = mod.fit_regularized(**fit_kwds).params
+    grad = _gen_grad(mod, params, alpha, L1_wt, score_kwds) / n_obs
 
-    X_beta = _gen_wdesign_mat(mod, beta_hat, hess_kwds)
+    X_beta = _gen_wdesign_mat(mod, params, hess_kwds)
 
     gamma_hat_l = []
     tau_hat_l = []
     for pi in range(mnum * p_part, min((mnum + 1) * p_part, p)):
 
-        gamma_hat = _gen_gamma_hat(X_beta, pi, p, n, alpha)
+        gamma_hat = _gen_gamma_hat(X_beta, pi, alpha)
         gamma_hat_l.append(gamma_hat)
 
-        tau_hat = _gen_tau_hat(X_beta, gamma_hat, pi, p, n, alpha)
+        tau_hat = _gen_tau_hat(X_beta, gamma_hat, pi, alpha)
         tau_hat_l.append(tau_hat)
 
-    return beta_hat, grad, gamma_hat_l, tau_hat_l
+    return params, grad, gamma_hat_l, tau_hat_l
 
 
 def _join_debiased(model_results_l, partitions, threshold=0):
@@ -289,23 +325,23 @@ def _join_debiased(model_results_l, partitions, threshold=0):
         The threshold at which the coefficients will be cut.
     """
 
-    beta_hat_l = []
+    params_l = []
     grad_l = []
     gamma_hat_l = []
     tau_hat_l = []
 
     for r in model_results_l:
-        beta_hat_l.append(r[0])
+        params_l.append(r[0])
         grad_l.append(r[1])
         gamma_hat_l.extend(r[2])
         tau_hat_l.extend(r[3])
 
     p = len(gamma_hat_l)
 
-    beta_mn = np.zeros(p)
-    for beta_hat in beta_hat_l:
-        beta_mn += beta_hat
-    beta_mn /= partitions
+    params_mn = np.zeros(p)
+    for params in params_l:
+        params_mn += params
+    params_mn /= partitions
 
     grad_mn = np.zeros(p)
     for grad in grad_l:
@@ -314,18 +350,18 @@ def _join_debiased(model_results_l, partitions, threshold=0):
 
     theta_hat = _gen_theta_hat(gamma_hat_l, tau_hat_l, p)
 
-    beta_tilde = beta_mn + theta_hat.dot(grad_mn)
+    debiased_params = params_mn + theta_hat.dot(grad_mn)
 
-    beta_tilde[np.abs(beta_tilde) < threshold] = 0
+    debiased_params[np.abs(debiased_params) < threshold] = 0
 
-    return beta_tilde
+    return debiased_params
 #    return beta_tilde, beta_mn, theta_hat, grad_mn, gamma_hat_l, theta_hat.dot(grad_mn)
 
 
-def distributed_estimation(data_generator, partitions,
-                           model_class=None, init_kwds=None, fit_kwds=None,
-                           estimation_method=None, estimation_kwds=None,
-                           join_method=None, join_kwds=None):
+def fit_distributed(data_generator, partitions,
+                    model_class=None, init_kwds=None, fit_kwds=None,
+                    estimation_func=None, estimation_kwds=None,
+                    join_func=None, join_kwds=None):
     """This functions handles a general approach to distributed estimation,
     the user is expected to provide generators for the data as well as
     a model and methods for performing the estimation and recombining
@@ -347,19 +383,19 @@ def distributed_estimation(data_generator, partitions,
         endog and exog.
     fit_kwds : dict-like or None
         Keywords needed for the model fitting.
-    estimation_method : function or None
+    estimation_func : function or None
         The function that performs the estimation for each partition.
         If None this defaults to _est_regularized_distributed.
     estimation_kwds : dict-like or None
         Keywords to be passed to estimation_method.
-    join_method : function or None
+    join_func : function or None
         The function used to recombine the results from each partition.
         If None this defaults to _join_debiased.
 
     Returns
     -------
 
-    join_method result.  For the default _join_debiased, it returns a
+    join_func result.  For the default _join_debiased, it returns a
     p length array.
     """
 
@@ -371,11 +407,11 @@ def distributed_estimation(data_generator, partitions,
     if model_class is None:
         model_class = OLS
 
-    if estimation_method is None:
-        estimation_method = _est_regularized_distributed
+    if estimation_func is None:
+        estimation_func = _est_regularized_distributed
 
-    if join_method is None:
-        join_method = _join_debiased
+    if join_func is None:
+        join_func = _join_debiased
 
     model_results_l = []
 
@@ -391,10 +427,10 @@ def distributed_estimation(data_generator, partitions,
 
         # TODO possibly fit_kwds should be handled within
         # estimation_kwds to make more general?
-        results = estimation_method(model, mnum, partitions, fit_kwds,
-                                    **estimation_kwds)
+        results = estimation_func(model, mnum, partitions, fit_kwds,
+                                  **estimation_kwds)
         model_results_l.append(results)
 
         mnum += 1
 
-    return join_method(model_results_l, partitions, **join_kwds)
+    return join_func(model_results_l, partitions, **join_kwds)
