@@ -1918,6 +1918,149 @@ def testTweediePowerEstimate():
     # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
     p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
+    p = model1.estimate_tweedie_power(res1.mu, method='perry')
+    assert_allclose(p, res2.params[1], rtol=1e-8)
+    p = model1.estimate_tweedie_power(res1.mu, method='taylor')
+    assert_allclose(p, res2.params[1], rtol=0.35)
+
+    assert_raises(ValueError,
+                  model1.estimate_tweedie_power, res1.mu, low=0.1, high=0.99)
+    assert_raises(ValueError,
+                  model1.estimate_tweedie_power, res1.mu, low=2, high=10)
+
+    data = sm.datasets.fair.load_pandas()
+    family_link = sm.families.Tweedie(link_power=0, var_power=1.5)
+    model = sm.GLM(data.endog,
+                   data.exog[['yrs_married', 'age', 'rate_marriage']],
+                   family=family_link)
+    res = model.fit()
+    p1 = model.estimate_tweedie_power(res.mu)
+    p2 = model.estimate_tweedie_power(res.mu, method='perry')
+    assert_allclose(p1, p2, rtol=1e-3)
+
+    s, p = model.estimate_tweedie_power(res.mu, method='perry', both=True)
+    assert_allclose(res.scale, s, rtol=0.15)
+    assert_allclose(p2, p)
+
+    s, p = model.estimate_tweedie_power(res.mu, method='taylor', both=True)
+    # assert_allclose(res.scale, s, rtol=0.15)  # Doesn't work
+    assert_allclose(p2, p, rtol=0.1)
+
+
+def testTweedieEstimateWeighted():
+    data = sm.datasets.fair.load_pandas()
+
+    np.random.seed(4321)
+    freq_weights = np.random.randint(low=1, high=5, size=len(data.endog))
+    y = data.endog
+    x = data.exog[['yrs_married', 'age', 'rate_marriage']]
+    x_rep = np.repeat(x.values, freq_weights, 0)
+    y_rep = np.repeat(y.values, freq_weights)
+
+    family_link = sm.families.Tweedie(link_power=0, var_power=1.5)
+    model = sm.GLM(y_rep, x_rep, family=family_link)
+    res = model.fit()
+
+    model_rep = sm.GLM(y, x, family=family_link,
+                       freq_weights=freq_weights)
+    res_rep = model_rep.fit()
+
+    s, p = model.estimate_tweedie_power(res.mu, method='brentq', both=True)
+    s_rep, p_rep = model_rep.estimate_tweedie_power(res_rep.mu,
+                                                    method='brentq',
+                                                    both=True)
+    assert_allclose(s, s_rep)
+    assert_allclose(p, p_rep)
+    s_rep, p_rep = model_rep.estimate_tweedie_power(res_rep.mu,
+                                                    method='brentq',
+                                                    both=True,
+                                                    freq_weights=freq_weights)
+    assert_allclose(s, s_rep)
+    assert_allclose(p, p_rep)
+
+    s, p = model.estimate_tweedie_power(res.mu, method='taylor', both=True)
+    s_rep, p_rep = model_rep.estimate_tweedie_power(res_rep.mu,
+                                                    method='taylor',
+                                                    both=True)
+    assert_allclose(s, s_rep)
+    assert_allclose(p, p_rep)
+    s_rep, p_rep = model_rep.estimate_tweedie_power(res_rep.mu,
+                                                    method='taylor',
+                                                    both=True,
+                                                    freq_weights=freq_weights)
+    assert_allclose(s, s_rep)
+    assert_allclose(p, p_rep)
+
+    s, p = model.estimate_tweedie_power(res.mu, method='perry', both=True)
+    s_rep, p_rep = model_rep.estimate_tweedie_power(res_rep.mu,
+                                                    method='perry',
+                                                    both=True)
+    assert_allclose(s, s_rep)
+    assert_allclose(p, p_rep)
+    s_rep, p_rep = model_rep.estimate_tweedie_power(res_rep.mu,
+                                                    method='perry',
+                                                    both=True,
+                                                    freq_weights=freq_weights)
+    assert_allclose(s, s_rep)
+    assert_allclose(p, p_rep)
+
+
+def testTweedieEstimateExposure():
+    data = sm.datasets.fair.load_pandas()
+
+    np.random.seed(4321)
+    exposure = np.random.randint(low=1, high=5, size=len(data.endog))
+    y = data.endog
+    x = data.exog[['yrs_married', 'age', 'rate_marriage']]
+    y_exp = y * exposure
+
+    family_link = sm.families.Tweedie(link_power=0, var_power=1.952)
+    model_wtd = sm.GLM(y, x, family=family_link, freq_weights=exposure)
+    res_wtd = model_wtd.fit()
+
+    model_exp = sm.GLM(y_exp, x, family=family_link,
+                       exposure=exposure)
+    res_exp = model_exp.fit()
+
+    s1, p1 = model_wtd.estimate_tweedie_power(res_wtd.mu, method='brentq',
+                                              both=True)
+    s2, p2 = model_exp.estimate_tweedie_power(res_exp.mu, method='brentq',
+                                              both=True)
+    assert_allclose(res_exp.scale, s2, rtol=1e-4)
+    assert_allclose(p1, p2, rtol=0.2)
+    s2, p2 = model_exp.estimate_tweedie_power(res_exp.mu,
+                                              method='brentq',
+                                              both=True,
+                                              exposure=exposure)
+    assert_allclose(res_exp.scale, s2, rtol=1e-4)
+    assert_allclose(p1, p2, rtol=0.2)
+
+    s1, p1 = model_wtd.estimate_tweedie_power(res_wtd.mu, method='taylor',
+                                              both=True)
+    s2, p2 = model_exp.estimate_tweedie_power(res_exp.mu, method='taylor',
+                                              both=True)
+    assert_allclose(s1, s2, rtol=5e-2)
+    assert_allclose(p1, p2, rtol=5e-2)
+    s2, p2 = model_exp.estimate_tweedie_power(res_exp.mu,
+                                              method='taylor',
+                                              both=True,
+                                              exposure=exposure)
+    assert_allclose(s1, s2, rtol=5e-2)
+    assert_allclose(p1, p2, rtol=5e-2)
+
+    s1, p1 = model_wtd.estimate_tweedie_power(res_wtd.mu, method='perry',
+                                              both=True)
+    s2, p2 = model_exp.estimate_tweedie_power(res_exp.mu, method='perry',
+                                              both=True)
+    assert_allclose(s1, s2, rtol=1e-2)
+    assert_allclose(p1, p2, rtol=1e-1)
+    s2, p2 = model_exp.estimate_tweedie_power(res_exp.mu,
+                                              method='perry',
+                                              both=True,
+                                              exposure=exposure)
+    assert_allclose(s1, s2, rtol=1e-2)
+    assert_allclose(p1, p2, rtol=1e-1)
+
 
 class TestRegularized(object):
 

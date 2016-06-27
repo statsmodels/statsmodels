@@ -815,8 +815,20 @@ class GLM(base.LikelihoodModel):
         mu : array-like
             Fitted mean response variable
         method : str, defaults to 'brentq'
-            Scipy optimizer used to solve the Pearson equation. Only brentq
-            currently supported.
+            Method to search for optimized `p`. 'brentq' will use the Pearson
+            estimate solved with the `brentq` scipy optimizer. 'taylor' will
+            use Taylor's reggresion estimator. 'perry' will use Perry's gamma
+            regression estimator which is a gamma-glm.
+        exposure : array-like, optional
+            Array of exposures
+        freq_weights : array-like, optional
+            Array of frequency weights
+        both : bool, optional
+            When `True`, return the scale and power parameters as a tuple.
+
+        If the 'brentq' method is specified, the following additional arguments
+        are accepted:
+
         low : float, optional
             Low end of the bracketing interval [a,b] to be used in the search
             for the power. Defaults to 1.01.
@@ -829,18 +841,82 @@ class GLM(base.LikelihoodModel):
         power : float
             The estimated shape or power
         """
+        if exposure is not None and not isinstance(self.family.link,
+                                                   families.links.Log):
+            raise ValueError("exposure can only be used with the log link function")
+
+        # Use fit exposure if appropriate
+        if exposure is None and hasattr(self, 'exposure'):
+            # Already logged
+            exposure = np.exp(self.exposure)
+        elif exposure is None:
+            exposure = np.ones(len(self.endog))
+
+        # Use fit freq_weights if appropriate
+        if freq_weights is None and hasattr(self, 'freq_weights'):
+            # Already logged
+            freq_weights = self.freq_weights
+        elif exposure is None:
+            freq_weights = np.ones(len(self.endog))
+
+        weights = freq_weights * exposure
+
+        endog2 = self.endog / exposure
+        mu2 = mu / exposure
+
         if method == 'brentq':
             from scipy.optimize import brentq
 
-            def psi_p(power, mu):
-                scale = ((self.iweights * (self.endog - mu) ** 2 /
+            low = kwargs.get('low', 1)
+            high = kwargs.get('high', 10)
+
+            def x2scale(power):
+                scale = ((freq_weights * (self.endog - mu) ** 2 /
                           (mu ** power)).sum() / self.df_resid)
-                return (np.sum(self.iweights * ((self.endog - mu) ** 2 /
-                               (scale * (mu ** power)) - 1) *
-                               np.log(mu)) / self.freq_weights.sum())
-            power = brentq(psi_p, low, high, args=(mu))
+                return scale
+
+            def psi_p(power, endog2, mu2, weights):
+                scale = x2scale(power)
+                p = (np.sum(weights * ((endog2 - mu2) ** 2 /
+                            (scale * (mu2 ** power)) - 1) * np.log(mu2)) /
+                     weights.sum())
+                return p
+
+            power = brentq(psi_p, low, high, args=(endog2, mu2, weights))
+            if both:
+                scale = x2scale(power)
+                return scale, power
+            else:
+                return power
+
+        elif method == 'perry':
+            y = np.power(endog2 - mu2, 2)
+            x = np.column_stack((np.ones(len(endog2)), np.log(mu2)))
+            model = GLM(y, x, freq_weights=weights,
+                        family=families.Gamma(families.links.log))
+            res = model.fit()
+            scale, power = res.params
+
+            if both:
+                return np.exp(scale), power
+            else:
+                return power
+
+        elif method == 'taylor':
+            from statsmodels.regression.linear_model import WLS
+
+            y = np.log(np.power(endog2 - mu2, 2))
+            x = np.column_stack((np.ones(len(endog2)), np.log(mu2)))
+            model = WLS(endog=y, exog=x, weights=weights)
+            res = model.fit()
+            scale, power = res.params
+
+            if both:
+                return np.exp(np.exp(scale)), power
+            else:
+                return power
         else:
-            raise NotImplementedError('Only brentq can currently be used')
+            raise NotImplementedError('Only brentq, taylor, and perry can currently be used')
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
