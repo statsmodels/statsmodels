@@ -1,23 +1,25 @@
+from statsmodels.compat.python import lrange, BytesIO
+
+import os
 import warnings
 
-from statsmodels.compat.python import lrange, BytesIO
-import numpy as np
 from nose.tools import nottest
+import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
                            assert_raises, dec, TestCase)
-from statsmodels.tools.testing import assert_equal
+import pandas as pd
+from pandas import PeriodIndex, DatetimeIndex
+
+from statsmodels.datasets.macrodata import load as load_macrodata
+from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
+from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.base.datetools import dates_from_range
-from .results import results_arma, results_arima
-import os
+from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
-from statsmodels.datasets.macrodata import load as load_macrodata
-from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
-import pandas as pd
-from pandas import PeriodIndex, DatetimeIndex, DataFrame
 
 try:
     import matplotlib.pyplot as plt
@@ -1574,7 +1576,7 @@ def test_1dexog():
         # check for dynamic is true and pandas Series  see #2589
         mod.predict(193, 202, exog[-10:], dynamic=True)
 
-        dta.index = pandas.Index(cpi_dates)
+        dta.index = pd.Index(cpi_dates)
         mod = ARMA(dta['realcons'], (1,1), dta['m1']).fit(disp=-1)
         mod.predict(dta.index[-10], dta.index[-1], exog=dta['m1'][-10:], dynamic=True)
 
@@ -1596,7 +1598,7 @@ def test_arima_predict_bug():
     predict = arma_mod20.predict(dta.index[-20], dta.index[-1], dynamic=True)
     assert_(predict.index.equals(dta.index[-20:]))
     # partially out of sample
-    predict_dates = pandas.Index(dates_from_range('2000', '2015'))
+    predict_dates = pd.Index(dates_from_range('2000', '2015'))
     predict = arma_mod20.predict(predict_dates[0], predict_dates[-1])
     assert_(predict.index.equals(predict_dates))
     #assert_(1 == 0)
@@ -1816,8 +1818,8 @@ def test_arima_small_data_bug():
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474]
 
     dr = dates_from_range("1990q1", length=len(vals))
-    ts = pandas.Series(vals, index=dr)
-    df = pandas.DataFrame(ts)
+    ts = pd.Series(vals, index=dr)
+    df = pd.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
     assert_raises(ValueError, mod.fit)
 
@@ -1831,8 +1833,8 @@ def test_arima_dataframe_integer_name():
             94.0, 96.5, 93.3, 97.5, 96.3, 92.]
 
     dr = dates_from_range("1990q1", length=len(vals))
-    ts = pandas.Series(vals, index=dr)
-    df = pandas.DataFrame(ts)
+    ts = pd.Series(vals, index=dr)
+    df = pd.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
 
 

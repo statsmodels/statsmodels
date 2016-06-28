@@ -1,13 +1,14 @@
 from statsmodels.compat.python import lrange, long
-import statsmodels.base.model as base
+from statsmodels.compat.pandas import is_numeric_dtype
+
+import datetime
+
+from pandas import to_datetime, DatetimeIndex, Period, PeriodIndex
+
 from statsmodels.base import data
+import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.base import datetools
-from numpy import arange, asarray
-from pandas import Index, to_datetime
-from pandas import datetools as pandas_datetools
-from pandas import DatetimeIndex, Index, Period, PeriodIndex
-import datetime
 
 _freq_to_pandas = datetools._freq_to_pandas
 
@@ -50,6 +51,8 @@ class TimeSeriesModel(base.LikelihoodModel):
             if (not datetools._is_datetime_index(dates) and
                     isinstance(self.data, data.PandasData)):
                 try:
+                    if is_numeric_dtype(dates):
+                        raise ValueError
                     dates = to_datetime(dates)
                 except ValueError:
                     raise ValueError("Given a pandas object and the index does "
@@ -114,7 +117,8 @@ class TimeSeriesModel(base.LikelihoodModel):
         Start can be a string or an integer if self.data.dates is None.
         """
         dates = self.data.dates
-        if isinstance(start, str):
+        if not isinstance(start, (int, long)):
+            start = str(start)
             if dates is None:
                 raise ValueError("Got a string for start and dates is None")
             dtstart = self._str_to_date(start)

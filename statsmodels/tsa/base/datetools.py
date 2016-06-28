@@ -2,10 +2,9 @@ from statsmodels.compat.python import (lrange, lzip, lmap, string_types, callabl
                                 asstr, reduce, zip, map)
 import re
 import datetime
-from pandas import Period
-from pandas.tseries.frequencies import to_offset
+
 from pandas import datetools as pandas_datetools
-from pandas import PeriodIndex, Period, DatetimeIndex
+from pandas import Period, DatetimeIndex
 import numpy as np
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
@@ -172,7 +171,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        return pandas_datetools.parse(timestr, parserinfo, **kwargs)
+        return pandas_datetools.to_datetime(timestr, **kwargs)
 
     return datetime.datetime(year, month, day)
 
