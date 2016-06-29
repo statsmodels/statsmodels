@@ -1,10 +1,14 @@
-import numpy as np
-import statsmodels.datasets.interest_inflation.data as e6
 import re
 import os
 
+import numpy as np
+
+import statsmodels.datasets.interest_inflation.data as e6
+
+
 datasets = [e6]
 deterministic_terms_list = ['', 'c', 'cs', 'clt', 'lt']
+
 
 def load_results_jmulti(dataset):
     source = 'jmulti'
