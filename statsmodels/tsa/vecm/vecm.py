@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import hstack, vstack
-from numpy.linalg import inv
+from numpy.linalg import inv, svd
 import scipy
 
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -34,8 +34,8 @@ class VECM(tsbase.TimeSeriesModel):
         self.y = self.endog  # TODO delete this line if y not necessary
         self.neqs = self.endog.shape[1]
 
-    def fit(self, max_diff_lags=None, method="ml", ic=None, 
-            deterministic_terms="", verbose=False, coint_rank=None):
+    def fit(self, max_diff_lags=None, method="ml", ic=None,
+            deterministic="", verbose=False, coint_rank=None):
         """
         Fit the VECM
 
@@ -52,7 +52,7 @@ class VECM(tsbase.TimeSeriesModel):
             fpe : Final prediction error
             hqic : Hannan-Quinn
             bic : Bayesian a.k.a. Schwarz
-        deterministic_terms, str {"", "c", "lt", "s"}
+        deterministic, str {"", "c", "lt", "s"}
             "" - no deterministic terms
             "c" - constant
             "lt" - linear trend
@@ -89,16 +89,16 @@ class VECM(tsbase.TimeSeriesModel):
         
         # estimate parameters
         if method == "ls":
-            return self._estimate_vecm_ls(diff_lags, deterministic_terms)
+            return self._estimate_vecm_ls(diff_lags, deterministic)
         elif method == "egls":
             if coint_rank is None:
                 coint_rank = 1
-            return self._estimate_vecm_egls(diff_lags, deterministic_terms,
+            return self._estimate_vecm_egls(diff_lags, deterministic,
                                             coint_rank)
         elif method == "ml":
             if coint_rank is None:
                 coint_rank = 1
-            return self._estimate_vecm_ml(diff_lags, deterministic_terms,
+            return self._estimate_vecm_ml(diff_lags, deterministic,
                                           coint_rank)
         else:
             raise ValueError("%s not recognized, must be among %s"
@@ -154,7 +154,7 @@ class VECM(tsbase.TimeSeriesModel):
         return pi_hat, gamma_hat, sigma_u_hat
 
     # def split_Pi(self, Pi):
-    #     U, s, V = np.linalg.svd(Pi, full_matrices=False)
+    #     U, s, V = svd(Pi, full_matrices=False)
     #     S = np.diag(s)
     #     alpha = U
     #     beta = (np.dot(S, V)).T
@@ -222,30 +222,35 @@ class VECM(tsbase.TimeSeriesModel):
         m, r0, r1 = self._m_and_r_matrices(T, delta_x, delta_y_1_T, y_min1)
         s = np.bmat([[Ri.dot(Rj.T)/T for Rj in [r0, r1]]
                      for Ri in [r0, r1]])
+        s = s.A
         s00 = s[:K, :K]
         s01 = s[:K, K:]
         s10 = s[K:, :K]
         s11 = s[K:, K:]
-        s11_ = scipy.linalg.sqrtm(s11.I)
+        u_, s_, v_ = svd(inv(s11), full_matrices=False)
+        s_ = np.sqrt(s_)
+        s11_ = u_.dot(np.diag(s_)).dot(v_)
 
-        v = np.linalg.eig(s11_ * s10 * s00.I * s01 * s11_)[1]
-        m_beta_tilde = (v[:, :r].T * s11_).T
+        v = np.linalg.eig(s11_.dot(s10).dot(inv(s00)).dot(s01).dot(s11_))[1]
+        beta_tilde = (v[:, :r].T.dot(s11_)).T
         # normalize beta tilde such that eye(r) forms the first r rows of it:
-        m_beta_tilde = m_beta_tilde * m_beta_tilde[:r, :r].I
-        m_alpha_tilde = s01 * m_beta_tilde * (m_beta_tilde.T * s11 *
-                                              m_beta_tilde).I
+        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:r, :r]))
+        alpha_tilde = s01.dot(beta_tilde).dot(
+                inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
 
-        m_delta_y_1_T = np.matrix(delta_y_1_T)
-        m_y_min1 = np.matrix(y_min1)
-        m_delta_x = np.matrix(delta_x)
-        m_gamma_tilde = (m_delta_y_1_T - m_alpha_tilde*m_beta_tilde.T*m_y_min1) * m_delta_x.T * (m_delta_x * m_delta_x.T).I
-        m_temp = (m_delta_y_1_T - m_alpha_tilde*m_beta_tilde.T*m_y_min1 - m_gamma_tilde*m_delta_x)
-        m_sigma_u_tilde = m_temp * m_temp.T / T
+        # delta_y_1_T = np.matrix(delta_y_1_T)
+        # y_min1 = np.matrix(y_min1)
+        # delta_x = np.matrix(delta_x)
+        gamma_tilde = (delta_y_1_T - alpha_tilde*beta_tilde.T.dot(y_min1)).dot(
+            delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
+        temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1) -
+                gamma_tilde.dot(delta_x))
+        sigma_u_tilde = temp.dot(temp.T) / T
         
-        return {"alpha": np.array(m_alpha_tilde), 
-                "beta": np.array(m_beta_tilde),
-                "Gamma": np.array(m_gamma_tilde), 
-                "Sigma_u": np.array(m_sigma_u_tilde)}
+        return {"alpha": np.array(alpha_tilde),
+                "beta": np.array(beta_tilde),
+                "Gamma": np.array(gamma_tilde),
+                "Sigma_u": np.array(sigma_u_tilde)}
 
     def select_order(self, max_diff_lags=None, verbose=True):
         """
