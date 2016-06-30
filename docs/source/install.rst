@@ -36,7 +36,7 @@ in the statsmodels directory.
 Windows Nightly Binaries
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you are not able to follow the build instructions below, we upload nightly builds of the GitHub repository to `http://statsmodels.sourceforge.net/binaries/ <http://statsmodels.sourceforge.net/binaries/>`__.
+If you are not able to follow the build instructions below, we upload nightly builds of the GitHub repository to `http://www.statsmodels.org/binaries/ <http://www.statsmodels.org/binaries/>`__.
 
 Installation from Source
 ~~~~~~~~~~~~~~~~~~~~~~~~
