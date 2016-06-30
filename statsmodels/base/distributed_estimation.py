@@ -665,13 +665,17 @@ class DistributedModel():
         p length array.
         """
 
-        try:
-            from joblib import Parallel, delayed
-        except:
-            from sklearn.externals.joblib import Parallel, delayed
+#        try:
+#            from joblib import Parallel, delayed
+#        except ImportError:
+#            from sklearn.externals.joblib import Parallel, delayed
 
-        par = Parallel(n_jobs=self.partitions)
-        f = delayed(_helper_fit_partition)
+        from statsmodels.tools.parallel import parallel_func
+
+        par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
+
+#        par = Parallel(n_jobs=self.partitions)
+#        f = delayed(_helper_fit_partition)
         results_l = par(f(self, pnum, endog, exog)
                         for pnum, (endog, exog)
                         in enumerate(self.data_generator))
