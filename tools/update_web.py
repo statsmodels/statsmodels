@@ -132,7 +132,7 @@ def check_version(branch, latest_hash=None):
         remote_dir = 'stable'
         regex = ("(?<=This documentation is for the <b>)(\d{1}\.\d{1}\.\d{1})"
                  "(?=</b> release.)")
-    base_url = 'http://statsmodels.sourceforge.net/{}'
+    base_url = 'http://www.statsmodels.org/{}'
     page = urlopen(base_url.format(remote_dir)).read()
 
     try:
