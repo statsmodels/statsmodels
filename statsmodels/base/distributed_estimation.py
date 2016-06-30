@@ -207,7 +207,7 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
 
     # TODO correctly handle hessian_obs
     rhess = np.sqrt(mod.hessian_obs(np.asarray(params), **hess_kwds))
-    return rhess.dot(mod.exog)
+    return rhess[:, None] * mod.exog
 
 
 def _calc_nodewise_row(wexog, idx, alpha):
@@ -665,7 +665,10 @@ class DistributedModel():
         p length array.
         """
 
-        from joblib import Parallel, delayed
+        try:
+            from joblib import Parallel, delayed
+        except:
+            from sklearn.externals.joblib import Parallel, delayed
 
         par = Parallel(n_jobs=self.partitions)
         f = delayed(_helper_fit_partition)
