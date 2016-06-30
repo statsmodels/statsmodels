@@ -2,25 +2,32 @@ from statsmodels.base.elastic_net import fit_elasticnet
 from statsmodels.base.model import Results
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
-#from statsmodels.genmod.generalized_linear_model import GLM
-#from statsmodels.genmod.families import Binomial
 import statsmodels.base.wrapper as wrap
 import numpy as np
 
 """
-distributed regularized estimation.
+Distributed estimation routines. Currently, we support several
+methods of distribution
 
-Routines for fitting regression models using a distributed
-approach outlined in
+- sequential, has no extra dependencies
+- parallel
+    - with dask
+    - with joblib
+
+The framework is very general and allows for a variety of
+estimation methods.  Currently, these include
+
+- debiased regularized estimation
+- simple coefficient averaging (naive)
+    - regularized
+    - unregularized
+
+Currently, the default is regularized estimation with debiasing
+which follows the methods outlined in
 
 Jason D. Lee, Qiang Liu, Yuekai Sun and Jonathan E. Taylor.
 "Communication-Efficient Sparse Regression: A One-Shot Approach."
 arXiv:1503.04337. 2015. http://arxiv.org/abs/1503.04337.
-
-Currently the primary usecase is for out of memory computation,
-this approach currently does not support mutli-core processing
-and processing must be handled sequentially.
-
 
 There are several variables that are taken from the source paper
 for which the interpretation may not be directly clear from the
@@ -28,45 +35,123 @@ code, these are mostly used to help form the estimate of the
 approximate inverse covariance matrix as part of the
 debiasing procedure.
 
-    X_beta
+    wexog
 
     A weighted design matrix used to perform the node-wise
     regression procedure.
 
-    gamma_hat
+    nodewise_row
 
-    gamma_hat is produced as part of the node-wise regression
+    nodewise_row is produced as part of the node-wise regression
     procedure used to produce the approximate inverse covariance
     matrix.  One is produced for each variable using the
     LASSO.
 
-    tau_hat
+    nodewise_weight
 
-    tau_hat is produced using the gamma_hat values for each
-    p to produce weights to reweight the gamma_hat values which
-    are ultimately used to form theta_hat.
+    nodewise_weight is produced using the gamma_hat values for
+    each p to produce weights to reweight the gamma_hat values which
+    are ultimately used to form approx_inv_cov.
 
-    theta_hat
+    approx_inv_cov
 
     This is the estimate of the approximate inverse covariance
     matrix.  This is used to debiase the coefficient average
     along with the average gradient.  For the OLS case,
-    theta_hat is an approximation for
+    approx_inv_cov is an approximation for
 
         (1 / n X^T X)^{-1}
 
     formed by node-wise regression.
 """
 
-def _gen_grad(mod, params, alpha, L1_wt, score_kwds):
-    """generates the log-likelihood gradient for the debiasing
+def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
+    """estimates the regularized fitted parameters.
 
     Parameters
     ----------
-    mod : statsmodels model class
-        The model for the current machine.
+    mod : statsmodels model class instance
+        The model for the current partition.
+    pnum : scalar
+        Index of current partition
+    partitions : scalar
+        Total number of partitions
+    fit_kwds : dict-like or None
+        Keyword arguments to be given to fit_regularized
+
+    Returns
+    -------
+    An array of the paramters for the regularized fit
+    """
+
+    if fit_kwds is None:
+        raise ValueError("_est_regularized_naive currently " +
+                         "requires that fit_kwds not be None.")
+
+    return mod.fit_regularized(**fit_kwds).params
+
+
+def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
+    """estimates the unregularized fitted parameters.
+
+    Parameters
+    ----------
+    mod : statsmodels model class instance
+        The model for the current partition.
+    pnum : scalar
+        Index of current partition
+    partitions : scalar
+        Total number of partitions
+    fit_kwds : dict-like or None
+        Keyword arguments to be given to fit
+
+    Returns
+    -------
+    An array of the parameters for the fit
+    """
+
+    if fit_kwds is None:
+        raise ValueError("_est_unregularized_naive currently " +
+                         "requires that fit_kwds not be None.")
+
+    return mod.fit(**fit_kwds).params
+
+
+def _join_naive(params_l, partitions, threshold=0):
+    """joins the results from each run of _est_<type>_naive
+    and returns the mean estimate of the coefficients
+
+    Parameters
+    ----------
+    params_l : list
+        A list of arrays of coefficients.
+    partitions : scalar
+        Total number of partitions.
+    threshold : scalar
+        The threshold at which the coefficients will be cut.
+    """
+
+    p = len(params_l[0])
+
+    params_mn = np.zeros(p)
+    for params in params_l:
+        params_mn += params
+    params_mn /= partitions
+
+    params_mn[np.abs(params_mn) < threshold] = 0
+
+    return params_mn
+
+
+def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
+    """calculates the log-likelihood gradient for the debiasing
+
+    Parameters
+    ----------
+    mod : statsmodels model class instance
+        The model for the current partition.
     params : array-like
-        The estimated coefficients for the current machine.
+        The estimated coefficients for the current partition.
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
@@ -89,7 +174,7 @@ def _gen_grad(mod, params, alpha, L1_wt, score_kwds):
 
     gradient l_k(params)
 
-    where k corresponds to the index of the machine
+    where k corresponds to the index of the partition
 
     For the simple linear case:
 
@@ -97,21 +182,20 @@ def _gen_grad(mod, params, alpha, L1_wt, score_kwds):
     """
 
     grad = -mod.score(np.r_[params], **score_kwds)
-    # this second part comes from the elastic net penalty
     grad += alpha * (1 - L1_wt)
     return grad
 
 
-def _gen_wdesign_mat(mod, params, hess_kwds):
-    """generates the weighted design matrix necessary to generate
+def _calc_wdesign_mat(mod, params, hess_kwds):
+    """calculates the weighted design matrix necessary to generate
     the approximate inverse covariance matrix
 
     Parameters
     ----------
-    mod : statsmodels model class
-        The model for the current machine.
+    mod : statsmodels model class instance
+        The model for the current partition.
     params : array-like
-        The estimated coefficients for the current machine.
+        The estimated coefficients for the current partition.
     hess_kwds : dict-like or None
         Keyword arguments for the hessian function.
 
@@ -121,21 +205,21 @@ def _gen_wdesign_mat(mod, params, hess_kwds):
     as mod.exog
     """
 
-    # TODO need to handle duration and other linear model classes
-    rhess = np.sqrt(mod.hessian_obs(np.array(params), **hess_kwds))
+    # TODO correctly handle hessian_obs
+    rhess = np.sqrt(mod.hessian_obs(np.asarray(params), **hess_kwds))
     return rhess[:, None] * mod.exog
 
 
-def _gen_gamma_hat(X_beta, pi, alpha):
-    """generates the gamma hat values for the pith variable, used to
-    estimate theta hat.
+def _calc_nodewise_row(wexog, idx, alpha):
+    """calculates the nodewise_row values for the idxth variable, used to
+    estimate approx_inv_cov.
 
     Parameters
     ----------
-    X_beta : array-like
-        The weighted design matrix for the current machine
-    pi : scalar
-        Index of the current variable
+    wexog : array-like
+        The weighted design matrix for the current partition.
+    idx : scalar
+        Index of the current variable.
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
@@ -149,37 +233,36 @@ def _gen_gamma_hat(X_beta, pi, alpha):
     Notes
     -----
 
-    gamma_hat_i = arg min 1/(2n) ||X_beta,i - X_beta,-i gamma||_2^2
-                          + alpha ||gamma||_1
+    nodewise_row_i = arg min 1/(2n) ||wexog_i - wexog_-i gamma||_2^2
+                             + alpha ||gamma||_1
     """
 
-    p = X_beta.shape[1]
+    p = wexog.shape[1]
     # handle array alphas
     if not np.isscalar(alpha):
         alpha = alpha[ind]
 
     ind = list(range(p))
-    ind.pop(pi)
+    ind.pop(idx)
 
-    # TODO use elastic net optimization routine directly
-    tmod = OLS(X_beta[:, pi], X_beta[:, ind])
+    tmod = OLS(wexog[:, idx], wexog[:, ind])
 
-    gamma_hat = tmod.fit_regularized(alpha=alpha).params
+    nodewise_row = tmod.fit_regularized(alpha=alpha).params
 
-    return gamma_hat
+    return nodewise_row
 
 
-def _gen_tau_hat(X_beta, gamma_hat, pi, alpha):
-    """generates the tau hat value for the pith variable, used to
-    estimate theta hat.
+def _calc_nodewise_weight(wexog, nodewise_row, idx, alpha):
+    """calculates the nodewise_weightvalue for the idxth variable, used to
+    estimate approx_inv_cov.
 
     Parameters
     ----------
-    X_beta : array-like
-        The weighted design matrix for the current machine
-    gamma_hat : array-like
-        The gamma_hat values for the current variable
-    pi : scalar
+    wexog : array-like
+        The weighted design matrix for the current partition.
+    nodewise_row : array-like
+        The nodewise_row values for the current variable.
+    idx : scalar
         Index of the current variable
     alpha : scalar or array-like
         The penalty weight.  If a scalar, the same penalty weight
@@ -194,34 +277,34 @@ def _gen_tau_hat(X_beta, gamma_hat, pi, alpha):
     Notes
     -----
 
-    tau_hat_i = sqrt(1/n ||X_beta,i - X_beta,-i gamma_hat||_2^2
-                     + alpha ||gamma||_1)
+    nodewise_weight_i = sqrt(1/n ||wexog,i - wexog_-i nodewise_row||_2^2
+                             + alpha ||nodewise_row||_1)
     """
 
-    n, p = X_beta.shape
+    n, p = wexog.shape
     # handle array alphas
     if not np.isscalar(alpha):
         alpha = alpha[ind]
 
     ind = list(range(p))
-    ind.pop(pi)
+    ind.pop(idx)
 
-    d = np.linalg.norm(X_beta[:, pi] - X_beta[:, ind].dot(gamma_hat))**2
-    d = np.sqrt(d / n + alpha * np.linalg.norm(gamma_hat, 1))
+    d = np.linalg.norm(wexog[:, idx] - wexog[:, ind].dot(nodewise_row))**2
+    d = np.sqrt(d / n + alpha * np.linalg.norm(nodewise_row, 1))
     return d
 
 
-def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
-    """generates the theta hat matrix
+def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l, p):
+    """calculates the approximate inverse covariance matrix
 
     Parameters
     ----------
-    gamma_hat_l : list
+    nodewise_row_l : list
         A list of array-like object where each object corresponds to
-        the gamma hat values for the corresponding variable, should
+        the nodewise_row values for the corresponding variable, should
         be length p.
-    tau_hat_l : list
-        A list of scalars where each scalar corresponds to the tau hat
+    nodewise_weight_l : list
+        A list of scalars where each scalar corresponds to the nodewise_weight
         value for the corresponding variable, should be length p.
     p : scalar
         Number of variables
@@ -233,32 +316,35 @@ def _gen_theta_hat(gamma_hat_l, tau_hat_l, p):
     Notes
     -----
 
-    theta_hat_j = - 1 / tau_hat_j [gamma_hat_j,1,...,1,...gamma_hat_j,p]
+    nwr = nodewise_row
+    nww = nodewise_weight
+
+    approx_inv_cov_j = - 1 / nww_j [nwr_j,1,...,1,...nwr_j,p]
     """
 
-    theta_hat = np.eye(p)
-    for pi in range(p):
+    approx_inv_cov = np.eye(p)
+    for idx in range(p):
         ind = list(range(p))
-        ind.pop(pi)
-        theta_hat[pi,ind] = gamma_hat_l[pi]
-        theta_hat[pi,:] = (- 1. / tau_hat_l[pi]**2) * theta_hat[pi,:]
+        ind.pop(idx)
+        approx_inv_cov[idx,ind] = nodewise_row_l[idx]
+        approx_inv_cov[idx,:] *= (- 1. / nodewise_weight_l[idx]**2)
 
-    return theta_hat
+    return approx_inv_cov
 
 
-def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
-                                 score_kwds=None, hess_kwds=None):
-    """generates the regularized fitted parameters, is the default
-    estimation_method for distributed_estimation
+def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
+                              score_kwds=None, hess_kwds=None):
+    """estimates the regularized fitted parameters, is the default
+    estimation_method for class DistributedModel.
 
     Parameters
     ----------
-    mod : statsmodels model class
-        The model for the current machine.
+    mod : statsmodels model class instance
+        The model for the current partition.
     mnum : scalar
-        Index of current machine
+        Index of current partition.
     partitions : scalar
-        Total number of machines
+        Total number of partitions.
     fit_kwds : dict-like or None
         Keyword arguments to be given to fit_regularized
     score_kwds : dict-like or None
@@ -268,18 +354,18 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
 
     Returns
     -------
-    A tuple of paramters for regularized fit
-        An array-like object of the fitted parameters, beta hat
+    A tuple of parameters for regularized fit
+        An array-like object of the fitted parameters, params
         An array-like object for the gradient
-        A list of array like objects for gamma hat
-        A list of array like objects for tau hat
+        A list of array like objects for nodewise_row
+        A list of array like objects for nodewise_weight
     """
 
     score_kwds = {} if score_kwds is None else score_kwds
     hess_kwds = {} if hess_kwds is None else hess_kwds
 
     if fit_kwds is None:
-        raise ValueError("_est_regularized_distributed currently " +
+        raise ValueError("_est_regularized_debiased currently " +
                          "requires that fit_kwds not be None.")
     else:
         alpha = fit_kwds["alpha"]
@@ -289,86 +375,106 @@ def _est_regularized_distributed(mod, mnum, partitions, fit_kwds=None,
     else:
         L1_wt = 1
 
-    n_obs, p = mod.exog.shape
+    nobs, p = mod.exog.shape
     p_part = int(np.ceil((1. * p) / partitions))
 
     params = mod.fit_regularized(**fit_kwds).params
-    grad = _gen_grad(mod, params, alpha, L1_wt, score_kwds) / n_obs
+    grad = _calc_grad(mod, params, alpha, L1_wt, score_kwds) / nobs
 
-    X_beta = _gen_wdesign_mat(mod, params, hess_kwds)
+    wexog = _calc_wdesign_mat(mod, params, hess_kwds)
 
-    gamma_hat_l = []
-    tau_hat_l = []
-    for pi in range(mnum * p_part, min((mnum + 1) * p_part, p)):
+    nodewise_row_l = []
+    nodewise_weight_l = []
+    for idx in range(mnum * p_part, min((mnum + 1) * p_part, p)):
 
-        gamma_hat = _gen_gamma_hat(X_beta, pi, alpha)
-        gamma_hat_l.append(gamma_hat)
+        nodewise_row = _calc_nodewise_row(wexog, idx, alpha)
+        nodewise_row_l.append(nodewise_row)
 
-        tau_hat = _gen_tau_hat(X_beta, gamma_hat, pi, alpha)
-        tau_hat_l.append(tau_hat)
+        nodewise_weight = _calc_nodewise_weight(wexog, nodewise_row, idx,
+                                                alpha)
+        nodewise_weight_l.append(nodewise_weight)
 
-    return params, grad, gamma_hat_l, tau_hat_l
+    return params, grad, nodewise_row_l, nodewise_weight_l
 
 
-def _join_debiased(model_results_l, partitions, threshold=0):
-    """joins the results from each run of _est_regularized_distributed
+def _join_debiased(results_l, partitions, threshold=0):
+    """joins the results from each run of _est_regularized_debiased
     and returns the debiased estimate of the coefficients
 
     Parameters
     ----------
-    model_results_l : list
-        A list of tuples each one containing the beta_hat, grad,
-        gamma_hat and tau_hat values for each partition.
+    results_l : list
+        A list of tuples each one containing the params, grad,
+        nodewise_row and nodewise_weight values for each partition.
     partitions : scalar
         The number of partitions that the data will be split into.
     threshold : scalar
         The threshold at which the coefficients will be cut.
     """
 
-    params_l = []
-    grad_l = []
-    gamma_hat_l = []
-    tau_hat_l = []
-
-    for r in model_results_l:
-        params_l.append(r[0])
-        grad_l.append(r[1])
-        gamma_hat_l.extend(r[2])
-        tau_hat_l.extend(r[3])
-
-    p = len(gamma_hat_l)
+    p = len(results_l[0][0])
 
     params_mn = np.zeros(p)
-    for params in params_l:
-        params_mn += params
-    params_mn /= partitions
-
     grad_mn = np.zeros(p)
-    for grad in grad_l:
-        grad_mn += grad
+
+    nodewise_row_l = []
+    nodewise_weight_l = []
+
+    for r in results_l:
+
+        params_mn += r[0]
+        grad_mn += r[1]
+
+        nodewise_row_l.extend(r[2])
+        nodewise_weight_l.extend(r[3])
+
+    params_mn /= partitions
     grad_mn *= -1. / partitions
 
-    theta_hat = _gen_theta_hat(gamma_hat_l, tau_hat_l, p)
+    approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l, p)
 
-    debiased_params = params_mn + theta_hat.dot(grad_mn)
+    debiased_params = params_mn + approx_inv_cov.dot(grad_mn)
 
     debiased_params[np.abs(debiased_params) < threshold] = 0
 
     return debiased_params
-#    return beta_tilde, beta_mn, theta_hat, grad_mn, gamma_hat_l, theta_hat.dot(grad_mn)
 
 
-def fit_distributed(data_generator, partitions,
-                    model_class=None, init_kwds=None, fit_kwds=None,
-                    estimation_func=None, estimation_kwds=None,
-                    join_func=None, join_kwds=None):
-    """This functions handles a general approach to distributed estimation,
-    the user is expected to provide generators for the data as well as
-    a model and methods for performing the estimation and recombining
-    the results
+def _helper_fit_partition(self, pnum, endog, exog):
+    """handles the model fitting for each machine. NOTE: this
+    is primarily handled outside of DistributedModel because
+    joblib can't handle class methods.
 
     Parameters
-    ---------
+    ----------
+    self : DistributedModel class instance
+        An instance of DistributedModel.
+    pnum : scalar
+        index of current partition.
+    endog : array-like
+        endogenous data for current partition.
+    exog : array-like
+        exogenous data for current partition.
+
+    Returns
+    -------
+    estimation_method result.  For the default,
+    _est_regularized_debiased, a tuple.
+    """
+
+    model = self.model_class(endog, exog, **self.init_kwds)
+    results = self.estimation_method(model, pnum, self.partitions,
+                                     self.fit_kwds,
+                                     **self.estimation_kwds)
+    return results
+
+
+class DistributedModel():
+    __doc__ = """
+    Distributed model class
+
+    Parameters
+    ----------
     data_generator : generator
         A generator that produces a sequence of tuples where the first
         element in the tuple corresponds to an endog array and the
@@ -383,54 +489,210 @@ def fit_distributed(data_generator, partitions,
         endog and exog.
     fit_kwds : dict-like or None
         Keywords needed for the model fitting.
-    estimation_func : function or None
-        The function that performs the estimation for each partition.
-        If None this defaults to _est_regularized_distributed.
+    estimation_method : function or None
+        The method that performs the estimation for each partition.
+        If None this defaults to _est_regularized_debiased.
     estimation_kwds : dict-like or None
         Keywords to be passed to estimation_method.
-    join_func : function or None
-        The function used to recombine the results from each partition.
+    join_method : function or None
+        The method used to recombine the results from each partition.
         If None this defaults to _join_debiased.
 
-    Returns
-    -------
+    Attributes
+    ----------
+    data_generator : generator
+        See Parameters.
+    partitions : scalar
+        See Parameters.
+    model_class : statsmodels model class
+        See Parameters.
+    init_kwds : dict-like or None
+        See Parameters.
+    fit_kwds : dict-like or None
+        See Parameters.
+    estimation_method : function or None
+        See Parameters.
+    estimation_kwds : dict-like or None
+        See Parameters.
+    join_method : function or None
+        See Parameters.
 
-    join_func result.  For the default _join_debiased, it returns a
-    p length array.
+    Examples
+    --------
+
+    Notes
+    -----
     """
 
-    init_kwds = {} if init_kwds is None else init_kwds
-    estimation_kwds = {} if estimation_kwds is None else estimation_kwds
-    join_kwds = {} if join_kwds is None else join_kwds
+    def __init__(self, data_generator, partitions, model_class=None,
+                 init_kwds=None, fit_kwds=None, estimation_method=None,
+                 estimation_kwds=None, join_method=None,
+                 join_kwds=None):
 
-    # set defaults
-    if model_class is None:
-        model_class = OLS
+        self.data_generator = data_generator
+        self.partitions = partitions
 
-    if estimation_func is None:
-        estimation_func = _est_regularized_distributed
+        if model_class is None:
+            self.model_class = OLS
+        else:
+            self.model_class = model_class
 
-    if join_func is None:
-        join_func = _join_debiased
+        if init_kwds is None:
+            self.init_kwds = {}
+        else:
+            self.init_kwds = init_kwds
 
-    model_results_l = []
+        if fit_kwds is None:
+            self.fit_kwds = {}
+        else:
+            self.fit_kwds = fit_kwds
 
-    # index for machine
-    mnum = 0
+        if estimation_method is None:
+            self.estimation_method = _est_regularized_debiased
+        else:
+            self.estimation_method = estimation_method
 
-    # TODO given that we already have an example where generators should
-    # produce more than just exog and endog (partition for variables)
-    # this should probably be handled differently
-    for endog, exog in data_generator:
+        if estimation_kwds is None:
+            self.estimation_kwds = {}
+        else:
+            self.estimation_kwds = esitmation_kwds
 
-        model = model_class(endog, exog, **init_kwds)
+        if join_method is None:
+            self.join_method = _join_debiased
+        else:
+            self.join_method = join_method
 
-        # TODO possibly fit_kwds should be handled within
-        # estimation_kwds to make more general?
-        results = estimation_func(model, mnum, partitions, fit_kwds,
-                                  **estimation_kwds)
-        model_results_l.append(results)
+        if join_kwds is None:
+            self.join_kwds = {}
+        else:
+            self.join_kwds = join_kwds
 
-        mnum += 1
 
-    return join_func(model_results_l, partitions, **join_kwds)
+#    def fit_partition(self, pnum, endog, exog):
+#        """handles the model fitting for each machine.
+#
+#        Parameters
+#        ----------
+#        pnum : scalar
+#            index of current partition.
+#        endog : array-like
+#            endogenous data for current partition.
+#        exog : array-like
+#            exogenous data for current partition.
+#
+#        Returns
+#        -------
+#        estimation_method result.  For the default,
+#        _est_regularized_debiased, a tuple.
+#        """
+#
+#        model = self.model_class(endog, exog, **self.init_kwds)
+#        results = self.estimation_method(model, pnum, self.partitions,
+#                                         self.fit_kwds,
+#                                         **self.estimation_kwds)
+#        return results
+
+
+    def fit_distributed(self, parallel_method="sequential"):
+        """Performs the distributed estimation using the corresponding
+        DistributedModel
+
+        Parameters
+        ----------
+        parallel_method : str
+            type of distributed estimation to be used, currently
+            "sequential", "joblib" and "dask" are supported.
+
+        Returns
+        -------
+        join_method result.  For the default, _join_debiased, it returns a
+        p length array.
+        """
+
+        if parallel_method == "sequential":
+            return self.fit_dist_sequential()
+
+        elif parallel_method == "joblib":
+            try:
+                return self.fit_dist_joblib()
+            except ImportError:
+                raise ValueError("cannot import joblib")
+
+        elif parallel_method == "dask":
+            try:
+                return self.fit_dist_dask()
+            except ImportError:
+                raise ValueError("cannot import dask")
+
+        else:
+            raise ValueError("parallel_method: %s is currently not supported"
+                             % parallel_method)
+
+
+    def fit_dist_sequential(self):
+        """Sequentially performs the distributed estimation using
+        the corresponding DistributedModel
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        join_method result.  For the default, _join_debiased, it returns a
+        p length array.
+        """
+
+        results_l = []
+
+        for pnum, (endog, exog) in enumerate(self.data_generator):
+
+            results = _helper_fit_partition(self, pnum, endog, exog)
+            results_l.append(results)
+
+        return self.join_method(results_l, self.partitions,
+                                **self.join_kwds)
+
+
+    def fit_dist_joblib(self):
+        """Performs the distributed estimation in parallel using joblib
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        join_method result.  For the default, _join_debiased, it returns a
+        p length array.
+        """
+
+#        try:
+#            from joblib import Parallel, delayed
+#        except ImportError:
+#            from sklearn.externals.joblib import Parallel, delayed
+
+        from statsmodels.tools.parallel import parallel_func
+
+        par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
+
+#        par = Parallel(n_jobs=self.partitions)
+#        f = delayed(_helper_fit_partition)
+        results_l = par(f(self, pnum, endog, exog)
+                        for pnum, (endog, exog)
+                        in enumerate(self.data_generator))
+        return self.join_method(results_l, self.partitions,
+                                **self.join_kwds)
+
+
+    def fit_dist_dask(self):
+        """Perofrms the distributed estimation in parallel using dask
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        join_method result.  For the default, _join_debiased, it returns a
+        p length array.
+        """
+
+        import distributed
