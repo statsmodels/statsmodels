@@ -72,7 +72,7 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
     ----------
     mod : statsmodels model class instance
         The model for the current partition.
-    mnum : scalar
+    pnum : scalar
         Index of current partition
     partitions : scalar
         Total number of partitions
@@ -192,7 +192,7 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
 
     Parameters
     ----------
-    mod : statsmodels model class
+    mod : statsmodels model class instance
         The model for the current partition.
     params : array-like
         The estimated coefficients for the current partition.
@@ -440,6 +440,35 @@ def _join_debiased(results_l, partitions, threshold=0):
     return debiased_params
 
 
+def _helper_fit_partition(self, pnum, endog, exog):
+    """handles the model fitting for each machine. NOTE: this
+    is primarily handled outside of DistributedModel because
+    joblib can't handle class methods.
+
+    Parameters
+    ----------
+    self : DistributedModel class instance
+        An instance of DistributedModel.
+    pnum : scalar
+        index of current partition.
+    endog : array-like
+        endogenous data for current partition.
+    exog : array-like
+        exogenous data for current partition.
+
+    Returns
+    -------
+    estimation_method result.  For the default,
+    _est_regularized_debiased, a tuple.
+    """
+
+    model = self.model_class(endog, exog, **self.init_kwds)
+    results = self.estimation_method(model, pnum, self.partitions,
+                                     self.fit_kwds,
+                                     **self.estimation_kwds)
+    return results
+
+
 class DistributedModel():
     __doc__ = """
     Distributed model class
@@ -462,7 +491,7 @@ class DistributedModel():
         Keywords needed for the model fitting.
     estimation_method : function or None
         The method that performs the estimation for each partition.
-        If None this defaults to _est_regularized_distributed.
+        If None this defaults to _est_regularized_debiased.
     estimation_kwds : dict-like or None
         Keywords to be passed to estimation_method.
     join_method : function or None
@@ -539,29 +568,29 @@ class DistributedModel():
             self.join_kwds = join_kwds
 
 
-    def fit_partition(self, pnum, endog, exog):
-        """handles the model fitting for each machine.
-
-        Parameters
-        ----------
-        pnum : scalar
-            index of current partition.
-        endog : array-like
-            endogenous data for current partition.
-        exog : array-like
-            exogenous data for current partition.
-
-        Returns
-        -------
-        estimation_method result.  For the default,
-        _est_regularized_debiased, a tuple.
-        """
-
-        model = self.model_class(endog, exog, **self.init_kwds)
-        results = self.estimation_method(model, pnum, self.partitions,
-                                         self.fit_kwds,
-                                         **self.estimation_kwds)
-        return results
+#    def fit_partition(self, pnum, endog, exog):
+#        """handles the model fitting for each machine.
+#
+#        Parameters
+#        ----------
+#        pnum : scalar
+#            index of current partition.
+#        endog : array-like
+#            endogenous data for current partition.
+#        exog : array-like
+#            exogenous data for current partition.
+#
+#        Returns
+#        -------
+#        estimation_method result.  For the default,
+#        _est_regularized_debiased, a tuple.
+#        """
+#
+#        model = self.model_class(endog, exog, **self.init_kwds)
+#        results = self.estimation_method(model, pnum, self.partitions,
+#                                         self.fit_kwds,
+#                                         **self.estimation_kwds)
+#        return results
 
 
     def fit_distributed(self, parallel_method="sequential"):
@@ -617,7 +646,7 @@ class DistributedModel():
 
         for pnum, (endog, exog) in enumerate(self.data_generator):
 
-            results = self.fit_partition(pnum, endog, exog)
+            results = _helper_fit_partition(self, pnum, endog, exog)
             results_l.append(results)
 
         return self.join_method(results_l, self.partitions,
@@ -639,7 +668,8 @@ class DistributedModel():
         from joblib import Parallel, delayed
 
         par = Parallel(n_jobs=self.partitions)
-        results_l = par(delayed(self.fit_partition)(pnum, endog, exog)
+        f = delayed(_helper_fit_partition)
+        results_l = par(f(self, pnum, endog, exog)
                         for pnum, (endog, exog)
                         in enumerate(self.data_generator))
         return self.join_method(results_l, self.partitions,
