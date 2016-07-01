@@ -129,7 +129,7 @@ def _calc_incidence_right(time, status, weights=None):
     return ip, se, utime
 
 
-def _checkargs(time, status, entry, freq_weights):
+def _checkargs(time, status, entry, freq_weights, exog):
 
     if len(time) != len(status):
         raise ValueError("time and status must have the same length")
@@ -144,6 +144,9 @@ def _checkargs(time, status, entry, freq_weights):
 
     if freq_weights is not None and (len(freq_weights) != len(time)):
         raise ValueError("weights, time and status must have the same length")
+
+    if exog is not None and (exog.shape[0] != len(time)):
+        raise ValueError("the rows of exog should align with time")
 
 
 class CumIncidenceRight(object):
@@ -195,11 +198,12 @@ class CumIncidenceRight(object):
 
     def __init__(self, time, status, title=None, freq_weights=None):
 
-        _checkargs(time, status, None, freq_weights)
+        _checkargs(time, status, None, freq_weights, None)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
+
         x = _calc_incidence_right(time, status, freq_weights)
         self.cinc = x[0]
         self.cinc_se = x[1]
@@ -233,6 +237,9 @@ class SurvfuncRight(object):
         Optional title used for plots and summary output.
     freq_weights : array-like
         Optional frequency weights
+    exog : array-like
+        Optional, if present used to account for violation of
+        independent censoring.
 
     Attributes
     ----------
@@ -240,29 +247,61 @@ class SurvfuncRight(object):
         The estimated value of the survivor function at each time
         point in `surv_times`.
     surv_prob_se : array-like
-        The standard errors for the values in `surv_prob`.
+        The standard errors for the values in `surv_prob`.  Not available
+        if exog is provided.
     surv_times : array-like
         The points where the survival function changes.
     n_risk : array-like
         The number of subjects at risk just before each time value in
-        `surv_times`.
+        `surv_times`.  Not available if exog is provided.
     n_events : array-like
         The number of events (e.g. deaths) that occur at each point
-        in `surv_times`.
+        in `surv_times`.  Not available if exog is provided.
+
+    Notes
+    -----
+    If exog is None, the standard Kaplan-Meier estimator is used.  If
+    exog is not None, a local estimate of the marginal survival
+    function around each point is constructed, and these are then
+    averaged.  This procedure gives an estimate of the marginal
+    survival function that accounts for dependent censoring as long as
+    the censoring becomes independent when conditioning on the
+    covariates in exog.  See Zeng et al. (2004) for details.
+
+    References
+    ----------
+    D. Zeng (2004).  Estimating marginal survival function by
+    adjusting for dependent censoring using many covariates.  Annals
+    of Statistics 32:4.
+    http://arxiv.org/pdf/math/0409180.pdf
     """
 
     def __init__(self, time, status, entry=None, title=None,
-                 freq_weights=None):
+                 freq_weights=None, exog=None, bwm=1.):
 
-        _checkargs(time, status, entry, freq_weights)
+        _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
+
         if entry is not None:
             entry = self.entry = np.asarray(entry)
+
+        if exog is not None:
+            from ._kernel_estimates import _kernel_survfunc
+            exog = self.exog = np.asarray(exog)
+            n = exog.shape[0]
+            kw = n**(-1/3.0) * bwm
+            kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
+            x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
+            self.surv_prob = x[0]
+            self.surv_times = x[1]
+            return
+
         x = _calc_survfunc_right(time, status, weights=freq_weights,
                                  entry=entry)
+
         self.surv_prob = x[0]
         self.surv_prob_se = x[1]
         self.surv_times = x[2]

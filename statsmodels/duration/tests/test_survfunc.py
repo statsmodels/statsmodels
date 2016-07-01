@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/statsmodels_fork/statsmodels")
+
 import numpy as np
 from statsmodels.duration.survfunc import (
     SurvfuncRight, survdiff, plot_survfunc,
@@ -446,3 +449,20 @@ def test_survdiff_entry_3():
     z, p = survdiff(ti, st, gr, entry=entry)
     assert_allclose(z, 6.75082959)
     assert_allclose(p, 0.00937041)
+
+def test_kernel():
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.uniform(size=n)
+    status = np.random.randint(0, 2, size=n)
+
+    result = SurvfuncRight(time, status, exog=x)
+
+    timex = np.r_[0.30721103, 0.0515439, 0.69246897, 0.16446079, 0.31308528]
+    sprob = np.r_[ 0.98948277, 0.98162275, 0.97129237, 0.96044668, 0.95030368]
+
+    # Regression test
+    assert_allclose(result.time[0:5], timex)
+    assert_allclose(result.surv_prob[0:5], sprob)
