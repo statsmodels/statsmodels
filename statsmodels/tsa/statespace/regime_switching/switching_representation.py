@@ -98,32 +98,68 @@ class SwitchingRepresentation(object):
 
     def __getitem__(self, key):
 
-        if key == 'regime_transition':
-            return np.exp(self._log_regime_transition)
+        if type(key) == str:
+            get_slice = False
+            matrix_name = key
+        elif type(key) == tuple:
+            get_slice = True
+            matrix_name = key[0]
+            slice_ = key[1:]
+        else:
+            raise ValueError('First index must be the name of a valid state' \
+                    'space matrix.')
 
-        if key not in self._per_regime_dims:
+        if matrix_name == 'regime_transition':
+            if get_slice:
+                return np.exp(self._log_regime_transition)[slice_]
+            else:
+                return np.exp(self._log_regime_transition)
+
+        if matrix_name not in self._per_regime_dims:
             raise IndexError('"%s" is an invalid state space matrix name.' \
-                    % key)
+                    % matrix_name)
 
-        return np.asarray([regime_filter[key] for regime_filter in \
+        return np.asarray([regime_filter[matrix_name] for regime_filter in \
                 self._regime_kalman_filters])
 
     def __setitem__(self, key, value):
+        '''
+        When slice is provided, `__setitem__` is forced to be broadcasted to
+        every regime's filter.
+        '''
 
-        if key == 'regime_transition':
-            self.set_regime_transition(value)
+        if type(key) == str:
+            set_slice = False
+            matrix_name = key
+        elif type(key) == tuple:
+            set_slice = True
+            matrix_name = key[0]
+            slice_ = key[1:]
+        else:
+            raise ValueError('First index must be the name of a valid state' \
+                    'space matrix.')
+
+        if matrix_name == 'regime_transition':
+            if set_slice:
+                self._log_regime_transition[slice_] = np.log(value)
+            else:
+                self.set_regime_transition(value)
             return
 
-        if key not in self._per_regime_dims:
+        if matrix_name not in self._per_regime_dims:
             raise IndexError('"%s" is an invalid state space matrix name.' \
-                    % key)
+                    % matrix_name)
 
-        value = self._prepare_data_for_regimes(value,
-                self._per_regime_dims[key])
+        if set_slice:
+            for regime_filter in self._regime_kalman_filters:
+                regime_filter[key] = value
+        else:
+            value = self._prepare_data_for_regimes(value,
+                self._per_regime_dims[matrix_name])
 
-        for regime_filter, regime_value in zip(self._regime_kalman_filters,
-                value):
-            regime_filter[key] = regime_value
+            for regime_filter, regime_value in zip(self._regime_kalman_filters,
+                    value):
+                regime_filter[key] = regime_value
 
     def _is_left_stochastic(self, matrix):
 
@@ -295,6 +331,7 @@ class SwitchingRepresentation(object):
             complex_step=False):
 
         kfilters = []
+        state_init_kwargs = []
 
         for regime_filter in self._regime_kalman_filters:
             prefix = regime_filter._initialize_filter(
@@ -303,11 +340,14 @@ class SwitchingRepresentation(object):
                     stability_method=stability_method,
                     conserve_memory=conserve_memory, tolerance=tolerance)[0]
             kfilters.append(regime_filter._kalman_filters[prefix])
-            regime_filter._initialize_state(prefix=prefix,
-                    complex_step=complex_step)
+
+            state_init_kwargs.append({'prefix': prefix,
+                    'complex_step': complex_step})
+            #regime_filter._initialize_state(prefix=prefix,
+            #        complex_step=complex_step)
 
         self._kfilters = kfilters
-
+        self._state_init_kwargs = state_init_kwargs
 
 class FrozenSwitchingRepresentation(object):
 

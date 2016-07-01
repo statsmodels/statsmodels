@@ -42,18 +42,18 @@ class _KimFilter(object):
 
         curr_kfilter = model._kfilters[curr_regime]
         prev_kfilter = model._kfilters[prev_regime]
-        curr_regime_filter = \
-                model._regime_kalman_filters[curr_regime]
+        curr_regime_filter = model._regime_kalman_filters[curr_regime]
         prev_regime_filter = model._regime_kalman_filters[prev_regime]
         curr_kfilter.seek(t)
 
         if t == 0:
             state_buffer = curr_regime_filter._initial_state
             state_cov_buffer = curr_regime_filter._initial_state_cov
-            curr_regime_filter._initial_state = \
-                    prev_regime_filter._initial_state
-            curr_regime_filter._initial_state_cov = \
-                    prev_regime_filter._initial_state_cov
+            curr_regime_filter.initialize_known(
+                    prev_regime_filter._initial_state,
+                    prev_regime_filter._initial_state_cov)
+            curr_regime_filter._initialize_state(
+                    **model._state_init_kwargs[curr_regime])
         else:
             np.copyto(state_buffer, curr_kfilter.filtered_state[:, t - 1])
             np.copyto(state_cov_buffer,
@@ -66,8 +66,7 @@ class _KimFilter(object):
         next(curr_kfilter)
 
         if t == 0:
-            curr_regime_filter._initial_state = state_buffer
-            curr_regime_filter._initial_state_cov = state_cov_buffer
+            curr_regime_filter.initialize_known(state_buffer, state_cov_buffer)
         else:
             np.copyto(np.asarray(curr_kfilter.filtered_state[:, t - 1]),
                     state_buffer)
