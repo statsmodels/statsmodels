@@ -75,7 +75,6 @@ def load_results_jmulti(dataset):
                     rows = len(matrix_col)
                     result = [[] for i in range(rows)]
                 for i in range(rows):
-                    # print(i)
                     result[i].append(float(matrix_col[i]))
         # delete "Legend"-section of JMulTi:
         del results["Legend"]
