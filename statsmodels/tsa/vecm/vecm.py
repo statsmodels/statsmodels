@@ -105,6 +105,7 @@ class VECM(tsbase.TimeSeriesModel):
                              % (method, ("ls", "egls", "ml")))
 
     def _est_matrices(self, diff_lags, deterministic):
+        # p. 286:
         p = diff_lags+1
         y = self.endog.T  # superclass turning DataFrame into ndarray?
         K = y.shape[0]
@@ -115,11 +116,13 @@ class VECM(tsbase.TimeSeriesModel):
         y_min1 = y[:, p-1:-1]
         if "lt" in deterministic:
             y_min1 = vstack((y_min1,
-                             np.arange(T)))
+                             np.arange(T)))  # p. 299
+        # p. 286:
         delta_x = np.zeros((diff_lags*K, T))
         for j in range(delta_x.shape[1]):
             delta_x[:, j] = (delta_y[:, j+p-2:None if j-1<0 else j-1:-1]
                              .T.reshape(K*(p-1)))
+        # p. 299, p. 303:
         if "c" in deterministic:
             delta_x = vstack((delta_x,
                               np.ones(T)))
@@ -135,21 +138,21 @@ class VECM(tsbase.TimeSeriesModel):
                      deterministic):
         K = delta_y_1_T.shape[0]
         T = delta_y_1_T.shape[1]
-        mat1 = hstack((delta_y_1_T.dot(y_min1.T), delta_y_1_T.dot(delta_x.T)))
 
+        mat1 = hstack((delta_y_1_T.dot(y_min1.T), delta_y_1_T.dot(delta_x.T)))
         b = y_min1.dot(delta_x.T)
         mat2 = inv(vstack((hstack((y_min1.dot(y_min1.T), b)),
                            hstack((b.T, delta_x.dot(delta_x.T))))))
-
-        est_pi_gamma = mat1.dot(mat2)
+        est_pi_gamma = mat1.dot(mat2)  # p. 287 (equation (7.2.4))
 
         pi_cols = K if "lt" not in deterministic else K + 1
         pi_hat = est_pi_gamma[:, :pi_cols]
 
         gamma_hat = est_pi_gamma[:, pi_cols:]
+
         _A = delta_y_1_T - pi_hat.dot(y_min1) - gamma_hat.dot(delta_x)
         p = diff_lags+1
-        sigma_u_hat = 1/(T-K*p) * np.dot(_A, _A.T)
+        sigma_u_hat = 1/(T-K*p) * np.dot(_A, _A.T)  # p. 287 (equation (7.2.5))
 
         return pi_hat, gamma_hat, sigma_u_hat
 
@@ -166,8 +169,8 @@ class VECM(tsbase.TimeSeriesModel):
 
     def _m_and_r_matrices(self, T, delta_x, delta_y_1_T, y_min1):
         m = np.identity(T) - (
-            delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x))
-        r0 = delta_y_1_T.dot(m)
+            delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x))  # p. 291
+        r0 = delta_y_1_T.dot(m)  # p. 292
         r1 = y_min1.dot(m)
         return m, r0, r1
     
@@ -181,11 +184,12 @@ class VECM(tsbase.TimeSeriesModel):
                                                             diff_lags,
                                                             deterministic)
         alpha_hat = pi_hat[:, :r]
-        
+
         m, r0, r1 = self._m_and_r_matrices(T, delta_x, delta_y_1_T, y_min1)
         r11 = r1[:r]
         r12 = r1[r:]
         _alpha_Sigma = alpha_hat.T.dot(inv(sigma_u_hat))
+        # p. 292:
         beta_hhat = inv(_alpha_Sigma.dot(alpha_hat)).dot(_alpha_Sigma).dot(
                 r0-alpha_hat.dot(r11)).dot(r12.T).dot(inv(r12.dot(r12.T))).T
         beta_hhat = vstack((np.identity(r),
@@ -207,6 +211,7 @@ class VECM(tsbase.TimeSeriesModel):
         T = y_1_T.shape[1]
         
         m, r0, r1 = self._m_and_r_matrices(T, delta_x, delta_y_1_T, y_min1)
+        # p. 294:
         s = np.bmat([[Ri.dot(Rj.T)/T for Rj in [r0, r1]]
                      for Ri in [r0, r1]])
         s = s.A
@@ -217,7 +222,7 @@ class VECM(tsbase.TimeSeriesModel):
         u_, s_, v_ = svd(inv(s11), full_matrices=False)
         s_ = np.sqrt(s_)
         s11_ = u_.dot(np.diag(s_)).dot(v_)
-
+        # p. 295:
         v = np.linalg.eig(s11_.dot(s10).dot(inv(s00)).dot(s01).dot(s11_))[1]
         beta_tilde = (v[:, :r].T.dot(s11_)).T
         # normalize beta tilde such that eye(r) forms the first r rows of it:
@@ -225,9 +230,6 @@ class VECM(tsbase.TimeSeriesModel):
         alpha_tilde = s01.dot(beta_tilde).dot(
                 inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
 
-        # delta_y_1_T = np.matrix(delta_y_1_T)
-        # y_min1 = np.matrix(y_min1)
-        # delta_x = np.matrix(delta_x)
         gamma_tilde = (delta_y_1_T - alpha_tilde*beta_tilde.T.dot(y_min1)).dot(
             delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
         temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1) -
