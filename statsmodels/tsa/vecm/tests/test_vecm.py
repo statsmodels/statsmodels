@@ -37,6 +37,9 @@ def load_results_statsmodels(dataset):
         results_per_deterministic_terms[deterministic_terms] = model.fit(
                                         max_diff_lags=3, method="ml", 
                                         deterministic=deterministic_terms)
+        results_per_deterministic_terms[deterministic_terms]["VAR A"] = \
+            model.to_var(max_diff_lags=3, method="ml",
+                         deterministic=deterministic_terms)
     return results_per_deterministic_terms
 
 
@@ -134,6 +137,26 @@ def test_ml_sigma():
             obtained = results_sm[ds][dt]["Sigma_u"]
             desired = results_ref[ds][dt]["Sigma_u"]
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+
+def test_var_rep_A():
+    for ds in datasets:
+        for dt in deterministic_terms_list:
+            err_msg = build_err_msg(ds, dt, "VAR repr. A")
+            obtained = results_sm[ds][dt]["VAR A"]
+            desired = results_ref[ds][dt]["VAR A"]
+            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+
+# Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
+# def test_var_rep_det():
+#     for ds in datasets:
+#         for dt in deterministic_terms_list:
+#             if dt != "":
+#                 err_msg = build_err_msg(ds, dt, "VAR repr. deterministic")
+#                 obtained = 0  # not implemented since the same values as VECM
+#                 desired = results_ref[ds][dt]["VAR deterministic"]
+#                 yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
 
 
 def setup():

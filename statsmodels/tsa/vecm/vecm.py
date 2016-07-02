@@ -153,17 +153,7 @@ class VECM(tsbase.TimeSeriesModel):
 
         return pi_hat, gamma_hat, sigma_u_hat
 
-    # def split_Pi(self, Pi):
-    #     U, s, V = svd(Pi, full_matrices=False)
-    #     S = np.diag(s)
-    #     alpha = U
-    #     beta = (np.dot(S, V)).T
-    #     if not np.array_equal(beta[:len(s),:len(s)], np.identity(len(s))):
-    #         alpha = np.dot(alpha, beta.T[:len(s), :len(s)])
-    #         beta = np.dot(beta, inv(beta[:len(s), :len(s)]))
-    #     return alpha, beta
-
-    def _estimate_vecm_ls(self, diff_lags, deterministic="", r=1):
+    def _estimate_vecm_ls(self, diff_lags, deterministic=""):
         # deterministic \in \{"c", "lt", "s"\}, where
         # c=constant, lt=linear trend, s=seasonal terms
         y, y_1_T, delta_y, delta_y_1_T, y_min1, delta_x = self._est_matrices(
@@ -171,9 +161,6 @@ class VECM(tsbase.TimeSeriesModel):
         pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
                                                            delta_x, diff_lags,
                                                            deterministic)
-        # alpha_hat, beta_hat = self.split_Pi(pi_hat)
-        # return {"alpha": alpha_hat, "beta": beta_hat,
-        #         "Gamma": gamma_hat, "Sigma_u": sigma_u_hat}
         return {"Pi_hat": pi_hat, "Gamma_hat": gamma_hat,
                 "Sigma_u_hat": sigma_u_hat}
 
@@ -276,3 +263,23 @@ class VECM(tsbase.TimeSeriesModel):
         """  # TODO: docstring + implementation
         pass
 
+    def to_var(self, max_diff_lags, method, deterministic):
+        pass
+        vecm_params = self.fit(max_diff_lags=max_diff_lags, method=method,
+                               deterministic=deterministic)
+        pi = vecm_params["alpha"].dot(vecm_params["beta"].T)
+        gamma = vecm_params["Gamma"]
+        if "lt" in deterministic:
+            pi = pi[:, :-1]
+        if "c" in deterministic:
+            gamma = gamma[:, :-1]
+        if "s" in deterministic:
+            gamma = gamma[:, :-3]  # TODO: allow for #seasons != 3
+        K = gamma.shape[0]
+        p = 1 + round(gamma.shape[1]/K)
+        A = np.zeros((p, K, K))
+        A[0] = pi + np.identity(K) + gamma[:, :K]
+        A[p-1] = - gamma[:, K*(p-2):]
+        for i in range(1, p-1):
+            A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
+        return np.concatenate(A, 1)
