@@ -27,6 +27,11 @@ class Linear_Kim1994Model(MLEModel):
     estimation in TestKim1994_MLEModelLinearFitFirst.
     '''
 
+    @property
+    def start_params(self):
+        dtype = self.ssm.dtype
+        return self.transform_params(np.ones((4,), dtype=dtype))
+
     def transform_params(self, unconstrained):
         constrained = np.array(unconstrained)
         constrained[:2] = _transform_ar_coefs(unconstrained[:2])
@@ -79,18 +84,10 @@ class Kim1994Model(SwitchingMLEModel):
 
         params[self.parameters['phi']] = nonswitching_params[:2]
         params[self.parameters['sigma']] = nonswitching_params[2]
-        # Without shifting a little we are stuck in local maximum
+        # Adding noise to break the symmetry.
         params[self.parameters[0, 'delta']] = nonswitching_params[3] - 1e-2
         params[self.parameters[1, 'delta']] = nonswitching_params[3] + 1e-2
         return params
-
-    def get_nonswitching_params(self, params):
-
-        nonswitching_params = np.zeros((4,), dtype=self.ssm.dtype)
-        nonswitching_params[:2] = params[self.parameters['phi']]
-        nonswitching_params[2] = params[self.parameters['sigma']]
-        nonswitching_params[3] = params[self.parameters['delta']].mean()
-        return nonswitching_params
 
     def transform_model_params(self, unconstrained):
 
@@ -144,7 +141,7 @@ class Kim1994WithMLEModel(Kim1994):
         raise NotImplementedError
 
 
-class TestKim1994_MLEModel(Kim1994WithMLEModel):
+class aTestKim1994_MLEModel(Kim1994WithMLEModel):
     '''
     Test for equivalence with kim_je example.
     '''

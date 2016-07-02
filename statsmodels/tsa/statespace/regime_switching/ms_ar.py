@@ -173,34 +173,6 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         return params
 
-    def get_nonswitching_params(self, params):
-        '''
-        nonswitching_params = (mean exog_regression_coefs ar_coefs var)
-        '''
-
-        dtype = self.ssm.dtype
-        order = self.order
-        k_ar_regimes = self.k_ar_regimes
-
-        if self.k_exog is not None:
-            exog_regression_coefs = \
-                    params[self.parameters['exog']].tolist()
-        else:
-            exog_regression_coefs = []
-
-        ar_coefs = np.zeros((k_ar_regimes, order), dtype=dtype)
-
-        for i in range(k_ar_regimes):
-            ar_coefs[i] = params[self.parameters[i, 'autoregressive']]
-
-        ar_coefs = ar_coefs.mean(axis=0).tolist()
-
-        mean = [params[self.parameters['mean']].mean()]
-        variance = [params[self.parameters['variance']].mean()]
-
-        return np.array(mean + exog_regression_coefs + ar_coefs + var,
-                dtype=dtype)
-
     def transform_model_params(self, unconstrained):
 
         k_ar_regimes = self.k_ar_regimes

@@ -119,7 +119,7 @@ class SwitchingRepresentation(object):
             raise IndexError('"%s" is an invalid state space matrix name.' \
                     % matrix_name)
 
-        return np.asarray([regime_filter[matrix_name] for regime_filter in \
+        return np.asarray([regime_filter[key] for regime_filter in \
                 self._regime_kalman_filters])
 
     def __setitem__(self, key, value):

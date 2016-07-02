@@ -54,15 +54,8 @@ class SwitchingMLEModel(MLEModel):
         This method is used when non-switching fitting is done, and we need to
         update switching model starting params using obtained non-switching
         params. To override, if fitting non-switching model is performed.
-        '''
-
-        return np.array(params, ndmin=1)
-
-    def get_nonswitching_params(self, params):
-        '''
-        Used when switching model params are provided in fit method, and we
-        need to transform them into params for nonswitching model fitting.
-        To override, if fitting non-switching model is performed.
+        Don't forget to add some noise to switching parameters to break the
+        symmetry.
         '''
 
         return np.array(params, ndmin=1)
@@ -250,33 +243,40 @@ class SwitchingMLEModel(MLEModel):
         return self.transform_params(np.ones((self.parameters.k_params,),
             dtype=self.ssm.dtype))
 
-    def fit(self, start_params=None, transformed=True,
-            set_equal_transition_probs=False, fit_nonswitching_first=False,
-            **kwargs):
+    def fit(self, start_params=None, default_transition_probs=None,
+            fit_nonswitching_first=False, **kwargs):
+        '''
+        `default_transition_probs` is a transition matrix, used in case of
+        fitting nonswitching first. If it's None, it's instantiated with all
+        equal transition probabilities.
+        If `fit_nonswitching_first` is True, `start_params` are fed to
+        nonswitching model.
+        '''
 
-        if start_params is None:
-            start_params = self.start_params
-            transformed = True
-
-        if not transformed:
-            start_params = self.transform_params(start_params)
+        dtype = self.ssm.dtype
 
         if fit_nonswitching_first:
             nonswitching_model = self.get_nonswitching_model()
             nonswitching_kwargs = dict(kwargs)
             nonswitching_kwargs['return_params'] = True
-            start_nonswitching_params = \
-                    self.get_nonswitching_params(start_params)
+            #start_nonswitching_params = \
+            #        self.get_nonswitching_params(start_params)
+            start_nonswitching_params = start_params
             nonswitching_params = nonswitching_model.fit(
                     start_params=start_nonswitching_params,
                     **nonswitching_kwargs)
 
-            start_params = self.update_params(start_params, nonswitching_params)
+            start_params = np.zeros((self.parameters.k_params,), dtype=dtype)
 
-        if set_equal_transition_probs:
-            start_params[self.parameters['regime_transition']] = \
-                    np.ones((self.param_k_regimes, self.param_k_regimes),
-                    dtype=self.ssm.dtype)[:-1, :].ravel() / self.param_k_regimes
+            if default_transition_probs is None:
+                default_transition_probs = \
+                        np.ones((self.param_k_regimes, self.param_k_regimes),
+                        dtype=self.ssm.dtype) / self.param_k_regimes
+
+            self._set_param_regime_transition(start_params,
+                    default_transition_probs)
+
+            start_params = self.update_params(start_params, nonswitching_params)
 
         kwargs['start_params'] = start_params
         # smoothing is not defined yet
