@@ -234,7 +234,7 @@ class CumIncidenceRight(object):
             freq_weights = self.freq_weights = np.asarray(freq_weights)
 
         if exog is not None:
-            from .kernel_estimates import _kernel_cumincidence
+            from ._kernel_estimates import _kernel_cumincidence
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
             kw = nobs**(-1/3.0) * bwm
