@@ -685,8 +685,11 @@ class DynamicFactor(MLEModel):
             # This is always an identity matrix, but because the transform
             # done prior to update (where the ssm representation matrices
             # change), it may be complex
-            cov = self.ssm[
-                'state_cov', :self.k_factors, :self.k_factors].real
+            #cov = self.ssm[
+            #    'state_cov', :self.k_factors, :self.k_factors].real
+
+            cov = np.identity(self.k_factors, dtype=self.ssm.dtype)
+
             coefficient_matrices, variance = (
                 constrain_stationary_multivariate(unconstrained_matrices, cov))
             constrained[self._params_factor_transition] = (
@@ -776,8 +779,11 @@ class DynamicFactor(MLEModel):
             constrained_matrices = (
                 constrained[self._params_factor_transition].reshape(
                     self.k_factors, self._factor_order))
-            cov = self.ssm[
-                'state_cov', :self.k_factors, :self.k_factors].real
+            #cov = self.ssm[
+            #    'state_cov', :self.k_factors, :self.k_factors].real
+
+            cov = np.identity(self.k_factors, dtype=self.ssm.dtype)
+
             coefficient_matrices, variance = (
                 unconstrain_stationary_multivariate(
                     constrained_matrices, cov))

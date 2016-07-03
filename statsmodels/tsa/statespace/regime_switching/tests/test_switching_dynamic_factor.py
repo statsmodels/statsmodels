@@ -1,11 +1,13 @@
 import numpy as np
 from numpy.testing import assert_allclose
+from statsmodels.tsa.statespace.regime_switching.tools import \
+        MarkovSwitchingParams
 from statsmodels.tsa.statespace.regime_switching.switching_dynamic_factor \
-        import DynamicFactorWithFactorIntercept, SwitchingDynamicFactor
+        import _DynamicFactorWithFactorIntercept, SwitchingDynamicFactor
 from .results import results_kim_yoo1995
 
 
-class KimYoo1995NonswitchingModel(DynamicFactorWithFactorIntercept):
+class KimYoo1995NonswitchingModel(_DynamicFactorWithFactorIntercept):
     '''
     This is dynamic factor model with some restrictions on parameters.
     See http://econ.korea.ac.kr/~cjkim/MARKOV/programs/sw_ms.opt.
@@ -35,6 +37,9 @@ class KimYoo1995NonswitchingModel(DynamicFactorWithFactorIntercept):
 
         self.kimyoo_k_params = offset
 
+        # For the sake of clarity
+        self._base_class_k_params = self.k_params_with_factor_intercept
+
     def _get_dynamic_factor_params(self, params_without_intercept):
         '''
         params_without_intercept - just a prefix of parameters vector, since
@@ -47,8 +52,8 @@ class KimYoo1995NonswitchingModel(DynamicFactorWithFactorIntercept):
         factor_order = self.factor_order
         error_order = self.error_order
 
-        # k_params property is inherited from DynamicFactor class
-        dynamic_factor_params = np.zeros((self.k_params,), dtype=dtype)
+        dynamic_factor_params = np.zeros((self.dynamic_factor_k_params,),
+                dtype=dtype)
 
         # 1. Factor loadings
 
@@ -144,78 +149,62 @@ class KimYoo1995NonswitchingModel(DynamicFactorWithFactorIntercept):
 
         return params_without_intercept
 
-    @property
-    def start_params(self):
+    def _get_base_class_params(self, params):
 
         dtype = self.ssm.dtype
+
+        base_class_params = np.zeros((self._base_class_k_params,), dtype=dtype)
+
+        base_class_params[self._dynamic_factor_params_idx] = \
+                self._get_dynamic_factor_params(
+                params[self._params_without_intercept_idx])
+
+        base_class_params[self._factor_intercept_idx] = params[self._mu_idx]
+
+        return base_class_params
+
+    def _get_params(self, base_class_params):
+
+        dtype = self.ssm.dtype
+
+        params_without_intercept = self._get_params_without_intercept(
+                base_class_params[self._dynamic_factor_params_idx])
+
+        params = np.zeros((self.kimyoo_k_params,), dtype=dtype)
+
+        params[self._params_without_intercept_idx] = params_without_intercept
+
+        params[self._mu_idx] = base_class_params[self._factor_intercept_idx]
+
+        return params
+
+    @property
+    def start_params(self):
 
         base_start_params = super(KimYoo1995NonswitchingModel,
                 self).start_params
 
-        params_without_intercept = self._get_params_without_intercept( \
-                base_start_params[self._dynamic_factor_params_idx])
-
-        start_params = np.zeros((self.kimyoo_k_params,), dtype=dtype)
-
-        start_params[self._params_without_intercept_idx] = \
-                params_without_intercept
-
-        start_params[self._mu_idx] = base_start_params[ \
-                self._factor_intercept_idx]
-
-        return start_params
+        return self._get_params(base_start_params)
 
     def transform_params(self, unconstrained):
 
-        dtype = self.ssm.dtype
+        unconstr_base_class_params = self._get_base_class_params(unconstrained)
 
-        constrained = np.array(unconstrained)
+        constr_base_class_params = super(KimYoo1995NonswitchingModel,
+                self).transform_params(unconstr_base_class_params)
 
-        # `k_params` property is inherited from `DynamicFactor` class, so it
-        # doesn't encounter factor intercept value in
-        # `DynamicFactorWithFactorIntercept` class params
-        unconstrained_base_params = np.zeros((self.k_params + 1,), dtype=dtype)
-
-        unconstrained_base_params[self._dynamic_factor_params_idx] = \
-                self._get_dynamic_factor_params( \
-                unconstrained[self._params_without_intercept_idx])
-
-        unconstrained_base_params[self._factor_intercept_idx] = \
-                unconstrained[self._mu_idx]
-
-        constrained_base_params = super(KimYoo1995NonswitchingModel,
-                self).transform_params(unconstrained_base_params)
-
-        constrained[self._params_without_intercept_idx] = \
-                self._get_params_without_intercept( \
-                constrained_base_params[self._dynamic_factor_params_idx])
+        constrained = self._get_params(constr_base_class_params)
 
         return constrained
 
     def untransform_params(self, constrained):
 
-        dtype = self.ssm.dtype
+        constr_base_class_params = self._get_base_class_params(constrained)
 
-        unconstrained = np.array(constrained)
+        unconstr_base_class_params = super(KimYoo1995NonswitchingModel,
+                self).untransform_params(constr_base_class_params)
 
-        # `k_params` property is inherited from `DynamicFactor` class, so it
-        # doesn't encounter factor intercept value in
-        # `DynamicFactorWithFactorIntercept` class params
-        constrained_base_params = np.zeros((self.k_params + 1,), dtype=dtype)
-
-        constrained_base_params[self._dynamic_factor_params_idx] = \
-                self._get_dynamic_factor_params( \
-                constrained[self._params_without_intercept_idx])
-
-        constrained_base_params[self._factor_intercept_idx] = \
-                constrained[self._mu_idx]
-
-        unconstrained_base_params = super(KimYoo1995NonswitchingModel,
-                self).untransform_params(constrained_base_params)
-
-        unconstrained[self._params_without_intercept_idx] = \
-                self._get_params_without_intercept( \
-                unconstrained_base_params[self._dynamic_factor_params_idx])
+        unconstrained = self._get_params(unconstr_base_class_params)
 
         return unconstrained
 
@@ -224,13 +213,7 @@ class KimYoo1995NonswitchingModel(DynamicFactorWithFactorIntercept):
         dtype = self.ssm.dtype
         k_states = self.k_states
 
-        base_class_params = np.zeros((self.k_params + 1,), dtype=dtype)
-
-        base_class_params[self._dynamic_factor_params_idx] = \
-                self._get_dynamic_factor_params( \
-                params[self._params_without_intercept_idx])
-
-        base_class_params[self._factor_intercept_idx] = params[self._mu_idx]
+        base_class_params = self._get_base_class_params(params)
 
         super(KimYoo1995NonswitchingModel, self).update(base_class_params,
                 **kwargs)
@@ -241,7 +224,8 @@ class KimYoo1995NonswitchingModel(DynamicFactorWithFactorIntercept):
 
         transition = self['transition']
 
-        raveled_state_cov = self['state_cov'].T.reshape(-1, 1)
+        raveled_state_cov = (self['selection'].dot(self['state_cov']).dot(
+                self['selection'].T)).reshape(-1, 1)
 
         initial_state = np.linalg.inv(np.identity(k_states, dtype=dtype) - \
                 transition).dot(state_intercept).ravel()
@@ -279,165 +263,128 @@ class KimYoo1995Model(SwitchingDynamicFactor):
         self._nonswitching_model = KimYoo1995NonswitchingModel(endog,
                 k_factors, factor_order, **kwargs)
 
-        regime_transition_params_len = (k_regimes) * (k_regimes - 1)
+        # For the sake of clarity
+        self._base_class_parameters = self.parameters
 
-        # params vector for this model = [transition_matrix_params
-        # kimyoo_params_without_intercepts factor_intercepts]
-        self._kimyoo_params_without_intercepts_idx = np.s_[ \
-                regime_transition_params_len:-k_regimes]
+        # params vector for this model differs from params vector in
+        # `SwitchingDynamicFactor`.
+        self._kimyoo_parameters = MarkovSwitchingParams(k_regimes)
 
-        self._kimyoo_factor_intercepts_idx = np.s_[-k_regimes:]
+        self._kimyoo_parameters['regime_transition'] = [False] * k_regimes * \
+                (k_regimes - 1)
+
+        # Number of nonswitching params is equal to number of parameters in
+        # nonswitching model, except of factor intercept (1 value).
+        self._kimyoo_parameters['nonswitching_params'] = [False] * \
+                (self._nonswitching_model.kimyoo_k_params - 1)
+
+        self._kimyoo_parameters['factor_intercept'] = [True]
 
         # A dirty hack, required, because Kim-Yoo model's specification is a
         # little different from Statsmodels one.
         self['state_cov', :k_factors, :k_factors] = 0
         self['state_cov', 0, 0] = 1
 
+    def _get_base_class_params(self, params):
+
+        dtype = self.ssm.dtype
+
+        base_class_params = np.zeros((self._base_class_parameters.k_params,),
+                dtype=dtype)
+
+        base_class_params[self._base_class_parameters['regime_transition']] = \
+                params[self._kimyoo_parameters['regime_transition']]
+
+        params_without_intercept = params[self._kimyoo_parameters[
+                'nonswitching_params']]
+
+        base_class_params[self._base_class_parameters['dynamic_factor']] = \
+                self._nonswitching_model._get_dynamic_factor_params(
+                params_without_intercept)
+
+        base_class_params[self._base_class_parameters['factor_intercept']] = \
+                params[self._kimyoo_parameters['factor_intercept']]
+
+        return base_class_params
+
+    def _get_params(self, base_class_params):
+
+        dtype = self.ssm.dtype
+
+        params = np.zeros((self._kimyoo_parameters.k_params,), dtype=dtype)
+
+        params[self._kimyoo_parameters['regime_transition']] = \
+                base_class_params[self._base_class_parameters[
+                'regime_transition']]
+
+        dynamic_factor_params = base_class_params[self._base_class_parameters[
+                'dynamic_factor']]
+
+        params[self._kimyoo_parameters['nonswitching_params']] = \
+                self._nonswitching_model._get_params_without_intercept(
+                dynamic_factor_params)
+
+        params[self._kimyoo_parameters['factor_intercept']] = \
+                base_class_params[self._base_class_parameters[
+                'factor_intercept']]
+
+        return params
+
     @property
     def start_params(self):
 
         dtype = self.ssm.dtype
-        k_regimes = self.k_regimes
-
-        regime_transition_params_len = \
-                self.parameters['regime_transition'].shape[0]
 
         base_start_params = super(KimYoo1995Model, self).start_params
 
-        start_params = np.zeros((regime_transition_params_len + \
-                self._nonswitching_model.kimyoo_k_params + \
-                k_regimes,), dtype=dtype)
-
-        # 1. Regime transition params
-
-        start_params[self.parameters['regime_transition']] = \
-                base_start_params[self.parameters['regime_transition']]
-
-        # 2. Kim Yoo params without intercept
-
-        start_params[self._kimyoo_params_without_intercepts_idx] = \
-                self._nonswitching_model._get_params_without_intercept( \
-                base_start_params[self._dynamic_factor_params_idx])
-
-        # 3. Factor intercept params
-
-        start_params[self._kimyoo_factor_intercepts_idx] = base_start_params[ \
-                self._factor_intercepts_idx]
-
-        return start_params
+        return self._get_params(base_start_params)
 
     def get_nonswitching_model(self):
 
         # don't need to instantiate a new model, since we already have one
         return self._nonswitching_model
 
-    def update_params(self, params, nonswitching_params):
+    def update_params(self, params, nonswitching_model_params):
 
-        params = np.array(params)
+        base_class_params = self._get_base_class_params(params)
 
-        params[self._kimyoo_params_without_intercepts_idx] = \
-                nonswitching_params[ \
-                self._nonswitching_model._params_without_intercept_idx]
+        nonswitching_base_class_params = \
+                self._nonswitching_model._get_base_class_params(
+                nonswitching_model_params)
 
-        params[self._kimyoo_factor_intercepts_idx] = \
-                nonswitching_params[ \
-                self._nonswitching_model._factor_intercept_idx]
+        updated_base_class_params = super(KimYoo1995Model,
+                self).update_params(base_class_params,
+                nonswitching_base_class_params)
 
-        return params
-
-    def get_nonswitching_params(self, params):
-
-        dtype = self.ssm.dtype
-
-        nonswitching_params_without_intercept_idx = \
-                self._nonswitching_model._params_without_intercept_idx
-
-        nonswitching_factor_intercept_idx = \
-                self._nonswitching_model._factor_intercept_idx
-
-        nonswitching_params_length = \
-                nonswitching_params_without_intercept_idx.shape[0] + \
-                nonswitching_factor_intercept_idx.shape[0]
-
-        nonswitching_params = np.zeros((nonswitching_params_length,),
-                dtype=dtype)
-
-        nonswitching_params[nonswitching_params_without_intercept_idx] = \
-                params[self._kimyoo_params_without_intercepts_idx]
-
-        nonswitching_params[nonswitching_factor_intercept_idx] = \
-                params[self._kimyoo_factor_intercepts_idx].mean()
-
-        return nonswitching_params
+        return self._get_params(updated_base_class_params)
 
     def transform_model_params(self, unconstrained):
 
-        constrained = np.array(unconstrained)
+        unconstr_base_class_params = self._get_base_class_params(unconstrained)
 
-        unconstrained_dynamic_factor_params = \
-                self._nonswitching_model._get_dynamic_factor_params( \
-                unconstrained[self._kimyoo_params_without_intercepts_idx])
+        constr_base_class_params = super(KimYoo1995Model,
+                self).transform_model_params(unconstr_base_class_params)
 
-        constrained_dynamic_factor_params = \
-                super(DynamicFactorWithFactorIntercept,
-                self._nonswitching_model).transform_params( \
-                unconstrained_dynamic_factor_params)
-
-        constrained[self._kimyoo_params_without_intercepts_idx] = \
-               self._nonswitching_model._get_params_without_intercept( \
-               constrained_dynamic_factor_params)
-
-        return constrained
+        return self._get_params(constr_base_class_params)
 
     def untransform_model_params(self, constrained):
 
-        unconstrained = np.array(constrained)
+        constr_base_class_params = self._get_base_class_params(constrained)
 
-        constrained_dynamic_factor_params = \
-                self._nonswitching_model._get_dynamic_factor_params( \
-                constrained[self._kimyoo_params_without_intercepts_idx])
+        unconstr_base_class_params = super(KimYoo1995Model,
+                self).untransform_model_params(constr_base_class_params)
 
-        unconstrained_dynamic_factor_params = \
-                super(DynamicFactorWithFactorIntercept,
-                self._nonswitching_model).untransform_params( \
-                constrained_dynamic_factor_params)
+        return self._get_params(unconstr_base_class_params)
 
-        unconstrained[self._kimyoo_params_without_intercepts_idx] = \
-               self._nonswitching_model._get_params_without_intercept( \
-               unconstrained_dynamic_factor_params)
-
-        return unconstrained
-
-    def update(self, params, transformed=True, **kwargs):
+    def update(self, params, **kwargs):
 
         dtype = self.ssm.dtype
         k_regimes = self.k_regimes
         k_states = self.k_states
 
-        if not transformed:
-            params = self.transform_params(params)
+        base_class_params = self._get_base_class_params(params)
 
-        # `k_params` property is inherited from `SwitchingDynamicFactor` class
-        base_class_params = np.zeros((self.k_params,), dtype=dtype)
-
-        # 1. Regime transition params
-
-        base_class_params[self.parameters['regime_transition']] = \
-                params[self.parameters['regime_transition']]
-
-        # 2. Dynamic factor params
-
-        base_class_params[self._dynamic_factor_params_idx] = \
-                self._nonswitching_model._get_dynamic_factor_params( \
-                params[self._kimyoo_params_without_intercepts_idx])
-
-        # 3. Factor intercepts params
-
-        base_class_params[self._factor_intercepts_idx] = params[ \
-                self._kimyoo_factor_intercepts_idx]
-
-        super(KimYoo1995Model, self).update(base_class_params,
-                transformed=True, **kwargs)
+        super(KimYoo1995Model, self).update(base_class_params, **kwargs)
 
         # Filter initialization.
 
@@ -447,7 +394,7 @@ class KimYoo1995Model(SwitchingDynamicFactor):
 
         transition = self['transition'][0]
 
-        raveled_state_cov = self['state_cov'][0].T.reshape(-1, 1)
+        raveled_state_cov = self['state_cov'][0].reshape(-1, 1)
 
         for i in range(k_regimes):
             initial_state[i] = np.linalg.inv(np.identity(k_states,
@@ -469,10 +416,11 @@ class KimYoo1995Model(SwitchingDynamicFactor):
 
         self.initialize_known(initial_state, initial_state_cov)
 
+
 class KimYoo1995(object):
 
     @classmethod
-    def setup_class(cls, with_standardizing=True):
+    def setup_class(cls, with_standardizing):
 
         cls.dtype = np.float64
         dtype = cls.dtype
@@ -481,6 +429,7 @@ class KimYoo1995(object):
         cls.k_factors = 3
         cls.factor_order = 1
         cls.error_order = 2
+        cls.enforce_stationarity = False
 
         cls.true = results_kim_yoo1995.sw_ms
 
@@ -505,7 +454,8 @@ class KimYoo1995(object):
 
         cls.model = KimYoo1995Model(cls.k_regimes, cls.obs,
                 cls.k_factors, cls.factor_order, error_order=cls.error_order,
-                loglikelihood_burn=cls.true['start'])
+                loglikelihood_burn=cls.true['start'],
+                enforce_stationarity=cls.enforce_stationarity)
 
 
 class TestKimYoo1995_Filtering(KimYoo1995):
@@ -513,8 +463,7 @@ class TestKimYoo1995_Filtering(KimYoo1995):
     @classmethod
     def setup_class(cls):
 
-        super(TestKimYoo1995_Filtering,
-                cls).setup_class(with_standardizing=False)
+        super(TestKimYoo1995_Filtering, cls).setup_class(False)
 
         dtype = cls.dtype
 
@@ -523,7 +472,7 @@ class TestKimYoo1995_Filtering(KimYoo1995):
         doc_mn = doc_din.mean()
 
         start_params = np.array(
-                cls.true['start_parameters2'], dtype=dtype)
+                cls.true['start_params_nonstd_data'], dtype=dtype)
 
         results = cls.model.filter(start_params)
 
@@ -547,11 +496,113 @@ class TestKimYoo1995_Filtering(KimYoo1995):
         }
 
     def test_loglike(self):
-        assert_allclose(self.result['loglike'], self.true['loglike2'],
-                rtol=3e-3)
+        assert_allclose(self.result['loglike'], self.true['start_loglike_nonstd_data'],
+                rtol=1e-4)
 
     def test_new_ind(self):
         assert_allclose(self.result['new_ind'], self.true['new_ind'], rtol=1e-2)
 
     def test_probs(self):
         assert_allclose(self.result['prtt0'], self.true['prtt0'], atol=1e-2)
+
+
+class TestKimYoo1995_Smoothing(KimYoo1995):
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestKimYoo1995_Smoothing, cls).setup_class(False)
+
+        dtype = cls.dtype
+
+        start_params = np.array(
+                cls.true['start_params_nonstd_data'], dtype=dtype)
+
+        results = cls.model.smooth(start_params)
+
+        cls.result = {
+                'smooth0': results.smoothed_regime_probs[:, 0]
+        }
+
+    def test_probs(self):
+        assert_allclose(self.result['smooth0'], self.true['smooth0'], atol=1e-2)
+
+
+class KimYoo1995_MLE(KimYoo1995):
+
+    @classmethod
+    def setup_class(cls, with_standardizing):
+
+        super(KimYoo1995_MLE, cls).setup_class(with_standardizing)
+
+        dtype = cls.dtype
+
+        if with_standardizing:
+            start_params_name = 'start_params_std_data'
+            cls.optimized_params_name = 'optimized_params_std_data'
+            cls.optimized_loglike_name = 'optimized_loglike_std_data'
+        else:
+            start_params_name = 'start_params_nonstd_data'
+            cls.optimized_params_name = 'optimized_params_nonstd_data'
+            cls.optimized_loglike_name = 'optimized_loglike_nonstd_data'
+
+        start_params = np.array(
+                cls.true[start_params_name], dtype=dtype)
+
+        params = cls.model.fit(start_params=start_params)
+
+        cls.result = {
+                'loglike': cls.model.loglike(params),
+                'params': params
+        }
+
+    def test_loglike(self):
+        # It occurs that the result loglike is even better than the value
+        # it's tested against in both standardized and non-standardized cases.
+        assert_allclose(self.result['loglike'],
+                self.true[self.optimized_loglike_name], rtol=1e-2)
+
+    def test_params(self):
+        assert_allclose(self.result['params'],
+                self.true[self.optimized_params_name], atol=2e-1)
+
+class TestKimYoo1995_MLEWithStandardizing(KimYoo1995_MLE):
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestKimYoo1995_MLEWithStandardizing, cls).setup_class(True)
+
+
+class TestKimYoo1995_MLEWithoutStandardizing(KimYoo1995_MLE):
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestKimYoo1995_MLEWithoutStandardizing, cls).setup_class(False)
+
+
+class TestKimYoo1995_MLEFitNonswitchingFirst(KimYoo1995):
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestKimYoo1995_MLEFitNonswitchingFirst, cls).setup_class(False)
+
+        dtype = cls.dtype
+
+        params = cls.model.fit(set_equal_transition_probs=True,
+                fit_nonswitching_first=True)
+
+        cls.result = {
+                'loglike': cls.model.loglike(params),
+                'params': params
+        }
+
+    def test_loglike(self):
+        assert_allclose(self.result['loglike'],
+                self.true['optimized_loglike_nonstd_data'], rtol=1e-2)
+
+    def test_params(self):
+        assert_allclose(self.result['params'],
+                self.true['optimized_params_nonstd_data'], atol=2e-1)
