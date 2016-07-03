@@ -4,7 +4,7 @@ import scipy.sparse as sparse
 from scipy.linalg import block_diag
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
-from statsmodels.compat.scipy_sparse import block_diag as sp_block_diag
+from statsmodels.compat.sparse import block_diag as sp_block_diag
 #from cStringIO import StringIO
 from statsmodels.compat import StringIO
 from statsmodels.iolib import SimpleTable
