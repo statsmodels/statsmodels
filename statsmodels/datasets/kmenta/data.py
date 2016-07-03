@@ -54,7 +54,7 @@ def load_pandas():
     from pandas import DataFrame
     data = _get_data()
     #raw_data = categorical(data, col='state', drop=True)
-    ds = du.process_recarray(data, endog_idx=[0, 1], stack=False)
+    ds = du.process_recarray_pandas(data, endog_idx=[0, 1])
     #ds.raw_data = DataFrame(raw_data) # why not DataFrame(data) ?
     return ds
 
