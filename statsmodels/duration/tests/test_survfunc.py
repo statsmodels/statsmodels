@@ -303,6 +303,10 @@ def test_incidence():
     #
     # The standard errors agree with Stata, not with R (cmprisk
     # package), which uses a different SE formula from Aalen (1978)
+    #
+    # To check with Stata:
+    # stset ftime failure(fstat==1)
+    # stcompet ci=ci, compet1(2)
 
     ftime = np.r_[1, 1, 2, 4, 4, 4, 6, 6, 7, 8, 9, 9, 9, 1, 2, 2, 4, 4]
     fstat = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -451,6 +455,29 @@ def test_survdiff_entry_3():
     assert_allclose(p, 0.00937041)
 
 def test_kernel():
+=======
+def test_incidence2():
+    # Check that the cumulative incidence functions for all competing
+    # risks sum to the complementary survival function.
+
+    np.random.seed(2423)
+    n = 200
+    time = -np.log(np.random.uniform(size=n))
+    status = np.random.randint(0, 3, size=n)
+    ii = np.argsort(time)
+    time = time[ii]
+    status = status[ii]
+    ci = CumIncidenceRight(time, status)
+    statusa = 1*(status >= 1)
+    sf = SurvfuncRight(time, statusa)
+    x = 1 - sf.surv_prob
+    y = (ci.cinc[0] + ci.cinc[1])[np.flatnonzero(statusa)]
+    assert_allclose(x, y)
+
+
+def test_kernel_survfunc1():
+    # Regression test
+>>>>>>> added kernelized cumulative incidence methods
 
     n = 100
     np.random.seed(3434)
@@ -461,8 +488,48 @@ def test_kernel():
     result = SurvfuncRight(time, status, exog=x)
 
     timex = np.r_[0.30721103, 0.0515439, 0.69246897, 0.16446079, 0.31308528]
-    sprob = np.r_[ 0.98948277, 0.98162275, 0.97129237, 0.96044668, 0.95030368]
+    sprob = np.r_[0.98948277, 0.98162275, 0.97129237, 0.96044668, 0.95030368]
 
-    # Regression test
     assert_allclose(result.time[0:5], timex)
     assert_allclose(result.surv_prob[0:5], sprob)
+
+
+def test_kernel_survfunc2():
+    # Check that when bandwidth is very large, the kernel procedure
+    # agrees with standard KM. (Note: the results do not agree
+    # perfectly when there are tied times).
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.uniform(0, 10, size=n)
+    status = np.random.randint(0, 2, size=n)
+
+    resultkm = SurvfuncRight(time, status)
+    result = SurvfuncRight(time, status, exog=x, bwm=10000)
+
+    assert_allclose(resultkm.surv_times, result.surv_times)
+    assert_allclose(resultkm.surv_prob, result.surv_prob)
+
+
+def test_kernel_cumincidence1():
+    # Check that when the bandwidth is very large, the kernel
+    # procedure agrees with standard cumulative incidence
+    # calculations. (Note: the results do not agree perfectly when
+    # there are tied times).
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.uniform(0, 10, size=n)
+    status = np.random.randint(0, 3, size=n)
+
+    result1 = CumIncidenceRight(time, status)
+
+    for dimred in False, True:
+        result2 = CumIncidenceRight(time, status, exog=x, bwm=10000,
+                                    dimred=dimred)
+
+        assert_allclose(result1.times, result2.times)
+        for k in 0, 1:
+            assert_allclose(result1.cinc[k], result2.cinc[k], rtol=1e-5)

@@ -85,7 +85,7 @@ def _calc_incidence_right(time, status, weights=None):
     sp, utime, rtime, n, d = _calc_survfunc_right(time, status0, weights,
                                                   compress=False, retall=False)
 
-    ngrp = status.max()
+    ngrp = int(status.max())
 
     # Number of cause-specific deaths at each unique time.
     d = []
@@ -172,6 +172,18 @@ class CumIncidenceRight(object):
         Optional title used for plots and summary output.
     freq_weights : array-like
         Optional frequency weights
+    exog : array-like
+        Optional, if present used to account for violation of
+        independent censoring.
+    bwm : float
+        Band-width multiplier for kernel-based estimation.  Only
+        used if exog is provided.
+    dimred : boolean
+        If True, proportional hazards regression models are used to
+        reduce exog to two columns by predicting overall events and
+        censoring in two separate models.  If False, exog is used
+        directly for calculating kernel weights without dimension
+        reduction.
 
     Attributes
     ----------
@@ -181,7 +193,18 @@ class CumIncidenceRight(object):
         cinc[k-1] contains the estimated cumulative incidence rates
         for outcome k=1,2,...
     cinc_se : list of arrays
-        The standard errors for the values in `cinc`.
+        The standard errors for the values in `cinc`.  Not available when
+        exog and/or frequency weights are provided.
+
+    Notes
+    -----
+    When exog is provded, a local estimate of the cumulative incidence
+    rate around each point is provided, and these are averaged to
+    produce an estimate of the marginal cumulative incidence
+    functions.  The procedure is analogous to that described in Zeng
+    (2004) for estimation of the marginal survival function.  The
+    approach removes bias resulting from dependent censoring when the
+    censoring becomes independent conditioned on the columns of exog.
 
     References
     ----------
@@ -194,15 +217,33 @@ class CumIncidenceRight(object):
     Marubini, E. and M. G. Valsecchi. 1995. Analysing Survival Data
     from Clinical Trials and Observational Studies. Chichester, UK:
     John Wiley & Sons.
+
+    D. Zeng (2004).  Estimating marginal survival function by
+    adjusting for dependent censoring using many covariates.  Annals
+    of Statistics 32:4.
+    http://arxiv.org/pdf/math/0409180.pdf
     """
 
-    def __init__(self, time, status, title=None, freq_weights=None):
+    def __init__(self, time, status, title=None, freq_weights=None,
+                 exog=None, bwm=1., dimred=True):
 
         _checkargs(time, status, None, freq_weights, None)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
+
+        if exog is not None:
+            from .kernel_estimates import _kernel_cumincidence
+            exog = self.exog = np.asarray(exog)
+            n = exog.shape[0]
+            kw = n**(-1/3.0) * bwm
+            kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
+            x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
+                                     dimred)
+            self.times = x[0]
+            self.cinc = x[1]
+            return
 
         x = _calc_incidence_right(time, status, freq_weights)
         self.cinc = x[0]
@@ -240,6 +281,9 @@ class SurvfuncRight(object):
     exog : array-like
         Optional, if present used to account for violation of
         independent censoring.
+    bwm : float
+        Band-width multiplier for kernel-baed estimation.  Only
+        used if exog is provided.
 
     Attributes
     ----------
