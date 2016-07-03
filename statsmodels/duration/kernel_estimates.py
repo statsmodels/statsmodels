@@ -34,7 +34,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
     time = time[ii]
     status = status[ii]
     exog = exog[ii, :]
-    n = len(time)
+    nobs = len(time)
 
     # Convert the unique times to ranks (0, 1, 2, ...)
     utime, rtime = np.unique(time, return_inverse=True)
@@ -51,9 +51,9 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
         freq_weights = freq_weights / freq_weights.sum()
 
     ip = []
-    sp = [None] * n
-    n_risk = [None] * n
-    kd = [None] * n
+    sp = [None] * nobs
+    n_risk = [None] * nobs
+    kd = [None] * nobs
     for k in range(ngrp):
         status0 = (status == k + 1).astype(np.float64)
 
@@ -68,7 +68,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
             exog2d = exog
 
         ip0 = 0
-        for i in range(n):
+        for i in range(nobs):
 
             if k == 0:
                 kd1 = exog2d - exog2d[i, :]
@@ -105,7 +105,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                 ip0 += freq_weights[i] * ip1
 
         if freq_weights is None:
-            ip0 /= n
+            ip0 /= nobs
 
         ip.append(ip0)
 

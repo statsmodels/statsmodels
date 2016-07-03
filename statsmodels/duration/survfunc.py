@@ -236,8 +236,8 @@ class CumIncidenceRight(object):
         if exog is not None:
             from .kernel_estimates import _kernel_cumincidence
             exog = self.exog = np.asarray(exog)
-            n = exog.shape[0]
-            kw = n**(-1/3.0) * bwm
+            nobs = exog.shape[0]
+            kw = nobs**(-1/3.0) * bwm
             kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
             x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                                      dimred)
@@ -335,8 +335,8 @@ class SurvfuncRight(object):
         if exog is not None:
             from ._kernel_estimates import _kernel_survfunc
             exog = self.exog = np.asarray(exog)
-            n = exog.shape[0]
-            kw = n**(-1/3.0) * bwm
+            nobs = exog.shape[0]
+            kw = nobs**(-1/3.0) * bwm
             kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
