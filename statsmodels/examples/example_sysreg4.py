@@ -36,12 +36,15 @@ sys = [eq1, eq2]
 instruments = np.column_stack((macrodata['realgovt'][1:], y[:-1]))
 
 # 2SLS
+print('\n2SLS')
 mod2sls = Sys2SLS(sys, instruments=instruments)
 res2sls = mod2sls.fit()
-print res2sls.summary()
+print(res2sls.summary())
+
 
 # 3SLS
+print('\n3SLS')
 mod3sls = Sys3SLS(sys, instruments=instruments)
 res3sls = mod3sls.fit()
-print res3sls.summary()
+print(res3sls.summary())
 

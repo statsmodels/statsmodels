@@ -53,4 +53,4 @@ grun_rires = grun_rimod.fit(iterative=True)
 params_names = ['f%d_%s'%(fn,en) for fn in range(4)
         for en in ['const', 'value', 'capital']]
 
-#print grun_res.summary(xname=params_names)
+print(grun_res.summary(xname=params_names))

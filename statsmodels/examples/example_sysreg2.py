@@ -6,6 +6,7 @@
 # Warning : 'R' and 'AK' states does not exist in the dataset.
 # So 'R' was replaced by 'AR' and 'AK' was deleted.
 
+from statsmodels.compat import asbytes
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sysreg.sysmodel import *
@@ -31,7 +32,7 @@ for m in regions:
     pc, hwy, water, util, emp, unemp = (np.zeros(17) for i in range(6))
 
     for state in regions[m]:
-        state_index = munnell_data.data['state'] == state
+        state_index = munnell_data.data['state'] == asbytes(state)
         eq_m['endog'] += munnell_data.endog[state_index]
         pc += munnell_data.data['pc'][state_index]
         hwy += munnell_data.data['hwy'][state_index]
@@ -39,7 +40,7 @@ for m in regions:
         util += munnell_data.data['util'][state_index]
         emp += munnell_data.data['emp'][state_index]
     for state in regions[m]:
-        state_index = munnell_data.data['state'] == state
+        state_index = munnell_data.data['state'] == asbytes(state)
         weights = munnell_data.data['emp'][state_index] / emp
         unemp += weights*munnell_data.data['unemp'][state_index]
 
@@ -51,5 +52,5 @@ for m in regions:
 
 munnell_mod = SysSUR(munnell_sys)
 munnell_res = munnell_mod.fit()
-print munnell_res.summary()
+print(munnell_res.summary())
 
