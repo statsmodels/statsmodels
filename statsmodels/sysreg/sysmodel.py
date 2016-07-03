@@ -85,7 +85,7 @@ class SysModel(LikelihoodModel):
         # Degrees of Freedom
         df_model, df_resid = [], []
         for eq in sys:
-            rank = tools.rank(eq['exog'])
+            rank = np.linalg.matrix_rank(eq['exog'])
             df_model.append(rank - 1)
             df_resid.append(self.nobs - rank)
         self.df_model, self.df_resid = np.asarray(df_model), np.asarray(df_resid)
