@@ -512,6 +512,17 @@ def test_kernel_survfunc2():
     assert_allclose(resultkm.surv_prob, result.surv_prob)
 
 
+def test_kernel_survfunc3():
+    # Smoke test for tied times
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.randint(0, 10, size=n)
+    status = np.random.randint(0, 2, size=n)
+    SurvfuncRight(time, status, exog=x, bwm=10000)
+
+
 def test_kernel_cumincidence1():
     # Check that when the bandwidth is very large, the kernel
     # procedure agrees with standard cumulative incidence
@@ -533,3 +544,14 @@ def test_kernel_cumincidence1():
         assert_allclose(result1.times, result2.times)
         for k in 0, 1:
             assert_allclose(result1.cinc[k], result2.cinc[k], rtol=1e-5)
+
+
+def test_kernel_cumincidence2():
+    # Smoke tests for tied times
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.randint(0, 10, size=n)
+    status = np.random.randint(0, 3, size=n)
+    CumIncidenceRight(time, status, exog=x, bwm=10000)

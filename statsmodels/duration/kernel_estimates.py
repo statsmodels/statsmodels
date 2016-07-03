@@ -87,7 +87,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                 prat = np.cumsum(lrat)[ie]
                 sf = np.exp(prat)
                 sp[i] = np.r_[1, sf[:-1]]
-                n_risk[i] = denom
+                n_risk[i] = denom[ie]
 
             # Number of cause-specific deaths at each unique time.
             d0 = np.bincount(rtime, weights=status0*kd[i],
