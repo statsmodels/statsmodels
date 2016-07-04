@@ -6,7 +6,7 @@ import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.tsa.base.datetools import dates_from_str
 from results.parse_jmulti_output import load_results_jmulti
 from statsmodels.tsa.vecm.vecm import VECM
-
+from statsmodels.tsa.vector_ar.var_model import VARProcess
 
 atol = 0.005 # absolute tolerance
 rtol = 0.01  # relative tolerance
@@ -144,9 +144,38 @@ def test_var_rep_A():
         for dt in deterministic_terms_list:
             err_msg = build_err_msg(ds, dt, "VAR repr. A")
             obtained = results_sm[ds][dt]["VAR A"]
-            desired = results_ref[ds][dt]["VAR A"]
+            p = obtained.shape[0]
+            desired = np.hsplit(results_ref[ds][dt]["VAR A"], p)
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
 
+
+def test_var_to_vecm():
+    for ds in datasets:
+        for dt in deterministic_terms_list:
+            err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
+            sigma_u = results_sm[ds][dt]["Sigma_u"]
+            k = sigma_u.shape[0]
+            coefs = results_sm[ds][dt]["VAR A"]
+            intercept = np.zeros(len(sigma_u))
+            var = VARProcess(coefs, intercept, sigma_u)
+            vecm_results = var.to_vecm()
+            obtained_pi = vecm_results["Pi"]
+            obtained_gamma = vecm_results["Gamma"]
+
+            desired_pi = np.dot(results_sm[ds][dt]["alpha"],
+                                results_sm[ds][dt]["beta"].T)
+            desired_gamma = results_sm[ds][dt]["Gamma"]
+            if "lt" in dt:
+                desired_pi = desired_pi[:, :-1]
+            if "c" in dt:
+                desired_gamma = desired_gamma[:, :-1]
+            if "s" in dt:
+                # TODO: remove hardcoded -3 (suitable only for #seasons==4)
+                desired_gamma = desired_gamma[:, :-3]
+            yield assert_allclose, obtained_pi, desired_pi, \
+                  rtol, atol, False, err_msg+" Pi"
+            yield assert_allclose, obtained_gamma, desired_gamma, \
+                  rtol, atol, False, err_msg+" Gamma"
 
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
 # def test_var_rep_det():

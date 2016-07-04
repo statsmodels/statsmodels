@@ -742,6 +742,16 @@ class VARProcess(object):
 
         return point_forecast, forc_lower, forc_upper
 
+    def to_vecm(self):
+        k = self.coefs.shape[1]
+        p = self.coefs.shape[0]
+        A = self.coefs
+        pi = -(np.identity(k) - np.sum(A, 0))
+        gamma = np.zeros((p-1, k, k))
+        for i in range(p-1):
+            gamma[i] = -(np.sum(A[i+1:], 0))
+        gamma = np.concatenate(gamma, 1)
+        return {"Gamma": gamma, "Pi": pi}
 
 #-------------------------------------------------------------------------------
 # VARResults class
