@@ -2233,15 +2233,17 @@ def test_arima_fit_mutliple_calls():
     y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
     mod = ARIMA(y, (1, 0, 2))
     # Make multiple calls to fit
-    mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+    with warnings.catch_warnings(record=True) as w:
+        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
-    mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+    with warnings.catch_warnings(record=True) as w:
+        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
 def test_long_ar_start_params():
     np.random.seed(12345)
-    arparams = np.array([.75, -.25])
-    maparams = np.array([.65, .35])
+    arparams = np.array([1, -.75, .25])
+    maparams = np.array([1, .65, .35])
 
     nobs = 30
 
@@ -2249,10 +2251,10 @@ def test_long_ar_start_params():
 
     model = ARMA(y, order=(2, 2))
 
-    res = model.fit(method='css',start_ar_lags=10)
-    res = model.fit(method='css-mle',start_ar_lags=10)
-    res = model.fit(method='mle',start_ar_lags=10)
-    assert_raises(ValueError, model.fit, start_ar_lags=nobs+5)
+    res = model.fit(method='css',start_ar_lags=10, disp=0)
+    res = model.fit(method='css-mle',start_ar_lags=10, disp=0)
+    res = model.fit(method='mle',start_ar_lags=10, disp=0)
+    assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
 
 if __name__ == "__main__":
     import nose

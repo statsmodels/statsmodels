@@ -876,7 +876,7 @@ class ARMA(tsbase.TimeSeriesModel):
             If True, all output from solver will be available in
             the Results object's mle_retvals attribute.  Output is dependent
             on the solver.  See Notes for more information.
-        disp : bool, optional
+        disp : int, optional
             If True, convergence information is printed.  For the default
             l_bfgs_b solver, disp controls the frequency of the output during
             the iterations. disp < 0 means no output in this case.
@@ -1110,7 +1110,7 @@ class ARIMA(ARMA):
             If True, all output from solver will be available in
             the Results object's mle_retvals attribute.  Output is dependent
             on the solver.  See Notes for more information.
-        disp : bool, optional
+        disp : int, optional
             If True, convergence information is printed.  For the default
             l_bfgs_b solver, disp controls the frequency of the output during
             the iterations. disp < 0 means no output in this case.
