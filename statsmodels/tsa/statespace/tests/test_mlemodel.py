@@ -193,7 +193,8 @@ def test_fit_misc():
         warnings.simplefilter("ignore")
         res_params = mod.fit(disp=-1, return_params=True)
 
-    assert_almost_equal(res_params, [0,0], 6)
+    # 5 digits necessary to accommodate 32-bit numpy / scipy with OpenBLAS 0.2.18
+    assert_almost_equal(res_params, [0, 0], 5)
 
 
 def test_score_misc():

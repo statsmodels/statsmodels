@@ -1831,7 +1831,8 @@ def test_simple_time_varying():
         res = mod.fit(disp=-1)
 
     # Test that the estimated variances of the errors are essentially zero
-    assert_almost_equal(res.params, [0,0], 6)
+    # 5 digits necessary to accommodate 32-bit numpy / scipy with OpenBLAS 0.2.18
+    assert_almost_equal(res.params, [0, 0], 5)
 
     # Test that the time-varying coefficients are all 0.5 (except the first
     # one)
