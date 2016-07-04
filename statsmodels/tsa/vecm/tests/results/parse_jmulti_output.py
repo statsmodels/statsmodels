@@ -92,7 +92,7 @@ def load_results_jmulti(dataset):
             if 'Covariance:' in line:
                 sigmau_section_reached = True
                 row = re.findall(regex_number, line)
-                rows_to_parse = len(row) # Sigma_u is quadratic ==> #rows==#cols
+                rows_to_parse = len(row)  # Sigma_u quadratic ==> #rows==#cols
                 Sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_number, line)
             rows_to_parse -= 1
