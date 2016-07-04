@@ -350,6 +350,14 @@ class KimFilter(SwitchingRepresentation):
 
         return results
 
+    @property
+    def loglikelihood_burn(self):
+        return self._loglikelihood_burn
+
+    @loglikelihood_burn.setter
+    def loglikelihood_burn(self, value):
+        self._loglikelihood_burn = value
+
     def loglikeobs(self, loglikelihood_burn=0, **kwargs):
 
         kfilter = _KimFilter(self, **kwargs)
