@@ -284,4 +284,4 @@ class VECM(tsbase.TimeSeriesModel):
         A[p-1] = - gamma[:, K*(p-2):]
         for i in range(1, p-1):
             A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
-        return np.concatenate(A, 1)
+        return A
