@@ -616,39 +616,6 @@ class SwitchingRepresentation(object):
         """
         return np.exp(self._initial_regime_logprobs)
 
-    def _initialize_filters(self, filter_method=None, inversion_method=None,
-            stability_method=None, conserve_memory=None, tolerance=None,
-            complex_step=False):
-
-        # This method is used before filtering, see `_KimFilter.__call__` method
-
-        kfilters = []
-        state_init_kwargs = []
-
-        # Using Kim and Nelson timing convention is required for Kim filter
-        filter_timing = 1
-
-        for regime_filter in self._regime_kalman_filters:
-            # Initializating
-            prefix = regime_filter._initialize_filter(
-                    filter_method=filter_method,
-                    inversion_method=inversion_method,
-                    stability_method=stability_method,
-                    conserve_memory=conserve_memory, tolerance=tolerance,
-                    filter_timing=filter_timing)[0]
-            kfilters.append(regime_filter._kalman_filters[prefix])
-
-            state_init_kwargs.append({'prefix': prefix,
-                    'complex_step': complex_step})
-            #regime_filter._initialize_state(prefix=prefix,
-            #        complex_step=complex_step)
-
-        # Store Cython filter references in the class
-        self._kfilters = kfilters
-
-        # These arguments are stored for `KalmanFilter.initialize_state`
-        # method call later. See `_KimFilter._kalman_filter_step` method
-        self._state_init_kwargs = state_init_kwargs
 
 class FrozenSwitchingRepresentation(object):
     """
