@@ -130,6 +130,11 @@ class VECM(tsbase.TimeSeriesModel):
             seasons = np.zeros((3, delta_x.shape[1]))  # 3 = 4-1 (4=#seasons)
             for i in range(seasons.shape[0]):
                 seasons[i, i::4] = 1
+            #seasons = seasons[:, ::-1]
+            #seasons = np.hstack((seasons[:, 3:4], seasons[:, :-1]))
+            #seasons = np.hstack((seasons[:, 2:4], seasons[:, :-2]))
+            seasons = np.hstack((seasons[:, 1:4], seasons[:, :-3]))
+            # seasons[1] = -seasons[1]
             delta_x = vstack((delta_x,
                               seasons))
         return y, y_1_T, delta_y, delta_y_1_T, y_min1, delta_x
@@ -278,7 +283,7 @@ class VECM(tsbase.TimeSeriesModel):
         if "s" in deterministic:
             gamma = gamma[:, :-3]  # TODO: allow for #seasons != 3
         K = gamma.shape[0]
-        p = 1 + round(gamma.shape[1]/K)
+        p = 1 + int(round(gamma.shape[1]/K))
         A = np.zeros((p, K, K))
         A[0] = pi + np.identity(K) + gamma[:, :K]
         A[p-1] = - gamma[:, K*(p-2):]
