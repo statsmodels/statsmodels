@@ -816,8 +816,8 @@ class GLM(base.LikelihoodModel):
             Fitted mean response variable
         method : str, defaults to 'brentq'
             Method to search for optimized `p`. 'brentq' will use the Pearson
-            estimate solved with the `brentq` scipy optimizer. 'taylor' will
-            use Taylor's reggresion estimator. 'perry' will use Perry's gamma
+            estimate solved with the `brentq` scipy optimizer. 'ols' will use
+            Taylor's reggresion estimator. 'glm-gamma' will use Perry's gamma
             regression estimator which is a gamma-glm.
         exposure : array-like, optional
             Array of exposures
@@ -850,7 +850,7 @@ class GLM(base.LikelihoodModel):
             # Already logged
             exposure = np.exp(self.exposure)
         elif exposure is None:
-            exposure = np.ones(len(self.endog))
+            exposure = 1
 
         # Use fit freq_weights if appropriate
         if freq_weights is None and hasattr(self, 'freq_weights'):
@@ -862,7 +862,9 @@ class GLM(base.LikelihoodModel):
         weights = freq_weights * exposure
 
         endog2 = self.endog / exposure
-        mu2 = mu / exposure
+        FLOAT_EPS = np.finfo(float).eps
+        mu = np.clip(mu, FLOAT_EPS, np.inf)
+        mu2 = np.clip(mu / exposure, FLOAT_EPS, np.inf)
 
         if method == 'brentq':
             from scipy.optimize import brentq
@@ -875,14 +877,14 @@ class GLM(base.LikelihoodModel):
                           (mu ** power)).sum() / self.df_resid)
                 return scale
 
-            def psi_p(power, endog2, mu2, weights):
+            def psi_p(power):
                 scale = x2scale(power)
-                p = (np.sum(weights * ((endog2 - mu2) ** 2 /
-                            (scale * (mu2 ** power)) - 1) * np.log(mu2)) /
-                     weights.sum())
+                p = (weights * (((endog2 - mu2) ** 2 /
+                                 (scale * (mu2 ** power))) - 1) *
+                     np.log(mu2)).sum()
                 return p
 
-            power = brentq(psi_p, low, high, args=(endog2, mu2, weights))
+            power = brentq(psi_p, low, high)
             if both:
                 scale = x2scale(power)
                 return scale, power
