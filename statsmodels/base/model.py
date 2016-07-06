@@ -158,7 +158,7 @@ class Model(object):
             if len(cols) < len(exog.columns):
                 exog = exog[cols]
                 cols = list(design_info.term_names)
-                for col in cols:
+                for col in drop_cols:
                     try:
                         cols.remove(col)
                     except ValueError:
