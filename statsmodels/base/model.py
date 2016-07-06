@@ -457,8 +457,13 @@ class LikelihoodModel(Model):
             Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
         elif not skip_hessian:
             try:
-                Hinv = np.linalg.inv(-1 * self.hessian(xopt))
-            except:
+                H = -1 * self.hessian(xopt)
+                w, v = np.linalg.eigh(H)
+                if np.min(w) <= 0:
+                    raise RuntimeError
+                Hinv = v.dot(np.diag(1.0 / w)).dot(v.T)
+                Hinv = np.asfortranarray((Hinv + Hinv.T) / 2.0)
+            except RuntimeError:
                 #might want custom warning ResultsWarning? NumericalWarning?
                 from warnings import warn
                 warndoc = ('Inverting hessian failed, no bse or '
@@ -591,7 +596,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         #Initialize is called by
         #statsmodels.model.LikelihoodModel.__init__
         #and should contain any preprocessing that needs to be done for a model
-        from statsmodels.tools import tools
         if self.exog is not None:
             # assume constant
             er = np_matrix_rank(self.exog)
