@@ -191,6 +191,13 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
         fexog.loc[:, ky] = values[ky]
 
     dexog = patsy.dmatrix(model.data.design_info.builder, fexog, return_type='dataframe')
+
+    # 0 rows cause problems for t-test
+    ii = np.abs(dexog).sum(1) > 1e-10
+    dexog = dexog.loc[ii, :]
+    fexog = fexog.loc[ii, :]
+    fvals = fvals[np.asarray(ii)]
+
     return dexog, fexog, fvals
 
 
@@ -243,6 +250,11 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         ix = exog_names.index(ky)
         exog[:, ix] = values[ky]
+
+    # 0 rows cause problems for t-test
+    ii = np.abs(exog).sum(1) > 1e-10
+    exog = exog[ii, :]
+    fvals = fvals[np.asarray(ii)]
 
     return exog, fvals
 
