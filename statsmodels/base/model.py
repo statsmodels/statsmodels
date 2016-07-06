@@ -112,7 +112,8 @@ class Model(object):
             indicate the subset of df to use in the model. Assumes df is a
             `pandas.DataFrame`
         drop_cols : array-like
-            Columns to drop from the design matrix.
+            Columns to drop from the design matrix.  Cannot be used to
+            drop terms involving categoricals.
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
