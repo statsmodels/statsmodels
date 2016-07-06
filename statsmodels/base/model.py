@@ -743,34 +743,14 @@ class Results(object):
             See self.model.predict
 
         """
-        import pandas as pd
+        from statsmodels.tools.data_interface import NumPyInterface
 
-        exog_index = exog.index if _is_using_pandas(exog, None) else None
-
-        if transform and hasattr(self.model, 'formula') and exog is not None:
-            from patsy import dmatrix
-            exog = dmatrix(self.model.data.design_info.builder,
-                           exog)
-
-        if exog is not None:
-            exog = np.asarray(exog)
-            if exog.ndim == 1 and (self.model.exog.ndim == 1 or
-                                   self.model.exog.shape[1] == 1):
-                exog = exog[:, None]
-            exog = np.atleast_2d(exog)  # needed in count model shape[1]
+        exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform)
+        exog = exog_interface.to_statsmodels(exog)
 
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
-        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
-
-            if predict_results.ndim == 1:
-                return pd.Series(predict_results, index=exog_index)
-            else:
-                return pd.DataFrame(predict_results, index=exog_index)
-
-        else:
-
-            return predict_results
+        return exog_interface.from_statsmodels(predict_results)
 
 
     def summary(self):

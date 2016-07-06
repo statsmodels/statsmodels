@@ -147,15 +147,13 @@ class CheckGenericMixin(object):
             from pandas.util.testing import assert_series_equal
 
             fitted = res.fittedvalues[:2]
+
             assert_allclose(fitted, res.predict(p_exog), rtol=1e-12)
             # this needs reshape to column-vector:
-            assert_allclose(fitted, res.predict(np.squeeze(p_exog).tolist()),
-                            rtol=1e-12)
+            assert_allclose(fitted, res.predict(np.squeeze(p_exog).tolist()), rtol=1e-12)
             # only one prediction:
-            assert_allclose(fitted[:1], res.predict(p_exog[0].tolist()),
-                            rtol=1e-12)
-            assert_allclose(fitted[:1], res.predict(p_exog[0]),
-                            rtol=1e-12)
+            assert_allclose(fitted[:1], res.predict(p_exog[0].tolist()), rtol=1e-12)
+            assert_allclose(fitted[:1], res.predict(p_exog[0]), rtol=1e-12)
 
             exog_index = range(len(p_exog))
             predicted = res.predict(p_exog)
