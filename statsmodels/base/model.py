@@ -155,7 +155,7 @@ class Model(object):
 
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
-            if len(cols) < len(exog.cols):
+            if len(cols) < len(exog.columns):
                 exog = exog[cols]
                 cols = list(design_info.term_names)
                 for col in cols:
