@@ -540,7 +540,7 @@ class KimFilter(SwitchingRepresentation):
         statsmodels.tsa.statespace.kalman_filter.KalmanFilter.filter
         """
 
-        # actual calculations are done by `_KimFilter` class. See this class
+        # Actual calculations are done by `_KimFilter` class. See this class
         # for details.
         kfilter = _KimFilter(self, filter_method=filter_method,
             inversion_method=inversion_method,
@@ -561,7 +561,7 @@ class KimFilter(SwitchingRepresentation):
             # save representation data in results
             results.update_representation(self)
 
-        # save filtering data in results
+        # Save filtering data in results
         results.update_filter(kfilter)
 
         return results
