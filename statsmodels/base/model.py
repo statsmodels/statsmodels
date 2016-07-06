@@ -153,16 +153,17 @@ class Model(object):
                                   missing=missing)
         ((endog, exog), missing_idx, design_info) = tmp
 
-        if drop_cols is not None:
+        if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
-            exog = exog[cols]
-            cols = list(design_info.term_names)
-            for col in cols:
-                try:
-                    cols.remove(col)
-                except ValueError:
-                    pass # OK if not present
-            design_info = design_info.builder.subset(cols).design_info
+            if len(cols) < len(exog.cols):
+                exog = exog[cols]
+                cols = list(design_info.term_names)
+                for col in cols:
+                    try:
+                        cols.remove(col)
+                    except ValueError:
+                        pass # OK if not present
+                design_info = design_info.builder.subset(cols).design_info
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
