@@ -402,10 +402,19 @@ class PHReg(model.LikelihoodModel):
         if isinstance(offset, str):
             offset = data[offset]
 
+        import re
+        terms = re.split("[+\-~]", formula)
+        for term in terms:
+            term = term.strip()
+            if term in ("0", "1"):
+                import warnings
+                warnings.warn("PHReg formulas should not include any '0' or '1' terms")
+
         mod = super(PHReg, cls).from_formula(formula, data,
                     status=status, entry=entry, strata=strata,
                     offset=offset, subset=subset, ties=ties,
-                    missing=missing, *args, **kwargs)
+                    missing=missing, drop_cols=["Intercept"], *args,
+                    **kwargs)
 
         return mod
 

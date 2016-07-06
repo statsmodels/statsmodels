@@ -97,7 +97,7 @@ class Model(object):
         return data
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -111,6 +111,8 @@ class Model(object):
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
             `pandas.DataFrame`
+        drop_cols : array-like
+            Columns to drop from the design matrix.
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
@@ -120,7 +122,6 @@ class Model(object):
             indicating the depth of the namespace to use. For example, the
             default ``eval_env=0`` uses the calling namespace. If you wish
             to use a "clean" environment set ``eval_env=-1``.
-
 
         Returns
         -------
@@ -145,12 +146,23 @@ class Model(object):
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get('missing', 'drop')
-        if missing == 'none':  # with patys it's drop or raise. let's raise.
+        if missing == 'none':  # with patsy it's drop or raise. let's raise.
             missing = 'raise'
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env,
                                   missing=missing)
         ((endog, exog), missing_idx, design_info) = tmp
+
+        if drop_cols is not None:
+            cols = [x for x in exog.columns if x not in drop_cols]
+            exog = exog[cols]
+            cols = list(design_info.term_names)
+            for col in cols:
+                try:
+                    cols.remove(col)
+                except ValueError:
+                    pass # OK if not present
+            design_info = design_info.builder.subset(cols).design_info
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
