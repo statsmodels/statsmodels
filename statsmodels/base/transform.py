@@ -3,6 +3,7 @@ from statsmodels.robust import mad
 from scipy.optimize import minimize_scalar
 from scipy.stats import boxcox_normmax
 
+
 class BoxCox(object):
     """
     Mixin class to allow for a Box-Cox transformation.
@@ -37,6 +38,10 @@ class BoxCox(object):
         ----------
         Guerrero, Victor M. 1993. "Time-series analysis supported by power
         transformations". `Journal of Forecasting`. 12 (1): 37-48.
+
+        Guerrero, Victor M. and Perera, Rafael. 2004. "Variance Stabilizing
+        Power Transformation for Time Series," `Journal of Modern Applied
+        Statistical Methods`. 3 (2): 357-369.
 
         Box, G. E. P., and D. R. Cox. 1964. "An Analysis of Transformations".
         `Journal of the Royal Statistical Society`. 26 (2): 211-252.
@@ -98,7 +103,7 @@ class BoxCox(object):
         return y
 
     def _est_lambda(self, x, bounds=(-1, 2),
-                    R=2, method='guerrero', scale='sd'):
+                    R=4, method='guerrero', scale='sd'):
         """
         Computes an estimate for the lambda parameter in the Box-Cox
         transformation using method.
@@ -111,7 +116,8 @@ class BoxCox(object):
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter. Default (-1, 2).
         R : int
-            The seasonality/grouping parameter. Default 2.
+            The seasonality/grouping parameter. Default 4, as per Guerrero and
+            Perera (2004).
         method : {'guerrero', 'loglik'}
             The method by which to estimate lambda. Defaults to 'guerrero', but
             the profile likelihood ('loglik') is also available.
@@ -153,7 +159,8 @@ class BoxCox(object):
         ----------
         x : array_like
         R : int
-            Seasonality/grouping parameter. Default 2.
+            Seasonality/grouping parameter. Default 4. Note: this indicates the
+            length of the individual groups, not the total number!
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
@@ -163,13 +170,12 @@ class BoxCox(object):
         """
         nobs = len(x)
         groups = int(nobs / R)
-        scale = scale.lower()
 
         # remove the first n < R observations from consideration.
-        grouped_data = np.reshape(x[nobs - (groups * R): nobs], (R, groups))
-
+        grouped_data = np.reshape(x[nobs - (groups * R): nobs], (groups, R))
         mean = np.mean(grouped_data, 1)
 
+        scale = scale.lower()
         if scale == 'sd':
             dispersion = np.std(grouped_data, 1)
         elif scale == 'mad':
@@ -177,9 +183,8 @@ class BoxCox(object):
         else:  # TODO: IQR?
             raise ValueError("Scale '{0}' not understood.".format(scale))
 
-        # closure; it's more elegant - and efficient - this way
         def optim(lmbda, *args, **kwargs):
-            rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq. 6, p. 40
+            rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq 6, p 40
             return np.std(rat) / np.mean(rat)
 
         res = minimize_scalar(optim,
@@ -205,14 +210,3 @@ class BoxCox(object):
             parameter.
         """
         return boxcox_normmax(x, bounds, 'mle')
-
-
-if __name__ == "__main__":
-    bc = BoxCox()
-
-    for i in range(0, 25):
-        x = np.arange(1, 100) + np.abs(np.random.rand(99) * i)
-        y_s, l_s = bc.transform_boxcox(x, scale='sd')
-        y_m, l_m = bc.transform_boxcox(x, scale='mad')
-        y_m, l_l = bc.transform_boxcox(x, scale='sd', method='loglik')
-        print("{}:  {}  {}  {}".format(i, l_s, l_m, l_l))

@@ -37,9 +37,14 @@ class TestTransform(SetupBoxCox):
         assert_raises(ValueError, self.bc.untransform_boxcox,
                       self.x, 1, 'test')
 
+    def test_valid_guerrero(self):
+        lmbda = self.bc._est_lambda(self.x, R=4, method='guerrero')
+        # `l <- BoxCox.lambda(x, method="guerrero")` on a ts object
+        # with frequency 4 (BoxCox.lambda defaults to 2, but we use
+        # Guerrero and Perera (2004) as a guideline)
+        assert_almost_equal(lmbda, 0.507624, 4)
 
-if __name__ == "__main__":
-    import nose
-    import numpy as np
-
-    np.testing.run_module_suite()
+        # `l <- BoxCox.lambda(x, method="guerrero")` with the default grouping
+        # parameter (namely, R=2).
+        lmbda = self.bc._est_lambda(self.x, R=2, method='guerrero')
+        assert_almost_equal(lmbda, 0.513893, 4)
