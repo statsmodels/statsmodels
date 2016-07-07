@@ -33,18 +33,34 @@ class TestTransform(SetupBoxCox):
         # Both _est_lambda and untransform have a method argument that should
         # be tested.
         assert_raises(ValueError, self.bc._est_lambda,
-                      self.x, (-1, 2), 2, 'test')
+                      self.x, (-1, 2), 'test')
         assert_raises(ValueError, self.bc.untransform_boxcox,
                       self.x, 1, 'test')
 
+    def test_unclear_scale_parameter(self):
+        # bc.guerrero allows for 'mad' and 'sd', for the MAD and Standard
+        # Deviation, respectively
+        assert_raises(ValueError, self.bc._est_lambda,
+                      self.x, scale='test')
+
+        # Next, check if mad/sd work:
+        self.bc._est_lambda(self.x, scale='mad')
+        self.bc._est_lambda(self.x, scale='MAD')
+
+        self.bc._est_lambda(self.x, scale='sd')
+        self.bc._est_lambda(self.x, scale='SD')
+
     def test_valid_guerrero(self):
-        lmbda = self.bc._est_lambda(self.x, R=4, method='guerrero')
         # `l <- BoxCox.lambda(x, method="guerrero")` on a ts object
         # with frequency 4 (BoxCox.lambda defaults to 2, but we use
         # Guerrero and Perera (2004) as a guideline)
+        lmbda = self.bc._est_lambda(self.x, method='guerrero', R=4)
         assert_almost_equal(lmbda, 0.507624, 4)
 
         # `l <- BoxCox.lambda(x, method="guerrero")` with the default grouping
         # parameter (namely, R=2).
-        lmbda = self.bc._est_lambda(self.x, R=2, method='guerrero')
+        lmbda = self.bc._est_lambda(self.x, method='guerrero', R=2)
         assert_almost_equal(lmbda, 0.513893, 4)
+
+    def test_boxcox_transformation_methods(self):
+        return True

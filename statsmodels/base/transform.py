@@ -9,7 +9,7 @@ class BoxCox(object):
     Mixin class to allow for a Box-Cox transformation.
     """
 
-    def transform_boxcox(self, x, lmbda=None, method='guerrero', scale='sd'):
+    def transform_boxcox(self, x, lmbda=None, method='guerrero', **kwargs):
         """
         Performs a Box-Cox transformation on the data array x. If lmbda is None,
         the indicated method is used to estimate a suitable lambda parameter.
@@ -23,9 +23,11 @@ class BoxCox(object):
             The method to estimate the lambda parameter. Will only be used if
             lmbda is None, and defaults to 'guerrero', detailed in Guerrero
             (1993). 'loglik' maximizes the profile likelihood.
-        scale : {'sd', 'mad'}
-            The dispersion measure to be used. 'sd' indicates the sample standard
-            deviation, but the more robust 'mad' is also available.
+        **kwargs: dict
+            Options for the specified method.
+            * For 'guerrero', this entails _R_, the grouping parameter,
+              and _scale_, the dispersion measure.
+            * For 'loglik', this dict is not used.
 
         Returns
         -------
@@ -55,7 +57,7 @@ class BoxCox(object):
             lmbda = self._est_lambda(x,
                                      bounds=(-1, 2),
                                      method=method,
-                                     scale=scale)
+                                     **kwargs)
 
         if np.isclose(lmbda, 0.):
             y = np.log(x)
@@ -102,8 +104,7 @@ class BoxCox(object):
 
         return y
 
-    def _est_lambda(self, x, bounds=(-1, 2),
-                    R=4, method='guerrero', scale='sd'):
+    def _est_lambda(self, x, bounds=(-1, 2), method='guerrero', **kwargs):
         """
         Computes an estimate for the lambda parameter in the Box-Cox
         transformation using method.
@@ -115,15 +116,14 @@ class BoxCox(object):
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter. Default (-1, 2).
-        R : int
-            The seasonality/grouping parameter. Default 4, as per Guerrero and
-            Perera (2004).
         method : {'guerrero', 'loglik'}
             The method by which to estimate lambda. Defaults to 'guerrero', but
             the profile likelihood ('loglik') is also available.
-        scale : {'sd', 'mad'}
-            The dispersion measure to be used. 'sd' indicates the sample standard
-            deviation, but the more robust 'mad' is also available.
+        **kwargs : dict
+            Options dict for the specified method.
+            * For 'guerrero': R (int), the seasonality/grouping parameter. Scale
+              ({'mad', 'sd'}), the dispersion measure.
+            * For 'loglik': this is not used.
 
         Returns
         -------
@@ -139,15 +139,15 @@ class BoxCox(object):
             raise ValueError("Lower bound exceeds upper bound.")
 
         if method == 'guerrero':
-            lmbda = self._guerrero_cv(x, R, bounds, scale=scale)
+            lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
         elif method == 'loglik':
-            lmbda = self._loglik(x, bounds)
+            lmbda = boxcox_normmax(x, bounds, 'mle')
         else:
             raise ValueError("Method '{0}' not understood.".format(method))
 
         return lmbda
 
-    def _guerrero_cv(self, x, R, bounds, scale='sd'):
+    def _guerrero_cv(self, x, bounds, R=4, scale='sd'):
         """
         Computes guerrero's coefficient of variation. If no seasonality
         is present in the data, R is set to 2 (p. 40, comment).
@@ -158,12 +158,13 @@ class BoxCox(object):
         Parameters
         ----------
         x : array_like
-        R : int
-            Seasonality/grouping parameter. Default 4. Note: this indicates the
-            length of the individual groups, not the total number!
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
+        R : int
+            Seasonality/grouping parameter. Default 4, as per Guerrero and
+            Perera (2004). Note: this indicates the length of the individual
+            groups, not the total number!
         scale : {'sd', 'mad'}
             The dispersion measure to be used. 'sd' indicates the sample standard
             deviation, but the more robust 'mad' is also available.
@@ -192,21 +193,3 @@ class BoxCox(object):
                               method='bounded',
                               options={'maxiter': 50})
         return res.x
-
-    def _loglik(self, x, bounds):
-        """
-        Computes the lambda parameter by means of the profile likelihood,
-        assuming the series x is normally distributed.
-
-        NOTE: Seasonality-specific auxiliaries _should_ provide their own
-        seasonality parameter. This method is here only to provide a parent
-        of sorts.
-
-        Parameters
-        ----------
-        x : array_like
-        bounds : tuple
-            Numeric 2-tuple, that indicate the solution space for the lambda
-            parameter.
-        """
-        return boxcox_normmax(x, bounds, 'mle')
