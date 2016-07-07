@@ -253,8 +253,9 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
 
     # 0 rows cause problems for t-test
     ii = np.abs(exog).sum(1) > 1e-10
+    ii = np.flatnonzero(ii)
     exog = exog[ii, :]
-    fvals = fvals[np.asarray(ii)]
+    fvals = fvals[ii]
 
     return exog, fvals
 
