@@ -299,9 +299,10 @@ class _KimFilter(object):
     def __call__(self):
 
         # This method is based on section 5 of
-        # Kim, Chang-Jin and Nelson, Charles R. 1999.
-        # State-space Models With Regime Switching : Classical and
-        # Gibbs-sampling Approaches With Applications. MIT Press.
+        # Kim, Chang-Jin, and Charles R. Nelson. 1999.
+        # "State-Space Models with Regime Switching:
+        # Classical and Gibbs-Sampling Approaches with Applications".
+        # MIT Press Books. The MIT Press.
 
         # Also, notation in comments follows this section
 
