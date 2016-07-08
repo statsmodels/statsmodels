@@ -9,7 +9,8 @@ from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import ValueWarning, \
+    HessianInversionWarning
 from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
@@ -456,19 +457,20 @@ class LikelihoodModel(Model):
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
         elif not skip_hessian:
-            try:
-                H = -1 * self.hessian(xopt)
-                w, v = np.linalg.eigh(H)
-                if np.min(w) <= 0:
-                    raise RuntimeError
-                Hinv = v.dot(np.diag(1.0 / w)).dot(v.T)
+            H = -1 * self.hessian(xopt)
+            invertible = False
+            if np.all(np.isfinite(H)):
+                eigvals, eigvecs = np.linalg.eigh(H)
+                if np.min(eigvals) > 0:
+                    invertible = True
+
+            if invertible:
+                Hinv = eigvecs.dot(np.diag(1.0 / eigvals)).dot(eigvecs.T)
                 Hinv = np.asfortranarray((Hinv + Hinv.T) / 2.0)
-            except RuntimeError:
-                #might want custom warning ResultsWarning? NumericalWarning?
+            else:
                 from warnings import warn
-                warndoc = ('Inverting hessian failed, no bse or '
-                           'cov_params available')
-                warn(warndoc, RuntimeWarning)
+                warn('Inverting hessian failed, no bse or cov_params '
+                     'available', HessianInversionWarning)
                 Hinv = None
 
         if 'cov_type' in kwargs:
