@@ -2240,6 +2240,22 @@ def test_arima_fit_mutliple_calls():
         mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
 
+def test_long_ar_start_params():
+    np.random.seed(12345)
+    arparams = np.array([1, -.75, .25])
+    maparams = np.array([1, .65, .35])
+
+    nobs = 30
+
+    y = arma_generate_sample(arparams, maparams, nobs)
+
+    model = ARMA(y, order=(2, 2))
+
+    res = model.fit(method='css',start_ar_lags=10, disp=0)
+    res = model.fit(method='css-mle',start_ar_lags=10, disp=0)
+    res = model.fit(method='mle',start_ar_lags=10, disp=0)
+    assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
