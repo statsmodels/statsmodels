@@ -156,7 +156,8 @@ class TestPHReg(object):
         mod1 = PHReg(time, exog, status, entry=entry)
         rslt1 = mod1.fit()
 
-        fml = "time ~ 0 + exog1 + exog2 + exog3 + exog4"
+        # works with "0 +" on RHS but issues warning
+        fml = "time ~ exog1 + exog2 + exog3 + exog4"
         mod2 = PHReg.from_formula(fml, df, status=status,
                                   entry=entry)
         rslt2 = mod2.fit()
@@ -170,6 +171,19 @@ class TestPHReg(object):
         assert_allclose(rslt1.bse, rslt2.bse)
         assert_allclose(rslt1.bse, rslt3.bse)
 
+    def test_formula_cat_interactions(self):
+
+        time = np.r_[1, 2, 3, 4, 5, 6, 7, 8, 9]
+        status = np.r_[1, 1, 0, 0, 1, 0, 1, 1, 1]
+        x1 = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3]
+        x2 = np.r_[1, 2, 3, 1, 2, 3, 1, 2, 3]
+        df = pd.DataFrame({"time": time, "status": status,
+                           "x1": x1, "x2": x2})
+
+        model1 = PHReg.from_formula("time ~ C(x1) + C(x2) + C(x1)*C(x2)", status="status",
+                                    data=df)
+        assert_equal(model1.exog.shape, [9, 8])
+
     def test_predict_formula(self):
 
         n = 100
@@ -181,7 +195,8 @@ class TestPHReg(object):
         df = pd.DataFrame({"time": time, "status": status,
                            "exog1": exog[:, 0], "exog2": exog[:, 1]})
 
-        fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
+        # Works with "0 +" on RHS but issues warning
+        fml = "time ~ exog1 + np.log(exog2) + exog1*exog2"
         model1 = PHReg.from_formula(fml, df, status=status)
         result1 = model1.fit()
 
