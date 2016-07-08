@@ -7,7 +7,7 @@ License: Simplified-BSD
 import numpy as np
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from statsmodels.tsa.statespace.representation import FrozenRepresentation
-
+from .tools import _is_left_stochastic
 
 class SwitchingRepresentation(object):
     r"""
@@ -127,10 +127,10 @@ class SwitchingRepresentation(object):
 
     References
     ----------
-    .. [1] Kim, Chang-Jin and Nelson, Charles R. 1999.
-        State-space Models With Regime Switching : Classical and Gibbs-sampling
-        Approaches With Applications.
-        MIT Press.
+    .. [1] Kim, Chang-Jin, and Charles R. Nelson. 1999.
+        "State-Space Models with Regime Switching:
+        Classical and Gibbs-Sampling Approaches with Applications".
+        MIT Press Books. The MIT Press.
     """
 
     # Dimensions of state space matrices in KalmanFilter class (without first
@@ -212,7 +212,7 @@ class SwitchingRepresentation(object):
                         ' (k_regimes, k_regimes)')
 
             # Regime transition matrix is required to be left stochastic
-            if not self._is_left_stochastic(regime_transition):
+            if not _is_left_stochastic(regime_transition):
                 raise ValueError(
                         'Provided regime transition matrix is not stochastic')
 
@@ -305,7 +305,7 @@ class SwitchingRepresentation(object):
                 self._log_regime_transition[slice_] = np.log(value)
 
                 # Check if value doesn't violate left-stochastic feature
-                if not self._is_left_stochastic(
+                if not _is_left_stochastic(
                         np.exp(self._log_regime_transition)):
                     raise ValueError('Regime transition matrix is not' \
                             ' left-stochastic anymore')
@@ -330,28 +330,6 @@ class SwitchingRepresentation(object):
             for regime_filter, regime_value in zip(self._regime_kalman_filters,
                     value):
                 regime_filter[key] = regime_value
-
-    def _is_left_stochastic(self, matrix):
-        # This method checks if `matrix` is left stochastic
-
-        # Comparing by eps is highly important due to floating point imperfect
-        # accuracy
-        eps = 1e-8
-
-        # Check if all elements are non-negative by eps
-        if np.any(matrix < -eps):
-            return False
-
-        # If some elements are negative, but insignificantly small, set them
-        # to zero
-        matrix[matrix < 0] = 0
-
-        # Check if every column represents a discrete probability distribution
-        if not np.all(np.fabs(matrix.sum(axis=0) - 1) < eps):
-            return False
-
-        # If all checks are passed, return True
-        return True
 
     @property
     def nobs(self):

@@ -87,8 +87,8 @@ class _KimFilter(object):
         # Filter input.
         if t == 0:
             # Saving previous initialization in temporary buffer
-            state_buffer[:] = curr_regime_filter._initial_state
-            state_cov_buffer[:, :] = curr_regime_filter._initial_state_cov
+            state_buffer = curr_regime_filter._initial_state
+            state_cov_buffer = curr_regime_filter._initial_state_cov
             # High level initialization
             curr_regime_filter.initialize_known(
                     prev_regime_filter._initial_state,
@@ -522,8 +522,9 @@ class KimFilter(SwitchingRepresentation):
 
         results : class or object, optional
             If a class, then that class is instantiated and returned with the
-            result of filtering.
+            result of filtering. It must be a subclass of `KimFilterResults`.
             If an object, then that object is updated with the filtering data.
+            Its class should extend `KimFilterResults`.
             If `None`, then a `KimFilterResults` object is returned.
 
         Notes
@@ -763,7 +764,7 @@ class KimFilterResults(FrozenSwitchingRepresentation):
         Parameters
         ----------
         kfilter : _KimFilter
-            Object, handling filtering, from which to take the updated values.
+            Object, handling filtering, which to take the updated values from.
 
         Notes
         -----

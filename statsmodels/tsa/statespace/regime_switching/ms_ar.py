@@ -130,9 +130,8 @@ class MarkovAutoregression(SwitchingMLEModel):
         `False`.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
-    k_exog : int, optional
-        Dimension of exogenous vector. No need to specify it, if `exog` is
-        provided.
+    **kwargs
+        Additional keyword arguments, passed to superclass initializer.
 
     Notes
     -----
@@ -160,20 +159,19 @@ class MarkovAutoregression(SwitchingMLEModel):
 
     def __init__(self, k_ar_regimes, order, endog, switching_ar=False,
             switching_mean=False, switching_variance=False, exog=None,
-            k_exog=None, **kwargs):
+            **kwargs):
 
         self.order = order
         self.k_ar_regimes = k_ar_regimes
 
         # Set `k_exog` and `exog` attributes
-        if k_exog is not None:
-            self.k_exog = k_exog
-        elif exog is not None:
+        if exog is not None:
             exog = np.asarray(exog)
             if exog.ndim == 1:
                 exog = exog.reshape(-1, 1)
             self.k_exog = exog.shape[1]
         else:
+            self.exog = None
             self.k_exog = None
 
         endog = endog.ravel()
@@ -209,7 +207,7 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         # Creating parameters slices
 
-        if self.k_exog is not None:
+        if self.exog is not None:
             self.parameters['exog'] = [False] * self.k_exog
 
         self.parameters['autoregressive'] = self.switching_ar
@@ -330,9 +328,8 @@ class MarkovAutoregression(SwitchingMLEModel):
         order = self.order
 
         k_ar_regimes = self.k_ar_regimes
-
-        regimes_suffix = regime_index // k_ar_regimes
-        for ar_coef_index in range(order):
+        regimes_suffix = regime_index
+        for ar_coef_index in range(order + 1):
             yield regimes_suffix % k_ar_regimes
             regimes_suffix /= k_ar_regimes
 
@@ -414,7 +411,7 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         # Exogenous term of `obs_intercept`
 
-        if self.k_exog is not None:
+        if self.exog is not None:
             exog_intercept_term = self.exog.dot(
                     params[self.parameters['exog']].reshape(-1, 1)
                     ).reshape((1, -1))
@@ -440,7 +437,7 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         # Switching means
 
-        if self.k_exog is not None:
+        if self.exog is not None:
             # In case of exog data obs intercept is changing in time
             obs_intercept = np.zeros((k_regimes,) + \
                     exog_intercept_term.shape, dtype=dtype)
@@ -564,7 +561,7 @@ class MarkovAutoregression(SwitchingMLEModel):
         markov_regression_exog[:, order] = 1
 
         # Copying MS-AR exogenous data unchanged.
-        if self.k_exog is not None:
+        if self.exog is not None:
             markov_regression_exog[:, order + 1:] = self.exog
 
         # EM-iteration for Markov switching regression
@@ -730,8 +727,6 @@ class MarkovAutoregression(SwitchingMLEModel):
             if best_params is None or loglike > best_loglike:
                 best_params = params
                 best_loglike = loglike
-                print(best_params)
-                print(best_loglike)
 
         # Return results
         if return_loglike:
@@ -761,7 +756,7 @@ class MarkovAutoregression(SwitchingMLEModel):
         See Also
         --------
         SwitchingMLEModel.smooth
-        statsmodels.tsa.statespace.regime_switching.tools.RegimePartition
+        statsmodels.tsa.statespace.regime_switching.KimSmoother.smooth
         """
 
         results = None
