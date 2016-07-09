@@ -1,14 +1,26 @@
+"""
+Tests for Kim filter
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+"""
 import numpy as np
 from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace.regime_switching.kim_filter import KimFilter
 from kim1994 import Kim1994
 
 class TestKim1994_KimFilter(Kim1994):
-    '''
-    Kim filter test based on output of
-    http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt.
-    See chapter 5.4.2 of Kim and Nelson book and for details.
-    '''
+    """
+    Basic test for the loglikelihood and filtered states precision
+    """
 
     @classmethod
     def setup_class(cls):
@@ -20,6 +32,7 @@ class TestKim1994_KimFilter(Kim1994):
 
     @classmethod
     def init_filter(cls):
+        # Base class usage
         regime_transition, design, obs_intercept, transition, selection, \
                 state_cov, initial_state_mean, initial_state_cov = \
                 cls.get_model_matrices(cls.dtype, cls.true['parameters'])

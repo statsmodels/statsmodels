@@ -1,23 +1,44 @@
+"""
+Base class for Kim filter tests
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+"""
 import numpy as np
 from .results import results_kim1994
 
 class Kim1994(object):
-    '''
-    Base class for Kim filter and switching MLE model test. Handles data
-    and transformation params to state space matrices.
-    See chapter 5.4.2 of Kim and Nelson book and
-    http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt for details.
-    '''
+    """
+    Kim's (1994) state space form of real GNP decomposition into stochastic
+    trend and autoregressive component (chapter 5.4 of Kim and Nelson, 1999).
+
+    Test data produced using GAUSS code described in Kim and Nelson (1999) and
+    found at http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt
+
+    See `results.results_kim1994` for more information.
+    """
 
     @classmethod
     def setup_class(cls):
         cls.dtype = np.float64
         dtype = cls.dtype
 
+        # Model attributes
+
         cls.k_regimes = 2
         cls.k_endog = 1
         cls.k_states = 2
         cls.k_posdef = 1
+
+        # Preparing observations, used in the model
 
         cls.true = results_kim1994.kim_je
         cls.true_cycle = np.array(cls.true['cycle'], dtype=dtype)
@@ -29,17 +50,21 @@ class Kim1994(object):
 
     @classmethod
     def get_model_matrices(cls, dtype, params):
-        '''
-        Transforms parameter vector into state space representation
-        matrices.
-        '''
+
+        # Transform parameters of the model into matrices of Markov switching
+        # state space representation.
+        # Presented logic is copied from GAUSS code
 
         k_regimes = 2
         k_endog = 1
         k_states = 2
         k_posdef = 1
 
+        # unpacking parameters
         p, q, phi_1, phi_2, sigma, delta_0, delta_1 = params
+
+        # State space and regime transition matrices
+        # The only switching matrix is `obs_intercept`
 
         regime_transition = np.zeros((k_regimes, k_regimes))
         regime_transition[:, :] = [[q, p], [1 - q, 1 - p]]

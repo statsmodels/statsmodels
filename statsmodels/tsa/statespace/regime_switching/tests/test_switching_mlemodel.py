@@ -1,3 +1,17 @@
+"""
+Tests for the generic MLEModel
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+"""
 import numpy as np
 from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace.api import MLEModel
@@ -5,6 +19,7 @@ from statsmodels.tsa.statespace.regime_switching.api import \
         SwitchingMLEModel
 from kim1994 import Kim1994
 
+# Useful methods, forcing AR coefficients to be stationary
 
 def _transform_ar_coefs(unconstrained):
     root1 = unconstrained[0] / (1 + np.abs(unconstrained[0]))
@@ -22,14 +37,14 @@ def _untransform_ar_coefs(constrained):
 
 
 class Linear_Kim1994Model(MLEModel):
-    '''
-    Linear Model without switching. Is used for starting parameters
-    estimation in TestKim1994_MLEModelLinearFitFirst.
-    '''
+    """
+    Kim's (1994) model without switching.
+    """
 
     @property
     def start_params(self):
         dtype = self.ssm.dtype
+        # Use ones vector as an untransformed start
         return self.transform_params(np.ones((4,), dtype=dtype))
 
     def transform_params(self, unconstrained):
@@ -47,7 +62,7 @@ class Linear_Kim1994Model(MLEModel):
         params = super(Linear_Kim1994Model, self).update(params, *args,
                 **kwargs)
 
-        # Some dirty hack
+        # Use switching model transformation to get non-switching matrices
         _, self['design'], obs_intercept, self['transition'], \
                 self['selection'], self['state_cov'], initial_state_mean, \
                 initial_state_cov = \
@@ -60,16 +75,16 @@ class Linear_Kim1994Model(MLEModel):
 
 
 class Kim1994Model(SwitchingMLEModel):
-    '''
-    Switching model.
-    '''
+    """
+    Kim's (1994) MLE model of real GNP decomposition into stochastic trend and
+    autoregressive component (chapter 5.4 of Kim and Nelson, 1999).
+    """
 
     def __init__(self, *args, **kwargs):
-        '''
-        need to specify switching params
-        '''
 
         super(Kim1994Model, self).__init__(*args, **kwargs)
+
+        # Parameters slices
 
         self.parameters['phi'] = [False, False]
         self.parameters['sigma'] = [False]
@@ -84,7 +99,7 @@ class Kim1994Model(SwitchingMLEModel):
 
         params[self.parameters['phi']] = nonswitching_params[:2]
         params[self.parameters['sigma']] = nonswitching_params[2]
-        # Adding noise to break the symmetry.
+        # Adding determinate noise to break the symmetry.
         params[self.parameters[0, 'delta']] = nonswitching_params[3] - 1e-2
         params[self.parameters[1, 'delta']] = nonswitching_params[3] + 1e-2
         return params
@@ -115,9 +130,9 @@ class Kim1994Model(SwitchingMLEModel):
         self.initialize_stationary_regime_probs()
 
 class Kim1994WithMLEModel(Kim1994):
-    '''
-    Basic class for testing SwitchingMLEModel.
-    '''
+    """
+    Base class for `Kim1994Model` testing.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -141,10 +156,10 @@ class Kim1994WithMLEModel(Kim1994):
         raise NotImplementedError
 
 
-class aTestKim1994_MLEModel(Kim1994WithMLEModel):
-    '''
-    Test for equivalence with kim_je example.
-    '''
+class TestKim1994_MLEModel(Kim1994WithMLEModel):
+    """
+    Basic test for MLE correct convergence.
+    """
 
     @classmethod
     def fit_model(cls):
@@ -167,7 +182,7 @@ class aTestKim1994_MLEModel(Kim1994WithMLEModel):
 
 class TestKim1994_MLEModelLinearFitFirst(Kim1994WithMLEModel):
     '''
-    Testing feature with starting optimization from the linear fit.
+    Test for correct MLE convergence from non-switching start.
     '''
 
     @classmethod
@@ -184,4 +199,5 @@ class TestKim1994_MLEModelLinearFitFirst(Kim1994WithMLEModel):
         assert_allclose(self.result['loglike'], self.true['loglike'], rtol=1e-2)
 
     def test_params(self):
+        # Test that obtained parameters make sense
         assert_allclose(self.result['params'], self.true['parameters'], rtol=0.25)

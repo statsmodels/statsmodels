@@ -1,11 +1,33 @@
-'''
-Data for Markov Autoregression model testing.
-Copied from http://econ.korea.ac.kr/~cjkim/MARKOV/data/gdp4795.prn and from
-http://econ.korea.ac.kr/~cjkim/MARKOV/programs/hmt4_kim.opt optimization
-results.
-See chapter 4.4 of Kim and Nelson book for details.
-'''
+"""
+Results for Hamilton (1989) model testing
 
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Datasets produced using GAUSS code described in Kim and Nelson (1999) and found
+at http://econ.korea.ac.kr/~cjkim/MARKOV/programs/hmt4_kim.opt
+Accessed 2016-06-15
+Code was run using OxGauss 6.
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+
+"""
+
+"""
+Hamilton's (1989) Markov-Switching Model of Business Fluctuations (chapter 4.4
+of Kim and Nelson, 1999)
+
+See http://econ.korea.ac.kr/~cjkim/MARKOV/prgmlist.htm#chapter4
+
+Gauss Code: HMT4_KIM.OPT
+Dataset: GDP4795.PRN
+"""
 hmt4_kim = {
     'data': [
         1239.5, 1247.19995117, 1255.0, 1269.5, 1284.0, 1295.69995117,

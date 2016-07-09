@@ -1,9 +1,33 @@
-'''
-Data for Kim filter and switching MLE model testing.
-Copied from http://econ.korea.ac.kr/~cjkim/MARKOV/data/kim_je.prn and from
-http://econ.korea.ac.kr/~cjkim/MARKOV/programs/kim_je.opt optimization results.
-See chapter 5.4.2 of Kim and Nelson book for details.
-'''
+"""
+Results for Kim filter and Switching model MLE
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Datasets produced using GAUSS code described in Kim and Nelson (1999) and found
+at http://econ.korea.ac.kr/~cjkim/SSMARKOV.htm
+Accessed 2016-06-01
+Code was run using OxGauss 6.
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+
+"""
+
+"""
+Kim's (1994) state space form of real GNP decomposition into stochastic trend
+and autoregressive component (chapter 5.4 of Kim and Nelson, 1999)
+
+See http://econ.korea.ac.kr/~cjkim/MARKOV/prgmlist.htm#chapter5
+
+Gauss Code: KIM_JE.OPT
+Dataset: KIM_JE.PRN
+"""
 
 kim_je = {
 	'data': [

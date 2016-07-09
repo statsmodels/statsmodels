@@ -1,3 +1,17 @@
+"""
+Tests for Markov switching autoregressive model
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+"""
 import numpy as np
 from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace.regime_switching.api import \
@@ -6,6 +20,15 @@ from .results import results_garcia_perron1996
 
 
 class GarciaPerron1996(object):
+    """
+    Garcia and Perron's (1996) 3-state Markov-switching mean and variance model
+    of Real Interest Rate (chapter 4.5 of Kim and Nelson, 1999).
+
+    Test data produced using GAUSS code described in Kim and Nelson (1999) and
+    found at http://econ.korea.ac.kr/~cjkim/MARKOV/programs/intr_s3.opt
+
+    See `results.results_garcia_perron1996` for more information.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -13,6 +36,7 @@ class GarciaPerron1996(object):
         cls.dtype = np.float64
         dtype = cls.dtype
 
+        # Model attributes
         cls.k_ar_regimes = 3
         cls.order = 2
 
@@ -20,6 +44,7 @@ class GarciaPerron1996(object):
 
         data = np.array(cls.true['data'], dtype=dtype)
 
+        # Preparing observations
         ex_r = data[1:176, 1]
         inf = np.log(data[1:176, 2] / data[0:175, 2]) * 100 * 4
         cls.obs = ex_r[49:175] - inf[49:175]
@@ -29,6 +54,10 @@ class GarciaPerron1996(object):
 
 
 class TestGarciaPerron1996_Filtering(GarciaPerron1996):
+    """
+    Basic test for the loglikelihood and predicted regime probabilities
+    precision.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -61,6 +90,9 @@ class TestGarciaPerron1996_Filtering(GarciaPerron1996):
 
 
 class TestGarciaPerron1996_MLE(GarciaPerron1996):
+    """
+    Basic test for MLE correct convergence.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -82,7 +114,11 @@ class TestGarciaPerron1996_MLE(GarciaPerron1996):
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=1e-2, atol=1e-7)
 
+
 class TestGarciaPerron1996_EM(GarciaPerron1996):
+    """
+    Test for EM algorithm convergence to near-optimal solution
+    """
 
     @classmethod
     def setup_class(cls):

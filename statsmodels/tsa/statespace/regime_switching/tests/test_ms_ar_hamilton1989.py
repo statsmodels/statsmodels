@@ -1,3 +1,17 @@
+"""
+Tests for Markov switching autoregressive model
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+"""
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 from statsmodels.tsa.statespace.regime_switching.api import \
@@ -6,17 +20,28 @@ from .results import results_hamilton1989
 
 
 class Hamilton1989(object):
+    """
+    Hamilton's (1989) Markov-Switching Model of Business Fluctuations (chapter
+    4.4 of Kim and Nelson, 1999)
+
+    Test data produced using GAUSS code described in Kim and Nelson (1999) and
+    found at http://econ.korea.ac.kr/~cjkim/MARKOV/programs/hmt4_kim.opt
+
+    See `results.results_hamilton1989` for more information.
+    """
 
     @classmethod
     def setup_class(cls):
         cls.dtype = np.float64
         dtype = cls.dtype
 
+        # Model attributes
         cls.k_ar_regimes = 2
         cls.order = 4
 
         cls.true = results_hamilton1989.hmt4_kim
 
+        # Preparing observations
         data = np.array(cls.true['data'], dtype=dtype)
         data = np.log(data) * 100
 
@@ -27,6 +52,10 @@ class Hamilton1989(object):
 
 
 class TestHamilton1989_Filtering(Hamilton1989):
+    """
+    Basic test for the loglikelihood, predicted and filtered regime
+    probabilities precision.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -55,6 +84,9 @@ class TestHamilton1989_Filtering(Hamilton1989):
 
 
 class TestHamilton1989_Smoothing(Hamilton1989):
+    """
+    Basic test for the smoothed regime probabilities precision.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -78,6 +110,9 @@ class TestHamilton1989_Smoothing(Hamilton1989):
 
 
 class TestHamilton1989_MLE(Hamilton1989):
+    """
+    Basic test for MLE correct convergence
+    """
 
     @classmethod
     def setup_class(cls):
@@ -104,6 +139,9 @@ class TestHamilton1989_MLE(Hamilton1989):
 
 
 class TestHamilton1989_EM(Hamilton1989):
+    """
+    Test for EM algorithm convergence to near-optimal solution
+    """
 
     @classmethod
     def setup_class(cls):
