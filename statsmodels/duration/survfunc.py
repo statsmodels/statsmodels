@@ -198,7 +198,7 @@ class CumIncidenceRight(object):
 
     Notes
     -----
-    When exog is provded, a local estimate of the cumulative incidence
+    When exog is provided, a local estimate of the cumulative incidence
     rate around each point is provided, and these are averaged to
     produce an estimate of the marginal cumulative incidence
     functions.  The procedure is analogous to that described in Zeng
@@ -282,8 +282,8 @@ class SurvfuncRight(object):
         Optional, if present used to account for violation of
         independent censoring.
     bwm : float
-        Band-width multiplier for kernel-baed estimation.  Only
-        used if exog is provided.
+        Band-width multiplier for kernel-based estimation.  Only used
+        if exog is provided.
 
     Attributes
     ----------
