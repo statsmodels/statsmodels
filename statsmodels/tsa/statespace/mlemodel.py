@@ -1545,6 +1545,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
+
+    _filter_and_smoother_attributes = ['filtered_state', 'filtered_state_cov',
+            'predicted_state', 'predicted_state_cov', 'forecasts',
+            'forecasts_error', 'forecasts_error_cov',
+            'scaled_smoothed_estimator', 'scaled_smoothed_estimator_cov',
+            'smoothing_error', 'smoothed_state', 'smoothed_state_cov',
+            'smoothed_state_autocov', 'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']
+
     def __init__(self, model, params, results, cov_type='opg',
                  cov_kwds=None, **kwargs):
         self.data = model.data
@@ -1591,16 +1602,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self.model.update(self.params)
 
         # References of filter and smoother output
-        for name in ['filtered_state', 'filtered_state_cov', 'predicted_state',
-                     'predicted_state_cov', 'forecasts', 'forecasts_error',
-                     'forecasts_error_cov', 'scaled_smoothed_estimator',
-                     'scaled_smoothed_estimator_cov', 'smoothing_error',
-                     'smoothed_state', 'smoothed_state_cov',
-                     'smoothed_state_autocov',
-                     'smoothed_measurement_disturbance',
-                     'smoothed_state_disturbance',
-                     'smoothed_measurement_disturbance_cov',
-                     'smoothed_state_disturbance_cov']:
+        for name in self._filter_and_smoother_attributes:
             setattr(self, name, getattr(self.filter_results, name, None))
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):

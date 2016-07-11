@@ -192,7 +192,7 @@ class _KimFilter(object):
         # \beta_{t|t} = \sum_{i,j}
         # ( Pr[ S_{t-1} = i, S_t = j | \psi_{t} ] * \beta_{t|t}^{(i,j)} )
         np.sum(weighted_state_batteries, axis=(0, 1),
-                out=self.filtered_states[t, :])
+                out=self.filtered_state[t, :])
 
         # Pr[ S_{t-1} = i, S_t = j | \psi_{t} ] * P_{t|t}^{(i,j)}
         np.multiply(filtered_prev_and_curr_regime_probs.reshape(k_regimes,
@@ -202,7 +202,7 @@ class _KimFilter(object):
         # P_{t|t} = \sum_{i,j}
         # ( Pr[ S_{t-1} = i, S_t = j | \psi_{t} ] * P_{t|t}^{(i,j)} )
         np.sum(weighted_state_cov_batteries, axis=(0, 1),
-                out=self.filtered_state_covs[t, :, :])
+                out=self.filtered_state_cov[t, :, :])
 
     def _approximation_step(self, t, curr_regime,
             filtered_prev_and_curr_regime_logprobs,
@@ -325,9 +325,9 @@ class _KimFilter(object):
                 dtype=dtype)
 
         # Array, storing \beta_{t|t}
-        self.filtered_states = np.zeros((nobs, k_states), dtype=dtype)
+        self.filtered_state = np.zeros((nobs, k_states), dtype=dtype)
         # Array, storing P_{t|t}
-        self.filtered_state_covs = np.zeros((nobs, k_states, k_states),
+        self.filtered_state_cov = np.zeros((nobs, k_states, k_states),
                 dtype=dtype)
 
         # If user didn't specify initialization, try to find stationary regime
@@ -618,6 +618,10 @@ class KimFilter(SwitchingRepresentation):
         """
         self._loglikelihood_burn = value
 
+    @property
+    def initialization(self):
+        return self._regime_kalman_filters[0].initialization
+
     def loglikeobs(self, loglikelihood_burn=0, **kwargs):
         """
         Calculate the loglikelihood for each observation associated with the
@@ -710,10 +714,10 @@ class KimFilterResults(FrozenSwitchingRepresentation):
     obs_loglikelihoods : array
         Loglikelihood for each observation associated with the
         statespace model (ignoring loglikelihood_burn).
-    filtered_states : array
+    filtered_state : array
         State mean at the moment t, conditional on all observations measured
         till the moment t. A `(nobs, k_states)` shaped array.
-    filtered_state_covs : array
+    filtered_state_cov : array
         State covariance at the moment t, conditional on all observations
         measured till the moment t. A `(nobs, k_states, k_states)` shaped
         array.
@@ -728,7 +732,7 @@ class KimFilterResults(FrozenSwitchingRepresentation):
     """
 
     _filter_attributes = ['loglikelihood_burn', 'initial_regime_logprobs',
-            'obs_loglikelihoods', 'filtered_states', 'filtered_state_covs',
+            'obs_loglikelihoods', 'filtered_state', 'filtered_state_cov',
             'filtered_regime_logprobs', 'predicted_regime_logprobs']
 
     _attributes = FrozenSwitchingRepresentation._attributes + \
@@ -773,8 +777,8 @@ class KimFilterResults(FrozenSwitchingRepresentation):
 
         self.obs_loglikelihoods = kfilter.obs_loglikelihoods
 
-        self.filtered_states = kfilter.filtered_states
-        self.filtered_state_covs = kfilter.filtered_state_covs
+        self.filtered_state = kfilter.filtered_state
+        self.filtered_state_cov = kfilter.filtered_state_cov
 
         self.filtered_regime_logprobs = kfilter.filtered_regime_logprobs
         self.predicted_regime_logprobs = kfilter.predicted_regime_logprobs

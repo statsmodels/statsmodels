@@ -5,7 +5,7 @@ Author: Valery Likhosherstov
 License: Simplified-BSD
 """
 import numpy as np
-from statsmodels.tsa.statespace.api import MLEModel
+from statsmodels.tsa.statespace.api import MLEModel, MLEResults
 from .tools import MarkovSwitchingParams
 from .kim_smoother import KimSmoother
 
@@ -58,6 +58,7 @@ class SwitchingMLEModel(MLEModel):
 
     See Also
     --------
+    SwitchingMLEResults
     statsmodels.tsa.statespace.regime_switching.switching_representation. \
     SwitchingRepresentation
     statsmodels.tsa.statespace.regime_switching.kim_filter.KimFilter
@@ -490,16 +491,6 @@ class SwitchingMLEModel(MLEModel):
 
         return params
 
-    def set_smoother_output(self, **kwargs):
-
-        raise NotImplementedError
-
-    def initialize_approximate_diffuse(self, **kwargs):
-
-        # Diffuse initialization is not defined for Kim filtering
-
-        raise NotImplementedError
-
     def initialize_known_regime_probs(self, *args):
 
         self.ssm.initialize_known_regime_probs(*args)
@@ -578,6 +569,11 @@ class SwitchingMLEModel(MLEModel):
         params : array_like
             Estimated parameters
 
+        Notes
+        -----
+        Kalman-filter-specific options `optim_score='harvey'` and
+        `optim_hessian='oim'` are unavailable.
+
         See also
         --------
         statsmodels.base.model.LikelihoodModel.fit
@@ -620,118 +616,376 @@ class SwitchingMLEModel(MLEModel):
         kwargs['start_params'] = start_params
         #TODO: create results class
         kwargs['return_params'] = True
+
+        # Kalman-filter-specific Harvey method is not available
+        if 'optim_score' in kwargs and kwargs['optim_score'] == 'harvey':
+            raise NotImplementedError
+        if 'optim_hessian' in kwargs and kwargs['optim_hessian'] == 'oim':
+            raise NotImplementedError
+
         return super(SwitchingMLEModel, self).fit(**kwargs)
 
-    def filter(self, params, transformed=True, complex_step=False, **kwargs):
+    def filter(self, params, transformed=True, complex_step=False,
+            cov_type=None, cov_kwds=None, return_ssm=False,
+            results_class=None, results_wrapper_class=None, **kwargs):
         """
         Kim filtering
 
-        Parameters
-        ----------
-        params : array_like
-            Array of parameters at which to evaluate the loglikelihood
-            function.
-        transformed : boolean, optional
-            Whether or not `params` is already transformed. Default is True.
-        **kwargs
-            Additional keyword arguments to pass to the Kim filter. See
-            `KimFilter.filter` for more details.
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+        Also, Kalman-filter-specific Harvey method (`cov_type == 'oim'`) is
+        unavailable here.
+
+        See Also
+        --------
+        MLEModel.filter
         """
 
-        self.update(params, transformed=transformed, complex_step=complex_step)
+        if not return_ssm:
+            # In this case base class returns `MLEResults` instance, so we need
+            # to specify results class
+            results_class = SwitchingMLEResults
 
-        return self.ssm.filter(complex_step=complex_step, **kwargs)
+        return super(SwitchingMLEModel, self).filter(params,
+                transformed=transformed, complex_step=complex_step,
+                cov_type=cov_type, cov_kwds=cov_kwds, return_ssm=return_ssm,
+                results_class=results_class,
+                results_wrapper_class=results_wrapper_class, **kwargs)
 
-    def smooth(self, params, transformed=True, complex_step=False, **kwargs):
+    def smooth(self, params, transformed=True, complex_step=False,
+            cov_type=None, cov_kwds=None, return_ssm=False,
+            results_class=None, results_wrapper_class=None, **kwargs):
         """
         Kim smoothing
 
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+        Also, Kalman-filter-specific Harvey method (`cov_type == 'oim'`) is
+        unavailable here.
+
+        See Also
+        --------
+        MLEModel.smooth
+        """
+
+        if not return_ssm:
+            # In this case base class returns `MLEResults` instance, so we need
+            # to specify results class
+            results_class = SwitchingMLEResults
+
+        return super(SwitchingMLEModel, self).smooth(params,
+                transformed=transformed, complex_step=complex_step,
+                cov_type=cov_type, cov_kwds=cov_kwds, return_ssm=return_ssm,
+                results_class=results_class,
+                results_wrapper_class=results_wrapper_class, **kwargs)
+
+    def update(self, params, transformed=True, complex_step=False):
+        """
+        Update the parameters of the model
+
         Parameters
         ----------
         params : array_like
-            Array of parameters at which to evaluate the loglikelihood
-            function.
+            Array of new parameters.
         transformed : boolean, optional
-            Whether or not `params` is already transformed. Default is True.
-        **kwargs
-            Additional keyword arguments to pass to the Kim filter. See
-            `KimSmoother.smooth` for more details.
+            Whether or not `params` is already transformed. If set to False,
+            `transform_params` is called. Default is True.
+
+        Returns
+        -------
+        params : array_like
+            Array of parameters.
+
+        Notes
+        -----
+        This method should be overridden by subclasses to perform actual
+        updating steps.
+
+        See Also
+        --------
+        MLEModel.update
         """
 
-        self.update(params, transformed=True, complex_step=complex_step)
+        return super(SwitchingMLEModel, self).update(params,
+                transformed=transformed, complex_step=complex_step)
 
-        kwargs['run_filter'] = True
+    #TODO: add this functionality
+    def set_filter_method(self, filter_method=None, **kwargs):
+        raise NotImplementedError
 
-        return self.ssm.smooth(complex_step=complex_step, **kwargs)
+    #TODO: add this functionality
+    def set_smoother_output(self, **kwargs):
+        raise NotImplementedError
+
+    def initialize_approximate_diffuse(self, **kwargs):
+        # Diffuse initialization is not defined for Kim filtering
+        raise NotImplementedError
+
+    @property
+    def initial_variance(self):
+        # Diffuse initialization is not defined for Kim filtering
+        raise NotImplementedError
+
+    @initial_variance.setter
+    def initial_variance(self, value):
+        # Diffuse initialization is not defined for Kim filtering
+        raise NotImplementedError
 
     def simulation_smoother(self, *args, **kwargs):
-
+        # Simulation is not implemented yet
         raise NotImplementedError
 
     def _forecast_error_partial_derivatives(self, *args, **kwargs):
-
+        # Kalman-filter-specific functionality
         raise NotImplementedError
 
     def observed_information_matrix(self, *args, **kwargs):
-
+        # Kalman-filter-specific functionality
         raise NotImplementedError
 
-    def opg_information_matrix(self, *args, **kwargs):
+    #def opg_information_matrix(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-        raise NotImplementedError
+    #def _score_complex_step(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-    def _score_complex_step(self, *args, **kwargs):
-
-        raise NotImplementedError
-
-    def _score_finite_difference(self, *args, **kwargs):
-
-        raise NotImplementedError
+    #def _score_finite_difference(self, *args, **kwargs):
+    #    raise NotImplementedError
 
     def _score_harvey(self, *args, **kwargs):
-
+        # Kalman-filter-specific functionality
         raise NotImplementedError
 
-    def score_obs_harvey(self, *args, **kwargs):
-
+    def _score_obs_harvey(self, *args, **kwargs):
+        # Kalman-filter-specific functionality
         raise NotImplementedError
 
     def score(self, *args, **kwargs):
+        """
+        Compute the score function at params
 
-        raise NotImplementedError
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+        Also, Kalman-filter-specific Harvey method (`method == 'harvey'`) is
+        unavailable here.
+
+        See Also
+        --------
+        MLEModel.score
+        """
+
+        return super(SwitchingMLEModel, self).score(*args, **kwargs)
 
     def score_obs(self, *args, **kwargs):
+        """
+        Compute the score per observation, evaluated at params
 
-        raise NotImplementedError
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+        Also, Kalman-filter-specific Harvey method (`method == 'harvey'`) is
+        unavailable here.
+
+        See Also
+        --------
+        MLEModel.score_obs
+        """
+
+        return super(SwitchingMLEModel, self).score_obs(*args, **kwargs)
 
     def hessian(self, *args, **kwargs):
+        """
+        Hessian matrix of the likelihood function, evaluated at the given
+        parameters
 
-        raise NotImplementedError
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+        Also, Kalman-filter-specific Harvey method (`method == 'oim'`) is
+        unavailable here.
+
+        See Also
+        --------
+        MLEModel.hessian
+        """
+
+        return super(SwitchingMLEModel, self).hessian(*args, **kwargs)
 
     def _hessian_oim(self, *args, **kwargs):
-
+        # Kalman-filter-specific functionality
         raise NotImplementedError
 
-    def _hessian_opg(self, *args, **kwargs):
+    #def _hessian_opg(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-        raise NotImplementedError
+    #def _hessian_finite_difference(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-    def _hessian_finite_difference(self, *args, **kwargs):
-
-        raise NotImplementedError
-
-    def _hessian_complex_step(self, *args, **kwargs):
-
-        raise NotImplementedError
+    #def _hessian_complex_step(self, *args, **kwargs):
+    #    raise NotImplementedError
 
     def transform_jacobian(self, *args, **kwargs):
+        """
+        Jacobian matrix matrix for the parameter transformation function
 
-        raise NotImplementedError
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+
+        See Also
+        --------
+        MLEModel.transform_jacobian
+        """
+
+        return super(SwitchingMLEModel, self).transform_jacobian(*args,
+                **kwargs)
 
     def simulate(self, *args, **kwargs):
-
+        # Simulation is not implemented yet
         raise NotImplementedError
 
     def impulse_responses(self, *args, **kwargs):
-
+        # Not implemented yet
         raise NotImplementedError
+
+class SwitchingMLEResults(MLEResults):
+
+    _filter_and_smoother_attributes = ['filtered_state', 'filtered_state_cov',
+            'filtered_regime_logprobs', 'predicted_regime_logprobs',
+            'initial_regime_logprobs', 'smoothed_regime_logprobs',
+            'smoothed_curr_and_next_regime_logprobs']
+
+    def __init__(self, model, params, results, cov_type='opg',
+            cov_kwds=None, **kwargs):
+
+        if cov_type == 'oim' or cov_type == 'robust_oim':
+            raise NotImplementedError
+
+        #TODO: check for correctness
+        #TODO: take away attributes array
+        super(SwitchingMLEResults, self).__init__(model, params, results,
+                cov_type=cov_type, cov_kwds=cov_kwds, **kwargs)
+
+    def _get_robustcov_results(self, *args, **kwargs):
+
+        if cov_type == 'oim' or cov_type == 'robust_oim':
+            raise NotImplementedError
+
+        return super(SwitchingMLEResults, self)._get_robustcov_results(*args,
+                **kwargs)
+
+    #def aic(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def bic(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def _cov_params_approx(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def cov_params_approx(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    def _cov_params_oim(self, *args, **kwargs):
+        # Kalman-filter-specific functionality
+        raise NotImplementedError
+
+    def cov_params_oim(self, *args, **kwargs):
+        # Kalman-filter-specific functionality
+        raise NotImplementedError
+
+    #def _cov_params_opg(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def cov_params_opg(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    def cov_params_robust(self, *args, **kwargs):
+        # Kalman-filter-specific functionality
+        raise NotImplementedError
+
+    def _cov_params_robust_oim(self, *args, **kwargs):
+        # Kalman-filter-specific functionality
+        raise NotImplementedError
+
+    def cov_params_robust_oim(self, *args, **kwargs):
+        # Kalman-filter-specific functionality
+        raise NotImplementedError
+
+    #def _cov_params_robust_approx(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def cov_params_robust_approx(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def fitted_values(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def hqic(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def llf_obs(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def llf(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def loglikelihood_burn(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def pvalues(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def resid(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def zvalues(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def test_normality(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def test_heteroscedasticity(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def test_serial_correlation(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    def get_prediction(self, *args, **kwargs):
+        # Not implemented yet
+        raise NotImplementedError
+
+    def get_forecast(self, *args, **kwargs):
+        # Not implemented yet
+        raise NotImplementedError
+
+    def predict(self, *args, **kwargs):
+        # Not implemented yet
+        raise NotImplementedError
+
+    def forecast(self, *args, **kwargs):
+        # Not implemented yet
+        raise NotImplementedError
+
+    def simulate(self, *args, **kwargs):
+        # Simulation is not implemented yet
+        raise NotImplementedError
+
+    def impulse_responses(self, *args, **kwargs):
+        # Not implemented yet
+        raise NotImplementedError
+
+    #def plot_diagnostics(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def summary(self, *args, **kwargs):
+    #    raise NotImplementedError

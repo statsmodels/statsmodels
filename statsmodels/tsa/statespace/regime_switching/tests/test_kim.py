@@ -57,7 +57,7 @@ class TestKim1994_KimFilter(Kim1994):
 
         return {
             'loglike': results.loglike(),
-            'cycle': results.filtered_states[cls.true['start']:, 0]
+            'cycle': results.filtered_state[cls.true['start']:, 0]
         }
 
     def test_loglike(self):

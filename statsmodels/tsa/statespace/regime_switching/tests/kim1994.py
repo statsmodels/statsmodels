@@ -60,7 +60,7 @@ class Kim1994(object):
         k_states = 2
         k_posdef = 1
 
-        # unpacking parameters
+        # Unpacking parameters
         p, q, phi_1, phi_2, sigma, delta_0, delta_1 = params
 
         # State space and regime transition matrices
