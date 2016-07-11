@@ -3,7 +3,8 @@ from numpy.testing import assert_equal, assert_
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import Binomial
-from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov, _est_regularized_debiased, _join_debiased, DistributedModel
+#from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov, _est_regularized_debiased, _join_debiased, DistributedModel
+from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _est_regularized_debiased, _join_debiased, DistributedModel
 
 
 def _exog_gen(exog, partitions):
