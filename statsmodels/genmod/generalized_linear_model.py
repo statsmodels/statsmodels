@@ -507,36 +507,6 @@ class GLM(base.LikelihoodModel):
         return oim_factor
 
 
-    def hessian_obs(self, params, scale=None, diag=True):
-        """
-        hessian second derivative of the loglikelihood for each observation.
-
-        Parameters
-        ----------
-        params : ndarray
-            parameter at which Hessian is evaluated
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        diag : bool
-            Whether to return the diag of the 3d mat
-
-        Returns
-        -------
-        hessian_obs : array
-            The second derivative of the loglikelihood function evaluated at
-            params for each observation. Only the diagonal is returned.
-        """
-
-        if diag:
-            hessian_factor = self.hessian_factor(params, scale=scale)
-            return hessian_factor
-
-        else:
-            raise NotImplementedError("diag False is not supported")
-
-
     def hessian(self, params, scale=None, observed=True):
         """Hessian, second derivative of loglikelihood function
 
