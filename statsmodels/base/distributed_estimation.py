@@ -1,4 +1,5 @@
 from statsmodels.base.elastic_net import fit_elasticnet
+from statsmodels.stats.nodewise_regression import calc_nodewise_row, calc_nodewise_weight, calc_approx_inv_cov
 from statsmodels.base.model import Results
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
@@ -206,130 +207,8 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
     """
 
     # TODO correctly handle hessian_obs
-    rhess = np.sqrt(mod.hessian_obs(np.asarray(params), **hess_kwds))
+    rhess = np.sqrt(mod.hessian_factor(np.asarray(params), **hess_kwds))
     return rhess[:, None] * mod.exog
-
-
-def _calc_nodewise_row(wexog, idx, alpha):
-    """calculates the nodewise_row values for the idxth variable, used to
-    estimate approx_inv_cov.
-
-    Parameters
-    ----------
-    wexog : array-like
-        The weighted design matrix for the current partition.
-    idx : scalar
-        Index of the current variable.
-    alpha : scalar or array-like
-        The penalty weight.  If a scalar, the same penalty weight
-        applies to all variables in the model.  If a vector, it
-        must have the same length as `params`, and contains a
-        penalty weight for each coefficient.
-
-    Returns
-    -------
-    An array-like object of length p-1
-
-    Notes
-    -----
-
-    nodewise_row_i = arg min 1/(2n) ||wexog_i - wexog_-i gamma||_2^2
-                             + alpha ||gamma||_1
-    """
-
-    p = wexog.shape[1]
-    # handle array alphas
-    if not np.isscalar(alpha):
-        alpha = alpha[ind]
-
-    ind = list(range(p))
-    ind.pop(idx)
-
-    tmod = OLS(wexog[:, idx], wexog[:, ind])
-
-    nodewise_row = tmod.fit_regularized(alpha=alpha).params
-
-    return nodewise_row
-
-
-def _calc_nodewise_weight(wexog, nodewise_row, idx, alpha):
-    """calculates the nodewise_weightvalue for the idxth variable, used to
-    estimate approx_inv_cov.
-
-    Parameters
-    ----------
-    wexog : array-like
-        The weighted design matrix for the current partition.
-    nodewise_row : array-like
-        The nodewise_row values for the current variable.
-    idx : scalar
-        Index of the current variable
-    alpha : scalar or array-like
-        The penalty weight.  If a scalar, the same penalty weight
-        applies to all variables in the model.  If a vector, it
-        must have the same length as `params`, and contains a
-        penalty weight for each coefficient.
-
-    Returns
-    -------
-    A scalar
-
-    Notes
-    -----
-
-    nodewise_weight_i = sqrt(1/n ||wexog,i - wexog_-i nodewise_row||_2^2
-                             + alpha ||nodewise_row||_1)
-    """
-
-    n, p = wexog.shape
-    # handle array alphas
-    if not np.isscalar(alpha):
-        alpha = alpha[ind]
-
-    ind = list(range(p))
-    ind.pop(idx)
-
-    d = np.linalg.norm(wexog[:, idx] - wexog[:, ind].dot(nodewise_row))**2
-    d = np.sqrt(d / n + alpha * np.linalg.norm(nodewise_row, 1))
-    return d
-
-
-def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l, p):
-    """calculates the approximate inverse covariance matrix
-
-    Parameters
-    ----------
-    nodewise_row_l : list
-        A list of array-like object where each object corresponds to
-        the nodewise_row values for the corresponding variable, should
-        be length p.
-    nodewise_weight_l : list
-        A list of scalars where each scalar corresponds to the nodewise_weight
-        value for the corresponding variable, should be length p.
-    p : scalar
-        Number of variables
-
-    Returns
-    ------
-    An array-like object, p x p matrix
-
-    Notes
-    -----
-
-    nwr = nodewise_row
-    nww = nodewise_weight
-
-    approx_inv_cov_j = - 1 / nww_j [nwr_j,1,...,1,...nwr_j,p]
-    """
-
-    approx_inv_cov = np.eye(p)
-    for idx in range(p):
-        ind = list(range(p))
-        ind.pop(idx)
-        approx_inv_cov[idx,ind] = nodewise_row_l[idx]
-        approx_inv_cov[idx,:] *= (- 1. / nodewise_weight_l[idx]**2)
-
-    return approx_inv_cov
 
 
 def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
@@ -387,17 +266,17 @@ def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
     nodewise_weight_l = []
     for idx in range(mnum * p_part, min((mnum + 1) * p_part, p)):
 
-        nodewise_row = _calc_nodewise_row(wexog, idx, alpha)
+        nodewise_row = calc_nodewise_row(wexog, idx, alpha)
         nodewise_row_l.append(nodewise_row)
 
-        nodewise_weight = _calc_nodewise_weight(wexog, nodewise_row, idx,
-                                                alpha)
+        nodewise_weight = calc_nodewise_weight(wexog, nodewise_row, idx,
+                                               alpha)
         nodewise_weight_l.append(nodewise_weight)
 
     return params, grad, nodewise_row_l, nodewise_weight_l
 
 
-def _join_debiased(results_l, partitions, threshold=0):
+def _join_debiased(results_l, threshold=0):
     """joins the results from each run of _est_regularized_debiased
     and returns the debiased estimate of the coefficients
 
@@ -406,13 +285,12 @@ def _join_debiased(results_l, partitions, threshold=0):
     results_l : list
         A list of tuples each one containing the params, grad,
         nodewise_row and nodewise_weight values for each partition.
-    partitions : scalar
-        The number of partitions that the data will be split into.
     threshold : scalar
         The threshold at which the coefficients will be cut.
     """
 
     p = len(results_l[0][0])
+    partitions = len(results_l)
 
     params_mn = np.zeros(p)
     grad_mn = np.zeros(p)
@@ -431,7 +309,7 @@ def _join_debiased(results_l, partitions, threshold=0):
     params_mn /= partitions
     grad_mn *= -1. / partitions
 
-    approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l, p)
+    approx_inv_cov = calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
 
     debiased_params = params_mn + approx_inv_cov.dot(grad_mn)
 
@@ -568,31 +446,6 @@ class DistributedModel():
             self.join_kwds = join_kwds
 
 
-#    def fit_partition(self, pnum, endog, exog):
-#        """handles the model fitting for each machine.
-#
-#        Parameters
-#        ----------
-#        pnum : scalar
-#            index of current partition.
-#        endog : array-like
-#            endogenous data for current partition.
-#        exog : array-like
-#            exogenous data for current partition.
-#
-#        Returns
-#        -------
-#        estimation_method result.  For the default,
-#        _est_regularized_debiased, a tuple.
-#        """
-#
-#        model = self.model_class(endog, exog, **self.init_kwds)
-#        results = self.estimation_method(model, pnum, self.partitions,
-#                                         self.fit_kwds,
-#                                         **self.estimation_kwds)
-#        return results
-
-
     def fit_distributed(self, parallel_method="sequential"):
         """Performs the distributed estimation using the corresponding
         DistributedModel
@@ -609,24 +462,24 @@ class DistributedModel():
         p length array.
         """
 
+        # TODO handle fit_kwds different from those passed into model
         if parallel_method == "sequential":
             return self.fit_dist_sequential()
 
         elif parallel_method == "joblib":
-            try:
-                return self.fit_dist_joblib()
-            except ImportError:
-                raise ValueError("cannot import joblib")
+             results_l = self.fit_dist_joblib()
 
         elif parallel_method == "dask":
-            try:
-                return self.fit_dist_dask()
-            except ImportError:
-                raise ValueError("cannot import dask")
+            raise ValueError("parallel_method: %s is currently not supported"
+                             % parallel_method)
+#            results_l self.fit_dist_dask()
 
         else:
             raise ValueError("parallel_method: %s is currently not supported"
                              % parallel_method)
+
+        return self.join_method(results_l, self.partitions,
+                                **self.join_kwds)
 
 
     def fit_dist_sequential(self):
@@ -665,34 +518,12 @@ class DistributedModel():
         p length array.
         """
 
-#        try:
-#            from joblib import Parallel, delayed
-#        except ImportError:
-#            from sklearn.externals.joblib import Parallel, delayed
-
         from statsmodels.tools.parallel import parallel_func
 
         par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
 
-#        par = Parallel(n_jobs=self.partitions)
-#        f = delayed(_helper_fit_partition)
         results_l = par(f(self, pnum, endog, exog)
                         for pnum, (endog, exog)
                         in enumerate(self.data_generator))
         return self.join_method(results_l, self.partitions,
                                 **self.join_kwds)
-
-
-    def fit_dist_dask(self):
-        """Perofrms the distributed estimation in parallel using dask
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
-        """
-
-        import distributed
