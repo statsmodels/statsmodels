@@ -659,9 +659,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
 
-    def hessian_obs(self, params, scale=None, diag=True):
-        """
-        hessian second derivative of the loglikelihood for each observation.
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
 
         Parameters
         ----------
@@ -671,14 +670,15 @@ class GenericLikelihoodModel(LikelihoodModel):
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
-        diag : bool
-            Whether to return the diag of the 3d mat
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
 
         Returns
         -------
-        hessian_obs : array
-            The second derivative of the loglikelihood function evaluated at
-            params for each observation. Only the diagonal is returned.
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
         """
 
         raise NotImplementedError
