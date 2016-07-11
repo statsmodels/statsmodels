@@ -33,24 +33,31 @@ class ResultsStore(object):
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
              fitargs=(), regresults=False):
     """
-    Returns the results for the lag length that maximimizes the info criterion.
+    Returns the results for the lag length that maximizes the info criterion.
 
     Parameters
     ----------
     mod : Model class
-        Model estimator class.
-    modargs : tuple
-        args to pass to model.  See notes.
-    fitargs : tuple
-        args to pass to fit.  See notes.
-    lagstart : int
+        Model estimator class
+    endog : array-like
+        nobs array containing endogenous variable
+    exog : array-like
+        nobs by (startlag + maxlag) array containing lags and possibly other
+        variables
+    startlag : int
         The first zero-indexed column to hold a lag.  See Notes.
     maxlag : int
         The highest lag order for lag length selection.
-    method : str {"aic","bic","t-stat"}
+    method : {'aic', 'bic', 't-stat'}
         aic - Akaike Information Criterion
         bic - Bayes Information Criterion
         t-stat - Based on last lag
+    modargs : tuple, optional
+        args to pass to model.  See notes.
+    fitargs : tuple, optional
+        args to pass to fit.  See notes.
+    regresults : bool, optional
+        Flag indicating to return optional return results
 
     Returns
     -------
@@ -58,7 +65,8 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         Best information criteria.
     bestlag : int
         The lag length that maximizes the information criterion.
-
+    results : dict, optional
+        Dictionary containing all estimation results
 
     Notes
     -----
@@ -109,7 +117,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 #TODO: autolag is untested
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
              store=False, regresults=False):
-    '''
+    """
     Augmented Dickey-Fuller unit root test
 
     The Augmented Dickey-Fuller test can be used to test for a unit root in a
@@ -121,8 +129,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         data series
     maxlag : int
         Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
-    regression : str {'c','ct','ctt','nc'}
+    regression : {'c','ct','ctt','nc'}
         Constant and trend order to include in regression
+
         * 'c' : constant only (default)
         * 'ct' : constant and trend
         * 'ctt' : constant, and linear and quadratic trend
@@ -130,36 +139,34 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     autolag : {'AIC', 'BIC', 't-stat', None}
         * if None, then maxlag lags are used
         * if 'AIC' (default) or 'BIC', then the number of lags is chosen
-          to minimize the corresponding information criterium
+          to minimize the corresponding information criterion
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
-          lag until the t-statistic on the last lag length is significant at
-          the 95 % level.
+          lag until the t-statistic on the last lag length is significant
+          using a 5%-sized test
     store : bool
         If True, then a result instance is returned additionally to
-        the adf statistic (default is False)
-    regresults : bool
-        If True, the full regression results are returned (default is False)
+        the adf statistic. Default is False
+    regresults : bool, optional
+        If True, the full regression results are returned. Default is False
 
     Returns
     -------
     adf : float
         Test statistic
     pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994)
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010)
     usedlag : int
-        Number of lags used.
+        Number of lags used
     nobs : int
         Number of observations used for the ADF regression and calculation of
-        the critical values.
+        the critical values
     critical values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010)
     icbest : float
         The maximized information criterion if autolag is not None.
-    regresults : RegressionResults instance
-        The
-    resstore : (optional) instance of ResultStore
-        an instance of a dummy class with results attached as attributes
+    resstore : ResultStore, optional
+        A dummy class with results attached as attributes
 
     Notes
     -----
@@ -168,33 +175,30 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     above a critical size, then we cannot reject that there is a unit root.
 
     The p-values are obtained through regression surface approximation from
-    MacKinnon 1994, but using the updated 2010 tables.
-    If the p-value is close to significant, then the critical values should be
-    used to judge whether to accept or reject the null.
+    MacKinnon 1994, but using the updated 2010 tables. If the p-value is close
+    to significant, then the critical values should be used to judge whether
+    to reject the null.
 
     The autolag option and maxlag for it are described in Greene.
 
     Examples
     --------
-    see example script
+    See example notebook
 
     References
     ----------
-    Greene
-    Hamilton
+    .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
+    .. [2] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
-    P-Values (regression surface approximation)
-    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-    unit-root and cointegration tests.  `Journal of Business and Economic
-    Statistics` 12, 167-76.
+    .. [3] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+        unit-root and cointegration tests.  `Journal of Business and Economic
+        Statistics` 12, 167-76.
 
-    Critical values
-    MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
-    University, Dept of Economics, Working Papers.  Available at
-    http://ideas.repec.org/p/qed/wpaper/1227.html
-
-    '''
+    .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
+        University, Dept of Economics, Working Papers.  Available at
+        http://ideas.repec.org/p/qed/wpaper/1227.html
+    """
 
     if regresults:
         store = True
