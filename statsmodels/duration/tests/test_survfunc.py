@@ -521,6 +521,7 @@ def test_kernel_survfunc3():
     time = np.random.randint(0, 10, size=n)
     status = np.random.randint(0, 2, size=n)
     SurvfuncRight(time, status, exog=x, bwm=10000)
+    SurvfuncRight(time, status, exog=x, bwm=np.r_[10000, 10000])
 
 
 def test_kernel_cumincidence1():
