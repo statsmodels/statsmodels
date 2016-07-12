@@ -2,16 +2,19 @@ import pandas as pd
 import patsy
 import numpy as np
 import warnings
+from scipy.stats.distributions import t as tdist
+from scipy.stats.distributions import norm as normdist
 
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 """
-A predict-like function that constructs means and pointwise or
-simultaneous confidence bands for the function f(x) = E[Y | X*=x,
-X1=x1, ...], where X* is the focus variable and X1, X2, ... are
-non-focus variables.  This is especially useful when conducting a
-functional regression in which the role of x is modeled with b-splines
-or other basis functions.
+predict_functional is a helper function for constructing
+one-dimensional slices of fitted regression models.  The function
+constructs fitted values and pointwise or simultaneous confidence
+bands for the function f(x) = E[Y | X*=x, X1=x1, ...], where X* is the
+focus variable and X1, X2, ... are non-focus variables.  This is
+especially useful when conducting a functional regression in which the
+role of x is modeled with b-splines or other basis functions.
 """
 
 _predict_functional_doc =\
@@ -192,12 +195,6 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
 
     dexog = patsy.dmatrix(model.data.design_info.builder, fexog, return_type='dataframe')
 
-    # 0 rows cause problems for t-test
-    ii = np.abs(dexog).sum(1) > 1e-10
-    dexog = dexog.loc[ii, :]
-    fexog = fexog.loc[ii, :]
-    fvals = fvals[np.asarray(ii)]
-
     return dexog, fexog, fvals
 
 
@@ -250,12 +247,6 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         ix = exog_names.index(ky)
         exog[:, ix] = values[ky]
-
-    # 0 rows cause problems for t-test
-    ii = np.abs(exog).sum(1) > 1e-10
-    ii = np.flatnonzero(ii)
-    exog = exog[ii, :]
-    fvals = fvals[ii]
 
     return exog, fvals
 
@@ -345,35 +336,45 @@ def predict_functional(result, focus_var, summaries=None, values=None,
         kwargs_pred = kwargs
 
     pred = result.predict(exog=fexog, **kwargs_pred)
+    if hasattr(pred, 'predicted_values'):
+        # Can remove after github#2924 is merged
+        pred = pred.predicted_values
+
     if contrast:
         pred2 = result.predict(exog=fexog2, **kwargs_pred)
+        if hasattr(pred, 'predicted_values'):
+            # Can remove after github#2924 is merged
+            pred2 = pred2.predicted_values
         pred = pred - pred2
         dexog = dexog - dexog2
 
+    if ci_method in ('pointwise', 'scheffe'):
+        cov = result.cov_params()
+        va = np.dot(cov, dexog.T)
+        va = (va * dexog.T).sum(0)
+        se = np.sqrt(va)
+        if hasattr(result, 'df_resid'):
+            tf = -tdist.ppf(alpha / 2, result.df_resid)
+        else:
+            tf = -normdist.ppf(alpha / 2)
+
+    cb = np.empty((dexog.shape[0], 2))
+
     if ci_method == 'pointwise':
+        cb[:, 0] = pred - tf*se
+        cb[:, 1] = pred + tf*se
 
-        t_test = result.t_test(dexog)
-        cb = t_test.conf_int(alpha=alpha)
-
-    elif ci_method == 'scheffe':
-
-        t_test = result.t_test(dexog)
-        sd = t_test.sd
-        cb = np.zeros((num_points, 2))
-
-        # Scheffe's method
+    if ci_method == 'scheffe':
         from scipy.stats.distributions import f as fdist
         df1 = result.model.exog.shape[1]
         df2 = result.model.exog.shape[0] - df1
         qf = fdist.cdf(1 - alpha, df1, df2)
-        fx = sd * np.sqrt(df1 * qf)
+        fx = se * np.sqrt(df1 * qf)
         cb[:, 0] = pred - fx
         cb[:, 1] = pred + fx
 
     elif ci_method == 'simultaneous':
-
         sigma, c = _glm_basic_scr(result, dexog, alpha)
-        cb = np.zeros((dexog.shape[0], 2))
         cb[:, 0] = pred - c*sigma
         cb[:, 1] = pred + c*sigma
 
