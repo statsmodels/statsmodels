@@ -511,7 +511,7 @@ class DistributedModel():
                                 **self.join_kwds)
 
 
-    def fit_dist_joblib(self, distributed_backend):
+    def fit_dist_joblib(self, parallel_backend):
         """Performs the distributed estimation in parallel using joblib
 
         Parameters
