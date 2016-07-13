@@ -554,7 +554,7 @@ class MarkovSwitchingParams(object):
                     self.index_regime_purpose[j][k] = v
                     indices.append(v)
                     offset += self.k_parameters[k]
-                self.index_regime[j] = np.concatenate(indices)
+                self.index_regime[j] = np.concatenate(indices).astype(int)
         else:
             raise IndexError('Invalid index')
 
@@ -2173,9 +2173,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         mask = []
         for key, _mask in other_masks.items():
-            mask = np.r_[mask, _mask]
+            mask.extend(_mask)
         if len(mask) > 0:
-            table = make_table(self, mask.tolist(), 'Non-switching parameters')
+            table = make_table(self, mask, 'Non-switching parameters')
             summary.tables.append(table)
 
         # Transition parameters
