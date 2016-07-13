@@ -1090,6 +1090,20 @@ def test_fvalue_implicit_constant():
     assert_(np.isnan(res.f_pvalue))
     res.summary()
 
+def test_ridge():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+
+    for alpha in [1., np.ones(p), 10, 10*np.ones(p)]:
+        model1 = OLS(yvec, xmat)
+        result1 = model1.fit_ridge(alpha=1.)
+        model2 = OLS(yvec, xmat)
+        result2 = model2.fit_regularized(alpha=1., L1_wt=0)
+        assert_allclose(result1.params, result2.params)
+
 
 if __name__=="__main__":
 
@@ -1099,7 +1113,3 @@ if __name__=="__main__":
                    exit=False)
 
     # nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
-
-
-
-
