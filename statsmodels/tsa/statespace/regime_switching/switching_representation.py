@@ -463,11 +463,11 @@ class SwitchingRepresentation(object):
         See `Representation.bind` documentation for details.
         """
 
-        self.endog = endog
-
         for regime_filter in self._regime_kalman_filters:
             regime_filter.bind(endog)
 
+        # `endog` is the same for every regime filter.
+        self.endog = self._regime_kalman_filters[0].endog
         # `nobs` is the same for every regime filter.
         self._nobs = self._regime_kalman_filters[0].nobs
 

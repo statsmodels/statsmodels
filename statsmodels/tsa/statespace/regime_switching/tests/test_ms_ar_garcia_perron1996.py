@@ -66,19 +66,19 @@ class TestGarciaPerron1996_Filtering(GarciaPerron1996):
 
         params = np.array(cls.true['parameters'], dtype=cls.dtype)
 
-        results = cls.model.filter(params)
+        results = cls.model.filter(params, return_ssm=True)
 
         predicted_regime_probs = results.predicted_regime_probs
 
-        pr_probs = np.zeros((predicted_regime_probs.shape[0], 3),
+        pr_probs = np.zeros((3, predicted_regime_probs.shape[1]),
                 dtype=cls.dtype)
 
         for i in range(3):
-            pr_probs[:, i] = predicted_regime_probs[:, i::3].sum(axis=1)
+            pr_probs[i, :] = predicted_regime_probs[i::3, :].sum(axis=1)
 
         cls.result = {
                 'loglike': results.loglike(),
-                'pr_probs': pr_probs
+                'pr_probs': pr_probs.T
         }
 
     def test_loglike(self):

@@ -31,9 +31,9 @@ def _em_iteration_for_markov_regression(dtype, k_regimes, endog, exog,
     for regime in range(k_regimes):
         # x_t \times \sqrt{p(S_t = i | \bar{y}_T)}
         regression_exog = exog * \
-                np.sqrt(smoothed_regime_probs[:, regime].reshape(-1, 1))
+                np.sqrt(smoothed_regime_probs[regime, :].reshape(-1, 1))
         # y_t \times \sqrt{p(S_t = i | \bar{y}_T)}
-        regression_endog = endog * np.sqrt(smoothed_regime_probs[:, regime])
+        regression_endog = endog * np.sqrt(smoothed_regime_probs[regime, :])
 
         # Calculating regression. Probably may raise exceptions in case of
         # ill-conditioned data.
@@ -44,22 +44,22 @@ def _em_iteration_for_markov_regression(dtype, k_regimes, endog, exog,
                 exog.dot(coefs[regime, :].reshape(-1, 1)).ravel())**2
 
         # \sum_{t} p(S_t = i | \bar{y}_T)
-        marginal_regime_prob_sum = np.sum(smoothed_regime_probs[:, regime])
+        marginal_regime_prob_sum = np.sum(smoothed_regime_probs[regime, :])
 
         # Variance as weighted residuals sum
         if marginal_regime_prob_sum != 0:
             variances[regime] = \
-                    np.sum(sqr_residuals * smoothed_regime_probs[:, regime]) / \
+                    np.sum(sqr_residuals * smoothed_regime_probs[regime, :]) / \
                     marginal_regime_prob_sum
         else:
             # Any value would be alright, because regime is unreachable
             variances[regime] = 1
 
     # \sum_{t} p(S_t = j, S_{t-1} = i | \bar{y}_T)
-    joint_prob_sum = np.sum(smoothed_curr_and_next_regime_probs, axis=0)
+    joint_prob_sum = np.sum(smoothed_curr_and_next_regime_probs, axis=2)
 
     # \sum{t-1} p(S_{t-1} = i | \bar{y}_T)
-    marginal_prob_sum = np.sum(smoothed_regime_probs[:-1], axis=0)
+    marginal_prob_sum = np.sum(smoothed_regime_probs[:, :-1], axis=1)
 
     # Regime transition matrix initialization
     regime_transition = np.zeros((k_regimes, k_regimes), dtype=dtype)
@@ -462,7 +462,7 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         state_cov = np.zeros((k_regimes, 1, 1, 1), dtype=dtype)
         for i in range(k_regimes):
-            state_cov[i, 0, 0, 0] = params[self.parameters[i % k_ar_regimes,
+            state_cov[i, :, :, :] = params[self.parameters[i % k_ar_regimes,
                     'variance']]
 
         self['state_cov'] = state_cov
@@ -531,7 +531,8 @@ class MarkovAutoregression(SwitchingMLEModel):
         # EM-algorithm relies on smoothed regime probabilitie
         # Obtaining them for the case of MS-AR model
 
-        msar_results = self.smooth(params, return_extended_probs=False)
+        msar_results = self.smooth(params, return_ssm=True,
+                return_extended_probs=False)
 
         smoothed_regime_probs = msar_results.smoothed_regime_probs
         smoothed_curr_and_next_regime_probs = \
@@ -678,7 +679,7 @@ class MarkovAutoregression(SwitchingMLEModel):
         return params
 
     def fit_em_with_random_starts(self, seed=1, em_optimizations=50,
-            em_iterations=10, return_loglike=False):
+            em_iterations=10, print_info=True, return_loglike=False):
         """
         Fit EM algorithm several times from random starts and choose the best
         parameters vector
@@ -692,6 +693,8 @@ class MarkovAutoregression(SwitchingMLEModel):
         em_iterations : int
             The number of iterations during every EM-algorithm session. Default
             is 5.
+        print_info : bool
+            Whether to print the info about passed optimization sessions.
         return_loglike : bool
             If set, the tuple is returned, where the first element is a best
             guess, and the second is its loglikelihood. Otherwise, only the best
@@ -708,8 +711,9 @@ class MarkovAutoregression(SwitchingMLEModel):
         best_loglike = None
         best_params = None
 
-        for i in range(em_optimizations):
+        print_step = 5
 
+        for i in range(em_optimizations):
             # Random start generating
             random_start_params = np.random.normal(
                     size=self.parameters.k_params)
@@ -727,6 +731,9 @@ class MarkovAutoregression(SwitchingMLEModel):
             if best_params is None or loglike > best_loglike:
                 best_params = params
                 best_loglike = loglike
+
+            if print_info and (i + 1) % print_step == 0:
+                print('{0} EM-optimizations passed'.format(i + 1))
 
         # Return results
         if return_loglike:
@@ -813,29 +820,30 @@ class MSARSmootherResults(KimSmootherResults):
         # system:
         # S_{internal;t} = S_t + S_{t-1} * k + ... + S_{t-p} * k^p
 
-        self.smoothed_ar_regime_probs = np.zeros((smoothed_regime_probs.shape[0],
-                k_ar_regimes), dtype=smoothed_regime_probs.dtype)
+        self.smoothed_ar_regime_probs = np.zeros((k_ar_regimes,
+                smoothed_regime_probs.shape[1]),
+                dtype=smoothed_regime_probs.dtype)
 
         # Collapsing probabilities
         # State space regimes with one residue are related to one AR regime
         for i in range(k_ar_regimes):
-            self.smoothed_ar_regime_probs[:, i] = smoothed_regime_probs[:,
-                    i::k_ar_regimes].sum(axis=1)
+            self.smoothed_ar_regime_probs[i, :] = smoothed_regime_probs[
+                    i::k_ar_regimes, :].sum(axis=0)
 
         # Switching from logprobs to probs
         smoothed_curr_and_next_regime_probs = \
                 np.exp(smoother.smoothed_curr_and_next_regime_logprobs)
 
-        self.smoothed_curr_and_next_ar_regime_probs = np.zeros((
-                smoothed_curr_and_next_regime_probs.shape[0], k_ar_regimes,
-                k_ar_regimes), dtype=smoothed_curr_and_next_regime_probs.dtype)
+        self.smoothed_curr_and_next_ar_regime_probs = np.zeros((k_ar_regimes,
+                k_ar_regimes, smoothed_curr_and_next_regime_probs.shape[2]),
+                dtype=smoothed_curr_and_next_regime_probs.dtype)
 
         # Collapsing probabilities
         for i in range(k_ar_regimes):
             for j in range(k_ar_regimes):
-                self.smoothed_curr_and_next_ar_regime_probs[:, i, j] = \
-                        smoothed_curr_and_next_regime_probs[:,
-                        i::k_ar_regimes, j::k_ar_regimes].sum(axis=(1, 2))
+                self.smoothed_curr_and_next_ar_regime_probs[i, j, :] = \
+                        smoothed_curr_and_next_regime_probs[i::k_ar_regimes,
+                        j::k_ar_regimes, :].sum(axis=(0, 1))
 
     @property
     def smoothed_regime_probs(self):

@@ -9,6 +9,76 @@ from .switching_representation import SwitchingRepresentation, \
         FrozenSwitchingRepresentation
 from scipy.misc import logsumexp
 
+def _marginalize_vector(event_probs, event_conditional_vectors,
+        weighted_vectors, marginal_vector, vector_biases, vector_bias_sqrs,
+        event_conditional_covs, covs_plus_bias_sqrs,
+        weighted_covs_plus_bias_sqrs, marginal_cov):
+    r"""
+    Generic method, marginalizing random vector's expectation and covariance
+    matrix
+
+    Parameters
+    ----------
+    event_probs : array_like
+        Probabilities of the set of the collectively exhaustive events
+        :math:`{ A_1, ..., A_n }`. In Kim filter these events are determined by
+        Markov switching model regime value.
+    event_conditional_vectors : array_like
+        (Hereafter let's denote random vector as :math:`\alpha`)
+        Vector expectations, conditional on events: :math:`E[ \alpha | A_i ]`.
+    weighted_vectors : array_like
+        Buffer to store :math:`Pr[ A_i ] * E[ \alpha | A_i ]`.
+    marginal_vector : array_like
+        Buffer to store the result: :math:`E[ \alpha ]`.
+    vector_biases : array_like
+        Buffer to store :math:`E[ \alpha ] - E[ \alpha | A_i ]`.
+    vector_bias_sqrs : array_like
+        Buffer to store :math:`( E[ \alpha ] - E[ \alpha | A_i ]) *
+        ( E[ \alpha ] - E[ \alpha | A_i ] )^T`.
+    event_conditional_covs : array_like
+        Vector covariance matrices, conditional on events:
+        :math:`Var[ \alpha | A_i ]`.
+    covs_plus_bias_sqrs : array_like
+        Buffer to store :math:` Var[ \alpha ] ( E[ \alpha ] -
+        E[ \alpha | A_i ]) * ( E[ \alpha ] - E[ \alpha | A_i ] )^T`.
+    weighted_covs_plus_bias_sqrs : array_like
+        Buffer to store :math:`Pr[ A_i ] * ( Var[ \alpha ] ( E[ \alpha ] -
+        E[ \alpha | A_i ]) * ( E[ \alpha ] - E[ \alpha | A_i ] )^T )`.
+    marginal_cov : array_like
+        Buffer to store the result: :math:`Var[ \alpha ]`.
+    """
+
+    # Pr[ A_i ] * E[ \alpha | A_i ]
+    np.multiply(event_probs.reshape(-1, 1), event_conditional_vectors,
+            out=weighted_vectors)
+
+    # E[ \alpha ] = \sum_{i} Pr[ A_i ] * E[ \alpha | A_i ]
+    np.sum(weighted_vectors, axis=0, out=marginal_vector)
+
+    # E[ \alpha ] - E[ \alpha | A_i ]
+    np.subtract(marginal_vector, event_conditional_vectors,
+            out=vector_biases)
+
+    # ( E[ \alpha ] - E[ \alpha | A_i ] ) *
+    # * ( E[ \alpha ] - E[ \alpha | A_i ] )^T
+    for i in range(event_probs.shape[0]):
+        np.outer(vector_biases[i], vector_biases[i], out=vector_bias_sqrs[i])
+
+    # Var[ \alpha | A_i ] + ( E[ \alpha ] - E[ \alpha | A_i ] ) *
+    # * ( E[ \alpha ] - E[ \alpha | A_i ] )^T
+    np.add(event_conditional_covs, vector_bias_sqrs, out=covs_plus_bias_sqrs)
+
+    # Pr[ A_i ] * ( Var[ \alpha | A_i ] + ( E[ \alpha ] - E[ \alpha | A_i ] ) *
+    # * ( E[ \alpha ] - E[ \alpha | A_i ] )^T )
+    np.multiply(event_probs.reshape(-1, 1, 1), covs_plus_bias_sqrs,
+            out=weighted_covs_plus_bias_sqrs)
+
+    # Var[ \alpha ] = \sum_{i}
+    # Pr[ A_i ] * ( Var[ \alpha | A_i ] + ( E[ \alpha ] - E[ \alpha | A_i ] ) *
+    # * ( E[ \alpha ] - E[ \alpha | A_i ] )^T )
+    np.sum(weighted_covs_plus_bias_sqrs, axis=0,
+            out=marginal_cov)
+
 
 class _KimFilter(object):
 
@@ -42,7 +112,7 @@ class _KimFilter(object):
         if t == 0:
             regime_logprobs = model._initial_regime_logprobs
         else:
-            regime_logprobs = self.filtered_regime_logprobs[t - 1, :]
+            regime_logprobs = self.filtered_regime_logprobs[:, t - 1]
 
         # Pr[ S_t, S_{t-1} | \psi_{t-1} ] = Pr[ S_t | S_{t-1} ] *
         # * Pr[ S_{t-1} | \psi_{t-1} ]
@@ -52,12 +122,13 @@ class _KimFilter(object):
 
         # Pr[ S_t | \psi_{t-1} ] =
         # = \sum_{S_{t-1}} Pr[ S_t, S_{t-1} | \psi_{t-1} ]
-        self.predicted_regime_logprobs[t, :] = logsumexp(
+        self.predicted_regime_logprobs[:, t] = logsumexp(
                 predicted_prev_and_curr_regime_logprobs, axis=0)
 
     def _kalman_filter_step(self, t, prev_regime, curr_regime, state_buffer,
             state_cov_buffer, state_batteries, state_cov_batteries,
-            prev_and_curr_regime_cond_obs_logprobs):
+            prev_and_curr_regime_cond_obs_logprobs, forecast_error_batteries,
+            forecast_error_cov_batteries):
 
         # `SwitchingRepresentation` aggregates `k_regimes` `KalmanFilter`
         # instances. During this step, for every combination (i, j)
@@ -79,8 +150,9 @@ class _KimFilter(object):
         curr_regime_filter = model._regime_kalman_filters[curr_regime]
         prev_regime_filter = model._regime_kalman_filters[prev_regime]
 
-        # Every `curr_kfilter` do the filtering iteration `k_regimes` times from
-        # one time position, so its time pointer has to be corrected every time.
+        # Every `curr_kfilter` does the filtering iteration `k_regimes` times
+        # from one time position, so its time pointer has to be corrected every
+        # time.
         curr_kfilter.seek(t)
 
         # `Feeding` \beta_{t-1|t-1}^{i} and P_{t-1|t-1}^{i} to j-th Kalman
@@ -132,6 +204,39 @@ class _KimFilter(object):
         prev_and_curr_regime_cond_obs_logprobs[prev_regime, curr_regime] = \
                 curr_kfilter.loglikelihood[t]
 
+        np.copyto(forecast_error_batteries[prev_regime, curr_regime, :],
+                curr_kfilter.forecast_error[:, t])
+        np.copyto(forecast_error_cov_batteries[prev_regime, curr_regime, :, :],
+                curr_kfilter.forecast_error_cov[:, :, t])
+
+    def _collapse_forecasts(self, t, predicted_prev_and_curr_regime_logprobs,
+            predicted_prev_and_curr_regime_probs, forecast_error_batteries,
+            weighted_error_batteries, error_biases, error_bias_sqrs,
+            forecast_error_cov_batteries, error_covs_plus_bias_sqrs,
+            weighted_error_covs_plus_bias_sqrs):
+
+        # This method calculates \eta_{t|t-1} and f_{t|t-1}, which are primarily
+        # used in `FilterResults` and `SwitchingMLEResults` for hypothesis
+        # testing.
+
+        model = self.model
+
+        k_endog = model._k_endog
+
+        # Switching from logprobs to probs
+        np.exp(predicted_prev_and_curr_regime_logprobs,
+                out=predicted_prev_and_curr_regime_probs)
+
+        # Calculate \eta_{t|t-1}, f_{t|t-1}, collapsing \eta_{t|t-1}^{(i,j)} and
+        # f_{t|t-1}^{(i,j)} with probability weights
+        _marginalize_vector(predicted_prev_and_curr_regime_probs,
+                forecast_error_batteries.reshape(-1, k_endog),
+                weighted_error_batteries, self.forecast_error[:, t],
+                error_biases, error_bias_sqrs,
+                forecast_error_cov_batteries.reshape(-1, k_endog, k_endog),
+                error_covs_plus_bias_sqrs, weighted_error_covs_plus_bias_sqrs,
+                self.forecast_error_cov[:, :, t])
+
     def _hamilton_filtering_step(self, t,
             predicted_prev_and_curr_regime_logprobs,
             prev_and_curr_regime_cond_obs_logprobs,
@@ -170,47 +275,16 @@ class _KimFilter(object):
             filtered_prev_and_curr_regime_logprobs[:, :] = -np.inf
 
         # Pr[ S_t | \psi_t ] = \sum_{S_{t-1}} Pr[ S_t, S_{t-1} | \psi_{t} ]
-        self.filtered_regime_logprobs[t, :] = logsumexp(
+        self.filtered_regime_logprobs[:, t] = logsumexp(
                 filtered_prev_and_curr_regime_logprobs, axis=0)
 
-    def _regime_uncond_filtering(self, t,
-            filtered_prev_and_curr_regime_probs, state_batteries,
-            weighted_state_batteries, state_cov_batteries,
-            weighted_state_cov_batteries):
-
-        # This method calculates \beta_{t-1|t-1} and P_{t-1|t-1}, that is,
-        # filtered data, unconditional on regimes
-
-        model = self.model
-
-        k_regimes = model._k_regimes
-
-        # Pr[ S_t, S_{t-1} | \psi_{t} ] * \beta_{t|t}^{(i,j)}
-        np.multiply(filtered_prev_and_curr_regime_probs.reshape(k_regimes,
-                k_regimes, 1), state_batteries, out=weighted_state_batteries)
-
-        # \beta_{t|t} = \sum_{i,j}
-        # ( Pr[ S_{t-1} = i, S_t = j | \psi_{t} ] * \beta_{t|t}^{(i,j)} )
-        np.sum(weighted_state_batteries, axis=(0, 1),
-                out=self.filtered_state[t, :])
-
-        # Pr[ S_{t-1} = i, S_t = j | \psi_{t} ] * P_{t|t}^{(i,j)}
-        np.multiply(filtered_prev_and_curr_regime_probs.reshape(k_regimes,
-                k_regimes, 1, 1), state_cov_batteries,
-                out=weighted_state_cov_batteries)
-
-        # P_{t|t} = \sum_{i,j}
-        # ( Pr[ S_{t-1} = i, S_t = j | \psi_{t} ] * P_{t|t}^{(i,j)} )
-        np.sum(weighted_state_cov_batteries, axis=(0, 1),
-                out=self.filtered_state_cov[t, :, :])
-
     def _approximation_step(self, t, curr_regime,
-            filtered_prev_and_curr_regime_logprobs,
+            filtered_prev_and_curr_regime_logprobs, approx_states,
             filtered_prev_cond_on_curr_regime_logprobs,
             state_batteries, weighted_states, state_biases,
             state_bias_sqrs, state_cov_batteries,
             state_covs_and_state_bias_sqrs,
-            weighted_state_covs_and_state_bias_sqrs, approx_state_cov):
+            weighted_state_covs_and_state_bias_sqrs, approx_state_covs):
 
         # During this step approximate \beta_{t|t}^{i} and P_{t|t}^{i}
         # are calculated and stored inside Kalman filters' `filtered_state` and
@@ -219,34 +293,30 @@ class _KimFilter(object):
 
         model = self.model
 
-        k_regimes = model._k_regimes
-        k_states = model._k_states
-
         # Reference to Cython KalmanFilter
         curr_filter = model._kfilters[curr_regime]
 
-        # Reference to Cython filter's internal matrix slice
-        approx_state = np.asarray(curr_filter.filtered_state[:, t])
-
         # Zero joint probability indicates that this pair of current and
         # previous regimes is impossible and no need to do further calculations
-        if self.filtered_regime_logprobs[t, curr_regime] == -np.inf:
+        if self.filtered_regime_logprobs[curr_regime, t] == -np.inf:
             # Filling \beta_{t-1|t-1}^{i} and P_{t-1|t-1}^{i} with zeros
             # Any value would be alright, since these data is multiplied by zero
             # weight in the next iteration
-            approx_state[:] = 0
+            approx_states[curr_regime, :] = 0
+            approx_state_covs[curr_regime, :, :] = 0
 
-            approx_state_cov = \
-                    np.asarray(curr_filter.filtered_state_cov[:, :, t])
-
-            approx_state_cov[:, :] = 0
-
+            # Copying data form temporary buffer to Kalman filter matrices
+            # There is no need to do it here, but just for consistency
+            np.copyto(np.asarray(curr_filter.filtered_state[:, t]),
+                    approx_states[curr_regime, :])
+            np.copyto(np.asarray(curr_filter.filtered_state_cov[:, :, t]),
+                    approx_state_covs[curr_regime, :, :])
             return
 
         # Pr[ S_{t-1} | S_t, \psi_t ] = Pr[ S_t, S_{t-1} | \psi_t ] /
         # / Pr[ S_t | \psi_t ]
         np.subtract(filtered_prev_and_curr_regime_logprobs[:, curr_regime],
-                self.filtered_regime_logprobs[t, curr_regime],
+                self.filtered_regime_logprobs[curr_regime, t],
                 out=filtered_prev_cond_on_curr_regime_logprobs)
 
         # Switching from logprobs to probs
@@ -255,46 +325,40 @@ class _KimFilter(object):
         np.exp(filtered_prev_cond_on_curr_regime_logprobs,
                 out=filtered_prev_cond_on_curr_regime_probs)
 
-        # Pr[ S_{t-1} = i | S_t = j, \psi_t ] * \beta_{t|t}^{(i,j)}
-        np.multiply(filtered_prev_cond_on_curr_regime_probs.reshape(-1, 1),
-                state_batteries[:, curr_regime, :], out=weighted_states)
+        # Calculate \beta_{t|t}^j, P_{t|t}^j, collapsing \beta_{t|t}^{(i,j)} and
+        # P_{t|t}^{(i,j)} with probability weights
+        _marginalize_vector(filtered_prev_cond_on_curr_regime_logprobs,
+                state_batteries[:, curr_regime, :], weighted_states,
+                approx_states[curr_regime, :], state_biases, state_bias_sqrs,
+                state_cov_batteries[:, curr_regime, :, :],
+                state_covs_and_state_bias_sqrs,
+                weighted_state_covs_and_state_bias_sqrs,
+                approx_state_covs[curr_regime, :, :])
 
-        # \beta_{t|t}^{j} = \sum_{i}
-        # Pr[ S_{t-1} = i | S_t = j, \psi_t ] * \beta_{t|t}^{(i,j)}
-        np.sum(weighted_states, axis=0, out=approx_state)
-
-        # \beta_{t|t}^j - \beta_{t|t}^{(i,j)}
-        np.subtract(approx_state, state_batteries[:, curr_regime, :],
-                out=state_biases)
-
-        # ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} ) *
-        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T
-        for i in range(k_regimes):
-            np.outer(state_biases[i], state_biases[i],
-                    out=state_bias_sqrs[i])
-
-        # P_{t|t}^{(i,j)} + ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} ) *
-        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T
-        np.add(state_cov_batteries[:, curr_regime, :, :], state_bias_sqrs,
-                out=state_covs_and_state_bias_sqrs)
-
-        # Pr[ S_{t-1} = i | S_t = j, \psi_t ] * (P_{t|t}^{(i,j)} +
-        # + ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} ) *
-        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T)
-        np.multiply(filtered_prev_cond_on_curr_regime_probs.reshape(-1, 1,
-                1), state_covs_and_state_bias_sqrs,
-                out=weighted_state_covs_and_state_bias_sqrs)
-
-        # P_{t|t}^{j} = \sum_{i}
-        # Pr[ S_{t-1} = i | S_t = j, \psi_t ] * P_{t|t}^{(i,j)}
-        np.sum(weighted_state_covs_and_state_bias_sqrs, axis=0,
-                out=approx_state_cov)
-
-        # It turns out that passing
-        # np.asarray(curr_filter.filtered_state_cov[:, :, t]) to np.sum
-        # leads to unexpected results.
+        # Copying data form temporary buffer to Kalman filter matrices
+        np.copyto(np.asarray(curr_filter.filtered_state[:, t]),
+                approx_states[curr_regime, :])
         np.copyto(np.asarray(curr_filter.filtered_state_cov[:, :, t]),
-                approx_state_cov)
+                approx_state_covs[curr_regime, :, :])
+
+    def _collapse_states(self, t, filtered_regime_probs,
+            approx_states, weighted_states, state_biases, state_bias_sqrs,
+            approx_state_covs, state_covs_and_state_bias_sqrs,
+            weighted_state_covs_and_state_bias_sqrs):
+
+        # This method calculates \beta_{t|t} and P_{t|t} using \beta_{t|t}^j
+        # and P_{t|t}^j.
+
+        # Switching from logprobs to probs
+        np.exp(self.filtered_regime_logprobs[:, t], out=filtered_regime_probs)
+
+        # Collapsing \beta_{t|t}^i and P_{t|t}^i to get the result
+        _marginalize_vector(filtered_regime_probs, approx_states,
+                weighted_states, self.filtered_state[:, t], state_biases,
+                state_bias_sqrs, approx_state_covs,
+                state_covs_and_state_bias_sqrs,
+                weighted_state_covs_and_state_bias_sqrs,
+                self.filtered_state_cov[:, :, t])
 
     def __call__(self):
 
@@ -318,16 +382,22 @@ class _KimFilter(object):
         self.obs_loglikelihoods = np.zeros((nobs,), dtype=dtype)
 
         # Array, storing \ln( Pr[ S_t | \psi_{t-1} ] )
-        self.filtered_regime_logprobs = np.zeros((nobs, k_regimes),
+        self.filtered_regime_logprobs = np.zeros((k_regimes, nobs),
                 dtype=dtype)
         # Array, storing \ln( Pr[ S_t | \psi_t ] )
-        self.predicted_regime_logprobs = np.zeros((nobs, k_regimes),
+        self.predicted_regime_logprobs = np.zeros((k_regimes, nobs),
                 dtype=dtype)
 
         # Array, storing \beta_{t|t}
-        self.filtered_state = np.zeros((nobs, k_states), dtype=dtype)
+        self.filtered_state = np.zeros((k_states, nobs), dtype=dtype)
         # Array, storing P_{t|t}
-        self.filtered_state_cov = np.zeros((nobs, k_states, k_states),
+        self.filtered_state_cov = np.zeros((k_states, k_states, nobs),
+                dtype=dtype)
+
+        # Array, storing \eta_{t|t-1}
+        self.forecast_error = np.zeros((k_endog, nobs), dtype=dtype)
+        # Array, storing f_{t|t-1}
+        self.forecast_error_cov = np.zeros((k_endog, k_endog, nobs),
                 dtype=dtype)
 
         # If user didn't specify initialization, try to find stationary regime
@@ -353,9 +423,40 @@ class _KimFilter(object):
         state_cov_batteries = np.zeros((k_regimes, k_regimes, k_states,
                 k_states), dtype=dtype)
 
+        # Batteries of \eta_{t|t-1}^{(i,j)}
+        forecast_error_batteries = np.zeros((k_regimes, k_regimes, k_endog),
+                dtype=dtype)
+        # Batteries of f_{t|t-1}^{(i,j)}
+        forecast_error_cov_batteries = np.zeros((k_regimes, k_regimes, k_endog,
+                k_endog), dtype=dtype)
+
+        # Buffer for Pr[ S_{t-1} = i, S_t = j | \psi_{t-1} ] *
+        # * \eta_{t|t-1}^{(i,j)}
+        weighted_error_batteries = np.zeros((k_regimes * k_regimes, k_endog),
+                dtype=dtype)
+        # Buffer for \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)}
+        error_biases = np.zeros((k_regimes * k_regimes, k_endog), dtype=dtype)
+        # Buffer for ( \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)} ) *
+        # * ( \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)} )^T
+        error_bias_sqrs = np.zeros((k_regimes * k_regimes, k_endog, k_endog),
+                dtype=dtype)
+        # Buffer for f_{t|t-1}^{(i,j)} +
+        # + ( \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)} ) *
+        # * ( \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)} )^T
+        error_covs_plus_bias_sqrs = np.zeros((k_regimes * k_regimes, k_endog,
+                k_endog), dtype=dtype)
+        # Buffer for Pr[ S_{t-1} = i, S_t = j | \psi_{t-1} ] *
+        # * ( f_{t|t-1}^{(i,j)} + ( \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)} ) *
+        # * ( \eta_{t|t-1} - \eta_{t|t-1}^{(i,j)} )^T )
+        weighted_error_covs_plus_bias_sqrs = np.zeros((k_regimes * k_regimes,
+                k_endog, k_endog), dtype=dtype)
+
         # Buffer for \ln( Pr[ S_t, S_{t-1} | \psi_{t-1} ] )
         predicted_prev_and_curr_regime_logprobs = np.zeros((k_regimes,
                 k_regimes), dtype=dtype)
+        # Buffer for Pr[ S_t, S_{t-1} | \psi_{t-1} ]
+        predicted_prev_and_curr_regime_probs = np.zeros((k_regimes, k_regimes),
+                dtype=dtype)
         # Buffer for \ln( f( y_t | S_t, S_{t-1}, \psi_{t-1} ) )
         prev_and_curr_regime_cond_obs_logprobs = np.zeros((k_regimes,
                 k_regimes), dtype=dtype)
@@ -370,37 +471,51 @@ class _KimFilter(object):
         filtered_prev_cond_on_curr_regime_logprobs = np.zeros((k_regimes,),
                 dtype=dtype)
 
+        # Buffer for \beta_{t|t}^j
+        approx_states = np.zeros((k_regimes, k_states), dtype=dtype)
+        # Buffer for P_{t|t}^j
+        approx_state_covs = np.zeros((k_regimes, k_states, k_states),
+                dtype=dtype)
+
         # Buffer for Pr[ S_{t-1} = i | S_t = j, \psi_t ] * \beta_{t|t}^{(i,j)}
+        # (in `_approximation_step`) and for
+        # Pr[ S_t = j | \psi_t ] * \beta_{t|t}^j (in `_collapse_states`)
         weighted_states = np.zeros((k_regimes, k_states), dtype=dtype)
+
         # Buffer for \beta_{t|t}^j - \beta_{t|t}^{(i,j)}
+        # (in `_approximation_step`) and for \beta_{t|t} - \beta_{t|t}^j
+        # (in `_collapse_states`)
         state_biases = np.zeros((k_regimes, k_states), dtype=dtype)
+
         # Buffer for ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} ) *
-        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T
+        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T (in `_approximation_step`)
+        # and for ( \beta_{t|t} - \beta_{t|t}^j ) *
+        # * ( \beta_{t|t} - \beta_{t|t}^j )^T (in `_collapse_states`)
         state_bias_sqrs = np.zeros((k_regimes, k_states, k_states),
                 dtype=dtype)
+
         # Buffer for P_{t|t}^{(i,j)} + ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} ) *
-        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T
+        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T (in `_approximation_step`)
+        # and for P_{t|t}^j + ( \beta_{t|t} - \beta_{t|t}^j ) *
+        # * ( \beta_{t|t} - \beta_{t|t}^j )^T (in `_collapse_states`)
         state_covs_and_state_bias_sqrs = np.zeros((k_regimes, k_states,
                 k_states), dtype=dtype)
 
-        # Buffer for Pr[ S_{t-1} = i | S_t = j, \psi_t ] * (P_{t|t}^{(i,j)} +
+        # Buffer for Pr[ S_{t-1} = i | S_t = j, \psi_t ] * ( P_{t|t}^{(i,j)} +
         # + ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} ) *
-        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T)
+        # * ( \beta_{t|t}^j - \beta_{t|t}^{(i,j)} )^T )
+        # (in `_approximation_step`) and for
+        # Pr[ S_t = j | \psi_t ] * ( P_{t|t}^j +
+        # + ( \beta_{t|t} - \beta_{t|t}^j ) *
+        # * ( \beta_{t|t} - \beta_{t|t}^j )^T ) (in `_collapse_states`)
         weighted_state_covs_and_state_bias_sqrs = np.zeros((k_regimes,
                 k_states, k_states), dtype=dtype)
-        # Buffer for P_{t,t}^j
-        approx_state_cov = np.zeros((k_states, k_states), dtype=dtype)
 
-        # Buffer for Pr[ S_{t-1} = i, S_t = j | \psi_t ] * \beta_{t|t}^{(i,j)}
-        weighted_state_batteries = np.zeros((k_regimes, k_regimes, k_states),
-                dtype=dtype)
-        # Buffer for Pr[ S_{t-1} = i, S_t = j | \psi_t ] * P_{t|t}^{(i,j)}
-        weighted_state_cov_batteries = np.zeros((k_regimes, k_regimes,
-                k_states, k_states), dtype=dtype)
+        # Buffer for Pr[ S_t = j | \psi_t ]
+        filtered_regime_probs = np.zeros((k_regimes,), dtype=dtype)
 
         # Iterating over observation period
         for t in range(nobs):
-
             # Kim filter iteration consists of three consecutive steps: Kalman
             # filter step, Hamilton filter step and Approximation step.
             # Here Hamilton filter step is splitted into two parts: prediction
@@ -425,7 +540,17 @@ class _KimFilter(object):
                         self._kalman_filter_step(t, prev_regime, curr_regime,
                                 state_buffer, state_cov_buffer, state_batteries,
                                 state_cov_batteries,
-                                prev_and_curr_regime_cond_obs_logprobs)
+                                prev_and_curr_regime_cond_obs_logprobs,
+                                forecast_error_batteries,
+                                forecast_error_cov_batteries)
+
+            # Collecting forecast errors
+            self._collapse_forecasts(t, predicted_prev_and_curr_regime_logprobs,
+                    predicted_prev_and_curr_regime_probs,
+                    forecast_error_batteries, weighted_error_batteries,
+                    error_biases, error_bias_sqrs, forecast_error_cov_batteries,
+                    error_covs_plus_bias_sqrs,
+                    weighted_error_covs_plus_bias_sqrs)
 
             # Hamilton filter
             self._hamilton_filtering_step(t,
@@ -437,26 +562,20 @@ class _KimFilter(object):
             # Approximation
             for curr_regime in range(k_regimes):
                 self._approximation_step(t, curr_regime,
-                        filtered_prev_and_curr_regime_logprobs,
+                        filtered_prev_and_curr_regime_logprobs, approx_states,
                         filtered_prev_cond_on_curr_regime_logprobs,
                         state_batteries, weighted_states, state_biases,
                         state_bias_sqrs, state_cov_batteries,
                         state_covs_and_state_bias_sqrs,
                         weighted_state_covs_and_state_bias_sqrs,
-                        approx_state_cov)
-
-            # Switching from logprobs to probs
-            filtered_prev_and_curr_regime_probs = \
-                    filtered_prev_and_curr_regime_logprobs
-            np.exp(filtered_prev_and_curr_regime_logprobs,
-                    out=filtered_prev_and_curr_regime_probs)
+                        approx_state_covs)
 
             # Collecting filtering results
-            self._regime_uncond_filtering(t,
-                    filtered_prev_and_curr_regime_probs, state_batteries,
-                    weighted_state_batteries, state_cov_batteries,
-                    weighted_state_cov_batteries)
-
+            self._collapse_states(t, filtered_regime_probs,
+                    approx_states, weighted_states, state_biases,
+                    state_bias_sqrs, approx_state_covs,
+                    state_covs_and_state_bias_sqrs,
+                    weighted_state_covs_and_state_bias_sqrs)
 
 class KimFilter(SwitchingRepresentation):
     """
@@ -560,9 +679,9 @@ class KimFilter(SwitchingRepresentation):
             if not issubclass(results, KimFilterResults):
                 raise ValueError('Invalid results type.')
             results = results(self)
-            # save representation data in results
-            results.update_representation(self)
 
+        # save representation data in results
+        results.update_representation(self)
         # Save filtering data in results
         results.update_filter(kfilter)
 
@@ -780,15 +899,41 @@ class KimFilterResults(FrozenSwitchingRepresentation):
         self.filtered_state = kfilter.filtered_state
         self.filtered_state_cov = kfilter.filtered_state_cov
 
+        self.forecasts_error = np.array(kfilter.forecast_error, copy=True)
+        self.forecasts = self.forecasts_error + \
+                kfilter.model.endog
+        self.forecasts_error_cov = np.array(kfilter.forecast_error_cov,
+                copy=True)
+
         self.filtered_regime_logprobs = kfilter.filtered_regime_logprobs
         self.predicted_regime_logprobs = kfilter.predicted_regime_logprobs
+
+        self._standardized_forecasts_error = None
+
+    @property
+    def standardized_forecasts_error(self):
+        """
+        (array) Standardized forecast errors
+        """
+        if self._standardized_forecasts_error is None:
+            # Logic partially copied from `kalman_filter.FilterResults` class
+            from scipy import linalg
+            self._standardized_forecasts_error = \
+                    np.zeros_like(self.forecasts_error)
+            for t in range(self.forecasts_error_cov.shape[2]):
+                upper, _ = linalg.cho_factor(self.forecasts_error_cov[:, :, t])
+                self._standardized_forecasts_error[:, t] = \
+                        linalg.solve_triangular(upper,
+                        self.forecasts_error[:, t])
+
+        return self._standardized_forecasts_error
 
     @property
     def filtered_regime_probs(self):
         """
         (array) Probability of a given regime being active at the moment t,
         conditional on all observations measured till the moment t. A
-        `(nobs, k_regimes)` shaped array.
+        `(k_regimes, nobs)` shaped array.
         """
         return np.exp(self.filtered_regime_logprobs)
 
@@ -797,7 +942,7 @@ class KimFilterResults(FrozenSwitchingRepresentation):
         """
         (array) Probability of a given regime being active at the moment t,
         conditional on all observations measured until the moment t. A
-        `(nobs, k_regimes)` shaped array.
+        `(k_regimes, nobs)` shaped array.
         """
         return np.exp(self.predicted_regime_logprobs)
 

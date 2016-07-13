@@ -54,30 +54,30 @@ class _KimSmoother(object):
             log_transition = np.log(transition_probs)
 
             # Allocating partition probabilities array
-            filtered_regime_logprobs = np.zeros((nobs, regime_partition.size),
+            filtered_regime_logprobs = np.zeros((regime_partition.size, nobs),
                     dtype=dtype)
-            predicted_regime_logprobs = np.zeros((nobs, regime_partition.size),
+            predicted_regime_logprobs = np.zeros((regime_partition.size, nobs),
                     dtype=dtype)
 
             # Collapsing values to get probabilities of subsets, forming
             # partition
             for i in range(regime_partition.size):
                 mask = regime_partition.get_mask(i)
-                filtered_regime_logprobs[:, i] = logsumexp(
-                        self.filtered_regime_logprobs[:, mask], axis=1)
-                predicted_regime_logprobs[:, i] = logsumexp(
-                        self.predicted_regime_logprobs[:, mask], axis=1)
+                filtered_regime_logprobs[i, :] = logsumexp(
+                        self.filtered_regime_logprobs[mask, :], axis=0)
+                predicted_regime_logprobs[i, :] = logsumexp(
+                        self.predicted_regime_logprobs[mask, :], axis=0)
 
             partition_size = regime_partition.size
 
         # Allocation of result
 
         # Pr[ S_t | \psi_T ]
-        self.smoothed_regime_logprobs = np.zeros((nobs, partition_size),
+        self.smoothed_regime_logprobs = np.zeros((partition_size, nobs),
                 dtype=dtype)
         # Pr[ S_t, S_{t+1} | \psi_T ]
-        self.smoothed_curr_and_next_regime_logprobs = np.zeros((nobs - 1,
-                partition_size, partition_size), dtype=dtype)
+        self.smoothed_curr_and_next_regime_logprobs = np.zeros((partition_size,
+                partition_size, nobs - 1), dtype=dtype)
 
         # Allocation of buffers, reused during iterations of smoothing
 
@@ -89,7 +89,7 @@ class _KimSmoother(object):
                 partition_size), dtype=dtype)
 
         # Initialization of smoothing
-        self.smoothed_regime_logprobs[-1, :] = filtered_regime_logprobs[-1, :]
+        self.smoothed_regime_logprobs[:, -1] = filtered_regime_logprobs[:, -1]
 
         # Backward pass iterations
         for t in range(nobs - 2, -1, -1):
@@ -97,16 +97,16 @@ class _KimSmoother(object):
             # Pr[ S_t, S_{t+1} | \psi_t ] = Pr[ S_t | \psi_t ] *
             # Pr[ S_{t+1} | S_t ]
             np.add(log_transition.transpose(),
-                    filtered_regime_logprobs[t, :].reshape(-1, 1),
+                    filtered_regime_logprobs[:, t].reshape(-1, 1),
                     out=predicted_curr_and_next_regime_logprobs)
 
             # Pr[ S_t | S_{t+1}, \psi_t ] = Pr[ S_t, S_{t+1} | \psi_t ] /
             # Pr[ S_{t+1} | \psi_t ]
             for i in range(partition_size):
                 # Condition to avoid -np.inf - (-np.inf) operation
-                if predicted_regime_logprobs[t + 1, i] != -np.inf:
+                if predicted_regime_logprobs[i, t + 1] != -np.inf:
                     np.subtract(predicted_curr_and_next_regime_logprobs[:, i],
-                            predicted_regime_logprobs[t + 1, i],
+                            predicted_regime_logprobs[i, t + 1],
                             out=filtered_curr_regime_cond_on_next_logprobs[:,
                             i])
                 else:
@@ -114,13 +114,13 @@ class _KimSmoother(object):
 
             # Pr[ S_t, S_{t+1} | \psi_T ] \approx Pr[ S_{t+1} | \psi_T ] * \
             # Pr[ S_t | S_{t+1}, \psi_t ]
-            np.add(self.smoothed_regime_logprobs[t + 1, :].reshape(1, -1),
+            np.add(self.smoothed_regime_logprobs[:, t + 1].reshape(1, -1),
                     filtered_curr_regime_cond_on_next_logprobs,
-                    out=self.smoothed_curr_and_next_regime_logprobs[t, :, :])
+                    out=self.smoothed_curr_and_next_regime_logprobs[:, :, t])
 
             # Pr[ S_t | \psi_T ] = \sum_{S_{t+1}} Pr[ S_t, S_{t+1} | \psi_T ]
-            self.smoothed_regime_logprobs[t, :] = logsumexp(
-                    self.smoothed_curr_and_next_regime_logprobs[t, :, :], axis=1)
+            self.smoothed_regime_logprobs[:, t] = logsumexp(
+                    self.smoothed_curr_and_next_regime_logprobs[:, :, t], axis=1)
 
 
 class KimSmoother(KimFilter):
@@ -216,7 +216,8 @@ class KimSmoother(KimFilter):
             # Run filtering first
             results = self.filter(results=results, **kwargs)
         elif results is None or isinstance(results, type) or \
-                results.filtered_regime_logprobs is None:
+                results.filtered_regime_logprobs is None or \
+                results.predicted_regime_logprobs is None:
             # Raise exception, if no filtering happened before.
             raise ValueError(
                     'Can\'t perform smoothing without filtering first')

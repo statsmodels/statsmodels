@@ -164,13 +164,13 @@ class TestKim1994_MLEModel(Kim1994WithMLEModel):
     @classmethod
     def fit_model(cls):
 
-        params = cls.model.fit(start_params=np.array(
+        results = cls.model.fit(start_params=np.array(
             cls.true['untransformed_start_parameters'], dtype=cls.dtype),
             transformed=False)
 
         return {
-                'loglike': cls.model.loglike(params),
-                'params': params
+                'loglike': results.llf,
+                'params': results.params
         }
 
     def test_loglike(self):
@@ -188,11 +188,11 @@ class TestKim1994_MLEModelLinearFitFirst(Kim1994WithMLEModel):
     @classmethod
     def fit_model(cls):
 
-        params = cls.model.fit(fit_nonswitching_first=True)
+        results = cls.model.fit(fit_nonswitching_first=True)
 
         return {
-                'loglike': cls.model.loglike(params),
-                'params': params
+                'loglike': results.llf,
+                'params': results.params
         }
 
     def test_loglike(self):

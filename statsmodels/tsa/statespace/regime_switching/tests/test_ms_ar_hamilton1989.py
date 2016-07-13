@@ -64,14 +64,12 @@ class TestHamilton1989_Filtering(Hamilton1989):
 
         params = np.array(cls.true['parameters'], dtype=cls.dtype)
 
-        results = cls.model.filter(params)
+        results = cls.model.filter(params, return_ssm=True)
 
         cls.result = {
                 'loglike': results.loglike(),
-                'pr_tt0': results.filtered_regime_probs[:, \
-                        ::2].sum(axis=1),
-                'pr_tl0': results.predicted_regime_probs[:, \
-                        ::2].sum(axis=1)
+                'pr_tt0': results.filtered_regime_probs[::2, :].sum(axis=0),
+                'pr_tl0': results.predicted_regime_probs[::2, :].sum(axis=0)
         }
 
     def test_loglike(self):
@@ -97,11 +95,11 @@ class TestHamilton1989_Smoothing(Hamilton1989):
 
         partition = RegimePartition([0, 1] * 16)
 
-        results = cls.model.smooth(params, return_extended_probs=True,
-                regime_partition=partition)
+        results = cls.model.smooth(params, return_ssm=True,
+                return_extended_probs=True, regime_partition=partition)
 
         cls.result = {
-                'smooth0': results.smoothed_regime_probs[:, 0]
+                'smooth0': results.smoothed_regime_probs[0, :]
         }
 
     def test_probs(self):
@@ -119,14 +117,14 @@ class TestHamilton1989_MLE(Hamilton1989):
 
         super(TestHamilton1989_MLE, cls).setup_class()
 
-        params = cls.model.fit(
+        results = cls.model.fit(
                 start_params=np.array(
                 cls.true['untransformed_start_parameters'], dtype=cls.dtype),
                 transformed=False)
 
         cls.result = {
-                'loglike': cls.model.loglike(params),
-                'params': params
+                'loglike': results.llf,
+                'params': results.params
         }
 
     def test_loglike(self):

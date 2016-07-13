@@ -614,8 +614,8 @@ class SwitchingMLEModel(MLEModel):
             start_params = self.update_params(start_params, nonswitching_params)
 
         kwargs['start_params'] = start_params
-        #TODO: create results class
-        kwargs['return_params'] = True
+
+        #kwargs['return_params'] = True
 
         # Kalman-filter-specific Harvey method is not available
         if 'optim_score' in kwargs and kwargs['optim_score'] == 'harvey':
@@ -683,6 +683,12 @@ class SwitchingMLEModel(MLEModel):
                 results_class=results_class,
                 results_wrapper_class=results_wrapper_class, **kwargs)
 
+    #def loglike(self, *args, **kwargs):
+    #    raise NotImplementedError
+
+    #def loglikeobs(self, *args, **kwargs):
+    #    raise NotImplementedError
+
     def update(self, params, transformed=True, complex_step=False):
         """
         Update the parameters of the model
@@ -709,6 +715,10 @@ class SwitchingMLEModel(MLEModel):
         --------
         MLEModel.update
         """
+
+        # When `complex_step` is used, params can have a small imaginary part
+        if complex_step:
+            params = np.real(params)
 
         return super(SwitchingMLEModel, self).update(params,
                 transformed=transformed, complex_step=complex_step)
@@ -860,9 +870,9 @@ class SwitchingMLEModel(MLEModel):
 class SwitchingMLEResults(MLEResults):
 
     _filter_and_smoother_attributes = ['filtered_state', 'filtered_state_cov',
-            'filtered_regime_logprobs', 'predicted_regime_logprobs',
-            'initial_regime_logprobs', 'smoothed_regime_logprobs',
-            'smoothed_curr_and_next_regime_logprobs']
+            'filtered_regime_probs', 'predicted_regime_probs',
+            'initial_regime_probs', 'smoothed_regime_probs',
+            'smoothed_curr_and_next_regime_probs']
 
     def __init__(self, model, params, results, cov_type='opg',
             cov_kwds=None, **kwargs):
@@ -875,13 +885,13 @@ class SwitchingMLEResults(MLEResults):
         super(SwitchingMLEResults, self).__init__(model, params, results,
                 cov_type=cov_type, cov_kwds=cov_kwds, **kwargs)
 
-    def _get_robustcov_results(self, *args, **kwargs):
+    def _get_robustcov_results(self, cov_type='opg', **kwargs):
 
         if cov_type == 'oim' or cov_type == 'robust_oim':
             raise NotImplementedError
 
-        return super(SwitchingMLEResults, self)._get_robustcov_results(*args,
-                **kwargs)
+        return super(SwitchingMLEResults, self)._get_robustcov_results(
+                cov_type=cov_type, **kwargs)
 
     #def aic(self, *args, **kwargs):
     #    raise NotImplementedError
@@ -987,5 +997,10 @@ class SwitchingMLEResults(MLEResults):
     #def plot_diagnostics(self, *args, **kwargs):
     #    raise NotImplementedError
 
-    #def summary(self, *args, **kwargs):
-    #    raise NotImplementedError
+    def summary(self, title=None, **kwargs):
+
+        # change statespace model title
+        if title is None:
+            title = 'Markov Switching Statespace Model Results'
+
+        return super(SwitchingMLEResults, self).summary(title=title, **kwargs)
