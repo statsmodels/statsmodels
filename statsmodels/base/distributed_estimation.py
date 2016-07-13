@@ -12,8 +12,14 @@ methods of distribution
 
 - sequential, has no extra dependencies
 - parallel
-    - with dask
     - with joblib
+        A variety of backends are supported through joblib
+        This allows for different types of clusters besides
+        standard local clusters.  Some examples of
+        backends supported by joblib are
+          - dask.distributed
+          - yarn
+          - ipyparallel
 
 The framework is very general and allows for a variety of
 estimation methods.  Currently, these include
@@ -446,7 +452,8 @@ class DistributedModel():
             self.join_kwds = join_kwds
 
 
-    def fit_distributed(self, parallel_method="sequential"):
+    def fit_distributed(self, parallel_method="sequential",
+                        parallel_backend=None):
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
@@ -455,6 +462,9 @@ class DistributedModel():
         parallel_method : str
             type of distributed estimation to be used, currently
             "sequential", "joblib" and "dask" are supported.
+        parallel_backend : None or joblib parallel_backend object
+            used to allow support for more complicated backends,
+            ex: dask.distributed
 
         Returns
         -------
@@ -467,12 +477,7 @@ class DistributedModel():
             return self.fit_dist_sequential()
 
         elif parallel_method == "joblib":
-             results_l = self.fit_dist_joblib()
-
-        elif parallel_method == "dask":
-            raise ValueError("parallel_method: %s is currently not supported"
-                             % parallel_method)
-#            results_l self.fit_dist_dask()
+             results_l = self.fit_dist_joblib(distributed_backend)
 
         else:
             raise ValueError("parallel_method: %s is currently not supported"
@@ -506,11 +511,14 @@ class DistributedModel():
                                 **self.join_kwds)
 
 
-    def fit_dist_joblib(self):
+    def fit_dist_joblib(self, parallel_backend):
         """Performs the distributed estimation in parallel using joblib
 
         Parameters
         ----------
+        parallel_backend : None or joblib parallel_backend object
+            used to allow support for more complicated backends,
+            ex: dask.distributed
 
         Returns
         -------
@@ -522,8 +530,15 @@ class DistributedModel():
 
         par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
 
-        results_l = par(f(self, pnum, endog, exog)
-                        for pnum, (endog, exog)
-                        in enumerate(self.data_generator))
+        if distributed_backend is None:
+            results_l = par(f(self, pnum, endog, exog)
+                            for pnum, (endog, exog)
+                            in enumerate(self.data_generator))
+        else:
+            with parallel_backend:
+                results_l = par(f(self, pnum, endog, exog)
+                                for pnum, (endog, exog)
+                                in enumerate(self.data_generator))
+
         return self.join_method(results_l, self.partitions,
                                 **self.join_kwds)
