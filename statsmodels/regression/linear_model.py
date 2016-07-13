@@ -753,7 +753,7 @@ class OLS(WLS):
 
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, profile_scale=False,
+                        L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
@@ -767,6 +767,10 @@ class OLS(WLS):
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
+        L1_wt: scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is a
+            ridge fit, if 1 it is a lasso fit.
         start_params : array-like
             Starting values for ``params``.
         profile_scale : bool
@@ -822,12 +826,15 @@ class OLS(WLS):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
+        if L1_wt == 0:
+            return self.fit_ridge(alpha)
+
         # In the future we could add support for other penalties, e.g. SCAD.
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         # Set default parameters.
-        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+        defaults = {"maxiter" : 50, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
 
@@ -845,12 +852,40 @@ class OLS(WLS):
 
         return fit_elasticnet(self, method=method,
                               alpha=alpha,
+                              L1_wt=L1_wt,
                               start_params=start_params,
                               loglike_kwds=loglike_kwds,
                               score_kwds=score_kwds,
                               hess_kwds=hess_kwds,
                               refit=refit,
                               **defaults)
+
+    def fit_ridge(self, alpha):
+        """
+        Fit a linear model using ridge regression.
+
+        Parameters
+        ----------
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+
+        Notes
+        -----
+        Equivalent to fit_regularized with L1_wt = 0 (but implemented
+        more efficiently).
+        """
+
+        u, s, vt = np.linalg.svd(self.exog, 0)
+        v = vt.T
+        s2 = s*s + alpha * self.nobs
+        params = np.dot(u.T, self.endog) * s / s2
+        params = np.dot(v, params)
+
+        from statsmodels.base.elastic_net import RegularizedResults
+        return RegularizedResults(self, params)
 
 
 class GLSAR(GLS):
@@ -2643,4 +2678,3 @@ if __name__ == "__main__":
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """
-
