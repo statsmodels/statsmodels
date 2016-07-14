@@ -419,9 +419,9 @@ class SARIMAX(MLEModel):
                 exog = np.asarray(exog)
 
             # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
+            if exog.ndim < 2:
                 if not exog_is_using_pandas:
-                    exog = exog[:, None]
+                    exog = np.atleast_2d(exog).T
                 else:
                     exog = pd.DataFrame(exog)
 
@@ -1826,7 +1826,7 @@ class SARIMAXResults(MLEResults):
         """
         return self._params_ma
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
+    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
                 **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
@@ -1917,11 +1917,11 @@ class SARIMAXResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(SARIMAXResults, self).predict(
+        return super(SARIMAXResults, self).get_prediction(
             start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
         )
 
-    def forecast(self, steps=1, exog=None, **kwargs):
+    def get_forecast(self, steps=1, exog=None, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -1943,7 +1943,7 @@ class SARIMAXResults(MLEResults):
         forecast : array
             Array of out of sample forecasts.
         """
-        return super(SARIMAXResults, self).forecast(steps, exog=exog, **kwargs)
+        return super(SARIMAXResults, self).get_forecast(steps, exog=exog, **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
