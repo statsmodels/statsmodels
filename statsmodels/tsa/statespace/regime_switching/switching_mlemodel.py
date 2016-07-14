@@ -86,6 +86,10 @@ class SwitchingMLEModel(MLEModel):
         self.parameters['regime_transition'] = [False] * \
                 self.param_k_regimes * (self.param_k_regimes - 1)
 
+        # Create param names with regime transition prob names
+        self._param_names = ['Pr[{0}->{1}]'.format(j, i) for i in range(
+                self.param_k_regimes - 1) for j in range(self.param_k_regimes)]
+
         # Superclass initialization
         super(SwitchingMLEModel, self).__init__(endog, k_states, **kwargs)
 
@@ -998,6 +1002,18 @@ class SwitchingMLEResults(MLEResults):
     #    raise NotImplementedError
 
     def summary(self, title=None, **kwargs):
+        """
+        Summarize the Model
+
+        Notes
+        -----
+        This method is inherited from base `MLEModel` class, see arguments
+        explanation, etc. in the corresponding docs.
+
+        See Also
+        --------
+        MLEModel.summary
+        """
 
         # change statespace model title
         if title is None:

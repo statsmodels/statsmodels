@@ -209,11 +209,32 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         if self.exog is not None:
             self.parameters['exog'] = [False] * self.k_exog
+            # Add exog param names
+            self._param_names += ['exog{0}'.format(i) for i in \
+                    range(self.k_exog)]
 
         self.parameters['autoregressive'] = self.switching_ar
+        # Add autoregressive param names
+        for i, is_switching in zip(range(order), self.switching_ar):
+            if is_switching:
+                self._param_names += ['phi{0}_{1}'.format(i, j) for j in \
+                        range(k_ar_regimes)]
+            else:
+                self._param_names += ['phi{0}'.format(i)]
 
         self.parameters['mean'] = [self.switching_mean]
+        # Add mean param names
+        if self.switching_mean:
+            self._param_names += ['mu_{0}'.format(i) for i in \
+                    range(k_ar_regimes)]
+        else:
+            self._param_names += ['mu']
+
         self.parameters['variance'] = [self.switching_variance]
+        # Add variance param names
+        if self.switching_variance:
+            self._param_names += ['sigma^2_{0}'.format(i) for i in \
+                    range(k_ar_regimes)]
 
     def get_nonswitching_model(self):
 
