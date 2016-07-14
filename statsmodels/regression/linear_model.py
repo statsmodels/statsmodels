@@ -858,6 +858,7 @@ class OLS(WLS):
                               score_kwds=score_kwds,
                               hess_kwds=hess_kwds,
                               refit=refit,
+                              check_step=False,
                               **defaults)
 
     def fit_ridge(self, alpha):
