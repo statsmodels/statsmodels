@@ -1104,6 +1104,36 @@ def test_ridge():
         result2 = model2.fit_regularized(alpha=1., L1_wt=0)
         assert_allclose(result1.params, result2.params)
 
+    fv1 = result1.fittedvalues
+    fv2 = np.dot(xmat, result1.params)
+    assert_allclose(fv1, fv2)
+
+def test_regularized_refit():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    model1 = OLS(yvec, xmat)
+    result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+    xmat2 = xmat[:, [0, 4]]
+    model2 = OLS(yvec, xmat)
+    result2 = model2.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+    assert_allclose(result1.params, result2.params)
+    assert_allclose(result1.bse, result2.bse)
+
+def test_regularized_options():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    model1 = OLS(yvec - 1, xmat)
+    result1 = model1.fit_regularized(alpha=1., L1_wt=0.5)
+    model2 = OLS(yvec, xmat, offset=1)
+    result2 = model2.fit_regularized(alpha=1., L1_wt=0.5, start_params=np.zeros(5))
+    assert_allclose(result1.params, result2.params)
+
 
 if __name__=="__main__":
 
