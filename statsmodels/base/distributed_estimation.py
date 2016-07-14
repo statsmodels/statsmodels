@@ -480,7 +480,7 @@ class DistributedModel(object):
             return self.fit_dist_sequential()
 
         elif parallel_method == "joblib":
-             results_l = self.fit_dist_joblib(distributed_backend)
+             results_l = self.fit_dist_joblib(parallel_backend)
 
         else:
             raise ValueError("parallel_method: %s is currently not supported"
