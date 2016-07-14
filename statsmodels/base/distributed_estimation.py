@@ -510,8 +510,7 @@ class DistributedModel(object):
             results = _helper_fit_partition(self, pnum, endog, exog)
             results_l.append(results)
 
-        return self.join_method(results_l, self.partitions,
-                                **self.join_kwds)
+        return results_l
 
 
     def fit_dist_joblib(self, parallel_backend):
@@ -543,5 +542,4 @@ class DistributedModel(object):
                                 for pnum, (endog, exog)
                                 in enumerate(self.data_generator))
 
-        return self.join_method(results_l, self.partitions,
-                                **self.join_kwds)
+        return results_l
