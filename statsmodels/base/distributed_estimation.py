@@ -477,7 +477,7 @@ class DistributedModel(object):
 
         # TODO handle fit_kwds different from those passed into model
         if parallel_method == "sequential":
-            return self.fit_dist_sequential()
+            results_l = self.fit_dist_sequential()
 
         elif parallel_method == "joblib":
              results_l = self.fit_dist_joblib(parallel_backend)
