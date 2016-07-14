@@ -1,5 +1,5 @@
 from statsmodels.base.elastic_net import fit_elasticnet
-from statsmodels.stats.nodewise_regression import calc_nodewise_row, calc_nodewise_weight, calc_approx_inv_cov
+from statsmodels.stats.regularized_covariance import _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov
 from statsmodels.base.model import Results
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
@@ -272,11 +272,11 @@ def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
     nodewise_weight_l = []
     for idx in range(mnum * p_part, min((mnum + 1) * p_part, p)):
 
-        nodewise_row = calc_nodewise_row(wexog, idx, alpha)
+        nodewise_row = _calc_nodewise_row(wexog, idx, alpha)
         nodewise_row_l.append(nodewise_row)
 
-        nodewise_weight = calc_nodewise_weight(wexog, nodewise_row, idx,
-                                               alpha)
+        nodewise_weight = _calc_nodewise_weight(wexog, nodewise_row, idx,
+                                                alpha)
         nodewise_weight_l.append(nodewise_weight)
 
     return params, grad, nodewise_row_l, nodewise_weight_l
@@ -312,10 +312,13 @@ def _join_debiased(results_l, threshold=0):
         nodewise_row_l.extend(r[2])
         nodewise_weight_l.extend(r[3])
 
+    nodewise_row_l = np.array(nodewise_row_l)
+    nodewise_weight_l = np.array(nodewise_weight_l)
+
     params_mn /= partitions
     grad_mn *= -1. / partitions
 
-    approx_inv_cov = calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
+    approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
 
     debiased_params = params_mn + approx_inv_cov.dot(grad_mn)
 
@@ -353,7 +356,7 @@ def _helper_fit_partition(self, pnum, endog, exog):
     return results
 
 
-class DistributedModel():
+class DistributedModel(object):
     __doc__ = """
     Distributed model class
 
@@ -530,7 +533,7 @@ class DistributedModel():
 
         par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
 
-        if distributed_backend is None:
+        if parallel_backend is None:
             results_l = par(f(self, pnum, endog, exog)
                             for pnum, (endog, exog)
                             in enumerate(self.data_generator))
