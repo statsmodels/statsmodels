@@ -303,9 +303,10 @@ class VARMAX(MLEModel):
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
         if np.any(np.isnan(endog)):
-            endog = endog[~np.isnan(endog)]
+            mask = ~np.any(np.isnan(endog), axis=1)
+            endog = endog[mask]
             if exog is not None:
-                exog = exog[~np.isnan(endog)]
+                exog = exog[mask]
 
         # Regression effects via OLS
         exog_params = np.zeros(0)
