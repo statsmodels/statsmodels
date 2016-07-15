@@ -723,8 +723,8 @@ class VARMAXResults(MLEResults):
                 ma_params.reshape(k_endog * k_ma, k_endog).T
             ).reshape(k_endog, k_endog, k_ma).T
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
+                       **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -818,11 +818,11 @@ class VARMAXResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(VARMAXResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        return super(VARMAXResults, self).get_prediction(
+            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
         )
 
-    def forecast(self, steps=1, exog=None, **kwargs):
+    def get_forecast(self, steps=1, exog=None, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -844,7 +844,8 @@ class VARMAXResults(MLEResults):
         forecast : array
             Array of out of sample forecasts.
         """
-        return super(VARMAXResults, self).forecast(steps, exog=exog, **kwargs)
+        return super(VARMAXResults, self).get_forecast(steps, exog=exog,
+                                                       **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params

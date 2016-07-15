@@ -1918,7 +1918,7 @@ class SARIMAXResults(MLEResults):
                  ' required. `exog` argument ignored.', ValueWarning)
 
         return super(SARIMAXResults, self).get_prediction(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
         )
 
     def get_forecast(self, steps=1, exog=None, **kwargs):
@@ -1943,7 +1943,8 @@ class SARIMAXResults(MLEResults):
         forecast : array
             Array of out of sample forecasts.
         """
-        return super(SARIMAXResults, self).get_forecast(steps, exog=exog, **kwargs)
+        return super(SARIMAXResults, self).get_forecast(steps, exog=exog,
+                                                        **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
