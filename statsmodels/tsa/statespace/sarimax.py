@@ -953,7 +953,7 @@ class SARIMAX(MLEModel):
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
         if np.any(np.isnan(endog)):
-            mask = ~np.isnan(endog)
+            mask = ~np.isnan(endog).squeeze()
             endog = endog[mask]
             if exog is not None:
                 exog = exog[mask]
