@@ -799,9 +799,10 @@ class PHReg(model.LikelihoodModel):
                     xp0 += e_linpred[ix].sum()
                     v = exog_s[ix,:]
                     xp1 += (e_linpred[ix][:,None] * v).sum(0)
-                    mat = v[None,:,:]
+                    #mat = v[None,:,:]
                     elx = e_linpred[ix]
-                    xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+                    #xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+                    xp2 += np.einsum("ij,ik,i->jk", v, v, elx)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
@@ -813,10 +814,10 @@ class PHReg(model.LikelihoodModel):
                     xp0 -= e_linpred[ix].sum()
                     v = exog_s[ix,:]
                     xp1 -= (e_linpred[ix][:,None] * v).sum(0)
-                    mat = v[None,:,:]
+                    #mat = v[None,:,:]
                     elx = e_linpred[ix]
-                    xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
-
+                    #xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
+                    xp2 -= np.einsum("ij,ik,i->jk", v, v, elx)
         return -hess
 
     def efron_hessian(self, params):
