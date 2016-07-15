@@ -1132,8 +1132,8 @@ class DynamicFactorResults(MLEResults):
 
         return fig
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
+                       **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1227,11 +1227,11 @@ class DynamicFactorResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(DynamicFactorResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        return super(DynamicFactorResults, self).get_prediction(
+            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
         )
 
-    def forecast(self, steps=1, exog=None, **kwargs):
+    def get_forecast(self, steps=1, exog=None, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -1253,8 +1253,8 @@ class DynamicFactorResults(MLEResults):
         forecast : array
             Array of out of sample forecasts.
         """
-        return super(DynamicFactorResults, self).forecast(steps, exog=exog,
-                                                          **kwargs)
+        return super(DynamicFactorResults, self).get_forecast(steps, exog=exog,
+                                                              **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params

@@ -12,7 +12,7 @@ import os
 import re
 
 import warnings
-from statsmodels.tsa.statespace import varmax
+from statsmodels.tsa.statespace import mlemodel, varmax
 from .results import results_varmax
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
@@ -431,10 +431,14 @@ class TestVAR_exog(CheckLutkepohl):
         desired = self.results.forecast(steps=16, exog=exog)
         assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
-        # Test it directly
+        # Test it directly (i.e. without the wrapping done in
+        # VARMAXResults.get_prediction which converts exog to state_intercept)
         beta = self.results.params[-9:-6]
-        state_intercept = np.concatenate([exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
-        desired = super(varmax.VARMAXResultsWrapper, self.results).predict(start=75, end=75+15, state_intercept=state_intercept)
+        state_intercept = np.concatenate([
+            exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
+        desired = mlemodel.MLEResults.get_prediction(
+            self.results._results, start=75, end=75+15,
+            state_intercept=state_intercept).predicted_mean
         assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
     def test_summary(self):
