@@ -1360,7 +1360,7 @@ class UnobservedComponentsResults(MLEResults):
 
             # Get the predicted values and confidence intervals
             predict = self.filter_results.forecasts[0]
-            std_errors = np.sqrt(self.filter_results.forecasts_error_cov[0,0])
+            std_errors = np.sqrt(self.filter_results.forecasts_error_cov[0, 0])
             ci_lower = predict - critical_value * std_errors
             ci_upper = predict + critical_value * std_errors
 
@@ -1370,7 +1370,7 @@ class UnobservedComponentsResults(MLEResults):
             ci_poly = ax.fill_between(
                 dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
             )
-            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
+            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha) * 100)
 
             # Proxy artist for fill_between legend entry
             # See e.g. http://matplotlib.org/1.3.1/users/legend_guide.html
@@ -1427,7 +1427,7 @@ class UnobservedComponentsResults(MLEResults):
         if llb > 0:
             text = ('Note: The first %d observations are not shown, due to'
                     ' approximate diffuse initialization.')
-            fig.text(0.1, 0.01, text % llb, fontsize='large');
+            fig.text(0.1, 0.01, text % llb, fontsize='large')
 
         return fig
 
