@@ -448,9 +448,9 @@ class UnobservedComponents(MLEModel):
                 exog = np.asarray(exog)
 
             # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
+            if exog.ndim < 2:
                 if not exog_is_using_pandas:
-                    exog = exog[:, None]
+                    exog = np.atleast_2d(exog).T
                 else:
                     exog = pd.DataFrame(exog)
 
@@ -693,9 +693,10 @@ class UnobservedComponents(MLEModel):
         endog = self.endog
         exog = self.exog
         if np.any(np.isnan(endog)):
-            endog = endog[~np.isnan(endog)]
+            mask = ~np.isnan(endog).squeeze()
+            endog = endog[mask]
             if exog is not None:
-                exog = exog[~np.isnan(endog)]
+                exog = exog[mask]
 
         # Level / trend variances
         # (Use the HP filter to get initial estimates of variances)
@@ -716,10 +717,10 @@ class UnobservedComponents(MLEModel):
         # Regression
         if self.regression and self.mle_regression:
             _start_params['reg_coeff'] = (
-                np.linalg.pinv(self.exog).dot(resid).tolist()
+                np.linalg.pinv(exog).dot(resid).tolist()
             )
             resid = np.squeeze(
-                resid - np.dot(self.exog, _start_params['reg_coeff'])
+                resid - np.dot(exog, _start_params['reg_coeff'])
             )
 
         # Autoregressive
