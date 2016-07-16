@@ -526,7 +526,6 @@ class DynamicFactor(MLEModel):
             res_errors = mod_errors.fit(maxlags=self.error_order, ic=None,
                                         trend='nc')
 
-
             # Test for stationarity
             coefficient_matrices = (
                 np.array(res_errors.params.T).ravel().reshape(
@@ -1132,8 +1131,8 @@ class DynamicFactorResults(MLEResults):
 
         return fig
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
+                       **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1227,34 +1226,9 @@ class DynamicFactorResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(DynamicFactorResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        return super(DynamicFactorResults, self).get_prediction(
+            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
         )
-
-    def forecast(self, steps=1, exog=None, **kwargs):
-        """
-        Out-of-sample forecasts
-
-        Parameters
-        ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
-        exog : array_like, optional
-            If the model includes exogenous regressors, you must provide
-            exactly enough out-of-sample values for the exogenous variables for
-            each step forecasted.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : array
-            Array of out of sample forecasts.
-        """
-        return super(DynamicFactorResults, self).forecast(steps, exog=exog,
-                                                          **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params

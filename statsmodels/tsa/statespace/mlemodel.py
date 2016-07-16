@@ -12,14 +12,12 @@ import pandas as pd
 from scipy.stats import norm
 
 from .kalman_smoother import KalmanSmoother, SmootherResults
-from .kalman_filter import (
-    KalmanFilter, FilterResults, PredictionResults, INVERT_UNIVARIATE, SOLVE_LU
-)
+from .kalman_filter import (KalmanFilter, FilterResults, INVERT_UNIVARIATE,
+                            SOLVE_LU)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.numdiff import (
-    _get_epsilon, approx_hess_cs, approx_fprime_cs, approx_fprime
-)
+from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
+                                       approx_fprime_cs, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended, Bunch
