@@ -218,6 +218,27 @@ class TestPHReg(object):
             for j in range(i):
                 assert_allclose(prl[i].standard_errors, prl[j].standard_errors)
 
+    def test_formula_args(self):
+
+        np.random.seed(34234)
+        n = 200
+        time = 50 * np.random.uniform(size=n)
+        status = np.random.randint(0, 2, size=n).astype(np.float64)
+        exog = np.random.normal(size=(200, 2))
+        offset = np.random.uniform(size=n)
+        entry = np.random.uniform(0, 1, size=n) * time
+
+        df = pd.DataFrame({"time": time, "status": status, "x1": exog[:, 0],
+                           "x2": exog[:, 1], "offset": offset, "entry": entry})
+        model1 = PHReg.from_formula("time ~ x1 + x2", status="status", offset="offset",
+                                    entry="entry", data=df)
+        result1 = model1.fit()
+        model2 = PHReg.from_formula("time ~ x1 + x2", status=df.status, offset=df.offset,
+                                    entry=df.entry, data=df)
+        result2 = model2.fit()
+        assert_allclose(result1.params, result2.params)
+        assert_allclose(result1.bse, result2.bse)
+
     def test_offset(self):
 
         np.random.seed(34234)
@@ -231,7 +252,7 @@ class TestPHReg(object):
             offset = exog[:,0] * rslt1.params[0]
             exog = exog[:, 1:]
 
-            mod2 = PHReg(time, exog, status, offset=offset)
+            mod2 = PHReg(time, exog, status, offset=offset, ties=ties)
             rslt2 = mod2.fit()
 
             assert_allclose(rslt2.params, rslt1.params[1:])
