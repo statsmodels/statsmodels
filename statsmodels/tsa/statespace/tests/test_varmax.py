@@ -772,3 +772,53 @@ def test_misspecifications():
         assert_equal(str(w[0].message), message)
     warnings.resetwarnings()
 
+
+def test_misc_exog():
+    # Tests for missing data
+    nobs = 20
+    k_endog = 2
+    np.random.seed(1208)
+    endog = np.random.normal(size=(nobs, k_endog))
+    endog[:4, 0] = np.nan
+    endog[2:6, 1] = np.nan
+    exog1 = np.random.normal(size=(nobs, 1))
+    exog2 = np.random.normal(size=(nobs, 2))
+
+    index = pd.date_range('1970-01-01', freq='QS', periods=nobs)
+    endog_pd = pd.DataFrame(endog, index=index)
+    exog1_pd = pd.Series(exog1.squeeze(), index=index)
+    exog2_pd = pd.DataFrame(exog2, index=index)
+
+    models = [
+        varmax.VARMAX(endog, exog=exog1, order=(1, 0)),
+        varmax.VARMAX(endog, exog=exog2, order=(1, 0)),
+        varmax.VARMAX(endog_pd, exog=exog1_pd, order=(1, 0)),
+        varmax.VARMAX(endog_pd, exog=exog2_pd, order=(1, 0)),
+    ]
+
+    for mod in models:
+        # Smoke tests
+        mod.start_params
+        res = mod.fit(disp=False)
+        res.summary()
+        res.predict()
+        res.predict(dynamic=True)
+        res.get_prediction()
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        res.forecast(steps=1, exog=oos_exog)
+        res.get_forecast(steps=1, exog=oos_exog)
+
+        # Smoke tests for invalid exog
+        oos_exog = np.random.normal(size=(1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+    # Test invalid model specifications
+    assert_raises(ValueError, varmax.VARMAX, endog, exog=np.zeros((10, 4)),
+                  order=(1, 0))
