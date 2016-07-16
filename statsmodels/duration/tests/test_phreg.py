@@ -225,15 +225,16 @@ class TestPHReg(object):
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        mod1 = PHReg(time, exog, status)
-        rslt1 = mod1.fit()
-        offset = exog[:,0] * rslt1.params[0]
-        exog = exog[:, 1:]
+        for ties in "breslow", "efron":
+            mod1 = PHReg(time, exog, status)
+            rslt1 = mod1.fit()
+            offset = exog[:,0] * rslt1.params[0]
+            exog = exog[:, 1:]
 
-        mod2 = PHReg(time, exog, status, offset=offset)
-        rslt2 = mod2.fit()
+            mod2 = PHReg(time, exog, status, offset=offset)
+            rslt2 = mod2.fit()
 
-        assert_allclose(rslt2.params, rslt1.params[1:])
+            assert_allclose(rslt2.params, rslt1.params[1:])
 
     def test_post_estimation(self):
         # All regression tests
