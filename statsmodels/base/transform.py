@@ -141,7 +141,7 @@ class BoxCox(object):
         if method == 'guerrero':
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
         elif method == 'loglik':
-            lmbda = self._loglik(x)
+            lmbda = self._loglik(x, bounds=bounds)
         else:
             raise ValueError("Method '{0}' not understood.".format(method))
 
@@ -195,7 +195,7 @@ class BoxCox(object):
                               options={'maxiter': 50})
         return res.x
 
-    def _loglik(self, x):
+    def _loglik(self, x, bounds):
         """
         Taken from the Stata manual on BoxCox regressions, where this is the
         special case of 'lhs only'. As an estimator for the variance, the
@@ -213,5 +213,7 @@ class BoxCox(object):
             return (1 - lmbda) * sum_x + (nobs / 2) * np.log(np.var(y))
 
         res = minimize_scalar(optim,
+                              bounds=bounds,
+                              method='bounded',
                               options={'maxiter': 50})
         return res.x
