@@ -62,5 +62,29 @@ class TestTransform(SetupBoxCox):
         lmbda = self.bc._est_lambda(self.x, method='guerrero', R=2)
         assert_almost_equal(lmbda, 0.513893, 4)
 
+    def test_guerrero_robust_scale(self):
+        # The lambda is derived from a manual check of the values for the MAD.
+        # Compare also the result for the standard deviation on R=4: 0.5076,
+        # i.e. almost the same value.
+        lmbda = self.bc._est_lambda(self.x, scale='mad')
+        assert_almost_equal(lmbda, 0.488621, 4)
+
+    def test_loglik_lambda_estimation(self):
+        # 0.2 is the value returned by `BoxCox.lambda(x, method="loglik")`
+        # TODO: check _loglik for more series, as I'm not sure it is correct
+        lmbda = self.bc._est_lambda(self.x, method='loglik')
+        assert_almost_equal(lmbda, 0.2, 1)
+
     def test_boxcox_transformation_methods(self):
-        return True
+        # testing estimated lambda vs. provided. Should result in almost
+        # the same transformed data.
+        y_transformed_no_lambda = self.bc.transform_boxcox(self.x)
+        y_transformed_lambda = self.bc.transform_boxcox(self.x, 0.507624)
+
+        assert_almost_equal(y_transformed_no_lambda[0],
+                            y_transformed_lambda[0], 3)
+
+        # a perfectly increasing set has a constant variance over the entire
+        # series, hence stabilising should result in the same scale: lmbda = 1.
+        y, lmbda = self.bc.transform_boxcox(np.arange(1, 100))
+        assert_almost_equal(lmbda, 1., 5)

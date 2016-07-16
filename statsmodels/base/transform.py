@@ -141,7 +141,7 @@ class BoxCox(object):
         if method == 'guerrero':
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
         elif method == 'loglik':
-            lmbda = boxcox_normmax(x, bounds, 'mle')
+            lmbda = self._loglik(x)
         else:
             raise ValueError("Method '{0}' not understood.".format(method))
 
@@ -149,8 +149,9 @@ class BoxCox(object):
 
     def _guerrero_cv(self, x, bounds, R=4, scale='sd'):
         """
-        Computes guerrero's coefficient of variation. If no seasonality
-        is present in the data, R is set to 2 (p. 40, comment).
+        Computes lambda using guerrero's coefficient of variation. If no
+        seasonality is present in the data, R is set to 4 (as per Guerrero
+        and Perera, (2004)).
 
         NOTE: Seasonality-specific auxiliaries *should* provide their own
         seasonality parameter.
@@ -163,8 +164,8 @@ class BoxCox(object):
             parameter.
         R : int
             Seasonality/grouping parameter. Default 4, as per Guerrero and
-            Perera (2004). Note: this indicates the length of the individual
-            groups, not the total number!
+            Perera (2004). NOTE: this indicates the length of the individual
+            groups, not the total number of groups!
         scale : {'sd', 'mad'}
             The dispersion measure to be used. 'sd' indicates the sample standard
             deviation, but the more robust 'mad' is also available.
@@ -181,7 +182,7 @@ class BoxCox(object):
             dispersion = np.std(grouped_data, 1)
         elif scale == 'mad':
             dispersion = mad(grouped_data, axis=1)
-        else:  # TODO: IQR?
+        else:
             raise ValueError("Scale '{0}' not understood.".format(scale))
 
         def optim(lmbda, *args, **kwargs):
@@ -191,5 +192,26 @@ class BoxCox(object):
         res = minimize_scalar(optim,
                               bounds=bounds,
                               method='bounded',
+                              options={'maxiter': 50})
+        return res.x
+
+    def _loglik(self, x):
+        """
+        Taken from the Stata manual on BoxCox regressions, where this is the
+        special case of 'lhs only'. As an estimator for the variance, the
+        sample variance is used, by means of the well-known formula.
+
+        Parameters
+        ----------
+        x : array_like
+        """
+        sum_x = np.sum(np.log(x))
+        nobs = len(x)
+
+        def optim(lmbda, *args, **kwargs):
+            y, lmbda = self.transform_boxcox(x, lmbda)
+            return (1 - lmbda) * sum_x + (nobs / 2) * np.log(np.var(y))
+
+        res = minimize_scalar(optim,
                               options={'maxiter': 50})
         return res.x
