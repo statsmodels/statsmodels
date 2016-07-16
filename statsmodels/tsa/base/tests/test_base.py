@@ -14,6 +14,15 @@ def test_pandas_nodates_index():
 
     npt.assert_raises(ValueError, TimeSeriesModel, s)
 
+    # Test with a non-date index that doesn't raise an exception because it
+    # can be coerced into a nanosecond DatetimeIndex
+    data = [988, 819, 964]
+    s = pd.Series(data)
+    mod = TimeSeriesModel(s)
+    start = mod._get_predict_start(0)
+    end, out_of_sample = mod._get_predict_end(4)
+    mod._make_predict_dates()
+
 def test_predict_freq():
     # test that predicted dates have same frequency
     x = np.arange(1,36.)
