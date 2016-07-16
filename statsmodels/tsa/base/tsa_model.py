@@ -3,7 +3,7 @@ from statsmodels.compat.pandas import is_numeric_dtype
 
 import datetime
 
-from pandas import to_datetime, DatetimeIndex, Period, PeriodIndex
+from pandas import to_datetime, DatetimeIndex, Period, PeriodIndex, Timestamp
 
 from statsmodels.base import data
 import statsmodels.base.model as base
@@ -235,6 +235,13 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self.data.dates.__class__(start=dtstart,
                                               end=dtend,
                                               freq=pandas_freq)
+            if not dates[-1] == dtend and pandas_freq == 'N':
+                # TODO: this is a hack because a DatetimeIndex with
+                # nanosecond frequency does not include "end"
+                dtend = Timestamp(dtend.value + 1)
+                dates = self.data.dates.__class__(start=dtstart,
+                                                  end=dtend,
+                                                  freq=pandas_freq)
         # handle
         elif freq is None and (isinstance(dtstart, (int, long)) and
                                isinstance(dtend, (int, long))):
