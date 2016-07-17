@@ -52,15 +52,11 @@ class DataInterface(object):
 
         from_type = type(data)
 
-        if from_type == DesignMatrix:
-            if self.model is None:
-                raise ValueError('When a DesignMatrix is returned, a model must be specified.')
-            else:
-                data = dmatrix(self.model.data.design_info.builder, data)
-                from_type = type(data)
-
         if data is None:
             return None
+
+        elif from_type == DesignMatrix:
+            return data
 
         elif from_type in NUMPY_TYPES:
             return self.from_numpy_array(data)
@@ -76,24 +72,24 @@ class DataInterface(object):
         from_type = type(data)
 
         if from_type in NUMPY_TYPES:
-            to_return = data
+            return data
 
         elif from_type == list:
-            to_return = np.array(data)
+            return np.array(data)
 
         elif from_type == np.recarray:
-            to_return = data.view(np.ndarray)
+            return data.view(np.ndarray)
 
         elif from_type == pd.Series:
 
-            to_return = data.values
+            return data.values
 
         elif from_type == pd.DataFrame:
-            to_return = data.values
+            return data.values
 
         else:
             try:
-                to_return = np.asarray(data)
+                return np.asarray(data)
             except:
                 TypeError('Type conversion to numpy from {} is not possible.'.format(from_type))
 
