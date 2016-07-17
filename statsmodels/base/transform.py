@@ -59,7 +59,8 @@ class BoxCox(object):
                                      method=method,
                                      **kwargs)
 
-        if np.isclose(lmbda, 0.):
+        # if less than 0.01, treat lambda as zero.
+        if np.abs(lmbda) < 10e-3:
             y = np.log(x)
         else:
             y = (np.power(x, lmbda) - 1) / lmbda
@@ -197,7 +198,7 @@ class BoxCox(object):
 
     def _loglik(self, x, bounds):
         """
-        Taken from the Stata manual on BoxCox regressions, where this is the
+        Taken from the Stata manual on Box-Cox regressions, where this is the
         special case of 'lhs only'. As an estimator for the variance, the
         sample variance is used, by means of the well-known formula.
 
