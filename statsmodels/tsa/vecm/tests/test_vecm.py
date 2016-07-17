@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose
@@ -10,7 +10,7 @@ from .results.parse_jmulti_output import load_results_jmulti
 from statsmodels.tsa.vecm.vecm import VECM
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
-atol = 0.005  # absolute tolerance
+atol = 0.003  # absolute tolerance
 rtol = 0.01  # relative tolerance
 datasets = []
 data = {}
@@ -18,12 +18,12 @@ results_ref = {}
 results_sm = {}
 coint_rank = 1
 
-debug_mode = False
-deterministic_terms_list = ["", "c", "cs", "clt"]  # TODO: add combinations
-all_tests = ["Gamma", "alpha", "beta", "C", "lin_trend", "Sigma_u",
+debug_mode = True
+dont_test_se_t_p = False
+deterministic_terms_list = ["", "cc", "ccs", "cclt"]  # TODO: add combinations
+all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like"]
-to_test = ["C"]
-
+to_test = all_tests # ["beta"]
 
 
 def load_data(dataset):  # TODO: make this function compatible with other
@@ -45,7 +45,7 @@ def load_results_statsmodels(dataset):
         model = VECM(data[dataset])
         # print("\n\n\nDETERMINISTIC TERMS: " + deterministic_terms)
         results_per_deterministic_terms[deterministic_terms] = model.fit(
-                                        max_diff_lags=3, method="ml", 
+                                        diff_lags=3, method="ml",
                                         deterministic=deterministic_terms,
                                         coint_rank=coint_rank)
     return results_per_deterministic_terms
@@ -60,10 +60,15 @@ def build_err_msg(ds, dt, parameter_str):
 
 
 def test_ml_gamma():
-    if debug_mode and "Gamma" not in to_test:
-        return
+    if debug_mode:
+        if "Gamma" not in to_test:
+            return
+        print("\n\nGAMMA", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             # estimated parameter vector
             err_msg = build_err_msg(ds, dt, "Gamma")
             obtained = results_sm[ds][dt].gamma
@@ -72,6 +77,8 @@ def test_ml_gamma():
             if obtained.shape[1] > cols:
                 obtained = obtained[:, :cols]
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+            if debug_mode and dont_test_se_t_p:
+                continue
             # standard errors
             obt = results_sm[ds][dt].stderr_gamma[:, :cols]
             des = results_ref[ds][dt]["se"]["Gamma"]
@@ -90,14 +97,22 @@ def test_ml_gamma():
 
 
 def test_ml_alpha():
-    if debug_mode and "alpha" not in to_test:
-        return
+    if debug_mode:
+        if "alpha" not in to_test:
+            return
+        print("\n\nALPHA", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             err_msg = build_err_msg(ds, dt, "alpha")
             obtained = results_sm[ds][dt].alpha
             desired = results_ref[ds][dt]["est"]["alpha"]
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+            if debug_mode and dont_test_se_t_p:
+                continue
             # standard errors
             obt = results_sm[ds][dt].stderr_alpha
             des = results_ref[ds][dt]["se"]["alpha"]
@@ -116,10 +131,15 @@ def test_ml_alpha():
 
 
 def test_ml_beta():
-    if debug_mode and "beta" not in to_test:
-        return
+    if debug_mode:
+        if "beta" not in to_test:
+            return
+        print("\n\nBETA", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             err_msg = build_err_msg(ds, dt, "beta")
             desired = results_ref[ds][dt]["est"]["beta"].T  # JMulTi: beta transposed
             rows = desired.shape[0]
@@ -128,10 +148,13 @@ def test_ml_beta():
             #   sm, so we compare only the elements belonging to beta.
             obtained = results_sm[ds][dt].beta[coint_rank:rows]
             desired = desired[coint_rank:]
-            print("\ndeterministic terms: " + dt)
-            print("tested elements of beta: ")
-            print(str(slice(coint_rank,rows)))
+            # print("\ndeterministic terms: " + dt)
+            # print("tested elements of beta: ")
+            # print(str(slice(coint_rank,rows)))
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+            if debug_mode and dont_test_se_t_p:
+                continue
             # standard errors
             obt = results_sm[ds][dt].stderr_beta[coint_rank:rows]
             des = results_ref[ds][dt]["se"]["beta"].T[coint_rank:]
@@ -150,10 +173,14 @@ def test_ml_beta():
 
 
 def test_ml_c():  # test const outside coint relation and seasonal terms
-    if debug_mode and "C" not in to_test:
-        return
+    if debug_mode:
+        if "C" not in to_test:
+            return
+        print("\n\nDET_COEF", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
 
             C_obt = results_sm[ds][dt].det_coef  # coefs for const & seasonal
             se_C_obt = results_sm[ds][dt].stderr_det_coef
@@ -168,7 +195,8 @@ def test_ml_c():  # test const outside coint relation and seasonal terms
                     continue
 
             desired = results_ref[ds][dt]["est"]["C"]
-            if "c" in dt:
+
+            if "co" in dt:
                 const_obt = C_obt[:, 0][:, None]
                 const_des = desired[:, 0][:, None]
                 C_obt = C_obt[:, 1:]
@@ -180,9 +208,11 @@ def test_ml_c():  # test const outside coint relation and seasonal terms
                 seas_des = desired if "lt" not in dt else desired[:, :-1]
                 yield assert_allclose, seas_obt, seas_des,  \
                       rtol, atol, False, build_err_msg(ds, dt, "SEASONAL")
+            if debug_mode and dont_test_se_t_p:
+                continue
             # standard errors
             se_desired = results_ref[ds][dt]["se"]["C"]
-            if "c" in dt:
+            if "co" in dt:
                 se_const_obt = se_C_obt[:, 0][:, None]
                 se_C_obt = se_C_obt[:, 1:]
                 se_const_des = se_desired[:, 0][:, None]
@@ -196,7 +226,7 @@ def test_ml_c():  # test const outside coint relation and seasonal terms
                       rtol, atol, False, build_err_msg(ds, dt, "SE SEASONAL")
             # t-values
             t_desired = results_ref[ds][dt]["t"]["C"]
-            if "c" in dt:
+            if "co" in dt:
                 t_const_obt = t_C_obt[:, 0][:, None]
                 t_C_obt = t_C_obt[:, 1:]
                 t_const_des = t_desired[:, 0][:, None]
@@ -210,7 +240,7 @@ def test_ml_c():  # test const outside coint relation and seasonal terms
                       rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
             # p-values
             p_desired = results_ref[ds][dt]["p"]["C"]
-            if "c" in dt:
+            if "co" in dt:
                 p_const_obt = p_C_obt[:, 0][:, None]
                 p_C_obt = p_C_obt[:, 1:]
                 p_const_des = p_desired[:, 0][:, None]
@@ -223,36 +253,43 @@ def test_ml_c():  # test const outside coint relation and seasonal terms
                 yield assert_allclose, p_seas_obt, p_seas_des,  \
                       rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
 
-def test_ml_lin_trend():
-    if debug_mode and "lin_trend" not in to_test:
-        return
+def test_ml_det_terms_in_coint_relation():
+    if debug_mode:
+        if "det_coint" not in to_test:
+            return
+        print("\n\nDET_COEF_COINT", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
-            err_msg = build_err_msg(ds, dt, "linear trend coefficients")
-            
-            beta_sm = results_sm[ds][dt].beta
-            beta_ref = results_ref[ds][dt]["est"]["beta"].T  # JMulTi: beta transposed
-            if "lt" not in dt:
-                if (beta_sm.shape[0] == beta_ref.shape[0] and  # sm: no trend
-                        "lin_trend" not in results_ref[ds][dt]["est"]):  # JMulTi:n.t.
-                    yield assert_, True
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
+            err_msg = build_err_msg(ds, dt, "det terms in coint relation")
+
+            det_coef_coint = results_sm[ds][dt].det_coef_coint
+            if "cc" not in dt and "lt" not in dt:
+                if det_coef_coint.size > 0:
+                    yield assert_, False, build_err_msg(ds, dt,
+                        "There should not be any det terms in cointegration!")
                 else:
-                    yield assert_, False, err_msg
+                    yield assert_, True
                 continue
-            a = results_sm[ds][dt].alpha
-            b = results_sm[ds][dt].beta
-            # obtained = take last col of Pi and make it 2 dimensional:
-            obtained = np.dot(a, b.T)[:, -1][:, None]
-            desired = results_ref[ds][dt]["est"]["lin_trend"]
+            alpha_obt = results_sm[ds][dt].alpha
+            obtained = alpha_obt.dot(det_coef_coint.T)
+            desired = results_ref[ds][dt]["est"]["det_coint"]
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
             # TODO: test se, t, p
 
 
 def test_ml_sigma():
-    if debug_mode and "Sigma_u" not in to_test:
-        return
+    if debug_mode:
+        if "Sigma_u" not in to_test:
+            return
+        print("\n\nSIGMA_U", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             err_msg = build_err_msg(ds, dt, "Sigma_u")
             obtained = results_sm[ds][dt].sigma_u
             desired = results_ref[ds][dt]["est"]["Sigma_u"]
@@ -260,10 +297,15 @@ def test_ml_sigma():
 
 
 def test_var_rep():
-    if debug_mode and "VAR repr. A" not in to_test:
-        return
+    if debug_mode:
+        if "VAR repr. A" not in to_test:
+            return
+        print("\n\nVAR REPRESENTATION", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             err_msg = build_err_msg(ds, dt, "VAR repr. A")
             obtained = results_sm[ds][dt].var_repr
             p = obtained.shape[0]
@@ -272,10 +314,15 @@ def test_var_rep():
 
 
 def test_var_to_vecm():
-    if debug_mode and "VAR to VEC representation" not in to_test:
-        return
+    if debug_mode:
+        if "VAR to VEC representation" not in to_test:
+            return
+        print("\n\nVAR TO VEC", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
             sigma_u = results_sm[ds][dt].sigma_u
             coefs = results_sm[ds][dt].var_repr
@@ -305,10 +352,16 @@ def test_var_to_vecm():
 
 
 def test_log_like():
-    if debug_mode and "log_like" not in to_test:
-        return
+    if debug_mode:
+        if "log_like" not in to_test:
+            return
+        else:
+            print("\n\nLOG LIKELIHOOD", end="")
     for ds in datasets:
         for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
             err_msg = build_err_msg(ds, dt, "Log Likelihood")
             obtained = results_sm[ds][dt].llf
             desired = results_ref[ds][dt]["log_like"]
@@ -320,7 +373,7 @@ def setup():
     
     for ds in datasets:
         load_data(ds)
-        results_ref[ds] = load_results_jmulti(ds)
+        results_ref[ds] = load_results_jmulti(ds, deterministic_terms_list)
         results_sm[ds] = load_results_statsmodels(ds)
         return results_sm[ds], results_ref[ds]
 

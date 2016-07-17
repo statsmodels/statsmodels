@@ -3,10 +3,9 @@ import os
 
 import numpy as np
 
-
-deterministic_terms_list = ["", "c", "cs", "clt", "lt"]
-
 debug_mode = True
+
+
 def print_debug_output(results, dt):
         print("\n\n\nDETERMINISTIC TERMS: " + dt)
         alpha = results["est"]["alpha"]
@@ -36,10 +35,10 @@ def print_debug_output(results, dt):
             print(results["se"]["C"])
 
 
-def load_results_jmulti(dataset):
+def load_results_jmulti(dataset, deterministic_terms_list):
     source = "jmulti"
 
-    results_for_different_det_terms = dict.fromkeys(deterministic_terms_list)
+    results_dict_per_det_terms = dict.fromkeys(deterministic_terms_list)
         
     for dt in deterministic_terms_list:
         file = dataset.__str__()+"_"+source+"_"+dt+".txt"
@@ -178,18 +177,24 @@ def load_results_jmulti(dataset):
         if debug_mode:
             print_debug_output(results, dt)
 
-        results_for_different_det_terms[dt] = results
-        if 'lt' in dt:
-            C = results_for_different_det_terms[dt]["est"]["C"]
-            lt = (C[:, -1])[:, None]  # take last col and make it 2-dimensional
-            C = C[:, :-1]
-            if C.shape[1] == 0:
-                del results_for_different_det_terms[dt]["est"]["C"]
+        results_dict_per_det_terms[dt] = results
+        if "cc" in dt or "lt" in dt:
+            C = results_dict_per_det_terms[dt]["est"]["C"]
+            det_coef_coint = []
+            if "cc" in dt:
+                det_coef_coint.append(C[:, :1])
+                C = C[:, 1:]
+            if 'lt' in dt:
+                det_coef_coint.append(C[:, -1:])
+                C = C[:, :-1]
+            det_coef_coint = np.column_stack(det_coef_coint)
+            results_dict_per_det_terms[dt]["est"]["det_coint"] = det_coef_coint
+            if C.size == 0:
+                del results_dict_per_det_terms[dt]["est"]["C"]
             else:
-                results_for_different_det_terms[dt]["est"]["C"] = C
-            results_for_different_det_terms[dt]["est"]["lin_trend"] = lt
+                results_dict_per_det_terms[dt]["est"]["C"] = C
 
-    return results_for_different_det_terms
+    return results_dict_per_det_terms
 
 if __name__ == "__main__":
     print(load_results_jmulti("e6"))
