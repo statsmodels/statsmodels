@@ -23,8 +23,8 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.sm_exceptions import (EstimationWarning,
-    ValueWarning)
+from statsmodels.tools.sm_exceptions import (EstimationWarning, ValueWarning)
+
 
 class VARMAX(MLEModel):
     r"""
@@ -303,9 +303,10 @@ class VARMAX(MLEModel):
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
         if np.any(np.isnan(endog)):
-            endog = endog[~np.isnan(endog)]
+            mask = ~np.any(np.isnan(endog), axis=1)
+            endog = endog[mask]
             if exog is not None:
-                exog = exog[~np.isnan(endog)]
+                exog = exog[mask]
 
         # Regression effects via OLS
         exog_params = np.zeros(0)
@@ -723,8 +724,8 @@ class VARMAXResults(MLEResults):
                 ma_params.reshape(k_endog * k_ma, k_endog).T
             ).reshape(k_endog, k_endog, k_ma).T
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
+                       **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -818,33 +819,9 @@ class VARMAXResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(VARMAXResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        return super(VARMAXResults, self).get_prediction(
+            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
         )
-
-    def forecast(self, steps=1, exog=None, **kwargs):
-        """
-        Out-of-sample forecasts
-
-        Parameters
-        ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
-        exog : array_like, optional
-            If the model includes exogenous regressors, you must provide
-            exactly enough out-of-sample values for the exogenous variables for
-            each step forecasted.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : array
-            Array of out of sample forecasts.
-        """
-        return super(VARMAXResults, self).forecast(steps, exog=exog, **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params

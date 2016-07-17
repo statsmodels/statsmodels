@@ -419,9 +419,9 @@ class SARIMAX(MLEModel):
                 exog = np.asarray(exog)
 
             # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
+            if exog.ndim < 2:
                 if not exog_is_using_pandas:
-                    exog = exog[:, None]
+                    exog = np.atleast_2d(exog).T
                 else:
                     exog = pd.DataFrame(exog)
 
@@ -953,7 +953,7 @@ class SARIMAX(MLEModel):
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
         if np.any(np.isnan(endog)):
-            mask = ~np.isnan(endog)
+            mask = ~np.isnan(endog).squeeze()
             endog = endog[mask]
             if exog is not None:
                 exog = exog[mask]
@@ -1826,7 +1826,7 @@ class SARIMAXResults(MLEResults):
         """
         return self._params_ma
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
+    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
                 **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
@@ -1917,33 +1917,9 @@ class SARIMAXResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(SARIMAXResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
+        return super(SARIMAXResults, self).get_prediction(
+            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
         )
-
-    def forecast(self, steps=1, exog=None, **kwargs):
-        """
-        Out-of-sample forecasts
-
-        Parameters
-        ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
-        exog : array_like, optional
-            If the model includes exogenous regressors, you must provide
-            exactly enough out-of-sample values for the exogenous variables for
-            each step forecasted.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : array
-            Array of out of sample forecasts.
-        """
-        return super(SARIMAXResults, self).forecast(steps, exog=exog, **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
