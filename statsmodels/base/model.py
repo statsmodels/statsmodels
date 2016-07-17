@@ -749,7 +749,6 @@ class Results(object):
         exog = exog_interface.to_statsmodels(exog)
 
         if exog is not None:
-            exog = np.asarray(exog)
 
             if exog.ndim == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
                 exog = exog[:, None]
