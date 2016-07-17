@@ -25,16 +25,23 @@ def _endog_matrices(endog_tot, diff_lags, deterministic):
     delta_y = np.diff(y)
     delta_y_1_T = delta_y[:, p-1:]
     y_min1 = y[:, p-1:-1]
+    if "co" in deterministic and "cc" in deterministic:
+        raise ValueError("Both 'co' and 'cc' as deterministic terms given. " +
+                         "Please choose one of the two.")
+    # todo: optimize the following with np.row_stack()
+    if "cc" in deterministic:
+        y_min1 = vstack((y_min1,
+                         np.ones(T)))
     if "lt" in deterministic:
         y_min1 = vstack((y_min1,
                          np.arange(T)))  # p. 299
     # p. 286:
     delta_x = np.zeros((diff_lags*K, T))
     for j in range(delta_x.shape[1]):
-        delta_x[:, j] = (delta_y[:, j+p-2:None if j-1<0 else j-1:-1]
+        delta_x[:, j] = (delta_y[:, j+p-2:None if j-1 < 0 else j-1:-1]
                          .T.reshape(K*(p-1)))
     # p. 299, p. 303:
-    if "c" in deterministic:
+    if "co" in deterministic:
         delta_x = vstack((delta_x,
                           np.ones(T)))
     if "s" in deterministic:  # TODO: How many seasons??
@@ -105,58 +112,38 @@ class VECM(tsbase.TimeSeriesModel):
         self.y = self.endog.T  # TODO delete this line if y not necessary
         self.neqs = self.endog.shape[1]
 
-    def fit(self, max_diff_lags=None, method="ml", ic=None,
-            deterministic="", verbose=False, coint_rank=None):
+    def fit(self, diff_lags=None, method="ml", deterministic="", coint_rank=1):
         """
-        Fit the VECM
+        Estimates the parameters of a VECM and returns a VECMResults object.
 
         Parameters
         ----------
-        max_diff_lags : int
-            Maximum number of lags to check for order selection, defaults to
-            12 * (nobs/100.)**(1./4), see select_order function ##### ##### ##### #####
+        diff_lags : int
+            Number of lags in the VEC representation
         method : {"ls", "egls", "ml"}
             Estimation method to use.
-        ic : {"aic", "fpe", "hqic", "bic", None}
-            Information criterion to use for VECM order selection.
-            aic : Akaike
-            fpe : Final prediction error
-            hqic : Hannan-Quinn
-            bic : Bayesian a.k.a. Schwarz
-        deterministic, str {"", "c", "lt", "s"}
+        deterministic, str {"", "co", "cc", "lt", "s"}
             "" - no deterministic terms
-            "c" - constant
+            "co" - constant outside the cointegration relation
+            "cc" - constant within the cointegration relation
             "lt" - linear trend
             "s" - seasonal terms
-            Combinations of these are possible (e.g. "clt" for linear trend 
-            with intercept)
+            Combinations of these are possible (e.g. "cclt" or "colt" for
+            linear trend with intercept)
+        coint_rank : int
+            Cointegration rank, equals the rank of the matrix \Pi and the number
+            of columns of \alpha and \beta
 
         Notes
         -----
-        Lutkepohl pp. 146-153
+        Lutkepohl pp. 269-304
 
         Returns
         -------
-        est : VARResults
-        """  # TODO: docstring + implementation
+        est : VECMResults
+        """
         
-        # TODO: trend
-        
-        # select number of lags (=p-1)
-        if ic is None:
-            if max_diff_lags is None:
-                diff_lags = 1
-            else:
-                diff_lags = max_diff_lags
-        else:
-            selections = self.select_order(max_diff_lags=max_diff_lags,
-                                           verbose=verbose)
-            if ic not in selections:
-                raise ValueError("%s not recognized, must be among %s"
-                                 % (ic, sorted(selections)))
-            diff_lags = selections[ic]
-            if verbose:
-                print("Using %d based on %s criterion" %  (diff_lags, ic))
+
         self.p = diff_lags + 1
         # estimate parameters
         if method == "ls":
@@ -184,10 +171,12 @@ class VECM(tsbase.TimeSeriesModel):
         mat2 = _block_matrix_ymin1_deltax(y_min1, delta_x)
         est_pi_gamma = mat1.dot(mat2)  # p. 287 (equation (7.2.4))
 
-        pi_cols = K if "lt" not in deterministic else K + 1
-        pi_hat = est_pi_gamma[:, :pi_cols]
-
-        gamma_hat = est_pi_gamma[:, pi_cols:]
+        pi_cols = K
+        if "cc" in deterministic:
+            pi_cols += 1
+        if "lt" in deterministic:
+            pi_cols += 1
+        pi_hat, gamma_hat = np.hsplit(est_pi_gamma, [pi_cols])
 
         _A = delta_y_1_T - pi_hat.dot(y_min1) - gamma_hat.dot(delta_x)
         p = diff_lags+1
@@ -251,7 +240,7 @@ class VECM(tsbase.TimeSeriesModel):
 
         beta_tilde = (v[:, :r].T.dot(s11_)).T
         # normalize beta tilde such that eye(r) forms the first r rows of it:
-        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:r, :r]))
+        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:r]))
         alpha_tilde = s01.dot(beta_tilde).dot(
                 inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
         # print("alpha shape: " + str(alpha_tilde.shape))
@@ -272,25 +261,7 @@ class VECM(tsbase.TimeSeriesModel):
                 # "Gamma": np.array(gamma_tilde),
                 # "Sigma_u": np.array(sigma_u_tilde)}
 
-    def select_order(self, max_diff_lags=None, verbose=True):
-        """
-        Compute lag order selections based on each of the available information
-        criteria
-
-        Parameters
-        ----------
-        max_diff_lags : int
-            if None, defaults to 12 * (nobs/100.)**(1./4)
-        verbose : bool, default True
-            If True, print table of info criteria and selected orders
-
-        Returns
-        -------
-        selections : dict {info_crit -> selected_order}
-        """  # TODO: docstring + implementation. Function used in fit().
-        pass
-
-    def predict(self, params, start=None, end=None, lags=1, trend="c"):
+    def predict(self, params, start=None, end=None, lags=1, trend="cc"):
         """
         Returns in-sample predictions or forecasts
         """  # TODO: docstring + implementation
@@ -302,68 +273,109 @@ class VECM(tsbase.TimeSeriesModel):
 # VECMResults class
 
 class VECMResults(object):
-    """Estimate VECM(p) process with fixed number of lags
-
+    """Class holding estimation related results of a vector error correction
+    model (VECM).
+endog_tot, level_var_lag_order, coint_rank, alpha, beta,
+                 gamma, sigma_u, deterministic='cc', delta_y_1_T=None,
+                 y_min1=None, delta_x=None
     Parameters
     ----------
     endog_tot : array
-    alpha : array
-    beta : array
-    gamma : array
-    sigma_u : array
-    lag_order : int
+    level_var_lag_order : int
     coint_rank : int
-    model : VECM model instance
-    deterministic : str {'c', 'lt', 's'}
-    names : array-like
-        List of names of the endogenous variables in order of appearance in `endog`.
-    dates
-
+    alpha : array (K x coint_rank)
+        ... where K is the number of variables per observation
+    beta : array (K x coint_rank)
+        ... where K is the number of variables per observation
+    gamma : array (K x K*(level_var_lag_order-1))
+        ... where K is the number of variables per observation
+    sigma_u : array (K x K)
+        ... where K is the number of variables per observation
+    deterministic : str {"", "co", "cc", "s", "lt"}
+            "" - no deterministic terms
+            "co" - constant outside the cointegration relation
+            "cc" - constant within the cointegration relation
+            "lt" - linear trend
+            "s" - seasonal terms
+            Combinations of these are possible (e.g. "cclt" or "colt" for
+            linear trend with intercept)
 
     Returns
     -------
     **Attributes**
-    aic
-    bic
-    bse
-    coefs : ndarray (p x K x K)
-        Estimated A_i matrices, A_i = coefs[i-1]
-    llf
-    model
-    neqs : int
-        Number of variables (equations)
-    nobs : int
-    n_totobs : int
-    order : int
-        Order of VAR process
-    params : ndarray (Kp + 1) x K
-        A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalues
-    sigma_u : ndarray (K x K)
-        Estimate of white noise process variance Var[u_t]
-    sigma_u_mle
-    stderr
-    tvalues
 
-    df_model
-    df_resid
-    fittedvalues
-    resid
-    sigma_u_mle --- need to adapt the ML estimator?
-    """
+    y_all
+    alpha
+    beta
+    gamma
+    sigma_u
+        Estimate of white noise process variance Var[u_t]
+
+    deterministic
+    K : int
+        Number of variables per observation. Number of equations.
+    p : int
+        Lags in the VAR representation. This implies: Lags in the VEC
+        representation = p - 1
+    r : int
+        Cointegration rank.
+    T : int
+        Number of observations after the presample
+
+    y_min1 : ndarray (K x T)
+        Observations at t=0 until t=T-1
+    delta_y_1_T : ndarray (K x T)
+        Observations at t=1 until t=T minus y_min1
+    delta_x : ndarray ((K * (p-1) + number of deterministic dummy variables
+        outside the cointegration relation) x T)
+
+    llf
+
+    _covar_sigma_u
+    num_det_coef_coint : int
+        Number of estimated coefficients for deterministic terms within the
+        cointegration relation
+
+    cov_params : ndarray (d x d)
+        ... where d equals K * (K+num_det_coef_coint + K*(p-1)+number of
+        deterministic dummy variables outside the cointegration relation)
+    stderr_params : ndarray (d)
+        ... where d is defined as for cov_params
+    stderr_coint : ndarray (K+num_det_coef_coint x r)
+    stderr_alpha ndarray (K x r)
+    stderr_beta : ndarray (K x r)
+    stderr_det_coef_coint ndarray (num_det_coef_coint x r)
+    stderr_gamma : ndarray (K x K*(p-1))
+    stderr_det_coef : ndarray (K x number of deterministic dummy variables
+        outside the cointegration relation)
+    tvalues_alpha : ndarray (K x r)
+    tvalues_beta : ndarray (K x r)
+    tvalues_det_coef_coint
+    tvalues_gamma : ndarray (K x K*(p-1))
+    tvalues_det_coef : ndarray (K x number of deterministic dummy variables
+        outside the cointegration relation)
+    pvalues_alpha : ndarray (K x r)
+    pvalues_beta : ndarray (K x r)
+    pvalues_det_coef_coint
+    pvalues_gamma : ndarray (K x K*(p-1))
+    pvalues_det_coef : ndarray (K x number of deterministic dummy variables
+        outside the cointegration relation)
+    var_repr : (p x K x K)
+        KxK matrices A_i of the corresponding VAR representation. If the return
+        value is assigned to a variable A, these matrices can be accessed via
+        A[i], i=0, ..., p-1.
+    """    # todo: aic, bic, bse, df_model, df_resid, fittedvalues, resid
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u,
-                 model=None, deterministic='c', names=None, dates=None,
-                 delta_y_1_T=None, y_min1=None, delta_x=None):
+                 gamma, sigma_u, deterministic='cc', delta_y_1_T=None,
+                 y_min1=None, delta_x=None):
         self.y_all = endog_tot
         self.K = endog_tot.shape[0]
         self.p = level_var_lag_order
         self.deterministic = deterministic
         self.r = coint_rank
         self.alpha = alpha
-        self.beta = beta[:self.K]
-        self.det_coef_coint = beta[self.K:]
+        self.beta, self.det_coef_coint = np.vsplit(beta, [self.K])
         self.gamma, self.det_coef = np.hsplit(gamma, [self.K*(self.p-1)])
         # = gamma[:, self.gamma.shape[1]:].reshape(gamma.shape[0], -1)
         self.sigma_u = sigma_u
@@ -399,8 +411,9 @@ class VECMResults(object):
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
 
     @cache_readonly
-    def number_coint_params(self):  # tedo: check if used at all?
-        number_of_params = 0 + ("lt" in self.deterministic)
+    def num_det_coef_coint(self):  # tedo: check if used at all?
+        number_of_params = 0 + ("cc" in self.deterministic) \
+                             + ("lt" in self.deterministic)
         return number_of_params
 
 
