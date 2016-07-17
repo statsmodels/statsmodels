@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from functools import partial
 from patsy import dmatrix
+from patsy.design_info import DesignMatrix
 
 NUMPY_TYPES = [np.ndarray, np.float64]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
@@ -51,7 +52,17 @@ class DataInterface(object):
 
         from_type = type(data)
 
-        if from_type in NUMPY_TYPES:
+        if from_type == DesignMatrix:
+            if self.model is None:
+                raise ValueError('When a DesignMatrix is returned, a model must be specified.')
+            else:
+                data = dmatrix(self.model.data.design_info.builder, data)
+                from_type = type(data)
+
+        if data is None:
+            return None
+
+        elif from_type in NUMPY_TYPES:
             return self.from_numpy_array(data)
 
         elif from_type in PANDAS_TYPES:
