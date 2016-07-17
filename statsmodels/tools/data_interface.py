@@ -87,11 +87,6 @@ class DataInterface(object):
                 TypeError('Type conversion to numpy from {} is not possible.'.format(from_type))
 
 
-        if self.model is not None:
-            return clean_ndim(to_return, self.model)
-        else:
-            return to_return
-
     def to_pandas(self, data):
 
         from_type = type(data)
@@ -164,15 +159,6 @@ class DataInterface(object):
 
 NumPyInterface = partial(DataInterface, [np.ndarray])
 PandasInterface = partial(DataInterface, [np.ndarray, pd.Series, pd.DataFrame])
-
-def clean_ndim(data, model):
-
-    if data.ndim == 1 and (model.exog.ndim == 1 or model.exog.shape[1] == 1):
-        data = data[:, None]
-
-    data = np.atleast_2d(data)  # needed in count model shape[1]
-
-    return data
 
 def get_dtype(data):
 

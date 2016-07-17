@@ -748,6 +748,14 @@ class Results(object):
         exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform)
         exog = exog_interface.to_statsmodels(exog)
 
+        if exog is not None:
+            exog = np.asarray(exog)
+
+            if exog.ndim == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
+                exog = exog[:, None]
+
+            exog = np.atleast_2d(exog)  # needed in count model shape[1]
+
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
         return exog_interface.from_statsmodels(predict_results)
