@@ -4,24 +4,27 @@ from functools import partial
 from patsy import dmatrix
 
 NUMPY_TYPES = [np.ndarray, np.float64]
+PANDAS_TYPES = [pd.Series, pd.DataFrame]
 
 class DataInterface(object):
 
-    def __init__(self, permitted_types, internal_type, data=None, external_type=None, model=None, use_formula=False):
+    def __init__(self, permitted_types, internal_type=np.ndarray, data=None, external_type=None, model=None,
+                 use_formula=False):
 
         self.permitted_types = permitted_types
         self.internal_type = internal_type
         self.columns = getattr(data, 'columns', None)
         self.name = getattr(data, 'name', None)
-        self.index = getattr(data, 'index', None)
         self.ndim = getattr(data, 'ndim', None)
         self.model = model
         self.use_formula = use_formula
 
         if external_type is not None:
             self.external_type = external_type
+
         elif data is not None:
             self.external_type = type(data)
+
         else:
             self.external_type = np.ndarray
 
@@ -33,28 +36,31 @@ class DataInterface(object):
             return None
 
         elif self.use_formula and self.model is not None and hasattr(self.model, 'formula'):
-                return dmatrix(self.model.data.design_info.builder, data)
+            return dmatrix(self.model.data.design_info.builder, data)
 
         elif type(data) in self.permitted_types:
             return data
 
         elif self.internal_type == np.ndarray:
-             return self.to_numpy(data)
+             return self.to_numpy_array(data)
 
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
     def from_statsmodels(self, data):
 
-        internal_type = type(data)
+        from_type = type(data)
 
-        if internal_type in NUMPY_TYPES:
-            return self.from_numpy(data)
+        if from_type in NUMPY_TYPES:
+            return self.from_numpy_array(data)
+
+        elif from_type in PANDAS_TYPES:
+            return self.from_pandas(data)
 
         else:
-            raise TypeError('Type conversion from {} to {} is not possible.'.format(internal_type, self.external_type))
+            raise TypeError('Type conversion from {} to {} is not possible.'.format(from_type, self.external_type))
 
-    def to_numpy(self, data):
+    def to_numpy_array(self, data):
 
         from_type = type(data)
 
@@ -86,9 +92,26 @@ class DataInterface(object):
         else:
             return to_return
 
-    def from_numpy(self, data):
+    def to_pandas(self, data):
 
-        if type(data) == self.external_type:
+        from_type = type(data)
+
+        if from_type in PANDAS_TYPES:
+            return data
+
+        else:
+            np_data = self.to_numpy_array(data)
+
+            if np_data.ndim == 1:
+                return pd.Series(np_data, name=self.name)
+            else:
+                return pd.DataFrame(np_data, columns=self.columns)
+
+    def from_numpy_array(self, data):
+
+        from_type = type(data)
+
+        if from_type == self.external_type:
             return data
 
         elif self.external_type == list:
@@ -98,13 +121,16 @@ class DataInterface(object):
             return data.view(np.recarray)
 
         elif self.external_type == pd.Series:
-            return pd.Series(data=data, index=self.index, dtype=self.dtype)
+            index = getattr(data, 'index', None)
+            return pd.Series(data=data, index=index, dtype=self.dtype)
 
         elif self.external_type == pd.DataFrame:
             ndim = getattr(data, 'ndim', None)
 
             if ndim in [1, None]:
-                return pd.Series(data=data, index=self.index)
+                index = getattr(data, 'index', None)
+
+                return pd.Series(data=data, index=index)
             elif self.ndim == ndim:
                 return pd.DataFrame(data=data, columns=self.columns, dtype=self.dtype)
             else:
@@ -113,9 +139,31 @@ class DataInterface(object):
         else:
             return data
 
+    def from_pandas(self, data):
 
-NumPyInterface = partial(DataInterface, [np.ndarray], np.ndarray)
-PandasInterface = partial(DataInterface, [np.ndarray, pd.Series, pd.DataFrame], np.ndarray)
+        from_type = type(data)
+
+        if from_type == self.external_type:
+            return data
+
+        elif self.external_type == np.ndarray:
+            return  data.values
+
+        elif from_type == pd.Series and self.external_type == pd.DataFrame:
+            return data.to_frame()
+
+        elif from_type == pd.DataFrame and self.external_type == pd.Series:
+            if data.ndim == 1:
+                return pd.Series(data.values, index=data.index, name=data.columns[0])
+            else:
+                raise TypeError('Cannot convert multi dimentional DataFrame to a Series')
+
+        elif self.external_type == list:
+            return data.values.tolist()
+
+
+NumPyInterface = partial(DataInterface, [np.ndarray])
+PandasInterface = partial(DataInterface, [np.ndarray, pd.Series, pd.DataFrame])
 
 def clean_ndim(data, model):
 
@@ -134,3 +182,23 @@ def get_dtype(data):
         return data.dtypes
     else:
         return None
+
+def is_1d(data):
+
+    try:
+        if np.asarray(data).ndim > 1 and np.asarray(data).squeeze().ndim == 1:
+            return False
+        elif np.asarray(data).ndim == 1:
+            return True
+    except:
+        pass
+
+    try:
+        if data.ndim > 1:
+            return False
+        elif data.ndim == 1:
+            return True
+    except:
+        pass
+
+    raise ValueError('Cannot determine number of dimensions')
