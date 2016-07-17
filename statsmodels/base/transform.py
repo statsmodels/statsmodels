@@ -63,7 +63,7 @@ class BoxCox(object):
         if np.abs(lmbda) < 10e-3:
             y = np.log(x)
         else:
-            y = (np.power(x, lmbda) - 1) / lmbda
+            y = (np.power(x, lmbda) - 1.) / lmbda
 
         return y, lmbda
 
@@ -211,7 +211,7 @@ class BoxCox(object):
 
         def optim(lmbda, *args, **kwargs):
             y, lmbda = self.transform_boxcox(x, lmbda)
-            return (1 - lmbda) * sum_x + (nobs / 2) * np.log(np.var(y))
+            return (1 - lmbda) * sum_x + (nobs / 2.) * np.log(np.var(y))
 
         res = minimize_scalar(optim,
                               bounds=bounds,
