@@ -95,8 +95,8 @@ before_install:
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
   - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
+  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml flake8
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml flake8
   - source activate statsmodels-test
   - pip install 'pytest<4' pytest-xdist nose
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
@@ -119,6 +119,10 @@ script:
   # Remove xdist (-n 2) until warning reporting is working
   - echo pytest ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
+  - cd ${SRCDIR}
+  - git remote add -t master upstream https://github.com/statsmodels/statsmodels.git
+  - git fetch upstream
+  - find . -type f ! -name "test*.py" -name "*.py" -path "./statsmodels/*" | xargs git diff upstream/master | flake8 --diff
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
