@@ -24,8 +24,8 @@ class TVPModel(MLEModel):
 
     Attributes
     ----------
-    k_tv_params : int
-        The number of time varying parameters.
+    k_exog : int
+        The number of exog variables.
 
     Notes
     -----
@@ -50,6 +50,9 @@ class TVPModel(MLEModel):
     MIT Press Books. The MIT Press.
     """
 
+    _obs_var_idx = np.s_[:1]
+    _tv_params_cov_idx = np.s_[1:]
+
     def __init__(self, endog, exog=None, **kwargs):
 
         # Check if exogenous data is provided
@@ -61,41 +64,39 @@ class TVPModel(MLEModel):
 
         # Reshape exog, if it is one-dimensional array
         if exog.ndim == 1:
-            exog = exog.reshape(1, -1)
+            exog = exog.reshape(-1, 1)
 
         # The number of time varying parameters is defined by `exog` second
         # dimension
-        self.k_tv_params = exog.shape[1]
-        k_tv_params = self.k_tv_params
+        self.k_exog = exog.shape[1]
+        k_exog = self.k_exog
 
         # Superclass initialization
-        super(TVPModel, self).__init__(endog, k_tv_params, exog=exog, **kwargs)
+        super(TVPModel, self).__init__(endog, k_exog, exog=exog, **kwargs)
 
         # Every observation is a single value
         if self.k_endog != 1:
-            raise ValueError('Endogenous vector must consist of 1 value.')
+            raise ValueError('Endogenous vector must be univariate.')
 
-        # Parameters vector and slices
-        self.k_params = k_tv_params + 1
-        self._obs_var_idx = np.s_[:1]
-        self._tv_params_cov_idx = np.s_[1:]
+        # The dimension of parameters space
+        self.k_params = k_exog + 1
 
         # Parameter names
         self._param_names = ['obs_var'] + ['tvp_var{0}'.format(i) for i in \
-                range(k_tv_params)]
+                range(k_exog)]
 
         dtype = self.ssm.dtype
 
         # Setting up constant representation matrices
 
-        self['design'] = np.array(exog.T.reshape(1, k_tv_params, -1),
+        self['design'] = np.array(exog.T.reshape(1, k_exog, -1),
                 dtype=dtype)
 
-        self['transition'] = np.identity(k_tv_params, dtype=dtype).reshape(
-                k_tv_params, k_tv_params, 1)
+        self['transition'] = np.identity(k_exog, dtype=dtype).reshape(k_exog,
+                k_exog, 1)
 
-        self['selection'] = np.identity(k_tv_params, dtype=dtype).reshape(
-                k_tv_params, k_tv_params, 1)
+        self['selection'] = np.identity(k_exog, dtype=dtype).reshape(k_exog,
+                k_exog, 1)
 
     @property
     def start_params(self):
@@ -127,14 +128,13 @@ class TVPModel(MLEModel):
         params = super(TVPModel, self).update(params, **kwargs)
 
         dtype = self.ssm.dtype
-        k_tv_params = self.k_tv_params
+        k_exog = self.k_exog
 
         # Observation covariance matrix is a single value
         self['obs_cov'] = np.array(params[self._obs_var_idx]).reshape(1, 1, 1)
 
         # State covariance matrix is diagonal
-        state_cov = np.identity(k_tv_params, dtype=dtype).reshape(k_tv_params,
-                k_tv_params, 1)
+        state_cov = np.identity(k_exog, dtype=dtype).reshape(k_exog, k_exog, 1)
         state_cov[:, :, 0] *= params[self._tv_params_cov_idx]
 
         self['state_cov'] = state_cov

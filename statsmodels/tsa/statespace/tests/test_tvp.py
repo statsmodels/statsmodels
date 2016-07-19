@@ -38,14 +38,14 @@ class KimNelson1989(object):
         start = cls.true['start']
 
         # Model attributes
-        cls.k_tv_params = 5
-        k_tv_params = cls.k_tv_params
+        cls.k_exog = 5
+        k_exog = cls.k_exog
 
         # Preparing endog and exog data
 
         cls.endog = np.array(cls.true['data']['m1'], dtype=dtype)
 
-        cls.exog = np.zeros((cls.endog.shape[0], k_tv_params), dtype=dtype)
+        cls.exog = np.zeros((cls.endog.shape[0], k_exog), dtype=dtype)
 
         cls.exog[:, 0] = 1
         cls.exog[:, 1] = cls.true['data']['dint']
@@ -58,8 +58,8 @@ class KimNelson1989(object):
         cls.model = TVPModel(cls.endog, exog=cls.exog, dtype=dtype,
                 alternate_timing=True, loglikelihood_burn=start)
 
-        cls.model.initialize_known(np.zeros(k_tv_params, dtype=dtype),
-                np.identity(k_tv_params, dtype=dtype) * 50)
+        cls.model.initialize_known(np.zeros(k_exog, dtype=dtype),
+                np.identity(k_exog, dtype=dtype) * 50)
 
 
 class TestKimNelson1989_Filtering(KimNelson1989):
