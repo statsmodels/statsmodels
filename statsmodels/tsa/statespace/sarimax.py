@@ -1713,7 +1713,6 @@ class SARIMAXResults(MLEResults):
             'k_seasons': self.model.k_seasons,
             'measurement_error': self.model.measurement_error,
             'time_varying_regression': self.model.time_varying_regression,
-            'mle_regression': self.model.mle_regression,
             'simple_differencing': self.model.simple_differencing,
             'enforce_stationarity': self.model.enforce_stationarity,
             'enforce_invertibility': self.model.enforce_invertibility,
