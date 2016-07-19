@@ -77,7 +77,7 @@ class TestTransform(SetupBoxCox):
 
     def test_boxcox_transformation_methods(self):
         # testing estimated lambda vs. provided. Should result in almost
-        # the same transformed data.
+        # the same transformed data. Value taken from R.
         y_transformed_no_lambda = self.bc.transform_boxcox(self.x)
         y_transformed_lambda = self.bc.transform_boxcox(self.x, 0.507624)
 
@@ -88,3 +88,23 @@ class TestTransform(SetupBoxCox):
         # series, hence stabilising should result in the same scale: lmbda = 1.
         y, lmbda = self.bc.transform_boxcox(np.arange(1, 100))
         assert_almost_equal(lmbda, 1., 5)
+
+    def test_zero_lambda(self):
+        # zero lambda should be a log transform.
+        y_transform_zero_lambda, lmbda = self.bc.transform_boxcox(self.x, 0.)
+
+        assert_equal(lmbda, 0.)
+        assert_almost_equal(y_transform_zero_lambda, np.log(self.x), 5)
+
+    def test_naive_back_transformation(self):
+        # test both transformations functions -> 0. and .5
+        y_zero_lambda = self.bc.transform_boxcox(self.x, 0.)
+        y_half_lambda = self.bc.transform_boxcox(self.x, .5)
+
+        y_zero_lambda_un = self.bc.untransform_boxcox(*y_zero_lambda,
+                                                      method='naive')
+        y_half_lambda_un = self.bc.untransform_boxcox(*y_half_lambda,
+                                                      method='naive')
+
+        assert_almost_equal(self.x, y_zero_lambda_un, 5)
+        assert_almost_equal(self.x, y_half_lambda_un, 5)
