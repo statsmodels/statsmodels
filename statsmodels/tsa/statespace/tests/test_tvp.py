@@ -21,7 +21,8 @@ from .results import results_tvp
 class KimNelson1989(object):
     """
     Kim and Nelson's (1989) time-varying-parameter model for modelling changing
-    conditional variance of uncertainty in the U.S. monetary growth.
+    conditional variance of uncertainty in the U.S. monetary growth (chapter
+    3.4 of Kim and Nelson, 1999).
 
     Test data produced using GAUSS code described in Kim and Nelson (1999) and
     found at http://econ.korea.ac.kr/~cjkim/MARKOV/programs/tvp.opt

@@ -1,3 +1,33 @@
+"""
+Results for Garcia-Perron (1996) model testing
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Datasets produced using GAUSS code described in Kim and Nelson (1999) and found
+at http://econ.korea.ac.kr/~cjkim/MARKOV/data/tvpmrkf.prn
+Accessed 2016-07-15
+Code was run using OxGauss 6.
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+
+"""
+
+"""
+Kim's (1993) time-varying-parameter model with heteroskedastic disturbances for
+U.S. monetary growth uncertainty (chapter 5.5.1 of Kim and Nelson, 1999).
+
+See http://econ.korea.ac.kr/~cjkim/MARKOV/prgmlist.htm#chapter5
+
+Gauss Code: TVPMRKF.OPT
+Dataset: TVPMRKF.PRN
+"""
 tvpmrkf = {
     'data': {
         'm1': [

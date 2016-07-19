@@ -22,7 +22,7 @@ MIT Press Books. The MIT Press.
 Kim and Nelson's (1989) time-varying-parameter model for modelling changing
 conditional variance of uncertainty in the U.S. monetary growth.
 
-See http://econ.korea.ac.kr/~cjkim/MARKOV/prgmlist.htm#chapter4
+See http://econ.korea.ac.kr/~cjkim/MARKOV/prgmlist.htm#chapter3
 
 Gauss Code: TVP.OPT
 Dataset: TVP.PRN

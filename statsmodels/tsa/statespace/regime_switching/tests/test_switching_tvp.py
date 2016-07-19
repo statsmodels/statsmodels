@@ -1,3 +1,17 @@
+"""
+Tests for Markov switching time varying parameters model
+
+Author: Valery Likhosherstov
+License: Simplified-BSD
+
+References
+----------
+
+Kim, Chang-Jin, and Charles R. Nelson. 1999.
+"State-Space Models with Regime Switching:
+Classical and Gibbs-Sampling Approaches with Applications".
+MIT Press Books. The MIT Press.
+"""
 import numpy as np
 from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace.regime_switching.api import SwitchingTVPModel
@@ -5,6 +19,16 @@ from .results import results_kim1993
 
 
 class Kim1993(object):
+    """
+    Kim's (1993) time-varying-parameter model with heteroskedastic disturbances
+    for U.S. monetary growth uncertainty (chapter 5.5.1 of Kim and Nelson,
+    1999).
+
+    Test data produced using GAUSS code described in Kim and Nelson (1999) and
+    found at http://econ.korea.ac.kr/~cjkim/MARKOV/programs/tvpmrkf.opt
+
+    See `results.results_kim1993` for more information.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -15,10 +39,13 @@ class Kim1993(object):
         cls.true = results_kim1993.tvpmrkf
         start = cls.true['start']
 
+        # Model attributes
         cls.k_regimes = 2
         k_regimes = cls.k_regimes
         cls.k_exog = 5
         k_exog = cls.k_exog
+
+        # Preparing test data
 
         cls.endog = np.array(cls.true['data']['m1'], dtype=dtype)
 
@@ -30,14 +57,19 @@ class Kim1993(object):
         cls.exog[:, 3] = cls.true['data']['surp']
         cls.exog[:, 4] = cls.true['data']['m1lag']
 
+        # Instantiate the model
         cls.model = SwitchingTVPModel(k_regimes, cls.endog, exog=cls.exog,
                 dtype=dtype, loglikelihood_burn=start)
 
+        # Set model initial states
         cls.model.initialize_known(np.zeros(k_exog, dtype=dtype),
                 np.identity(k_exog, dtype=dtype) * 100)
 
 
 class TestKim1993_Filtering(Kim1993):
+    """
+    Basic test for the loglikelihood and forecast precision.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -65,6 +97,9 @@ class TestKim1993_Filtering(Kim1993):
 
 
 class TestKim1993_MLE(Kim1993):
+    """
+    Basic test for MLE correct convergence.
+    """
 
     @classmethod
     def setup_class(cls):
@@ -89,6 +124,10 @@ class TestKim1993_MLE(Kim1993):
                 rtol=1e-3, atol=1e-5)
 
 class TestKim1993_MLEFitNonswitchingFirst(Kim1993):
+    """
+    Basic test for correct convergence of MLE from the start provided by
+    non-switching model.
+    """
 
     @classmethod
     def setup_class(cls):
