@@ -540,7 +540,10 @@ class SwitchingMLEModel(MLEModel):
     @property
     def start_params(self):
         """
-        (array) Starting parameters for maximum likelihood estimation.
+        (array) Starting parameters for maximum likelihood estimation. Note,
+        that this is a bad initialization with identical regimes. Consider using
+        user-defined starting parameters, non-switching fit or model-specific
+        initialization (e.g. EM-algorithm in case of MS AR).
         """
         return self.transform_params(np.ones((self.parameters.k_params,),
             dtype=self.ssm.dtype))

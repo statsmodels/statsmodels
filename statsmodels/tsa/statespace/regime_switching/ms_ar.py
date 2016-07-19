@@ -5,7 +5,6 @@ Author: Valery Likhosherstov
 License: Simplified-BSD
 """
 import numpy as np
-from .tools import RegimePartition
 from .switching_mlemodel import SwitchingMLEModel
 from .kim_smoother import KimSmootherResults
 from statsmodels.tsa.statespace.api import SARIMAX
