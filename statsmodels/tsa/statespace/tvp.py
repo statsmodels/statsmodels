@@ -16,7 +16,7 @@ class TVPModel(MLEModel):
     ----------
     endog : array_like
         The observed time series process :math:`y`.
-    exog : array_like, optional
+    exog : array_like
         Array of exogenous regressors for the observation equation, shaped
         nobs x k_exog. Required for this model.
     kwargs
@@ -53,11 +53,11 @@ class TVPModel(MLEModel):
     _obs_var_idx = np.s_[:1]
     _tv_params_cov_idx = np.s_[1:]
 
-    def __init__(self, endog, exog=None, **kwargs):
+    def __init__(self, endog, exog, **kwargs):
 
-        # Check if exogenous data is provided
-        if exog is None:
-            raise ValueError('Exogenous data is required for this model.')
+        # Delete exog in optional arguments
+        if 'exog' in kwargs:
+            del kwargs['exog']
 
         # Transform to numpy array
         exog = np.asarray(exog)
@@ -85,56 +85,41 @@ class TVPModel(MLEModel):
         self._param_names = ['obs_var'] + ['tvp_var{0}'.format(i) for i in \
                 range(k_exog)]
 
-        dtype = self.ssm.dtype
-
         # Setting up constant representation matrices
 
-        self['design'] = np.array(exog.T.reshape(1, k_exog, -1),
-                dtype=dtype)
+        self['design'] = exog.T.reshape(1, k_exog, -1)
 
-        self['transition'] = np.identity(k_exog, dtype=dtype).reshape(k_exog,
-                k_exog, 1)
+        self['transition'] = np.identity(k_exog)
 
-        self['selection'] = np.identity(k_exog, dtype=dtype).reshape(k_exog,
-                k_exog, 1)
+        self['selection'] = np.identity(k_exog)
 
     @property
     def start_params(self):
 
-        dtype = self.ssm.dtype
-
         # Default start params is a vector of ones
-        return np.ones(self.k_params, dtype=dtype)
+        return np.ones(self.k_params)
 
     def transform_params(self, unconstrained):
 
         # All parameters are error variances
         # Keeping them positive
-        constrained = unconstrained**2
-
-        return constrained
+        return unconstrained**2
 
     def untransform_params(self, constrained):
 
         # All parameters are error variances
         # Keeping them positive
-        unconstrained = constrained**0.5
-
-        return unconstrained
+        return constrained**0.5
 
     def update(self, params, **kwargs):
 
         # Transorm params, if they are untransformed
         params = super(TVPModel, self).update(params, **kwargs)
 
-        dtype = self.ssm.dtype
         k_exog = self.k_exog
 
         # Observation covariance matrix is a single value
-        self['obs_cov'] = np.array(params[self._obs_var_idx]).reshape(1, 1, 1)
+        self['obs_cov'] = np.array(params[self._obs_var_idx]).reshape(1, 1)
 
         # State covariance matrix is diagonal
-        state_cov = np.identity(k_exog, dtype=dtype).reshape(k_exog, k_exog, 1)
-        state_cov[:, :, 0] *= params[self._tv_params_cov_idx]
-
-        self['state_cov'] = state_cov
+        self['state_cov'] = np.diag(params[self._tv_params_cov_idx])

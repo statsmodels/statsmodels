@@ -19,7 +19,7 @@ class SwitchingTVPModel(SwitchingMLEModel):
         The number of switching regimes.
     endog : array_like
         The observed time series process :math:`y`.
-    exog : array_like, optional
+    exog : array_like
         Array of exogenous regressors for the observation equation, shaped
         nobs x k_exog. Required for this model.
     kwargs
@@ -59,11 +59,11 @@ class SwitchingTVPModel(SwitchingMLEModel):
     MIT Press Books. The MIT Press.
     """
 
-    def __init__(self, k_regimes, endog, exog=None, **kwargs):
+    def __init__(self, k_regimes, endog, exog, **kwargs):
 
-        # Check if exogenous data is provided
-        if exog is None:
-            raise ValueError('Exogenous data is required for this model.')
+        # Delete exog in optional arguments
+        if 'exog' in kwargs:
+            del kwargs['exog']
 
         # Transform to numpy array
         exog = np.asarray(exog)
@@ -99,13 +99,11 @@ class SwitchingTVPModel(SwitchingMLEModel):
 
         # Setting up constant representation matrices
 
-        self['design'] = np.array(exog.T.reshape(1, k_exog, -1), dtype=dtype)
+        self['design'] = np.array(exog.T.reshape(1, k_exog, -1))
 
-        self['transition'] = np.identity(k_exog, dtype=dtype).reshape(k_exog,
-                k_exog, 1)
+        self['transition'] = np.identity(k_exog).reshape(k_exog, k_exog, 1)
 
-        self['selection'] = np.identity(k_exog, dtype=dtype).reshape(k_exog,
-                k_exog, 1)
+        self['selection'] = np.identity(k_exog).reshape(k_exog, k_exog, 1)
 
     def get_nonswitching_model(self):
 
@@ -187,7 +185,6 @@ class SwitchingTVPModel(SwitchingMLEModel):
         # Transform `params` vector if it is untransformed
         params = super(SwitchingTVPModel, self).update(params, **kwargs)
 
-        dtype = self.ssm.dtype
         k_regimes = self.k_regimes
         k_exog = self.k_exog
 
@@ -199,6 +196,6 @@ class SwitchingTVPModel(SwitchingMLEModel):
                 k_regimes, 1, 1, 1)
 
         # Update time varying parameters covariance
-        state_cov = np.identity(k_exog, dtype=dtype).reshape(k_exog, k_exog, 1)
-        state_cov[:, :, 0] *= params[self.parameters['tvp_var']]
+        state_cov = np.diag(params[self.parameters['tvp_var']]).reshape(k_exog,
+                k_exog, 1)
         self['state_cov'] = state_cov

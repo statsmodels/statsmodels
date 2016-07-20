@@ -490,13 +490,13 @@ class MarkovAutoregression(SwitchingMLEModel):
         # Other matrices
 
         # Since variance is a matrix of order 1, `selection` is the following
-        selection = np.zeros((order, 1, 1), dtype=dtype)
+        selection = np.zeros((order, 1, 1))
         selection[0, 0, 0] = 1
 
         self['selection'] = selection
 
         # This is due to Durbin and Koopman book
-        design = np.zeros((1, order, 1), dtype=dtype)
+        design = np.zeros((1, order, 1))
         design[0, 0, 0] = 1
 
         self['design'] = design

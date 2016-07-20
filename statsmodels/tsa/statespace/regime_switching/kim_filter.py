@@ -101,6 +101,11 @@ class _KimFilter(object):
             stability_method=stability_method, conserve_memory=conserve_memory,
             tolerance=tolerance, complex_step=complex_step)
 
+        # Check if filter initialization is provided
+        if any((regime_filter.initialization is None for regime_filter in \
+                model._regime_kalman_filters)):
+            raise RuntimeError('Statespace model not initialized.')
+
     def _hamilton_prediction_step(self, t,
             predicted_prev_and_curr_regime_logprobs):
 
