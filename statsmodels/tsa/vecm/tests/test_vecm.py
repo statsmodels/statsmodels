@@ -172,125 +172,125 @@ def test_ml_beta():
                   "p-VALUES\n"+err_msg
 
 
-# def test_ml_c():  # test const outside coint relation and seasonal terms
-#     if debug_mode:
-#         if "C" not in to_test:
-#             return
-#         print("\n\nDET_COEF", end="")
-#     for ds in datasets:
-#         for dt in deterministic_terms_list:
-#             if debug_mode:
-#                 print("\n" + dt + ": ", end="")
-#
-#             C_obt = results_sm[ds][dt].det_coef  # coefs for const & seasonal
-#             se_C_obt = results_sm[ds][dt].stderr_det_coef
-#             t_C_obt = results_sm[ds][dt].tvalues_det_coef
-#             p_C_obt = results_sm[ds][dt].pvalues_det_coef
-#
-#             if "C" not in results_ref[ds][dt]["est"].keys():
-#                 # case: there are no deterministic terms
-#                 if C_obt.size == 0 and se_C_obt.size == 0  \
-#                         and t_C_obt.size == 0 and p_C_obt.size == 0:
-#                     yield assert_, True, "no const & seasonal terms"
-#                     continue
-#
-#             desired = results_ref[ds][dt]["est"]["C"]
-#
-#             if "co" in dt:
-#                 const_obt = C_obt[:, 0][:, None]
-#                 const_des = desired[:, 0][:, None]
-#                 C_obt = C_obt[:, 1:]
-#                 desired = desired[:, 1:]
-#                 yield assert_allclose, const_obt, const_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "CONST")
-#             if "s" in dt:
-#                 if "lt" in dt:
-#                     seas_obt = C_obt[:, :-1]
-#                     seas_des = desired[:, :-1]
-#                 else:
-#                     seas_obt = C_obt
-#                     seas_des = desired
-#                 yield assert_allclose, seas_obt, seas_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "SEASONAL")
-#             if "lt" in dt:
-#                 lt_obt = C_obt[:, -1:]
-#                 lt_des = desired[:, -1:]
-#                 yield assert_allclose, lt_obt, lt_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "LINEAR TREND")
-#             if debug_mode and dont_test_se_t_p:
-#                 continue
-#             # standard errors
-#             se_desired = results_ref[ds][dt]["se"]["C"]
-#             if "co" in dt:
-#                 se_const_obt = se_C_obt[:, 0][:, None]
-#                 se_C_obt = se_C_obt[:, 1:]
-#                 se_const_des = se_desired[:, 0][:, None]
-#                 se_desired = se_desired[:, 1:]
-#                 yield assert_allclose, se_const_obt, se_const_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "SE CONST")
-#             if "s" in dt:
-#                 if "lt" in dt:
-#                     se_seas_obt = se_C_obt[:, :-1]
-#                     se_seas_des = se_desired[:, :-1]
-#                 else:
-#                     se_seas_obt = se_C_obt
-#                     se_seas_des = se_desired
-#                 yield assert_allclose, se_seas_obt, se_seas_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "SE SEASONAL")
-#                 if "lt" in dt:
-#                     se_lt_obt = se_C_obt[:, -1:]
-#                     se_lt_des = se_desired[:, -1:]
-#                     yield assert_allclose, se_lt_obt, se_lt_des,  \
-#                           rtol, atol, False,  \
-#                           build_err_msg(ds, dt, "SE LIN. TREND")
-#             # t-values
-#             t_desired = results_ref[ds][dt]["t"]["C"]
-#             if "co" in dt:
-#                 t_const_obt = t_C_obt[:, 0][:, None]
-#                 t_C_obt = t_C_obt[:, 1:]
-#                 t_const_des = t_desired[:, 0][:, None]
-#                 t_desired = t_desired[:, 1:]
-#                 yield assert_allclose, t_const_obt, t_const_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "T CONST")
-#             if "s" in dt:
-#                 if "lt" in dt:
-#                     t_seas_obt = t_C_obt[:, :-1]
-#                     t_seas_des = t_desired[:, :-1]
-#                 else:
-#                     t_seas_obt = t_C_obt
-#                     t_seas_des = t_desired
-#                 yield assert_allclose, t_seas_obt, t_seas_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
-#             if "lt" in dt:
-#                 t_lt_obt = t_C_obt[:, -1:]
-#                 t_lt_des = t_desired[:, -1:]
-#                 yield assert_allclose, t_lt_obt, t_lt_des,  \
-#                       rtol, atol, False,  \
-#                       build_err_msg(ds, dt, "T LIN. TREND")
-#             # p-values
-#             p_desired = results_ref[ds][dt]["p"]["C"]
-#             if "co" in dt:
-#                 p_const_obt = p_C_obt[:, 0][:, None]
-#                 p_C_obt = p_C_obt[:, 1:]
-#                 p_const_des = p_desired[:, 0][:, None]
-#                 p_desired = p_desired[:, 1:]
-#                 yield assert_allclose, p_const_obt, p_const_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "P CONST")
-#             if "s" in dt:
-#                 if "lt" in dt:
-#                     p_seas_obt = p_C_obt[:, :-1]
-#                     p_seas_des = p_desired[:, :-1]
-#                 else:
-#                     p_seas_obt = p_C_obt
-#                     p_seas_des = p_desired
-#                 yield assert_allclose, p_seas_obt, p_seas_des,  \
-#                       rtol, atol, False, build_err_msg(ds, dt, "P SEASONAL")
-#             if "lt" in dt:
-#                 p_lt_obt = p_C_obt[:, -1:]
-#                 p_lt_des = p_desired[:, -1:]
-#                 yield assert_allclose, p_lt_obt, p_lt_des,  \
-#                       rtol, atol, False,  \
-#                       build_err_msg(ds, dt, "P LIN. TREND")
+def test_ml_c():  # test const outside coint relation and seasonal terms
+    if debug_mode:
+        if "C" not in to_test:
+            return
+        print("\n\nDET_COEF", end="")
+    for ds in datasets:
+        for dt in deterministic_terms_list:
+            if debug_mode:
+                print("\n" + dt + ": ", end="")
+
+            C_obt = results_sm[ds][dt].det_coef  # coefs for const & seasonal
+            se_C_obt = results_sm[ds][dt].stderr_det_coef
+            t_C_obt = results_sm[ds][dt].tvalues_det_coef
+            p_C_obt = results_sm[ds][dt].pvalues_det_coef
+
+            if "C" not in results_ref[ds][dt]["est"].keys():
+                # case: there are no deterministic terms
+                if C_obt.size == 0 and se_C_obt.size == 0  \
+                        and t_C_obt.size == 0 and p_C_obt.size == 0:
+                    yield assert_, True, "no const & seasonal terms"
+                    continue
+
+            desired = results_ref[ds][dt]["est"]["C"]
+
+            if "co" in dt:
+                const_obt = C_obt[:, 0][:, None]
+                const_des = desired[:, 0][:, None]
+                C_obt = C_obt[:, 1:]
+                desired = desired[:, 1:]
+                yield assert_allclose, const_obt, const_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "CONST")
+            if "s" in dt:
+                if "lt" in dt:
+                    seas_obt = C_obt[:, :-1]
+                    seas_des = desired[:, :-1]
+                else:
+                    seas_obt = C_obt
+                    seas_des = desired
+                yield assert_allclose, seas_obt, seas_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "SEASONAL")
+            if "lt" in dt:
+                lt_obt = C_obt[:, -1:]
+                lt_des = desired[:, -1:]
+                yield assert_allclose, lt_obt, lt_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "LINEAR TREND")
+            if debug_mode and dont_test_se_t_p:
+                continue
+            # standard errors
+            se_desired = results_ref[ds][dt]["se"]["C"]
+            if "co" in dt:
+                se_const_obt = se_C_obt[:, 0][:, None]
+                se_C_obt = se_C_obt[:, 1:]
+                se_const_des = se_desired[:, 0][:, None]
+                se_desired = se_desired[:, 1:]
+                yield assert_allclose, se_const_obt, se_const_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "SE CONST")
+            if "s" in dt:
+                if "lt" in dt:
+                    se_seas_obt = se_C_obt[:, :-1]
+                    se_seas_des = se_desired[:, :-1]
+                else:
+                    se_seas_obt = se_C_obt
+                    se_seas_des = se_desired
+                yield assert_allclose, se_seas_obt, se_seas_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "SE SEASONAL")
+                if "lt" in dt:
+                    se_lt_obt = se_C_obt[:, -1:]
+                    se_lt_des = se_desired[:, -1:]
+                    yield assert_allclose, se_lt_obt, se_lt_des,  \
+                          rtol, atol, False,  \
+                          build_err_msg(ds, dt, "SE LIN. TREND")
+            # t-values
+            t_desired = results_ref[ds][dt]["t"]["C"]
+            if "co" in dt:
+                t_const_obt = t_C_obt[:, 0][:, None]
+                t_C_obt = t_C_obt[:, 1:]
+                t_const_des = t_desired[:, 0][:, None]
+                t_desired = t_desired[:, 1:]
+                yield assert_allclose, t_const_obt, t_const_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "T CONST")
+            if "s" in dt:
+                if "lt" in dt:
+                    t_seas_obt = t_C_obt[:, :-1]
+                    t_seas_des = t_desired[:, :-1]
+                else:
+                    t_seas_obt = t_C_obt
+                    t_seas_des = t_desired
+                yield assert_allclose, t_seas_obt, t_seas_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
+            if "lt" in dt:
+                t_lt_obt = t_C_obt[:, -1:]
+                t_lt_des = t_desired[:, -1:]
+                yield assert_allclose, t_lt_obt, t_lt_des,  \
+                      rtol, atol, False,  \
+                      build_err_msg(ds, dt, "T LIN. TREND")
+            # p-values
+            p_desired = results_ref[ds][dt]["p"]["C"]
+            if "co" in dt:
+                p_const_obt = p_C_obt[:, 0][:, None]
+                p_C_obt = p_C_obt[:, 1:]
+                p_const_des = p_desired[:, 0][:, None]
+                p_desired = p_desired[:, 1:]
+                yield assert_allclose, p_const_obt, p_const_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "P CONST")
+            if "s" in dt:
+                if "lt" in dt:
+                    p_seas_obt = p_C_obt[:, :-1]
+                    p_seas_des = p_desired[:, :-1]
+                else:
+                    p_seas_obt = p_C_obt
+                    p_seas_des = p_desired
+                yield assert_allclose, p_seas_obt, p_seas_des,  \
+                      rtol, atol, False, build_err_msg(ds, dt, "P SEASONAL")
+            if "lt" in dt:
+                p_lt_obt = p_C_obt[:, -1:]
+                p_lt_des = p_desired[:, -1:]
+                yield assert_allclose, p_lt_obt, p_lt_des,  \
+                      rtol, atol, False,  \
+                      build_err_msg(ds, dt, "P LIN. TREND")
 
 
 
