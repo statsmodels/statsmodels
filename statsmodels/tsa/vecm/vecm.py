@@ -11,11 +11,59 @@ from statsmodels.tsa.tsatools import duplication_matrix, vec, vech, unvec
 import statsmodels.tsa.base.tsa_model as tsbase
 
 def mat_sqrt(_2darray):
+    """Calculates the square root of a matrix.
+
+    Parameters
+    ----------
+    _2darray : ndarray
+        A 2-dimensional ndarray representing a square matrix.
+
+    Returns
+    -------
+    result : ndarray
+        Square root of the matrix given as function argument.
+    """
     u_, s_, v_ = svd(_2darray, full_matrices=False)
     s_ = np.sqrt(s_)
     return chain_dot(u_, np.diag(s_), v_)
 
 def _endog_matrices(endog_tot, diff_lags, deterministic):
+    """Returns different matrices needed for parameter estimation. These consist
+    of elements of the data as well as elements representing deterministic
+    terms. A tuple of consisting of these matrices is returned.
+
+    Parameters
+    ----------
+    endog_tot : ndarray (neqs x total_nobs)
+        The whole sample including the presample.
+    diff_lags : int
+        Number of lags in the VEC representation.
+    deterministic, str {"", "co", "cc", "lt", "s"}
+            "" - no deterministic terms
+            "co" - constant outside the cointegration relation
+            "cc" - constant within the cointegration relation
+            "lt" - linear trend
+            "s" - seasonal terms
+            Combinations of these are possible (e.g. "cclt" or "colt" for
+            linear trend with intercept)
+
+    Returns
+    -------
+    y_1_T : ndarray (neqs x nobs)
+        The (transposed) data without the presample.
+        .. math:: (y_1, \ldots, y_T)
+    delta_y_1_T : ndarray (neqs x nobs)
+        .. math:: (y_1, \ldots, y_T) - (y_0, \ldots, y_{T-1})
+    y_min1 : ndarray (neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+        .. math:: (y_0, \ldots, y_{T-1}
+    delta_x : ndarray (diff_lags*neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+
+    References
+    ----------
+    [Lut2005]_, p. 286
+    """
     # p. 286:
     p = diff_lags+1
     y = endog_tot
@@ -25,16 +73,25 @@ def _endog_matrices(endog_tot, diff_lags, deterministic):
     delta_y = np.diff(y)
     delta_y_1_T = delta_y[:, p-1:]
     y_min1 = y[:, p-1:-1]
-    if "co" in deterministic and "cc" in deterministic:
-        raise ValueError("Both 'co' and 'cc' as deterministic terms given. " +
-                         "Please choose one of the two.")
+    # if "co" in deterministic and "cc" in deterministic:
+    #     raise ValueError("Both 'co' and 'cc' as deterministic terms given. " +
+    #                      "Please choose one of the two.")
     # todo: optimize the following with np.row_stack()
-    if "cc" in deterministic:
+
+    if "cc" in deterministic:  # pp. 257, 299, 306, 307
+        # y_min1_mean = y_min1.mean(1)
         y_min1 = vstack((y_min1,
                          np.ones(T)))
-    if "lt" in deterministic:
-        y_min1 = vstack((y_min1,
-                         np.arange(T)))  # p. 299
+        # H = vstack((np.identity(K),
+        #             - y_min1_mean))
+        # y_min1 = H.T.dot(y_min1)
+
+    # the following gives the same result as the R-package tsDyn when the
+    # linear term is outside the cointegration relation:
+    # if "lt" in deterministic:  # p. 299
+    #     y_min1 = vstack((y_min1,
+    #                      np.arange(T)))
+
     # p. 286:
     delta_x = np.zeros((diff_lags*K, T))
     for j in range(delta_x.shape[1]):
@@ -45,26 +102,74 @@ def _endog_matrices(endog_tot, diff_lags, deterministic):
         delta_x = vstack((delta_x,
                           np.ones(T)))
     if "s" in deterministic:  # TODO: How many seasons??
-        seasons = np.zeros((3, delta_x.shape[1]))  # 3 = 4-1 (4=#seasons)
-        for i in range(seasons.shape[0]):
-            seasons[i, i::4] = 1
-        #seasons = seasons[:, ::-1]
+        num_of_seas = 4
+        seasons = np.zeros((num_of_seas - 1, delta_x.shape[1]))
+        for i in range(num_of_seas - 1):
+            seasons[i, i::num_of_seas] = 1
+        # seasons = seasons[:, ::-1]
         #seasons = np.hstack((seasons[:, 3:4], seasons[:, :-1]))
-        #seasons = np.hstack((seasons[:, 2:4], seasons[:, :-2]))
+        # seasons = np.hstack((seasons[:, 2:4], seasons[:, :-2]))
         seasons = np.hstack((seasons[:, 1:4], seasons[:, :-3]))
         # seasons[1] = -seasons[1]
+        seasons = seasons - 1 / num_of_seas
         delta_x = vstack((delta_x,
                           seasons))
-    return y_1_T, delta_y, delta_y_1_T, y_min1, delta_x
+
+    if "lt" in deterministic:
+        delta_x = vstack((delta_x,
+                          np.arange(T)+1))
+
+    return y_1_T, delta_y_1_T, y_min1, delta_x
 
 
 def _block_matrix_ymin1_deltax(y_min1, delta_x):  # e.g. p.287 (7.2.4)
+    """Returns an ndarray needed for parameter estimation as well as the
+    calculation of standard errors.
+
+    Parameters
+    ----------
+    y_min1 : ndarray (neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+        .. math:: (y_0, \ldots, y_{T-1}
+    delta_x : ndarray (diff_lags*neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+
+    Returns
+    -------
+    result : ndarray (K*p x K*p)
+        (dimensions assuming no deterministic terms are given)
+        Inverse of a matrix consisting of four blocks. Each block is consists of
+        matrix products of the function's arguments.
+    """
     b = y_min1.dot(delta_x.T)
     return inv(vstack((hstack((y_min1.dot(y_min1.T), b)),
                        hstack((b.T, delta_x.dot(delta_x.T))))))
 
 
 def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
+    """Returns two ndarrays needed for parameter estimation as well as the
+    calculation of standard errors.
+
+    Parameters
+    ----------
+    T : int
+        nobs
+    delta_x : ndarray (diff_lags*neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+    delta_y_1_T : ndarray (neqs x nobs)
+        .. math:: (y_1, \ldots, y_T) - (y_0, \ldots, y_{T-1})
+    y_min1 : ndarray (neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+        .. math:: (y_0, \ldots, y_{T-1}
+
+    Returns
+    -------
+    result : tuple
+        A tuple of two ndarrays
+    """
+
+
+    # todo: rewrite m such that a big (TxT) matrix is avoided
     m = np.identity(T) - (
         delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x))  # p. 291
     r0 = delta_y_1_T.dot(m)  # p. 292
@@ -73,6 +178,25 @@ def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
 
 
 def _sij(delta_x, delta_y_1_T, y_min1):
+    """Returns matrices and eigenvalues and -vectors used for parameter
+    estimation and the calculation of a models loglikelihood.
+
+    Parameters
+    ----------
+    delta_x : ndarray (diff_lags*neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+    delta_y_1_T : ndarray (neqs x nobs)
+        .. math:: (y_1, \ldots, y_T) - (y_0, \ldots, y_{T-1})
+    y_min1 : ndarray (neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+        .. math:: (y_0, \ldots, y_{T-1}
+
+    Returns
+    -------
+    result : tuple
+        A tuple of five ndarrays as well as eigenvalues and -vecotrs of a
+        certain (matrix) product of some of the returned ndarrays.
+    """
     T = y_min1.shape[1]
     r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
     # p. 294: optimizable: e.g. r0.dot(r1.T) == r1.dot(r0.T).T ==> s01==s10.T
@@ -88,21 +212,23 @@ def _sij(delta_x, delta_y_1_T, y_min1):
 
 class VECM(tsbase.TimeSeriesModel):
     r"""
-    Fit VECM process and do lag order selection
-
-    .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
+    Fit a VECM process
+    .. math:: \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots + \Gamma_{p-1} \Delta y_{t-p+1} + u_t
+    where
+    .. math:: \Pi = \alpha \beta'.
 
     Parameters
     ----------
-    endog : array-like
-        2-d endogenous response variable. The independent variable.
+    endog_tot : array-like
+        2-d endogenous response variable.
     dates : array-like
         must match number of rows of endog
 
     References
     ----------
-    Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
-    """  # TODO: docstring + implementation
+    [Lut2005]_
+    .. [Lut2005] Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+    """
     
     # TODO: implementation
     def __init__(self, endog_tot, dates=None, freq=None, missing="none"):
@@ -187,8 +313,9 @@ class VECM(tsbase.TimeSeriesModel):
     def _estimate_vecm_ls(self, diff_lags, deterministic=""):
         # deterministic \in \{"c", "lt", "s"\}, where
         # c=constant, lt=linear trend, s=seasonal terms
-        y_1_T, delta_y, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+        y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
                 self.y, diff_lags, deterministic)
+
         pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
                                                            delta_x, diff_lags,
                                                            deterministic)
@@ -196,7 +323,7 @@ class VECM(tsbase.TimeSeriesModel):
                 "Sigma_u_hat": sigma_u_hat}
     
     def _estimate_vecm_egls(self, diff_lags, deterministic="", r=1):
-        y_1_T, _dy, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+        y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
                 self.y, diff_lags, deterministic)
         T = y_1_T.shape[1]
         
@@ -226,7 +353,7 @@ class VECM(tsbase.TimeSeriesModel):
                 "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
     
     def _estimate_vecm_ml(self, diff_lags, deterministic="", r=1):
-        y_1_T, _dy, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+        y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
                 self.y, diff_lags, deterministic)
         T = y_1_T.shape[1]
 
@@ -384,7 +511,7 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             self.y_min1 = y_min1
             self.delta_x = delta_x
         else:
-             _y_1_T, _delta_y, self.delta_y_1_T, self.y_min1, self.delta_x = \
+             _y_1_T, self.delta_y_1_T, self.y_min1, self.delta_x = \
                  _endog_matrices(endog_tot, level_var_lag_order, deterministic)
         self.T = self.y_min1.shape[1]
         # TODO: llf, se, t, p
@@ -412,40 +539,35 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
 
     @cache_readonly
     def num_det_coef_coint(self):  # tedo: check if used at all?
-        number_of_params = 0 + ("cc" in self.deterministic) \
-                             + ("lt" in self.deterministic)
+        number_of_params = 0 + ("cc" in self.deterministic)
+                           # + ("lt" in self.deterministic)
+                           # commented out since JMulTi has "lt" outside coint. rel.
         return number_of_params
 
 
 
     @cache_readonly
     def cov_params(self):  # p.296 (7.2.21)
-        # beta = vstack((self.beta,
-        #                self.det_coef_coint))
-        #
-        # b_id = scipy.linalg.block_diag(beta, np.identity(self.K*(self.p-1)))
-        #
-        # b_y = beta.T.dot(self.y_min1)
-        # omega11 = b_y.dot(b_y.T)
-        # omega12 = b_y.dot(self.delta_x.T)
-        # omega21 = omega12.T
-        # omega22 = self.delta_x.dot(self.delta_x.T)
-        # omega = np.bmat([[omega11, omega12], [omega21, omega22]])
-        #
-        # print("\n\n\ndet terms")
-        # print(self.det_coef.shape)
-        # print("det terms in coint")
-        # print(self.det_coef_coint.shape)
-        # print(b_id.shape)
-        # print(omega.shape)
-        # print(b_id.T.shape)
-        # mat1 = b_id.dot(inv(omega)
-        #             ).dot(b_id.T)
-        # return np.kron(mat1, self.sigma_u)
+        beta = self.beta
 
-        # with first arg to np.kron estimated as in Lutkepohl
-        return np.kron(_block_matrix_ymin1_deltax(self.y_min1, self.delta_x),
-                      self.sigma_u)  # p.287
+        dt = self.deterministic
+        num_det = ("co" in dt) + 3*("s" in dt) + ("lt" in dt)
+        b_id = scipy.linalg.block_diag(beta,
+                                       np.identity(self.K*(self.p-1) + num_det))
+
+        y_min1 = self.y_min1
+        if self.num_det_coef_coint > 0:
+            y_min1 = y_min1[:-self.num_det_coef_coint]
+        b_y = beta.T.dot(y_min1)
+        omega11 = b_y.dot(b_y.T)
+        omega12 = b_y.dot(self.delta_x.T)
+        omega21 = omega12.T
+        omega22 = self.delta_x.dot(self.delta_x.T)
+        omega = np.bmat([[omega11, omega12],
+                         [omega21, omega22]]).A
+
+        mat1 = b_id.dot(inv(omega)).dot(b_id.T)
+        return np.kron(mat1, self.sigma_u)
 
     @cache_readonly
     def stderr_params(self):
@@ -568,3 +690,10 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         for i in range(1, self.p-1):
             A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
         return A
+
+    @cache_readonly
+    def predict(self, steps):
+        self.A
+        pass # var_repr() --> use predict() / forecast() of VARResults
+             # with intercept 1D, y 2D (steps x K, i.e. row-wise 1D), A pxKxK
+             # !!! Warning: these methods are for known processes only !!!

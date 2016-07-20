@@ -151,7 +151,8 @@ def load_results_jmulti(dataset, deterministic_terms_list):
         del results["p"]["Legend"]
         # parse  information regarding \Sigma_u
         sigmau_file = dataset.__str__()+"_"+source+"_"+dt+"_Sigmau"+".txt"
-        sigmau_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), sigmau_file)
+        sigmau_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                   sigmau_file)
         rows_to_parse = 0
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
         regex_est = re.compile("\s+\S+e\S+")
@@ -169,7 +170,7 @@ def load_results_jmulti(dataset, deterministic_terms_list):
                 Sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_est, line)
             rows_to_parse -= 1
-            Sigma_u[rows_to_parse] = row # rows are added in reverse order
+            Sigma_u[rows_to_parse] = row  # rows are added in reverse order
             if rows_to_parse == 0:
                 break
         results["est"]["Sigma_u"] = Sigma_u[::-1]
@@ -184,15 +185,16 @@ def load_results_jmulti(dataset, deterministic_terms_list):
             if "cc" in dt:
                 det_coef_coint.append(C[:, :1])
                 C = C[:, 1:]
-            if 'lt' in dt:
-                det_coef_coint.append(C[:, -1:])
-                C = C[:, :-1]
-            det_coef_coint = np.column_stack(det_coef_coint)
-            results_dict_per_det_terms[dt]["est"]["det_coint"] = det_coef_coint
-            if C.size == 0:
-                del results_dict_per_det_terms[dt]["est"]["C"]
-            else:
-                results_dict_per_det_terms[dt]["est"]["C"] = C
+            # if 'lt' in dt:
+            #     det_coef_coint.append(C[:, -1:])
+            #     C = C[:, :-1]
+            if det_coef_coint != []:
+                det_coef_coint = np.column_stack(det_coef_coint)
+                results_dict_per_det_terms[dt]["est"]["det_coint"] = det_coef_coint
+                if C.size == 0:
+                    del results_dict_per_det_terms[dt]["est"]["C"]
+                else:
+                    results_dict_per_det_terms[dt]["est"]["C"] = C
 
     return results_dict_per_det_terms
 
