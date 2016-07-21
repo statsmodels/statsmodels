@@ -1,3 +1,4 @@
+from __future__ import division
 from math import log, pi
 import numpy as np
 from numpy import hstack, vstack
