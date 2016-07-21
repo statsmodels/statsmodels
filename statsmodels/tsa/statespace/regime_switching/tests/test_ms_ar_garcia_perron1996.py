@@ -74,7 +74,7 @@ class TestGarciaPerron1996_Filtering(GarciaPerron1996):
                 dtype=cls.dtype)
 
         for i in range(3):
-            pr_probs[i, :] = predicted_regime_probs[i::3, :].sum(axis=1)
+            pr_probs[i, :] = predicted_regime_probs[i::3, :].sum(axis=0)
 
         cls.result = {
                 'loglike': results.loglike(),

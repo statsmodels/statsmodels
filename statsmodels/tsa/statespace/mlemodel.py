@@ -1542,9 +1542,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     See Also
     --------
     MLEModel
-    statsmodels.tsa.statespace.kalman_filter.FilterResults
-    statsmodels.tsa.statespace.representation.FrozenRepresentation
-    """
+    statsmodels.tsa.statespace.kalman_filter.FilterResults statsmodels.tsa.statespace.representation.FrozenRepresentation """
 
     _filter_and_smoother_attributes = ['filtered_state', 'filtered_state_cov',
             'predicted_state', 'predicted_state_cov', 'forecasts',
@@ -2689,6 +2687,100 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             summary.add_extra_txt(etext)
 
         return summary
+
+    def _plot_values(self, filtered_values, filtered_value_covs, value_labels,
+            alpha, legend_loc, fig, figsize):
+        r"""
+        Plot univariate values, changing with time.
+
+        Parameters
+        ----------
+        filtered_values : array_like
+            (`k_values` x `nobs`) shaped array, containing filtered values.
+        filtered_value_covs : array_like
+            (`k_values` x `nobs`) shaped array, containing variances/covariances
+            of filtered values.
+        alpha : float
+            The confidence intervals for the coefficient are (1 - alpha) %
+        legend_loc : string
+            The location of the legend in the plot. Default is upper left.
+        fig : Matplotlib Figure instance
+            If given, subplots are created in this figure instead of in a new
+            figure. Note that the grid will be created in the provided
+            figure using `fig.add_subplot()`.
+        figsize : tuple
+            If a figure is created, this argument allows specifying a size.
+            The tuple is (width, height).
+
+        Notes
+        -----
+        This is a helping method, used internally.
+        All plots contain (1 - `alpha`) %  confidence intervals.
+        """
+
+        # Create the plot
+        from scipy.stats import norm
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+        plt = _import_mpl()
+        fig = create_mpl_fig(fig, figsize)
+
+        k_values = filtered_values.shape[0]
+
+        for i in range(k_values): 
+            filtered = filtered_values[i]
+            filtered_cov = filtered_value_covs[i]
+
+            ax = fig.add_subplot(k_values, 1, i + 1)
+
+            # Get dates, if applicable
+            if hasattr(self.data, 'dates') and self.data.dates is not None:
+                dates = self.data.dates._mpl_repr()
+            else:
+                dates = np.arange(self.nobs)
+            llb = self.loglikelihood_burn
+
+            # Plot the value
+            ax.plot(dates[llb:], filtered[llb:],
+                    label=value_labels[i])
+
+            # Legend
+            handles, labels = ax.get_legend_handles_labels()
+
+            # Get the critical value for confidence intervals
+            if alpha is not None:
+                critical_value = norm.ppf(1 - alpha / 2.)
+
+                # Plot confidence intervals
+                std_errors = np.sqrt(filtered_cov)
+                ci_lower = (
+                    filtered - critical_value * std_errors)
+                ci_upper = (
+                    filtered + critical_value * std_errors)
+                ci_poly = ax.fill_between(
+                    dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+                )
+                ci_label = ('$%.3g \\%%$ confidence interval'
+                            % ((1 - alpha)*100))
+
+                # Only add CI to legend for the first plot
+                if i == 0:
+                    # Proxy artist for fill_between legend entry
+                    # See http://matplotlib.org/1.3.1/users/legend_guide.html
+                    p = plt.Rectangle((0, 0), 1, 1,
+                                      fc=ci_poly.get_facecolor()[0])
+
+                    handles.append(p)
+                    labels.append(ci_label)
+
+            ax.legend(handles, labels, loc=legend_loc)
+
+            # Remove xticks for all but the last plot
+            if i < k_values - 1:
+                ax.xaxis.set_ticklabels([])
+
+        fig.tight_layout()
+
+        return fig
 
 
 class MLEResultsWrapper(wrap.ResultsWrapper):
