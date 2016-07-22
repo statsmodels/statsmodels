@@ -99,16 +99,20 @@ def load_results_jmulti(dataset, deterministic_terms_list):
                 continue
             if started_reading_section:
                 if line.startswith(start_end_mark):
-                    if result == []:  # no results collected in section "Legend"
+                    if result == []:  # no values collected in section "Legend"
                         started_reading_section = False
                         continue
-                    results["est"][sections[section]] = np.column_stack(result)
+                    results["est"][sections[section]] = np.column_stack(
+                                                                    result)
                     result = []
-                    results["se"][sections[section]] = np.column_stack(result_se)
+                    results["se"][sections[section]] = np.column_stack(
+                                                                    result_se)
                     result_se = []
-                    results["t"][sections[section]] = np.column_stack(result_t)
+                    results["t"][sections[section]] = np.column_stack(
+                                                                    result_t)
                     result_t = []
-                    results["p"][sections[section]] = np.column_stack(result_p)
+                    results["p"][sections[section]] = np.column_stack(
+                                                                    result_p)
                     result_p = []
                     started_reading_section = False
                     continue

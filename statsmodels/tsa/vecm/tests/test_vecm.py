@@ -6,7 +6,7 @@ import pandas
 
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.tsa.base.datetools import dates_from_str
-from .results.parse_jmulti_output import load_results_jmulti
+from .results_JMulTi.parse_jmulti_output import load_results_jmulti
 from statsmodels.tsa.vecm.vecm import VECM
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
