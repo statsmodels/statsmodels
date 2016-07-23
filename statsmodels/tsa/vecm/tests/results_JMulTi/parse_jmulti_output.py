@@ -35,13 +35,45 @@ def print_debug_output(results, dt):
             print(results["se"]["C"])
 
 
-def load_results_jmulti(dataset, deterministic_terms_list):
+def dt_s_tup_to_string(dt_s_tup):
+    dt_string = dt_s_tup[0]  # string for identifying the file to parse.
+    if dt_s_tup[1] > 0:  # if there are seasons in the model
+        if "co" in dt_string or "cc" in dt_string:
+            dt_string = dt_string[:2] + "s" + dt_string[2:]
+        else:
+            dt_string = "s" + dt_string
+    return dt_string
+
+
+def load_results_jmulti(dataset, dt_s_list):
+    """
+
+    Parameters
+    ----------
+    dataset : module
+        A data module in the statsmodels/datasets directory that defines a
+        __str__() method returning the dataset's name.
+    dt_s_list : list
+        A list of strings where each string represents a combination of
+        deterministic terms.
+
+    Returns
+    -------
+    result : dict
+        A dict (keys: tuples of deterministic terms and seasonal terms)
+        of dicts (keys: strings "est" (for estimators),
+                              "se" (for standard errors),
+                              "t" (for t-values),
+                              "p" (for p-values))
+        of dicts (keys: strings "alpha", "beta", "Gamma" and other results)
+    """
     source = "jmulti"
 
-    results_dict_per_det_terms = dict.fromkeys(deterministic_terms_list)
+    results_dict_per_det_terms = dict.fromkeys(dt_s_list)
         
-    for dt in deterministic_terms_list:
-        file = dataset.__str__()+"_"+source+"_"+dt+".txt"
+    for dt_s in dt_s_list:
+        dt_string = dt_s_tup_to_string(dt_s)
+        file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
         file = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
         # sections in jmulti output:
         section_header = ["Lagged endogenous term",  # Gamma
@@ -65,7 +97,7 @@ def load_results_jmulti(dataset, deterministic_terms_list):
                     "Legend",
                     "VAR A",  # VAR parameter matrices
                     "VAR deterministic"]  # VAR deterministic terms
-        if dt == "":
+        if dt_string == "":
             del(section_header[1])
             del(sections[1])
             del(section_header[-1])
@@ -154,7 +186,8 @@ def load_results_jmulti(dataset, deterministic_terms_list):
         del results["t"]["Legend"]
         del results["p"]["Legend"]
         # parse  information regarding \Sigma_u
-        sigmau_file = dataset.__str__()+"_"+source+"_"+dt+"_Sigmau"+".txt"
+        sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
+            + "_Sigmau" + ".txt"
         sigmau_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    sigmau_file)
         rows_to_parse = 0
@@ -165,7 +198,7 @@ def load_results_jmulti(dataset, deterministic_terms_list):
             if line.startswith("Log Likelihood:"):
                 line = line.split("Log Likelihood:")[1]
                 results["log_like"] = float(re.findall(regex_est, line)[0])
-            if not sigmau_section_reached and not "Covariance:" in line:
+            if not sigmau_section_reached and "Covariance:" not in line:
                 continue
             if "Covariance:" in line:
                 sigmau_section_reached = True
@@ -180,13 +213,13 @@ def load_results_jmulti(dataset, deterministic_terms_list):
         results["est"]["Sigma_u"] = Sigma_u[::-1]
 
         if debug_mode:
-            print_debug_output(results, dt)
+            print_debug_output(results, dt_string)
 
-        results_dict_per_det_terms[dt] = results
-        if "cc" in dt or "lt" in dt:
-            C = results_dict_per_det_terms[dt]["est"]["C"]
+        results_dict_per_det_terms[dt_s] = results
+        if "cc" in dt_string or "lt" in dt_string:
+            C = results_dict_per_det_terms[dt_s]["est"]["C"]
             det_coef_coint = []
-            if "cc" in dt:
+            if "cc" in dt_string:
                 det_coef_coint.append(C[:, :1])
                 C = C[:, 1:]
             # if 'lt' in dt:
@@ -194,13 +227,11 @@ def load_results_jmulti(dataset, deterministic_terms_list):
             #     C = C[:, :-1]
             if det_coef_coint != []:
                 det_coef_coint = np.column_stack(det_coef_coint)
-                results_dict_per_det_terms[dt]["est"]["det_coint"] = det_coef_coint
+                results_dict_per_det_terms[dt_s]["est"]["det_coint"] = \
+                    det_coef_coint
                 if C.size == 0:
-                    del results_dict_per_det_terms[dt]["est"]["C"]
+                    del results_dict_per_det_terms[dt_s]["est"]["C"]
                 else:
-                    results_dict_per_det_terms[dt]["est"]["C"] = C
+                    results_dict_per_det_terms[dt_s]["est"]["C"] = C
 
     return results_dict_per_det_terms
-
-if __name__ == "__main__":
-    print(load_results_jmulti("e6"))

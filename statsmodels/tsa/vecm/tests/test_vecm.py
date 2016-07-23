@@ -7,6 +7,7 @@ import pandas
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.tsa.base.datetools import dates_from_str
 from .results_JMulTi.parse_jmulti_output import load_results_jmulti
+from .results_JMulTi.parse_jmulti_output import dt_s_tup_to_string
 from statsmodels.tsa.vecm.vecm import VECM
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
@@ -20,7 +21,9 @@ coint_rank = 1
 
 debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["", "co", "cos", "colt"]  # TODO: add combinations
+deterministic_terms_list = ["co"]  # ["", "co", "lt", "colt"]  # TODO: add combinations
+seasonal_list = [0, 4]
+dt_s_list = [(dt, s) for dt in deterministic_terms_list for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like"]
 to_test = all_tests # ["beta"]
@@ -40,22 +43,27 @@ def load_data(dataset):  # TODO: make this function compatible with other
 
 
 def load_results_statsmodels(dataset):
-    results_per_deterministic_terms = dict.fromkeys(deterministic_terms_list)
-    for deterministic_terms in deterministic_terms_list:
+    results_per_deterministic_terms = dict.fromkeys(dt_s_list)
+    for dt_s_tup in dt_s_list:
         model = VECM(data[dataset])
         # print("\n\n\nDETERMINISTIC TERMS: " + deterministic_terms)
-        results_per_deterministic_terms[deterministic_terms] = model.fit(
+        results_per_deterministic_terms[dt_s_tup] = model.fit(
                                         diff_lags=3, method="ml",
-                                        deterministic=deterministic_terms,
+                                        deterministic=dt_s_tup[0],
+                                        seasons=dt_s_tup[1],
                                         coint_rank=coint_rank)
     return results_per_deterministic_terms
 
 
-def build_err_msg(ds, dt, parameter_str):
+def build_err_msg(ds, dt_s, parameter_str):
+    dt = dt_s[0]
+    seasons = dt_s[1]
     err_msg = "Error in " + parameter_str + " for:\n"
     err_msg += "- Dataset: " + ds.__str__() + "\n"
     err_msg += "- Deterministic terms: "
-    err_msg += (dt if dt != "" else "no det. terms")
+    err_msg += (dt_s[0] if dt != "" else "no det. terms")
+    if seasons > 0:
+        err_msg += ", seasons: " + str(seasons)  # TODO AUSBESSERN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     return err_msg
 
 
@@ -65,14 +73,14 @@ def test_ml_gamma():
             return
         print("\n\nGAMMA", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt_s in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt_s) + ": ", end="") # TODO: DT AUSBESSERN!!!!!!!!!!!!!!
 
             # estimated parameter vector
-            err_msg = build_err_msg(ds, dt, "Gamma")
-            obtained = results_sm[ds][dt].gamma
-            desired = results_ref[ds][dt]["est"]["Gamma"]
+            err_msg = build_err_msg(ds, dt_s, "Gamma")
+            obtained = results_sm[ds][dt_s].gamma
+            desired = results_ref[ds][dt_s]["est"]["Gamma"]
             cols = desired.shape[1]
             if obtained.shape[1] > cols:
                 obtained = obtained[:, :cols]
@@ -80,18 +88,18 @@ def test_ml_gamma():
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
-            obt = results_sm[ds][dt].stderr_gamma[:, :cols]
-            des = results_ref[ds][dt]["se"]["Gamma"]
+            obt = results_sm[ds][dt_s].stderr_gamma[:, :cols]
+            des = results_ref[ds][dt_s]["se"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                   "STANDARD ERRORS\n"+err_msg
             # t-values
-            obt = results_sm[ds][dt].tvalues_gamma[:, :cols]
-            des = results_ref[ds][dt]["t"]["Gamma"]
+            obt = results_sm[ds][dt_s].tvalues_gamma[:, :cols]
+            des = results_ref[ds][dt_s]["t"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                   "t-VALUES\n"+err_msg
             # p-values
-            obt = results_sm[ds][dt].pvalues_gamma[:, :cols]
-            des = results_ref[ds][dt]["p"]["Gamma"]
+            obt = results_sm[ds][dt_s].pvalues_gamma[:, :cols]
+            des = results_ref[ds][dt_s]["p"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                   "p-VALUES\n"+err_msg
 
@@ -102,9 +110,9 @@ def test_ml_alpha():
             return
         print("\n\nALPHA", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "alpha")
             obtained = results_sm[ds][dt].alpha
@@ -136,9 +144,9 @@ def test_ml_beta():
             return
         print("\n\nBETA", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "beta")
             desired = results_ref[ds][dt]["est"]["beta"].T  # JMulTi: beta transposed
@@ -178,9 +186,9 @@ def test_ml_c():  # test const outside coint relation and seasonal terms
             return
         print("\n\nDET_COEF", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             C_obt = results_sm[ds][dt].det_coef  # coefs for const & seasonal
             se_C_obt = results_sm[ds][dt].stderr_det_coef
@@ -300,9 +308,9 @@ def test_ml_det_terms_in_coint_relation():
             return
         print("\n\nDET_COEF_COINT", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "det terms in coint relation")
 
@@ -329,9 +337,9 @@ def test_ml_sigma():
             return
         print("\n\nSIGMA_U", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "Sigma_u")
             obtained = results_sm[ds][dt].sigma_u
@@ -345,9 +353,9 @@ def test_var_rep():
             return
         print("\n\nVAR REPRESENTATION", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "VAR repr. A")
             obtained = results_sm[ds][dt].var_repr
@@ -362,9 +370,9 @@ def test_var_to_vecm():
             return
         print("\n\nVAR TO VEC", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
             sigma_u = results_sm[ds][dt].sigma_u
@@ -386,7 +394,7 @@ def test_var_to_vecm():
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
 # def test_var_rep_det():
 #     for ds in datasets:
-#         for dt in deterministic_terms_list:
+#         for dt in dt_s_list:
 #             if dt != "":
 #                 err_msg = build_err_msg(ds, dt, "VAR repr. deterministic")
 #                 obtained = 0  # not implemented since the same values as VECM
@@ -401,9 +409,9 @@ def test_log_like():
         else:
             print("\n\nLOG LIKELIHOOD", end="")
     for ds in datasets:
-        for dt in deterministic_terms_list:
+        for dt in dt_s_list:
             if debug_mode:
-                print("\n" + dt + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "Log Likelihood")
             obtained = results_sm[ds][dt].llf
@@ -416,7 +424,7 @@ def setup():
     
     for ds in datasets:
         load_data(ds)
-        results_ref[ds] = load_results_jmulti(ds, deterministic_terms_list)
+        results_ref[ds] = load_results_jmulti(ds, dt_s_list)
         results_sm[ds] = load_results_statsmodels(ds)
         return results_sm[ds], results_ref[ds]
 
