@@ -28,7 +28,7 @@ def mat_sqrt(_2darray):
     s_ = np.sqrt(s_)
     return chain_dot(u_, np.diag(s_), v_)
 
-def _endog_matrices(endog_tot, diff_lags, deterministic):
+def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
     """Returns different matrices needed for parameter estimation. These consist
     of elements of the data as well as elements representing deterministic
     terms. A tuple of consisting of these matrices is returned.
@@ -39,14 +39,15 @@ def _endog_matrices(endog_tot, diff_lags, deterministic):
         The whole sample including the presample.
     diff_lags : int
         Number of lags in the VEC representation.
-    deterministic, str {"", "co", "cc", "lt", "s"}
+    deterministic, str {"", "co", "cc", "lt"}
             "" - no deterministic terms
             "co" - constant outside the cointegration relation
             "cc" - constant within the cointegration relation
             "lt" - linear trend
-            "s" - seasonal terms
             Combinations of these are possible (e.g. "cclt" or "colt" for
             linear trend with intercept)
+    seasons : int
+        Number of seasons. 0 (default) means no seasons.
 
     Returns
     -------
@@ -102,19 +103,18 @@ def _endog_matrices(endog_tot, diff_lags, deterministic):
     if "co" in deterministic:
         delta_x = vstack((delta_x,
                           np.ones(T)))
-    if "s" in deterministic:  # TODO: How many seasons??
-        num_of_seas = 4
-        seasons = np.zeros((num_of_seas - 1, delta_x.shape[1]))
-        for i in range(num_of_seas - 1):
-            seasons[i, i::num_of_seas] = 1
-        # seasons = seasons[:, ::-1]
-        #seasons = np.hstack((seasons[:, 3:4], seasons[:, :-1]))
-        # seasons = np.hstack((seasons[:, 2:4], seasons[:, :-2]))
-        seasons = np.hstack((seasons[:, 1:4], seasons[:, :-3]))
-        # seasons[1] = -seasons[1]
-        seasons = seasons - 1 / num_of_seas
+    if seasons > 0:
+        season_dummy = np.zeros((seasons - 1, delta_x.shape[1]))
+        for i in range(seasons - 1):
+            season_dummy[i, i::seasons] = 1
+        # season_dummy = season_dummy[:, ::-1]
+        #season_dummy = np.hstack((season_dummy[:, 3:4], season_dummy[:, :-1]))
+        # season_dummy = np.hstack((season_dummy[:, 2:4], season_dummy[:, :-2]))
+        season_dummy = np.hstack((season_dummy[:, 1:4], season_dummy[:, :-3]))
+        # season_dummy[1] = -season_dummy[1]
+        season_dummy = season_dummy - 1 / seasons
         delta_x = vstack((delta_x,
-                          seasons))
+                          season_dummy))
 
     if "lt" in deterministic:
         delta_x = vstack((delta_x,
@@ -239,7 +239,8 @@ class VECM(tsbase.TimeSeriesModel):
         self.y = self.endog.T  # TODO delete this line if y not necessary
         self.neqs = self.endog.shape[1]
 
-    def fit(self, diff_lags=None, method="ml", deterministic="", coint_rank=1):
+    def fit(self, diff_lags=None, method="ml", deterministic="", seasons=0,
+            coint_rank=1):
         """
         Estimates the parameters of a VECM and returns a VECMResults object.
 
@@ -249,41 +250,41 @@ class VECM(tsbase.TimeSeriesModel):
             Number of lags in the VEC representation
         method : {"ls", "egls", "ml"}
             Estimation method to use.
-        deterministic, str {"", "co", "cc", "lt", "s"}
+        deterministic, str {"", "co", "cc", "lt"}
             "" - no deterministic terms
             "co" - constant outside the cointegration relation
             "cc" - constant within the cointegration relation
             "lt" - linear trend
-            "s" - seasonal terms
             Combinations of these are possible (e.g. "cclt" or "colt" for
             linear trend with intercept)
+        seasons : int
+            Number of seasons. 0 (default) means no seasons.
         coint_rank : int
             Cointegration rank, equals the rank of the matrix \Pi and the number
             of columns of \alpha and \beta
 
-        Notes
-        -----
-        Lutkepohl pp. 269-304
-
         Returns
         -------
         est : VECMResults
+
+        Notes
+        -----
+        Lutkepohl pp. 269-304
         """
-        
 
         self.p = diff_lags + 1
         # estimate parameters
         if method == "ls":
-            return self._estimate_vecm_ls(diff_lags, deterministic)
+            return self._estimate_vecm_ls(diff_lags, deterministic, seasons)
         elif method == "egls":
             if coint_rank is None:
                 coint_rank = 1
-            return self._estimate_vecm_egls(diff_lags, deterministic,
+            return self._estimate_vecm_egls(diff_lags, deterministic, seasons,
                                             coint_rank)
         elif method == "ml":
             if coint_rank is None:
                 coint_rank = 1
-            return self._estimate_vecm_ml(diff_lags, deterministic,
+            return self._estimate_vecm_ml(diff_lags, deterministic, seasons,
                                           coint_rank)
         else:
             raise ValueError("%s not recognized, must be among %s"
@@ -311,11 +312,11 @@ class VECM(tsbase.TimeSeriesModel):
 
         return pi_hat, gamma_hat, sigma_u_hat
 
-    def _estimate_vecm_ls(self, diff_lags, deterministic=""):
-        # deterministic \in \{"c", "lt", "s"\}, where
+    def _estimate_vecm_ls(self, diff_lags, deterministic="", seasons=0):
+        # deterministic \in \{"c", "lt", \}, where
         # c=constant, lt=linear trend, s=seasonal terms
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic)
+                self.y, diff_lags, deterministic, seasons)
 
         pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
                                                            delta_x, diff_lags,
@@ -323,9 +324,10 @@ class VECM(tsbase.TimeSeriesModel):
         return {"Pi_hat": pi_hat, "Gamma_hat": gamma_hat,
                 "Sigma_u_hat": sigma_u_hat}
     
-    def _estimate_vecm_egls(self, diff_lags, deterministic="", r=1):
+    def _estimate_vecm_egls(self, diff_lags, deterministic="", seasons=0,
+                            r=1):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic)
+                self.y, diff_lags, deterministic, seasons)
         T = y_1_T.shape[1]
         
         pi_hat, _gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T,
@@ -353,9 +355,9 @@ class VECM(tsbase.TimeSeriesModel):
         return {"alpha": alpha_hat, "beta": beta_hhat, 
                 "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
     
-    def _estimate_vecm_ml(self, diff_lags, deterministic="", r=1):
+    def _estimate_vecm_ml(self, diff_lags, deterministic="", seasons=0, r=1):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic)
+                self.y, diff_lags, deterministic, seasons)
         T = y_1_T.shape[1]
 
         s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_min1)
@@ -382,8 +384,9 @@ class VECM(tsbase.TimeSeriesModel):
 
         return VECMResults(self.y, self.p, r, alpha_tilde, beta_tilde,
                            gamma_tilde, sigma_u_tilde,
-                           deterministic=deterministic, delta_y_1_T=delta_y_1_T,
-                           y_min1=y_min1, delta_x=delta_x)
+                           deterministic=deterministic, seasons=seasons,
+                           delta_y_1_T=delta_y_1_T, y_min1=y_min1,
+                           delta_x=delta_x)
         # return {"alpha": np.array(alpha_tilde),
                 # "beta": np.array(beta_tilde),
                 # "Gamma": np.array(gamma_tilde),
@@ -404,8 +407,8 @@ class VECMResults(object):
     """Class holding estimation related results of a vector error correction
     model (VECM).
 endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic='cc', delta_y_1_T=None,
-                 y_min1=None, delta_x=None
+                 gamma, sigma_u, deterministic="", seasons=0,
+                 delta_y_1_T=None, y_min1=None, delta_x=None
     Parameters
     ----------
     endog_tot : array
@@ -419,14 +422,15 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         ... where K is the number of variables per observation
     sigma_u : array (K x K)
         ... where K is the number of variables per observation
-    deterministic : str {"", "co", "cc", "s", "lt"}
+    deterministic : str {"", "co", "cc", "lt"}
             "" - no deterministic terms
             "co" - constant outside the cointegration relation
             "cc" - constant within the cointegration relation
             "lt" - linear trend
-            "s" - seasonal terms
             Combinations of these are possible (e.g. "cclt" or "colt" for
             linear trend with intercept)
+    seasons : int
+        Number of seasons. 0 (default) means no seasons.
 
     Returns
     -------
@@ -495,12 +499,13 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
     """    # todo: aic, bic, bse, df_model, df_resid, fittedvalues, resid
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic='cc', delta_y_1_T=None,
-                 y_min1=None, delta_x=None):
+                 gamma, sigma_u, deterministic='cc', seasons=0,
+                 delta_y_1_T=None, y_min1=None, delta_x=None):
         self.y_all = endog_tot
         self.K = endog_tot.shape[0]
         self.p = level_var_lag_order
         self.deterministic = deterministic
+        self.seasons = seasons
         self.r = coint_rank
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.K])
@@ -512,10 +517,10 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             self.y_min1 = y_min1
             self.delta_x = delta_x
         else:
-             _y_1_T, self.delta_y_1_T, self.y_min1, self.delta_x = \
-                 _endog_matrices(endog_tot, level_var_lag_order, deterministic)
+            _y_1_T, self.delta_y_1_T, self.y_min1, self.delta_x = \
+                _endog_matrices(endog_tot, level_var_lag_order, deterministic,
+                                seasons)
         self.T = self.y_min1.shape[1]
-        # TODO: llf, se, t, p
 
     @cache_readonly
     def llf(self):  # Lutkepohl p. 295 (7.2.20)
@@ -552,9 +557,11 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         beta = self.beta
 
         dt = self.deterministic
-        num_det = ("co" in dt) + 3*("s" in dt) + ("lt" in dt)
+        num_det = ("co" in dt) + ("lt" in dt)
+        num_det += (self.seasons-1) if self.seasons else 0
         b_id = scipy.linalg.block_diag(beta,
-                                       np.identity(self.K*(self.p-1) + num_det))
+                                       np.identity(self.K * (self.p-1) +
+                                                   num_det))
 
         y_min1 = self.y_min1
         if self.num_det_coef_coint > 0:
