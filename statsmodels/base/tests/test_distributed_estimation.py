@@ -3,8 +3,7 @@ from numpy.testing import assert_equal, assert_
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import Binomial
-#from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov, _est_regularized_debiased, _join_debiased, DistributedModel
-from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _est_regularized_debiased, _join_debiased, DistributedModel
+from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _est_regularized_debiased, _join_debiased, _est_regularized_naive, _est_unregularized_naive, _join_naive, DistributedModel
 
 
 def _exog_gen(exog, partitions):
@@ -58,47 +57,6 @@ def test_calc_wdesign_mat():
     assert_equal(dmat.shape, X.shape)
 
 
-#def test_calc_nodewise_row():
-#
-#    np.random.seed(435265)
-#    X = np.random.normal(size=(50, 3))
-#    y = np.random.randint(0, 2, size=50)
-#    beta = np.random.normal(size=3)
-#    mod = OLS(y, X)
-#    ghat = _calc_nodewise_row(X, 0, 0.01)
-#    assert_equal(ghat.shape, (2,))
-#
-#
-#def test_calc_nodewise_weight():
-#
-#    np.random.seed(435265)
-#    X = np.random.normal(size=(50, 3))
-#    y = np.random.randint(0, 2, size=50)
-#    beta = np.random.normal(size=3)
-#    mod = OLS(y, X)
-#    ghat = np.random.normal(size=2)
-#    that = _calc_nodewise_weight(X, ghat, 0, 0.01)
-#    assert_(isinstance(that, float))
-#
-#
-#def test_calc_approx_inv_cov():
-#
-#    np.random.seed(435265)
-#    X = np.random.normal(size=(50, 3))
-#    y = np.random.randint(0, 2, size=50)
-#    beta = np.random.normal(size=3)
-#    mod = OLS(y, X)
-#    ghat_l = []
-#    that_l = []
-#    for i in range(3):
-#        ghat = _calc_nodewise_row(X, i, 0.01)
-#        that = _calc_nodewise_weight(X, ghat, i, 0.01)
-#        ghat_l.append(ghat)
-#        that_l.append(that)
-#    theta_hat = _calc_approx_inv_cov(ghat_l, that_l)
-#    assert_equal(theta_hat.shape, np.eye(3).shape)
-
-
 def test_est_regularized_debiased():
 
     np.random.seed(435265)
@@ -138,6 +96,41 @@ def test_est_regularized_debiased():
     assert_(isinstance(that_l[0], float))
 
 
+def test_est_regularized_naive():
+
+    np.random.seed(435265)
+    X = np.random.normal(size=(50, 3))
+    y = np.random.randint(0, 2, size=50)
+    beta = np.random.normal(size=3)
+    mod = OLS(y, X)
+    res = _est_regularized_naive(mod, 0, 2, fit_kwds={"alpha": 0.5})
+    bhat = res[0]
+
+    assert_equal(res.shape, beta.shape)
+
+    mod = GLM(y, X, family=Binomial())
+    res = _est_regularized_naive(mod, 0, 2, fit_kwds={"alpha": 0.5})
+
+    assert_equal(res.shape, beta.shape)
+
+
+def test_est_unregularized_naive():
+
+    np.random.seed(435265)
+    X = np.random.normal(size=(50, 3))
+    y = np.random.randint(0, 2, size=50)
+    beta = np.random.normal(size=3)
+    mod = OLS(y, X)
+    res = _est_unregularized_naive(mod, 0, 2, fit_kwds={"alpha": 0.5})
+
+    assert_equal(res.shape, beta.shape)
+
+    mod = GLM(y, X, family=Binomial())
+    res = _est_unregularized_naive(mod, 0, 2, fit_kwds={"alpha": 0.5})
+
+    assert_equal(res.shape, beta.shape)
+
+
 def test_join_debiased():
 
     np.random.seed(435265)
@@ -161,6 +154,30 @@ def test_join_debiased():
     assert_equal(joined.shape, beta.shape)
 
 
+def test_join_naive():
+
+    np.random.seed(435265)
+    X = np.random.normal(size=(50, 3))
+    y = np.random.randint(0, 2, size=50)
+    beta = np.random.normal(size=3)
+    mod = OLS(y, X)
+    res_l = []
+    for i in range(2):
+        res = _est_regularized_naive(mod, i, 2, fit_kwds={"alpha": 0.5})
+        res_l.append(res)
+    joined = _join_naive(res_l)
+    assert_equal(joined.shape, beta.shape)
+
+    mod = GLM(y, X, family=Binomial())
+    res_l = []
+    for i in range(2):
+        res = _est_regularized_naive(mod, i, 2, fit_kwds={"alpha": 0.5})
+        res_l.append(res)
+    joined = _join_naive(res_l)
+    assert_equal(joined.shape, beta.shape)
+
+
+
 def test_fit_sequential():
 
     np.random.seed(435265)
@@ -168,30 +185,30 @@ def test_fit_sequential():
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS)
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS)
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS)
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS)
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="sequential")
+    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
 
 
@@ -202,28 +219,62 @@ def test_fit_joblib():
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS)
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS)
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS)
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS)
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()}, fit_kwds={"alpha": 0.5})
-    fit = mod.fit_distributed(parallel_method="joblib")
+    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()})
+    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
     assert_equal(fit.shape, beta.shape)
+
+
+def test_debiased_v_average():
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 4
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    db_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m)
+    fitOLSdb = db_mod.fit(fit_kwds={"alpha": 0.2})
+    olsdb = np.linalg.norm(fitOLSdb - beta)
+    n_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, estimation_method=_est_regularized_naive, join_method=_join_naive)
+    fitOLSn = n_mod.fit(fit_kwds={"alpha": 0.2})
+    olsn = np.linalg.norm(fitOLSn - beta)
+
+    assert_(olsdb < olsn)
+
+    prob = 1 / (1 + np.exp(-X.dot(beta) + np.random.normal(size=N)))
+    y = 1. * (prob > 0.5)
+
+    db_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, model_class=GLM, init_kwds={"family": Binomial()})
+    fitGLMdb = db_mod.fit(fit_kwds={"alpha": 0.2})
+    glmdb = np.linalg.norm(fitGLMdb - beta)
+    n_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, model_class=GLM, init_kwds={"family": Binomial()}, estimation_method=_est_regularized_naive, join_method=_join_naive)
+    fitGLMn = n_mod.fit(fit_kwds={"alpha": 0.2})
+    glmn = np.linalg.norm(fitGLMn - beta)
+
+    assert_(glmdb < glmn)
