@@ -4,7 +4,7 @@ from scipy.stats.distributions import chi2, norm
 from statsmodels.graphics import utils
 
 
-def _calc_survfunc_right(time, status, weights=None, compress=True,
+def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
                          retall=True):
     """
     Calculate the survival function and its standard error for a single
@@ -12,20 +12,36 @@ def _calc_survfunc_right(time, status, weights=None, compress=True,
     """
 
     # Convert the unique times to ranks (0, 1, 2, ...)
-    utime, rtime = np.unique(time, return_inverse=True)
+    if entry is None:
+        utime, rtime = np.unique(time, return_inverse=True)
+    else:
+        tx = np.concatenate((time, entry))
+        utime, rtime = np.unique(tx, return_inverse=True)
+        rtime = rtime[0:len(time)]
 
     # Number of deaths at each unique time.
+    ml = len(utime)
     if weights is None:
-        d = np.bincount(rtime, weights=status)
+        d = np.bincount(rtime, weights=status, minlength=ml)
     else:
-        d = np.bincount(rtime, weights=status*weights)
+        d = np.bincount(rtime, weights=status*weights, minlength=ml)
 
     # Size of risk set just prior to each event time.
     if weights is None:
-        n = np.bincount(rtime)
+        n = np.bincount(rtime, minlength=ml)
     else:
-        n = np.bincount(rtime, weights=weights)
-    n = np.cumsum(n[::-1])[::-1]
+        n = np.bincount(rtime, weights=weights, minlength=ml)
+    if entry is not None:
+        n = np.cumsum(n) - n
+        rentry = np.searchsorted(utime, entry, side='left')
+        if weights is None:
+            n0 = np.bincount(rentry, minlength=ml)
+        else:
+            n0 = np.bincount(rentry, weights=weights, minlength=ml)
+        n0 = np.cumsum(n0) - n0
+        n = n0 - n
+    else:
+        n = np.cumsum(n[::-1])[::-1]
 
     # Only retain times where an event occured.
     if compress:
@@ -113,10 +129,18 @@ def _calc_incidence_right(time, status, weights=None):
     return ip, se, utime
 
 
-def _checkargs(time, status, freq_weights):
+def _checkargs(time, status, entry, freq_weights):
 
     if len(time) != len(status):
         raise ValueError("time and status must have the same length")
+
+    if entry is not None and (len(entry) != len(time)):
+        msg = "entry times and event times must have the same length"
+        raise ValueError(msg)
+
+    if entry is not None and np.any(entry >= time):
+        msg = "Entry times must not occur on or after event times"
+        raise ValueError(msg)
 
     if freq_weights is not None and (len(freq_weights) != len(time)):
         raise ValueError("weights, time and status must have the same length")
@@ -171,7 +195,7 @@ class CumIncidenceRight(object):
 
     def __init__(self, time, status, title=None, freq_weights=None):
 
-        _checkargs(time, status, freq_weights)
+        _checkargs(time, status, None, freq_weights)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
         if freq_weights is not None:
@@ -202,6 +226,9 @@ class SurvfuncRight(object):
         occurs at the given value in `time`; status==0
         indicates that censoring has occured, meaning that
         the event occurs after the given value in `time`.
+    entry : array-like, optional
+        An array of entry times (the subject is not in the
+        risk set on or before the entry time)
     title : string
         Optional title used for plots and summary output.
     freq_weights : array-like
@@ -224,14 +251,18 @@ class SurvfuncRight(object):
         in `surv_times`.
     """
 
-    def __init__(self, time, status, title=None, freq_weights=None):
+    def __init__(self, time, status, entry=None, title=None,
+                 freq_weights=None):
 
-        _checkargs(time, status, freq_weights)
+        _checkargs(time, status, entry, freq_weights)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
-        x = _calc_survfunc_right(time, status, freq_weights)
+        if entry is not None:
+            entry = self.entry = np.asarray(entry)
+        x = _calc_survfunc_right(time, status, weights=freq_weights,
+                                 entry=entry)
         self.surv_prob = x[0]
         self.surv_prob_se = x[1]
         self.surv_times = x[2]
