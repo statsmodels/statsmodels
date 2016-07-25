@@ -2,13 +2,13 @@ from statsmodels.regression.linear_model import OLS
 import numpy as np
 
 
-def _calc_nodewise_row(wexog, idx, alpha):
+def _calc_nodewise_row(exog, idx, alpha):
     """calculates the nodewise_row values for the idxth variable, used to
     estimate approx_inv_cov.
 
     Parameters
     ----------
-    wexog : array-like
+    exog : array-like
         The weighted design matrix for the current partition.
     idx : scalar
         Index of the current variable.
@@ -25,11 +25,11 @@ def _calc_nodewise_row(wexog, idx, alpha):
     Notes
     -----
 
-    nodewise_row_i = arg min 1/(2n) ||wexog_i - wexog_-i gamma||_2^2
+    nodewise_row_i = arg min 1/(2n) ||exog_i - exog_-i gamma||_2^2
                              + alpha ||gamma||_1
     """
 
-    p = wexog.shape[1]
+    p = exog.shape[1]
     # handle array alphas
     if not np.isscalar(alpha):
         alpha = alpha[ind]
@@ -37,20 +37,20 @@ def _calc_nodewise_row(wexog, idx, alpha):
     ind = list(range(p))
     ind.pop(idx)
 
-    tmod = OLS(wexog[:, idx], wexog[:, ind])
+    tmod = OLS(exog[:, idx], exog[:, ind])
 
     nodewise_row = tmod.fit_regularized(alpha=alpha).params
 
     return nodewise_row
 
 
-def _calc_nodewise_weight(wexog, nodewise_row, idx, alpha):
+def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
     """calculates the nodewise_weightvalue for the idxth variable, used to
     estimate approx_inv_cov.
 
     Parameters
     ----------
-    wexog : array-like
+    exog : array-like
         The weighted design matrix for the current partition.
     nodewise_row : array-like
         The nodewise_row values for the current variable.
@@ -69,11 +69,11 @@ def _calc_nodewise_weight(wexog, nodewise_row, idx, alpha):
     Notes
     -----
 
-    nodewise_weight_i = sqrt(1/n ||wexog,i - wexog_-i nodewise_row||_2^2
+    nodewise_weight_i = sqrt(1/n ||exog,i - exog_-i nodewise_row||_2^2
                              + alpha ||nodewise_row||_1)
     """
 
-    n, p = wexog.shape
+    n, p = exog.shape
     # handle array alphas
     if not np.isscalar(alpha):
         alpha = alpha[ind]
@@ -81,7 +81,7 @@ def _calc_nodewise_weight(wexog, nodewise_row, idx, alpha):
     ind = list(range(p))
     ind.pop(idx)
 
-    d = np.linalg.norm(wexog[:, idx] - wexog[:, ind].dot(nodewise_row))**2
+    d = np.linalg.norm(exog[:, idx] - exog[:, ind].dot(nodewise_row))**2
     d = np.sqrt(d / n + alpha * np.linalg.norm(nodewise_row, 1))
     return d
 
@@ -114,7 +114,7 @@ def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l):
 
     p = len(nodewise_weight_l)
 
-    approx_inv_cov = np.eye(p)
+    approx_inv_cov = -np.eye(p)
     for idx in range(p):
         ind = list(range(p))
         ind.pop(idx)
@@ -131,44 +131,43 @@ class RegularizedInvCovariance(object):
 
     Parameters
     ----------
-    wexog : array-like
+    exog : array-like
         A weighted design matrix for covariance
-    alpha : scalar
-        Regularizing constant
 
     Attributes
     ----------
-    wexog : array-like
+    exog : array-like
         A weighted design matrix for covariance
     alpha : scalar
         Regularizing constant
     """
 
-    def __init__(self, wexog, alpha):
+    def __init__(self, exog):
 
-        self.wexog = wexog
-        self.alpha = alpha
+        self.exog = exog
 
 
-    def fit_nodewise(self):
+    def fit(self, alpha=0):
         """estimates the regularized inverse covariance using nodewise
         regression
 
         Parameters
         ----------
+        alpha : scalar
+            Regularizing constant
         """
 
-        n, p = self.wexog.shape
+        n, p = self.exog.shape
 
         nodewise_row_l = []
         nodewise_weight_l = []
 
         for idx in range(p):
-            nodewise_row = _calc_nodewise_row(self.wexog, idx, self.alpha)
+            nodewise_row = _calc_nodewise_row(self.exog, idx, alpha)
             nodewise_row_l.append(nodewise_row)
 
-            nodewise_weight = _calc_nodewise_weight(self.wexog, nodewise_row,
-                                                    idx, self.alpha)
+            nodewise_weight = _calc_nodewise_weight(self.exog, nodewise_row,
+                                                    idx, alpha)
             nodewise_weight_l.append(nodewise_weight)
 
         nodewise_row_l = np.array(nodewise_row_l)
@@ -176,4 +175,8 @@ class RegularizedInvCovariance(object):
 
         approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
 
-        return approx_inv_cov
+        self._approx_inv_cov = approx_inv_cov
+
+
+    def approx_inv_cov(self):
+        return self._approx_inv_cov
