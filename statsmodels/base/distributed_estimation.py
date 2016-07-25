@@ -124,7 +124,7 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
     return mod.fit(**fit_kwds).params
 
 
-def _join_naive(params_l, partitions, threshold=0):
+def _join_naive(params_l, threshold=0):
     """joins the results from each run of _est_<type>_naive
     and returns the mean estimate of the coefficients
 
@@ -132,13 +132,12 @@ def _join_naive(params_l, partitions, threshold=0):
     ----------
     params_l : list
         A list of arrays of coefficients.
-    partitions : scalar
-        Total number of partitions.
     threshold : scalar
         The threshold at which the coefficients will be cut.
     """
 
     p = len(params_l[0])
+    partitions = len(params_l)
 
     params_mn = np.zeros(p)
     for params in params_l:
@@ -212,7 +211,6 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
     as mod.exog
     """
 
-    # TODO correctly handle hessian_obs
     rhess = np.sqrt(mod.hessian_factor(np.asarray(params), **hess_kwds))
     return rhess[:, None] * mod.exog
 
@@ -327,7 +325,7 @@ def _join_debiased(results_l, threshold=0):
     return debiased_params
 
 
-def _helper_fit_partition(self, pnum, endog, exog):
+def _helper_fit_partition(self, pnum, endog, exog, fit_kwds):
     """handles the model fitting for each machine. NOTE: this
     is primarily handled outside of DistributedModel because
     joblib can't handle class methods.
@@ -342,6 +340,8 @@ def _helper_fit_partition(self, pnum, endog, exog):
         endogenous data for current partition.
     exog : array-like
         exogenous data for current partition.
+    fit_kwds : dict-like
+        Keywords needed for the model fitting.
 
     Returns
     -------
@@ -351,7 +351,7 @@ def _helper_fit_partition(self, pnum, endog, exog):
 
     model = self.model_class(endog, exog, **self.init_kwds)
     results = self.estimation_method(model, pnum, self.partitions,
-                                     self.fit_kwds,
+                                     fit_kwds=fit_kwds,
                                      **self.estimation_kwds)
     return results
 
@@ -374,8 +374,6 @@ class DistributedModel(object):
     init_kwds : dict-like or None
         Keywords needed for initializing the model, in addition to
         endog and exog.
-    fit_kwds : dict-like or None
-        Keywords needed for the model fitting.
     estimation_method : function or None
         The method that performs the estimation for each partition.
         If None this defaults to _est_regularized_debiased.
@@ -395,8 +393,6 @@ class DistributedModel(object):
         See Parameters.
     init_kwds : dict-like or None
         See Parameters.
-    fit_kwds : dict-like or None
-        See Parameters.
     estimation_method : function or None
         See Parameters.
     estimation_kwds : dict-like or None
@@ -412,7 +408,7 @@ class DistributedModel(object):
     """
 
     def __init__(self, data_generator, partitions, model_class=None,
-                 init_kwds=None, fit_kwds=None, estimation_method=None,
+                 init_kwds=None, estimation_method=None,
                  estimation_kwds=None, join_method=None,
                  join_kwds=None):
 
@@ -428,11 +424,6 @@ class DistributedModel(object):
             self.init_kwds = {}
         else:
             self.init_kwds = init_kwds
-
-        if fit_kwds is None:
-            self.fit_kwds = {}
-        else:
-            self.fit_kwds = fit_kwds
 
         if estimation_method is None:
             self.estimation_method = _est_regularized_debiased
@@ -455,13 +446,15 @@ class DistributedModel(object):
             self.join_kwds = join_kwds
 
 
-    def fit_distributed(self, parallel_method="sequential",
-                        parallel_backend=None):
+    def fit(self, fit_kwds=None, parallel_method="sequential",
+            parallel_backend=None):
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
         Parameters
         ----------
+        fit_kwds : dict-like or None
+            Keywords needed for the model fitting.
         parallel_method : str
             type of distributed estimation to be used, currently
             "sequential", "joblib" and "dask" are supported.
@@ -475,27 +468,31 @@ class DistributedModel(object):
         p length array.
         """
 
+        if fit_kwds is None:
+            fit_kwds = {}
+
         # TODO handle fit_kwds different from those passed into model
         if parallel_method == "sequential":
-            results_l = self.fit_dist_sequential()
+            results_l = self.fit_sequential(fit_kwds)
 
         elif parallel_method == "joblib":
-             results_l = self.fit_dist_joblib(parallel_backend)
+             results_l = self.fit_joblib(parallel_backend, fit_kwds)
 
         else:
             raise ValueError("parallel_method: %s is currently not supported"
                              % parallel_method)
 
-        return self.join_method(results_l, self.partitions,
-                                **self.join_kwds)
+        return self.join_method(results_l, **self.join_kwds)
 
 
-    def fit_dist_sequential(self):
+    def fit_sequential(self, fit_kwds):
         """Sequentially performs the distributed estimation using
         the corresponding DistributedModel
 
         Parameters
         ----------
+        fit_kwds : dict-like
+            Keywords needed for the model fitting.
 
         Returns
         -------
@@ -507,13 +504,14 @@ class DistributedModel(object):
 
         for pnum, (endog, exog) in enumerate(self.data_generator):
 
-            results = _helper_fit_partition(self, pnum, endog, exog)
+            results = _helper_fit_partition(self, pnum, endog, exog,
+                                            fit_kwds)
             results_l.append(results)
 
         return results_l
 
 
-    def fit_dist_joblib(self, parallel_backend):
+    def fit_joblib(self, parallel_backend, fit_kwds):
         """Performs the distributed estimation in parallel using joblib
 
         Parameters
@@ -521,6 +519,8 @@ class DistributedModel(object):
         parallel_backend : None or joblib parallel_backend object
             used to allow support for more complicated backends,
             ex: dask.distributed
+        fit_kwds : dict-like
+            Keywords needed for the model fitting.
 
         Returns
         -------
@@ -533,12 +533,12 @@ class DistributedModel(object):
         par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
 
         if parallel_backend is None:
-            results_l = par(f(self, pnum, endog, exog)
+            results_l = par(f(self, pnum, endog, exog, fit_kwds)
                             for pnum, (endog, exog)
                             in enumerate(self.data_generator))
         else:
             with parallel_backend:
-                results_l = par(f(self, pnum, endog, exog)
+                results_l = par(f(self, pnum, endog, exog, fit_kwds)
                                 for pnum, (endog, exog)
                                 in enumerate(self.data_generator))
 
