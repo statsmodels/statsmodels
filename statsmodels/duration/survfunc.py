@@ -226,9 +226,9 @@ class SurvfuncRight(object):
         occurs at the given value in `time`; status==0
         indicates that censoring has occured, meaning that
         the event occurs after the given value in `time`.
-    entry : array-like, optional
-        An array of entry times (the subject is not in the
-        risk set on or before the entry time)
+    entry : array-like, optional An array of entry times for handling
+        left truncation (the subject is not in the risk set on or
+        before the entry time)
     title : string
         Optional title used for plots and summary output.
     freq_weights : array-like
