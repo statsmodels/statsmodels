@@ -5,8 +5,8 @@ Author: Valery Likhosherstov
 License: Simplified-BSD
 """
 import numpy as np
-from .switching_mlemodel import SwitchingMLEModel
-from statsmodels.tsa.statespace.tvp import TVPModel
+from .switching_mlemodel import SwitchingMLEModel, SwitchingMLEResults
+from statsmodels.tsa.statespace.tvp import TVPModel, TVPResults
 
 
 class SwitchingTVPModel(SwitchingMLEModel):
@@ -25,10 +25,11 @@ class SwitchingTVPModel(SwitchingMLEModel):
     switching_obs_cov : bool, optional
         Whether observation variance/covariance is switching. Default is `True`.
     switching_tvp_cov : bool or array_like of bool, optional
-        If a boolean, sets whether or not all time varying parameters are
-        switching across regimes. If an iterable, should be of length equal to
-        `k_exog`, where each element is a boolean describing whether the
-        corresponding coefficient is switching. Default is `False`.
+        If a boolean, sets whether or not all time varying parameter
+        variances/covariances are switching across regimes. If an iterable,
+        should be of length equal to `k_exog`, where each element is a boolean
+        describing whether the corresponding coefficient variance/covariance is
+        switching. Default is `False`.
     kwargs
         Keyword arguments, passed to superclass ('MLEModel') initializer.
 
@@ -50,8 +51,9 @@ class SwitchingTVPModel(SwitchingMLEModel):
         v_{it} \sim N(0, \sigma_{i,S_t}^2)
 
     where :math:`\beta_{it}` are time varying parameters and :math:`x_{it}` are
-    exogenous variables. Observation error term has a switching variance -
-    :math:`\sigma_{(S_t)}^2`. :math:`S_t` is a regime at the moment :math:`t`.
+    exogenous variables. Observation and transition error terms have a switching
+    variance - :math:`\sigma_{S_t}^2` and :math:`\sigma_{i,S_t}^2` respectively.
+    :math:`S_t` is a regime at the moment :math:`t`.
 
     See Also
     --------
@@ -278,3 +280,17 @@ class SwitchingTVPModel(SwitchingMLEModel):
                     'tvp_var']])
 
         self['state_cov'] = state_cov
+
+    def smooth(self, params, results_class=None, **kwargs):
+
+        # `TVPResults` is compatible
+        if results_class is None:
+            results_class = SwitchingTVPResults
+
+        return super(SwitchingTVPModel, self).smooth(params,
+                results_class=results_class, **kwargs)
+
+
+class SwitchingTVPResults(SwitchingMLEResults, TVPResults):
+
+    pass

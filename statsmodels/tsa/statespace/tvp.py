@@ -129,8 +129,8 @@ class TVPModel(MLEModel):
         if results_class is None:
             results_class = TVPResults
 
-        return super(TVPModel, self).smooth(params,
-                results_class=results_class, **kwargs)
+        return super(TVPModel, self).smooth(params, results_class=results_class,
+                **kwargs)
 
 
 class TVPResults(MLEResults):

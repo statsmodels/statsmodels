@@ -66,7 +66,7 @@ class Kim1993(object):
                 np.identity(k_exog, dtype=dtype) * 100)
 
 
-class aTestKim1993_Filtering(Kim1993):
+class TestKim1993_Filtering(Kim1993):
     """
     Basic test for the loglikelihood and forecast precision.
     """
@@ -96,7 +96,7 @@ class aTestKim1993_Filtering(Kim1993):
         assert_allclose(self.result['ss'], self.true['ss'], rtol=3e-2)
 
 
-class aTestKim1993_MLE(Kim1993):
+class TestKim1993_MLE(Kim1993):
     """
     Basic test for MLE correct convergence.
     """
@@ -123,7 +123,7 @@ class aTestKim1993_MLE(Kim1993):
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=1e-3, atol=1e-5)
 
-class aTestKim1993_MLEFitNonswitchingFirst(Kim1993):
+class TestKim1993_MLEFitNonswitchingFirst(Kim1993):
     """
     Basic test for correct convergence of MLE from the start provided by
     non-switching model.
@@ -152,8 +152,8 @@ class aTestKim1993_MLEFitNonswitchingFirst(Kim1993):
 
 class TestKim1993_SwitchingTVP(Kim1993):
     """
-    Smoke test to check if switching tvp option works fine and doesn't throw any
-    errors.
+    Smoke test to check if switching tvp cov option works fine and doesn't
+    throw any errors.
     """
 
     @classmethod

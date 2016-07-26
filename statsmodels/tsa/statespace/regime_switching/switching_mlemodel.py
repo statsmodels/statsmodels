@@ -650,7 +650,7 @@ class SwitchingMLEModel(MLEModel):
         MLEModel.filter
         """
 
-        if not return_ssm:
+        if not return_ssm and results_class is None:
             # In this case base class returns `MLEResults` instance, so we need
             # to specify results class
             results_class = SwitchingMLEResults
@@ -679,7 +679,7 @@ class SwitchingMLEModel(MLEModel):
         MLEModel.smooth
         """
 
-        if not return_ssm:
+        if not return_ssm and results_class is None:
             # In this case base class returns `MLEResults` instance, so we need
             # to specify results class
             results_class = SwitchingMLEResults
