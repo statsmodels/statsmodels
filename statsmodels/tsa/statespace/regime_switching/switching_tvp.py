@@ -22,6 +22,13 @@ class SwitchingTVPModel(SwitchingMLEModel):
     exog : array_like
         Array of exogenous regressors for the observation equation, shaped
         nobs x k_exog. Required for this model.
+    switching_obs_cov : bool, optional
+        Whether observation variance/covariance is switching. Default is `True`.
+    switching_tvp_cov : bool or array_like of bool, optional
+        If a boolean, sets whether or not all time varying parameters are
+        switching across regimes. If an iterable, should be of length equal to
+        `k_exog`, where each element is a boolean describing whether the
+        corresponding coefficient is switching. Default is `False`.
     kwargs
         Keyword arguments, passed to superclass ('MLEModel') initializer.
 
@@ -39,8 +46,8 @@ class SwitchingTVPModel(SwitchingMLEModel):
         y_t = \beta_{1t} x_{1t} + \beta_{2t} x_{2t} + ... +
         \beta_{kt} x_{kt} + e_t \\
         \beta_{it} = \beta_{i,t-1} + v_{it} \\
-        e_t \sim N(0, \sigma_{(S_t)}^2) \\
-        v_{it} \sim N(0, \sigma_i^2)
+        e_t \sim N(0, \sigma_{S_t}^2) \\
+        v_{it} \sim N(0, \sigma_{i,S_t}^2)
 
     where :math:`\beta_{it}` are time varying parameters and :math:`x_{it}` are
     exogenous variables. Observation error term has a switching variance -
@@ -59,7 +66,8 @@ class SwitchingTVPModel(SwitchingMLEModel):
     MIT Press Books. The MIT Press.
     """
 
-    def __init__(self, k_regimes, endog, exog, **kwargs):
+    def __init__(self, k_regimes, endog, exog, switching_obs_cov=True,
+            switching_tvp_cov=False, **kwargs):
 
         # Delete exog in optional arguments
         if 'exog' in kwargs:
@@ -85,15 +93,32 @@ class SwitchingTVPModel(SwitchingMLEModel):
         if self.k_endog != 1:
             raise ValueError('Endogenous vector must be univariate.')
 
+        if isinstance(switching_tvp_cov, bool):
+            switching_tvp_cov = [switching_tvp_cov] * k_exog
+        else:
+            switching_tvp_cov = list(switching_tvp_cov)
+
+        if not any(switching_tvp_cov) and not switching_obs_cov:
+            raise ValueError('None of the parameters is switching. Consider' \
+                    ' using non-switching model.')
+
+        self.switching_obs_cov = switching_obs_cov
+        self.switching_tvp_cov = switching_tvp_cov
+
         # Parameter vector slices handling
-        self.parameters['obs_var'] = [True]
-        self.parameters['tvp_var'] = [False] * k_exog
+        self.parameters['obs_var'] = [switching_obs_cov]
+        self.parameters['tvp_var'] = switching_tvp_cov
 
         # Parameter names
         self._param_names += ['obs_var_{0}'.format(i) for i in \
                 range(k_regimes)]
-        self._param_names += ['tvp_var{0}'.format(i) for i in \
-                range(k_exog)]
+
+        for i, is_switching in zip(range(k_exog), switching_tvp_cov):
+            if is_switching:
+                self._param_names += ['tvp_var{0}_{1}'.format(i, j) for j in \
+                        range(k_regimes)]
+            else:
+                self._param_names += ['tvp_var{0}'.format(i)]
 
         dtype = self.ssm.dtype
 
@@ -127,8 +152,32 @@ class SwitchingTVPModel(SwitchingMLEModel):
         return model
 
     def update_params(self, params, nonswitching_params, noise=0.5, seed=1):
+        """
+        Update constrained parameters of the model, using parameters of
+        non-switching model.
+ 
+        Parameters
+        ----------
+        noise : float
+            Relative normal noise scale, added to switching parameters to break
+            the symmetry of regimes.
+        seed : int
+            Random seed, used to generate the noise.
+
+        Notes
+        -----
+        `noise` and `seed` parameters are defined in keyword arguments so that
+        they can be changed in child class.
+
+        See Also
+        --------
+        SwitchingMLEModel.update_params
+        """
 
         k_regimes = self.k_regimes
+
+        switching_obs_cov = self.switching_obs_cov
+        switching_tvp_cov = self.switching_tvp_cov
 
         # Set observation variance to one non-switching value for every regime
         params[self.parameters['obs_var']] = \
@@ -136,19 +185,44 @@ class SwitchingTVPModel(SwitchingMLEModel):
 
         # Set non-switching time varying parameters variance to those from
         # non-switching model
-        params[self.parameters['tvp_var']] = \
-                nonswitching_params[TVPModel._tv_params_cov_idx]
+        for i in range(k_regimes):
+            params[self.parameters[i, 'tvp_var']] = \
+                    nonswitching_params[TVPModel._tv_params_cov_idx]
 
         # Set the seed
         np.random.seed(seed=seed)
 
+        # Calculate the sup norm of switching parameter subset
+        norm = 0.0
+
+        # Update norm with observation variance
+        if switching_obs_cov:
+            norm = np.max(np.absolute(params[self.parameters['obs_var']]))
+
+        # Update norm with switching tvp variance
+        mask = np.array(switching_tvp_cov)
+        if any(switching_tvp_cov): 
+            for i in range(k_regimes):
+                norm = max(norm, np.max(np.absolute(
+                        params[self.parameters[i, 'tvp_var']][mask])))
+
         # Get the noise scale
-        noise_scale = np.linalg.norm(params[self.parameters['obs_var']],
-                np.inf) * noise
+        noise_scale = norm * noise
 
         # Add noise to switching parameters to break the symmetry
-        params[self.parameters['obs_var']] += np.random.normal(
-                scale=noise_scale, size=k_regimes)
+
+        # Add noise to observation variance
+        if switching_obs_cov:
+            params[self.parameters['obs_var']] += np.random.normal(
+                    scale=noise_scale, size=k_regimes)
+
+        # Add noise to tvp variance
+        if any(switching_tvp_cov):
+            switching_tvp_count = np.sum(mask)
+            for i in range(k_regimes):
+                params[self.parameters[i, 'tvp_var']][mask] += \
+                        np.random.normal(scale=noise_scale,
+                        size=switching_tvp_count)
 
         return params
 
@@ -176,9 +250,9 @@ class SwitchingTVPModel(SwitchingMLEModel):
 
         k_regimes = self.k_regimes
 
-        # Use increasing variance order as normal permutation
+        # Use increasing regime params tuple order as normal permutation
         return sorted(range(k_regimes),
-                key=lambda x: params[self.parameters[x, 'obs_var']])
+                key=lambda x: tuple(params[self.parameters[x]]))
 
     def update(self, params, **kwargs):
 
@@ -196,6 +270,11 @@ class SwitchingTVPModel(SwitchingMLEModel):
                 k_regimes, 1, 1, 1)
 
         # Update time varying parameters covariance
-        state_cov = np.diag(params[self.parameters['tvp_var']]).reshape(k_exog,
-                k_exog, 1)
+
+        state_cov = np.zeros((k_regimes, k_exog, k_exog, 1))
+
+        for i in range(k_regimes):
+            state_cov[i, :, :, 0] = np.diag(params[self.parameters[i,
+                    'tvp_var']])
+
         self['state_cov'] = state_cov

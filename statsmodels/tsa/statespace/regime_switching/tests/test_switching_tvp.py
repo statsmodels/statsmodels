@@ -13,7 +13,7 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 from statsmodels.tsa.statespace.regime_switching.api import SwitchingTVPModel
 from .results import results_kim1993
 
@@ -58,7 +58,7 @@ class Kim1993(object):
         cls.exog[:, 4] = cls.true['data']['m1lag']
 
         # Instantiate the model
-        cls.model = SwitchingTVPModel(k_regimes, cls.endog, exog=cls.exog,
+        cls.model = SwitchingTVPModel(k_regimes, cls.endog, cls.exog,
                 dtype=dtype, loglikelihood_burn=start)
 
         # Set model initial states
@@ -66,7 +66,7 @@ class Kim1993(object):
                 np.identity(k_exog, dtype=dtype) * 100)
 
 
-class TestKim1993_Filtering(Kim1993):
+class aTestKim1993_Filtering(Kim1993):
     """
     Basic test for the loglikelihood and forecast precision.
     """
@@ -96,7 +96,7 @@ class TestKim1993_Filtering(Kim1993):
         assert_allclose(self.result['ss'], self.true['ss'], rtol=3e-2)
 
 
-class TestKim1993_MLE(Kim1993):
+class aTestKim1993_MLE(Kim1993):
     """
     Basic test for MLE correct convergence.
     """
@@ -123,7 +123,7 @@ class TestKim1993_MLE(Kim1993):
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=1e-3, atol=1e-5)
 
-class TestKim1993_MLEFitNonswitchingFirst(Kim1993):
+class aTestKim1993_MLEFitNonswitchingFirst(Kim1993):
     """
     Basic test for correct convergence of MLE from the start provided by
     non-switching model.
@@ -149,3 +149,36 @@ class TestKim1993_MLEFitNonswitchingFirst(Kim1993):
     def test_params(self):
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=5e-2, atol=5e-2)
+
+class TestKim1993_SwitchingTVP(Kim1993):
+    """
+    Smoke test to check if switching tvp option works fine and doesn't throw any
+    errors.
+    """
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestKim1993_SwitchingTVP, cls).setup_class()
+
+        dtype = cls.dtype
+        k_exog = cls.k_exog
+        k_regimes = cls.k_regimes
+
+        # Redefine the model - add switching tvp
+        cls.model = SwitchingTVPModel(k_regimes, cls.endog, cls.exog,
+                switching_obs_cov=True, switching_tvp_cov=True, dtype=dtype)
+
+        # Set model initial states
+        cls.model.initialize_known(np.zeros(k_exog, dtype=dtype),
+                np.identity(k_exog, dtype=dtype) * 100)
+
+        params = cls.model.fit(fit_nonswitching_first=True, return_params=True)
+
+        params = cls.model.normalize_params(params)
+
+        cls.result_params = params
+
+    def test_params(self):
+        # Check if result parameters are finite and not Nan
+        assert_equal(np.isfinite(self.result_params), True)
