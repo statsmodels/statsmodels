@@ -260,10 +260,10 @@ def test_debiased_v_average():
 
     db_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m)
     fitOLSdb = db_mod.fit(fit_kwds={"alpha": 0.2})
-    olsdb = np.sum(np.abs(fitOLSdb - beta))
+    olsdb = np.linalg.norm(fitOLSdb - beta)
     n_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, estimation_method=_est_regularized_naive, join_method=_join_naive)
     fitOLSn = n_mod.fit(fit_kwds={"alpha": 0.2})
-    olsn = np.sum(np.abs(fitOLSn - beta))
+    olsn = np.linalg.norm(fitOLSn - beta)
 
     assert_(olsdb < olsn)
 
@@ -272,9 +272,9 @@ def test_debiased_v_average():
 
     db_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, model_class=GLM, init_kwds={"family": Binomial()})
     fitGLMdb = db_mod.fit(fit_kwds={"alpha": 0.2})
-    glmdb = np.sum(np.abs(fitGLMdb - beta))
+    glmdb = np.linalg.norm(fitGLMdb - beta)
     n_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, model_class=GLM, init_kwds={"family": Binomial()}, estimation_method=_est_regularized_naive, join_method=_join_naive)
     fitGLMn = n_mod.fit(fit_kwds={"alpha": 0.2})
-    glmn = np.sum(np.abs(fitGLMn - beta))
+    glmn = np.linalg.norm(fitGLMn - beta)
 
     assert_(glmdb < glmn)
