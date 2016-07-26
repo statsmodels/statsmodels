@@ -26,7 +26,7 @@ def print_debug_output(results, dt):
         print("Gamma:")
         print(str(type(Gamma)) + str(Gamma.shape))
         print(Gamma)
-        if dt:
+        if "co" in dt or "s" in dt or "lo" in dt:
             C = results["est"]["C"]
             print("C:")
             print(str(type(C)) + str(C.shape))
@@ -38,7 +38,7 @@ def print_debug_output(results, dt):
 def dt_s_tup_to_string(dt_s_tup):
     dt_string = dt_s_tup[0]  # string for identifying the file to parse.
     if dt_s_tup[1] > 0:  # if there are seasons in the model
-        if "co" in dt_string or "cc" in dt_string:
+        if "co" in dt_string or "ci" in dt_string:
             dt_string = dt_string[:2] + "s" + dt_string[2:]
         else:
             dt_string = "s" + dt_string
@@ -73,11 +73,12 @@ def load_results_jmulti(dataset, dt_s_list):
         
     for dt_s in dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
-        file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
-        file = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
+        params_file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
+        params_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                   params_file)
         # sections in jmulti output:
         section_header = ["Lagged endogenous term",  # Gamma
-                          "Deterministic term",      # c, s, lt
+                          "Deterministic term",      # co, s, lo
                           "Loading coefficients",    # alpha
                           "Estimated cointegration relation",  # beta
                           "Legend",
@@ -97,11 +98,15 @@ def load_results_jmulti(dataset, dt_s_list):
                     "Legend",
                     "VAR A",  # VAR parameter matrices
                     "VAR deterministic"]  # VAR deterministic terms
-        if dt_string == "":
+        if "co" not in dt_string and "lo" not in dt_string \
+                and "s" not in dt_string:
+            # JMulTi: no deterministic terms section in VEC representation
             del(section_header[1])
             del(sections[1])
-            del(section_header[-1])
-            del(sections[-1])
+            if "ci" not in dt_string and "li" not in dt_string:
+                # JMulTi: no deterministic section in VAR repr.
+                del(section_header[-1])
+                del(sections[-1])
         results = dict()
         results["est"] = dict.fromkeys(sections)
         results["se"] = dict.fromkeys(sections)
@@ -118,7 +123,7 @@ def load_results_jmulti(dataset, dt_s_list):
         start_end_mark = "-----"
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
-        for line in open(file):
+        for line in open(params_file):
             if section == -1 and section_header[section+1] not in line:
                 continue
             if section < len(section_header)-1 \
@@ -185,6 +190,25 @@ def load_results_jmulti(dataset, dt_s_list):
         del results["se"]["Legend"]
         del results["t"]["Legend"]
         del results["p"]["Legend"]
+        # JMulTi outputs beta.T
+        results["est"]["beta"] = results["est"]["beta"].T
+        results["se"]["beta"] = results["se"]["beta"].T
+        results["t"]["beta"] = results["t"]["beta"].T
+        results["p"]["beta"] = results["p"]["beta"].T
+        # split information about beta and deterministic terms inside coint.
+        alpha = results["est"]["alpha"]
+        beta = results["est"]["beta"]
+        alpha_rows = alpha.shape[0]
+        if beta.shape[0] > alpha_rows:
+            results["est"]["beta"], results["est"]["det_coint"] = np.vsplit(
+                results["est"]["beta"], [alpha_rows])
+            results["se"]["beta"], results["se"]["det_coint"] = np.vsplit(
+                results["se"]["beta"], [alpha_rows])
+            results["t"]["beta"], results["t"]["det_coint"] = np.vsplit(
+                results["t"]["beta"], [alpha_rows])
+            results["p"]["beta"], results["p"]["det_coint"] = np.vsplit(
+                results["p"]["beta"], [alpha_rows])
+
         # parse  information regarding \Sigma_u
         sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_Sigmau" + ".txt"
@@ -216,22 +240,5 @@ def load_results_jmulti(dataset, dt_s_list):
             print_debug_output(results, dt_string)
 
         results_dict_per_det_terms[dt_s] = results
-        if "cc" in dt_string or "lt" in dt_string:
-            C = results_dict_per_det_terms[dt_s]["est"]["C"]
-            det_coef_coint = []
-            if "cc" in dt_string:
-                det_coef_coint.append(C[:, :1])
-                C = C[:, 1:]
-            # if 'lt' in dt:
-            #     det_coef_coint.append(C[:, -1:])
-            #     C = C[:, :-1]
-            if det_coef_coint != []:
-                det_coef_coint = np.column_stack(det_coef_coint)
-                results_dict_per_det_terms[dt_s]["est"]["det_coint"] = \
-                    det_coef_coint
-                if C.size == 0:
-                    del results_dict_per_det_terms[dt_s]["est"]["C"]
-                else:
-                    results_dict_per_det_terms[dt_s]["est"]["C"] = C
 
     return results_dict_per_det_terms

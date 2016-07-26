@@ -39,12 +39,13 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         The whole sample including the presample.
     diff_lags : int
         Number of lags in the VEC representation.
-    deterministic, str {"", "co", "cc", "lt"}
+    deterministic : str {"", "co", "ci", "lo", "li"}
             "" - no deterministic terms
             "co" - constant outside the cointegration relation
-            "cc" - constant within the cointegration relation
-            "lt" - linear trend
-            Combinations of these are possible (e.g. "cclt" or "colt" for
+            "ci" - constant within the cointegration relation
+            "lo" - linear trend outside the cointegration relation
+            "li" - linear trend within the cointegration relation
+            Combinations of these are possible (e.g. "cili" or "colo" for
             linear trend with intercept)
     seasons : int
         Number of seasons. 0 (default) means no seasons.
@@ -75,12 +76,12 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
     delta_y = np.diff(y)
     delta_y_1_T = delta_y[:, p-1:]
     y_min1 = y[:, p-1:-1]
-    # if "co" in deterministic and "cc" in deterministic:
-    #     raise ValueError("Both 'co' and 'cc' as deterministic terms given. " +
+    # if "co" in deterministic and "ci" in deterministic:
+    #     raise ValueError("Both 'co' and 'ci' as deterministic terms given. " +
     #                      "Please choose one of the two.")
     # todo: optimize the following with np.row_stack()
 
-    if "cc" in deterministic:  # pp. 257, 299, 306, 307
+    if "ci" in deterministic:  # pp. 257, 299, 306, 307
         # y_min1_mean = y_min1.mean(1)
         y_min1 = vstack((y_min1,
                          np.ones(T)))
@@ -88,11 +89,9 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         #             - y_min1_mean))
         # y_min1 = H.T.dot(y_min1)
 
-    # the following gives the same result as the R-package tsDyn when the
-    # linear term is outside the cointegration relation:
-    # if "lt" in deterministic:  # p. 299
-    #     y_min1 = vstack((y_min1,
-    #                      np.arange(T)))
+    if "li" in deterministic:  # p. 299
+        y_min1 = vstack((y_min1,
+                         np.arange(T)))
 
     # p. 286:
     delta_x = np.zeros((diff_lags*K, T))
@@ -116,7 +115,7 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         delta_x = vstack((delta_x,
                           season_dummy))
 
-    if "lt" in deterministic:
+    if "lo" in deterministic:
         delta_x = vstack((delta_x,
                           np.arange(T)+1))
 
@@ -250,13 +249,14 @@ class VECM(tsbase.TimeSeriesModel):
             Number of lags in the VEC representation
         method : {"ls", "egls", "ml"}
             Estimation method to use.
-        deterministic, str {"", "co", "cc", "lt"}
-            "" - no deterministic terms
-            "co" - constant outside the cointegration relation
-            "cc" - constant within the cointegration relation
-            "lt" - linear trend
-            Combinations of these are possible (e.g. "cclt" or "colt" for
-            linear trend with intercept)
+        deterministic : str {"", "co", "ci", "lo", "li"}
+                "" - no deterministic terms
+                "co" - constant outside the cointegration relation
+                "ci" - constant within the cointegration relation
+                "lo" - linear trend outside the cointegration relation
+                "li" - linear trend within the cointegration relation
+                Combinations of these are possible (e.g. "cili" or "colo" for
+                linear trend with intercept)
         seasons : int
             Number of seasons. 0 (default) means no seasons.
         coint_rank : int
@@ -300,9 +300,9 @@ class VECM(tsbase.TimeSeriesModel):
         est_pi_gamma = mat1.dot(mat2)  # p. 287 (equation (7.2.4))
 
         pi_cols = K
-        if "cc" in deterministic:
+        if "ci" in deterministic:
             pi_cols += 1
-        if "lt" in deterministic:
+        if "li" in deterministic:
             pi_cols += 1
         pi_hat, gamma_hat = np.hsplit(est_pi_gamma, [pi_cols])
 
@@ -313,7 +313,7 @@ class VECM(tsbase.TimeSeriesModel):
         return pi_hat, gamma_hat, sigma_u_hat
 
     def _estimate_vecm_ls(self, diff_lags, deterministic="", seasons=0):
-        # deterministic \in \{"c", "lt", \}, where
+        # deterministic \in \{"c", "lo", \}, where
         # c=constant, lt=linear trend, s=seasonal terms
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
                 self.y, diff_lags, deterministic, seasons)
@@ -387,12 +387,8 @@ class VECM(tsbase.TimeSeriesModel):
                            deterministic=deterministic, seasons=seasons,
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
                            delta_x=delta_x)
-        # return {"alpha": np.array(alpha_tilde),
-                # "beta": np.array(beta_tilde),
-                # "Gamma": np.array(gamma_tilde),
-                # "Sigma_u": np.array(sigma_u_tilde)}
 
-    def predict(self, params, start=None, end=None, lags=1, trend="cc"):
+    def predict(self, params, start=None, end=None, lags=1, trend="ci"):
         """
         Returns in-sample predictions or forecasts
         """  # TODO: docstring + implementation
@@ -422,12 +418,13 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         ... where K is the number of variables per observation
     sigma_u : array (K x K)
         ... where K is the number of variables per observation
-    deterministic : str {"", "co", "cc", "lt"}
+    deterministic : str {"", "co", "ci", "lo", "li"}
             "" - no deterministic terms
             "co" - constant outside the cointegration relation
-            "cc" - constant within the cointegration relation
-            "lt" - linear trend
-            Combinations of these are possible (e.g. "cclt" or "colt" for
+            "ci" - constant within the cointegration relation
+            "lo" - linear trend outside the cointegration relation
+            "li" - linear trend within the cointegration relation
+            Combinations of these are possible (e.g. "cili" or "colo" for
             linear trend with intercept)
     seasons : int
         Number of seasons. 0 (default) means no seasons.
@@ -544,28 +541,27 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
 
     @cache_readonly
-    def num_det_coef_coint(self):  # tedo: check if used at all?
-        number_of_params = 0 + ("cc" in self.deterministic)
-                           # + ("lt" in self.deterministic)
-                           # commented out since JMulTi has "lt" outside coint. rel.
+    def num_det_coef_coint(self):  # todo: check if used at all?
+        number_of_params = 0 + ("ci" in self.deterministic) \
+                           + ("li" in self.deterministic)
         return number_of_params
-
-
 
     @cache_readonly
     def cov_params(self):  # p.296 (7.2.21)
+        # beta = self.beta
         beta = self.beta
-
+        if self.det_coef_coint.size > 0:
+            beta = vstack((beta, self.det_coef_coint))
         dt = self.deterministic
-        num_det = ("co" in dt) + ("lt" in dt)
+        num_det = ("co" in dt) + ("lo" in dt)
         num_det += (self.seasons-1) if self.seasons else 0
         b_id = scipy.linalg.block_diag(beta,
                                        np.identity(self.K * (self.p-1) +
                                                    num_det))
 
         y_min1 = self.y_min1
-        if self.num_det_coef_coint > 0:
-            y_min1 = y_min1[:-self.num_det_coef_coint]
+        # if self.num_det_coef_coint > 0:
+        #     y_min1 = y_min1[:-self.num_det_coef_coint]
         b_y = beta.T.dot(y_min1)
         omega11 = b_y.dot(b_y.T)
         omega12 = b_y.dot(self.delta_x.T)
