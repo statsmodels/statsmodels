@@ -470,7 +470,8 @@ class SurvfuncRight(object):
         return lcb, ucb
 
 
-def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
+def survdiff(time, status, group, weight_type=None, strata=None,
+             entry=None, **kwargs):
     """
     Test for the equality of two survival distributions.
 
@@ -497,6 +498,9 @@ def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
                  at risk
     strata : array-like
         Optional stratum indicators for a stratified test
+    entry : array-like
+        Entry times to handle left truncation. The subject is not in
+        the risk set on or before the entry time.
 
     Returns
     --------
@@ -517,7 +521,7 @@ def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
 
     if strata is None:
         obs, var = _survdiff(time, status, group, weight_type, gr,
-                             **kwargs)
+                             entry, **kwargs)
     else:
         strata = np.asarray(strata)
         stu = np.unique(strata)
@@ -526,7 +530,7 @@ def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
             # could be more efficient?
             ii = (strata == st)
             obs1, var1 = _survdiff(time[ii], status[ii], group[ii],
-                                   weight_type, gr, **kwargs)
+                                   weight_type, gr, entry, **kwargs)
             obs += obs1
             var += var1
 
@@ -539,49 +543,55 @@ def survdiff(time, status, group, weight_type=None, strata=None, **kwargs):
     return chisq, pvalue
 
 
-def _survdiff(time, status, group, weight_type, gr, **kwargs):
+def _survdiff(time, status, group, weight_type, gr, entry=None,
+              **kwargs):
     # logrank test for one stratum
 
-    ii = (group == gr[0])
-    time1 = time[ii]
-    status1 = status[ii]
-    ii = (group == gr[1])
-    time2 = time[ii]
-    status2 = status[ii]
-
     # Get the unique times.
-    utimes = np.unique(time)
+    if entry is None:
+        utimes, rtimes = np.unique(time, return_inverse=True)
+    else:
+        utimes, rtimes = np.unique(np.concatenate((time, entry)),
+                                   return_inverse=True)
+        rtimes = rtimes[0:len(time)]
 
-    status1 = status1.astype(np.bool)
-    status2 = status2.astype(np.bool)
+    # Split entry times by group if present (should use pandas groupby)
+    tse = [(gr[0], None), (gr[1], None)]
+    if entry is not None:
+        for k in 0, 1:
+            ii = (group == gr[k])
+            entry1 = entry[ii]
+            tse[k] = (gr[k], entry1)
 
-    # The positions of the observed event times in each group, in the
-    # overall list of unique times.
-    ix1 = np.searchsorted(utimes, time1[status1])
-    ix2 = np.searchsorted(utimes, time2[status2])
+    # Event count and risk set size at each time point, per group and overall.
+    # TODO: should use Pandas groupby
+    nrisk, obsv = [], []
+    ml = len(utimes)
+    for g, entry0 in tse:
 
-    # Number of events observed at each time point, per group and
-    # overall.
-    obs1 = np.bincount(ix1, minlength=len(utimes))
-    obs2 = np.bincount(ix2, minlength=len(utimes))
-    obs = obs1 + obs2
+        mk = (group == g)
+        n = np.bincount(rtimes, weights=mk, minlength=ml)
 
-    # Risk set size at each time point, per group and overall.
-    nvec = []
-    for time0 in time1, time2:
-        ix = np.searchsorted(utimes, time0)
-        n = np.bincount(ix, minlength=len(utimes))
-        n = np.cumsum(n)
-        n = np.roll(n, 1)
-        n[0] = 0
-        n = len(time0) - n
-        nvec.append(n)
-    n1, n2 = tuple(nvec)
-    n = n1 + n2
+        ob = np.bincount(rtimes, weights=status*mk, minlength=ml)
+        obsv.append(ob)
+
+        if entry is not None:
+            n = np.cumsum(n) - n
+            rentry = np.searchsorted(utimes, entry0, side='left')
+            n0 = np.bincount(rentry, minlength=ml)
+            n0 = np.cumsum(n0) - n0
+            nr = n0 - n
+        else:
+            nr = np.cumsum(n[::-1])[::-1]
+
+        nrisk.append(nr)
+
+    obs = sum(obsv)
+    nrisk_tot = sum(nrisk)
 
     # The variance of event counts in the first group.
-    r = n1 / n.astype(np.float64)
-    var = obs * r * (1 - r) * (n - obs) / (n - 1)
+    r = nrisk[0] / nrisk_tot
+    var = obs * r * (1 - r) * (nrisk_tot - obs) / (nrisk_tot - 1)
 
     # The expected number of events in the first group.
     exp1 = obs * r
@@ -590,9 +600,9 @@ def _survdiff(time, status, group, weight_type, gr, **kwargs):
     if weight_type is not None:
         weight_type = weight_type.lower()
         if weight_type == "gb":
-            weights = n
+            weights = nrisk_tot
         elif weight_type == "tw":
-            weights = np.sqrt(n)
+            weights = np.sqrt(nrisk_tot)
         elif weight_type == "fh":
             if "fh_p" not in kwargs:
                 msg = "weight_type type 'fh' requires specification of fh_p"
@@ -600,7 +610,7 @@ def _survdiff(time, status, group, weight_type, gr, **kwargs):
             fh_p = kwargs["fh_p"]
             # Calculate the survivor function directly to avoid the
             # overhead of creating a SurvfuncRight object
-            sp = 1 - obs / n.astype(np.float64)
+            sp = 1 - obs / nrisk_tot.astype(np.float64)
             sp = np.log(sp)
             sp = np.cumsum(sp)
             sp = np.exp(sp)
@@ -612,12 +622,12 @@ def _survdiff(time, status, group, weight_type, gr, **kwargs):
 
     # The Z-scale test statistic (compare to normal reference
     # distribution).
-    ix = np.flatnonzero(n > 1)
+    ix = np.flatnonzero(nrisk_tot > 1)
     if weights is None:
-        obs = np.sum(obs1[ix] - exp1[ix])
+        obs = np.sum(obsv[0][ix] - exp1[ix])
         var = np.sum(var[ix])
     else:
-        obs = np.dot(weights[ix], obs1[ix] - exp1[ix])
+        obs = np.dot(weights[ix], obsv[0][ix] - exp1[ix])
         var = np.dot(weights[ix]**2, var[ix])
 
     return obs, var

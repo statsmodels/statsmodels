@@ -390,3 +390,59 @@ def test_survfunc_entry_3():
     assert_allclose(sf.surv_times, np.r_[5, 6])
     assert_allclose(sf.surv_prob, np.r_[0.857143, 0.285714], atol=1e-5)
     assert_allclose(sf.surv_prob_se, np.r_[0.13226, 0.170747], atol=1e-5)
+
+
+def test_survdiff_entry_1():
+    # entry times = 0 is equivalent to no entry times
+    ti = np.r_[1, 3, 4, 2, 5, 4, 6, 7, 5, 9]
+    st = np.r_[1, 1, 0, 1, 1, 0, 1, 1, 0, 0]
+    gr = np.r_[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    entry = np.r_[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    z1, p1 = survdiff(ti, st, gr, entry=entry)
+    z2, p2 = survdiff(ti, st, gr)
+    assert_allclose(z1, z2)
+    assert_allclose(p1, p2)
+
+
+def test_survdiff_entry_2():
+    # Tests against Stata:
+    #
+    # stset time, failure(status) entry(entry)
+    # sts test group, logrank
+
+    ti = np.r_[5, 3, 4, 2, 5, 4, 6, 7, 5, 9]
+    st = np.r_[1, 1, 0, 1, 1, 0, 1, 1, 0, 0]
+    gr = np.r_[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    entry = np.r_[1, 2, 2, 1, 3, 3, 5, 4, 2, 5]
+
+    # Check with no entry times
+    z, p = survdiff(ti, st, gr)
+    assert_allclose(z, 6.694424)
+    assert_allclose(p, 0.00967149)
+
+    # Check with entry times
+    z, p = survdiff(ti, st, gr, entry=entry)
+    assert_allclose(z, 3.0)
+    assert_allclose(p, 0.083264516)
+
+
+def test_survdiff_entry_3():
+    # Tests against Stata:
+    #
+    # stset time, failure(status) entry(entry)
+    # sts test group, logrank
+
+    ti = np.r_[2, 1, 5, 8, 7, 8, 8, 9, 4, 9]
+    st = np.r_[1, 1, 1, 1, 1, 0, 1, 0, 0, 0]
+    gr = np.r_[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    entry = np.r_[1, 1, 2, 2, 3, 3, 2, 1, 2, 0]
+
+    # Check with no entry times
+    z, p = survdiff(ti, st, gr)
+    assert_allclose(z, 6.9543024)
+    assert_allclose(p, 0.008361789)
+
+    # Check with entry times
+    z, p = survdiff(ti, st, gr, entry=entry)
+    assert_allclose(z, 6.75082959)
+    assert_allclose(p, 0.00937041)
