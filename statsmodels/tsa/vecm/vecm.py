@@ -39,8 +39,8 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         The whole sample including the presample.
     diff_lags : int
         Number of lags in the VEC representation.
-    deterministic : str {"", "co", "ci", "lo", "li"}
-            "" - no deterministic terms
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
+            "nc" - no deterministic terms
             "co" - constant outside the cointegration relation
             "ci" - constant within the cointegration relation
             "lo" - linear trend outside the cointegration relation
@@ -211,7 +211,7 @@ def _sij(delta_x, delta_y_1_T, y_min1):
 # VECM class: for known or unknown VECM
 
 class VECM(tsbase.TimeSeriesModel):
-    r"""
+    """
     Fit a VECM process
     .. math:: \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots + \Gamma_{p-1} \Delta y_{t-p+1} + u_t
     where
@@ -238,7 +238,7 @@ class VECM(tsbase.TimeSeriesModel):
         self.y = self.endog.T  # TODO delete this line if y not necessary
         self.neqs = self.endog.shape[1]
 
-    def fit(self, diff_lags=None, method="ml", deterministic="", seasons=0,
+    def fit(self, diff_lags=None, method="ml", deterministic="nc", seasons=0,
             coint_rank=1):
         """
         Estimates the parameters of a VECM and returns a VECMResults object.
@@ -249,8 +249,8 @@ class VECM(tsbase.TimeSeriesModel):
             Number of lags in the VEC representation
         method : {"ls", "egls", "ml"}
             Estimation method to use.
-        deterministic : str {"", "co", "ci", "lo", "li"}
-                "" - no deterministic terms
+        deterministic : str {"nc", "co", "ci", "lo", "li"}
+                "nc" - no deterministic terms
                 "co" - constant outside the cointegration relation
                 "ci" - constant within the cointegration relation
                 "lo" - linear trend outside the cointegration relation
@@ -312,7 +312,7 @@ class VECM(tsbase.TimeSeriesModel):
 
         return pi_hat, gamma_hat, sigma_u_hat
 
-    def _estimate_vecm_ls(self, diff_lags, deterministic="", seasons=0):
+    def _estimate_vecm_ls(self, diff_lags, deterministic="nc", seasons=0):
         # deterministic \in \{"c", "lo", \}, where
         # c=constant, lt=linear trend, s=seasonal terms
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
@@ -324,7 +324,7 @@ class VECM(tsbase.TimeSeriesModel):
         return {"Pi_hat": pi_hat, "Gamma_hat": gamma_hat,
                 "Sigma_u_hat": sigma_u_hat}
     
-    def _estimate_vecm_egls(self, diff_lags, deterministic="", seasons=0,
+    def _estimate_vecm_egls(self, diff_lags, deterministic="nc", seasons=0,
                             r=1):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
                 self.y, diff_lags, deterministic, seasons)
@@ -355,7 +355,7 @@ class VECM(tsbase.TimeSeriesModel):
         return {"alpha": alpha_hat, "beta": beta_hhat, 
                 "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
     
-    def _estimate_vecm_ml(self, diff_lags, deterministic="", seasons=0, r=1):
+    def _estimate_vecm_ml(self, diff_lags, deterministic="nc", seasons=0, r=1):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
                 self.y, diff_lags, deterministic, seasons)
         T = y_1_T.shape[1]
@@ -403,7 +403,7 @@ class VECMResults(object):
     """Class holding estimation related results of a vector error correction
     model (VECM).
 endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic="", seasons=0,
+                 gamma, sigma_u, deterministic="nc", seasons=0,
                  delta_y_1_T=None, y_min1=None, delta_x=None
     Parameters
     ----------
@@ -418,8 +418,8 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         ... where K is the number of variables per observation
     sigma_u : array (K x K)
         ... where K is the number of variables per observation
-    deterministic : str {"", "co", "ci", "lo", "li"}
-            "" - no deterministic terms
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
+            "nc" - no deterministic terms
             "co" - constant outside the cointegration relation
             "ci" - constant within the cointegration relation
             "lo" - linear trend outside the cointegration relation

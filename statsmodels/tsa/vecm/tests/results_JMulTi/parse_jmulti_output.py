@@ -38,7 +38,7 @@ def print_debug_output(results, dt):
 def dt_s_tup_to_string(dt_s_tup):
     dt_string = dt_s_tup[0]  # string for identifying the file to parse.
     if dt_s_tup[1] > 0:  # if there are seasons in the model
-        if "co" in dt_string or "ci" in dt_string:
+        if "co" in dt_string or "ci" in dt_string or "nc" in dt_string:
             dt_string = dt_string[:2] + "s" + dt_string[2:]
         else:
             dt_string = "s" + dt_string
