@@ -19,9 +19,9 @@ results_ref = {}
 results_sm = {}
 coint_rank = 1
 
-debug_mode = True
+debug_mode = False
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
+deterministic_terms_list = ["nc"]#["nc", "co", "colo", "ci", "cili"]
 seasonal_list = [0, 4]
 dt_s_list = [(dt, s) for dt in deterministic_terms_list for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
@@ -355,7 +355,8 @@ def test_var_rep():
             obtained = results_sm[ds][dt].var_repr
             p = obtained.shape[0]
             desired = np.hsplit(results_ref[ds][dt]["est"]["VAR A"], p)
-            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+            yield assert_allclose, obtained, desired, rtol, atol, False, \
+                err_msg
 
 
 def test_var_to_vecm():
@@ -411,6 +412,24 @@ def test_log_like():
             obtained = results_sm[ds][dt].llf
             desired = results_ref[ds][dt]["log_like"]
             yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+
+
+def test_fc():
+    if debug_mode:
+        if "fc" not in to_test:
+            return
+        else:
+            print("\n\nFORECAST", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            err_msg = build_err_msg(ds, dt, "FORECAST")
+            obtained = results_sm[ds][dt].predict()
+            desired = results_ref[ds][dt]["fc"]["fc"]
+            yield assert_allclose, obtained, desired, rtol, atol, False, \
+                err_msg
 
 
 def setup():
