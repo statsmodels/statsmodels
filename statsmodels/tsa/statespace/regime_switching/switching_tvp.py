@@ -153,7 +153,7 @@ class SwitchingTVPModel(SwitchingMLEModel):
 
         return model
 
-    def update_params(self, params, nonswitching_params, noise=0.5, seed=1):
+    def update_params(self, params, nonswitching_params, noise=0.1, seed=1):
         """
         Update constrained parameters of the model, using parameters of
         non-switching model.
@@ -176,7 +176,9 @@ class SwitchingTVPModel(SwitchingMLEModel):
         SwitchingMLEModel.update_params
         """
 
+        dtype = self.ssm.dtype
         k_regimes = self.k_regimes
+        k_exog = self.k_exog
 
         switching_obs_cov = self.switching_obs_cov
         switching_tvp_cov = self.switching_tvp_cov
@@ -194,37 +196,36 @@ class SwitchingTVPModel(SwitchingMLEModel):
         # Set the seed
         np.random.seed(seed=seed)
 
-        # Calculate the sup norm of switching parameter subset
-        norm = 0.0
-
-        # Update norm with observation variance
-        if switching_obs_cov:
-            norm = np.max(np.absolute(params[self.parameters['obs_var']]))
-
-        # Update norm with switching tvp variance
-        mask = np.array(switching_tvp_cov)
-        if any(switching_tvp_cov): 
-            for i in range(k_regimes):
-                norm = max(norm, np.max(np.absolute(
-                        params[self.parameters[i, 'tvp_var']][mask])))
-
-        # Get the noise scale
-        noise_scale = norm * noise
-
         # Add noise to switching parameters to break the symmetry
 
         # Add noise to observation variance
         if switching_obs_cov:
+            noise_scale = np.absolute(nonswitching_params[
+                    TVPModel._obs_var_idx]) * noise
             params[self.parameters['obs_var']] += np.random.normal(
                     scale=noise_scale, size=k_regimes)
 
+            # Keep variances non-negative
+            params[self.parameters['obs_var']] = np.maximum(0,
+                    params[self.parameters['obs_var']])
+
         # Add noise to tvp variance
         if any(switching_tvp_cov):
+
+            mask = np.array(switching_tvp_cov)
+
+            # Get normal white noise scale for every parameter
+            noise_scales = np.absolute(nonswitching_params[
+                    TVPModel._tv_params_cov_idx]) * noise
+
             switching_tvp_count = np.sum(mask)
             for i in range(k_regimes):
                 params[self.parameters[i, 'tvp_var']][mask] += \
-                        np.random.normal(scale=noise_scale,
-                        size=switching_tvp_count)
+                        np.random.normal(scale=noise_scales[mask])
+
+                # Keep variances non-negative
+                params[self.parameters[i, 'tvp_var']][mask] = np.maximum(0,
+                        params[self.parameters[i, 'tvp_var']])
 
         return params
 

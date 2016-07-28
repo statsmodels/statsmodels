@@ -168,3 +168,73 @@ class TestHamilton1989_EM(Hamilton1989):
         true_is_close = [True] * 9
         true_is_close[6] = False
         assert_array_equal(is_close, true_is_close)
+
+
+class TestHamilton1989_MLEFitNonswitchingFirst(Hamilton1989):
+    """
+    Smoke test to check if non-switching start parameters feature doesn't throw
+    errors and returns something (due to complexity of MS-AR model, EM-algorithm
+    is prefered as a more sophisticated tool)
+    """
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestHamilton1989_MLEFitNonswitchingFirst, cls).setup_class()
+
+        params = cls.model.fit(fit_nonswitching_first=True, return_params=True)
+
+        cls.result = {
+                'loglike': cls.model.loglike(params),
+                'params': params
+        }
+
+    def test_loglike(self):
+        # Check if calculated likelihood makes sense
+        assert_allclose(self.result['loglike'], self.true['loglike'],
+                rtol=2e-2)
+
+    def test_params(self):
+        # Check if parameters are finite and not NaN
+        assert_equal(np.isfinite(self.result['params']), True)
+
+
+class TestHamilton1989_AllSwiching(Hamilton1989):
+    """
+    Smoke test to check if setting AR coefficients, mean values and variances
+    to switching and additionally providing exogenous data doesn't cause
+    throwing errors and produces some result.
+    """
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestHamilton1989_AllSwiching, cls).setup_class()
+
+        dtype = cls.dtype
+
+        # Add some exog data to check that it is processed without errors
+        exog = np.arange(cls.obs.shape[0], dtype=dtype)
+
+        # Redefine the model - make everything switching
+        cls.model = MarkovAutoregression(cls.k_ar_regimes, cls.order, cls.obs,
+                switching_mean=True, switching_variance=True, switching_ar=True,
+                exog=exog, dtype=dtype)
+
+        params = cls.model.fit(fit_nonswitching_first=True, return_params=True)
+
+        # Run EM-algorithm to assure that it no errors are thrown
+        params = cls.model.fit_em(start_params=params)
+
+        cls.result = {
+                'loglike': cls.model.loglike(params),
+                'params': params
+        }
+
+    def test_loglike(self):
+        # Check if calculated likelihood is finite and not NaN
+        assert_equal(np.isfinite(self.result['loglike']), True)
+
+    def test_params(self):
+        # Check if parameters are finite and not NaN
+        assert_equal(np.isfinite(self.result['params']), True)

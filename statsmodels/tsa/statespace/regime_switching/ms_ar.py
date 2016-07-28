@@ -89,14 +89,14 @@ class _NonswitchingAutoregression(SARIMAX):
         mle_regression = True
 
         # Constant exog variable
-        intercept = np.ones((endog.shape[1], 1))
+        intercept = np.ones((endog.shape[0], 1))
 
         if exog is not None:
             exog = np.hstack((intercept, exog))
         else:
             exog = intercept
 
-        super(_NonswitchingAutoregression, self).init(endog, exog=exog,
+        super(_NonswitchingAutoregression, self).__init__(endog, exog=exog,
                 order=(order, 0, 0), mle_regression=mle_regression,
                 enforce_stationarity=False)
 
@@ -128,7 +128,7 @@ class MarkovAutoregression(SwitchingMLEModel):
         whether or not the error term has a switching variance. Default is
         `False`.
     exog : array_like, optional
-        Array of exogenous regressors, shaped nobs x k.
+        Array of exogenous regressors, shaped nobs x k_exog.
     **kwargs
         Additional keyword arguments, passed to superclass initializer.
 
@@ -138,7 +138,7 @@ class MarkovAutoregression(SwitchingMLEModel):
 
     .. math::
 
-        \phi_{S_t}(L)(y_{S_t} - \nu_{S_t} - x_t' \beta_t) = e_t \\
+        \phi_{S_t}(L)(y_t - \mu_{S_t} - x_t' \beta_t) = e_t \\
         e_t \sim N(0, \sigma_{S_t}^2)
 
     i.e. the model is an autoregression where the autoregressive
@@ -175,10 +175,14 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         endog = endog.ravel()
 
-        # In case of autoregression first `order` endog values are used to
-        # calculate initialization of state space model
+        # In case of autoregression first `order` endog and exog values are
+        # used to calculate initialization of state space model
         self.endog_head = endog[:order]
         endog = endog[order:]
+
+        if exog is not None:
+            self.exog_head = exog[:order]
+            exog = exog[order:]
 
         # Broadcasting and saving `switching_ar` attribute
         if isinstance(switching_ar, bool):
@@ -244,13 +248,39 @@ class MarkovAutoregression(SwitchingMLEModel):
         return _NonswitchingAutoregression(self.endog, self.order, exog=exog,
                 dtype=self.ssm.dtype)
 
-    def update_params(self, params, nonswitching_params):
+    def update_params(self, params, nonswitching_params, noise=0.1, seed=1):
+        """
+        Update constrained parameters of the model, using parameters of
+        non-switching model.
+ 
+        Parameters
+        ----------
+        noise : float
+            Relative normal noise scale, added to switching parameters to break
+            the symmetry of regimes.
+        seed : int
+            Random seed, used to generate the noise.
 
-        #TODO: add noise
+        Notes
+        -----
+        `noise` and `seed` parameters are defined in keyword arguments so that
+        they can be changed in child class.
+
+        See Also
+        --------
+        SwitchingMLEModel.update_params
+        """
 
         dtype = self.ssm.dtype
         order = self.order
         k_ar_regimes = self.k_ar_regimes
+
+        switching_mean = self.switching_mean
+        switching_ar = self.switching_ar
+        switching_variance = self.switching_variance
+
+        # Set the seed
+        np.random.seed(seed=seed)
 
         # Low-level `nonswitching_params` slices handling
         offset = 0
@@ -259,7 +289,12 @@ class MarkovAutoregression(SwitchingMLEModel):
         # Otherwise, set all regimes means to one value
         params[self.parameters['mean']] = nonswitching_params[offset]
 
-        offset += 1
+        # Add noise, if switching
+        if switching_mean:
+            noise_scale = np.absolute(nonswitching_params[offset]) * noise
+
+            params[self.parameters['mean']] += np.random.normal(
+                    scale=noise_scale, size=k_ar_regimes)
 
         # Setting exog coefficients to those from non-switching model
         if self.k_exog is not None:
@@ -267,15 +302,40 @@ class MarkovAutoregression(SwitchingMLEModel):
                     nonswitching_params[offset:offset + self.k_exog]
             offset += self.k_exog
 
-        # TODO: check if order of coefs is the same
+        offset += 1
+
         ar_coefs = nonswitching_params[offset:offset + order]
         # Setting all autoregressive coefficients to their non-switching analogs
         for i in range(k_ar_regimes):
             params[self.parameters[i, 'autoregressive']] = ar_coefs
+
+        # Add noise, if switching
+        if any(switching_ar):
+
+            mask = np.array(switching_ar)
+
+            # Get normal noise scale
+            noise_scales = np.absolute(nonswitching_params[
+                    offset:offset + order]) * noise
+
+            for i in range(k_ar_regimes):
+                params[self.parameters[i, 'autoregressive']][mask] += \
+                        np.random.normal(scale=noise_scales[mask])
+
         offset += order
 
         # Setting variance
         params[self.parameters['variance']] = nonswitching_params[offset]
+
+        if switching_variance:
+            noise_scale = nonswitching_params[offset] * noise
+
+            params[self.parameters['variance']] += np.random.normal(
+                    scale=noise_scale, size=k_ar_regimes)
+
+            # Keep variances non-negative
+            params[self.parameters['variance']] = np.maximum(0,
+                    params[self.parameters['variance']])
 
         return params
 
@@ -387,7 +447,16 @@ class MarkovAutoregression(SwitchingMLEModel):
                 yield (prev_regime_index, curr_regime_index, prev_ar_regime,
                         curr_ar_regime)
 
+    def loglike(self, *args, **kwargs):
+
+        ll = super(MarkovAutoregression, self).loglike(*args, **kwargs)
+        print(ll)
+
+        return ll
+
     def update(self, params, **kwargs):
+
+        print(params)
 
         # State space representation of autoregressive model is based on chapter
         # 3.3 of
@@ -434,7 +503,7 @@ class MarkovAutoregression(SwitchingMLEModel):
         if self.exog is not None:
             exog_intercept_term = self.exog.dot(
                     params[self.parameters['exog']].reshape(-1, 1)
-                    ).reshape((1, -1))
+                    ).reshape(1, -1)
 
         # Autoregression coefficients for every MS-AR regime (equal among
         # regimes in case of non-switching AR coefficients)
@@ -512,27 +581,37 @@ class MarkovAutoregression(SwitchingMLEModel):
 
         # Construct initial state according to Durbin and Koopman book,
         # encountering mean term and different regimes
+
+        if self.exog is not None:
+            exog_biases = self.exog_head.dot(
+                    params[self.parameters['exog']].reshape(-1, 1)
+                    ).ravel()
+        else:
+            exog_biases = np.zeros(order, dtype=dtype)
+
         for regime_index in range(k_regimes):
 
             curr_ar_regime = regime_index % k_ar_regimes
 
             curr_regime_ar_coefs = ar_coefs[curr_ar_regime, :]
-            curr_regime_ar_means = np.zeros((order, ), dtype=dtype)
+            curr_regime_ar_means = np.zeros(order, dtype=dtype)
 
             for ar_lag_index, ar_regime in zip(range(order),
                     self._get_ar_regimes(regime_index)):
                 curr_regime_ar_means[ar_lag_index] = \
                         params[self.parameters[ar_regime, 'mean']]
 
+            curr_regime_biases = exog_biases + curr_regime_ar_means
+
             initial_state[regime_index, 0] = self.endog_head[-1] - \
-                    curr_regime_ar_means[0]
+                    curr_regime_biases[0]
 
             for i in range(1, order):
                 for j in range(i, order):
                     initial_state[regime_index, i] += \
                             curr_regime_ar_coefs[j] * \
                             (self.endog_head[order - 2 + i - j] - \
-                            curr_regime_ar_means[j])
+                            curr_regime_biases[j])
 
         self.initialize_known(initial_state, initial_state_cov)
 
@@ -744,11 +823,14 @@ class MarkovAutoregression(SwitchingMLEModel):
                 params = self.fit_em(start_params=random_start_params,
                     transformed=False, em_iterations=em_iterations)
                 loglike = self.loglike(params)
+            except KeyboardInterrupt:
+                raise
             except:
                 continue
 
             # Update best results
-            if best_params is None or loglike > best_loglike:
+            if (best_params is None or loglike > best_loglike) and \
+                    not np.isnan(loglike):
                 best_params = params
                 best_loglike = loglike
 

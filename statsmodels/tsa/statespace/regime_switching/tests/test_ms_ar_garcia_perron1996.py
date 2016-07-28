@@ -13,7 +13,7 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 from statsmodels.tsa.statespace.regime_switching.api import \
         MarkovAutoregression, RegimePartition
 from .results import results_garcia_perron1996
@@ -100,7 +100,8 @@ class TestGarciaPerron1996_MLE(GarciaPerron1996):
         super(TestGarciaPerron1996_MLE, cls).setup_class()
 
         params = cls.model.fit(start_params=np.array(
-                cls.true['start_parameters'], dtype=cls.dtype))
+                cls.true['start_parameters'], dtype=cls.dtype),
+                return_params=True)
 
         cls.result = {
                 'loglike': cls.model.loglike(params),
@@ -143,3 +144,31 @@ class TestGarciaPerron1996_EM(GarciaPerron1996):
         # Test that EM algorithm produces sensible result
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=2e-1, atol=0.15)
+
+
+class TestGarciaPerron1996_MLEFitNonswitchingFirst(GarciaPerron1996):
+    """
+    Smoke test to check if non-switching start parameters feature doesn't throw
+    errors and returns something (due to complexity of MS-AR model, EM-algorithm
+    is prefered as a more sophisticated tool)
+    """
+
+    @classmethod
+    def setup_class(cls):
+
+        super(TestGarciaPerron1996_MLEFitNonswitchingFirst, cls).setup_class()
+
+        params = cls.model.fit(fit_nonswitching_first=True, return_params=True)
+
+        cls.result = {
+                'loglike': cls.model.loglike(params),
+                'params': params
+        }
+
+    def test_loglike(self):
+        # Check if calculated likelihood makes sense
+        assert_allclose(self.result['loglike'], self.true['loglike'], rtol=5e-2)
+
+    def test_params(self):
+        # Check if parameters are finite and not NaN
+        assert_equal(np.isfinite(self.result['params']), True)

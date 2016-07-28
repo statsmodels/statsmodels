@@ -123,6 +123,7 @@ class TestKim1993_MLE(Kim1993):
         assert_allclose(self.result['params'], self.true['parameters'],
                 rtol=1e-3, atol=1e-5)
 
+
 class TestKim1993_MLEFitNonswitchingFirst(Kim1993):
     """
     Basic test for correct convergence of MLE from the start provided by
