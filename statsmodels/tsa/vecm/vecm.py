@@ -10,6 +10,8 @@ from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec, vech, unvec
 
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.vector_ar.var_model import VARResults, forecast
+
 
 def mat_sqrt(_2darray):
     """Calculates the square root of a matrix.
@@ -698,9 +700,5 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
         return A
 
-    @cache_readonly
-    def predict(self, steps):
-        self.A
-        pass # var_repr() --> use predict() / forecast() of VARResults
-             # with intercept 1D, y 2D (steps x K, i.e. row-wise 1D), A pxKxK
-             # !!! Warning: these methods are for known processes only !!!
+    def predict(self, steps=5):
+        return forecast(self.y_all.T[-self.p:], self.var_repr, 0, steps)

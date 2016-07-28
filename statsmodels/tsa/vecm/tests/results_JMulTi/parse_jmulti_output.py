@@ -86,7 +86,7 @@ def load_results_jmulti(dataset, dt_s_list):
                           "Deterministic term"]      # VAR representation
         # the following "sections" will serve as key for the corresponding
         # result values
-        sections = ["Gamma", 
+        sections = ["Gamma",
                     "C",     # Here all deterministic term coefficients are
                              # collected. (const and linear trend which belong
                              # to cointegration relation as well as seasonal
@@ -209,7 +209,7 @@ def load_results_jmulti(dataset, dt_s_list):
             results["p"]["beta"], results["p"]["det_coint"] = np.vsplit(
                 results["p"]["beta"], [alpha_rows])
 
-        # parse  information regarding \Sigma_u
+        # parse information regarding \Sigma_u
         sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_Sigmau" + ".txt"
         sigmau_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -235,6 +235,33 @@ def load_results_jmulti(dataset, dt_s_list):
             if rows_to_parse == 0:
                 break
         results["est"]["Sigma_u"] = Sigma_u[::-1]
+
+        # parse forecast related outputs
+        fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
+            + "_fc5" + ".txt"
+        fc_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                   fc_file)
+        fc, lower, upper, plu_min = [], [], [], []
+        for line in open(fc_file, encoding='latin_1'):
+
+            str_number = "(\s+-?\d+\.\d{3}\s*)"
+            regex_number = re.compile(str_number)
+            numbers = re.findall(regex_number, line)
+            if numbers == []:
+                continue
+            fc.append(float(numbers[0]))
+            lower.append(float(numbers[1]))
+            upper.append(float(numbers[2]))
+            plu_min.append(float(numbers[3]))
+        variables = alpha.shape[0]
+        fc = np.hstack(np.vsplit(np.array(fc)[:, None], variables))
+        lower = np.hstack(np.vsplit(np.array(lower)[:, None], variables))
+        upper = np.hstack(np.vsplit(np.array(upper)[:, None], variables))
+        plu_min = np.hstack(np.vsplit(np.array(plu_min)[:, None], variables))
+        results["fc"] = dict.fromkeys(["fc", "lower", "upper"])
+        results["fc"]["fc"] = fc
+        results["fc"]["lower"] = lower
+        results["fc"]["upper"] = upper
 
         if debug_mode:
             print_debug_output(results, dt_string)
