@@ -223,6 +223,23 @@ class VECM(tsbase.TimeSeriesModel):
         2-d endogenous response variable.
     dates : array-like
         must match number of rows of endog
+    method : {"ls", "egls", "ml"}
+        Estimation method to use.
+    diff_lags : int
+        Number of lags in the VEC representation
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
+            "nc" - no deterministic terms
+            "co" - constant outside the cointegration relation
+            "ci" - constant within the cointegration relation
+            "lo" - linear trend outside the cointegration relation
+            "li" - linear trend within the cointegration relation
+            Combinations of these are possible (e.g. "cili" or "colo" for
+            linear trend with intercept)
+    seasons : int
+        Number of seasons. 0 (default) means no seasons.
+    coint_rank : int
+        Cointegration rank, equals the rank of the matrix \Pi and the number
+        of columns of \alpha and \beta
 
     References
     ----------
@@ -231,37 +248,29 @@ class VECM(tsbase.TimeSeriesModel):
     """
     
     # TODO: implementation
-    def __init__(self, endog_tot, dates=None, freq=None, missing="none"):
-        super(VECM, self).__init__(endog_tot, None, dates, freq, missing=missing)
+    def __init__(self, endog_tot, dates=None, freq=None, missing="none",
+                 method="ml", diff_lags=1, deterministic="nc", seasons=0,
+                 coint_rank=1):
+        super(VECM, self).__init__(endog_tot, None, dates, freq,
+                                   missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
         self.y = self.endog.T  # TODO delete this line if y not necessary
         self.neqs = self.endog.shape[1]
+        self.p = diff_lags + 1
+        self.method = method
+        self.diff_lags = diff_lags
+        self.deterministic = deterministic
+        self.seasons = seasons
+        self.coint_rank = coint_rank
 
-    def fit(self, diff_lags=None, method="ml", deterministic="nc", seasons=0,
-            coint_rank=1):
+    def fit(self):
         """
         Estimates the parameters of a VECM and returns a VECMResults object.
 
         Parameters
         ----------
-        diff_lags : int
-            Number of lags in the VEC representation
-        method : {"ls", "egls", "ml"}
-            Estimation method to use.
-        deterministic : str {"nc", "co", "ci", "lo", "li"}
-                "nc" - no deterministic terms
-                "co" - constant outside the cointegration relation
-                "ci" - constant within the cointegration relation
-                "lo" - linear trend outside the cointegration relation
-                "li" - linear trend within the cointegration relation
-                Combinations of these are possible (e.g. "cili" or "colo" for
-                linear trend with intercept)
-        seasons : int
-            Number of seasons. 0 (default) means no seasons.
-        coint_rank : int
-            Cointegration rank, equals the rank of the matrix \Pi and the number
-            of columns of \alpha and \beta
+
 
         Returns
         -------
@@ -271,24 +280,18 @@ class VECM(tsbase.TimeSeriesModel):
         -----
         Lutkepohl pp. 269-304
         """
-
-        self.p = diff_lags + 1
-        # estimate parameters
-        if method == "ls":
-            return self._estimate_vecm_ls(diff_lags, deterministic, seasons)
-        elif method == "egls":
-            if coint_rank is None:
-                coint_rank = 1
-            return self._estimate_vecm_egls(diff_lags, deterministic, seasons,
-                                            coint_rank)
-        elif method == "ml":
-            if coint_rank is None:
-                coint_rank = 1
-            return self._estimate_vecm_ml(diff_lags, deterministic, seasons,
-                                          coint_rank)
+        if self.method == "ls":
+            return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
+                                          self.seasons)
+        elif self.method == "egls":
+            return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
+                                            self.seasons, self.coint_rank)
+        elif self.method == "ml":
+            return self._estimate_vecm_ml(self.diff_lags, self.deterministic,
+                                          self.seasons, self.coint_rank)
         else:
             raise ValueError("%s not recognized, must be among %s"
-                             % (method, ("ls", "egls", "ml")))
+                             % (self.method, ("ls", "egls", "ml")))
 
     def _ls_pi_gamma(self, delta_y_1_T, y_min1, delta_x, diff_lags,
                      deterministic):
