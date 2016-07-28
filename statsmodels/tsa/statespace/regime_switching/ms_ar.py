@@ -447,16 +447,7 @@ class MarkovAutoregression(SwitchingMLEModel):
                 yield (prev_regime_index, curr_regime_index, prev_ar_regime,
                         curr_ar_regime)
 
-    def loglike(self, *args, **kwargs):
-
-        ll = super(MarkovAutoregression, self).loglike(*args, **kwargs)
-        print(ll)
-
-        return ll
-
     def update(self, params, **kwargs):
-
-        print(params)
 
         # State space representation of autoregressive model is based on chapter
         # 3.3 of
