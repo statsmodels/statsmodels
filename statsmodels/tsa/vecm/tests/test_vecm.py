@@ -21,7 +21,7 @@ coint_rank = 1
 
 debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["", "co", "colo", "ci", "cili"]
+deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
 seasonal_list = [0, 4]
 dt_s_list = [(dt, s) for dt in deterministic_terms_list for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
@@ -55,7 +55,7 @@ def build_err_msg(ds, dt_s, parameter_str):
     err_msg = "Error in " + parameter_str + " for:\n"
     err_msg += "- Dataset: " + ds.__str__() + "\n"
     err_msg += "- Deterministic terms: "
-    err_msg += (dt_s[0] if dt != "" else "no det. terms")
+    err_msg += (dt_s[0] if dt != "nc" else "no det. terms")
     if seasons > 0:
         err_msg += ", seasons: " + str(seasons)
     return err_msg
@@ -391,7 +391,7 @@ def test_var_to_vecm():
 # def test_var_rep_det():
 #     for ds in datasets:
 #         for dt in dt_s_list:
-#             if dt != "":
+#             if dt != "nc":
 #                 err_msg = build_err_msg(ds, dt, "VAR repr. deterministic")
 #                 obtained = 0  # not implemented since the same values as VECM
 #                 desired = results_ref[ds][dt]["est"]["VAR deterministic"]
