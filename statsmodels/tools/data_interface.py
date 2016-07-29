@@ -146,10 +146,10 @@ class DataInterface(object):
             np_data = self.to_numpy_array(data)
 
             if np_data.ndim == 1:
-                return pd.Series(np_data, name=self.name, dtype=self.dtype)
+                return pd.Series(np_data, name=self.name)
 
             else:
-                return pd.DataFrame(np_data, columns=self.columns, dtype=self.dtype)
+                return pd.DataFrame(np_data, columns=self.columns)
 
     def from_numpy_array(self, data):
 
@@ -166,20 +166,20 @@ class DataInterface(object):
 
         elif self.external_type == pd.Series:
             index = getattr(data, 'index', None)
-            return pd.Series(data=data, index=index, dtype=self.dtype)
+            return pd.Series(data=data, index=index)
 
         elif self.external_type == pd.DataFrame:
             ndim = getattr(data, 'ndim', None)
 
             if ndim in [1, None]:
-                return pd.Series(data=data, index=self.index, dtype=self.dtype)
+                return pd.Series(data=data, index=self.index)
 
             elif self.ndim == ndim:
                 df = pd.DataFrame(data=data, columns=self.columns, index=self.index)
                 return apply_dtype_to_df(df, self.dtype)
 
             else:
-                df = pd.DataFrame(data=data, dtype=self.dtype, index=self.index)
+                df = pd.DataFrame(data=data, index=self.index)
                 return apply_dtype_to_df(df, self.dtype)
 
         else:
@@ -200,7 +200,7 @@ class DataInterface(object):
 
         elif from_type == pd.DataFrame and self.external_type == pd.Series:
             if data.ndim == 1:
-                return pd.Series(data.values, index=data.index, name=data.columns[0], dtype=self.dtype)
+                return pd.Series(data.values, index=data.index, name=data.columns[0])
             else:
                 raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
 
