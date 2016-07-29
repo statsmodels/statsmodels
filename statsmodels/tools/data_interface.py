@@ -92,7 +92,8 @@ class DataInterface(object):
             data_to_return = self.from_numpy_array(data)
 
             if self.to_transpose(data_to_return):
-                return data_to_return.squeeze()
+                return transpose(data)
+
             else:
                 return data_to_return
 
@@ -100,7 +101,8 @@ class DataInterface(object):
             data_to_return = self.from_pandas(data)
 
             if self.to_transpose(data_to_return):
-                return
+                return transpose(data)
+
             else:
                 return data_to_return
 
