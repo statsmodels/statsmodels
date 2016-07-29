@@ -21,7 +21,7 @@ coint_rank = 1
 
 debug_mode = False
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc"]#["nc", "co", "colo", "ci", "cili"]
+deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
 seasonal_list = [0, 4]
 dt_s_list = [(dt, s) for dt in deterministic_terms_list for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",

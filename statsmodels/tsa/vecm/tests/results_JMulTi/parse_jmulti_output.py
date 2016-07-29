@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-debug_mode = True
+debug_mode = False
 
 
 def print_debug_output(results, dt):
