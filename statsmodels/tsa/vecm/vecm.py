@@ -246,7 +246,7 @@ class VECM(tsbase.TimeSeriesModel):
     References
     ----------
     [Lut2005]_
-    .. [Lut2005] Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+    .. [Lut2005] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
     
     # TODO: implementation
@@ -508,12 +508,28 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         self.p = level_var_lag_order
         self.deterministic = deterministic
         self.seasons = seasons
+
         self.r = coint_rank
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.K])
         self.gamma, self.det_coef = np.hsplit(gamma, [self.K*(self.p-1)])
-        # = gamma[:, self.gamma.shape[1]:].reshape(gamma.shape[0], -1)
+
+        if "ci" in deterministic:
+            self.const_coint = self.det_coef_coint[:1, :]
+        else:
+            self.const_coint = np.zeros(self.K)[:, None]
+        if "li" in deterministic:
+            self.lin_trend_coint = self.det_coef_coint[-1:, :]
+        else:
+            self.lin_trend_coint = np.zeros(self.K)[:, None]
+
+        split_const_season = 1 if "co" in deterministic else 0
+        split_season_lin = split_const_season + ((seasons-1) if seasons else 0)
+        self.const, self.seasonal, self.lin_trend = np.hsplit(self.det_coef,
+            [split_const_season, split_season_lin])
+
         self.sigma_u = sigma_u
+
         if y_min1 is not None or delta_x is not None or delta_y_1_T:
             self.delta_y_1_T = delta_y_1_T
             self.y_min1 = y_min1
@@ -657,7 +673,6 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             return self.det_coef  # 0-size array
         return self.det_coef / self.stderr_det_coef
 
-    
     @cache_readonly
     def pvalues_alpha(self):
         return (1-scipy.stats.norm.cdf(abs(self.tvalues_alpha))) * 2  # student-t
@@ -686,8 +701,6 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             return self.det_coef  # 0-size array
         return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2  # student-t
 
-
-
     @cache_readonly
     def var_repr(self):
         pi = self.alpha.dot(self.beta.T)
@@ -701,4 +714,43 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         return A
 
     def predict(self, steps=5):
-        return forecast(self.y_all.T[-self.p:], self.var_repr, 0, steps)
+        last_observations = self.y_all.T[-self.p:]
+        exog = []
+        trend_coefs = []
+
+        exog_const = np.ones(steps)
+        if self.const.size > 0:
+            exog.append(exog_const)
+            trend_coefs.append(self.const.T)
+        if "ci" in self.deterministic:
+            exog.append(exog_const)
+            trend_coefs.append(self.alpha.dot(self.const_coint).T)
+        if self.seasons > 0:
+            exog_seasonal = np.pad(np.identity(self.seasons-1),   # identity &
+                                   ((0, 1), (0, 0)), "constant")  # 0-row below
+            exog_seasonal -= 1 / self.seasons
+            if steps < self.seasons:
+                exog_seasonal = exog_seasonal[:steps]
+            if steps > self.seasons:  # repeat matrix pattern until #rows=steps
+                exog_seasonal = np.pad(exog_seasonal, ((0, steps-self.seasons),
+                                                       (0, 0)), "wrap")
+            exog.append(exog_seasonal)
+            trend_coefs.append(self.seasonal.T)
+
+        nobs_tot = self.T + self.p
+        exog_lin_trend = list(range(nobs_tot + 1, nobs_tot + steps + 1))
+        if self.lin_trend.size > 0:
+            exog.append(exog_lin_trend)
+            trend_coefs.append(self.lin_trend.T)
+        if "li" in self.deterministic:
+            exog.append(exog_lin_trend)
+            trend_coefs.append(self.alpha.dot(self.lin_trend_coint).T)
+
+        exog = np.column_stack(exog) if exog != [] else None
+        if trend_coefs != []:
+            # np.real: ignore imaginary +0j (e.g. if det. terms = cili+seasons)
+            trend_coefs = np.real(np.row_stack(trend_coefs))
+        else:
+            trend_coefs = None
+        return forecast(last_observations, self.var_repr, trend_coefs,
+                        steps, exog)

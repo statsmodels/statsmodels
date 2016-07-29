@@ -165,16 +165,17 @@ def _var_acf(coefs, sig_u):
 
     return acf
 
-def forecast(y, coefs, intercept, steps):
+def forecast(y, coefs, trend_coefs, steps, exog):
     """
-    Produce linear MSE forecast
+    Produce linear minimum MSE forecast
 
     Parameters
     ----------
-    y :
-    coefs :
-    intercept :
-    steps :
+    y : ndarray (k_ar x neqs)
+    coefs : ndarray (k_ar x neqs x neqs)
+    trend_coefs : ndarray (1 x neqs) or (neqs)
+    steps : int
+    exog : ndarray (trend_coefs.shape[1] x neqs)
 
     Returns
     -------
@@ -189,7 +190,12 @@ def forecast(y, coefs, intercept, steps):
     p = len(coefs)
     k = len(coefs[0])
     # initial value
-    forcs = np.zeros((steps, k)) + intercept
+    forcs = np.zeros((steps, k))
+    if exog is not None and trend_coefs is not None:
+        forcs += np.dot(exog, trend_coefs)
+    # to make existing code (with trend_coefs=intercept and without exog) work:
+    elif exog is None and trend_coefs is not None:
+        forcs += trend_coefs
 
     # h=0 forecast should be latest observation
     # forcs[0] = y[-1]
@@ -209,6 +215,7 @@ def forecast(y, coefs, intercept, steps):
 
             # i=1 is coefs[0]
             f = f + np.dot(coefs[i - 1], prior_y)
+
         forcs[h - 1] = f
 
     return forcs
