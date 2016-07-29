@@ -175,12 +175,10 @@ class DataInterface(object):
                 return pd.Series(data=data, index=self.index)
 
             elif self.ndim == ndim:
-                df = pd.DataFrame(data=data, columns=self.columns, index=self.index)
-                return apply_dtype_to_df(df, self.dtype)
+                return pd.DataFrame(data=data, columns=self.columns, index=self.index)
 
             else:
-                df = pd.DataFrame(data=data, index=self.index)
-                return apply_dtype_to_df(df, self.dtype)
+                return pd.DataFrame(data=data, index=self.index)
 
         else:
             return data
