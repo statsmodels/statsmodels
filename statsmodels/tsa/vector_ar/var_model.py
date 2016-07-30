@@ -165,6 +165,35 @@ def _var_acf(coefs, sig_u):
 
     return acf
 
+def mse(ma_coefs, sigma_u, steps):
+    """
+    Compute theoretical forecast error variance matrices
+
+    Parameters
+    ----------
+    steps : int
+        Number of steps ahead
+
+    Notes
+    -----
+    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
+
+    Returns
+    -------
+    forc_covs : ndarray (steps x neqs x neqs)
+    """
+    neqs = len(sigma_u)
+    forc_covs = np.zeros((steps, neqs, neqs))
+
+    prior = np.zeros((neqs, neqs))
+    for h in range(steps):
+        # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
+        phi = ma_coefs[h]
+        var = chain_dot(phi, sigma_u, phi.T)
+        forc_covs[h] = prior = prior + var
+
+    return forc_covs
+
 def forecast(y, coefs, trend_coefs, steps, exog):
     """
     Produce linear minimum MSE forecast
@@ -242,6 +271,27 @@ def forecast_cov(ma_coefs, sig_u, steps):
         forc_covs[h] = prior = prior + var
 
     return forc_covs
+
+def _forecast_vars(steps, ma_coefs, sig_u):
+    covs = mse(ma_coefs, sig_u, steps)
+    # Take diagonal for each cov
+    neqs = len(sig_u)
+    inds = np.arange(neqs)
+    return covs[:, inds, inds]
+
+def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
+                      exog=1):
+    assert(0 < alpha < 1)
+    q = util.norm_signif_level(alpha)
+
+    point_forecast = forecast(y, coefs, trend_coefs, steps, exog)
+    ma_coefs = ma_rep(coefs, 10)
+    sigma = np.sqrt(_forecast_vars(steps, ma_coefs, sig_u))
+
+    forc_lower = point_forecast - q * sigma
+    forc_upper = point_forecast + q * sigma
+
+    return point_forecast, forc_lower, forc_upper
 
 def var_loglike(resid, omega, nobs):
     r"""

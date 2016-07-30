@@ -7,10 +7,10 @@ import scipy
 import scipy.stats
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
-from statsmodels.tsa.tsatools import duplication_matrix, vec, vech, unvec
+from statsmodels.tsa.tsatools import duplication_matrix
 
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.vector_ar.var_model import VARResults, forecast
+from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval
 
 
 def mat_sqrt(_2darray):
@@ -713,7 +713,22 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
         return A
 
-    def predict(self, steps=5):
+    def predict(self, steps=5, confidence_level_for_intervals=None):
+        """
+
+        Parameters
+        ----------
+        steps : int
+            Prediction horizon.
+        confidence_level_for_intervals : float between 0 and 1 or None
+            If None, compute point forecast only.
+            If float, compute confidence intervals too. In this case the
+            argument stands for the confidence level.
+
+        Returns
+        -------
+
+        """
         last_observations = self.y_all.T[-self.p:]
         exog = []
         trend_coefs = []
@@ -752,5 +767,12 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             trend_coefs = np.real(np.row_stack(trend_coefs))
         else:
             trend_coefs = None
-        return forecast(last_observations, self.var_repr, trend_coefs,
-                        steps, exog)
+
+        if confidence_level_for_intervals is not None:
+            return forecast_interval(last_observations, self.var_repr,
+                                     trend_coefs, self.sigma_u, steps,
+                                     alpha=confidence_level_for_intervals,
+                                     exog=exog)
+        else:
+            return forecast(last_observations, self.var_repr, trend_coefs,
+                            steps, exog)
