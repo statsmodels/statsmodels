@@ -426,11 +426,27 @@ def test_fc():
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "FORECAST")
+            # test point forecast functionality of predict method
             obtained = results_sm[ds][dt].predict()
             desired = results_ref[ds][dt]["fc"]["fc"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
-
+            # test predict method with confidence interval calculation
+            err_msg = build_err_msg(ds, dt, "FORECAST WITH INTERVALS")
+            obtained = results_sm[ds][dt].predict(
+                    confidence_level_for_intervals=0.05)
+            obt = obtained[0]  # forecast
+            obt_l = obtained[1]  # lower bound
+            obt_u = obtained[2]  # upper bound
+            des = results_ref[ds][dt]["fc"]["fc"]
+            des_l = results_ref[ds][dt]["fc"]["lower"]
+            des_u = results_ref[ds][dt]["fc"]["upper"]
+            yield assert_allclose, obt, des, rtol, atol, False, \
+                err_msg
+            yield assert_allclose, obt_l, des_l, rtol, atol, False, \
+                err_msg
+            yield assert_allclose, obt_u, des_u, rtol, atol, False, \
+                err_msg
 
 def setup():
     datasets.append(e6)  # TODO: append more data sets for more test cases.
