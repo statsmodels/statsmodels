@@ -38,7 +38,6 @@ class DataInterface(object):
 
         self.columns = getattr(data, 'columns', None)
         self.name = getattr(data, 'name', None)
-        self.dtype = get_dtypes(data)
         self.ndim = get_ndim(data)
         self.is_col_vector = is_col_vector(data)
 
@@ -214,54 +213,46 @@ PandasInterface = partial(DataInterface, [np.ndarray, pd.Series, pd.DataFrame])
 
 
 def get_ndim(data):
+
     if type(data) == pd.Series:
         return 1
 
-    if type(data) == pd.DataFrame:
-        if safe_get(data.shape, 1, None) == 1 and safe_get(data.shape, 0, None) > 1:
-            return 1
+    if type(data) != pd.DataFrame:
 
-        elif safe_get(data.shape, 1, None) > 1 and safe_get(data.shape, 0, None) == 1:
-            return 1
+        try:
+            data = np.asarray(data)
 
-        else:
-            return data.ndim
+        except TypeError:
+            raise TypeError('Cannot find dimension of {}'.format(type(data)))
 
-    try:
-        data = np.asarray(data)
-        data_ndim = data.ndim
-        data_squeeze_ndim = data.squeeze().ndim
+    if safe_get(data.shape, 0, None) > 1 and safe_get(data.shape, 1, None) == 1:
+        return 1
 
-        if data_ndim > 1 and data_squeeze_ndim == 1:
-            return 1
-        else:
-            return data_ndim
+    elif safe_get(data.shape, 0, None) == 1 and safe_get(data.shape, 1, None) > 1:
+        return 1
 
-    except:
-        return None
+    else:
+        return data.ndim
 
 
 def is_col_vector(data):
+
     if type(data) == pd.Series:
         return False
 
-    if type(data) == pd.DataFrame:
-        if safe_get(data.shape, 1, None) == 1:
-            return True
-        else:
-            return False
+    if type(data) != pd.DataFrame:
 
-    try:
-        data = np.asarray(data)
-        data_ndim = data.ndim
-        data_squeeze_ndim = data.squeeze().ndim
+        try:
+            data = np.asarray(data)
 
-        if data_ndim > 1 and data_squeeze_ndim == 1:
-            return True
-        else:
-            return False
-    except:
-        raise ValueError('Cannot determine if the vector is a column')
+        except TypeError:
+            raise TypeError('Cannot convert {} to array'.format(type(data)))
+
+    if safe_get(data.shape, 0, None) > 1 and safe_get(data.shape, 1, None) == 1:
+        return True
+
+    else:
+        return False
 
 
 def transpose(data):
@@ -281,12 +272,16 @@ def transpose(data):
 
     else:
 
-        if transpose_type == np.ndarray:
-            return data[np.newaxis].T
-
-        elif transpose_type == pd.Series:
+        if transpose_type == pd.Series:
             data_col = data.values[np.newaxis].T
             return pd.DataFrame(data_col, index=data.index)
+
+        elif transpose_type == np.ndarray:
+
+            if safe_get(data.shape, 0, None) == 1 and safe_get(data.shape, 1, None) > 1:
+                data = data[0]
+
+            return data[np.newaxis].T
 
         elif transpose_type == pd.DataFrame:
             return data.T
@@ -301,23 +296,3 @@ def safe_get(data, index, default):
 
     except IndexError:
         return default
-
-
-def get_dtypes(data):
-
-    if hasattr(data, 'dtype'):
-        return data.dtype
-
-    elif hasattr(data, 'dtypes'):
-        return data.dtypes
-
-    else:
-        return None
-
-
-def apply_dtype_to_df(df, dtypes):
-
-    for col, dtype in zip(df.columns, dtypes.values):
-        df[col] = df[col].astype(dtype)
-
-    return df
