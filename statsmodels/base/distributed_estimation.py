@@ -1,6 +1,6 @@
-from statsmodels.base.elastic_net import fit_elasticnet
+from statsmodels.base.elastic_net import fit_elasticnet, RegularizedResults
 from statsmodels.stats.regularized_covariance import _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov
-from statsmodels.base.model import Results
+from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
 import statsmodels.base.wrapper as wrap
@@ -382,6 +382,13 @@ class DistributedModel(object):
     join_method : function or None
         The method used to recombine the results from each partition.
         If None this defaults to _join_debiased.
+    join_kwds : dict-like or None
+        Keywords to be passed to join_method.
+    results_class : results class or None
+        The class of results that should be returned.  If None this
+        defaults to RegularizedResults.
+    results_kwds : dict-like or None
+        Keywords to be passed to results class.
 
     Attributes
     ----------
@@ -399,6 +406,12 @@ class DistributedModel(object):
         See Parameters.
     join_method : function or None
         See Parameters.
+    join_kwds : dict-like or None
+        See Parameters.
+    results_class : results class or None
+        See Parameters.
+    results_kwds : dict-like or None
+        See Parameters.
 
     Examples
     --------
@@ -410,7 +423,8 @@ class DistributedModel(object):
     def __init__(self, data_generator, partitions, model_class=None,
                  init_kwds=None, estimation_method=None,
                  estimation_kwds=None, join_method=None,
-                 join_kwds=None):
+                 join_kwds=None, results_class=None,
+                 results_kwds=None):
 
         self.data_generator = data_generator
         self.partitions = partitions
@@ -444,6 +458,16 @@ class DistributedModel(object):
             self.join_kwds = {}
         else:
             self.join_kwds = join_kwds
+
+        if results_class is None:
+            self.results_class = RegularizedResults
+        else:
+            self.results_class = results_class
+
+        if results_kwds  is None:
+            self.results_kwds = {}
+        else:
+            self.results_kwds = results_kwds
 
 
     def fit(self, fit_kwds=None, parallel_method="sequential",
@@ -482,7 +506,11 @@ class DistributedModel(object):
             raise ValueError("parallel_method: %s is currently not supported"
                              % parallel_method)
 
-        return self.join_method(results_l, **self.join_kwds)
+        params = self.join_method(results_l, **self.join_kwds)
+
+        res_mod = self.model_class([0], [0], **self.init_kwds)
+
+        return self.results_class(res_mod, params, **self.results_kwds)
 
 
     def fit_sequential(self, fit_kwds):
@@ -543,3 +571,47 @@ class DistributedModel(object):
                                 in enumerate(self.data_generator))
 
         return results_l
+
+
+class DistributedResults(LikelihoodModelResults):
+
+    """
+    Class to contain model results
+
+    Parameters
+    ----------
+    model : class instance
+        class instance for model used for distributed data,
+        this particular instance uses fake data and is really
+        only to allow use of methods like predict.
+    params : array
+        parameter estimates from the fit model.
+
+    """
+
+    def __init__(self, model, params):
+        super(DistributedResults, self).__init__(model, params)
+
+    def predict(self, exog, *args, **kwargs):
+        """Calls self.model.predict for the provided exog.  See
+        Results.predict.
+
+        Parameters
+        ----------
+        exog : array-like NOT optional
+            The values for which we want to predict, unlike standard
+            predict this is NOT optional since the data in self.model
+            is fake.
+        args, kwargs :
+            Some models can take additional arguments or keywords, see the
+            predict method of the model for the details.
+
+        Returns
+        -------
+            prediction : ndarray, pandas.Series or pandas.DataFrame
+            See self.model.predict
+
+        """
+
+
+        return self.model.predict(self.params, exog, *args, **kwargs)
