@@ -254,11 +254,26 @@ class Mediation(object):
             ii = np.random.randint(0, len(endog), len(endog))
             endog = endog[ii]
             exog = exog[ii, :]
+
+            # Attempt to handle auxiliary arrays (but MixedLM.exog_vc
+            # does not work here)
+            init_kwargs = dict(init_kwargs)
+            n = len(endog)
+            for k in init_kwargs.keys():
+                val = init_kwargs[k]
+                if (hasattr(val, 'shape') and hasattr(val, 'ndim')
+                    and val.shape[0] == n):
+                    if val.ndim == 1:
+                        init_kwargs[k] = val[ii]
+                    else:
+                        init_kwargs[k] = val[ii, :]
+
         outcome_model = klass(endog, exog, **init_kwargs)
-        return outcome_model.fit(**fit_kwargs)
+        result = outcome_model.fit(**fit_kwargs)
+        return result
 
 
-    def fit(self, method="parametric", n_rep=1000):
+    def fit(self, method="parametric", n_rep=1000, full_output=False):
         """
         Fit a regression model to assess mediation.
 
@@ -268,6 +283,9 @@ class Mediation(object):
             Either 'parametric' or 'bootstrap'.
         n_rep : integer
             The number of simulation replications.
+        full_output : bool
+            If True, each fitted model result is stored in the `hist`
+            attribute.
 
         Returns a MediationResults object.
         """
@@ -281,6 +299,7 @@ class Mediation(object):
 
         indirect_effects = [[], []]
         direct_effects = [[], []]
+        hist = []
 
         for iter in range(n_rep):
 
@@ -297,6 +316,9 @@ class Mediation(object):
                 mediator_result = self._fit_model(self.mediator_model,
                                                   self._mediator_fit_kwargs, boot=True)
                 mediation_params = mediator_result.params
+
+                if full_output:
+                    hist.append([outcome_result, mediator_result])
 
             # predicted outcomes[tm][te] is the outcome when the
             # mediator is set to tm and the outcome/exposure is set to
@@ -327,6 +349,10 @@ class Mediation(object):
 
         rslt = MediationResults(self.indirect_effects, self.direct_effects)
         rslt.method = method
+
+        if full_output:
+            rslt.hist = hist
+
         return rslt
 
 

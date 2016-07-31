@@ -162,3 +162,31 @@ def test_framing_example_moderator_formula():
     med_rslt = med.fit(method='parametric', n_rep=100)
     diff = np.asarray(med_rslt.summary() - framing_moderated_4231)
     assert_allclose(diff, 0, atol=1e-6)
+
+
+def mixedlm_smoketest():
+
+    np.random.seed(123)
+    n = 100
+    gsize = 4
+    k_fe = 2
+    k_re = 2
+    exog = np.random.normal(size=(n*gsize, k_fe))
+    exog_re = np.random.normal(size=(n*gsize, k_re))
+    groups = np.kron(np.arange(n), np.ones(gsize))
+    re = np.random.normal(size=(n, k_re))
+    re = np.kron(re, np.ones((2, 1)))
+    y = exog.sum(1) + (re * exog_re).sum(1) + np.random.normal(size=n*gsize)
+    df = pd.DataFrame({"y": y, "x1": exog[:, 0], "x2": exog[:, 1]})
+    df["z1"] = exog_re[:, 0]
+    df["z2"] = exog_re[:, 1]
+    df["groups"] = groups
+
+    outcome_model = sm.MixedLM.from_formula("y ~ x1 + x2", groups="groups",
+                                            re_formula="0+z1+z2")
+    mediator_model = sm.MixedLM.from_formula("x1 ~ x2", groups="groups",
+                                             re_formula="0+z1+z2")
+
+    mdm = Mediation(outcome_model, mediator_model, "x2", "x1",
+                    data=df)
+    mdx = mdm.fit(method='boot', n_rep=5)

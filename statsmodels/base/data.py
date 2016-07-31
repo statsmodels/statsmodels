@@ -213,6 +213,9 @@ class ModelData(object):
         combined_2d_names = []
         if len(kwargs):
             for key, value_array in iteritems(kwargs):
+                if not hasattr(value_array, 'ndim'):
+                    none_array_names += [key]
+                    continue
                 if value_array is None or value_array.ndim == 0:
                     none_array_names += [key]
                     continue

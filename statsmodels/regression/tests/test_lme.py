@@ -726,6 +726,55 @@ def test_random_effects():
     assert_(isinstance(re[0], pd.Series))
     assert_(len(re[0]) == 2)
 
+
+def test_get_distribution():
+
+    n = 200
+    gsize = 4
+    k_fe = 2
+    k_re = 2
+    k_vc = 2
+
+    np.random.seed(123)
+    exog = np.random.normal(size=(n*gsize, k_fe))
+    exog_re = np.random.normal(size=(n*gsize, k_re))
+    exog_re[:, 0] = 1
+    groups = np.kron(np.arange(n), np.r_[1, 1, 1, 1])
+    exog_vc = {}
+    exog_vc["A"] = {k : np.random.normal(size=(gsize, 2))
+                    for k in range(n)}
+    exog_vc["B"] = {k : np.random.normal(size=(gsize, 2))
+                    for k in range(n)}
+
+    ey = exog.sum(1)
+    re = np.random.normal(size=(n, k_re))
+    re = np.kron(re, np.ones((gsize, 1)))
+    ey += (re * exog_re).sum(1)
+
+    for v in "AB":
+        re = np.random.normal(size=(n, 2))
+        re = np.kron(re, np.ones((gsize, 1)))
+        xm = [exog_vc[v][k] for k in range(n)]
+        xm = np.concatenate(xm, axis=0)
+        ey += (re * xm).sum(1)
+
+    y = ey + np.random.normal(size=len(ey))
+
+    # Test with various combinations of random effects structures
+    for has_re in False, True:
+        for has_vc in False, True:
+            kwargs = {}
+            if has_re:
+                kwargs["exog_re"] = exog_re
+            if has_vc:
+                kwargs["exog_vc"] = exog_vc
+            model = MixedLM(y, exog, groups=groups, **kwargs)
+            result = model.fit()
+            print(result.summary())
+            gen = model.get_distribution(params=result.params, scale=result.scale)
+            gen.rvs(1) # smoke test
+
+
 if __name__ == "__main__":
 
     import nose

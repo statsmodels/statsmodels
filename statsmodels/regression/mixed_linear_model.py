@@ -534,7 +534,10 @@ class MixedLM(base.LikelihoodModel):
         covariance matrix, otherwise it is carried out using the
         lower triangle of the random effects covariance matrix.
     missing : string
-        The approach to missing data handling
+        The approach to missing data handling.  Missing values cannot
+        currently be dropped from variance components design matrices
+        so missing='none' should be used and the cases with missing
+        values should be dropped before passing data to the model.
 
     Notes
     -----
@@ -625,9 +628,9 @@ class MixedLM(base.LikelihoodModel):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        super(MixedLM, self).__init__(endog, exog, groups=groups,
-                                      exog_re=exog_re, missing=missing,
-                                      **kwargs)
+        kwargs.update({"groups": groups, "exog_re": exog_re, "exog_vc": exog_vc,
+                       'missing': missing})
+        super(MixedLM, self).__init__(endog, exog, **kwargs)
 
         self._init_keys.extend(["use_sqrt", "exog_vc"])
 
@@ -662,6 +665,7 @@ class MixedLM(base.LikelihoodModel):
             # All random effects are variance components
             self.k_re = 0
             self.k_re2 = 0
+            self.exog_re = None
 
         if not self.data._param_names:
             # HACK: could've been set in from_formula already
@@ -913,10 +917,10 @@ class MixedLM(base.LikelihoodModel):
         else:
             exog_vc = None
 
+        kwargs.update({"subset": None, "exog_re": exog_re, "exog_vc": exog_vc,
+                       'missing': 'none'})
+
         mod = super(MixedLM, cls).from_formula(formula, data,
-                                               subset=None,
-                                               exog_re=exog_re,
-                                               exog_vc=exog_vc,
                                                *args, **kwargs)
 
         # expand re names to account for pairs of RE
@@ -962,6 +966,66 @@ class MixedLM(base.LikelihoodModel):
             params = params[0:self.k_fe]
 
         return np.dot(exog, params)
+
+
+    def get_distribution(self, params, scale, exog=None):
+        """
+        Returns a random number generator for the model.
+
+        Parameters
+        ----------
+        params : array-like or MixedLMParams object
+            Parameters defining a fitted model.
+        scale : scalar
+            A scale parameter for the fitted model.
+        exog : array-like, optional
+            An exog matrix for fixed effects.  If not provided,
+            the model exog_fe matrix is used.
+        """
+
+        params = MixedLMParams.from_packed(params, self.k_fe, self.k_re,
+                                           use_sqrt=False, has_fe=True)
+
+        if exog is None:
+            exog_fe = self.exog
+        else:
+            exog_fe = exog
+        exog_re = self.exog_re
+
+        if self.k_fe > 0:
+            fixef = self.predict(params, exog=exog_fe)
+        else:
+            fixef = np.array(0)
+
+        class gen(object):
+
+            def __init__(self, model):
+                self.model = model
+
+            def rvs(self, n):
+                # The n parameter is ignored but needed for interface consistency
+                rv = fixef.copy()
+                model = self.model
+
+                if model.k_re > 0:
+                    z0 = np.zeros(params.cov_re.shape[0])
+                    rv += np.random.multivariate_normal(
+                        mean=z0, cov=params.cov_re,
+                        size=model.nobs).sum(1)
+
+                if model.k_vc > 0:
+                    ix = model.row_indices
+                    lb = model.group_labels
+                    for la in lb:
+                        i = ix[la]
+                        for j, a in enumerate(model._vc_names):
+                            mat = model.exog_vc[a][la]
+                            r = np.sqrt(params.vcomp[j]) * np.random.normal(mat.shape[1])
+                            rv[i] += (mat * r).sum(1)
+
+                return rv
+
+        return gen(self)
 
 
     def group_list(self, array):
