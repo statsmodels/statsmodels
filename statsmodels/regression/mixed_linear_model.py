@@ -628,9 +628,10 @@ class MixedLM(base.LikelihoodModel):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        kwargs.update({"groups": groups, "exog_re": exog_re, "exog_vc": exog_vc,
+        kwargs.update({"groups": groups, "exog_re": exog_re,
                        'missing': missing})
         super(MixedLM, self).__init__(endog, exog, **kwargs)
+        kwargs["exog_vc"] = exog_vc
 
         self._init_keys.extend(["use_sqrt", "exog_vc"])
 

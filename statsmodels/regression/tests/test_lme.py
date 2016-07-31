@@ -770,7 +770,6 @@ def test_get_distribution():
                 kwargs["exog_vc"] = exog_vc
             model = MixedLM(y, exog, groups=groups, **kwargs)
             result = model.fit()
-            print(result.summary())
             gen = model.get_distribution(params=result.params, scale=result.scale)
             gen.rvs(1) # smoke test
 
