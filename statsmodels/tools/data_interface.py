@@ -23,6 +23,7 @@ class DataInterface(object):
         self.dtype = None
         self.index = None
         self.ndim = None
+        self.is_nested_row_vector = None
         self.is_col_vector = None
 
         if external_type is not None:
@@ -39,6 +40,7 @@ class DataInterface(object):
         self.columns = getattr(data, 'columns', None)
         self.name = getattr(data, 'name', None)
         self.ndim = get_ndim(data)
+        self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
 
     def to_transpose(self, data):
@@ -90,23 +92,21 @@ class DataInterface(object):
         elif from_type in NUMPY_TYPES:
             data_to_return = self.from_numpy_array(data)
 
-            if self.to_transpose(data_to_return):
-                return transpose(data)
-
-            else:
-                return data_to_return
 
         elif from_type in PANDAS_TYPES:
             data_to_return = self.from_pandas(data)
 
-            if self.to_transpose(data_to_return):
-                return transpose(data)
-
-            else:
-                return data_to_return
-
         else:
             raise TypeError('Type conversion from {} to {} is not possible.'.format(from_type, self.external_type))
+
+        if self.to_transpose(data_to_return):
+            data_to_return = transpose(data)
+
+        if self.ndim == 1 and (not self.is_nested_row_vector and is_nested_row_vector(data_to_return)):
+            return data_to_return[0]
+
+        else:
+            return data_to_return
 
     def to_numpy_array(self, data):
 
@@ -234,6 +234,25 @@ def get_ndim(data):
     else:
         return data.ndim
 
+
+def is_nested_row_vector(data):
+
+    if type(data) == pd.Series:
+        return False
+
+    if type(data) != pd.DataFrame:
+
+        try:
+            data = np.asarray(data)
+
+        except TypeError:
+            raise TypeError('Cannot find dimension of {}'.format(type(data)))
+
+    if safe_get(data.shape, 0, None) > 1 and safe_get(data.shape, 1, None) == 1:
+        return True
+
+    else:
+        return False
 
 def is_col_vector(data):
 

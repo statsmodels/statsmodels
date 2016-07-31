@@ -24,6 +24,16 @@ def test_series_numpy():
 
     assert data_series.equals(numpy_to_series)
 
+def test_series_numpy2():
+    data_list = [[1, 2, 3]]
+
+    data_series = pd.Series(data_list)
+    series_interface = NumPyInterface(external_type=pd.Series)
+    series_to_numpy = series_interface.to_statsmodels(data_series)
+    numpy_to_series = series_interface.from_statsmodels(series_to_numpy)
+
+    assert data_series.equals(numpy_to_series)
+
 def test_data_frame_numpy():
     data_nested_list = [[1, 2, 3], [4, 5, 6]]
 
