@@ -22,15 +22,15 @@ def print_debug_output(results, dt):
         print("beta:")
         print(str(type(beta)) + str(beta.shape))
         print(beta)
-        Gamma = results["est"]["Gamma"]
+        gamma = results["est"]["Gamma"]
         print("Gamma:")
-        print(str(type(Gamma)) + str(Gamma.shape))
-        print(Gamma)
+        print(str(type(gamma)) + str(gamma.shape))
+        print(gamma)
         if "co" in dt or "s" in dt or "lo" in dt:
-            C = results["est"]["C"]
+            c = results["est"]["C"]
             print("C:")
-            print(str(type(C)) + str(C.shape))
-            print(C)
+            print(str(type(c)) + str(c.shape))
+            print(c)
             print("se: ")
             print(results["se"]["C"])
 
@@ -228,19 +228,19 @@ def load_results_jmulti(dataset, dt_s_list):
                 sigmau_section_reached = True
                 row = re.findall(regex_est, line)
                 rows_to_parse = len(row)  # Sigma_u quadratic ==> #rows==#cols
-                Sigma_u = np.empty((rows_to_parse, rows_to_parse))
+                sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_est, line)
             rows_to_parse -= 1
-            Sigma_u[rows_to_parse] = row  # rows are added in reverse order
+            sigma_u[rows_to_parse] = row  # rows are added in reverse order
             if rows_to_parse == 0:
                 break
-        results["est"]["Sigma_u"] = Sigma_u[::-1]
+        results["est"]["Sigma_u"] = sigma_u[::-1]
 
         # parse forecast related outputs
         fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_fc5" + ".txt"
         fc_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   fc_file)
+                               fc_file)
         fc, lower, upper, plu_min = [], [], [], []
         for line in open(fc_file, encoding='latin_1'):
 
@@ -257,7 +257,7 @@ def load_results_jmulti(dataset, dt_s_list):
         fc = np.hstack(np.vsplit(np.array(fc)[:, None], variables))
         lower = np.hstack(np.vsplit(np.array(lower)[:, None], variables))
         upper = np.hstack(np.vsplit(np.array(upper)[:, None], variables))
-        plu_min = np.hstack(np.vsplit(np.array(plu_min)[:, None], variables))
+        # plu_min = np.hstack(np.vsplit(np.array(plu_min)[:, None], variables))
         results["fc"] = dict.fromkeys(["fc", "lower", "upper"])
         results["fc"]["fc"] = fc
         results["fc"]["lower"] = lower
