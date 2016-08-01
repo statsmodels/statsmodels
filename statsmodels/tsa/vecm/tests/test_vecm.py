@@ -2,10 +2,8 @@ from __future__ import absolute_import, print_function
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose
-import pandas
 
 import statsmodels.datasets.interest_inflation.data as e6
-from statsmodels.tsa.base.datetools import dates_from_str
 from .results_JMulTi.parse_jmulti_output import load_results_jmulti
 from .results_JMulTi.parse_jmulti_output import dt_s_tup_to_string
 from statsmodels.tsa.vecm.vecm import VECM
@@ -23,14 +21,16 @@ debug_mode = False
 dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
 seasonal_list = [0, 4]
-dt_s_list = [(dt, s) for dt in deterministic_terms_list for s in seasonal_list]
+dt_s_list = [(det, s) for det in deterministic_terms_list
+             for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like"]
 to_test = all_tests  # ["beta"]
 
 
-def load_data(dataset, data_dict):  # TODO: make function compatible with other data_dict sets.
-    # ...todo... e.g. by making the local variable "variables" part of data_dict.py.
+def load_data(dataset, data_dict):  # TODO: make function compatible with other
+    # ...todo... data_dict sets, e.g. by making the local variable "variables"
+    # ...todo... part of data_dict.py.
     variables = ["Dp", "R"]
     loaded = dataset.load().data[variables].view(float, type=np.ndarray)
     data_dict[dataset] = loaded.reshape((-1, len(variables)))
@@ -39,11 +39,11 @@ def load_data(dataset, data_dict):  # TODO: make function compatible with other 
 def load_results_statsmodels(dataset):
     results_per_deterministic_terms = dict.fromkeys(dt_s_list)
     for dt_s_tup in dt_s_list:
-        model = VECM(data[dataset], diff_lags=3, method="ml",
-                     deterministic=dt_s_tup[0], seasons=dt_s_tup[1],
-                     coint_rank=coint_rank)
+        model = VECM(data[dataset], diff_lags=3,
+                     deterministic=dt_s_tup[0], seasons=dt_s_tup[1])
         # print("\n\n\nDETERMINISTIC TERMS: " + deterministic_terms)
-        results_per_deterministic_terms[dt_s_tup] = model.fit()
+        results_per_deterministic_terms[dt_s_tup] = model.fit(
+                method="ml", coint_rank=coint_rank)
     return results_per_deterministic_terms
 
 
@@ -73,25 +73,22 @@ def test_ml_gamma():
             err_msg = build_err_msg(ds, dt_s, "Gamma")
             obtained = results_sm[ds][dt_s].gamma
             desired = results_ref[ds][dt_s]["est"]["Gamma"]
-            # cols = desired.shape[1]
-            # if obtained.shape[1] > cols:
-            #     obtained = obtained[:, :cols]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
-            obt = results_sm[ds][dt_s].stderr_gamma#[:, :cols]
+            obt = results_sm[ds][dt_s].stderr_gamma
             des = results_ref[ds][dt_s]["se"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "STANDARD ERRORS\n"+err_msg
             # t-values
-            obt = results_sm[ds][dt_s].tvalues_gamma#[:, :cols]
+            obt = results_sm[ds][dt_s].tvalues_gamma
             des = results_ref[ds][dt_s]["t"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "t-VALUES\n"+err_msg
             # p-values
-            obt = results_sm[ds][dt_s].pvalues_gamma#[:, :cols]
+            obt = results_sm[ds][dt_s].pvalues_gamma
             des = results_ref[ds][dt_s]["p"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "p-VALUES\n"+err_msg
@@ -205,7 +202,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
                 C_obt = C_obt[:, 1:]
                 desired = desired[:, 1:]
                 yield assert_allclose, const_obt, const_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "CONST")
+                    rtol, atol, False, build_err_msg(ds, dt, "CONST")
             if "s" in dt_string:
                 if "lo" in dt_string:
                     seas_obt = C_obt[:, :-1]
@@ -214,12 +211,12 @@ def test_ml_c():  # test deterministic terms outside coint relation
                     seas_obt = C_obt
                     seas_des = desired
                 yield assert_allclose, seas_obt, seas_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "SEASONAL")
+                    rtol, atol, False, build_err_msg(ds, dt, "SEASONAL")
             if "lo" in dt_string:
                 lt_obt = C_obt[:, -1:]
                 lt_des = desired[:, -1:]
                 yield assert_allclose, lt_obt, lt_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "LINEAR TREND")
+                    rtol, atol, False, build_err_msg(ds, dt, "LINEAR TREND")
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
@@ -230,7 +227,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
                 se_const_des = se_desired[:, 0][:, None]
                 se_desired = se_desired[:, 1:]
                 yield assert_allclose, se_const_obt, se_const_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "SE CONST")
+                    rtol, atol, False, build_err_msg(ds, dt, "SE CONST")
             if "s" in dt_string:
                 if "lo" in dt_string:
                     se_seas_obt = se_C_obt[:, :-1]
@@ -239,13 +236,13 @@ def test_ml_c():  # test deterministic terms outside coint relation
                     se_seas_obt = se_C_obt
                     se_seas_des = se_desired
                 yield assert_allclose, se_seas_obt, se_seas_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "SE SEASONAL")
+                    rtol, atol, False, build_err_msg(ds, dt, "SE SEASONAL")
                 if "lo" in dt_string:
                     se_lt_obt = se_C_obt[:, -1:]
                     se_lt_des = se_desired[:, -1:]
                     yield assert_allclose, se_lt_obt, se_lt_des,  \
-                          rtol, atol, False,  \
-                          build_err_msg(ds, dt, "SE LIN. TREND")
+                        rtol, atol, False,  \
+                        build_err_msg(ds, dt, "SE LIN. TREND")
             # t-values
             t_desired = results_ref[ds][dt]["t"]["C"]
             if "co" in dt_string:
@@ -254,7 +251,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
                 t_const_des = t_desired[:, 0][:, None]
                 t_desired = t_desired[:, 1:]
                 yield assert_allclose, t_const_obt, t_const_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "T CONST")
+                    rtol, atol, False, build_err_msg(ds, dt, "T CONST")
             if "s" in dt_string:
                 if "lo" in dt_string:
                     t_seas_obt = t_C_obt[:, :-1]
@@ -263,13 +260,13 @@ def test_ml_c():  # test deterministic terms outside coint relation
                     t_seas_obt = t_C_obt
                     t_seas_des = t_desired
                 yield assert_allclose, t_seas_obt, t_seas_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
+                    rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
             if "lo" in dt_string:
                 t_lt_obt = t_C_obt[:, -1:]
                 t_lt_des = t_desired[:, -1:]
                 yield assert_allclose, t_lt_obt, t_lt_des,  \
-                      rtol, atol, False,  \
-                      build_err_msg(ds, dt, "T LIN. TREND")
+                    rtol, atol, False,  \
+                    build_err_msg(ds, dt, "T LIN. TREND")
             # p-values
             p_desired = results_ref[ds][dt]["p"]["C"]
             if "co" in dt_string:
@@ -278,7 +275,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
                 p_const_des = p_desired[:, 0][:, None]
                 p_desired = p_desired[:, 1:]
                 yield assert_allclose, p_const_obt, p_const_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "P CONST")
+                    rtol, atol, False, build_err_msg(ds, dt, "P CONST")
             if "s" in dt_string:
                 if "lo" in dt_string:
                     p_seas_obt = p_C_obt[:, :-1]
@@ -287,14 +284,13 @@ def test_ml_c():  # test deterministic terms outside coint relation
                     p_seas_obt = p_C_obt
                     p_seas_des = p_desired
                 yield assert_allclose, p_seas_obt, p_seas_des,  \
-                      rtol, atol, False, build_err_msg(ds, dt, "P SEASONAL")
+                    rtol, atol, False, build_err_msg(ds, dt, "P SEASONAL")
             if "lo" in dt_string:
                 p_lt_obt = p_C_obt[:, -1:]
                 p_lt_des = p_desired[:, -1:]
                 yield assert_allclose, p_lt_obt, p_lt_des,  \
-                      rtol, atol, False,  \
-                      build_err_msg(ds, dt, "P LIN. TREND")
-
+                    rtol, atol, False,  \
+                    build_err_msg(ds, dt, "P LIN. TREND")
 
 
 def test_ml_det_terms_in_coint_relation():
@@ -313,9 +309,10 @@ def test_ml_det_terms_in_coint_relation():
             obtained = results_sm[ds][dt].det_coef_coint
             if "ci" not in dt_string and "li" not in dt_string:
                 if obtained.size > 0:
-                    yield assert_, False, build_err_msg(ds, dt,
-                        "There should not be any det terms in cointegration "
-                        + "for deterministic terms " + dt_string)
+                    yield assert_, False, build_err_msg(
+                            ds, dt, "There should not be any det terms in " +
+                                    "cointegration for deterministic terms " +
+                                    dt_string)
                 else:
                     yield assert_, True
                 continue
@@ -338,7 +335,8 @@ def test_ml_sigma():
             err_msg = build_err_msg(ds, dt, "Sigma_u")
             obtained = results_sm[ds][dt].sigma_u
             desired = results_ref[ds][dt]["est"]["Sigma_u"]
-            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+            yield assert_allclose, obtained, desired, rtol, atol, False, \
+                err_msg
 
 
 def test_var_rep():
@@ -382,9 +380,9 @@ def test_var_to_vecm():
                                 results_sm[ds][dt].beta.T)
             desired_gamma = results_sm[ds][dt].gamma
             yield assert_allclose, obtained_pi, desired_pi, \
-                  rtol, atol, False, err_msg+" Pi"
+                rtol, atol, False, err_msg+" Pi"
             yield assert_allclose, obtained_gamma, desired_gamma, \
-                  rtol, atol, False, err_msg+" Gamma"
+                rtol, atol, False, err_msg+" Gamma"
 
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
 # def test_var_rep_det():
@@ -394,7 +392,8 @@ def test_var_to_vecm():
 #                 err_msg = build_err_msg(ds, dt, "VAR repr. deterministic")
 #                 obtained = 0  # not implemented since the same values as VECM
 #                 desired = results_ref[ds][dt]["est"]["VAR deterministic"]
-#                 yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+#                 yield assert_allclose, obtained, desired, rtol, atol, \
+#                       False, err_msg
 
 
 def test_log_like():
@@ -411,7 +410,8 @@ def test_log_like():
             err_msg = build_err_msg(ds, dt, "Log Likelihood")
             obtained = results_sm[ds][dt].llf
             desired = results_ref[ds][dt]["log_like"]
-            yield assert_allclose, obtained, desired, rtol, atol, False, err_msg
+            yield assert_allclose, obtained, desired, rtol, atol, False, \
+                err_msg
 
 
 def test_fc():
@@ -447,6 +447,7 @@ def test_fc():
                 err_msg
             yield assert_allclose, obt_u, des_u, rtol, atol, False, \
                 err_msg
+
 
 def setup():
     datasets.append(e6)  # TODO: append more data sets for more test cases.

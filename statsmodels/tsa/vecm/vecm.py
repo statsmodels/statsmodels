@@ -1,5 +1,6 @@
 from __future__ import division
-from math import log, pi
+import math
+from math import log
 import numpy as np
 from numpy import hstack, vstack
 from numpy.linalg import inv, svd
@@ -30,10 +31,11 @@ def mat_sqrt(_2darray):
     s_ = np.sqrt(s_)
     return chain_dot(u_, np.diag(s_), v_)
 
+
 def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
-    """Returns different matrices needed for parameter estimation. These consist
-    of elements of the data as well as elements representing deterministic
-    terms. A tuple of consisting of these matrices is returned.
+    """Returns different matrices needed for parameter estimation. These
+    consist of elements of the data as well as elements representing
+    deterministic terms. A tuple of consisting of these matrices is returned.
 
     Parameters
     ----------
@@ -42,13 +44,14 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
     diff_lags : int
         Number of lags in the VEC representation.
     deterministic : str {"nc", "co", "ci", "lo", "li"}
-            "nc" - no deterministic terms
-            "co" - constant outside the cointegration relation
-            "ci" - constant within the cointegration relation
-            "lo" - linear trend outside the cointegration relation
-            "li" - linear trend within the cointegration relation
-            Combinations of these are possible (e.g. "cili" or "colo" for
-            linear trend with intercept)
+        * "nc" - no deterministic terms
+        * "co" - constant outside the cointegration relation
+        * "ci" - constant within the cointegration relation
+        * "lo" - linear trend outside the cointegration relation
+        * "li" - linear trend within the cointegration relation
+
+        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        trend with intercept)
     seasons : int
         Number of seasons. 0 (default) means no seasons.
 
@@ -79,8 +82,8 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
     delta_y_1_T = delta_y[:, p-1:]
     y_min1 = y[:, p-1:-1]
     # if "co" in deterministic and "ci" in deterministic:
-    #     raise ValueError("Both 'co' and 'ci' as deterministic terms given. " +
-    #                      "Please choose one of the two.")
+    #     raise ValueError("Both 'co' and 'ci' as deterministic terms given. "
+    #                      + "Please choose one of the two.")
     # todo: optimize the following with np.row_stack()
 
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
@@ -109,11 +112,13 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         for i in range(seasons - 1):
             season_dummy[i, i::seasons] = 1
         # season_dummy = season_dummy[:, ::-1]
-        #season_dummy = np.hstack((season_dummy[:, 3:4], season_dummy[:, :-1]))
-        # season_dummy = np.hstack((season_dummy[:, 2:4], season_dummy[:, :-2]))
+        # season_dummy = np.hstack((season_dummy[:, 3:4],
+        #   season_dummy[:, :-1]))
+        # season_dummy = np.hstack((season_dummy[:, 2:4],
+        #   season_dummy[:, :-2]))
         season_dummy = np.hstack((season_dummy[:, 1:4], season_dummy[:, :-3]))
         # season_dummy[1] = -season_dummy[1]
-        season_dummy = season_dummy - 1 / seasons
+        season_dummy -= 1 / seasons
         delta_x = vstack((delta_x,
                           season_dummy))
 
@@ -140,8 +145,8 @@ def _block_matrix_ymin1_deltax(y_min1, delta_x):  # e.g. p.287 (7.2.4)
     -------
     result : ndarray (K*p x K*p)
         (dimensions assuming no deterministic terms are given)
-        Inverse of a matrix consisting of four blocks. Each block is consists of
-        matrix products of the function's arguments.
+        Inverse of a matrix consisting of four blocks. Each block is consists
+        of matrix products of the function's arguments.
     """
     b = y_min1.dot(delta_x.T)
     return inv(vstack((hstack((y_min1.dot(y_min1.T), b)),
@@ -170,7 +175,6 @@ def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
         A tuple of two ndarrays
     """
 
-
     # todo: rewrite m such that a big (TxT) matrix is avoided
     m = np.identity(T) - (
         delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x))  # p. 291
@@ -196,7 +200,7 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     Returns
     -------
     result : tuple
-        A tuple of five ndarrays as well as eigenvalues and -vecotrs of a
+        A tuple of five ndarrays as well as eigenvalues and -vectors of a
         certain (matrix) product of some of the returned ndarrays.
     """
     T = y_min1.shape[1]
@@ -209,6 +213,7 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     lambd = eig[0]
     v = eig[1]
     return s00, s01, s10, s11, s11_, lambd, v
+
 
 # VECM class: for known or unknown VECM
 
@@ -225,34 +230,28 @@ class VECM(tsbase.TimeSeriesModel):
         2-d endogenous response variable.
     dates : array-like
         must match number of rows of endog
-    method : {"ls", "egls", "ml"}
-        Estimation method to use.
     diff_lags : int
         Number of lags in the VEC representation
     deterministic : str {"nc", "co", "ci", "lo", "li"}
-            "nc" - no deterministic terms
-            "co" - constant outside the cointegration relation
-            "ci" - constant within the cointegration relation
-            "lo" - linear trend outside the cointegration relation
-            "li" - linear trend within the cointegration relation
-            Combinations of these are possible (e.g. "cili" or "colo" for
-            linear trend with intercept)
+        * "nc" - no deterministic terms
+        * "co" - constant outside the cointegration relation
+        * "ci" - constant within the cointegration relation
+        * "lo" - linear trend outside the cointegration relation
+        * "li" - linear trend within the cointegration relation
+
+        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        trend with intercept)
     seasons : int
         Number of seasons. 0 (default) means no seasons.
-    coint_rank : int
-        Cointegration rank, equals the rank of the matrix \Pi and the number
-        of columns of \alpha and \beta
 
     References
     ----------
     [Lut2005]_
     .. [Lut2005] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
-    
-    # TODO: implementation
+
     def __init__(self, endog_tot, dates=None, freq=None, missing="none",
-                 method="ml", diff_lags=1, deterministic="nc", seasons=0,
-                 coint_rank=1):
+                 diff_lags=1, deterministic="nc", seasons=0):
         super(VECM, self).__init__(endog_tot, None, dates, freq,
                                    missing=missing)
         if self.endog.ndim == 1:
@@ -260,19 +259,21 @@ class VECM(tsbase.TimeSeriesModel):
         self.y = self.endog.T  # TODO delete this line if y not necessary
         self.neqs = self.endog.shape[1]
         self.p = diff_lags + 1
-        self.method = method
         self.diff_lags = diff_lags
         self.deterministic = deterministic
         self.seasons = seasons
-        self.coint_rank = coint_rank
 
-    def fit(self):
+    def fit(self, method="ml", coint_rank=1):
         """
         Estimates the parameters of a VECM and returns a VECMResults object.
 
         Parameters
         ----------
-
+        method : {"ls", "egls", "ml"}
+            Estimation method to use.
+        coint_rank : int
+            Cointegration rank, equals the rank of the matrix \Pi and the
+            number of columns of \alpha and \beta
 
         Returns
         -------
@@ -280,20 +281,20 @@ class VECM(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        Lutkepohl pp. 269-304
+        [Lut2005]_ pp. 269-304
         """
-        if self.method == "ls":
+        if method == "ls":
             return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
                                           self.seasons)
-        elif self.method == "egls":
+        elif method == "egls":
             return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
-                                            self.seasons, self.coint_rank)
-        elif self.method == "ml":
+                                            self.seasons, coint_rank)
+        elif method == "ml":
             return self._estimate_vecm_ml(self.diff_lags, self.deterministic,
-                                          self.seasons, self.coint_rank)
+                                          self.seasons, coint_rank)
         else:
             raise ValueError("%s not recognized, must be among %s"
-                             % (self.method, ("ls", "egls", "ml")))
+                             % (method, ("ls", "egls", "ml")))
 
     def _ls_pi_gamma(self, delta_y_1_T, y_min1, delta_x, diff_lags,
                      deterministic):
@@ -352,7 +353,8 @@ class VECM(tsbase.TimeSeriesModel):
                             beta_hhat))
 
         # ? Gamma_hhat necessary / computed via
-        # (delta_y_1_T - alpha_hat.dot(beta_hhat.T).dot(y_min1)).dot(delta_x.dot(inv(np.dot(delta_x,delta_x.T))))
+        # (delta_y_1_T - alpha_hat.dot(beta_hhat.T).dot(y_min1)).dot(
+        #     delta_x.dot(inv(np.dot(delta_x,delta_x.T))))
         
         # Gamma_hhat = 
         # TODO: Gamma?
@@ -382,7 +384,7 @@ class VECM(tsbase.TimeSeriesModel):
         # print("beta shape: " + str(beta_tilde.shape))
         # print("y_min1 shape: " + str(y_min1.shape))
         gamma_tilde = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1)
-                      ).dot(delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
+                       ).dot(delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
         temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1) -
                 gamma_tilde.dot(delta_x))
         sigma_u_tilde = temp.dot(temp.T) / T
@@ -393,28 +395,22 @@ class VECM(tsbase.TimeSeriesModel):
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
                            delta_x=delta_x)
 
-    def predict(self, params, start=None, end=None, lags=1, trend="ci"):
-        """
-        Returns in-sample predictions or forecasts
-        """  # TODO: docstring + implementation
-        pass
 
-
-
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # VECMResults class
 
 class VECMResults(object):
     """Class holding estimation related results of a vector error correction
     model (VECM).
-endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic="nc", seasons=0,
-                 delta_y_1_T=None, y_min1=None, delta_x=None
+
     Parameters
     ----------
     endog_tot : array
+
     level_var_lag_order : int
+
     coint_rank : int
+
     alpha : array (K x coint_rank)
         ... where K is the number of variables per observation
     beta : array (K x coint_rank)
@@ -424,13 +420,14 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
     sigma_u : array (K x K)
         ... where K is the number of variables per observation
     deterministic : str {"nc", "co", "ci", "lo", "li"}
-            "nc" - no deterministic terms
-            "co" - constant outside the cointegration relation
-            "ci" - constant within the cointegration relation
-            "lo" - linear trend outside the cointegration relation
-            "li" - linear trend within the cointegration relation
-            Combinations of these are possible (e.g. "cili" or "colo" for
-            linear trend with intercept)
+        * "nc" - no deterministic terms
+        * "co" - constant outside the cointegration relation
+        * "ci" - constant within the cointegration relation
+        * "lo" - linear trend outside the cointegration relation
+        * "li" - linear trend within the cointegration relation
+
+        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        trend with intercept)
     seasons : int
         Number of seasons. 0 (default) means no seasons.
 
@@ -525,8 +522,8 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
 
         split_const_season = 1 if "co" in deterministic else 0
         split_season_lin = split_const_season + ((seasons-1) if seasons else 0)
-        self.const, self.seasonal, self.lin_trend = np.hsplit(self.det_coef,
-            [split_const_season, split_season_lin])
+        self.const, self.seasonal, self.lin_trend = \
+            np.hsplit(self.det_coef, [split_const_season, split_season_lin])
 
         self.sigma_u = sigma_u
 
@@ -548,8 +545,8 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         T = self.T
         r = self.r
         s00, _, _, _, _, lambd, _ = _sij(self.delta_x, self.delta_y_1_T,
-                                              self.y_min1)
-        return - K * T * log(2*pi) / 2  \
+                                         self.y_min1)
+        return - K * T * log(2*math.pi) / 2  \
             - T * (log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
             - K * T / 2
 
@@ -594,6 +591,7 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         mat1 = b_id.dot(inv(omega)).dot(b_id.T)
         return np.kron(mat1, self.sigma_u)
 
+    # standard errors:
     @cache_readonly
     def stderr_params(self):
         return np.sqrt(np.diag(self.cov_params))
@@ -601,7 +599,7 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
     @cache_readonly
     def stderr_coint(self):
         _, r1 = _r_matrices(self.T, self.delta_x, self.delta_y_1_T,
-                             self.y_min1)
+                            self.y_min1)
         r12 = r1[self.r:]
         mat1 = inv(r12.dot(r12.T))
         det = self.det_coef_coint.shape[0]
@@ -610,7 +608,8 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
                                self.alpha.T, inv(self.sigma_u), self.alpha)))
         first_rows = np.zeros((self.r, self.r))
         last_rows_1d = np.sqrt(np.diag(mat1.dot(mat2)))
-        last_rows = last_rows_1d.reshape((self.K-self.r+det, self.r), order="F")
+        last_rows = last_rows_1d.reshape((self.K-self.r+det, self.r),
+                                         order="F")
         return vstack((first_rows,
                        last_rows))
 
@@ -618,6 +617,7 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
     def stderr_alpha(self):
         ret_1dim = self.stderr_params[:self.alpha.size]
         return ret_1dim.reshape(self.alpha.shape, order="F")
+
     @cache_readonly
     def stderr_beta(self):
         ret_1dim = self.stderr_coint[:self.beta.size]
@@ -644,8 +644,7 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
         ret1_1dim = self.stderr_params[-self.det_coef.size:]
         return ret1_1dim.reshape(self.det_coef.shape, order="F")
 
-
-
+    # t-values:
     @cache_readonly
     def tvalues_alpha(self):
         return self.alpha / self.stderr_alpha
@@ -673,9 +672,10 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
             return self.det_coef  # 0-size array
         return self.det_coef / self.stderr_det_coef
 
+    # p-values:
     @cache_readonly
-    def pvalues_alpha(self):
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_alpha))) * 2  # student-t
+    def pvalues_alpha(self):  # todo: student-t
+        return (1-scipy.stats.norm.cdf(abs(self.tvalues_alpha))) * 2
 
     @cache_readonly
     def pvalues_beta(self):
@@ -686,20 +686,20 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
                        last_rows))
 
     @cache_readonly
-    def pvalues_det_coef_coint(self):
+    def pvalues_det_coef_coint(self):  # todo: student-t
         if self.det_coef_coint.size == 0:
             return self.det_coef_coint  # 0-size array
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef_coint))) * 2  # student-t
+        return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef_coint))) * 2
 
     @cache_readonly
-    def pvalues_gamma(self):
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_gamma))) * 2  # student-t
+    def pvalues_gamma(self):  # todo: student-t
+        return (1-scipy.stats.norm.cdf(abs(self.tvalues_gamma))) * 2
 
     @cache_readonly
-    def pvalues_det_coef(self):
+    def pvalues_det_coef(self):  # todo: student-t
         if self.det_coef.size == 0:
             return self.det_coef  # 0-size array
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2  # student-t
+        return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2
 
     @cache_readonly
     def var_repr(self):
@@ -727,7 +727,12 @@ endog_tot, level_var_lag_order, coint_rank, alpha, beta,
 
         Returns
         -------
-
+        forecast - ndarray (steps x neqs) or three ndarrays
+            In case of a point forecast: each row of the returned ndarray
+            represents the forecast of the neqs variables for a specific
+            period. The first row (index [0]) is the forecast for the next
+            period, the last row (index [steps-1]) is the steps-periods-ahead-
+            forecast.
         """
         last_observations = self.y_all.T[-self.p:]
         exog = []

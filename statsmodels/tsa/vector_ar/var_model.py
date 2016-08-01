@@ -249,6 +249,7 @@ def forecast(y, coefs, trend_coefs, steps, exog):
 
     return forcs
 
+
 def forecast_cov(ma_coefs, sig_u, steps):
     """
     Compute theoretical forecast error variance matrices
@@ -272,12 +273,28 @@ def forecast_cov(ma_coefs, sig_u, steps):
 
     return forc_covs
 
+
 def _forecast_vars(steps, ma_coefs, sig_u):
+    """_forecast_vars function used by VECMResults. Note that the definition
+    of the local variable covs is the same as in VARProcess and as such it
+    differs from the one in VARResults!
+
+    Parameters
+    ----------
+    steps
+    ma_coefs
+    sig_u
+
+    Returns
+    -------
+
+    """
     covs = mse(ma_coefs, sig_u, steps)
     # Take diagonal for each cov
     neqs = len(sig_u)
     inds = np.arange(neqs)
     return covs[:, inds, inds]
+
 
 def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
                       exog=1):
@@ -292,6 +309,7 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
     forc_upper = point_forecast + q * sigma
 
     return point_forecast, forc_lower, forc_upper
+
 
 def var_loglike(resid, omega, nobs):
     r"""
@@ -326,6 +344,7 @@ def var_loglike(resid, omega, nobs):
     part1 = - (nobs * neqs / 2) * np.log(2 * np.pi)
     part2 = - (nobs / 2) * (logdet + neqs)
     return part1 + part2
+
 
 def _reordered(self, order):
     #Create new arrays to hold rearranged results from .fit()
@@ -364,6 +383,7 @@ def _reordered(self, order):
                       params=params_new, sigma_u=sigma_u_new,
                       lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
+
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
