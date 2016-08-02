@@ -194,7 +194,7 @@ def mse(ma_coefs, sigma_u, steps):
 
     return forc_covs
 
-def forecast(y, coefs, trend_coefs, steps, exog):
+def forecast(y, coefs, trend_coefs, steps, exog=None):
     """
     Produce linear minimum MSE forecast
 
