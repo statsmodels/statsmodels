@@ -205,11 +205,14 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     """
     T = y_min1.shape[1]
     r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
-    # p. 294: optimizable: e.g. r0.dot(r1.T) == r1.dot(r0.T).T ==> s01==s10.T
-    s00, s01, s10, s11 = (Ri.dot(Rj.T)/T for Ri in (r0, r1) for Rj in (r0, r1))
+    s00 = np.dot(r0, r0.T) / T
+    s01 = np.dot(r0, r1.T) / T
+    s10 = s01.T
+    s11 = np.dot(r1, r1.T) / T
     s11_ = inv(mat_sqrt(s11))
     # p. 295:
-    eig = np.linalg.eig(chain_dot(s11_, s10, inv(s00), s01, s11_))
+    s01_s11_ = np.dot(s01, s11_)
+    eig = np.linalg.eig(chain_dot(s01_s11_.T, inv(s00), s01_s11_))
     lambd = eig[0]
     v = eig[1]
     return s00, s01, s10, s11, s11_, lambd, v
