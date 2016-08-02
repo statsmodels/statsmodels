@@ -1,5 +1,6 @@
 import re
 import os
+from io import open
 
 import numpy as np
 
@@ -123,7 +124,8 @@ def load_results_jmulti(dataset, dt_s_list):
         start_end_mark = "-----"
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
-        for line in open(params_file):
+        params_file = open(params_file)
+        for line in params_file:
             if section == -1 and section_header[section+1] not in line:
                 continue
             if section < len(section_header)-1 \
@@ -185,6 +187,7 @@ def load_results_jmulti(dataset, dt_s_list):
                         p_col[i] = p_col[i].replace("{", "").replace("}", "")
                     p_col = [float(el) for el in p_col]
                     result_p.append(p_col)
+        params_file.close()
         # delete "Legend"-section of JMulTi:
         del results["est"]["Legend"]
         del results["se"]["Legend"]
@@ -218,7 +221,8 @@ def load_results_jmulti(dataset, dt_s_list):
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
         regex_est = re.compile("\s+\S+e\S+")
         sigmau_section_reached = False
-        for line in open(sigmau_file):
+        sigmau_file = open(sigmau_file)
+        for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
                 line = line.split("Log Likelihood:")[1]
                 results["log_like"] = float(re.findall(regex_est, line)[0])
@@ -234,6 +238,7 @@ def load_results_jmulti(dataset, dt_s_list):
             sigma_u[rows_to_parse] = row  # rows are added in reverse order
             if rows_to_parse == 0:
                 break
+        sigmau_file.close()
         results["est"]["Sigma_u"] = sigma_u[::-1]
 
         # parse forecast related outputs
@@ -242,8 +247,8 @@ def load_results_jmulti(dataset, dt_s_list):
         fc_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                fc_file)
         fc, lower, upper, plu_min = [], [], [], []
-        for line in open(fc_file, encoding='latin_1'):
-
+        fc_file = open(fc_file, encoding='latin_1')
+        for line in fc_file:
             str_number = "(\s+-?\d+\.\d{3}\s*)"
             regex_number = re.compile(str_number)
             numbers = re.findall(regex_number, line)
@@ -253,6 +258,7 @@ def load_results_jmulti(dataset, dt_s_list):
             lower.append(float(numbers[1]))
             upper.append(float(numbers[2]))
             plu_min.append(float(numbers[3]))
+        fc_file.close()
         variables = alpha.shape[0]
         fc = np.hstack(np.vsplit(np.array(fc)[:, None], variables))
         lower = np.hstack(np.vsplit(np.array(lower)[:, None], variables))
