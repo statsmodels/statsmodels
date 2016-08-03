@@ -9,7 +9,7 @@ from .results_JMulTi.parse_jmulti_output import dt_s_tup_to_string
 from statsmodels.tsa.vecm.vecm import VECM
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
-atol = 0.003  # absolute tolerance
+atol = 0.001  # absolute tolerance
 rtol = 0.01  # relative tolerance
 datasets = []
 data = {}
@@ -28,11 +28,11 @@ all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
 to_test = all_tests  # ["beta"]
 
 
-def load_data(dataset, data_dict):  # TODO: make function compatible with other
-    # ...todo... data_dict sets, e.g. by making the local variable "variables"
-    # ...todo... part of data_dict.py.
-    variables = ["Dp", "R"]
-    loaded = dataset.load().data[variables].view(float, type=np.ndarray)
+def load_data(dataset, data_dict):
+    dtset = dataset.load()
+    # works for datasets with time-related first 2 names (e.g. year, quarter)
+    variables = list(dtset.names[2:])
+    loaded = dtset.data[variables].view(float, type=np.ndarray)
     data_dict[dataset] = loaded.reshape((-1, len(variables)))
 
 
@@ -304,7 +304,6 @@ def test_ml_det_terms_in_coint_relation():
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "det terms in coint relation")
-
             dt_string = dt_s_tup_to_string(dt)
             obtained = results_sm[ds][dt].det_coef_coint
             if "ci" not in dt_string and "li" not in dt_string:
@@ -319,7 +318,21 @@ def test_ml_det_terms_in_coint_relation():
             desired = results_ref[ds][dt]["est"]["det_coint"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
-            # TODO: test se, t, p!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # standard errors
+            se_obtained = results_sm[ds][dt].stderr_det_coef_coint
+            se_desired = results_ref[ds][dt]["se"]["det_coint"]
+            yield assert_allclose, se_obtained, se_desired, rtol, atol, \
+                False, "STANDARD ERRORS\n"+err_msg
+            # t-values
+            t_obtained = results_sm[ds][dt].tvalues_det_coef_coint
+            t_desired = results_ref[ds][dt]["t"]["det_coint"]
+            yield assert_allclose, t_obtained, t_desired, rtol, atol, \
+                False, "t-VALUES\n"+err_msg
+            # p-values
+            p_obtained = results_sm[ds][dt].pvalues_det_coef_coint
+            p_desired = results_ref[ds][dt]["p"]["det_coint"]
+            yield assert_allclose, p_obtained, p_desired, rtol, atol, \
+                False, "p-VALUES\n"+err_msg
 
 
 def test_ml_sigma():
