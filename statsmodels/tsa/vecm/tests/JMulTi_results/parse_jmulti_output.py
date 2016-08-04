@@ -290,6 +290,12 @@ def load_results_jmulti(dataset, dt_s_list):
         results["fc"]["upper"] = upper
 
         # parse output related to Granger-causality:
+        results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
+        results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
+        results["granger_caus"]["p"] = dict()
+        results["granger_caus"]["test_stat"] = dict()
+        results["inst_caus"]["p"] = dict()
+        results["inst_caus"]["test_stat"] = dict()
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
@@ -297,17 +303,40 @@ def load_results_jmulti(dataset, dt_s_list):
         # https://docs.python.org/dev/library/itertools.html#itertools-recipes)
         var_combs = itertools.chain.from_iterable(
                 itertools.combinations(vn, i) for i in range(1, len(vn)))
-        for v_comb in var_combs:
-            v_comb_compl = [el for el in vn if el not in v_comb]
-            granger_file = dataset.__str__() + "_" + source + "_" + dt_string \
-                + "_granger_causality_" + stringify_var_names(v_comb) + "_" \
-                + stringify_var_names(v_comb_compl) + ".txt"
-            granger_file = os.path.join(os.path.dirname(
-                    os.path.realpath(__file__)), granger_file)
-            granger_file = open(granger_file)
-            for line in granger_file:
-                pass  # todo: parse JMulTi results
-            granger_file.close()
+        for causing in var_combs:
+            # complement of causing
+            v_comb_compl = [el for el in vn if el not in causing]
+            # sublists of v_comb_compl
+            v_comb_caused = itertools.chain.from_iterable(
+                itertools.combinations(v_comb_compl, i) for i in
+                range(1, len(v_comb_compl)+1))
+            for caused in v_comb_caused:
+                granger_file = dataset.__str__() + "_" + source + "_" \
+                    + dt_string + "_granger_causality_" \
+                    + stringify_var_names(causing) + "_" \
+                    + stringify_var_names(caused) + ".txt"
+                granger_file = os.path.join(os.path.dirname(
+                        os.path.realpath(__file__)), granger_file)
+                granger_file = open(granger_file)
+                granger_results = []
+                for line in granger_file:
+                    str_number = "\d+\.\d{4}"
+                    regex_number = re.compile(str_number)
+                    number = re.search(regex_number, line)
+                    if number is None:
+                        continue
+                    number = float(number.group(0))
+                    granger_results.append(number)
+                granger_file.close()
+
+                results["granger_caus"]["p"][(causing, caused)] = \
+                    granger_results[0]
+                results["granger_caus"]["test_stat"][(causing, caused)] =\
+                    granger_results[1]
+                results["inst_caus"]["p"][(causing, caused)] = \
+                    granger_results[2]
+                results["inst_caus"]["test_stat"][(causing, caused)] = \
+                    granger_results[3]
 
         if debug_mode:
             print_debug_output(results, dt_string)
