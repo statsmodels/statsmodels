@@ -4,8 +4,8 @@ import numpy as np
 from numpy.testing import assert_, assert_allclose
 
 import statsmodels.datasets.interest_inflation.data as e6
-from .results_JMulTi.parse_jmulti_output import load_results_jmulti
-from .results_JMulTi.parse_jmulti_output import dt_s_tup_to_string
+from .JMulTi_results.parse_jmulti_output import load_results_jmulti
+from .JMulTi_results.parse_jmulti_output import dt_s_tup_to_string
 from statsmodels.tsa.vecm.vecm import VECM
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
@@ -30,8 +30,7 @@ to_test = all_tests  # ["beta"]
 
 def load_data(dataset, data_dict):
     dtset = dataset.load()
-    # works for datasets with time-related first 2 names (e.g. year, quarter)
-    variables = list(dtset.names[2:])
+    variables = dataset.variable_names
     loaded = dtset.data[variables].view(float, type=np.ndarray)
     data_dict[dataset] = loaded.reshape((-1, len(variables)))
 
