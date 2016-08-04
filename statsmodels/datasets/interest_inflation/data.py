@@ -35,6 +35,9 @@ NOTE = """::
 """
 
 
+variable_names = ["Dp", "R"]
+
+
 def load():
     """
     Load the West German interest/inflation data and return a Dataset class.

@@ -2,6 +2,7 @@ import re
 import os
 from io import open
 
+import itertools
 import numpy as np
 
 debug_mode = False
@@ -44,6 +45,25 @@ def dt_s_tup_to_string(dt_s_tup):
         else:
             dt_string = "s" + dt_string
     return dt_string
+
+
+def stringify_var_names(var_list):
+    """
+
+    Parameters
+    ----------
+    var_list : list of strings
+        Each list element is the name of a variable.
+
+    Returns
+    -------
+    result : string
+        Concatenated variable names.
+    """
+    result = ""
+    for var_name in var_list:
+        result += var_name
+    return result.lower()
 
 
 def load_results_jmulti(dataset, dt_s_list):
@@ -241,7 +261,7 @@ def load_results_jmulti(dataset, dt_s_list):
         sigmau_file.close()
         results["est"]["Sigma_u"] = sigma_u[::-1]
 
-        # parse forecast related outputs
+        # parse forecast related output:
         fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_fc5" + ".txt"
         fc_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -268,6 +288,26 @@ def load_results_jmulti(dataset, dt_s_list):
         results["fc"]["fc"] = fc
         results["fc"]["lower"] = lower
         results["fc"]["upper"] = upper
+
+        # parse output related to Granger-causality:
+        vn = dataset.variable_names
+        # all possible combinations of potentially causing variables
+        # (at least 1 variable and not all variables together):
+        # (see also: powerset in
+        # https://docs.python.org/dev/library/itertools.html#itertools-recipes)
+        var_combs = itertools.chain.from_iterable(
+                itertools.combinations(vn, i) for i in range(1, len(vn)))
+        for v_comb in var_combs:
+            v_comb_compl = [el for el in vn if el not in v_comb]
+            granger_file = dataset.__str__() + "_" + source + "_" + dt_string \
+                + "_granger_causality_" + stringify_var_names(v_comb) + "_" \
+                + stringify_var_names(v_comb_compl) + ".txt"
+            granger_file = os.path.join(os.path.dirname(
+                    os.path.realpath(__file__)), granger_file)
+            granger_file = open(granger_file)
+            for line in granger_file:
+                pass  # todo: parse JMulTi results
+            granger_file.close()
 
         if debug_mode:
             print_debug_output(results, dt_string)
