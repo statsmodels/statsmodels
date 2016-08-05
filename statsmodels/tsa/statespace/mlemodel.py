@@ -2598,9 +2598,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             model_name = model.__class__.__name__
 
         # Diagnostic tests results
-        het = self.test_heteroskedasticity(method='breakvar')
-        lb = self.test_serial_correlation(method='ljungbox')
-        jb = self.test_normality(method='jarquebera')
+        try:
+            het = self.test_heteroskedasticity(method='breakvar')
+        except:
+            het = np.array([[np.nan]*2])
+        try:
+            lb = self.test_serial_correlation(method='ljungbox')
+        except:
+            lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
+        try:
+            jb = self.test_normality(method='jarquebera')
+        except:
+            jb = np.array([[np.nan]*4])
 
         # Create the tables
         if not isinstance(model_name, list):
