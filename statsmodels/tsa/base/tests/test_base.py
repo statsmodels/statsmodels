@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
-
+from statsmodels.tsa.base.datetools import _freq_to_pandas
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tools.testing import assert_equal
 
@@ -16,12 +16,21 @@ def test_pandas_nodates_index():
 
     # Test with a non-date index that doesn't raise an exception because it
     # can be coerced into a nanosecond DatetimeIndex
-    data = [988, 819, 964]
-    s = pd.Series(data)
-    mod = TimeSeriesModel(s)
-    start = mod._get_predict_start(0)
-    end, out_of_sample = mod._get_predict_end(4)
-    mod._make_predict_dates()
+    # (This test doesn't make sense for Numpy < 1.7 since they don't have
+    # nanosecond support)
+    try:
+        _freq_to_pandas['N']
+    except:
+        pass
+    else:
+        data = [988, 819, 964]
+        # index=pd.date_range('1970-01-01', periods=3, freq='QS')
+        s = pd.Series(data)
+        mod = TimeSeriesModel(s)
+        start = mod._get_predict_start(0)
+        end, out_of_sample = mod._get_predict_end(4)
+        mod._make_predict_dates()
+        assert_equal(len(mod.data.predict_dates), 5)
 
 def test_predict_freq():
     # test that predicted dates have same frequency
