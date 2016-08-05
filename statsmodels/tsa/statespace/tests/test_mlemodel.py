@@ -485,6 +485,10 @@ def test_summary():
     # Test res.summary when `model_name` was not provided
     assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
 
+    # Smoke test that summary still works when diagnostic tests fail
+    res.filter_results._standardized_forecasts_error[:] = np.nan
+    res.summary()
+
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
