@@ -392,7 +392,7 @@ def py_kim_smoother(regime_transition, predicted_joint_probabilities,
         # S_{t+1}, S_t, ..., S_{t-r+2} | T / S_{t+1}, S_t, ..., S_{t-r+2} | t
         y = (smoothed_joint_probabilities[..., t+1] /
              predicted_joint_probabilities[..., t+1])
-        # S_{t+1}, S_t, ..., S_{t-r+1} | T
+        # S_t, S_{t-1}, ..., S_{t-r+1} | T
         smoothed_joint_probabilities[..., t] = (x * y[..., None]).sum(axis=0)
 
     # Get smoothed marginal probabilities S_t | T by integrating out
