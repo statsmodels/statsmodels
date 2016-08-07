@@ -224,10 +224,10 @@ def get_ndim(data):
         except TypeError:
             raise TypeError('Cannot find dimension of {}'.format(type(data)))
 
-    if safe_get(data.shape, 0, None) > 1 and safe_get(data.shape, 1, None) == 1:
+    if get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
         return 1
 
-    elif safe_get(data.shape, 0, None) == 1 and safe_get(data.shape, 1, None) > 1:
+    elif get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:
         return 1
 
     else:
@@ -249,7 +249,7 @@ def is_nested_row_vector(data):
         except TypeError:
             raise TypeError('Cannot find dimension of {}'.format(type(data)))
 
-    if safe_get(data.shape, 0, None) == 1 and safe_get(data.shape, 1, None) > 1:
+    if get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:
         return True
 
     else:
@@ -269,7 +269,7 @@ def is_col_vector(data):
         except TypeError:
             raise TypeError('Cannot convert {} to array'.format(type(data)))
 
-    if safe_get(data.shape, 0, None) > 1 and safe_get(data.shape, 1, None) == 1:
+    if get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
         return True
 
     else:
@@ -299,7 +299,7 @@ def transpose(data):
 
         elif transpose_type == np.ndarray:
 
-            if safe_get(data.shape, 0, None) == 1 and safe_get(data.shape, 1, None) > 1:
+            if get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:
                 data = data[0]
 
             return data[np.newaxis].T
@@ -311,9 +311,9 @@ def transpose(data):
             raise TypeError('Cannot transpose {} into a column vector'.format(transpose_type))
 
 
-def safe_get(data, index, default):
+def get_shape_dim(data, index):
     try:
-        return data[index]
+        return np.int32(data[index])
 
     except IndexError:
-        return default
+        return None
