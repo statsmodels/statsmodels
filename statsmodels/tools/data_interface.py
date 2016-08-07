@@ -35,7 +35,9 @@ class DataInterface(object):
         self.ndim = get_ndim(data)
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
-        self.external_type = type(data) if self.external_type is None else self.external_type
+
+        if self.external_type is None:
+            self.external_type = type(data)
 
     def to_transpose(self, data):
 
@@ -76,6 +78,7 @@ class DataInterface(object):
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
         if self.require_2d and self.ndim == 1 and not is_col_vector(to_return):
+            self.is_col_vector = True
             return transpose(to_return)
 
         else:

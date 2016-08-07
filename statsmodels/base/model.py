@@ -745,15 +745,17 @@ class Results(object):
         """
         from statsmodels.tools.data_interface import NumPyInterface
 
-        exog_interface = NumPyInterface(model=self.model, use_formula=transform)
+        exog_interface = NumPyInterface(model=self.model, external_type=type(exog),
+                                        use_formula=transform, require_2d=True)
+
         exog = exog_interface.to_statsmodels(exog)
 
-        if exog is not None:
-
-            if exog.ndim == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
-                exog = exog[:, None]
-
-            exog = np.atleast_2d(exog)  # needed in count model shape[1]
+        # if exog is not None:
+        #
+        #     if exog.ndim == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
+        #         exog = exog[:, None]
+        #
+        #     exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
