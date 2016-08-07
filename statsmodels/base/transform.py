@@ -1,7 +1,6 @@
 import numpy as np
 from statsmodels.robust import mad
 from scipy.optimize import minimize_scalar
-from scipy.stats import boxcox_normmax
 
 
 class BoxCox(object):
@@ -78,11 +77,12 @@ class BoxCox(object):
             The transformed series.
         lmbda : float
             The lambda parameter that was used to transform the series.
-        method : {'naive', 'normal'}
+        method : {'naive'}
             Indicates the method to be used in the untransformation. Defaults
-            to 'naive', which reverses the transformation. 'normal' yields an
-            optimal back-transform, assuming the transform series is normally
-            distributed.
+            to 'naive', which reverses the transformation.
+
+            NOTE: 'naive' is implemented natively, while other methods may be
+            available in subclasses!
 
         Returns
         -------
@@ -97,8 +97,6 @@ class BoxCox(object):
                 y = np.exp(x)
             else:
                 y = np.power(lmbda * x + 1, 1. / lmbda)
-        elif method == 'normal':
-            y = x  # TODO: normal back transformation
         else:
             raise ValueError("Method '{0}' not understood.".format(method))
 
@@ -141,7 +139,7 @@ class BoxCox(object):
         if method == 'guerrero':
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
         elif method == 'loglik':
-            lmbda = self._loglik(x, bounds=bounds)
+            lmbda = self._loglik_boxcox(x, bounds=bounds)
         else:
             raise ValueError("Method '{0}' not understood.".format(method))
 
@@ -167,8 +165,8 @@ class BoxCox(object):
             Perera (2004). NOTE: this indicates the length of the individual
             groups, not the total number of groups!
         scale : {'sd', 'mad'}
-            The dispersion measure to be used. 'sd' indicates the sample standard
-            deviation, but the more robust 'mad' is also available.
+            The dispersion measure to be used. 'sd' indicates the sample
+            standard deviation, but the more robust 'mad' is also available.
         """
         nobs = len(x)
         groups = int(nobs / R)
@@ -195,7 +193,7 @@ class BoxCox(object):
                               options={'maxiter': 50})
         return res.x
 
-    def _loglik(self, x, bounds):
+    def _loglik_boxcox(self, x, bounds):
         """
         Taken from the Stata manual on Box-Cox regressions, where this is the
         special case of 'lhs only'. As an estimator for the variance, the
