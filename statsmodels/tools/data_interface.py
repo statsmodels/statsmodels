@@ -23,8 +23,8 @@ class DataInterface(object):
         if external_type is not None:
             self.external_type = external_type
 
-        # elif data is not None and not np.isscalar(data):
-        #     self.external_type = type(data)
+        elif data is not None and not np.isscalar(data):
+            self.external_type = type(data)
 
         else:
             self.external_type = np.ndarray
@@ -227,7 +227,7 @@ class DataInterface(object):
             return data.values
 
         elif from_type == pd.Series and self.external_type == pd.DataFrame:
-            return data.to_frame()
+            return data
 
         elif from_type == pd.DataFrame and self.external_type == pd.Series:
             if data.ndim == 1:
