@@ -755,7 +755,7 @@ class Results(object):
                 require_col_vector = True
 
         exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform,
-                                        require_col_vector=require_col_vector, atleast_2d =at_least_2d)
+                                        require_col_vector=require_col_vector, at_least_2d=at_least_2d)
 
         exog = exog_interface.to_statsmodels(exog)
 

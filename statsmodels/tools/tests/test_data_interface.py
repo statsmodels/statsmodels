@@ -121,37 +121,37 @@ def test_list_list():
     data_nested = [data]
     data_transpose = transpose(data)
 
-    list_interface = ListInterface()
+    list_interface = ListInterface(external_type=list)
     list_internal = list_interface.to_statsmodels(data)
     list_result = list_interface.from_statsmodels(list_internal)
 
     assert data == list_result
 
-    list_interface = ListInterface()
+    list_interface = ListInterface(external_type=list)
     list_internal = list_interface.to_statsmodels(data_nested)
     list_result = list_interface.from_statsmodels(list_internal)
 
     assert data_nested == list_result
 
-    list_interface = ListInterface()
+    list_interface = ListInterface(external_type=list)
     list_interface.to_statsmodels(data)
     list_result = list_interface.from_statsmodels(data_transpose)
 
     assert data == list_result
 
-    list_interface = ListInterface()
+    list_interface = ListInterface(external_type=list)
     list_interface.to_statsmodels(data_transpose)
     list_result = list_interface.from_statsmodels(data)
 
     assert data_transpose == list_result
 
-    list_interface = ListInterface()
+    list_interface = ListInterface(external_type=list)
     list_interface.to_statsmodels(data)
     list_result = list_interface.from_statsmodels(data_nested)
 
     assert data == list_result
 
-    list_interface = ListInterface()
+    list_interface = ListInterface(external_type=list)
     list_interface.to_statsmodels(data_nested)
     list_result = list_interface.from_statsmodels(data)
 
