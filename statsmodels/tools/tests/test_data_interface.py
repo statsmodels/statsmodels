@@ -3,6 +3,7 @@ from statsmodels.tools.data_interface import NumPyInterface, get_ndim, is_col_ve
 from pandas.util.testing import assert_frame_equal
 import pandas as pd
 import numpy as np
+from pdb import set_trace
 
 
 def test_list_numpy():
@@ -24,15 +25,29 @@ def test_series_numpy():
 
     assert data_series.equals(numpy_to_series)
 
-def test_series_numpy2():
+def test_numpy_numpy():
     data_list = [[1, 2, 3]]
 
-    data_series = pd.Series(data_list)
-    series_interface = NumPyInterface(external_type=pd.Series)
-    series_to_numpy = series_interface.to_statsmodels(data_series)
-    numpy_to_series = series_interface.from_statsmodels(series_to_numpy)
+    data = np.array(data_list)
+    numpy_interface = NumPyInterface()
+    numpy_internal = numpy_interface.to_statsmodels(data)
+    numpy_result = numpy_interface.from_statsmodels(numpy_internal)
 
-    assert data_series.equals(numpy_to_series)
+    assert np.array_equal(data, numpy_result)
+
+def test_numpy_numpy2():
+    data_list = [1, 2, 3]
+    data_list_nested = [[1, 2, 3]]
+
+    data = np.array(data_list)
+    data_nested = np.array(data_list_nested)
+
+    numpy_interface = NumPyInterface()
+
+    numpy_interface.to_statsmodels(data)
+    numpy_result = numpy_interface.from_statsmodels(data_nested)
+
+    assert np.array_equal(data, numpy_result)
 
 def test_data_frame_numpy():
     data_nested_list = [[1, 2, 3], [4, 5, 6]]

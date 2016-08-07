@@ -10,13 +10,15 @@ PANDAS_TYPES = [pd.Series, pd.DataFrame]
 
 class DataInterface(object):
 
-    def __init__(self, permitted_types, internal_type=np.ndarray, data=None, external_type=None, model=None,
-                 use_formula=False):
+    def __init__(self, permitted_types, internal_type=None, external_type=None, model=None, use_formula=False,
+                 require_2d=False):
 
         self.permitted_types = permitted_types
-        self.internal_type = internal_type
+        self.internal_type = np.ndarray if internal_type is None else internal_type
         self.model = model
         self.use_formula = use_formula
+        self.external_type = external_type
+        self.require_2d = require_2d
 
         self.columns = None
         self.name = None
@@ -26,15 +28,6 @@ class DataInterface(object):
         self.is_nested_row_vector = None
         self.is_col_vector = None
 
-        if external_type is not None:
-            self.external_type = external_type
-
-        elif data is not None:
-            self.external_type = type(data)
-
-        else:
-            self.external_type = np.ndarray
-
     def init_data_interface(self, data):
 
         self.columns = getattr(data, 'columns', None)
@@ -42,6 +35,7 @@ class DataInterface(object):
         self.ndim = get_ndim(data)
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
+        self.external_type = type(data) if self.external_type is None else self.external_type
 
     def to_transpose(self, data):
 
@@ -66,17 +60,23 @@ class DataInterface(object):
         if self.use_formula and self.model is not None and hasattr(self.model, 'formula'):
             return dmatrix(self.model.data.design_info.builder, data)
 
-        elif type(data) in self.permitted_types:
-            return data
+        if type(data) in self.permitted_types:
+            to_return = data
 
         elif self.internal_type == np.ndarray:
-            return self.to_numpy_array(data)
+            to_return = self.to_numpy_array(data)
 
         elif self.internal_type in PANDAS_TYPES:
-            self.to_pandas(data)
+            to_return = self.to_pandas(data)
 
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
+
+        if self.require_2d and self.ndim == 1 and not is_col_vector(to_return):
+            return transpose(to_return)
+
+        else:
+            return to_return
 
     def from_statsmodels(self, data):
 
@@ -91,7 +91,6 @@ class DataInterface(object):
 
         elif from_type in NUMPY_TYPES:
             data_to_return = self.from_numpy_array(data)
-
 
         elif from_type in PANDAS_TYPES:
             data_to_return = self.from_pandas(data)
@@ -237,10 +236,12 @@ def get_ndim(data):
 
 def is_nested_row_vector(data):
 
-    if type(data) == pd.Series:
+    data_type = type(data)
+
+    if data_type == pd.Series:
         return False
 
-    if type(data) != pd.DataFrame:
+    if data_type != pd.DataFrame and data_type != np.ndarray:
 
         try:
             data = np.asarray(data)
@@ -248,11 +249,12 @@ def is_nested_row_vector(data):
         except TypeError:
             raise TypeError('Cannot find dimension of {}'.format(type(data)))
 
-    if safe_get(data.shape, 0, None) > 1 and safe_get(data.shape, 1, None) == 1:
+    if safe_get(data.shape, 0, None) == 1 and safe_get(data.shape, 1, None) > 1:
         return True
 
     else:
         return False
+
 
 def is_col_vector(data):
 
