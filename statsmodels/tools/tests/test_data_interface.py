@@ -255,14 +255,24 @@ def test_gee():
     pred1 = result.predict()
     pred3 = result.predict(exposure=data["exposure"])
 
-    # set_trace()
-
     pred5 = result.predict(exog=data[-10:],
                            offset=data["offset"][-10:],
                            exposure=data["exposure"][-10:])
 
+    assert type(pred5) == pd.Series
     assert_allclose(pred1, pred3)
-
-    # set_trace()
-
     assert_allclose(pred1[-10:], pred5)
+
+def test_discrete():
+
+    import statsmodels.api as sm
+
+    data = sm.datasets.anes96.load()
+    exog = data.exog
+    # leave out last exog column
+    exog = exog[:, :-1]
+    exog = sm.add_constant(exog, prepend=True)
+    res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    x = exog[0]
+
+    np.testing.assert_equal(res1.predict(x).shape, (7,))
