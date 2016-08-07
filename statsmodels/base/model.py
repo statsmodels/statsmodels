@@ -745,7 +745,7 @@ class Results(object):
         """
         from statsmodels.tools.data_interface import NumPyInterface
 
-        exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform, require_2d=True)
+        exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform, require_1d=True)
         exog = exog_interface.to_statsmodels(exog)
 
         # if exog is not None:
