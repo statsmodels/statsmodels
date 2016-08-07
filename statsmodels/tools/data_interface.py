@@ -11,13 +11,13 @@ PANDAS_TYPES = [pd.Series, pd.DataFrame]
 class DataInterface(object):
 
     def __init__(self, permitted_types, internal_type=None, data=None, external_type=None, model=None,
-                 use_formula=False, require_2d=False):
+                 use_formula=False, require_1d=False):
 
         self.permitted_types = permitted_types
         self.internal_type = np.ndarray if internal_type is None else internal_type
         self.model = model
         self.use_formula = use_formula
-        self.require_2d = require_2d
+        self.require_1d = require_1d
 
         if external_type is not None:
             self.external_type = external_type
@@ -83,8 +83,14 @@ class DataInterface(object):
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
-        if self.require_2d and self.ndim == 1 and not is_col_vector(to_return):
-            return transpose(to_return)
+        if self.require_1d and self.ndim == 1:
+            if is_col_vector(to_return):
+                to_return = transpose(to_return)
+
+            if is_nested_row_vector(to_return):
+                to_return = to_return[0]
+
+            return to_return
 
         else:
             return to_return
@@ -112,9 +118,6 @@ class DataInterface(object):
 
         else:
             raise TypeError('Type conversion from {} to {} is not possible.'.format(from_type, self.external_type))
-
-        # from pdb import set_trace
-        # set_trace()
 
         if self.to_transpose(data_to_return):
             data_to_return = transpose(data)
