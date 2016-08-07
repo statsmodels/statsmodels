@@ -23,8 +23,8 @@ class DataInterface(object):
         if external_type is not None:
             self.external_type = external_type
 
-        elif data is not None and not np.isscalar(data):
-            self.external_type = type(data)
+        # elif data is not None and not np.isscalar(data):
+        #     self.external_type = type(data)
 
         else:
             self.external_type = np.ndarray
@@ -90,21 +90,12 @@ class DataInterface(object):
         if self.at_least_2d:
             to_return = np.atleast_2d(to_return)
 
-        # if self.require_1d and self.ndim == 1:
-        #     if is_col_vector(to_return):
-        #         to_return = transpose(to_return)
-        #
-        #     if is_nested_row_vector(to_return):
-        #         to_return = to_return[0]
-        #
-        #     return to_return
-
-        # else:
-        #     return to_return
-
         return to_return
 
     def from_statsmodels(self, data):
+
+        # from pdb import set_trace
+        # set_trace()
 
         if data is None:
             return None

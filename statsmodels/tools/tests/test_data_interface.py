@@ -6,7 +6,7 @@ from pandas.util.testing import assert_frame_equal
 import pandas as pd
 import numpy as np
 from pdb import set_trace
-
+from numpy.testing import assert_allclose
 
 def test_list_numpy():
 
@@ -229,3 +229,40 @@ def test_transpose():
     assert pd_row_vector.equals(transpose(pd_col_vector))
     assert_frame_equal(pd_col_vector, transpose(pd_row_vector))
     assert_frame_equal(pd_col_vector, transpose(pd_row_vector2))
+
+def test_gee():
+
+    from statsmodels.genmod.generalized_estimating_equations import GEE
+    from statsmodels.genmod.families import Poisson
+
+    n = 50
+    X1 = np.random.normal(size=n)
+    X2 = np.random.normal(size=n)
+    groups = np.kron(np.arange(25), np.r_[1, 1])
+    offset = np.random.uniform(1, 2, size=n)
+    exposure = np.random.uniform(1, 2, size=n)
+    Y = np.random.poisson(0.1 * (X1 + X2) + offset +
+                          np.log(exposure), size=n)
+    data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
+                         "offset": offset, "exposure": exposure})
+
+
+    fml = "Y ~ X1 + X2"
+    model = GEE.from_formula(fml, groups, data, family=Poisson(),
+                             offset="offset", exposure="exposure")
+    result = model.fit()
+
+    pred1 = result.predict()
+    pred3 = result.predict(exposure=data["exposure"])
+
+    # set_trace()
+
+    pred5 = result.predict(exog=data[-10:],
+                           offset=data["offset"][-10:],
+                           exposure=data["exposure"][-10:])
+
+    assert_allclose(pred1, pred3)
+
+    # set_trace()
+
+    assert_allclose(pred1[-10:], pred5)
