@@ -23,7 +23,7 @@ class DataInterface(object):
         if external_type is not None:
             self.external_type = external_type
 
-        elif data is not None:
+        elif data is not None and not np.isscalar(data):
             self.external_type = type(data)
 
         else:
