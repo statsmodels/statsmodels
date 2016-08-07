@@ -11,13 +11,14 @@ PANDAS_TYPES = [pd.Series, pd.DataFrame]
 class DataInterface(object):
 
     def __init__(self, permitted_types, internal_type=None, data=None, external_type=None, model=None,
-                 use_formula=False, require_1d=False):
+                 use_formula=False, require_col_vector=False, at_least_2d=False):
 
         self.permitted_types = permitted_types
         self.internal_type = np.ndarray if internal_type is None else internal_type
         self.model = model
         self.use_formula = use_formula
-        self.require_1d = require_1d
+        self.require_col_vector = require_col_vector
+        self.at_least_2d = at_least_2d
 
         if external_type is not None:
             self.external_type = external_type
@@ -83,17 +84,25 @@ class DataInterface(object):
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
-        if self.require_1d and self.ndim == 1:
-            if is_col_vector(to_return):
-                to_return = transpose(to_return)
+        if self.require_col_vector and self.ndim == 1 and not is_col_vector(to_return):
+            to_return = transpose(to_return)
 
-            if is_nested_row_vector(to_return):
-                to_return = to_return[0]
+        if self.at_least_2d:
+            to_return = np.atleast_2d(to_return)
 
-            return to_return
+        # if self.require_1d and self.ndim == 1:
+        #     if is_col_vector(to_return):
+        #         to_return = transpose(to_return)
+        #
+        #     if is_nested_row_vector(to_return):
+        #         to_return = to_return[0]
+        #
+        #     return to_return
 
-        else:
-            return to_return
+        # else:
+        #     return to_return
+
+        return to_return
 
     def from_statsmodels(self, data):
 
