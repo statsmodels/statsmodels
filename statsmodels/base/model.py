@@ -743,15 +743,15 @@ class Results(object):
             See self.model.predict
 
         """
-        from statsmodels.tools.data_interface import NumPyInterface
+        from statsmodels.tools.data_interface import NumPyInterface, get_ndim
 
         at_least_2d = False
         require_col_vector = False
 
         if exog is not None:
-            at_least_2d = True
+            at_least_2d = True # needed in count model shape[1]
 
-            if exog.ndim == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
+            if get_ndim(exog) == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
                 require_col_vector = True
 
         exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform,
