@@ -10,8 +10,8 @@ PANDAS_TYPES = [pd.Series, pd.DataFrame]
 
 class DataInterface(object):
 
-    def __init__(self, permitted_types, internal_type=None, data=None, external_type=None, model=None, use_formula=False,
-                 require_2d=False):
+    def __init__(self, permitted_types, internal_type=None, data=None, external_type=None, model=None,
+                 use_formula=False, require_2d=False):
 
         self.permitted_types = permitted_types
         self.internal_type = np.ndarray if internal_type is None else internal_type
@@ -84,7 +84,6 @@ class DataInterface(object):
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
         if self.require_2d and self.ndim == 1 and not is_col_vector(to_return):
-            self.is_col_vector = True
             return transpose(to_return)
 
         else:
