@@ -10,15 +10,23 @@ PANDAS_TYPES = [pd.Series, pd.DataFrame]
 
 class DataInterface(object):
 
-    def __init__(self, permitted_types, internal_type=None, external_type=None, model=None, use_formula=False,
+    def __init__(self, permitted_types, internal_type=None, data=None, external_type=None, model=None, use_formula=False,
                  require_2d=False):
 
         self.permitted_types = permitted_types
         self.internal_type = np.ndarray if internal_type is None else internal_type
         self.model = model
         self.use_formula = use_formula
-        self.external_type = external_type
         self.require_2d = require_2d
+
+        if external_type is not None:
+            self.external_type = external_type
+
+        elif data is not None:
+            self.external_type = type(data)
+
+        else:
+            self.external_type = np.ndarray
 
         self.columns = None
         self.name = None
@@ -35,9 +43,6 @@ class DataInterface(object):
         self.ndim = get_ndim(data)
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
-
-        if self.external_type is None:
-            self.external_type = type(data)
 
     def to_transpose(self, data):
 
@@ -56,6 +61,7 @@ class DataInterface(object):
 
         if data is None:
             return None
+
         else:
             self.init_data_interface(data)
 
@@ -86,16 +92,17 @@ class DataInterface(object):
 
     def from_statsmodels(self, data):
 
-        from_type = type(data)
-        self.index = getattr(data, 'index', None)
-
         if data is None:
             return None
 
-        elif from_type == DesignMatrix:
+        from_type = type(data)
+
+        if from_type == DesignMatrix:
             return data
 
-        elif from_type in NUMPY_TYPES:
+        self.index = getattr(data, 'index', None)
+
+        if from_type in NUMPY_TYPES:
             data_to_return = self.from_numpy_array(data)
 
         elif from_type in PANDAS_TYPES:
