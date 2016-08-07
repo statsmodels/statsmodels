@@ -69,6 +69,9 @@ class DataInterface(object):
         elif self.internal_type in PANDAS_TYPES:
             to_return = self.to_pandas(data)
 
+        elif self.internal_type == list:
+            to_return = self.to_list(data)
+
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
@@ -95,14 +98,23 @@ class DataInterface(object):
         elif from_type in PANDAS_TYPES:
             data_to_return = self.from_pandas(data)
 
+        elif from_type == list:
+            data_to_return = self.from_list(data)
+
         else:
             raise TypeError('Type conversion from {} to {} is not possible.'.format(from_type, self.external_type))
+
+        # from pdb import set_trace
+        # set_trace()
 
         if self.to_transpose(data_to_return):
             data_to_return = transpose(data)
 
         if self.ndim == 1 and (not self.is_nested_row_vector and is_nested_row_vector(data_to_return)):
             return data_to_return[0]
+
+        elif self.ndim == 1 and (self.is_nested_row_vector and not is_nested_row_vector(data_to_return)):
+            return to_nested_row_vector(data_to_return)
 
         else:
             return data_to_return
@@ -130,8 +142,9 @@ class DataInterface(object):
         else:
             try:
                 return np.asarray(data)
+
             except TypeError:
-                TypeError('Type conversion to numpy from {} is not possible.'.format(from_type))
+                raise TypeError('Type conversion to numpy from {} is not possible.'.format(from_type))
 
     def to_pandas(self, data):
 
@@ -148,6 +161,16 @@ class DataInterface(object):
 
             else:
                 return pd.DataFrame(np_data, columns=self.columns)
+
+    def to_list(self, data):
+
+        from_type = type(data)
+
+        if from_type == list:
+            return data
+
+        else:
+            return self.to_numpy_array(data).tolist()
 
     def from_numpy_array(self, data):
 
@@ -179,7 +202,7 @@ class DataInterface(object):
                 return pd.DataFrame(data=data, index=self.index)
 
         else:
-            return data
+            raise TypeError('Cannot convert from numpy array to {}'.format(self.external_type))
 
     def from_pandas(self, data):
 
@@ -204,11 +227,35 @@ class DataInterface(object):
             return data.values.tolist()
 
         else:
+            raise TypeError('Cannot convert from {} to {}'.format(from_type, self.external_type))
+
+    def from_list(self, data):
+
+        from_type = type(data)
+
+        if from_type == self.external_type:
             return data
+
+        elif self.external_type == np.ndarray:
+            return np.asarray(data)
+
+        elif self.external_type == pd.DataFrame:
+            return pd.DataFrame(data, index=self.index, columns=self.columns)
+
+        elif self.external_type == pd.Series:
+            if data.ndim == 1:
+                return pd.Series(data, index=self.index, name=self.name)
+            else:
+                raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
+
+        else:
+            raise TypeError('Cannot convert from list to {}'.format(self.external_type))
 
 
 NumPyInterface = partial(DataInterface, [np.ndarray])
-PandasInterface = partial(DataInterface, [np.ndarray, pd.Series, pd.DataFrame])
+SeriesInterface = partial(DataInterface, [pd.Series], pd.Series)
+DataFrameInterface = partial(DataInterface, [pd.DataFrame], pd.DataFrame)
+ListInterface = partial(DataInterface, [list], list)
 
 
 def get_ndim(data):
@@ -256,6 +303,23 @@ def is_nested_row_vector(data):
         return False
 
 
+def to_nested_row_vector(data):
+
+    data_type = type(data)
+
+    if data_type in [pd.Series, pd.DataFrame]:
+        return pd.DataFrame([data.values])
+
+    elif data_type == np.ndarray:
+        return data[np.newaxis]
+
+    elif data_type == list:
+        return [data]
+
+    else:
+        raise TypeError('Cannot convert {} to a nested row vector'.format(data_type))
+
+
 def is_col_vector(data):
 
     if type(data) == pd.Series:
@@ -288,6 +352,9 @@ def transpose(data):
         elif transpose_type == pd.DataFrame:
             return data.T.squeeze()
 
+        elif transpose_type == list:
+            return np.asarray(data).squeeze().tolist()
+
         else:
             raise TypeError('Cannot transpose {} into a row vector'.format(transpose_type))
 
@@ -307,13 +374,22 @@ def transpose(data):
         elif transpose_type == pd.DataFrame:
             return data.T
 
+        elif transpose_type == list:
+
+            data = np.asarray(data)
+
+            if get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:
+                data = data[0]
+
+            return data[np.newaxis].T.tolist()
+
         else:
             raise TypeError('Cannot transpose {} into a column vector'.format(transpose_type))
 
 
 def get_shape_dim(data, index):
     try:
-        return np.int32(data[index])
+        return data[index]
 
     except IndexError:
-        return None
+        return 0
