@@ -8,10 +8,11 @@ import scipy
 import scipy.stats
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
-from statsmodels.tsa.tsatools import duplication_matrix
+from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval
+from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
+    test_causality
 
 
 def mat_sqrt(_2darray):
@@ -716,6 +717,29 @@ class VECMResults(object):
             A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
         return A
 
+    @cache_readonly
+    def cov_var_repr(self):
+        pi = self.alpha.dot(self.beta.T)
+        gamma = self.gamma
+        vecm_vec = vec(hstack((pi, gamma)))
+        # var_vec = np.zeros((self.K**2 * self.p))
+        vecm_var_transformation = np.zeros((self.K**2 * self.p,
+                                            self.K**2 * self.p))
+        eye = np.identity(self.K**2)
+        # for A_1:
+        vecm_var_transformation[:self.K**2, :2*self.K**2] = hstack(
+                (np.identity(self.K**2), eye))
+        # for A_i, where i = 2, ..., p-1
+        for i in range(2, self.p):
+            start_row = self.K**2 + (i-2) * self.K**2
+            start_col = self.K**2 + (i-2) * self.K**2
+            vecm_var_transformation[start_row:start_row+self.K**2,
+                start_col:start_col+2*self.K**2] = hstack((-eye, eye))
+        # for A_p:
+        vecm_var_transformation[-self.K**2:, -self.K**2:] = -eye
+        return chain_dot(vecm_var_transformation, self.cov_params,
+                         vecm_var_transformation.T)
+
     def predict(self, steps=5, confidence_level_for_intervals=None):
         """
 
@@ -784,3 +808,11 @@ class VECMResults(object):
         else:
             return forecast(last_observations, self.var_repr, trend_coefs,
                             steps, exog)
+
+    def test_causality(self, equation, variables, kind='f', signif=0.05,
+                       verbose=True):
+        return test_causality(self, equation, variables, kind=kind,
+                              signif=signif, verbose=verbose)
+
+    def test_inst_causality(self):
+        raise Exception("not implemented yet")  # TODO
