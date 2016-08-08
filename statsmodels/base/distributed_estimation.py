@@ -510,8 +510,7 @@ class DistributedModel(object):
 
         res_mod = self.model_class([0], [0], **self.init_kwds)
 
-#        return self.results_class(res_mod, params, **self.results_kwds)
-        return params
+        return self.results_class(res_mod, params, **self.results_kwds)
 
 
     def fit_sequential(self, fit_kwds):
