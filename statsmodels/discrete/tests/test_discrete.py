@@ -1343,7 +1343,7 @@ def test_issue_341():
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
     x = exog[0]
     np.testing.assert_equal(res1.predict(x).shape, (7,))
-    np.testing.assert_equal(res1.predict(x[None]).shape, (1,7))
+    np.testing.assert_equal(res1.predict(x[None]).shape, (7,))
 
 def test_iscount():
     X = np.random.random((50, 10))

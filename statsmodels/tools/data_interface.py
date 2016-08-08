@@ -87,9 +87,8 @@ class DataInterface(object):
         if self.require_col_vector and get_ndim(to_return) == 1 and not is_col_vector(to_return):
             to_return = transpose(to_return)
 
-        if self.at_least_2d:
-            if get_ndim(to_return) == 1 and not is_col_vector(to_return):
-                to_return = to_nested_row_vector(to_return)
+        if self.at_least_2d and get_ndim(to_return) == 1 and not is_col_vector(to_return):
+            to_return = to_nested_row_vector(to_return)
 
         return to_return
 
