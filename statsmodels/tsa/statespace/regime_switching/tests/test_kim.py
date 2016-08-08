@@ -16,6 +16,12 @@ import numpy as np
 from numpy.testing import assert_allclose
 from statsmodels.tsa.statespace.regime_switching.kim_filter import KimFilter
 from kim1994 import Kim1994
+from statsmodels.tsa.statespace.tools import compatibility_mode
+from nose.exc import SkipTest
+
+if compatibility_mode:
+    raise SkipTest
+
 
 class TestKim1994_KimFilter(Kim1994):
     """

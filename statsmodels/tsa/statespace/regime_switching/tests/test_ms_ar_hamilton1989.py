@@ -17,6 +17,11 @@ from numpy.testing import assert_allclose, assert_array_equal
 from statsmodels.tsa.statespace.regime_switching.api import \
         MarkovAutoregression, RegimePartition
 from .results import results_hamilton1989
+from statsmodels.tsa.statespace.tools import compatibility_mode
+from nose.exc import SkipTest
+
+if compatibility_mode:
+    raise SkipTest
 
 
 class Hamilton1989(object):

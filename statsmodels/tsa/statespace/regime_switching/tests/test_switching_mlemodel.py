@@ -18,6 +18,12 @@ from statsmodels.tsa.statespace.api import MLEModel
 from statsmodels.tsa.statespace.regime_switching.api import \
         SwitchingMLEModel
 from kim1994 import Kim1994
+from statsmodels.tsa.statespace.tools import compatibility_mode
+from nose.exc import SkipTest
+
+if compatibility_mode:
+    raise SkipTest
+
 
 # Useful methods, forcing AR coefficients to be stationary
 

@@ -17,6 +17,11 @@ from numpy.testing import assert_allclose, assert_equal
 from statsmodels.tsa.statespace.regime_switching.api import \
         MarkovAutoregression, RegimePartition
 from .results import results_garcia_perron1996
+from statsmodels.tsa.statespace.tools import compatibility_mode
+from nose.exc import SkipTest
+
+if compatibility_mode:
+    raise SkipTest
 
 
 class GarciaPerron1996(object):

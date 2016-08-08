@@ -16,6 +16,11 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from statsmodels.tsa.statespace.regime_switching.api import SwitchingTVPModel
 from .results import results_kim1993
+from statsmodels.tsa.statespace.tools import compatibility_mode
+from nose.exc import SkipTest
+
+if compatibility_mode:
+    raise SkipTest
 
 
 class Kim1993(object):
