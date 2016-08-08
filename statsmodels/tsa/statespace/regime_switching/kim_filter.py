@@ -8,6 +8,9 @@ import numpy as np
 from .switching_representation import SwitchingRepresentation, \
         FrozenSwitchingRepresentation
 from scipy.misc import logsumexp
+from statsmodels.tsa.statespace.kalman_filter import PredictionResults
+
+from warnings import warn
 
 def _marginalize_vector(event_probs, event_conditional_vectors,
         weighted_vectors, marginal_vector, vector_biases, vector_bias_sqrs,
@@ -84,7 +87,7 @@ class _KimFilter(object):
 
     def __init__(self, model, filter_method=None, inversion_method=None,
             stability_method=None, conserve_memory=None, tolerance=None,
-            complex_step=False):
+            complex_step=False, nobs=None):
 
         # This class does all hard filtering work
 
@@ -105,6 +108,11 @@ class _KimFilter(object):
         if any((regime_filter.initialization is None for regime_filter in \
                 model._regime_kalman_filters)):
             raise RuntimeError('Statespace model not initialized.')
+
+        if nobs is None:
+            self.nobs = model.nobs
+        else:
+            self.nobs = nobs
 
     def _hamilton_prediction_step(self, t,
             predicted_prev_and_curr_regime_logprobs):
@@ -381,15 +389,15 @@ class _KimFilter(object):
         k_states = model._k_states
         k_regimes = model._k_regimes
         dtype = model._dtype
-        nobs = model._nobs
+        nobs = self.nobs
 
         # Array, storing \ln( f( y_t | \psi_{t-1} ) )
         self.obs_loglikelihoods = np.zeros((nobs,), dtype=dtype)
 
-        # Array, storing \ln( Pr[ S_t | \psi_{t-1} ] )
+        # Array, storing \ln( Pr[ S_t | \psi_t ] )
         self.filtered_regime_logprobs = np.zeros((k_regimes, nobs),
                 dtype=dtype)
-        # Array, storing \ln( Pr[ S_t | \psi_t ] )
+        # Array, storing \ln( Pr[ S_t | \psi_{t-1} ] )
         self.predicted_regime_logprobs = np.zeros((k_regimes, nobs),
                 dtype=dtype)
 
@@ -582,6 +590,7 @@ class _KimFilter(object):
                     state_covs_and_state_bias_sqrs,
                     weighted_state_covs_and_state_bias_sqrs)
 
+
 class KimFilter(SwitchingRepresentation):
     """
     Markov switching state space representation of a time series process, with
@@ -637,7 +646,7 @@ class KimFilter(SwitchingRepresentation):
 
     def filter(self, results=None, filter_method=None, inversion_method=None,
             stability_method=None, conserve_memory=None, tolerance=None,
-            complex_step=False):
+            complex_step=False, nobs=None):
         """
         Apply the Kim filter to the Markov switching statespace model
 
@@ -650,6 +659,9 @@ class KimFilter(SwitchingRepresentation):
             If an object, then that object is updated with the filtering data.
             Its class should extend `KimFilterResults`.
             If `None`, then a `KimFilterResults` object is returned.
+        nobs : int
+            If specified, filtering is performed on data prefix of length
+            `nobs`. This parameter is usually used internally for prediction.
 
         Notes
         -----
@@ -671,7 +683,7 @@ class KimFilter(SwitchingRepresentation):
         kfilter = _KimFilter(self, filter_method=filter_method,
             inversion_method=inversion_method,
             stability_method=stability_method, conserve_memory=conserve_memory,
-            tolerance=tolerance, complex_step=complex_step)
+            tolerance=tolerance, complex_step=complex_step, nobs=nobs)
         kfilter()
 
         # If results are not provided, use the class from initializer
@@ -688,7 +700,7 @@ class KimFilter(SwitchingRepresentation):
         # save representation data in results
         results.update_representation(self)
         # Save filtering data in results
-        results.update_filter(kfilter)
+        results.update_filter(kfilter, self)
 
         return results
 
@@ -817,6 +829,93 @@ class KimFilter(SwitchingRepresentation):
         # Summarize observation loglikelihoods and return results
         return kfilter.obs_loglikelihoods[loglikelihood_burn:].sum()
 
+    @property
+    def tolerance(self):
+        """
+        (float) The tolerance at which the Kalman filter determines convergence
+        to steady-state. Handling is delegated to `KalmanFilter`.
+        """
+        return self.regime_filters[0].tolerance
+
+    @tolerance.setter
+    def tolerance(self, value):
+        """
+        (float) The tolerance at which the Kalman filter determines convergence
+        to steady-state. Handling is delegated to `KalmanFilter`.
+        """
+        for regime_filter in self.regime_filters:
+            regime_filter.tolerance = value
+
+    def set_filter_method(self, **kwargs):
+        """
+        This method propagates the action of the same name among regime filters.
+        See `KalmanFilter.set_filter_method` documentation for details.
+        """
+
+        for regime_filter in self._regime_kalman_filters:
+            regime_filter.set_filter_method(**kwargs)
+
+    @property
+    def filter_method(self):
+        """
+        (int) Filter method, used in underlying Kalman filters
+        """
+        return self.regime_filters[0].filter_method
+
+    def set_inversion_method(self, **kwargs):
+        """
+        This method propagates the action of the same name among regime filters.
+        See `KalmanFilter.set_inversion_method` documentation for details.
+        """
+
+        for regime_filter in self._regime_kalman_filters:
+            regime_filter.set_inversion_method(**kwargs)
+
+    @property
+    def inversion_method(self): 
+        """
+        (int) Inversion method, used in underlying Kalman filters
+        """
+        return self.regime_filters[0].inversion_method
+
+    def set_stability_method(self, **kwargs):
+        """
+        This method propagates the action of the same name among regime filters.
+        See `KalmanFilter.set_stability_method` documentation for details.
+        """
+
+        for regime_filter in self._regime_kalman_filters:
+            regime_filter.set_stability_method(**kwargs)
+
+    @property
+    def stability_method(self):
+        """
+        (int) Stability method, used in underlying Kalman filters
+        """
+        return self.regime_filters[0].stability_method
+
+    def set_conserve_memory(self, **kwargs):
+        """
+        This method propagates the action of the same name among regime filters.
+        See `KalmanFilter.set_conserve_method` documentation for details.
+        """
+
+        for regime_filter in self._regime_kalman_filters:
+            regime_filter.set_conserve_memory(**kwargs)
+
+    @property
+    def conserve_memory(self):
+        """
+        (int) Conserve memory property, used in underlying Kalman filters
+        """
+        return self.regime_filters[0].conserve_memory
+
+    @property
+    def filter_timing(self):
+        """
+        (int) Filter timing, used in underlying Kalman filters
+        """
+        return self.regime_filters[0].filter_timing
 
 class KimFilterResults(FrozenSwitchingRepresentation):
     """
@@ -853,11 +952,31 @@ class KimFilterResults(FrozenSwitchingRepresentation):
         Log-probability of a given regime being active at the moment t,
         conditional on all observations measured until the moment t. A
         `(nobs, k_regimes)` shaped array.
+    filter_method : int
+        Bitmask representing the Kalman filtering method (for underlying Kalman
+        filters).
+    inversion_method : int
+        Bitmask representing the method used to invert the forecast error
+        covariance matrix (for underlying Kalman filters).
+    stability_method : int
+        Bitmask representing the methods used to promote numerical stability in
+        the Kalman filter recursions (for underlying Kalman filters).
+    conserve_memory : int
+        Bitmask representing the selected memory conservation method (for
+        underlying Kalman filters).
+    filter_timing : int
+        Whether or not to use the alternate timing convention (for underlying
+        Kalman filters).
+    tolerance : float
+        The tolerance at which the Kalman filter determines convergence to
+        steady-state (for underlying Kalman filters).
     """
 
     _filter_attributes = ['loglikelihood_burn', 'initial_regime_logprobs',
             'obs_loglikelihoods', 'filtered_state', 'filtered_state_cov',
-            'filtered_regime_logprobs', 'predicted_regime_logprobs']
+            'filtered_regime_logprobs', 'predicted_regime_logprobs',
+            'filter_method', 'inversion_method', 'stability_method',
+            'conserve_method', 'filter_timing', 'tolerance']
 
     _attributes = FrozenSwitchingRepresentation._attributes + \
             _filter_attributes
@@ -878,14 +997,11 @@ class KimFilterResults(FrozenSwitchingRepresentation):
 
         super(KimFilterResults, self).update_representation(model)
 
-        # This is defined in `KimFilter` class
-        self.loglikelihood_burn = model._loglikelihood_burn
-
         # When user didn't define initial regime distribution himself, these
         # values are initialized only during filtering.
         self.initial_regime_logprobs = model._initial_regime_logprobs
 
-    def update_filter(self, kfilter):
+    def update_filter(self, kfilter, model):
         """
         Update the filter results
 
@@ -893,11 +1009,24 @@ class KimFilterResults(FrozenSwitchingRepresentation):
         ----------
         kfilter : _KimFilter
             Object, handling filtering, which to take the updated values from.
+        model : KimFilter
+            `KimFilter` object with metadata.
 
         Notes
         -----
         This method is rarely required except for internal usage.
         """
+
+        # Save Kalman filter parameters
+        self.filter_method = model.filter_method
+        self.inversion_method = model.inversion_method
+        self.stability_method = model.stability_method
+        self.conserve_memory = model.conserve_memory
+        self.filter_timing = model.filter_timing
+        self.tolerance = model.tolerance
+        self.loglikelihood_burn = model.loglikelihood_burn
+
+        # Save filtering result matrices
 
         self.obs_loglikelihoods = kfilter.obs_loglikelihoods
 
@@ -906,7 +1035,7 @@ class KimFilterResults(FrozenSwitchingRepresentation):
 
         self.forecasts_error = np.array(kfilter.forecast_error, copy=True)
         self.forecasts = self.forecasts_error + \
-                kfilter.model.endog
+                kfilter.model.endog[:, :self.forecasts_error.shape[1]]
         self.forecasts_error_cov = np.array(kfilter.forecast_error_cov,
                 copy=True)
 
@@ -1004,3 +1133,403 @@ class KimFilterResults(FrozenSwitchingRepresentation):
 
         # Summarize observation loglikelihoods and return results
         return self.obs_loglikelihoods[loglikelihood_burn:].sum()
+
+    def predict(self, start=None, end=None, dynamic=None, **kwargs):
+        """
+        In-sample and out-of-sample prediction for state space models generally
+
+        Parameters
+        ----------
+        start : int, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast will be at start.
+        end : int, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast will be at end.
+        dynamic : int, optional
+            This option is added for compatibility, using it will cause
+            `NotImplementedError`.
+        **kwargs
+            If the prediction range is outside of the sample range, any
+            of the state space representation matrices that are time-varying
+            must have updated values provided for the out-of-sample range.
+            For example, of `obs_intercept` is a time-varying component and
+            the prediction range extends 10 periods beyond the end of the
+            sample, a (`k_regimes` x `k_endog` x 10) matrix must be provided
+            with the new intercept values.
+
+        Returns
+        -------
+        results : PredictionResults
+            A PredictionResults object.
+
+        Notes
+        -----
+        Only one-step-ahead prediction and forecasting are available.
+
+        All prediction is performed by applying the deterministic part of the
+        measurement equation using the predicted state variables and ignoring
+        the Hamilton filtering step.
+
+        See Also
+        --------
+        statsmodels.tsa.statespace.kalman_filter.FilterResults.predict
+        """
+
+        nobs = self.nobs
+
+        # Raise error, if `dynamic` argument is provided
+        if dynamic is not None and dynamic != 0:
+            raise NotImplementedError
+
+        if end is None:
+            end = nobs
+
+        # Length of prediction periods
+        nstatic = nobs
+        ndynamic = 0
+        nforecast = max(0, end - nobs)
+
+        # If no forecasting needed, the existing result object can be used
+        if nforecast == 0:
+            return PredictionResults(self, start, end, nstatic, ndynamic,
+                    nforecast)
+
+        # Collect representation matrices
+        representation = {}
+        for name in SwitchingRepresentation._per_regime_dims.keys():
+            representation[name] = np.asarray([getattr(x, name) for x in \
+                    self.regime_representations])
+
+        warning = ('Model has time-invariant {0} matrix, so the {0}'
+                ' argument to `predict` has been ignored.')
+        exception = ('Forecasting for models with time-varying {0} matrix'
+                ' requires an updated time-varying matrix for the'
+                ' period to be forecasted.')
+
+        # Extending representation matrices, if they are not time-invariant
+        for name in SwitchingRepresentation._per_regime_dims.keys():
+            # If matrix is time invariant, no extension is required
+            if representation[name].shape[-1] == 1:
+                if name in kwargs:
+                    warn(warning.format(name))
+            # If it's not, and no extension provided, raise an error
+            elif name not in kwargs:
+                raise ValueError(exception.format(name))
+            # Extend matrix with out-of-sample range
+            else:
+                mat = self.model._broadcast_per_regime(kwargs[name],
+                        SwitchingRepresentation._per_regime_dims[name])
+                if mat.shape[:-1] != representation[name].shape[:-1]:
+                    raise ValueError(exception.format(name))
+
+                representation = np.c_[representation, mat]
+
+        # Add regime transition matrix to arguments
+        representation['regime_transition'] = np.exp(self.log_regime_transition)
+
+        # Extend `endog` array with NaNs
+        endog = np.empty((self.k_endog, nforecast))
+        endog.fill(np.nan)
+        endog = np.asfortranarray(np.c_[self.endog, endog])
+
+        # Other options
+        model_kwargs = {
+                'filter_method': self.filter_method,
+                'inversion_method': self.inversion_method,
+                'stability_method': self.stability_method,
+                'conserve_memory': self.conserve_memory,
+                'filter_timing': self.filter_timing,
+                'tolerance': self.tolerance,
+                'loglikelihoood_burn': self.loglikelihood_burn
+        }
+
+        model_kwargs.update(representation)
+
+        # The size of state covariance matrix is the same for all regimes
+        k_posdef = self.regime_representations[0].k_posdef
+
+        # Instantiate the model for forecasting
+        model = KimFilter(self.k_endog, self.k_states, self.k_regimes,
+                k_posdef=k_posdef, **model_kwargs)
+
+        # Bind the endogenous data
+        model.bind(endog)
+
+        # Provide state space initialization
+        if self.model.initialization is not None:
+            model.initialize_known(
+                    [x.initial_state for x in self.regime_representations],
+                    [x.initial_state_cov for x in self.regime_representations])
+
+        # Do actual prediction
+        results = self._predict(nstatic, nforecast, model)
+
+        return PredictionResults(results, start, end, nstatic, ndynamic,
+                nforecast)
+
+    def _predict(self, nstatic, nforecast, model):
+        # This method performs actual prediction
+
+        # Notation in comments follows Kim and Nelson book, although the
+        # prediction algorithm is not described there.
+
+        dtype = self.dtype
+        k_regimes = self.k_regimes
+        k_endog = self.k_endog
+        k_states = self.k_states
+
+        # One-step-ahead prediction is usual filtering of non-NaN prefix of the
+        # data
+        filter_results = model.filter(nobs=nstatic)
+
+        # Allocating some useful arrays for prediction
+
+        log_regime_transition = self.log_regime_transition
+
+        # Low-level Kalman filters 
+        kfilters = model._kfilters
+
+        # High-level Kalman filters
+        regime_filters = model.regime_filters
+
+        # Predicted probabilities
+        predicted_regime_logprobs = np.zeros((k_regimes, nstatic + nforecast),
+                dtype=dtype)
+
+        # First `nstatic` columns of the matrix contain
+        # \ln( Pr[ S_t | \psi_{t-1} ] ), t <= T, - one-step-ahead prediction of
+        # regime. The remaining part is fulfilled with
+        # \ln( Pr[ S_t | \psi_T ] ), where t > T.
+        predicted_regime_logprobs[:, :nstatic] = \
+                filter_results.predicted_regime_logprobs
+
+        # Batteries of \beta_{t|T}^{(i,j)}, t > T
+        predicted_state_batteries = np.zeros((k_regimes, k_regimes, k_states),
+                dtype=dtype)
+
+        # Batteries of P_{t|T}^{(i,j)}, t > T
+        predicted_state_cov_batteries = np.zeros((k_regimes, k_regimes,
+                k_states, k_states), dtype=dtype)
+
+        # Forecasts array
+        # First `nstatic` columns of the matrix contain E[ y_t | \psi_{t-1} ],
+        # t <= T, - one-step-ahead prediction of observation. The remaining part
+        # is fulfilled with E[ y_t | \psi_T ], t > T.
+        forecasts = np.zeros((k_endog, nstatic + nforecast), dtype=dtype)
+        forecasts[:, :nstatic] = filter_results.forecasts
+
+        # Forecast covariance
+        # First `nstatic` columns of the matrix contain f_{t|t-1}, t <= T, -
+        # one-step-ahead prediction error covariance. The remaining part is
+        # fulfilled with f_{t|T}, t > T - forecast error covariance.
+        forecasts_error_cov = np.zeros((k_endog, k_endog, nstatic + nforecast),
+                dtype=dtype)
+        forecasts_error_cov[:, :, :nstatic] = filter_results.forecasts_error_cov
+
+        # Batteries of E[ y_t | S_t, S_{t-1}, \psi_T ], t > T
+        forecast_batteries = np.zeros((k_regimes, k_regimes, k_endog),
+                dtype=dtype)
+
+        # Batteries of f_{t|T}^{(i,j)}, t > T
+        forecast_cov_batteries = np.zeros((k_regimes, k_regimes, k_endog,
+                k_endog), dtype=dtype)
+
+        # These are helping buffers, passed to `_marginalize_vector` function.
+        # See `_marginalize_vector` documentation for details.
+        weighted_forecasts = np.zeros((k_regimes * k_regimes, k_endog),
+                dtype=dtype)
+        forecast_biases = np.zeros((k_regimes * k_regimes, k_endog),
+                dtype=dtype)
+        forecast_bias_sqrs = np.zeros((k_regimes * k_regimes, k_endog, k_endog),
+                dtype=dtype)
+        forecast_covs_and_bias_sqrs = np.zeros((k_regimes * k_regimes, k_endog,
+                k_endog), dtype=dtype)
+        weighted_forecast_covs_and_bias_sqrs = np.zeros((k_regimes * k_regimes,
+                k_endog, k_endog), dtype=dtype)
+
+        # Buffers for \beta_{t|T}^{j}, t > T
+        approx_predicted_states = np.zeros((k_regimes, k_states), dtype=dtype)
+
+        # Buffers for P_{t|T}^{j}, t > T
+        approx_predicted_state_covs = np.zeros((k_regimes, k_states, k_states),
+                dtype=dtype)
+
+        # Initialize approximate predicted state with \beta_{T|T}^{j} and
+        # P_{T|T}^{j}
+        for i in range(k_regimes):
+            # Scenario, when `nstatic` = `nobs` = 0 is strange, but is handled
+            # here
+            if nstatic != 0:
+                # \beta_{T|T}^{j} and P_{T|T}^{j} are stored in `filtered_state`
+                # and `filtered_state_cov` arrays
+                np.copyto(approx_predicted_states[i],
+                        np.asarray(kfilters[i].filtered_state[:, nstatic - 1]))
+                np.copyto(approx_predicted_state_covs[i],
+                        np.asarray(kfilters[i].filtered_state_cov[:, :,
+                        nstatic - 1]))
+            else:
+                # In this case T = 0, \beta_{0|0}^{j} and P_{0|0}^{j} is an
+                # initialization of the model
+                np.copyto(approx_predicted_states[i],
+                        regime_filters[i]._initial_state)
+                np.copyto(approx_predicted_state_covs[i],
+                        regime_filters[i]._initial_state_cov)
+
+        # These are helping buffers, passed to `_marginalize_vector` function.
+        # See `_marginalize_vector` documentation for details.
+        weighted_states = np.zeros((k_regimes, k_states), dtype=dtype)
+        state_biases = np.zeros((k_regimes, k_states), dtype=dtype)
+        state_bias_sqrs = np.zeros((k_regimes, k_states, k_states),
+                dtype=dtype)
+        state_covs_and_state_bias_sqrs = np.zeros((k_regimes, k_states,
+                k_states), dtype=dtype)
+        weighted_state_covs_and_state_bias_sqrs = np.zeros((k_regimes,
+                k_states, k_states), dtype=dtype)
+
+        # Forecasting
+        for t in range(nstatic, nstatic + nforecast):
+
+            # Pr[ S_t, S_{t-1} | \psi_T ] = Pr[ S_t | S_{t-1} ] *
+            # * Pr[ S_{t-1} | \psi_T ]
+            predicted_prev_and_curr_regime_logprobs = \
+                    log_regime_transition.transpose() + \
+                    predicted_regime_logprobs[:, t - 1].reshape(-1, 1)
+
+            # Pr[ S_t | \psi_T ] = \sum_{S_{t-1}} Pr[ S_t, S_{t-1} | \psi_T ]
+            predicted_regime_logprobs[:, t] = logsumexp(
+                    predicted_prev_and_curr_regime_logprobs, axis=0)
+
+            # Performing Kalman prediction in underlying Kalman filters
+            # Remember, that NaNs in endog data force Kalman filter to do
+            # prediction in the `__next__` calls
+            for prev_regime in range(k_regimes):
+                for curr_regime in range(k_regimes):
+                    # This condition optimizes calculation time in case of
+                    # sparse regime transition matrix (e.g. for MS AR)
+                    if predicted_prev_and_curr_regime_logprobs[prev_regime, \
+                            curr_regime] != -np.inf:
+
+                        # References to current Kalman filter
+                        curr_regime_filter = regime_filters[curr_regime]
+                        curr_kfilter = kfilters[curr_regime]
+
+                        # Pass \beta_{t|T}^{i} and P_{t|T}^{i} to j-th filter
+                        # Again, the case of t == 0 is strange and rare
+                        if t != 0:
+                            np.copyto(np.asarray(curr_kfilter.filtered_state[:,
+                                    t - 1]), approx_predicted_states[
+                                    prev_regime])
+                            np.copyto(np.asarray(
+                                    curr_kfilter.filtered_state_cov[:,
+                                    :, t - 1]), approx_predicted_state_covs[
+                                    prev_regime])
+                        else:
+                            # If t == 0, use approximate state as initialization
+                            curr_regime_filter.initialize_known(
+                                    approx_predicted_states[prev_regime],
+                                    approx_predicted_state_covs[prev_regime])
+                            # Low level initialization - this method "pushes"
+                            # new initialization to Cython Kalman filter
+                            curr_regime_filter._initialize_state(
+                                    **model._state_init_kwargs[curr_regime])
+
+                        # We use every regime filter `k_regimes` times in the
+                        # given moment t, so it needs to be moved one step back
+                        curr_kfilter.seek(t)
+
+                        # Iteration of prediction
+                        next(curr_kfilter)
+
+                        # Kalman filter produces \beta_{t|T}^{(i,j)} and
+                        # P_{t|T}^{(i,j)}
+
+                        np.copyto(predicted_state_batteries[prev_regime,
+                                curr_regime], np.asarray(
+                                curr_kfilter.predicted_state[:, t]))
+
+                        np.copyto(predicted_state_cov_batteries[prev_regime,
+                                curr_regime],
+                                curr_kfilter.predicted_state_cov[:, :, t])
+
+                        # Use convenient reference
+                        predicted_state = predicted_state_batteries[prev_regime,
+                                curr_regime].reshape(-1, 1)
+                        predicted_state_cov = predicted_state_cov_batteries[
+                                prev_regime, curr_regime]
+
+                        # Get some state-space matrices of current regime and
+                        # moment
+
+                        if curr_regime_filter.design.shape[-1] == 1:
+                            design = curr_regime_filter.design[:, :, 0]
+                        else:
+                            design = curr_regime_filter.design[:, :, t]
+
+                        if curr_regime_filter.obs_intercept.shape[-1] == 1:
+                            obs_intercept = curr_regime_filter.obs_intercept[:,
+                                    0]
+                        else:
+                            obs_intercept = curr_regime_filter.obs_intercept[:,
+                                    t]
+
+                        if curr_regime_filter.obs_cov.shape[-1] == 1:
+                            obs_cov = curr_regime_filter.obs_cov[:, :, 0]
+                        else:
+                            obs_cov = curr_regime_filter.obs_cov[:, :, t]
+
+                        # Manually calculate forecast
+                        # E[ y_t | S_t, S_{t-1}, \psi_T ] and its covariance
+                        # f_{t|T}^{(i,j)}, since Kalman prediction fulfills
+                        # corresponding arrays with zero
+
+                        forecast_batteries[prev_regime, curr_regime] = \
+                                design.dot(predicted_state) + obs_intercept
+
+                        forecast_cov_batteries[prev_regime, curr_regime] = \
+                                design.dot(predicted_state_cov).dot(
+                                design.T) + obs_cov
+
+            # Switch from logprobs to probs
+            predicted_prev_and_curr_regime_probs = np.exp(
+                    predicted_prev_and_curr_regime_logprobs)
+
+            # Collapse E[ y_t | S_t, S_{t-1}, \psi_T ] and f_{t|T}^{(i,j)}
+            # to obtain E[ y_t | \psi_T ] and f_{t|T}
+            _marginalize_vector(predicted_prev_and_curr_regime_probs.ravel(),
+                    forecast_batteries.reshape(-1, k_endog), weighted_forecasts,
+                    forecasts[:, t], forecast_biases, forecast_bias_sqrs,
+                    forecast_cov_batteries.reshape(-1, k_endog, k_endog),
+                    forecast_covs_and_bias_sqrs,
+                    weighted_forecast_covs_and_bias_sqrs, forecasts_error_cov[:,
+                    :, t])
+
+            # Pr[ S_{t-1} | S_t, \psi_T ] = Pr[ S_t, S_{t-1} | \psi_T ] /
+            # / Pr[ S_t | \psi_T ]
+            predicted_prev_cond_on_curr_regime_logprobs = \
+                    predicted_prev_and_curr_regime_logprobs - \
+                    predicted_regime_logprobs[:, t].reshape(1, -1)
+
+            # Switch from logprobs to probs
+            predicted_prev_cond_on_curr_regime_probs = np.exp(
+                    predicted_prev_cond_on_curr_regime_logprobs)
+
+            # Collapse \beta_{t|T}^{(i,j)} and P_{t|T}^{(i,j)}
+            # to obtain \beta_{t|T}^{j} and P_{t|T}^{j}
+            for curr_regime in range(k_regimes):
+                _marginalize_vector(predicted_prev_cond_on_curr_regime_probs[:,
+                        curr_regime], predicted_state_batteries[:, curr_regime,
+                        :], weighted_states, approx_predicted_states[
+                        curr_regime], state_biases, state_bias_sqrs,
+                        predicted_state_cov_batteries[:, curr_regime, :, :],
+                        state_covs_and_state_bias_sqrs,
+                        weighted_state_covs_and_state_bias_sqrs,
+                        approx_predicted_state_covs[curr_regime])
+
+        # Use existing `KimFilterResults` object to substitute corresponding
+        # fields with forecasted data
+        filter_results.forecasts = forecasts
+        filter_results.forecasts_error_cov = forecasts_error_cov
+        filter_results.predicted_regime_logprobs = predicted_regime_logprobs
+
+        return filter_results

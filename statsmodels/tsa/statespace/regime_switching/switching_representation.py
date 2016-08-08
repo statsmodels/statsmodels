@@ -399,63 +399,10 @@ class SwitchingRepresentation(object):
         return self.regime_filters[0].initialization
 
     @property
-    def tolerance(self):
-        """
-        (float) The tolerance at which the Kalman filter determines convergence
-        to steady-state. Handling is delegated to `KalmanFilter`.
-        """
-        return self.regime_filters[0].tolerance
-
-    @tolerance.setter
-    def tolerance(self, value):
-        """
-        (float) The tolerance at which the Kalman filter determines convergence
-        to steady-state. Handling is delegated to `KalmanFilter`.
-        """
-        for regime_filter in self.regime_filters:
-            regime_filter.tolerance = value
-
-    @property
     def _complex_endog(self):
         # A flag for complex data, handled by `Representation` class.
         # This is used internally in `MLEModel` class.
         return self.regime_filters[0]._complex_endog
-
-    def set_filter_method(self, **kwargs):
-        """
-        This method propagates the action of the same name among regime filters.
-        See `KalmanFilter.set_filter_method` documentation for details.
-        """
-
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_filter_method(**kwargs)
-
-    def set_inversion_method(self, **kwargs):
-        """
-        This method propagates the action of the same name among regime filters.
-        See `KalmanFilter.set_inversion_method` documentation for details.
-        """
-
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_inversion_method(**kwargs)
-
-    def set_stability_method(self, **kwargs):
-        """
-        This method propagates the action of the same name among regime filters.
-        See `KalmanFilter.set_stability_method` documentation for details.
-        """
-
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_stability_method(**kwargs)
-
-    def set_conserve_memory(self, **kwargs):
-        """
-        This method propagates the action of the same name among regime filters.
-        See `KalmanFilter.set_conserve_method` documentation for details.
-        """
-
-        for regime_filter in self._regime_kalman_filters:
-            regime_filter.set_conserve_memory(**kwargs)
 
     def bind(self, endog):
         """
@@ -463,6 +410,7 @@ class SwitchingRepresentation(object):
         See `Representation.bind` documentation for details.
         """
 
+        # Copying for the case 
         for regime_filter in self._regime_kalman_filters:
             regime_filter.bind(endog)
 

@@ -731,38 +731,32 @@ class SwitchingMLEModel(MLEModel):
                 transformed=transformed, complex_step=complex_step)
 
     #TODO: add this functionality
-    def set_filter_method(self, filter_method=None, **kwargs):
-        raise NotImplementedError
-
-    #TODO: add this functionality
     def set_smoother_output(self, **kwargs):
         raise NotImplementedError
 
-    def initialize_approximate_diffuse(self, **kwargs):
-        # Diffuse initialization is not defined for Kim filtering
-        raise NotImplementedError
+    def initialize_approximate_diffuse(self, **kwargs): 
+        raise NotImplementedError(
+                'Diffuse initialization is not defined for Kim filtering.')
 
     @property
     def initial_variance(self):
-        # Diffuse initialization is not defined for Kim filtering
-        raise NotImplementedError
+        raise NotImplementedError(
+                'Diffuse initialization is not defined for Kim filtering.')
 
     @initial_variance.setter
     def initial_variance(self, value):
-        # Diffuse initialization is not defined for Kim filtering
-        raise NotImplementedError
+        raise NotImplementedError(
+                'Diffuse initialization is not defined for Kim filtering.')
 
     def simulation_smoother(self, *args, **kwargs):
         # Simulation is not implemented yet
         raise NotImplementedError
 
-    def _forecast_error_partial_derivatives(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+    def _forecast_error_partial_derivatives(self, *args, **kwargs): 
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     def observed_information_matrix(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     #def opg_information_matrix(self, *args, **kwargs):
     #    raise NotImplementedError
@@ -774,12 +768,10 @@ class SwitchingMLEModel(MLEModel):
     #    raise NotImplementedError
 
     def _score_harvey(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     def _score_obs_harvey(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     def score(self, *args, **kwargs):
         """
@@ -837,8 +829,7 @@ class SwitchingMLEModel(MLEModel):
         return super(SwitchingMLEModel, self).hessian(*args, **kwargs)
 
     def _hessian_oim(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     #def _hessian_opg(self, *args, **kwargs):
     #    raise NotImplementedError
@@ -885,7 +876,7 @@ class SwitchingMLEResults(MLEResults):
             cov_kwds=None, **kwargs):
 
         if cov_type == 'oim' or cov_type == 'robust_oim':
-            raise NotImplementedError
+            raise NotImplementedError('Kalman filter specific functionality.')
 
         #TODO: check for correctness
         #TODO: take away attributes array
@@ -895,7 +886,7 @@ class SwitchingMLEResults(MLEResults):
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
 
         if cov_type == 'oim' or cov_type == 'robust_oim':
-            raise NotImplementedError
+            raise NotImplementedError('Kalman filter specific functionality.')
 
         return super(SwitchingMLEResults, self)._get_robustcov_results(
                 cov_type=cov_type, **kwargs)
@@ -913,12 +904,10 @@ class SwitchingMLEResults(MLEResults):
     #    raise NotImplementedError
 
     def _cov_params_oim(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     def cov_params_oim(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     #def _cov_params_opg(self, *args, **kwargs):
     #    raise NotImplementedError
@@ -927,16 +916,13 @@ class SwitchingMLEResults(MLEResults):
     #    raise NotImplementedError
 
     def cov_params_robust(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     def _cov_params_robust_oim(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     def cov_params_robust_oim(self, *args, **kwargs):
-        # Kalman-filter-specific functionality
-        raise NotImplementedError
+        raise NotImplementedError('Kalman filter specific functionality.')
 
     #def _cov_params_robust_approx(self, *args, **kwargs):
     #    raise NotImplementedError
@@ -977,21 +963,17 @@ class SwitchingMLEResults(MLEResults):
     #def test_serial_correlation(self, *args, **kwargs):
     #    raise NotImplementedError
 
-    def get_prediction(self, *args, **kwargs):
-        # Not implemented yet
-        raise NotImplementedError
+    #def get_prediction(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-    def get_forecast(self, *args, **kwargs):
-        # Not implemented yet
-        raise NotImplementedError
+    #def get_forecast(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-    def predict(self, *args, **kwargs):
-        # Not implemented yet
-        raise NotImplementedError
+    #def predict(self, *args, **kwargs):
+    #    raise NotImplementedError
 
-    def forecast(self, *args, **kwargs):
-        # Not implemented yet
-        raise NotImplementedError
+    #def forecast(self, *args, **kwargs):
+    #    raise NotImplementedError
 
     def simulate(self, *args, **kwargs):
         # Simulation is not implemented yet
