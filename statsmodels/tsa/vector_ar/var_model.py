@@ -311,6 +311,238 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
     return point_forecast, forc_lower, forc_upper
 
 
+def test_causality(vecm_results, equation, variables, kind='f', signif=0.05,
+                   verbose=True):
+    """Compute test statistic for null hypothesis of Granger-noncausality,
+    general function to test joint Granger-causality of multiple variables
+
+    Parameters
+    ----------
+    vecm_results : VECMResults
+
+    equation : string or int
+        Potentially Granger-caused equation.
+    variables : sequence (of strings or ints)
+        List, tuple, etc. of potentially Granger-causing variables.
+    kind : {'f', 'wald'}
+        Perform F-test or Wald (chi-sq) test
+    signif : float, default 5%
+        Significance level for computing critical values for test,
+        defaulting to standard 0.95 level
+
+    Notes
+    -----
+    Null hypothesis is that there is no Granger-causality for the indicated
+    variables. The degrees of freedom in the F-test are based on the
+    number of variables in the VAR system, that is, degrees of freedom
+    are equal to the number of equations in the VAR times degree of freedom
+    of a single equation.
+
+    Returns
+    -------
+    results : dict
+    """
+    if isinstance(variables, (string_types, int, np.integer)):
+        variables = [variables]
+
+    k, p = vecm_results.K, vecm_results.p
+
+    # number of restrictions  # ==> this means variables are the potentially causing variables
+    N = len(variables) * (p-1)  # for VECM: (self.k_ar-1) (or: (p-1)) instead of self.k_ar
+
+    num_det_terms = 0 if vecm_results.deterministic == "nc" else 1  # TODO: adapt to other det_terms
+
+    # Make restriction matrix
+    C = np.zeros((N, k*num_det_terms + k**2 * (p-1)), dtype=float)  # for VECM: p-1 instead of p
+    eq_index = util.get_index(vecm_results.names, equation)  # TODO: implement names
+    vinds = mat([util.get_index(vecm_results.names, v) for v in variables])
+    print("\nvinds:")
+    print(vinds)
+    #print(num_det_terms)
+    #  remember, vec is column order!
+    # offsets = np.concatenate([k*num_det_terms + k ** 2 * j + k * vinds + eq_index
+    #                           for j in range(p-1)])  # for VECM range(p-1) instead of range(p)
+    # print(offsets)
+    #C[np.arange(N), offsets] = 1
+    row = 0
+    cols_det = k * num_det_terms
+    for j in range(p-1):
+        for vind in vinds:
+            C[row, eq_index + cols_det + k * vind + k**2 * j] = 1
+            row += 1
+    print("\nC:")
+    print(C)
+    # Lutkepohl 3.6.5
+    # Cb = np.dot(C, vec(self.params.T))
+    print("\nVAR-Repr.shape:")
+    print(vecm_results.var_repr.shape)
+
+    A_vec = np.vstack([vec(vecm_results.var_repr[i])[:, None] for i in range(
+            vecm_results.var_repr.shape[0])])
+    Cb = np.dot(C, vec(A_vec[:(p-1)*k**2 + 1*num_det_terms]))  # for VECM: added [:(p-1)*k + 1*1]  # 1 * (1or0)... 1 for "c", 0 for "nc"
+    print("\nCb:")
+    print(Cb)
+    print()
+    middle = L.inv(chain_dot(C, vecm_results.cov_var_repr[:-k*k, :-k*k], C.T))  # for VECM: added [:-k*k, :-k*k]
+
+    # wald statistic
+    lam_wald = statistic = chain_dot(Cb, middle, Cb)
+
+    if kind.lower() == 'wald':
+        df = N
+        dist = stats.chi2(df)
+    elif kind.lower() == 'f':
+        statistic = lam_wald / N
+        df = (N, k * 100) #self.df_resid) # TODO: df_resid
+        dist = stats.f(*df)
+    else:
+        raise Exception('kind %s not recognized' % kind)
+
+    pvalue = dist.sf(statistic)
+    crit_value = dist.ppf(1 - signif)
+
+    conclusion = 'fail to reject' if statistic < crit_value else 'reject'
+    results = {
+        'statistic' : statistic,
+        'crit_value' : crit_value,
+        'pvalue' : pvalue,
+        'df' : df,
+        'conclusion' : conclusion,
+        'signif' :  signif
+    }
+
+    if verbose:
+        summ = output.causality_summary(results, variables, equation, kind)
+
+        print(summ)
+
+    return results
+
+
+def var_based_causality_test(var_results, equation, variables, kind='f',
+                             signif=0.05, verbose=True):
+    """Compute test statistic for null hypothesis of Granger-noncausality,
+    general function to test joint Granger-causality of multiple variables
+
+    Parameters
+    ----------
+    vecm_results : VARResults
+
+    equation : string or int
+        Potentially Granger-caused equation.
+    variables : sequence (of strings or ints)
+        List, tuple, etc. of potentially Granger-causing variables.
+    kind : {'f', 'wald'}
+        Perform F-test or Wald (chi-sq) test
+    signif : float, default 5%
+        Significance level for computing critical values for test,
+        defaulting to standard 0.95 level
+
+    Notes
+    -----
+    Null hypothesis is that there is no Granger-causality for the indicated
+    variables. The degrees of freedom in the F-test are based on the
+    number of variables in the VAR system, that is, degrees of freedom
+    are equal to the number of equations in the VAR times degree of freedom
+    of a single equation.
+
+    Returns
+    -------
+    results : dict
+    """
+    if isinstance(variables, (string_types, int, np.integer)):
+        variables = [variables]
+
+    k, p, t = var_results.neqs, var_results.k_ar, var_results.nobs
+    y = var_results.y.T
+
+    # number of restrictions  # ==> this means variables are the potentially causing variables
+    N = len(variables) * (p-1)  # for VECM: (self.k_ar-1) (or: (p-1)) instead of self.k_ar
+
+    num_det_terms = 0  # TODO: adapt to other det_terms
+
+    # Make restriction matrix
+    C = np.zeros((N, k*num_det_terms + k**2 * (p-1)), dtype=float)  # for VECM: p-1 instead of p
+    eq_index = util.get_index(var_results.names, equation)
+    vinds = mat([util.get_index(var_results.names, v) for v in variables])
+    print("\nvinds:")
+    print(vinds)
+    #print(num_det_terms)
+    #  remember, vec is column order!
+    # offsets = np.concatenate([k*num_det_terms + k ** 2 * j + k * vinds + eq_index
+    #                           for j in range(p-1)])  # for VECM range(p-1) instead of range(p)
+    # print(offsets)
+    #C[np.arange(N), offsets] = 1
+    cols_det = k * num_det_terms
+    row = 0
+    for j in range(p-1):
+        for vind in vinds:
+            C[row, eq_index + cols_det + k * vind + k**2 * j] = 1
+            row += 1
+    print("\nC:")
+    print(C)
+    # Lutkepohl 3.6.5
+    # Cb = np.dot(C, vec(self.params.T))
+    print("VAR COEFS: " + str(var_results.coefs.shape))
+    a = np.vstack([vec(var_results.coefs[i])[:, None] for i in range(p-1)])
+    Ca = np.dot(C, a)  # for VECM: added [:(p-1)*k + 1*1]  # 1 * (1or0)... 1 for "c", 0 for "nc"
+    print("\nCa:")
+    print(Ca)
+    x_min_p = np.zeros((k * p, t))
+    print("X_-p: " + str(x_min_p.shape))
+    # fll first k * p rows of x_min_p:
+    for i in range(p-1):
+        x_min_p[i*k:(i+1)*k, :] = y[:, p-1-i:-1-i] - y[:, :-p]
+    # fill last rows of x_min_p:
+    x_min_p[-k:, :] = y[:, :-p]
+    # print("X_-p: " + str(x_min_p.shape))
+    np.set_printoptions(threshold=np.inf)  # todo: remove! (just here for printing)
+    # print(np.round(x_min_p, 3))
+    x_x = np.dot(x_min_p, x_min_p.T)  # k*p x k*p
+    print("X_X':")
+    print(np.round(x_x, 3))
+    x_x_11 = L.inv(x_x)[:k * (p-1), :k * (p-1)]  # k*(p-1) x k*(p-1)
+    print("x_x_11: " + str(x_x_11.shape))
+    print("sigma_u: " + str(var_results.sigma_u.shape))
+    sig_alpha_min_p = t * np.kron(x_x_11, var_results.sigma_u)  # k**2 * (p-1) x k**2 * (p-1)
+    print("***** sig_alpha_min_(p+1) *****: " + str(sig_alpha_min_p.shape))
+    # print(sig_alpha_min_p)
+    middle = L.inv(chain_dot(C, sig_alpha_min_p, C.T))
+
+    # wald statistic
+    lam_wald = statistic = t * chain_dot(Ca.T, middle, Ca)
+
+    if kind.lower() == 'wald':
+        df = N
+        dist = stats.chi2(df)
+    elif kind.lower() == 'f':
+        statistic = lam_wald / N
+        df = (N, k * 100) #self.df_resid) # TODO? df_resid
+        dist = stats.f(*df)
+    else:
+        raise Exception('kind %s not recognized' % kind)
+
+    pvalue = dist.sf(statistic)
+    crit_value = dist.ppf(1 - signif)
+
+    conclusion = 'fail to reject' if statistic < crit_value else 'reject'
+    results = {
+        'statistic' : statistic,
+        'crit_value' : crit_value,
+        'pvalue' : pvalue,
+        'df' : df,
+        'conclusion' : conclusion,
+        'signif' :  signif
+    }
+
+    if verbose:
+        summ = output.causality_summary(results, variables, equation, kind)
+
+        print(summ)
+
+    return results
+
+
 def var_loglike(resid, omega, nobs):
     r"""
     Returns the value of the VAR(p) log-likelihood.
@@ -1407,23 +1639,28 @@ class VARResults(VARProcess):
 
         k, p = self.neqs, self.k_ar
 
-        # number of restrictions
-        N = len(variables) * self.k_ar
+        # number of restrictions  # ==> this means variables are the potentially causing variables
+        N = len(variables) * (self.k_ar-1)  # for VECM: (self.k_ar-1) (or: (p-1)) instead of self.k_ar
 
         # Make restriction matrix
-        C = np.zeros((N, k ** 2 * p + k), dtype=float)
-
+        # bug: "+ k" should read "+ k * number_of_det_terms"
+        # C = np.zeros((N, k ** 2 * p + k*1), dtype=float) # bug
+        C = np.zeros((N, k**2 * (p-1) + k*1), dtype=float)  # for VECM: p-1 instead of p
         eq_index = self.get_eq_index(equation)
         vinds = mat([self.get_eq_index(v) for v in variables])
 
         # remember, vec is column order!
-        offsets = np.concatenate([k + k ** 2 * j + k * vinds + eq_index
-                                  for j in range(p)])
+        # bug: "k + k ** 2" should read "k * num_of_det_terms + k ** 2"
+        offsets = np.concatenate([k*1 + k ** 2 * j + k * vinds + eq_index
+                                  for j in range(p-1)])  # bug # for VECM range(p-1) instead of range(p)
+        print(offsets)
         C[np.arange(N), offsets] = 1
 
         # Lutkepohl 3.6.5
-        Cb = np.dot(C, vec(self.params.T))
-        middle = L.inv(chain_dot(C, self.cov_params, C.T))
+        # Cb = np.dot(C, vec(self.params.T))
+        print(self.params.shape)
+        Cb = np.dot(C, vec(self.params[:(p-1)*k + 1*1].T))  # for VECM: added [:(p-1)*k + 1*1]  # 1 * (1or0)... 1 for "c", 0 for "nc"
+        middle = L.inv(chain_dot(C, self.cov_params[:-k*k, :-k*k], C.T))  # for VECM: added [:-k*k, :-k*k]
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
