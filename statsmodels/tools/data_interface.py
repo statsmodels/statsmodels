@@ -320,7 +320,7 @@ def to_nested_row_vector(data):
         return pd.DataFrame([data.values])
 
     elif data_type == np.ndarray:
-        return data[np.newaxis]
+        return np.atleast_2d(data)
 
     elif data_type == list:
         return [data]
