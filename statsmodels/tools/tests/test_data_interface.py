@@ -5,8 +5,7 @@ from statsmodels.tools.data_interface import (NumPyInterface, ListInterface, Ser
 from pandas.util.testing import assert_frame_equal
 import pandas as pd
 import numpy as np
-from pdb import set_trace
-from numpy.testing import assert_allclose
+
 
 def test_list_numpy():
 
@@ -18,6 +17,7 @@ def test_list_numpy():
 
     assert data_list == numpy_to_list
 
+
 def test_numpy_list():
 
     data = np.array([1, 2, 3])
@@ -27,6 +27,7 @@ def test_numpy_list():
     list_to_numpy = list_interface.from_statsmodels(numpy_to_list)
 
     assert np.array_equal(data, list_to_numpy)
+
 
 def test_series_numpy():
 
@@ -39,6 +40,7 @@ def test_series_numpy():
 
     assert data_series.equals(numpy_to_series)
 
+
 def test_numpy_series():
 
     data = np.array([1, 2, 3])
@@ -48,6 +50,7 @@ def test_numpy_series():
     series_to_numpy = series_interface.from_statsmodels(numpy_to_series)
 
     assert np.array_equal(data, series_to_numpy)
+
 
 def test_data_frame_numpy():
 
@@ -60,6 +63,7 @@ def test_data_frame_numpy():
 
     assert data_frame.equals(numpy_to_data_frame)
 
+
 def test_numpy_data_frame():
 
     data = np.array([[1, 2, 3], [4, 5, 6]])
@@ -69,6 +73,7 @@ def test_numpy_data_frame():
     data_frame_to_numpy = data_frame_interface.from_statsmodels(numpy_to_data_frame)
 
     assert np.array_equal(data, data_frame_to_numpy)
+
 
 def test_numpy_numpy():
 
@@ -115,6 +120,7 @@ def test_numpy_numpy():
 
     assert np.array_equal(data_nested, numpy_result)
 
+
 def test_list_list():
 
     data = [1.368312, 2.667389, 2.387636, 1.797382, 1.935495, 3.482808, 2.520573, 2.804281, 1.264108, 1.305208]
@@ -156,6 +162,7 @@ def test_list_list():
     list_result = list_interface.from_statsmodels(data)
 
     assert data_nested == list_result
+
 
 def test_ndim():
 
@@ -204,6 +211,7 @@ def test_ndim():
     assert is_col_vector(pd_col_vector) == True
     assert is_col_vector(pd_matrix) == False
 
+
 def test_transpose():
 
     list_row_vector = [1, 2, 3]
@@ -229,50 +237,3 @@ def test_transpose():
     assert pd_row_vector.equals(transpose(pd_col_vector))
     assert_frame_equal(pd_col_vector, transpose(pd_row_vector))
     assert_frame_equal(pd_col_vector, transpose(pd_row_vector2))
-
-def test_gee():
-
-    from statsmodels.genmod.generalized_estimating_equations import GEE
-    from statsmodels.genmod.families import Poisson
-
-    n = 50
-    X1 = np.random.normal(size=n)
-    X2 = np.random.normal(size=n)
-    groups = np.kron(np.arange(25), np.r_[1, 1])
-    offset = np.random.uniform(1, 2, size=n)
-    exposure = np.random.uniform(1, 2, size=n)
-    Y = np.random.poisson(0.1 * (X1 + X2) + offset +
-                          np.log(exposure), size=n)
-    data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "groups": groups,
-                         "offset": offset, "exposure": exposure})
-
-
-    fml = "Y ~ X1 + X2"
-    model = GEE.from_formula(fml, groups, data, family=Poisson(),
-                             offset="offset", exposure="exposure")
-    result = model.fit()
-
-    pred1 = result.predict()
-    pred3 = result.predict(exposure=data["exposure"])
-
-    pred5 = result.predict(exog=data[-10:],
-                           offset=data["offset"][-10:],
-                           exposure=data["exposure"][-10:])
-
-    assert type(pred5) == pd.Series
-    assert_allclose(pred1, pred3)
-    assert_allclose(pred1[-10:], pred5)
-
-def test_discrete():
-
-    import statsmodels.api as sm
-
-    data = sm.datasets.anes96.load()
-    exog = data.exog
-    # leave out last exog column
-    exog = exog[:, :-1]
-    exog = sm.add_constant(exog, prepend=True)
-    res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
-    x = exog[0]
-
-    np.testing.assert_equal(res1.predict(x).shape, (7,))

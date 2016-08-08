@@ -84,18 +84,16 @@ class DataInterface(object):
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
 
-        if self.require_col_vector and self.ndim == 1 and not is_col_vector(to_return):
+        if self.require_col_vector and get_ndim(to_return) == 1 and not is_col_vector(to_return):
             to_return = transpose(to_return)
 
         if self.at_least_2d:
-            to_return = np.atleast_2d(to_return)
+            if get_ndim(to_return) == 1 and not is_col_vector(to_return):
+                to_return = to_nested_row_vector(to_return)
 
         return to_return
 
     def from_statsmodels(self, data):
-
-        # from pdb import set_trace
-        # set_trace()
 
         if data is None:
             return None
