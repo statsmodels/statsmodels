@@ -6,7 +6,7 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
-                           assert_raises, dec, assert_)
+                           assert_raises, dec, assert_, assert_allclose)
 from numpy import genfromtxt
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index, DataFrame
@@ -169,45 +169,45 @@ class TestACF_FFT(CheckCorrGram):
     def test_qstat(self):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
-        
+
 class TestACFMissing(CheckCorrGram):
     # Test Autocorrelation Function using Missing
     def __init__(self):
         self.x = np.concatenate((np.array([np.nan]),self.x))
         self.acf = self.results['acvar'] # drop and conservative
         self.qstat = self.results['Q1']
-        self.res_drop = acf(self.x, nlags=40, qstat=True, alpha=.05, 
+        self.res_drop = acf(self.x, nlags=40, qstat=True, alpha=.05,
                             missing='drop')
-        self.res_conservative = acf(self.x, nlags=40, qstat=True, alpha=.05, 
-                                    missing='conservative')       
+        self.res_conservative = acf(self.x, nlags=40, qstat=True, alpha=.05,
+                                    missing='conservative')
         self.acf_none = np.empty(40) * np.nan # lags 1 to 40 inclusive
         self.qstat_none = np.empty(40) * np.nan
         self.res_none = acf(self.x, nlags=40, qstat=True, alpha=.05,
                         missing='none')
-    
+
     def test_raise(self):
-        assert_raises(MissingDataError, acf, self.x, nlags=40, 
+        assert_raises(MissingDataError, acf, self.x, nlags=40,
                       qstat=True, alpha=.05, missing='raise')
-                      
+
     def test_acf_none(self):
         assert_almost_equal(self.res_none[0][1:41], self.acf_none, DECIMAL_8)
-    
+
     def test_acf_drop(self):
         assert_almost_equal(self.res_drop[0][1:41], self.acf, DECIMAL_8)
-    
+
     def test_acf_conservative(self):
-        assert_almost_equal(self.res_conservative[0][1:41], self.acf, 
+        assert_almost_equal(self.res_conservative[0][1:41], self.acf,
                             DECIMAL_8)
 
     def test_qstat_none(self):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
-    
-# how to do this test? the correct q_stat depends on whether nobs=len(x) is 
+
+# how to do this test? the correct q_stat depends on whether nobs=len(x) is
 # used when x contains NaNs or whether nobs<len(x) when x contains NaNs
 #    def test_qstat_drop(self):
 #        assert_almost_equal(self.res_drop[2][:40], self.qstat, DECIMAL_3)
-        
+
 
 class TestPACF(CheckCorrGram):
     def __init__(self):
@@ -254,13 +254,81 @@ class CheckCoint(object):
     def test_tstat(self):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
 
+# this doesn't produce the old results anymore
 class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals
     """
     def __init__(self):
-        self.coint_t = coint(self.y1, self.y2, regression ="c")[0]
+        #self.coint_t = coint(self.y1, self.y2, trend="c")[0]
+        self.coint_t = coint(self.y1, self.y2, trend="c", maxlag=0, autolag=None)[0]
         self.teststat = -1.8208817
+        self.teststat = -1.830170986148
+
+
+def test_coint():
+    nobs = 200
+    scale_e = 1
+    const = [1, 0, 0.5, 0]
+    np.random.seed(123)
+    unit = np.random.randn(nobs).cumsum()
+    y = scale_e * np.random.randn(nobs, 4)
+    y[:, :2] += unit[:, None]
+    y += const
+    y = np.round(y, 4)
+
+    for trend in []:#['c', 'ct', 'ctt', 'nc']:
+        print('\n', trend)
+        print(coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None))
+        print(coint(y[:, 0], y[:, 1:3], trend=trend, maxlag=4, autolag=None))
+        print(coint(y[:, 0], y[:, 2:], trend=trend, maxlag=4, autolag=None))
+        print(coint(y[:, 0], y[:, 1:], trend=trend, maxlag=4, autolag=None))
+
+    # results from Stata egranger
+    res_egranger = {}
+    # trend = 'ct'
+    res = res_egranger['ct'] = {}
+    res[0]  = [-5.615251442239, -4.406102369132,  -3.82866685109, -3.532082997903]
+    res[1]  = [-5.63591313706, -4.758609717199, -4.179130554708, -3.880909696863]
+    res[2]  = [-2.892029275027, -4.758609717199, -4.179130554708, -3.880909696863]
+    res[3]  = [-5.626932544079,  -5.08363327039, -4.502469783057,   -4.2031051091]
+
+    # trend = 'c'
+    res = res_egranger['c'] = {}
+    # first critical value res[0][1] has a discrepancy starting at 4th decimal
+    res[0]  = [-5.760696844656, -3.952043522638, -3.367006313729, -3.065831247948]
+    # manually adjusted to have higher precision as in other cases
+    res[0][1] = -3.952321293401682
+    res[1]  = [-5.781087068772, -4.367111915942, -3.783961136005, -3.483501524709]
+    res[2]  = [-2.477444137366, -4.367111915942, -3.783961136005, -3.483501524709]
+    res[3]  = [-5.778205811661, -4.735249216434, -4.152738973763, -3.852480848968]
+
+    # trend = 'ctt'
+    res = res_egranger['ctt'] = {}
+    res[0]  = [-5.644431269946, -4.796038299708, -4.221469431008, -3.926472577178]
+    res[1]  = [-5.665691609506, -5.111158174219,  -4.53317278104,  -4.23601008516]
+    res[2]  = [-3.161462374828, -5.111158174219,  -4.53317278104,  -4.23601008516]
+    res[3]  = [-5.657904558563, -5.406880189412, -4.826111619543, -4.527090164875]
+
+
+    # trend = 'nc' not allowed in egranger
+
+    trend = 'ct'
+    for trend in ['c', 'ct', 'ctt']: #, 'nc']:
+        res1 = {}
+        res1[0] = coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None)
+        res1[1] = coint(y[:, 0], y[:, 1:3], trend=trend, maxlag=4,
+                        autolag=None)
+        res1[2] = coint(y[:, 0], y[:, 2:], trend=trend, maxlag=4, autolag=None)
+        res1[3] = coint(y[:, 0], y[:, 1:], trend=trend, maxlag=4, autolag=None)
+
+        for i in range(4):
+            res = res_egranger[trend]
+
+            assert_allclose(res1[i][0], res[i][0], rtol=1e-11)
+            r2 = res[i][1:]
+            r1 = res1[i][2]
+            assert_allclose(r1, r2, rtol=0, atol=6e-7)
 
 
 class TestGrangerCausality(object):
