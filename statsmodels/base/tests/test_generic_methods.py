@@ -440,6 +440,17 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         cls.res = mod.fit()  # default use_t=True
 
 
+    def test_predict_missing(self):
+        ex = self.data[:5].copy()
+        ex.iloc[0, 1] = np.nan
+        predicted1 = self.res.predict(ex)
+        predicted2 = self.res.predict(ex[1:])
+        from pandas.util.testing import assert_series_equal, assert_index_equal
+        assert_index_equal(predicted1.index, ex.index)
+        assert_series_equal(predicted1[1:], predicted2)
+        assert_equal(predicted1.values[0], np.nan)
+
+
 class TestWaldAnovaGLM(CheckAnovaMixin):
 
     @classmethod
