@@ -1010,9 +1010,10 @@ class MixedLM(base.LikelihoodModel):
 
                 if model.k_re > 0:
                     z0 = np.zeros(params.cov_re.shape[0])
-                    rv += np.random.multivariate_normal(
+                    mv = np.random.multivariate_normal(
                         mean=z0, cov=params.cov_re,
-                        size=model.nobs).sum(1)
+                        size=model.nobs)
+                    rv += mv.sum(1)
 
                 if model.k_vc > 0:
                     ix = model.row_indices
@@ -1023,6 +1024,8 @@ class MixedLM(base.LikelihoodModel):
                             mat = model.exog_vc[a][la]
                             r = np.sqrt(params.vcomp[j]) * np.random.normal(mat.shape[1])
                             rv[i] += (mat * r).sum(1)
+
+                rv += np.sqrt(scale) * np.random.normal(size=len(rv))
 
                 return rv
 
