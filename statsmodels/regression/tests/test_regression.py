@@ -1119,7 +1119,7 @@ def test_ridge():
 
     for alpha in [1., np.ones(p), 10, 10*np.ones(p)]:
         model1 = OLS(yvec, xmat)
-        result1 = model1.fit_ridge(alpha=1.)
+        result1 = model1._fit_ridge(alpha=1.)
         model2 = OLS(yvec, xmat)
         result2 = model2.fit_regularized(alpha=1., L1_wt=0)
         assert_allclose(result1.params, result2.params)

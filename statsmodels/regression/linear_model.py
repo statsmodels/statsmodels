@@ -827,7 +827,7 @@ class OLS(WLS):
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if L1_wt == 0:
-            return self.fit_ridge(alpha)
+            return self._fit_ridge(alpha)
 
         # In the future we could add support for other penalties, e.g. SCAD.
         if method != "elastic_net":
@@ -861,7 +861,7 @@ class OLS(WLS):
                               check_step=False,
                               **defaults)
 
-    def fit_ridge(self, alpha):
+    def _fit_ridge(self, alpha):
         """
         Fit a linear model using ridge regression.
 
