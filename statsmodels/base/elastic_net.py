@@ -1,4 +1,4 @@
-from scipy.stats import f
+from scipy.stats import f, exp
 import numpy as np
 from statsmodels.stats.contrast import CovTestResults
 from statsmodels.base.model import Results
