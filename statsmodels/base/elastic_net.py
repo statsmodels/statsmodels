@@ -1,5 +1,6 @@
+from scipy.stats import f
 import numpy as np
-import statsmodels.base.wrapper as wrap
+from statsmodels.stats.contrast import CovTestResults
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
@@ -330,6 +331,98 @@ class RegularizedResults(Results):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
+    @cache_readonly
+    def pvalue(self, tstat, null):
+        n, p = self.exog.shape
+        if null == "F":
+            return f.sf(tstat, 2, n - p)
+        elif null == "exp":
+            return exp.sf(tstat, 1)
+
+    def cov_test_stat(self, idx, mufull, sigma2, fit_kwds):
+        """generates the covariance test statistic
+        for the specified variable indexed idx
+
+        Parameters
+        ----------
+        idx : scalar
+            index of current variable
+        mufull : array-like
+            the current predicted values for the full
+            model
+        sigma2 : scalar
+            either estimate using full data or given
+        fit_kwds : dict-like
+            keywords for the model fit used to estimate
+            params
+
+        Returns
+        -------
+        A scalar of the test stat for the current idx
+        """
+
+        # first we prep the model using the active set
+        # less the var of interest and fit the model
+        # using the arguments given to the full run
+        exogA = self.model.exog
+        exogA = np.delete(exogA, idx, 1)
+        modelA = self.model
+        modelA.exog = exogA
+        paramsA = modelA.fit_regularized(**fit_kwds)
+
+        mufull = model.predict(self.params)
+        muA = modelA.predict(paramsA)
+        sigma2_hat = np.linalg.norm(self.endog - mufull) / (n - p)
+
+        return (y.dot(mufull) - y.dot(muA)) / sigma2_hat
+
+    def cov_test(self, fit_kwds=None, sigma2=None):
+        """performs the covariance test described in
+
+        Richard Lockhart, Jonathan Taylor, Ryan J. Tibshirani, and Robert
+        Tibshirani. "A Significance for Test the Lasso."
+        http://statweb.stanford.edu/~tibs/ftp/covtest.pdf
+        http://statweb.stanford.edu/~tibs/ftp/covtest-talk.pdf
+
+        Parameters
+        ----------
+        fit_kwds : None or dict-like
+            keywords for the model fit used to estimate
+            params
+        sigma2 : None or scalar
+            If None, estimates using the data otherwise
+            using the given value
+
+        Returns
+        -------
+        A CovTestResults instance
+
+        """
+
+        if fit_kwds is None:
+            raise ValueError("cov_test currently requires that fit_kwds not" +
+                             " be None.")
+
+        n, p = self.model.exog.shape
+        mufull = self.model.predict(self.params)
+
+        if sigma2 is None:
+            sigma2 = np.linalg.norm(self.endog - mufull) / (n - p)
+            null = "F"
+        else:
+            null = "exp"
+
+        res_cov = []
+        for idx in np.nonzero(self.params):
+            tstat = self.cov_test_stat(idx, mufull, sigma2, fit_kwds)
+            pval = self.pvalue(tstat, null)
+            res_cov.append([tstat, pval])
+
+        col_names = ["statistic", "pvalues"]
+        from pandas import DataFrame
+        table = DataFrame(res_cov, columns=col_names)
+        res = CovTestResults(None, table=table)
+        return res
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
