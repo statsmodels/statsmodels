@@ -809,9 +809,6 @@ class OLS(WLS):
 
         maxiter : int
             Maximum number of iterations
-        L1_wt  : float
-            Must be in [0, 1].  The L1 penalty has weight L1_wt and the
-            L2 penalty has weight 1 - L1_wt.
         cnvrg_tol : float
             Convergence threshold for line searches
         zero_tol : float
