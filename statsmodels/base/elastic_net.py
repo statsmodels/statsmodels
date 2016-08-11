@@ -1,4 +1,4 @@
-from scipy.stats import f, exp
+from scipy.stats import f, expon
 import numpy as np
 from statsmodels.stats.contrast import CovTestResults
 from statsmodels.base.model import Results
@@ -331,13 +331,12 @@ class RegularizedResults(Results):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
-    @cache_readonly
     def pvalue(self, tstat, null):
-        n, p = self.exog.shape
+        n, p = self.model.exog.shape
         if null == "F":
             return f.sf(tstat, 2, n - p)
         elif null == "exp":
-            return exp.sf(tstat, 1)
+            return expon.sf(tstat, 1)
 
     def cov_test_stat(self, idx, mufull, sigma2, fit_kwds):
         """generates the covariance test statistic
@@ -361,20 +360,22 @@ class RegularizedResults(Results):
         A scalar of the test stat for the current idx
         """
 
+        params_full = self.params
+        exog_full = self.model.exog
         # first we prep the model using the active set
         # less the var of interest and fit the model
         # using the arguments given to the full run
-        exogA = self.model.exog
+        exogA = self.model.exog.copy()
         exogA = np.delete(exogA, idx, 1)
-        modelA = self.model
-        modelA.exog = exogA
-        paramsA = modelA.fit_regularized(**fit_kwds)
+        print idx, exogA.shape, self.model.exog.shape
+        self.model.exog = exogA
+        paramsA = self.model.fit_regularized(**fit_kwds).params
 
-        mufull = model.predict(self.params)
-        muA = modelA.predict(paramsA)
-        sigma2_hat = np.linalg.norm(self.endog - mufull) / (n - p)
+        mu_full = self.model.predict(params_full, exog_full)
+        muA = self.model.predict(paramsA, exogA)
+        y = self.model.endog
 
-        return (y.dot(mufull) - y.dot(muA)) / sigma2_hat
+        return (y.dot(mu_full) - y.dot(muA)) / sigma2
 
     def cov_test(self, fit_kwds=None, sigma2=None):
         """performs the covariance test described in
@@ -407,20 +408,26 @@ class RegularizedResults(Results):
         mufull = self.model.predict(self.params)
 
         if sigma2 is None:
-            sigma2 = np.linalg.norm(self.endog - mufull) / (n - p)
+            sigma2 = np.linalg.norm(self.model.endog - mufull) / (n - p)
             null = "F"
         else:
             null = "exp"
 
         res_cov = []
-        for idx in np.nonzero(self.params):
+        # store these outside of model instance because it is currently
+        # easiest to modify the instance for each run instead of reinit
+        # TODO clean this up
+        full_exog = self.model.exog.copy()
+        nz = np.nonzero(self.params)[0]
+        for idx in nz:
+            self.model.exog = full_exog
             tstat = self.cov_test_stat(idx, mufull, sigma2, fit_kwds)
             pval = self.pvalue(tstat, null)
             res_cov.append([tstat, pval])
 
-        col_names = ["statistic", "pvalues"]
+        col_names = ["statistic", "pvalue"]
         from pandas import DataFrame
-        table = DataFrame(res_cov, columns=col_names)
+        table = DataFrame(res_cov, index=nz, columns=col_names)
         res = CovTestResults(None, table=table)
         return res
 

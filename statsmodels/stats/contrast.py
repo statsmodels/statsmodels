@@ -419,8 +419,8 @@ class CovTestResults(object):
 
         self.table = table
         self.statistic = statistic
-        self.pvalues = self.pvalues
+        self.pvalues = pvalues
 
         if table is not None:
             self.statistic = table["statistic"].values
-            self.pvalues = table["pvalues"].values
+            self.pvalues = table["pvalue"].values
