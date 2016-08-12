@@ -6,6 +6,7 @@ from patsy.design_info import DesignMatrix
 
 NUMPY_TYPES = [np.ndarray, np.float64]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
+DEFAULT_EXTERNAL_TYPE = np.ndarray
 
 
 class DataInterface(object):
@@ -19,7 +20,7 @@ class DataInterface(object):
         self.use_formula = use_formula
         self.require_col_vector = require_col_vector
         self.at_least_2d = at_least_2d
-        self.external_type = external_type
+        self.external_type = external_type if external_type is not None else DEFAULT_EXTERNAL_TYPE
 
         self.columns = None
         self.name = None
@@ -37,12 +38,9 @@ class DataInterface(object):
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
 
-        if self.external_type is None:
-            if data is not None and not np.isscalar(data):
+        if self.external_type == DEFAULT_EXTERNAL_TYPE and data is not None:
+            if not np.isscalar(data):
                 self.external_type = type(data)
-
-            else:
-                self.external_type = np.ndarray
 
     def to_transpose(self, data):
 
