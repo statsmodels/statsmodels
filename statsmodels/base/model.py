@@ -754,14 +754,17 @@ class Results(object):
             if get_ndim(exog) == 1 and (self.model.exog.ndim == 1 or self.model.exog.shape[1] == 1):
                 require_col_vector = True
 
-        exog_interface = NumPyInterface(data=exog, model=self.model, use_formula=transform,
-                                        require_col_vector=require_col_vector, at_least_2d=at_least_2d)
+        exog_interface = NumPyInterface(model=self.model, use_formula=transform, require_col_vector=require_col_vector,
+                                        at_least_2d=at_least_2d)
 
         exog = exog_interface.to_statsmodels(exog)
 
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
-        return exog_interface.from_statsmodels(predict_results)
+        if hasattr(predict_results, 'predicted_values'):
+            return predict_results
+        else:
+            return exog_interface.from_statsmodels(predict_results)
 
 
     def summary(self):

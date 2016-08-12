@@ -11,7 +11,7 @@ DEFAULT_EXTERNAL_TYPE = np.ndarray
 
 class DataInterface(object):
 
-    def __init__(self, permitted_types, internal_type=None, data=None, external_type=None, model=None,
+    def __init__(self, permitted_types, internal_type=None, external_type=None, model=None,
                  use_formula=False, require_col_vector=False, at_least_2d=False):
 
         self.permitted_types = permitted_types
