@@ -19,15 +19,7 @@ class DataInterface(object):
         self.use_formula = use_formula
         self.require_col_vector = require_col_vector
         self.at_least_2d = at_least_2d
-
-        if external_type is not None:
-            self.external_type = external_type
-
-        elif data is not None and not np.isscalar(data):
-            self.external_type = type(data)
-
-        else:
-            self.external_type = np.ndarray
+        self.external_type = external_type
 
         self.columns = None
         self.name = None
@@ -44,6 +36,13 @@ class DataInterface(object):
         self.ndim = get_ndim(data)
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
+
+        if self.external_type is None:
+            if data is not None and not np.isscalar(data):
+                self.external_type = type(data)
+
+            else:
+                self.external_type = np.ndarray
 
     def to_transpose(self, data):
 
