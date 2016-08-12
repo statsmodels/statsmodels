@@ -2,8 +2,11 @@ from __future__ import absolute_import, print_function
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose
+from statsmodels.compat.python import range
 
 import statsmodels.datasets.interest_inflation.data as e6
+from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output import \
+    sublists
 from .JMulTi_results.parse_jmulti_output import load_results_jmulti
 from .JMulTi_results.parse_jmulti_output import dt_s_tup_to_string
 from statsmodels.tsa.vecm.vecm import VECM
@@ -17,14 +20,15 @@ results_ref = {}
 results_sm = {}
 coint_rank = 1
 
-debug_mode = False
+debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
-seasonal_list = [0, 4]
+deterministic_terms_list = ["nc"]  # ["nc", "co", "colo", "ci", "cili"] # todo ###############################
+seasonal_list = [0]  # [0, 4] # todo #########################################################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
-             "VAR repr. A", "VAR to VEC representation", "log_like"]
+             "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
+             "causality"]
 to_test = all_tests  # ["beta"]
 
 
@@ -459,6 +463,62 @@ def test_fc():
                 err_msg
             yield assert_allclose, obt_u, des_u, rtol, atol, False, \
                 err_msg
+
+
+def test_causality():  # test Granger-causality and instantaneous causality
+    if debug_mode:
+        if "causality" not in to_test:
+            return
+        else:
+            print("\n\nCAUSALITY", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
+            err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
+            err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
+            err_msg_i_t = build_err_msg(ds, dt, "INSTANT. CAUS. - TEST STAT.")
+            # v_names = ds.variable_names  # todo: implement names in VECM
+            # ==> until names are implemented, use the following line:
+            v_names = range(len(ds.variable_names))
+            for causing in sublists(v_names, 1, len(v_names)):
+                # Now that the potentially causing variables are fixed, find 
+                # all combinations of potentially caused variables.
+                causing_compl = [el for el in v_names if el not in causing]
+                caused_combs = sublists(causing_compl, 1, len(causing_compl))
+                for caused in caused_combs:
+                    caused_key = tuple(ds.variable_names[i] for i in caused)
+                    causing_key = tuple(ds.variable_names[i] for i in causing)
+                    granger_sm = results_sm[ds][
+                        dt].test_granger_causality(caused, causing, verbose=False)
+                    # test test-statistic for Granger non-causality
+                    g_t_obt = granger_sm["statistic"]
+                    g_t_des = results_ref[ds][dt]["granger_caus"][
+                        "test_stat"][(causing_key, caused_key)]
+                    yield assert_allclose, g_t_obt, g_t_des, rtol, atol, \
+                        False, err_msg_g_t
+                    # test p-value for Granger non-causality
+                    g_p_obt = granger_sm["pvalue"]
+                    g_p_des = results_ref[ds][dt]["granger_caus"]["p"][(
+                        causing_key, caused_key)]
+                    yield assert_allclose, g_p_obt, g_p_des, rtol, atol, \
+                        False, err_msg_g_p
+                    # test test-statistic for instantaneous non-causality
+                    i_t_obt = results_sm[ds][dt].test_inst_causality(
+                        caused, causing)["statistic"]
+                    i_t_des = results_ref[ds][dt]["inst_caus"][
+                        "test_stat"][(causing_key, caused_key)]
+                    yield assert_allclose, i_t_obt, i_t_des, rtol, atol, \
+                        False, err_msg_i_t
+                    # test p-value for instantaneous non-causality
+                    i_p_obt = results_sm[ds][dt].test_inst_causality(
+                        caused, causing)["pvalue"]
+                    i_p_des = results_ref[ds][dt]["inst_caus"]["p"][(
+                        causing_key, caused_key)]
+                    yield assert_allclose, i_p_obt, i_p_des, rtol, atol, \
+                        False, err_msg_i_p
 
 
 def setup():

@@ -6,14 +6,51 @@ from numpy import hstack, vstack
 from numpy.linalg import inv, svd
 import scipy
 import scipy.stats
+
+from statsmodels.compat.python import range, string_types
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.vector_ar import util as var_util
+from statsmodels.tsa.vector_ar import output as var_output
+from statsmodels.tsa.vector_ar.util import vech
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
-    test_causality
+    VAR
 
+
+def num_det_vars(det_string, seasons=0):
+    """Gives the number of deterministic variables.
+
+    Parameters
+    ----------
+    det_string : str {"nc", "co", "ci", "lo", "li"}
+        * "nc" - no deterministic terms
+        * "co" - constant outside the cointegration relation
+        * "ci" - constant within the cointegration relation
+        * "lo" - linear trend outside the cointegration relation
+        * "li" - linear trend within the cointegration relation
+
+        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        trend with intercept)
+    seasons : int
+        Number of seasons
+
+    Returns
+    -------
+    num : int
+        Number of deterministic terms and number dummy variables for seasonal
+        terms.
+    """
+    num = 0
+    if "ci" in det_string or "co" in det_string:
+        num += 1
+    if "li" in det_string or "lo" in det_string:
+        num += 1
+    if seasons > 0:
+        num += seasons - 1
+    return num
 
 def mat_sqrt(_2darray):
     """Calculates the square root of a matrix.
@@ -34,9 +71,10 @@ def mat_sqrt(_2darray):
 
 
 def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
-    """Returns different matrices needed for parameter estimation. These
-    consist of elements of the data as well as elements representing
-    deterministic terms. A tuple of consisting of these matrices is returned.
+    """Returns different matrices needed for parameter estimation (compare p.
+    186 in [1]_). These matrices consist of elements of the data as well as
+    elements representing deterministic terms. A tuple of consisting of these
+    matrices is returned.
 
     Parameters
     ----------
@@ -71,7 +109,7 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
 
     References
     ----------
-    [Lut2005]_, p. 286
+    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
     # p. 286:
     p = diff_lags+1
@@ -226,7 +264,8 @@ class VECM(tsbase.TimeSeriesModel):
     Fit a VECM process
     .. math:: \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots + \Gamma_{p-1} \Delta y_{t-p+1} + u_t
     where
-    .. math:: \Pi = \alpha \beta'.
+    .. math:: \Pi = \alpha \beta'
+    as described in chapter 7 of [1]_.
 
     Parameters
     ----------
@@ -250,8 +289,7 @@ class VECM(tsbase.TimeSeriesModel):
 
     References
     ----------
-    [Lut2005]_
-    .. [Lut2005] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
     def __init__(self, endog_tot, dates=None, freq=None, missing="none",
@@ -269,7 +307,8 @@ class VECM(tsbase.TimeSeriesModel):
 
     def fit(self, method="ml", coint_rank=1):
         """
-        Estimates the parameters of a VECM and returns a VECMResults object.
+        Estimates the parameters of a VECM as described on pp. 269-304 in [1]_
+        and returns a VECMResults object.
 
         Parameters
         ----------
@@ -283,9 +322,9 @@ class VECM(tsbase.TimeSeriesModel):
         -------
         est : VECMResults
 
-        Notes
+        References
         -----
-        [Lut2005]_ pp. 269-304
+        [1]_ pp. 269-304
         """
         if method == "ls":
             return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
@@ -502,7 +541,7 @@ class VECMResults(object):
     """    # todo: aic, bic, bse, df_model, df_resid, fittedvalues, resid
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic='cc', seasons=0,
+                 gamma, sigma_u, deterministic='nc', seasons=0,
                  delta_y_1_T=None, y_min1=None, delta_x=None):
         self.y_all = endog_tot
         self.K = endog_tot.shape[0]
@@ -809,10 +848,229 @@ class VECMResults(object):
             return forecast(last_observations, self.var_repr, trend_coefs,
                             steps, exog)
 
-    def test_causality(self, equation, variables, kind='f', signif=0.05,
-                       verbose=True):
-        return test_causality(self, equation, variables, kind=kind,
-                              signif=signif, verbose=verbose)
+    def test_granger_causality(self, caused, causing, signif=0.05, verbose=True):
+        """
+        Test for Granger-causality as described in chapter 7.6.3 of [1]_.
+        Test H0: "causing does not Granger-cause caused" against  H1: "causing
+        is Granger-causal for caused".
 
-    def test_inst_causality(self):
-        raise Exception("not implemented yet")  # TODO
+        Parameters
+        ----------
+        caused : int or str
+            Test whether the corresponding variable is caused by the
+            variable(s) specified in causing.
+        causing : int or str or sequence of int or str
+            If int or str, test whether the corresponding variable is causing
+            the variable specified in caused.
+            If sequence of int or str, test whether the corresponding variables
+            are causing the variable specified in caused.
+        signif : float between 0 and 1, default 5 %
+            Significance level for computing critical values for test,
+            defaulting to standard 0.95 level
+        verbose : bool
+            If True, print a table with the results.
+
+        Returns
+        -------
+        results : dict
+            A dict holding the test's results. The dict's keys are:
+            * "statistic" : float
+                The claculated test statistic.
+            * "crit_value" : float
+                The critical value of the F-distribution.
+            * "pvalue" : float
+                The p-value corresponding to the test statistic.
+            * "df" : float
+                The degrees of freedom of the F-distribution.
+            * "conclusion" : str {"reject", "fail to reject"}
+                 Whether H0 can be rejected or not.
+            * "signif" : float
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+
+        """
+        if isinstance(causing, (string_types, int, np.integer)):
+            causing = [causing]
+        y, k, t, p = self.y_all, self.K, self.T-1, self.p+1
+        var_results = VAR(y.T).fit(maxlags=p, trend=self.deterministic)
+
+        # TODO: allow for multiple caused variables --> num_restr = (len(causing) + len(equations)) * (p-1) ... thus equations must implement __len__ (==> no int!)
+        num_restr = len(causing) * (p - 1)  # called N in Lutkepohl
+
+        num_det_terms = num_det_vars(self.deterministic, self.seasons)
+        # todo: make code work with names and comment in again the following:
+        # caused_ind = var_util.get_index(var_results.names, caused)
+        # causing_ind = np.array([var_util.get_index(var_results.names, c)
+        #                        for c in causing])
+        caused_ind = caused[0]
+        causing_ind = causing
+
+        # Make restriction matrix
+        C = np.zeros((num_restr, k*num_det_terms + k**2 * (p-1)), dtype=float)
+        cols_det = k * num_det_terms
+        row = 0
+        for j in range(p-1):
+            for vind in causing_ind:
+                C[row, cols_det + caused_ind + k * vind + k**2 * j] = 1
+                row += 1
+
+        a = np.vstack(vec(var_results.coefs[i])[:, None] for i in range(p-1))
+        Ca = np.dot(C, a)
+
+        x_min_p = np.zeros((k * p, t))
+        for i in range(p-1):  # fll first k * p rows of x_min_p
+            x_min_p[i*k:(i+1)*k, :] = y[:, p-1-i:-1-i] - y[:, :-p]
+        x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
+
+        x_x = np.dot(x_min_p, x_min_p.T)  # k*p x k*p
+        x_x_11 = inv(x_x)[:k * (p-1), :k * (p-1)]  # k*(p-1) x k*(p-1)
+
+        # For VAR-model with parameter restrictions the denominator in the
+        # calculation of sigma_u is T instead of (t-k*p-num_det_terms). Testing
+        # for Granger-causality means testing for restricted parameters, thus
+        # the former of the two denominators is used. As Lutkepohl states, both
+        # variants of the estimated sigma_u are possible. (see Lutkepohl,
+        # p.198)
+        # The choice of the denominator T has also the advantage of getting the
+        # same results as the reference software JMulTi.
+        sigma_u = var_results.sigma_u * (t-k*p-num_det_terms) / t
+        sig_alpha_min_p = t * np.kron(x_x_11, sigma_u)  # k**2*(p-1) x k**2*(p-1)
+        middle = inv(chain_dot(C, sig_alpha_min_p, C.T))
+
+        wald_statistic = t * chain_dot(Ca.T, middle, Ca)
+        f_statistic = wald_statistic / num_restr
+        df = (num_restr, k * var_results.df_resid)
+        f_distribution = scipy.stats.f(*df)
+
+        pvalue = f_distribution.sf(f_statistic)
+        crit_value = f_distribution.ppf(1 - signif)
+        conclusion = 'fail to reject' if f_statistic < crit_value else 'reject'
+
+        results = {
+            "statistic": f_statistic,
+            "crit_value": crit_value,
+            "pvalue": pvalue,
+            "df": df,
+            "conclusion": conclusion,
+            "signif":  signif
+        }
+
+        if verbose:
+            summ = var_output.causality_summary(results, causing, caused, "f")
+            print(summ)
+
+        return results
+
+    def test_inst_causality(self, caused, causing, signif=0.05, verbose=True):
+        """
+        Test for instantaneous causality as described in chapters 3.6.3 and
+        7.6.4 of [1]_.
+        Test H0: "No instantaneous causality between caused and causing"
+        against H1: "Instantaneous causality between caused and causing
+        exists".
+        Note that instantaneous causality is a symmetric relation
+        (i.e. if causing is "instantaneously causing" caused, then also caused
+        is "instantaneously causing" causing), thus the naming of the
+        parameters (which is chosen to be in accordance with
+        test_granger_causality()) may be misleading.
+
+        Parameters
+        ----------
+        caused :
+            If int or str, test whether the corresponding variable is caused
+            by the variable(s) specified in causing.
+            If sequence of int or str, test whether the corresponding variables
+            are being caused by the variable(s) specified in causing.
+        causing :
+            If int or str, test whether the corresponding variable is causing
+            the variable(s) specified in caused.
+            If sequence of int or str, test whether the corresponding variables
+            are causing the variable(s) specified in caused.
+        signif : float between 0 and 1, default 5 %
+            Significance level for computing critical values for test,
+            defaulting to standard 0.95 level
+        verbose : bool
+            If True, print a table with the results.
+
+        Returns
+        -------
+        results : dict
+            A dict holding the test's results. The dict's keys are:
+            * "statistic" : float
+                The claculated test statistic.
+            * "crit_value" : float
+                The critical value of the \Chi^2-distribution.
+            * "pvalue" : float
+                The p-value corresponding to the test statistic.
+            * "df" : float
+                The degrees of freedom of the \Chi^2-distribution.
+            * "conclusion" : str {"reject", "fail to reject"}
+                 Whether H0 can be rejected or not.
+            * "signif" : float
+
+        Notes
+        -----
+        This method is not returning the same result as JMulTi. This is because
+        the test is based on a VAR(p) model in statsmodels (in accordance to
+        pp. 104, 320-321 in [1]_) whereas JMulTi seems to be using a VAR(p+1)
+        model.
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        """
+
+        if not (0 < signif < 1):
+            raise ValueError("signif has to be between 0 and 1")
+
+        # Note: JMulTi is using p+1 instead of p
+        k, t, p = self.K, self.T, self.p
+        print("p: " + str(p))
+        var_results = VAR(self.y_all.T).fit(maxlags=p,
+                                            trend=self.deterministic)
+        if isinstance(causing, (string_types, int, np.integer)):
+            causing = [causing]
+        if isinstance(caused, (string_types, int, np.integer)):
+            caused = [caused]
+
+        num_restr = len(causing) * len(caused)  # called N in Lutkepohl
+
+        # todo: make code work with names and comment in again the following:
+        # caused_ind = var_util.get_index(var_results.names, caused)
+        # causing_ind = np.array([var_util.get_index(var_results.names, c)
+        #                        for c in causing])
+        caused_ind = caused
+        causing_ind = causing
+        inds = sorted([i+j for i in causing_ind for j in caused_ind])
+
+        sigma_u = var_results.sigma_u
+        vech_sigma_u = vech(sigma_u)
+
+        # Make restriction matrix
+        C = np.zeros((num_restr, len(vech_sigma_u)), dtype=float)
+        for row in range(num_restr):
+            C[row, inds[row]] = 1
+        Cs = np.dot(C, vech_sigma_u)
+        d = np.linalg.pinv(duplication_matrix(k))
+        Cd = np.dot(C, d)
+        middle = inv(chain_dot(Cd, np.kron(sigma_u, sigma_u), Cd.T)) / 2
+
+        wald_statistic = t * chain_dot(Cs.T, middle, Cs)
+        df = num_restr
+        dist = scipy.stats.chi2(df)
+
+        pvalue = dist.sf(wald_statistic)
+        crit_value = dist.ppf(1 - signif)
+
+        conclusion = 'fail to reject' if wald_statistic < crit_value else 'reject'
+        results = {
+            'statistic': wald_statistic,
+            'crit_value': crit_value,
+            'pvalue': pvalue,
+            'df': df,
+            'conclusion': conclusion,
+            'signif': signif
+        }
+        return results
