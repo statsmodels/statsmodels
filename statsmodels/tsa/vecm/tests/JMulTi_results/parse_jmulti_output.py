@@ -47,6 +47,42 @@ def dt_s_tup_to_string(dt_s_tup):
     return dt_string
 
 
+def sublists(lst, min_elmts=0, max_elmts=None):
+    """Build a list of all possible sublists of a given list. Restrictions
+    on the length of the sublists can be posed via the min_elmts and max_elmts
+    parameters.
+    All sublists
+    have will have at least min_elmts elements and not more than max_elmts
+    elements.
+
+    Parameters
+    ----------
+    lst : list
+        Original list from which sublists are generated.
+    min_elmts : int
+        Lower bound for the length of sublists.
+    max_elmts : int or None
+        If int, then max_elmts are the upper bound for the length of sublists.
+        If None, sublists' length is not restricted. In this case the longest
+        sublist will be of the same length as the original list lst.
+
+    Returns
+    -------
+    result : list
+        A list of all sublists of lst fulfilling the length restrictions.
+    """
+    if max_elmts is None:
+        max_elmts = len(lst)
+    # for the following see also the definition of powerset() in
+    # https://docs.python.org/dev/library/itertools.html#itertools-recipes
+    result = itertools.chain.from_iterable(
+                itertools.combinations(lst, sublist_len)
+                for sublist_len in range(min_elmts, max_elmts+1))
+    if type(result) != list:
+        result = list(result)
+    return result
+
+
 def stringify_var_names(var_list):
     """
 
@@ -142,6 +178,8 @@ def load_results_jmulti(dataset, dt_s_list):
         rows = 0
         started_reading_section = False
         start_end_mark = "-----"
+
+        # ---------------------------------------------------------------------
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
         params_file = open(params_file)
@@ -232,6 +270,7 @@ def load_results_jmulti(dataset, dt_s_list):
             results["p"]["beta"], results["p"]["det_coint"] = np.vsplit(
                 results["p"]["beta"], [alpha_rows])
 
+        # ---------------------------------------------------------------------
         # parse information regarding \Sigma_u
         sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_Sigmau" + ".txt"
@@ -261,6 +300,7 @@ def load_results_jmulti(dataset, dt_s_list):
         sigmau_file.close()
         results["est"]["Sigma_u"] = sigma_u[::-1]
 
+        # ---------------------------------------------------------------------
         # parse forecast related output:
         fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
             + "_fc5" + ".txt"
@@ -289,6 +329,7 @@ def load_results_jmulti(dataset, dt_s_list):
         results["fc"]["lower"] = lower
         results["fc"]["upper"] = upper
 
+        # ---------------------------------------------------------------------
         # parse output related to Granger-causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
         results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
@@ -299,18 +340,13 @@ def load_results_jmulti(dataset, dt_s_list):
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
-        # (see also: powerset in
-        # https://docs.python.org/dev/library/itertools.html#itertools-recipes)
-        var_combs = itertools.chain.from_iterable(
-                itertools.combinations(vn, i) for i in range(1, len(vn)))
+        var_combs = sublists(vn, 1, len(vn)-1)
         for causing in var_combs:
-            # complement of causing
-            v_comb_compl = [el for el in vn if el not in causing]
-            # sublists of v_comb_compl
-            v_comb_caused = itertools.chain.from_iterable(
-                itertools.combinations(v_comb_compl, i) for i in
-                range(1, len(v_comb_compl)+1))
-            for caused in v_comb_caused:
+            # Now that the potentially causing variables are fixed, find all
+            # combinations of potentially caused variables.
+            causing_compl = [el for el in vn if el not in causing]
+            caused_combs = sublists(causing_compl, 1, len(causing_compl))
+            for caused in caused_combs:
                 granger_file = dataset.__str__() + "_" + source + "_" \
                     + dt_string + "_granger_causality_" \
                     + stringify_var_names(causing) + "_" \
@@ -328,15 +364,17 @@ def load_results_jmulti(dataset, dt_s_list):
                     number = float(number.group(0))
                     granger_results.append(number)
                 granger_file.close()
-
-                results["granger_caus"]["p"][(causing, caused)] = \
+                results["granger_caus"]["test_stat"][(causing, caused)] = \
                     granger_results[0]
-                results["granger_caus"]["test_stat"][(causing, caused)] =\
+
+                results["granger_caus"]["p"][(causing, caused)] =\
                     granger_results[1]
-                results["inst_caus"]["p"][(causing, caused)] = \
-                    granger_results[2]
                 results["inst_caus"]["test_stat"][(causing, caused)] = \
+                    granger_results[2]
+                results["inst_caus"]["p"][(causing, caused)] = \
                     granger_results[3]
+
+        # ---------------------------------------------------------------------
 
         if debug_mode:
             print_debug_output(results, dt_string)
