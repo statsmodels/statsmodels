@@ -157,6 +157,12 @@ class SARIMAXStataTests(object):
             hqic, 3
         )
 
+    def test_standardized_forecasts_error(self):
+        cython_sfe = self.result.standardized_forecasts_error
+        self.result._standardized_forecasts_error = None
+        python_sfe = self.result.standardized_forecasts_error
+        assert_allclose(cython_sfe, python_sfe)
+
 
 class ARIMA(SARIMAXStataTests):
     """
@@ -1935,3 +1941,132 @@ def test_results():
 
     assert_almost_equal(res.arparams, [0.5])
     assert_almost_equal(res.maparams, [-0.5])
+
+
+def test_misc_exog():
+    # Tests for missing data
+    nobs = 20
+    k_endog = 1
+    np.random.seed(1208)
+    endog = np.random.normal(size=(nobs, k_endog))
+    endog[:4, 0] = np.nan
+    exog1 = np.random.normal(size=(nobs, 1))
+    exog2 = np.random.normal(size=(nobs, 2))
+
+    index = pd.date_range('1970-01-01', freq='QS', periods=nobs)
+    endog_pd = pd.DataFrame(endog, index=index)
+    exog1_pd = pd.Series(exog1.squeeze(), index=index)
+    exog2_pd = pd.DataFrame(exog2, index=index)
+
+    models = [
+        sarimax.SARIMAX(endog, exog=exog1, order=(1, 1, 0)),
+        sarimax.SARIMAX(endog, exog=exog2, order=(1, 1, 0)),
+        sarimax.SARIMAX(endog, exog=exog2, order=(1, 1, 0),
+                        simple_differencing=False),
+        sarimax.SARIMAX(endog_pd, exog=exog1_pd, order=(1, 1, 0)),
+        sarimax.SARIMAX(endog_pd, exog=exog2_pd, order=(1, 1, 0)),
+        sarimax.SARIMAX(endog_pd, exog=exog2_pd, order=(1, 1, 0),
+                        simple_differencing=False),
+    ]
+
+    for mod in models:
+        # Smoke tests
+        mod.start_params
+        res = mod.fit(disp=False)
+        res.summary()
+        res.predict()
+        res.predict(dynamic=True)
+        res.get_prediction()
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        res.forecast(steps=1, exog=oos_exog)
+        res.get_forecast(steps=1, exog=oos_exog)
+
+        # Smoke tests for invalid exog
+        oos_exog = np.random.normal(size=(1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+    # Test invalid model specifications
+    assert_raises(ValueError, sarimax.SARIMAX, endog, exog=np.zeros((10, 4)),
+                  order=(1, 1, 0))
+
+
+def test_datasets():
+    # Test that some unusual types of datasets work
+
+    np.random.seed(232849)
+    endog = np.random.binomial(1, 0.5, size=100)
+    exog = np.random.binomial(1, 0.5, size=100)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
+    res = mod.fit()
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_arima000():
+    from statsmodels.tsa.statespace.tools import compatibility_mode
+
+    # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
+    # a variance term)
+    np.random.seed(328423)
+    nobs = 50
+    endog = pd.DataFrame(np.random.normal(size=nobs))
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state, endog.T)
+
+    # ARIMA(0, 1, 0)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
+
+    # SARIMA(0, 1, 0)x(0, 1, 0, 1)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True,
+                          seasonal_order=(0, 1, 0, 1))
+    res = mod.smooth(mod.start_params)
+
+    # Exogenous variables
+    error = np.random.normal(size=nobs)
+    endog = np.ones(nobs) * 10 + error
+    exog = np.ones(nobs)
+
+    # We need univariate filtering here, to guarantee we won't hit singular
+    # forecast error covariance matrices.
+    if compatibility_mode:
+        return
+
+    # OLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog)
+    mod.ssm.filter_univariate = True
+    res = mod.smooth([10., 1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
+
+    # RLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([0., 10.], np.diag([1., 0.]))
+    res = mod.smooth([1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
+    assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
+
+    # RLS + TVP
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False, time_varying_regression=True)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([10.], np.diag([0.]))
+    res = mod.smooth([0., 1.])
+    assert_allclose(res.smoothed_state[0], 10, atol=1e-10)

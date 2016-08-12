@@ -34,7 +34,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
          - `agresti_coull` : Agresti-Coull interval
          - `beta` : Clopper-Pearson interval based on Beta distribution
          - `wilson` : Wilson Score interval
-         - `jeffrey` : Jeffrey's Bayesian Interval
+         - `jeffreys` : Jeffreys Bayesian Interval
          - `binom_test` : experimental, inversion of binom_test
 
     Returns
@@ -90,7 +90,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
             ci_upp = optimize.brentq(func, q_, 1. - float_info.epsilon)
 
     elif method == 'beta':
-        ci_low = stats.beta.ppf(alpha_2 , count, nobs - count + 1)
+        ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
         ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
 
     elif method == 'agresti_coull':
@@ -112,13 +112,206 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         ci_low = center - dist
         ci_upp = center + dist
 
-    elif method == 'jeffrey':
-        ci_low, ci_upp = stats.beta.interval(1 - alpha,  count + 0.5,
+    # method adjusted to be more forgiving of misspellings or incorrect option name
+    elif method[:4] == 'jeff':
+        ci_low, ci_upp = stats.beta.interval(1 - alpha, count + 0.5,
                                              nobs - count + 0.5)
 
     else:
         raise NotImplementedError('method "%s" is not available' % method)
     return ci_low, ci_upp
+
+
+def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
+    '''Confidence intervals for multinomial proportions.
+
+    Parameters
+    ----------
+    counts : array_like of int, 1-D
+        Number of observations in each category.
+    alpha : float in (0, 1), optional
+        Significance level, defaults to 0.05.
+    method : {'goodman', 'sison-glaz'}, optional
+        Method to use to compute the confidence intervals; available methods
+        are:
+
+         - `goodman`: based on a chi-squared approximation, valid if all
+           values in `counts` are greater or equal to 5 [2]_
+         - `sison-glaz`: less conservative than `goodman`, but only valid if
+           `counts` has 7 or more categories (``len(counts) >= 7``) [3]_
+
+    Returns
+    -------
+    confint : ndarray, 2-D
+        Array of [lower, upper] confidence levels for each category, such that
+        overall coverage is (approximately) `1-alpha`.
+
+    Raises
+    ------
+    ValueError
+        If `alpha` is not in `(0, 1)` (bounds excluded), or if the values in
+        `counts` are not all positive or null.
+    NotImplementedError
+        If `method` is not kown.
+    Exception
+        When ``method == 'sison-glaz'``, if for some reason `c` cannot be
+        computed; this signals a bug and should be reported.
+
+    Notes
+    -----
+    The `goodman` method [2]_ is based on approximating a statistic based on
+    the multinomial as a chi-squared random variable. The usual recommendation
+    is that this is valid if all the values in `counts` are greater than or
+    equal to 5. There is no condition on the number of categories for this
+    method.
+
+    The `sison-glaz` method [3]_ approximates the multinomial probabilities,
+    and evaluates that with a maximum-likelihood estimator. The first
+    approximation is an Edgeworth expansion that converges when the number of
+    categories goes to infinity, and the maximum-likelihood estimator converges
+    when the number of observations (``sum(counts)``) goes to infinity. In
+    their paper, Sison & Glaz demo their method with at least 7 categories, so
+    ``len(counts) >= 7`` with all values in `counts` at or above 5 can be used
+    as a rule of thumb for the validity of this method. This method is less
+    conservative than the `goodman` method (i.e. it will yield confidence
+    intervals closer to the desired significance level), but produces
+    confidence intervals of uniform width over all categories (except when the
+    intervals reach 0 or 1, in which case they are truncated), which makes it
+    most useful when proportions are of similar magnitude.
+
+    Aside from the original sources ([1]_, [2]_, and [3]_), the implementation
+    uses the formulas (though not the code) presented in [4]_ and [5]_.
+
+    References
+    ----------
+    .. [1] Levin, Bruce, "A representation for multinomial cumulative
+           distribution functions," The Annals of Statistics, Vol. 9, No. 5,
+           1981, pp. 1123-1126.
+
+    .. [2] Goodman, L.A., "On simultaneous confidence intervals for multinomial
+           proportions," Technometrics, Vol. 7, No. 2, 1965, pp. 247-254.
+
+    .. [3] Sison, Cristina P., and Joseph Glaz, "Simultaneous Confidence
+           Intervals and Sample Size Determination for Multinomial
+           Proportions," Journal of the American Statistical Association,
+           Vol. 90, No. 429, 1995, pp. 366-369.
+
+    .. [4] May, Warren L., and William D. Johnson, "A SAS® macro for
+           constructing simultaneous confidence intervals  for multinomial
+           proportions," Computer methods and programs in Biomedicine, Vol. 53,
+           No. 3, 1997, pp. 153-162.
+
+    .. [5] May, Warren L., and William D. Johnson, "Constructing two-sided
+           simultaneous confidence intervals for multinomial proportions for
+           small counts in a large number of cells," Journal of Statistical
+           Software, Vol. 5, No. 6, 2000, pp. 1-24.
+    '''
+    if alpha <= 0 or alpha >= 1:
+        raise ValueError('alpha must be in (0, 1), bounds excluded')
+    counts = np.array(counts, dtype=np.float)
+    if (counts < 0).any():
+        raise ValueError('counts must be >= 0')
+
+    n = counts.sum()
+    k = len(counts)
+    proportions = counts / n
+    if method == 'goodman':
+        chi2 = stats.chi2.ppf(1 - alpha / k, 1)
+        delta = chi2 ** 2 + (4 * n * proportions * chi2 * (1 - proportions))
+        region = ((2 * n * proportions + chi2 +
+                   np.array([- np.sqrt(delta), np.sqrt(delta)])) /
+                  (2 * (chi2 + n))).T
+    elif method[:5] == 'sison':  # We accept any name starting with 'sison'
+        # Define a few functions we'll use a lot.
+        def poisson_interval(interval, p):
+            """Compute P(b <= Z <= a) where Z ~ Poisson(p) and
+            `interval = (b, a)`."""
+            b, a = interval
+            prob = stats.poisson.cdf(a, p) - stats.poisson.cdf(b - 1, p)
+            if p == 0 and np.isnan(prob):
+                # hack for older scipy <=0.16.1
+                return int(b - 1 < 0)
+            return prob
+
+        def truncated_poisson_factorial_moment(interval, r, p):
+            """Compute mu_r, the r-th factorial moment of a poisson random
+            variable of parameter `p` truncated to `interval = (b, a)`."""
+            b, a = interval
+            return p ** r * (1 - ((poisson_interval((a - r + 1, a), p) -
+                                   poisson_interval((b - r, b - 1), p)) /
+                                  poisson_interval((b, a), p)))
+
+        def edgeworth(intervals):
+            """Compute the Edgeworth expansion term of Sison & Glaz's formula
+            (1) (approximated probability for multinomial proportions in a
+            given box)."""
+            # Compute means and central moments of the truncated poisson
+            # variables.
+            mu_r1, mu_r2, mu_r3, mu_r4 = [
+                np.array([truncated_poisson_factorial_moment(interval, r, p)
+                          for (interval, p) in zip(intervals, counts)])
+                for r in range(1, 5)
+            ]
+            mu = mu_r1
+            mu2 = mu_r2 + mu - mu ** 2
+            mu3 = mu_r3 + mu_r2 * (3 - 3 * mu) + mu - 3 * mu ** 2 + 2 * mu ** 3
+            mu4 = (mu_r4 + mu_r3 * (6 - 4 * mu) +
+                   mu_r2 * (7 - 12 * mu + 6 * mu ** 2) +
+                   mu - 4 * mu ** 2 + 6 * mu ** 3 - 3 * mu ** 4)
+
+            # Compute expansion factors, gamma_1 and gamma_2.
+            g1 = mu3.sum() / mu2.sum() ** 1.5
+            g2 = (mu4.sum() - 3 * (mu2 ** 2).sum()) / mu2.sum() ** 2
+
+            # Compute the expansion itself.
+            x = (n - mu.sum()) / np.sqrt(mu2.sum())
+            phi = np.exp(- x ** 2 / 2) / np.sqrt(2 * np.pi)
+            H3 = x ** 3 - 3 * x
+            H4 = x ** 4 - 6 * x ** 2 + 3
+            H6 = x ** 6 - 15 * x ** 4 + 45 * x ** 2 - 15
+            f = phi * (1 + g1 * H3 / 6 + g2 * H4 / 24 + g1 ** 2 * H6 / 72)
+            return f / np.sqrt(mu2.sum())
+
+
+        def approximated_multinomial_interval(intervals):
+            """Compute approximated probability for Multinomial(n, proportions)
+            to be in `intervals` (Sison & Glaz's formula (1))."""
+            return np.exp(
+                np.sum(np.log([poisson_interval(interval, p)
+                               for (interval, p) in zip(intervals, counts)])) +
+                np.log(edgeworth(intervals)) -
+                np.log(stats.poisson._pmf(n, n))
+            )
+
+        def nu(c):
+            """Compute interval coverage for a given `c` (Sison & Glaz's
+            formula (7))."""
+            return approximated_multinomial_interval(
+                [(np.maximum(count - c, 0), np.minimum(count + c, n))
+                 for count in counts])
+
+        # Find the value of `c` that will give us the confidence intervals
+        # (solving nu(c) <= 1 - alpha < nu(c + 1).
+        c = 1.0
+        nuc = nu(c)
+        nucp1 = nu(c + 1)
+        while not (nuc <= (1 - alpha) < nucp1):
+            if c > n:
+                raise Exception("Couldn't find a value for `c` that "
+                                "solves nu(c) <= 1 - alpha < nu(c + 1)")
+            c += 1
+            nuc = nucp1
+            nucp1 = nu(c + 1)
+
+        # Compute gamma and the corresponding confidence intervals.
+        g = (1 - alpha - nuc) / (nucp1 - nuc)
+        ci_lower = np.maximum(proportions - c / n, 0)
+        ci_upper = np.minimum(proportions + (c + 2 * g) / n, 1)
+        region = np.array([ci_lower, ci_upper]).T
+    else:
+        raise NotImplementedError('method "%s" is not available' % method)
+    return region
+
 
 def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
                                   method='normal'):
@@ -586,7 +779,7 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
 
     count = np.asarray(count)
     nobs = np.asarray(nobs)
-    
+
     if nobs.size == 1:
         nobs = nobs * np.ones_like(count)
 

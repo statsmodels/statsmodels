@@ -402,10 +402,19 @@ class PHReg(model.LikelihoodModel):
         if isinstance(offset, str):
             offset = data[offset]
 
+        import re
+        terms = re.split("[+\-~]", formula)
+        for term in terms:
+            term = term.strip()
+            if term in ("0", "1"):
+                import warnings
+                warnings.warn("PHReg formulas should not include any '0' or '1' terms")
+
         mod = super(PHReg, cls).from_formula(formula, data,
                     status=status, entry=entry, strata=strata,
                     offset=offset, subset=subset, ties=ties,
-                    missing=missing, *args, **kwargs)
+                    missing=missing, drop_cols=["Intercept"], *args,
+                    **kwargs)
 
         return mod
 
@@ -790,9 +799,8 @@ class PHReg(model.LikelihoodModel):
                     xp0 += e_linpred[ix].sum()
                     v = exog_s[ix,:]
                     xp1 += (e_linpred[ix][:,None] * v).sum(0)
-                    mat = v[None,:,:]
                     elx = e_linpred[ix]
-                    xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+                    xp2 += np.einsum("ij,ik,i->jk", v, v, elx)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
@@ -804,10 +812,8 @@ class PHReg(model.LikelihoodModel):
                     xp0 -= e_linpred[ix].sum()
                     v = exog_s[ix,:]
                     xp1 -= (e_linpred[ix][:,None] * v).sum(0)
-                    mat = v[None,:,:]
                     elx = e_linpred[ix]
-                    xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
-
+                    xp2 -= np.einsum("ij,ik,i->jk", v, v, elx)
         return -hess
 
     def efron_hessian(self, params):
@@ -845,28 +851,25 @@ class PHReg(model.LikelihoodModel):
                     xp0 += e_linpred[ix].sum()
                     v = exog_s[ix,:]
                     xp1 += (e_linpred[ix][:,None] * v).sum(0)
-                    mat = v[None,:,:]
                     elx = e_linpred[ix]
-                    xp2 += (mat.T * mat * elx[None,:,None]).sum(1)
+                    xp2 += np.einsum("ij,ik,i->jk", v, v, elx)
 
                 ixf = uft_ix[i]
                 if len(ixf) > 0:
                     v = exog_s[ixf,:]
                     xp0f = e_linpred[ixf].sum()
                     xp1f = (e_linpred[ixf][:,None] * v).sum(0)
-                    mat = v[None,:,:]
                     elx = e_linpred[ixf]
-                    xp2f = (mat.T * mat * elx[None,:,None]).sum(1)
+                    xp2f = np.einsum("ij,ik,i->jk", v, v, elx)
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
                 J = np.arange(m, dtype=np.float64) / m
                 c0 = xp0 - J*xp0f
-                mat = (xp2[None,:,:] - J[:,None,None]*xp2f) / c0[:,None,None]
-                hess += mat.sum(0)
+                hess += xp2 * np.sum(1 / c0)
+                hess -= xp2f * np.sum(J / c0)
                 mat = (xp1[None, :] - np.outer(J, xp1f)) / c0[:, None]
-                mat = mat[:, :, None] * mat[:, None, :]
-                hess -= mat.sum(0)
+                hess -= np.einsum("ij,ik->jk", mat, mat)
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -874,9 +877,8 @@ class PHReg(model.LikelihoodModel):
                     xp0 -= e_linpred[ix].sum()
                     v = exog_s[ix,:]
                     xp1 -= (e_linpred[ix][:,None] * v).sum(0)
-                    mat = v[None,:,:]
                     elx = e_linpred[ix]
-                    xp2 -= (mat.T * mat * elx[None,:,None]).sum(1)
+                    xp2 -= np.einsum("ij,ik,i->jk", v, v, elx)
 
         return -hess
 

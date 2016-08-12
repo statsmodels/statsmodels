@@ -1,13 +1,14 @@
 import numpy as np
 
 import statsmodels.api as sm
-from numpy.testing import dec
+from numpy.testing import dec, assert_equal, assert_raises
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
                   plot_added_variable, plot_partial_residuals,
-                  plot_ceres_residuals)
+                  plot_ceres_residuals, influence_plot, plot_leverage_resid2)
 from pandas import Series, DataFrame
+from numpy.testing.utils import assert_array_less
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -77,17 +78,59 @@ class TestPlot(object):
     def test_plot_oth(self):
         #just test that they run
         res = self.res
-
+        plt.close('all')
         plot_fit(res, 0, y_true=None)
+        plt.close('all')
         plot_partregress_grid(res, exog_idx=[0,1])
+        plt.close('all')
         plot_regress_exog(res, exog_idx=0)
+        plt.close('all')
         plot_ccpr(res, exog_idx=0)
+        plt.close('all')
         plot_ccpr_grid(res, exog_idx=[0])
+        plt.close('all')
         fig = plot_ccpr_grid(res, exog_idx=[0,1])
         for ax in fig.axes:
             add_lowess(ax)
-
+   
         close_or_save(pdf, fig)
+        plt.close('all')
+
+    @dec.skipif(not have_matplotlib)
+    def test_plot_influence(self):
+        infl = self.res.get_influence()
+        fig = influence_plot(self.res)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        # test that we have the correct criterion for sizes #3103
+        try:
+            sizes = fig.axes[0].get_children()[0]._sizes
+            ex = sm.add_constant(infl.cooks_distance[0])
+            ssr = sm.OLS(sizes, ex).fit().ssr
+            assert_array_less(ssr, 1e-12)
+        except AttributeError:
+            import warnings
+            warnings.warn('test not compatible with matplotlib version')
+        plt.close(fig)
+
+        fig = influence_plot(self.res, criterion='DFFITS')
+        assert_equal(isinstance(fig, plt.Figure), True)
+        try:
+            sizes = fig.axes[0].get_children()[0]._sizes
+            ex = sm.add_constant(np.abs(infl.dffits[0]))
+            ssr = sm.OLS(sizes, ex).fit().ssr
+            assert_array_less(ssr, 1e-12)
+        except AttributeError:
+            pass
+        plt.close(fig)
+
+        assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
+
+    @dec.skipif(not have_matplotlib)
+    def test_plot_leverage_resid2(self):
+        fig = plot_leverage_resid2(self.res)
+        assert_equal(isinstance(fig, plt.Figure), True)
+        plt.close(fig)
+
 
 class TestPlotPandas(TestPlot):
     def setup(self):
@@ -114,8 +157,10 @@ class TestPlotFormula(TestPlotPandas):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
         plot_regress_exog(res, "var1")
+        plt.close('all')
         res = ols("y~var1", data=self.data).fit()
         plot_regress_exog(res, "var1")
+        plt.close('all')
 
 
 class TestABLine(object):

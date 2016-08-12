@@ -137,10 +137,15 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         self.data.endog, self.data.exog = (
             self.data._convert_endog_exog(self.endog, self.exog))
 
-        # Reset dates, if provided
-        if self.data.dates is not None:
-            new_length = self.data.endog.shape[0]
-            self.data.dates = self.data.dates[self.order:]
+        # Reset indexes, if provided
+        if self.data.row_labels is not None:
+            self.data._cache['row_labels'] = (
+                self.data.row_labels[self.order:])
+        if self._index is not None:
+            if self._index_generated:
+                self._index = self._index[:-self.order]
+            else:
+                self._index = self._index[self.order:]
 
         # Parameters
         self.parameters['autoregressive'] = self.switching_ar

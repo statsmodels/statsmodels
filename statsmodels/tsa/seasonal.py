@@ -82,7 +82,8 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
             freq = pfreq
         else:
             raise ValueError("You must specify a freq or x must be a "
-                             "pandas object with a timeseries index")
+                             "pandas object with a timeseries index with"
+                             "a freq not set to None")
 
     if filt is None:
         if freq % 2 == 0:  # split weights at ends

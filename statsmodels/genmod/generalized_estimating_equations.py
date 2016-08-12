@@ -678,8 +678,8 @@ class GEE(base.Model):
         if type(exposure) == str:
             exposure = data[exposure]
 
-        model = super(GEE, cls).from_formula(formula, data, subset,
-                                             groups, time=time,
+        model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
+                                             groups=groups, time=time,
                                              offset=offset,
                                              exposure=exposure,
                                              *args, **kwargs)
@@ -2386,13 +2386,13 @@ class NominalGEEResults(GEEResults):
         link = self.model.family.link.inverse
         ncut = self.model.family.ncut
 
-        k = self.model.exog.shape[1] / ncut
+        k = int(self.model.exog.shape[1] / ncut)
         exog_means = self.model.exog.mean(0)[0:k]
         exog_names = self.model.exog_names[0:k]
         exog_names = [x.split("[")[0] for x in exog_names]
 
         params = np.reshape(self.params,
-                            (ncut, len(self.params) / ncut))
+                            (ncut, len(self.params) // ncut))
 
         for ev in exog_values:
 

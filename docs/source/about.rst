@@ -17,7 +17,7 @@ Testing
 -------
 
 Most results have been verified with at least one other statistical package:
-R, Stata or SAS. The guiding principal for the initial rewrite and for 
+R, Stata or SAS. The guiding principle for the initial rewrite and for 
 continued development is that all numbers have to be verified. Some 
 statistical methods are tested with Monte Carlo studies. While we strive to
 follow this test driven approach, there is no guarantee that the code is 
@@ -52,6 +52,6 @@ development of statsmodels:
  Vector Autoregressive Models (VAR) by Wes McKinney
 
 We would also like to thank our hosting providers, `github
-<https://github.com/>`_ for the public code repository, `sourceforge
-<http://sourceforge.net/>`_ for hosting our documentation and `python.org
+<https://github.com/>`_ for the public code repository, `github.io
+<http://statsmodels.github.io/>`_ for hosting our documentation and `python.org
 <https://python.org>`_ for making our downloads available on PyPi.

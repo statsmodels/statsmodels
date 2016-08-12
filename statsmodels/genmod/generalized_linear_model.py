@@ -1310,7 +1310,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def resid_working(self):
         # Isn't self.resid_response is already adjusted by _n_trials?
-        val = (self.resid_response / self.family.link.deriv(self.mu))
+        val = (self.resid_response * self.family.link.deriv(self.mu))
         val *= self._n_trials
         return val
 

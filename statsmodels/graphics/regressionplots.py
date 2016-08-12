@@ -762,9 +762,9 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
 
     infl = results.get_influence()
 
-    if criterion.lower().startswith('dff'):
+    if criterion.lower().startswith('coo'):
         psize = infl.cooks_distance[0]
-    elif criterion.lower().startswith('coo'):
+    elif criterion.lower().startswith('dff'):
         psize = np.abs(infl.dffits[0])
     else:
         raise ValueError("Criterion %s not understood" % criterion)
@@ -810,7 +810,7 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
     return fig
 
 
-def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
+def plot_leverage_resid2(results, alpha=.05, ax=None,
                          **kwargs):
     """
     Plots leverage statistics vs. normalized residuals squared
@@ -822,8 +822,6 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     alpha : float
         Specifies the cut-off for large-standardized residuals. Residuals
         are assumed to be distributed N(0, 1) with alpha=alpha.
-    label_kwargs : dict
-        The keywords to pass to annotate for the labels.
     ax : Axes instance
         Matplotlib Axes instance
 
@@ -849,7 +847,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     large_resid = np.abs(resid) > cutoff
     labels = results.model.data.row_labels
     if labels is None:
-        labels = lrange(results.nobs)
+        labels = lrange(int(results.nobs))
     index = np.where(np.logical_or(large_leverage, large_resid))[0]
     ax = utils.annotate_axes(index, labels, lzip(resid**2, leverage),
                              [(0, 5)]*int(results.nobs), "large",

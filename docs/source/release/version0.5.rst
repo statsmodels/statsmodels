@@ -108,7 +108,7 @@ The power module (``statsmodel.stats.power``) currently implements power and sam
 
 Other important new features
 ----------------------------
-* **IPython notebook examples**: Many of our examples have been converted or added as IPython notebooks now. They are available `here <http://statsmodels.sourceforge.net/devel/examples/index.html#notebook-examples>`_.
+* **IPython notebook examples**: Many of our examples have been converted or added as IPython notebooks now. They are available `here <http://www.statsmodels.org/devel/examples/index.html#notebook-examples>`_.
 
 * **Improved marginal effects for discrete choice models**: Expanded options for obtaining marginal effects after the estimation of nonlinear discrete choice models are available. See :py:meth:`get_margeff <statsmodels.discrete.discrete_model.DiscreteResuls.get_margeff>`.
 

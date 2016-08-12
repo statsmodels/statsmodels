@@ -335,6 +335,7 @@ proportions that can be used with NormalIndPower.
    binom_tost
    binom_tost_reject_interval
 
+   multinomial_proportions_confint
 
    proportions_ztest
    proportions_ztost

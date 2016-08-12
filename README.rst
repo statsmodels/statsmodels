@@ -65,6 +65,12 @@ Main Features
   - Hypothesis tests for time series: unit root, cointegration and others
   - Descriptive statistics and process models for time series analysis
 
+* Survival analysis:
+
+  - Proportional hazards regression (Cox models)
+  - Survivor function estimation (Kaplan-Meier)
+  - Cumulative incidence function estimation
+
 * Nonparametric statistics: (Univariate) kernel density estimators
 * Datasets: Datasets used for examples and in testing
 * Statistics: a wide range of statistical tests
@@ -75,6 +81,7 @@ Main Features
   - various additional statistical tests
 
 * Imputation with MICE and regression on order statistic
+* Mediation analysis
 * Principal Component Analysis with missing data
 * I/O
 

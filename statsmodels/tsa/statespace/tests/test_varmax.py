@@ -12,7 +12,7 @@ import os
 import re
 
 import warnings
-from statsmodels.tsa.statespace import varmax
+from statsmodels.tsa.statespace import mlemodel, varmax
 from .results import results_varmax
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 from nose.exc import SkipTest
@@ -114,6 +114,12 @@ class CheckVARMAX(object):
             self.results.predict(end=end, dynamic=dynamic, **kwargs),
             self.true['dynamic_predict'],
             atol=atol)
+
+    def test_standardized_forecasts_error(self):
+        cython_sfe = self.results.standardized_forecasts_error
+        self.results._standardized_forecasts_error = None
+        python_sfe = self.results.standardized_forecasts_error
+        assert_allclose(cython_sfe, python_sfe)
 
 
 class CheckLutkepohl(CheckVARMAX):
@@ -431,10 +437,14 @@ class TestVAR_exog(CheckLutkepohl):
         desired = self.results.forecast(steps=16, exog=exog)
         assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
-        # Test it directly
+        # Test it directly (i.e. without the wrapping done in
+        # VARMAXResults.get_prediction which converts exog to state_intercept)
         beta = self.results.params[-9:-6]
-        state_intercept = np.concatenate([exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
-        desired = super(varmax.VARMAXResultsWrapper, self.results).predict(start=75, end=75+15, state_intercept=state_intercept)
+        state_intercept = np.concatenate([
+            exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
+        desired = mlemodel.MLEResults.get_prediction(
+            self.results._results, start=75, end=75+15,
+            state_intercept=state_intercept).predicted_mean
         assert_allclose(desired, self.true['fcast'], atol=1e-6)
 
     def test_summary(self):
@@ -584,7 +594,7 @@ class CheckFREDManufacturing(CheckVARMAX):
         # 1960:Q1 - 1982:Q4
         with open(current_path + os.sep + 'results' + os.sep + 'manufac.dta', 'rb') as test_data:
             dta = pd.read_stata(test_data)
-        dta.index = dta.month
+        dta.index = pd.DatetimeIndex(dta.month, freq='MS')
         dta['dlncaputil'] = dta['lncaputil'].diff()
         dta['dlnhours'] = dta['lnhours'].diff()
 
@@ -741,6 +751,8 @@ def test_specifications():
 
 
 def test_misspecifications():
+    varmax.__warningregistry__ = {}
+
     # Tests for model specification and misspecification exceptions
     endog = np.arange(20).reshape(10,2)
 
@@ -768,3 +780,62 @@ def test_misspecifications():
         assert_equal(str(w[0].message), message)
     warnings.resetwarnings()
 
+
+def test_misc_exog():
+    # Tests for missing data
+    nobs = 20
+    k_endog = 2
+    np.random.seed(1208)
+    endog = np.random.normal(size=(nobs, k_endog))
+    endog[:4, 0] = np.nan
+    endog[2:6, 1] = np.nan
+    exog1 = np.random.normal(size=(nobs, 1))
+    exog2 = np.random.normal(size=(nobs, 2))
+
+    index = pd.date_range('1970-01-01', freq='QS', periods=nobs)
+    endog_pd = pd.DataFrame(endog, index=index)
+    exog1_pd = pd.Series(exog1.squeeze(), index=index)
+    exog2_pd = pd.DataFrame(exog2, index=index)
+
+    models = [
+        varmax.VARMAX(endog, exog=exog1, order=(1, 0)),
+        varmax.VARMAX(endog, exog=exog2, order=(1, 0)),
+        varmax.VARMAX(endog_pd, exog=exog1_pd, order=(1, 0)),
+        varmax.VARMAX(endog_pd, exog=exog2_pd, order=(1, 0)),
+    ]
+
+    for mod in models:
+        # Smoke tests
+        mod.start_params
+        res = mod.fit(disp=False)
+        res.summary()
+        res.predict()
+        res.predict(dynamic=True)
+        res.get_prediction()
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        res.forecast(steps=1, exog=oos_exog)
+        res.get_forecast(steps=1, exog=oos_exog)
+
+        # Smoke tests for invalid exog
+        oos_exog = np.random.normal(size=(1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+    # Test invalid model specifications
+    assert_raises(ValueError, varmax.VARMAX, endog, exog=np.zeros((10, 4)),
+                  order=(1, 0))
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=(50, 2)))
+    mod = varmax.VARMAX(endog, order=(1, 0))
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

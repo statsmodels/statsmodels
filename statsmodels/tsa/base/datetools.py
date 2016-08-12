@@ -1,97 +1,14 @@
-from statsmodels.compat.python import (lrange, lzip, lmap, string_types, callable,
-                                asstr, reduce, zip, map)
+"""
+Tools for working with dates
+"""
+from statsmodels.compat.python import (lrange, lzip, lmap, string_types, long,
+                                       callable, asstr, reduce, zip, map)
 import re
 import datetime
-from pandas import Period
-from pandas.tseries.frequencies import to_offset
+
 from pandas import datetools as pandas_datetools
+from pandas import Int64Index, Period, PeriodIndex, Timestamp, DatetimeIndex
 import numpy as np
-
-#NOTE: All of these frequencies assume end of period (except wrt time)
-class _freq_to_pandas_class(object):
-    # being lazy, don't want to replace dictionary below
-    def __getitem__(self, key):
-        return to_offset(key)
-_freq_to_pandas = _freq_to_pandas_class()
-
-
-def _is_datetime_index(dates):
-    if isinstance(dates[0], (datetime.datetime, Period)):
-        return True  # TimeStamp is a datetime subclass
-    else:
-        return False
-
-def _index_date(date, dates):
-    """
-    Gets the index number of a date in a date index.
-
-    Works in-sample and will return one past the end of the dates since
-    prediction can start one out.
-
-    Currently used to validate prediction start dates.
-
-    If there dates are not of a fixed-frequency and date is not on the
-    existing dates, then a ValueError is raised.
-    """
-    if isinstance(date, string_types):
-        date = date_parser(date)
-    try:
-        if hasattr(dates, 'indexMap'): # 0.7.x
-            return dates.indexMap[date]
-        else:
-            date = dates.get_loc(date)
-            try: # pandas 0.8.0 returns a boolean array
-                len(date)
-                return np.where(date)[0].item()
-            except TypeError: # expected behavior
-                return date
-    except KeyError as err:
-        freq = _infer_freq(dates)
-        if freq is None:
-            #TODO: try to intelligently roll forward onto a date in the
-            # index. Waiting to drop pandas 0.7.x support so this is
-            # cleaner to do.
-            raise ValueError("There is no frequency for these dates and "
-                             "date %s is not in dates index. Try giving a "
-                             "date that is in the dates index or use "
-                             "an integer" % date)
-
-        # we can start prediction at the end of endog
-        if _idx_from_dates(dates[-1], date, freq) == 1:
-            return len(dates)
-
-        raise ValueError("date %s not in date index. Try giving a "
-                         "date that is in the dates index or use an integer"
-                         % date)
-
-def _date_from_idx(d1, idx, freq):
-    """
-    Returns the date from an index beyond the end of a date series.
-    d1 is the datetime of the last date in the series. idx is the
-    index distance of how far the next date should be from d1. Ie., 1 gives
-    the next date from d1 at freq.
-
-    Notes
-    -----
-    This does not do any rounding to make sure that d1 is actually on the
-    offset. For now, this needs to be taken care of before you get here.
-    """
-    return d1 + idx * _freq_to_pandas[freq]
-
-def _idx_from_dates(d1, d2, freq):
-    """
-    Returns an index offset from datetimes d1 and d2. d1 is expected to be the
-    last date in a date series and d2 is the out of sample date.
-
-    Notes
-    -----
-    Rounds down the index if the end date is before the next date at freq.
-    Does not check the start date to see whether it is on the offest but
-    assumes that it is.
-    """
-    from pandas import DatetimeIndex
-    return len(DatetimeIndex(start=d1, end=d2,
-                             freq = _freq_to_pandas[freq])) - 1
 
 _quarter_to_day = {
         "1" : (3, 31),
@@ -103,6 +20,7 @@ _quarter_to_day = {
         "III" : (9, 30),
         "IV" : (12, 31)
         }
+
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 _months_with_days = lzip(lrange(1,13), _mdays)
@@ -164,15 +82,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        if (hasattr(pandas_datetools, 'parser') and
-            not callable(pandas_datetools.parser)):
-            # exists in 0.8.0 pandas, but it's the class not the module
-            return pandas_datetools.parser.parse(timestr, parserinfo,
-                                                 **kwargs)
-        else: # 0.8.1 pandas version didn't import this into namespace
-            from dateutil import parser
-            return parser.parse(timestr, parserinfo, **kwargs)
-
+        return pandas_datetools.to_datetime(timestr, **kwargs)
 
     return datetime.datetime(year, month, day)
 
@@ -276,41 +186,3 @@ def dates_from_range(start, end=None, length=None):
     """
     dates = date_range_str(start, end, length)
     return dates_from_str(dates)
-
-def _add_datetimes(dates):
-    return reduce(lambda x, y: y+x, dates)
-
-def _infer_freq(dates):
-    maybe_freqstr = getattr(dates, 'freqstr', None)
-    if maybe_freqstr is not None:
-        return maybe_freqstr
-    try:
-        from pandas.tseries.api import infer_freq
-        freq = infer_freq(dates)
-        return freq
-    except ImportError:
-        pass
-
-    timedelta = datetime.timedelta
-    nobs = min(len(dates), 6)
-    if nobs == 1:
-        raise ValueError("Cannot infer frequency from one date")
-    if hasattr(dates, 'values'):
-        dates = dates.values # can't do a diff on a DateIndex
-    diff = np.diff(dates[:nobs])
-    delta = _add_datetimes(diff)
-    nobs -= 1 # after diff
-    if delta == timedelta(nobs): #greedily assume 'D'
-        return 'D'
-    elif delta == timedelta(nobs + 2):
-        return 'B'
-    elif delta == timedelta(7*nobs):
-        return 'W'
-    elif delta >= timedelta(28*nobs) and delta <= timedelta(31*nobs):
-        return 'M'
-    elif delta >= timedelta(90*nobs) and delta <= timedelta(92*nobs):
-        return 'Q'
-    elif delta >= timedelta(365 * nobs) and delta <= timedelta(366 * nobs):
-        return 'A'
-    else:
-        return

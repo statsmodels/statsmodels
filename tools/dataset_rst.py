@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """
 Run this script to convert dataset documentation to ReST files. Relies
 on the meta-information from the datasets of the currently installed version.

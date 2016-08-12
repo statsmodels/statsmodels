@@ -9,7 +9,8 @@ from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import ValueWarning, \
+    HessianInversionWarning
 from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
@@ -97,7 +98,7 @@ class Model(object):
         return data
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -111,6 +112,9 @@ class Model(object):
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
             `pandas.DataFrame`
+        drop_cols : array-like
+            Columns to drop from the design matrix.  Cannot be used to
+            drop terms involving categoricals.
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
@@ -120,7 +124,6 @@ class Model(object):
             indicating the depth of the namespace to use. For example, the
             default ``eval_env=0`` uses the calling namespace. If you wish
             to use a "clean" environment set ``eval_env=-1``.
-
 
         Returns
         -------
@@ -145,12 +148,24 @@ class Model(object):
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get('missing', 'drop')
-        if missing == 'none':  # with patys it's drop or raise. let's raise.
+        if missing == 'none':  # with patsy it's drop or raise. let's raise.
             missing = 'raise'
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env,
                                   missing=missing)
         ((endog, exog), missing_idx, design_info) = tmp
+
+        if drop_cols is not None and len(drop_cols) > 0:
+            cols = [x for x in exog.columns if x not in drop_cols]
+            if len(cols) < len(exog.columns):
+                exog = exog[cols]
+                cols = list(design_info.term_names)
+                for col in drop_cols:
+                    try:
+                        cols.remove(col)
+                    except ValueError:
+                        pass # OK if not present
+                design_info = design_info.builder.subset(cols).design_info
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
@@ -442,14 +457,20 @@ class LikelihoodModel(Model):
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
         elif not skip_hessian:
-            try:
-                Hinv = np.linalg.inv(-1 * self.hessian(xopt))
-            except:
-                #might want custom warning ResultsWarning? NumericalWarning?
+            H = -1 * self.hessian(xopt)
+            invertible = False
+            if np.all(np.isfinite(H)):
+                eigvals, eigvecs = np.linalg.eigh(H)
+                if np.min(eigvals) > 0:
+                    invertible = True
+
+            if invertible:
+                Hinv = eigvecs.dot(np.diag(1.0 / eigvals)).dot(eigvecs.T)
+                Hinv = np.asfortranarray((Hinv + Hinv.T) / 2.0)
+            else:
                 from warnings import warn
-                warndoc = ('Inverting hessian failed, no bse or '
-                           'cov_params available')
-                warn(warndoc, RuntimeWarning)
+                warn('Inverting hessian failed, no bse or cov_params '
+                     'available', HessianInversionWarning)
                 Hinv = None
 
         if 'cov_type' in kwargs:
@@ -577,7 +598,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         #Initialize is called by
         #statsmodels.model.LikelihoodModel.__init__
         #and should contain any preprocessing that needs to be done for a model
-        from statsmodels.tools import tools
         if self.exog is not None:
             # assume constant
             er = np_matrix_rank(self.exog)
@@ -774,7 +794,14 @@ class Results(object):
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
             exog = dmatrix(self.model.data.design_info.builder,
-                           exog)
+                           exog, return_type="dataframe")
+            if len(exog) < len(exog_index):
+                # missing values, rows have been dropped
+                if exog_index is not None:
+                    exog = exog.reindex(exog_index)
+                else:
+                    import warnings
+                    warnings.warn("nan rows have been dropped", ValueWarning)
 
         if exog is not None:
             exog = np.asarray(exog)

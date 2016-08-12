@@ -39,7 +39,9 @@ class TestSVAR(object):
 
 
     def test_B(self):
-        assert_almost_equal(self.res1.B, self.res2.B, DECIMAL_4)
+        # see issue #3148, adding np.abs to make solution positive
+        # general case will need positive sqrt of covariance matrix
+        assert_almost_equal(np.abs(self.res1.B), self.res2.B, DECIMAL_4)
 
 
     def test_basic(self):

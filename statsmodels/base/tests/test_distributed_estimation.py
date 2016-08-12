@@ -1,13 +1,16 @@
 import numpy as np
-from numpy.testing import assert_equal, assert_
+from numpy.testing import assert_equal, assert_, assert_allclose
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import Binomial
-from statsmodels.base.distributed_estimation import _calc_grad, _calc_wdesign_mat, _est_regularized_debiased, _join_debiased, _est_regularized_naive, _est_unregularized_naive, _join_naive, DistributedModel
+from statsmodels.base.distributed_estimation import _calc_grad, \
+    _calc_wdesign_mat, _est_regularized_debiased, _join_debiased, \
+    _est_regularized_naive, _est_unregularized_naive, _join_naive, \
+    DistributedModel
 
 
-def _exog_gen(exog, partitions):
-    """partitions exog data"""
+def _data_gen(endog, exog, partitions):
+    """partitions data"""
 
     n_exog = exog.shape[0]
     n_part = np.ceil(n_exog / partitions)
@@ -15,23 +18,14 @@ def _exog_gen(exog, partitions):
     ii = 0
     while ii < n_exog:
         jj = int(min(ii + n_part, n_exog))
-        yield exog[ii:jj, :]
-        ii += int(n_part)
-
-def _endog_gen(endog, partitions):
-    """partitions endog data"""
-
-    n_endog = endog.shape[0]
-    n_part = np.ceil(n_endog / partitions)
-
-    ii = 0
-    while ii < n_endog:
-        jj = int(min(ii + n_part, n_endog))
-        yield endog[ii:jj]
+        yield endog[ii:jj], exog[ii:jj, :]
         ii += int(n_part)
 
 
 def test_calc_grad():
+
+    # seperately tests that _calc_grad returns
+    # sensible results
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -43,6 +37,9 @@ def test_calc_grad():
 
 
 def test_calc_wdesign_mat():
+
+    # seperately tests that _calc_wdesign_mat
+    # returns sensible results
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -58,6 +55,10 @@ def test_calc_wdesign_mat():
 
 
 def test_est_regularized_debiased():
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for regularized debiased estimation,
+    # does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -98,13 +99,16 @@ def test_est_regularized_debiased():
 
 def test_est_regularized_naive():
 
+    # tests that the shape of all the intermediate steps
+    # remains correct for regularized naive estimation,
+    # does this for OLS and GLM
+
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
     mod = OLS(y, X)
     res = _est_regularized_naive(mod, 0, 2, fit_kwds={"alpha": 0.5})
-    bhat = res[0]
 
     assert_equal(res.shape, beta.shape)
 
@@ -115,6 +119,10 @@ def test_est_regularized_naive():
 
 
 def test_est_unregularized_naive():
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for unregularized naive estimation,
+    # does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -132,6 +140,9 @@ def test_est_unregularized_naive():
 
 
 def test_join_debiased():
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for debiased join, does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -156,6 +167,9 @@ def test_join_debiased():
 
 def test_join_naive():
 
+    # tests that the shape of all the intermediate steps
+    # remains correct for naive join, does this for OLS and GLM
+
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
@@ -177,76 +191,234 @@ def test_join_naive():
     assert_equal(joined.shape, beta.shape)
 
 
-
 def test_fit_sequential():
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for sequential fit, does this for OLS and GLM
+    # and a variety of model sizes
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS)
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(1, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 1), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS)
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(2, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 2), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS)
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(3, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 3), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS)
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(50, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 50), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(1, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 1), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(2, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 2), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(3, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 3), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="sequential", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(50, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 50), parallel_method="sequential",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
 
 
 def test_fit_joblib():
 
+    # tests that the shape of all the intermediate steps
+    # remains correct for joblib fit, does this for OLS and GLM
+    # and a variety of model sizes
+
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
     y = np.random.randint(0, 2, size=50)
     beta = np.random.normal(size=3)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=OLS)
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(1, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 1), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=OLS)
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(2, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 2), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=OLS)
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(3, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 3), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=OLS)
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(50, model_class=OLS)
+    fit = mod.fit(_data_gen(y, X, 50), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
 
-    mod = DistributedModel(zip(_endog_gen(y, 1), _exog_gen(X, 1)), 1, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(1, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 1), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 2), _exog_gen(X, 2)), 2, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(2, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 2), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 3), _exog_gen(X, 3)), 3, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(3, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 3), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
-    mod = DistributedModel(zip(_endog_gen(y, 50), _exog_gen(X, 50)), 50, model_class=GLM, init_kwds={"family": Binomial()})
-    fit = mod.fit(parallel_method="joblib", fit_kwds={"alpha": 0.5})
+    mod = DistributedModel(50, model_class=GLM,
+                           init_kwds={"family": Binomial()})
+    fit = mod.fit(_data_gen(y, X, 50), parallel_method="joblib",
+                  fit_kwds={"alpha": 0.5})
     assert_equal(fit.params.shape, beta.shape)
+
+
+def test_single_partition():
+
+    # tests that the results make sense if we have a single partition
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 1
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    # test regularized OLS v. naive
+    db_mod = DistributedModel(m)
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0})
+
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0})
+
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit(alpha=0)
+
+    assert_allclose(fitOLSdb.params, fitOLS.params)
+    assert_allclose(fitOLSnv.params, fitOLS.params)
+
+    # test regularized
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit_regularized(alpha=0.1)
+
+    assert_allclose(fitOLSnv.params, fitOLS.params)
+
+
+def test_larger_p():
+
+    # tests when p > N / m for the debiased and naive case
+
+    np.random.seed(435265)
+    N = 40
+    p = 40
+    m = 5
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    db_mod = DistributedModel(m)
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+    assert_equal(np.sum(np.isnan(fitOLSdb.params)), 0)
+
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+    assert_equal(np.sum(np.isnan(fitOLSnv.params)), 0)
+
+
+def test_non_zero_params():
+
+    # tests that the thresholding does not cause any issues
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 5
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    db_mod = DistributedModel(m, join_kwds={"threshold": 0.13})
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit_regularized(alpha=0.1)
+
+    nz_params_db = 1 * (fitOLSdb.params != 0)
+    nz_params_ols = 1 * (fitOLS.params != 0)
+
+    assert_allclose(nz_params_db, nz_params_ols)
+
+
+def test_repeat_partition():
+
+    # tests that if we use identical partitions the average is the same
+    # as the estimate for the full data
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 1
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    def _rep_data_gen(endog, exog, partitions):
+        """partitions data"""
+
+        n_exog = exog.shape[0]
+        n_part = np.ceil(n_exog / partitions)
+
+        ii = 0
+        while ii < n_exog:
+            yield endog, exog
+            ii += int(n_part)
+
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_rep_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit_regularized(alpha=0.1)
+
+    assert_allclose(fitOLSnv.params, fitOLS.params)
 
 
 def test_debiased_v_average():
+
+    # tests that the debiased method performs better than the standard
+    # average.  Does this for both OLS and GLM.
 
     np.random.seed(435265)
     N = 200
@@ -258,11 +430,12 @@ def test_debiased_v_average():
     X = np.random.normal(size=(N, p))
     y = X.dot(beta) + np.random.normal(size=N)
 
-    db_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m)
-    fitOLSdb = db_mod.fit(fit_kwds={"alpha": 0.2})
+    db_mod = DistributedModel(m)
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.2})
     olsdb = np.linalg.norm(fitOLSdb.params - beta)
-    n_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, estimation_method=_est_regularized_naive, join_method=_join_naive)
-    fitOLSn = n_mod.fit(fit_kwds={"alpha": 0.2})
+    n_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                             join_method=_join_naive)
+    fitOLSn = n_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.2})
     olsn = np.linalg.norm(fitOLSn.params - beta)
 
     assert_(olsdb < olsn)
@@ -270,11 +443,15 @@ def test_debiased_v_average():
     prob = 1 / (1 + np.exp(-X.dot(beta) + np.random.normal(size=N)))
     y = 1. * (prob > 0.5)
 
-    db_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, model_class=GLM, init_kwds={"family": Binomial()})
-    fitGLMdb = db_mod.fit(fit_kwds={"alpha": 0.2})
+    db_mod = DistributedModel(m, model_class=GLM,
+                              init_kwds={"family": Binomial()})
+    fitGLMdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.2})
     glmdb = np.linalg.norm(fitGLMdb.params - beta)
-    n_mod = DistributedModel(zip(_endog_gen(y, m), _exog_gen(X, m)), m, model_class=GLM, init_kwds={"family": Binomial()}, estimation_method=_est_regularized_naive, join_method=_join_naive)
-    fitGLMn = n_mod.fit(fit_kwds={"alpha": 0.2})
+    n_mod = DistributedModel(m, model_class=GLM,
+                             init_kwds={"family": Binomial()},
+                             estimation_method=_est_regularized_naive,
+                             join_method=_join_naive)
+    fitGLMn = n_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.2})
     glmn = np.linalg.norm(fitGLMn.params - beta)
 
     assert_(glmdb < glmn)

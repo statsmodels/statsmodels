@@ -18,9 +18,9 @@ dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
 
 # ## Using Pandas
 #
-# Make a pandas TimeSeries or DataFrame
+# Make a pandas Series or DataFrame with DatetimeIndex
 
-endog = pd.TimeSeries(data.endog, index=dates)
+endog = pd.Series(data.endog, index=dates)
 
 
 # Instantiate the model
