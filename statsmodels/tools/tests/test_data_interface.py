@@ -2,10 +2,9 @@
 from statsmodels.tools.data_interface import (NumPyInterface, ListInterface, SeriesInterface, DataFrameInterface,
                                               get_ndim, is_col_vector, transpose)
 
-from pandas.util.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
 import numpy as np
-
 
 def test_list_numpy():
 
@@ -38,7 +37,7 @@ def test_series_numpy():
     series_to_numpy = series_interface.to_statsmodels(data_series)
     numpy_to_series = series_interface.from_statsmodels(series_to_numpy)
 
-    assert data_series.equals(numpy_to_series)
+    assert_series_equal(data_series, numpy_to_series)
 
 
 def test_numpy_series():
@@ -61,7 +60,7 @@ def test_data_frame_numpy():
     data_frame_to_numpy = data_frame_interface.to_statsmodels(data_frame)
     numpy_to_data_frame = data_frame_interface.from_statsmodels(data_frame_to_numpy)
 
-    assert data_frame.equals(numpy_to_data_frame)
+    assert_frame_equal(data_frame, numpy_to_data_frame)
 
 
 def test_numpy_data_frame():
@@ -234,6 +233,11 @@ def test_transpose():
     np.testing.assert_equal(np_col_vector, transpose(np_row_vector2))
     np.testing.assert_equal(np_row_vector, transpose(np_col_vector))
 
-    assert pd_row_vector.equals(transpose(pd_col_vector))
+    pd_col_vector_transpose = transpose(pd_col_vector)
+
+    # Fix the changing Series name from None to 0
+    pd_col_vector_transpose.name = None
+
+    assert_series_equal(pd_row_vector, pd_col_vector_transpose)
     assert_frame_equal(pd_col_vector, transpose(pd_row_vector))
     assert_frame_equal(pd_col_vector, transpose(pd_row_vector2))
