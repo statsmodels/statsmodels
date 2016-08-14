@@ -78,17 +78,23 @@ class TestPlot(object):
     def test_plot_oth(self):
         #just test that they run
         res = self.res
-
+        plt.close('all')
         plot_fit(res, 0, y_true=None)
+        plt.close('all')
         plot_partregress_grid(res, exog_idx=[0,1])
+        plt.close('all')
         plot_regress_exog(res, exog_idx=0)
+        plt.close('all')
         plot_ccpr(res, exog_idx=0)
+        plt.close('all')
         plot_ccpr_grid(res, exog_idx=[0])
+        plt.close('all')
         fig = plot_ccpr_grid(res, exog_idx=[0,1])
         for ax in fig.axes:
             add_lowess(ax)
-
+   
         close_or_save(pdf, fig)
+        plt.close('all')
 
     @dec.skipif(not have_matplotlib)
     def test_plot_influence(self):
@@ -151,8 +157,10 @@ class TestPlotFormula(TestPlotPandas):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
         plot_regress_exog(res, "var1")
+        plt.close('all')
         res = ols("y~var1", data=self.data).fit()
         plot_regress_exog(res, "var1")
+        plt.close('all')
 
 
 class TestABLine(object):
