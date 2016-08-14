@@ -96,16 +96,25 @@ class TestPlot(object):
         fig = influence_plot(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
         # test that we have the correct criterion for sizes #3103
-        sizes = fig.axes[0].get_children()[0]._sizes
-        ssr = sm.OLS(sizes, sm.add_constant(infl.cooks_distance[0])).fit().ssr
-        assert_array_less(ssr, 1e-12)
+        try:
+            sizes = fig.axes[0].get_children()[0]._sizes
+            ex = sm.add_constant(infl.cooks_distance[0])
+            ssr = sm.OLS(sizes, ex).fit().ssr
+            assert_array_less(ssr, 1e-12)
+        except AttributeError:
+            import warnings
+            warnings.warn('test not compatible with matplotlib version')
         plt.close(fig)
 
         fig = influence_plot(self.res, criterion='DFFITS')
         assert_equal(isinstance(fig, plt.Figure), True)
-        sizes = fig.axes[0].get_children()[0]._sizes
-        ssr = sm.OLS(sizes, sm.add_constant(np.abs(infl.dffits[0]))).fit().ssr
-        assert_array_less(ssr, 1e-12)
+        try:
+            sizes = fig.axes[0].get_children()[0]._sizes
+            ex = sm.add_constant(np.abs(infl.dffits[0]))
+            ssr = sm.OLS(sizes, ex).fit().ssr
+            assert_array_less(ssr, 1e-12)
+        except AttributeError:
+            pass
         plt.close(fig)
 
         assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
