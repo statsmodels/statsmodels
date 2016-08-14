@@ -8,6 +8,7 @@ from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_added_variable, plot_partial_residuals,
                   plot_ceres_residuals, influence_plot, plot_leverage_resid2)
 from pandas import Series, DataFrame
+from numpy.testing.utils import assert_array_less
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -91,12 +92,20 @@ class TestPlot(object):
 
     @dec.skipif(not have_matplotlib)
     def test_plot_influence(self):
+        infl = self.res.get_influence()
         fig = influence_plot(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
+        # test that we have the correct criterion for sizes #3103
+        sizes = fig.axes[0].get_children()[0]._sizes
+        ssr = sm.OLS(sizes, sm.add_constant(infl.cooks_distance[0])).fit().ssr
+        assert_array_less(ssr, 1e-12)
         plt.close(fig)
 
         fig = influence_plot(self.res, criterion='DFFITS')
         assert_equal(isinstance(fig, plt.Figure), True)
+        sizes = fig.axes[0].get_children()[0]._sizes
+        ssr = sm.OLS(sizes, sm.add_constant(np.abs(infl.dffits[0]))).fit().ssr
+        assert_array_less(ssr, 1e-12)
         plt.close(fig)
 
         assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
