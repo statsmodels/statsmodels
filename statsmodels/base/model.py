@@ -764,7 +764,14 @@ class Results(object):
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
             exog = dmatrix(self.model.data.design_info.builder,
-                           exog)
+                           exog, return_type="dataframe")
+            if len(exog) < len(exog_index):
+                # missing values, rows have been dropped
+                if exog_index is not None:
+                    exog = exog.reindex(exog_index)
+                else:
+                    import warnings
+                    warnings.warn("nan rows have been dropped", ValueWarning)
 
         if exog is not None:
             exog = np.asarray(exog)
