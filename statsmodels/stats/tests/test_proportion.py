@@ -102,7 +102,7 @@ def  test_confint_multinomial_proportions_zeros():
 
     # the shifts are the differences between "LOWER(SG)"  "UPPER(SG)" and
     # "LOWER(C+1)" "UPPER(C+1)" in verbose printout
-    #ci01_shift = np.array([0.002531008, -0.002515122])  # not needed
+    # ci01_shift = np.array([0.002531008, -0.002515122])  # not needed
     ci0_shift = np.array([0.002531642, 0.002515247])
 
     p = [56, 0.1, 73, 59, 62, 87, 58]
