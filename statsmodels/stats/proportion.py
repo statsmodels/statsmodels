@@ -208,12 +208,8 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
         raise ValueError('alpha must be in (0, 1), bounds excluded')
     counts = np.array(counts, dtype=np.float)
     if (counts < 0).any():
-        raise ValueError('counts must be > 0')
-    elif (counts == 0).any():
-        # This case is separated from (counts < 0).any() so we can give clearer
-        # advice.
-        raise ValueError('The behavior is not undefined for 0-valued counts; '
-                         'try adding 0.5 to your 0-valued counts to run this')
+        raise ValueError('counts must be >= 0')
+
     n = counts.sum()
     k = len(counts)
     proportions = counts / n
@@ -270,6 +266,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
             f = phi * (1 + g1 * H3 / 6 + g2 * H4 / 24 + g1 ** 2 * H6 / 72)
             return f / np.sqrt(mu2.sum())
 
+
         def approximated_multinomial_interval(intervals):
             """Compute approximated probability for Multinomial(n, proportions)
             to be in `intervals` (Sison & Glaz's formula (1))."""
@@ -277,32 +274,38 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
                 np.sum(np.log([poisson_interval(interval, p)
                                for (interval, p) in zip(intervals, counts)])) +
                 np.log(edgeworth(intervals)) -
-                np.log(stats.poisson.pmf(n, n))
+                np.log(stats.poisson._pmf(n, n))
             )
 
         def nu(c):
             """Compute interval coverage for a given `c` (Sison & Glaz's
             formula (7))."""
             return approximated_multinomial_interval(
-                [(count - c, count + c) for count in counts])
+                [(np.maximum(count - c, 0), np.minimum(count + c, n))
+                 for count in counts])
 
         # Find the value of `c` that will give us the confidence intervals
         # (solving nu(c) <= 1 - alpha < nu(c + 1).
         c = 1.0
-        while not (nu(c) <= (1 - alpha) < nu(c + 1)):
+        nuc = nu(c)
+        nucp1 = nu(c + 1)
+        while not (nuc <= (1 - alpha) < nucp1):
             if c > n:
                 raise Exception("Couldn't find a value for `c` that "
                                 "solves nu(c) <= 1 - alpha < nu(c + 1)")
             c += 1
+            nuc = nucp1
+            nucp1 = nu(c + 1)
 
         # Compute gamma and the corresponding confidence intervals.
-        g = (1 - alpha - nu(c)) / (nu(c + 1) - nu(c))
+        g = (1 - alpha - nuc) / (nucp1 - nuc)
         ci_lower = np.maximum(proportions - c / n, 0)
         ci_upper = np.minimum(proportions + (c + 2 * g) / n, 1)
         region = np.array([ci_lower, ci_upper]).T
     else:
         raise NotImplementedError('method "%s" is not available' % method)
     return region
+
 
 def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
                                   method='normal'):
