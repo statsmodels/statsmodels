@@ -15,7 +15,8 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
 
-from numpy.testing import assert_, assert_allclose, assert_equal
+from numpy.testing import (assert_, assert_allclose, assert_equal,
+                           assert_array_equal)
 
 from nose import SkipTest
 import platform
@@ -67,8 +68,21 @@ class CheckGenericMixin(object):
         assert_(hasattr(res, 'use_t'))
 
         tt = res.t_test(mat[0])
-        tt.summary()   # smoke test for #1323
+        string_confint = lambda alpha: "[%4.3F      %4.3F]" % (
+                                       alpha / 2, 1- alpha / 2)
+        summ = tt.summary()   # smoke test for #1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
+        assert_(string_confint(0.05) in str(summ))
+        # issue #3116 alpha not used in column headers
+        summ = tt.summary(alpha=0.1)
+        ss = "[0.05       0.95]"   # different formatting
+        assert_(ss in str(summ))
+        summf = tt.summary_frame(alpha=0.1)
+        pvstring_use_t = 'P>|z|' if res.use_t is False else 'P>|t|'
+        tstring_use_t = 'z' if res.use_t is False else 't'
+        cols = ['coef', 'std err', tstring_use_t, pvstring_use_t,
+                'Conf. Int. Low', 'Conf. Int. Upp.']
+        assert_array_equal(summf.columns.values, cols)
 
 
     def test_ftest_pvalues(self):
