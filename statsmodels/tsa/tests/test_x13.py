@@ -28,8 +28,14 @@ class TestX13(object):
         dta = co2.load_pandas().data
         dta['co2'] = dta.co2.interpolate()
         cls.monthly_data = dta.resample('M')
+        # change in pandas 0.18 resample is deferred object
+        if not isinstance(cls.monthly_data, (pd.DataFrame, pd.Series)):
+            cls.monthly_data = cls.monthly_data.mean()
 
         cls.monthly_start_data = dta.resample('MS')
+        if not isinstance(cls.monthly_start_data, (pd.DataFrame, pd.Series)):
+            cls.monthly_start_data = cls.monthly_start_data.mean()
+
 
     def test_x13_arima_select_order(self):
         res = x13_arima_select_order(self.monthly_data)
