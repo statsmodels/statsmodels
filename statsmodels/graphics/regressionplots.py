@@ -762,9 +762,9 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
 
     infl = results.get_influence()
 
-    if criterion.lower().startswith('dff'):
+    if criterion.lower().startswith('coo'):
         psize = infl.cooks_distance[0]
-    elif criterion.lower().startswith('coo'):
+    elif criterion.lower().startswith('dff'):
         psize = np.abs(infl.dffits[0])
     else:
         raise ValueError("Criterion %s not understood" % criterion)

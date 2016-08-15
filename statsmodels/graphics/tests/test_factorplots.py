@@ -68,13 +68,21 @@ class TestInteractionPlot(object):
         plt.close(fig)
 
     def test_formatting_errors(self):
+        #plt.close('all')
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, markers=['D'])
+        plt.close('all')
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, colors=['b','r','g'])
+        plt.close('all')
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, linestyles=['--','-.',':'])
+        plt.close('all')
+
 
     def test_plottype(self):
         fig = interaction_plot(self.weight, self.duration, self.days, plottype='line')
         assert_equal(isinstance(fig, plt.Figure), True)
+        plt.close(fig)
         fig = interaction_plot(self.weight, self.duration, self.days, plottype='scatter')
         assert_equal(isinstance(fig, plt.Figure), True)
+        plt.close(fig)
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, plottype='unknown')
+        plt.close('all')
