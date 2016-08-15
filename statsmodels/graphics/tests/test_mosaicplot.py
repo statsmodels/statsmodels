@@ -207,7 +207,6 @@ def test_axes_labeling():
 def test_mosaic_empty_cells():
     # SMOKE test  see #2286
     import pandas as pd
-
     mydata = pd.DataFrame({'id2': {64: 'Angelica',
                                    65: 'DXW_UID', 66: 'casuid01',
                                    67: 'casuid01', 68: 'EC93_uid',
@@ -223,6 +222,7 @@ def test_mosaic_empty_cells():
 
     ct = pd.crosstab(mydata.id1, mydata.id2)
     fig, vals = mosaic(ct.T.unstack())
+    pylab.close('all')
     fig, vals = mosaic(mydata, ['id1','id2'])
     pylab.close('all')
 
@@ -430,6 +430,7 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
+@dec.skipif(not have_matplotlib or pandas_old)
 def test_default_arg_index():
     # 2116
     import pandas as pd
@@ -438,6 +439,7 @@ def test_default_arg_index():
                        'length' : ['long', 'short', 'short', 'long', 'long',
                                    'short']})
     assert_raises(ValueError, mosaic, data=df, title='foobar')
+    pylab.close('all')
 
 
 if __name__ == '__main__':

@@ -94,6 +94,7 @@ class CheckPowerMixin(object):
     def test_power_plot(self):
         if self.cls == smp.FTestPower:
             raise nose.SkipTest('skip FTestPower plot_power')
+        plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
         fig = self.cls().plot_power(dep_var='nobs',
@@ -109,7 +110,7 @@ class CheckPowerMixin(object):
                                   #alternative='larger',
                                   ax=ax, title='',
                                   **self.kwds_extra)
-        plt.close('all')
+        plt.close(fig)
 
 #''' test cases
 #one sample
