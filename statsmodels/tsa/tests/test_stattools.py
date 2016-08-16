@@ -310,11 +310,17 @@ def test_coint():
     res[2]  = [-3.161462374828, -5.111158174219,  -4.53317278104,  -4.23601008516]
     res[3]  = [-5.657904558563, -5.406880189412, -4.826111619543, -4.527090164875]
 
-
+    # The following for 'nc' are only regression test numbers
     # trend = 'nc' not allowed in egranger
+    # trend = 'nc'
+    res = res_egranger['nc'] = {}
+    nan = np.nan  # shortcut for table
+    res[0]  = [-3.7146175989071137, nan, nan, nan]
+    res[1]  = [-3.8199323012888384, nan, nan, nan]
+    res[2]  = [-1.6865000791270679, nan, nan, nan]
+    res[3]  = [-3.7991270451873675, nan, nan, nan]
 
-    trend = 'ct'
-    for trend in ['c', 'ct', 'ctt']: #, 'nc']:
+    for trend in ['c', 'ct', 'ctt', 'nc']:
         res1 = {}
         res1[0] = coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None)
         res1[1] = coint(y[:, 0], y[:, 1:3], trend=trend, maxlag=4,
