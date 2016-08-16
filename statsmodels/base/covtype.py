@@ -252,7 +252,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
             nobs_ = len(groups)
         elif time is not None:
             # TODO: clumsy time index in cov_nw_panel
-            tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
+            tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
             nobs_ = len(time)
         else:
             raise ValueError('either time or groups needs to be given')
@@ -277,7 +277,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['weights_func'] = weights_func
         if adjust_df:
             # need to find number of groups
-            tt = (np.nonzero(np.diff(time) < 0)[0] + 1)
+            tt = (np.nonzero(time[1:] < time[:-1])[0] + 1)
             self.n_groups = n_groups = len(tt) + 1
         res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
                                         weights_func=weights_func,

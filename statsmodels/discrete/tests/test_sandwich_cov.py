@@ -653,7 +653,6 @@ class TestGLMGaussHACPanelGroups(CheckDiscreteGLM):
                     use_correction='hac',
                     df_correction=False)
         cls.res1 = mod1.fit(cov_type='hac-panel', cov_kwds=kwds)
-        cls.res1b = mod1.fit(cov_type='nw-panel', cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
         cls.res2 = mod2.fit(cov_type='hac-panel', cov_kwds=kwds)
