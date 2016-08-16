@@ -1900,11 +1900,15 @@ class RegressionResults(base.LikelihoodModelResults):
         - 'hac-panel' heteroscedasticity and autocorrelation robust standard
             errors in panel data.
             The data needs to be sorted in this case, the time series for
-            each panel unit or cluster need to be stacked.
+            each panel unit or cluster need to be stacked. The membership to
+            a timeseries of an individual or group can be either specified by 
+            group indicators or by increasing time periods.
+            
             keywords
 
-            - `time` array_like (required) : index of time periods
-
+            - either `groups` or `time` : array_like (required)
+              `groups` : indicator for groups
+              `time` : index of time periods
             - `maxlag` integer (required) : number of lags to use
             - `kernel` string (optional) : kernel, default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
@@ -2034,7 +2038,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         elif cov_type == 'hac-panel':
             #cluster robust standard errors
-            res.cov_kwds['time'] = time = kwds['time']
+            res.cov_kwds['time'] = time = kwds.get('time', None)
+            res.cov_kwds['groups'] = groups = kwds.get('groups', None)
             #TODO: nlags is currently required
             #nlags = kwds.get('nlags', True)
             #res.cov_kwds['nlags'] = nlags
@@ -2044,9 +2049,16 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['use_correction'] = use_correction
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
             res.cov_kwds['weights_func'] = weights_func
-            # TODO: clumsy time index in cov_nw_panel
-            tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
-            groupidx = lzip([0] + tt, tt + [len(time)])
+            if groups is not None:
+                tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
+                nobs_ = len(groups)
+            elif time is not None:
+                # TODO: clumsy time index in cov_nw_panel
+                tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
+                nobs_ = len(time)
+            else:
+                raise ValueError('either time or groups needs to be given')
+            groupidx = lzip([0] + tt, tt + [nobs_])
             self.n_groups = n_groups = len(groupidx)
             res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                                 weights_func=weights_func,
