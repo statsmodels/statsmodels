@@ -885,8 +885,9 @@ if __name__ == "__main__":
     #should this be up to the user, or should it be done in TSM init?
     #NOTE: not anymore, it's end of year now
     ts_dr = ts.date_array(start_date=d1, length=len(sunspots.endog))
-    pandas_dr = pandas.DateRange(start=d1.datetime,
-                                 periods=len(sunspots.endog), timeRule='A@DEC')
+    pandas_dr = pandas.DatetimeIndex(start=d1.datetime,
+                                 periods=len(sunspots.endog),
+                                     freq='A-DEC')
     #pandas_dr = pandas_dr.shift(-1, pandas.datetools.yearBegin)
 
     dates = np.arange(1700, 1700 + len(sunspots.endog))

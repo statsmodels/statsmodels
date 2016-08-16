@@ -642,6 +642,7 @@ def test_pandas_endog():
     # Example (failure): pandas.Series, no dates
     endog = pd.Series([1., 2.])
     # raises error due to no dates
+    warnings.simplefilter('always')
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
     # Example : pandas.Series
