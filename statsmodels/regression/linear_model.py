@@ -1973,7 +1973,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
             res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
             res.cov_params_default = scale * res.normalized_cov_params
-        elif cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+        elif cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
                 raise ValueError('heteroscedasticity robust covarians ' +
                                  'does not use keywords')
@@ -1982,7 +1982,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # TODO cannot access cov without calling se first
             getattr(self, cov_type.upper() + '_se')
             res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
-        elif cov_type == 'HAC':
+        elif cov_type.lower() == 'hac':
             maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
             res.cov_kwds['maxlags'] = maxlags
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
@@ -1996,7 +1996,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
                                                  weights_func=weights_func,
                                                  use_correction=use_correction)
-        elif cov_type == 'cluster':
+        elif cov_type.lower() == 'cluster':
             #cluster robust standard errors, one- or two-way
             groups = kwds['groups']
             if not hasattr(groups, 'shape'):
@@ -2036,7 +2036,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
 
-        elif cov_type == 'hac-panel':
+        elif cov_type.lower() == 'hac-panel':
             #cluster robust standard errors
             res.cov_kwds['time'] = time = kwds.get('time', None)
             res.cov_kwds['groups'] = groups = kwds.get('groups', None)
@@ -2065,7 +2065,7 @@ class RegressionResults(base.LikelihoodModelResults):
                                                 use_correction=use_correction)
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
-        elif cov_type == 'hac-groupsum':
+        elif cov_type.lower() == 'hac-groupsum':
             # Driscoll-Kraay standard errors
             res.cov_kwds['time'] = time = kwds['time']
             #TODO: nlags is currently required
