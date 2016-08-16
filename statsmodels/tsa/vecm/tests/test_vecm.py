@@ -42,11 +42,10 @@ def load_data(dataset, data_dict):
 def load_results_statsmodels(dataset):
     results_per_deterministic_terms = dict.fromkeys(dt_s_list)
     for dt_s_tup in dt_s_list:
-        model = VECM(data[dataset], diff_lags=3,
+        model = VECM(data[dataset], diff_lags=3, coint_rank=coint_rank,
                      deterministic=dt_s_tup[0], seasons=dt_s_tup[1])
-        # print("\n\n\nDETERMINISTIC TERMS: " + deterministic_terms)
         results_per_deterministic_terms[dt_s_tup] = model.fit(
-                method="ml", coint_rank=coint_rank)
+                method="ml")
     return results_per_deterministic_terms
 
 
