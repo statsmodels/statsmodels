@@ -64,11 +64,7 @@ For these cases, the easiest way to compare performance pre- to post-API change 
 
 .. code-block:: python
 
-    try:
-        rng = date_range('1/1/2000', periods=N, freq='min')
-    except NameError:
-        rng = DateRange('1/1/2000', periods=N, offset=datetools.Minute())
-        date_range = DateRange
+    rng = date_range('1/1/2000', periods=N, freq='min')
 
 Pre-PR
 ~~~~~~

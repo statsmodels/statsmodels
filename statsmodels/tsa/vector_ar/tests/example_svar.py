@@ -1,17 +1,15 @@
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.tsa.api import VAR, SVAR
-import matplotlib.pyplot as plt
-import statsmodels.tsa.vector_ar.util as util
-import pandas as px
+import pandas as pd
 
 mdatagen = sm.datasets.macrodata.load().data
 mdata = mdatagen[['realgdp','realcons','realinv']]
 names = mdata.dtype.names
-start = px.datetime(1959, 3, 31)
-end = px.datetime(2009, 9, 30)
-qtr = px.DateRange(start, end, offset=px.datetools.BQuarterEnd())
-data = px.DataFrame(mdata, index=qtr)
+start = pd.datetime(1959, 3, 31)
+end = pd.datetime(2009, 9, 30)
+#qtr = pd.DatetimeIndex(start=start, end=end, freq=pd.datetools.BQuarterEnd())
+qtr = pd.DatetimeIndex(start=start, end=end, freq='BQ-MAR')
+data = pd.DataFrame(mdata, index=qtr)
 data = (np.log(data)).diff().dropna()
 
 #define structural inputs
@@ -21,4 +19,5 @@ A_guess = np.asarray([0.5, 0.25, -0.38])
 B_guess = np.asarray([0.5, 0.1, 0.05])
 mymodel = SVAR(data, svar_type='AB', A=A, B=B, freq='Q')
 res = mymodel.fit(maxlags=3, maxiter=10000, maxfun=10000, solver='bfgs')
-res.irf(periods=30).plot(impulse='realgdp', plot_stderr=True, stderr_type='mc', repl=100)
+res.irf(periods=30).plot(impulse='realgdp', plot_stderr=True,
+                         stderr_type='mc', repl=100)

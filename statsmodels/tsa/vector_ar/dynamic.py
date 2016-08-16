@@ -14,7 +14,6 @@ ROLLING = 1
 EXPANDING = 2
 
 
-
 def _get_window_type(window_type):
     if window_type in (FULL_SAMPLE, ROLLING, EXPANDING):
         return window_type
@@ -29,6 +28,7 @@ def _get_window_type(window_type):
             return EXPANDING
 
     raise Exception('Unrecognized window type: %s' % window_type)
+
 
 class DynamicVAR(object):
     """
