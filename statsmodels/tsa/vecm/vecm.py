@@ -1,4 +1,6 @@
 from __future__ import division
+
+import collections
 import math
 from math import log
 import numpy as np
@@ -8,12 +10,12 @@ import scipy
 import scipy.stats
 
 from statsmodels.compat.python import range, string_types
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.vector_ar import util as var_util
 from statsmodels.tsa.vector_ar import output as var_output
 from statsmodels.tsa.vector_ar.util import vech
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
@@ -293,7 +295,7 @@ class VECM(tsbase.TimeSeriesModel):
     """
 
     def __init__(self, endog_tot, dates=None, freq=None, missing="none",
-                 diff_lags=1, deterministic="nc", seasons=0):
+                 diff_lags=1, coint_rank=1, deterministic="nc", seasons=0):
         super(VECM, self).__init__(endog_tot, None, dates, freq,
                                    missing=missing)
         if self.endog.ndim == 1:
@@ -302,10 +304,12 @@ class VECM(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.p = diff_lags + 1
         self.diff_lags = diff_lags
+        self.coint_rank = coint_rank
         self.deterministic = deterministic
         self.seasons = seasons
+        self.load_coef_repr = "ec"  # name for loading coef. (alpha) in summary
 
-    def fit(self, method="ml", coint_rank=1):
+    def fit(self, method="ml"):
         """
         Estimates the parameters of a VECM as described on pp. 269-304 in [1]_
         and returns a VECMResults object.
@@ -331,10 +335,10 @@ class VECM(tsbase.TimeSeriesModel):
                                           self.seasons)
         elif method == "egls":
             return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
-                                            self.seasons, coint_rank)
+                                            self.seasons, self.coint_rank)
         elif method == "ml":
             return self._estimate_vecm_ml(self.diff_lags, self.deterministic,
-                                          self.seasons, coint_rank)
+                                          self.seasons, self.coint_rank)
         else:
             raise ValueError("%s not recognized, must be among %s"
                              % (method, ("ls", "egls", "ml")))
@@ -436,8 +440,140 @@ class VECM(tsbase.TimeSeriesModel):
                            gamma_tilde, sigma_u_tilde,
                            deterministic=deterministic, seasons=seasons,
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
-                           delta_x=delta_x)
+                           delta_x=delta_x, model=self)
 
+    @property
+    def lagged_param_names(self):
+        """
+
+        Returns
+        -------
+        param_names : list of str
+            Returns a list of parameter names for the lagged endogenous
+            parameters which are called Gamma in [1]_ (see chapter 6).
+            If present in the model, also names for deterministic terms outside
+            the cointegration relation are returned. They name the elements of
+            the matrix C in [1]_ (p. 299).
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        """
+        param_names = []
+
+        # 1. Deterministic terms outside cointegration relation
+        if "co" in self.deterministic:
+            param_names += ["const.%s" % n for n in self.endog_names]
+
+        if self.seasons > 0:
+            param_names += ["season%d.%s" % (s, n)
+                            for n in self.endog_names
+                            for s in range(1, self.seasons)]
+
+        if "lo" in self.deterministic:
+            param_names += ["lin_trend.%s" % n for n in self.endog_names]
+
+        # 2. lagged endogenous terms
+        param_names += [
+            "L%d.%s.%s" % (i+1, n1, n2)
+            for n2 in self.endog_names
+            for i in range(self.p-1)
+            for n1 in self.endog_names]
+
+        return param_names
+
+    @property
+    def load_coef_param_names(self):
+        """
+
+        Returns
+        -------
+        param_names : list of str
+            Returns a list of parameter names for the loading coefficients
+            which are called alpha in [1]_ (see chapter 6).
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        """
+        param_names = []
+
+        if self.coint_rank == 0:
+            return None
+
+        # loading coefficients (alpha) # called "ec" in JMulTi, "ECT" in tsDyn
+        param_names += [               # called "_ce" in Stata
+            self.load_coef_repr + "%d.%s" % (i+1, self.endog_names[j])
+            for j in range(self.neqs)
+            for i in range(self.coint_rank)
+        ]
+
+        return param_names
+
+    @property
+    def coint_param_names(self):
+        """
+
+        Returns
+        -------
+        param_names : list of str
+            Returns a list of parameter names for the cointegration matrix
+            as well as deterministic terms inside the cointegration relation
+            (if present in the model).
+
+        """
+        # 1. cointegration matrix/vector
+        param_names = []
+
+        param_names += [("beta.%d." + self.load_coef_repr + "%d") % (j, i+1)
+                        for i in range(self.coint_rank)
+                        for j in range(self.neqs)]
+
+        # 2. deterministic terms inside cointegration relation
+        if "ci" in self.deterministic:
+            param_names += ["const." + self.load_coef_repr + "%d" % (i+1)
+                            for i in range(self.coint_rank)]
+
+        if "li" in self.deterministic:
+            param_names += ["lin_trend." + self.load_coef_repr + "%d" % (i+1)
+                            for i in range(self.coint_rank)]
+
+        return param_names
+
+    @property
+    def sigma2_param_names(self, error_cov_type="unstructured"):
+        """
+
+        Parameters
+        ----------
+        error_cov_type : str {"diagonal", "unstructured"}
+            If "diagonal", the variance of each variable is returned.
+            If "unstructured", the covariance of each combination of variables
+            is returned.
+
+        Returns
+        -------
+        param_names : list of str
+            Returns a list of parameter names.
+        """
+        param_names = []
+
+        if self.error_cov_type == 'diagonal':
+            param_names += [
+                'sigma2.%s' % self.endog_names[i]
+                for i in range(self.neqs)
+            ]
+        elif self.error_cov_type == 'unstructured':
+            param_names += [
+                ('sqrt.var.%s' % self.endog_names[i] if i == j else
+                 'sqrt.cov.%s.%s' % (self.endog_names[j], self.endog_names[i]))
+                for i in range(self.neqs)
+                for j in range(i+1)
+            ]
+        else:
+            raise ValueError("error_cov_type has to be either \"diagonal\" " +
+                             "or \"unstructured\".")
+        return param_names
 
 # -----------------------------------------------------------------------------
 # VECMResults class
@@ -473,6 +609,8 @@ class VECMResults(object):
         trend with intercept)
     seasons : int
         Number of seasons. 0 (default) means no seasons.
+    model : VECM
+        An instance of the VECM class.
 
     Returns
     -------
@@ -542,7 +680,8 @@ class VECMResults(object):
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
                  gamma, sigma_u, deterministic='nc', seasons=0,
-                 delta_y_1_T=None, y_min1=None, delta_x=None):
+                 delta_y_1_T=None, y_min1=None, delta_x=None, model=None):
+        self.model = model
         self.y_all = endog_tot
         self.K = endog_tot.shape[0]
         self.p = level_var_lag_order
@@ -744,6 +883,30 @@ class VECMResults(object):
             return self.det_coef  # 0-size array
         return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2
 
+    # confidence intervals
+    def _make_conf_int(self, est, stderr, alpha):
+        struct_arr = np.zeros(est.shape, dtype=[("lower", float),
+                                               ("upper", float)])
+        struct_arr["lower"] = est - scipy.stats.norm.ppf(1 - alpha/2) * stderr
+        struct_arr["upper"] = est + scipy.stats.norm.ppf(1 - alpha/2) * stderr
+        return struct_arr
+
+    def conf_int_alpha(self, alpha=0.05):
+        return self._make_conf_int(self.alpha, self.stderr_alpha, alpha)
+
+    def conf_int_beta(self, alpha=0.05):
+        return self._make_conf_int(self.beta, self.stderr_beta, alpha)
+
+    def conf_int_det_coef_coint(self, alpha=0.05):
+        return self._make_conf_int(self.det_coef_coint,
+                                   self.stderr_det_coef_coint, alpha)
+
+    def conf_int_gamma(self, alpha=0.05):
+        return self._make_conf_int(self.gamma, self.stderr_gamma, alpha)
+
+    def conf_int_det_coef(self, alpha=0.05):
+        return self._make_conf_int(self.det_coef, self.stderr_det_coef, alpha)
+
     @cache_readonly
     def var_repr(self):
         pi = self.alpha.dot(self.beta.T)
@@ -856,9 +1019,11 @@ class VECMResults(object):
 
         Parameters
         ----------
-        caused : int or str
+        caused : int or str or sequence of int or str
             Test whether the corresponding variable is caused by the
-            variable(s) specified in causing.
+            variable(s) specified in causing. Note that currently only one
+            variable can be specified in caused, hence sequences passed as
+            argument must have only one element.
         causing : int or str or sequence of int or str
             If int or str, test whether the corresponding variable is causing
             the variable specified in caused.
@@ -896,7 +1061,7 @@ class VECMResults(object):
         y, k, t, p = self.y_all, self.K, self.T-1, self.p+1
         var_results = VAR(y.T).fit(maxlags=p, trend=self.deterministic)
 
-        # TODO: allow for multiple caused variables --> num_restr = (len(causing) + len(equations)) * (p-1) ... thus equations must implement __len__ (==> no int!)
+        # TODO: allow for multiple caused variables --> num_restr = (len(causing) + len(caused)) * (p-1) ... thus caused must implement __len__ (==> no int!)
         num_restr = len(causing) * (p - 1)  # called N in Lutkepohl
 
         num_det_terms = num_det_vars(self.deterministic, self.seasons)
@@ -904,7 +1069,11 @@ class VECMResults(object):
         # caused_ind = var_util.get_index(var_results.names, caused)
         # causing_ind = np.array([var_util.get_index(var_results.names, c)
         #                        for c in causing])
-        caused_ind = caused[0]
+        if isinstance(caused, collections.Sequence) \
+                and not isinstance(caused, string_types):
+            caused_ind = caused[0]
+        else:
+            caused_ind = caused
         causing_ind = causing
 
         # Make restriction matrix
@@ -1074,3 +1243,186 @@ class VECMResults(object):
             'signif': signif
         }
         return results
+
+    def summary(self, alpha=.05):
+        from statsmodels.iolib.summary import summary_params
+
+        summary = Summary()
+
+        def make_table(self, params, std_err, t_values, p_values, conf_int,
+                       mask, names, title, strip_end=True):
+            res = (self,
+                   params[mask],
+                   std_err[mask],
+                   t_values[mask],
+                   p_values[mask],
+                   conf_int[mask]
+                   )
+            param_names = [
+                '.'.join(name.split('.')[:-1]) if strip_end else name
+                for name in np.array(names)[mask].tolist()]
+            return summary_params(res, yname=None, xname=param_names,
+                                  alpha=alpha, use_t=False, title=title)
+
+        # ---------------------------------------------------------------------
+        # Add tables with gamma and det_coef for each endogenous variable:
+        lagged_params_components = []
+        stderr_lagged_params_components = []
+        tvalues_lagged_params_components = []
+        pvalues_lagged_params_components = []
+        conf_int_lagged_params_components = []
+        if self.det_coef.size > 0:
+            lagged_params_components.append(self.det_coef.flatten(order="F"))
+            stderr_lagged_params_components.append(
+                    self.stderr_det_coef.flatten(order="F"))
+            tvalues_lagged_params_components.append(
+                    self.tvalues_det_coef.flatten(order="F"))
+            pvalues_lagged_params_components.append(
+                    self.pvalues_det_coef.flatten(order="F"))
+            conf_int = self.conf_int_det_coef(alpha=alpha)
+            lower = conf_int["lower"].flatten(order="F")
+            upper = conf_int["upper"].flatten(order="F")
+            conf_int_lagged_params_components.append(np.column_stack(
+                    (lower, upper)))
+        if self.p - 1 > 0:
+            lagged_params_components.append(self.gamma.flatten())
+            stderr_lagged_params_components.append(self.stderr_gamma.flatten())
+            tvalues_lagged_params_components.append(
+                    self.tvalues_gamma.flatten())
+            pvalues_lagged_params_components.append(
+                    self.pvalues_gamma.flatten())
+            conf_int = self.conf_int_gamma(alpha=alpha)
+            lower = conf_int["lower"].flatten()
+            upper = conf_int["upper"].flatten()
+            conf_int_lagged_params_components.append(np.column_stack(
+                    (lower, upper)))
+        lagged_params = hstack(lagged_params_components)
+        stderr_lagged_params = hstack(stderr_lagged_params_components)
+        tvalues_lagged_params = hstack(tvalues_lagged_params_components)
+        pvalues_lagged_params = hstack(pvalues_lagged_params_components)
+        conf_int_lagged_params = vstack(conf_int_lagged_params_components)
+
+        for i in range(self.K):
+            masks = []
+            offset = 0
+            # 1. Deterministic terms outside cointegration relation
+            if "co" in self.deterministic:
+                masks.append(offset + np.array(i, ndmin=1))
+                offset += self.K
+            if self.seasons > 0:
+                start = (self.seasons-1) * i
+                masks.append(offset + np.arange(start, start + self.seasons-1))
+                offset += (self.seasons-1) * self.K
+            if "lo" in self.deterministic:
+                masks.append(offset + np.array(i, ndmin=1))
+                offset += self.K
+            # 2. Lagged endogenous terms
+            if self.p - 1 > 0:
+                start = i * self.K * (self.p-1)
+                end = (i+1) * self.K * (self.p-1)
+                masks.append(offset + np.arange(start, end))
+                # offset += self.K**2 * (self.p-1)
+
+            # Create the table
+            mask = np.concatenate(masks)
+            eq_name = self.model.endog_names[i]
+            title = "Det. terms outside coint. relation " + \
+                    "& lagged endog. parameters for equation %s" % eq_name
+            table = make_table(self, lagged_params, stderr_lagged_params,
+                               tvalues_lagged_params, pvalues_lagged_params,
+                               conf_int_lagged_params, mask,
+                               self.model.lagged_param_names, title)
+            summary.tables.append(table)
+
+        # ---------------------------------------------------------------------
+        # Loading coefficients (alpha):
+        a = self.alpha.flatten()
+        se_a = self.stderr_alpha.flatten()
+        t_a = self.tvalues_alpha.flatten()
+        p_a = self.pvalues_alpha.flatten()
+        ci_a = self.conf_int_alpha(alpha=alpha)
+        lower = ci_a["lower"].flatten()
+        upper = ci_a["upper"].flatten()
+        ci_a = np.column_stack((lower, upper))
+        a_names = self.model.load_coef_param_names
+        alpha_masks = []
+        for i in range(self.K):
+            if self.r > 0:
+                start = i * self.r
+                end = start + self.r
+                mask = np.arange(start, end)
+
+            # Create the table
+            alpha_masks.append(mask)
+
+            eq_name = self.model.endog_names[i]
+            title = "Loading coefficients (alpha) for equation %s" % eq_name
+            table = make_table(self, a, se_a, t_a, p_a, ci_a, mask, a_names,
+                               title)
+            summary.tables.append(table)
+
+        # ---------------------------------------------------------------------
+        # Cointegration matrix/vector (beta) and det. terms inside coint. rel.:
+        coint_components = []
+        stderr_coint_components = []
+        tvalues_coint_components = []
+        pvalues_coint_components = []
+        conf_int_coint_components = []
+        if self.r > 0:
+            coint_components.append(self.beta.T.flatten())
+            stderr_coint_components.append(self.stderr_beta.T.flatten())
+            tvalues_coint_components.append(self.tvalues_beta.T.flatten())
+            pvalues_coint_components.append(self.pvalues_beta.T.flatten())
+            conf_int = self.conf_int_beta(alpha=alpha)
+            lower = conf_int["lower"].T.flatten()
+            upper = conf_int["upper"].T.flatten()
+            conf_int_coint_components.append(np.column_stack(
+                    (lower, upper)))
+        if self.det_coef_coint.size > 0:
+            coint_components.append(self.det_coef_coint.flatten())
+            stderr_coint_components.append(
+                    self.stderr_det_coef_coint.flatten())
+            tvalues_coint_components.append(
+                    self.tvalues_det_coef_coint.flatten())
+            pvalues_coint_components.append(
+                    self.pvalues_det_coef_coint.flatten())
+            conf_int = self.conf_int_det_coef_coint(alpha=alpha)
+            lower = conf_int["lower"].flatten()
+            upper = conf_int["upper"].flatten()
+            conf_int_coint_components.append(np.column_stack((lower, upper)))
+        coint = hstack(coint_components)
+        stderr_coint = hstack(stderr_coint_components)
+        tvalues_coint = hstack(tvalues_coint_components)
+        pvalues_coint = hstack(pvalues_coint_components)
+        conf_int_coint = vstack(conf_int_coint_components)
+        coint_names = self.model.coint_param_names
+
+        for i in range(self.r):
+            masks = []
+            offset = 0
+
+            # 1. Cointegration matrix (beta)
+            if self.r > 0:
+                start = i * self.K
+                end = start + self.K
+                masks.append(offset + np.arange(start, end))
+                offset += self.K * self.r
+
+            # 2. Deterministic terms inside cointegration relation
+            if "ci" in self.deterministic:
+                masks.append(offset + np.array(i, ndmin=1))
+                offset += self.r
+            if "li" in self.deterministic:
+                masks.append(offset + np.array(i, ndmin=1))
+                # offset += self.r
+
+            # Create the table
+            mask = np.concatenate(masks)
+            title = "Cointegration relations for " + \
+                    "loading-coefficients-column %d" % (i+1)
+            table = make_table(self, coint, stderr_coint, tvalues_coint,
+                               pvalues_coint, conf_int_coint, mask,
+                               coint_names, title)
+            summary.tables.append(table)
+
+        return summary
