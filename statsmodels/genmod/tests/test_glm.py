@@ -66,10 +66,19 @@ class CheckModelResultsMixin(object):
 
     decimal_resids = DECIMAL_4
     def test_residuals(self):
+        # fix incorrect numbers in resid_working results
+        # residuals for Poisson are also tested in test_glm_weights.py
+        import copy
+        # new numpy would have copy method
+        resid2 = copy.copy(self.res2.resids)
+        resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
+
+        atol = 10**(-self.decimal_resids)
         resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
                 self.res1.resid_anscombe, self.res1.resid_response))
-        assert_almost_equal(resids, self.res2.resids, self.decimal_resids)
+        assert_allclose(resids, resid2, rtol=1e-6, atol=atol)
+
 
     decimal_aic_R = DECIMAL_4
     def test_aic_R(self):
@@ -1423,13 +1432,13 @@ class CheckTweedie(object):
                         np.concatenate((self.res2.resid_deviance[:17],
                                         [self.res2.resid_deviance[l2]])),
                         rtol=1e-5, atol=1e-5)
-        # Not working either...
-        if not isinstance(self, (TestTweedieLog1, TestTweedieLog15Fair)):
-            assert_allclose(np.concatenate((self.res1.resid_working[:17],
-                                            [self.res1.resid_working[l]])),
-                            np.concatenate((self.res2.resid_working[:17],
-                                            [self.res2.resid_working[l2]])),
-                            rtol=1e-5, atol=1e-5)
+
+        assert_allclose(np.concatenate((self.res1.resid_working[:17],
+                                        [self.res1.resid_working[l]])),
+                        np.concatenate((self.res2.resid_working[:17],
+                                        [self.res2.resid_working[l2]])),
+                        rtol=1e-5, atol=1e-5)
+
 
     def test_bse(self):
         assert_allclose(self.res1.bse, self.res2.bse, atol=1e-6, rtol=1e6)
