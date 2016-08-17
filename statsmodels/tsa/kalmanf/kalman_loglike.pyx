@@ -225,8 +225,8 @@ def kalman_filter_complex(dcomplex[:] y,
         dcomplex[::1,:] alpha = PyArray_ZEROS(2, mshape, cnp.NPY_CDOUBLE, FORTRAN)
         int lda = alpha.strides[1]/sizeof(dcomplex)
         # initial variance
-        dcomplex[::1,:] P = dot(pinv(identity(r**2)-kron(T_mat, T_mat)),
-                            dot(R_mat,R_mat.T).ravel('F')).reshape(r,r, order='F')
+        dcomplex[::1,:] P = asfortranarray(dot(pinv(identity(r**2)-kron(T_mat, T_mat)),
+                                           dot(R_mat,R_mat.T).ravel('F')).reshape(r,r, order='F'))
         int ldp = P.strides[1]/sizeof(dcomplex)
         dcomplex F_mat = 0
         dcomplex Finv = 0
