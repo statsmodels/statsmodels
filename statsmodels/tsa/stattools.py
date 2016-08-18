@@ -311,7 +311,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     missing : str
         A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
         are to be treated.
-        
+
     Returns
     -------
     acovf : array
@@ -335,7 +335,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     else:
         deal_with_masked = has_missing(x)
     if deal_with_masked:
-        if missing == 'raise': 
+        if missing == 'raise':
             raise MissingDataError("NaNs were encountered in the data")
         notmask_bool = ~np.isnan(x) #bool
         if missing == 'conservative':
@@ -362,7 +362,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         d = np.hstack((xi, xi[:-1][::-1]))
     elif deal_with_masked: #biased and NaNs given and ('drop' or 'conservative')
         d = notmask_int.sum() * np.ones(2*n-1)
-    else: #biased and no NaNs or missing=='none' 
+    else: #biased and no NaNs or missing=='none'
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -921,12 +921,16 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     return resli
 
 
-def coint(y1, y2, regression="c"):
-    """
-    This is a simple cointegration test. Uses unit-root test on residuals to
-    test for cointegrated relationship
+def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
+          return_results=None):
+    """Test for no-cointegration of a univariate equation
 
-    See Hamilton (1994) 19.2
+    The null hypothesis is no cointegration. Variables in y0 and y1 are
+    assumed to be integrated of order 1, I(1).
+
+    This uses the augmented Engle-Granger two-step cointegration test.
+    Constant or trend is included in 1st stage regression, i.e. in
+    cointegrating equation.
 
     Parameters
     ----------
@@ -934,19 +938,36 @@ def coint(y1, y2, regression="c"):
         first element in cointegrating vector
     y2 : array_like
         remaining elements in cointegrating vector
-    c : str {'c'}
-        Included in regression
-        * 'c' : Constant
+    trend : str {'c', 'ct'}
+        trend term included in regression for cointegrating equation
+        * 'c' : constant
+        * 'ct' : constant and linear trend
+        * also available quadratic trend 'ctt', and no constant 'nc'
+
+    method : string
+        currently only 'aeg' for augmented Engle-Granger test is available.
+        default might change.
+    maxlag : None or int
+        keyword for `adfuller`, largest or given number of lags
+    autolag : string
+        keyword for `adfuller`, lag selection criterion.
+    return_results : bool
+        for future compatibility, currently only tuple available.
+        If True, then a results instance is returned. Otherwise, a tuple
+        with the test outcome is returned.
+        Set `return_results=False` to avoid future changes in return.
+
 
     Returns
     -------
     coint_t : float
         t-statistic of unit-root test on residuals
     pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994)
+        MacKinnon's approximate, asymptotic p-value based on MacKinnon (1994)
     crit_value : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels.
+        levels based on regression curve. This depends on the number of
+        observations.
 
     Notes
     -----
@@ -955,30 +976,52 @@ def coint(y1, y2, regression="c"):
     small, below a critical size, then we can reject the hypothesis that there
     is no cointegrating relationship.
 
-    P-values are obtained through regression surface approximation from
-    MacKinnon 1994.
+    P-values and critical values are obtained through regression surface
+    approximation from MacKinnon 1994 and 2010.
+
+    TODO: We could handle gaps in data by dropping rows with nans in the
+    auxiliary regressions. Not implemented yet, currently assumes no nans
+    and no gaps in time series.
 
     References
     ----------
-    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-        unit-root and cointegration tests.  `Journal of Business and Economic
-        Statistics` 12, 167-76.
-
+    MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions for
+        Unit-Root and Cointegration Tests." Journal of Business & Economics
+        Statistics, 12.2, 167-76.
+    MacKinnon, J.G. 2010.  "Critical Values for Cointegration Tests."
+        Queen's University, Dept of Economics Working Papers 1227.
+        http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-    regression = regression.lower()
-    if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood" % regression)
+
+    trend = trend.lower()
+    if trend not in ['c', 'nc', 'ct', 'ctt']:
+        raise ValueError("trend option %s not understood" % trend)
+    y0 = np.asarray(y0)
     y1 = np.asarray(y1)
-    y2 = np.asarray(y2)
-    if regression == 'c':
-        y2 = add_constant(y2, prepend=False)
-    st1_resid = OLS(y1, y2).fit().resid  # stage one residuals
-    lgresid_cons = add_constant(st1_resid[0:-1], prepend=False)
-    uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
-    coint_t = (uroot_reg.params[0] - 1) / uroot_reg.bse[0]
-    pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
-    crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
-    return coint_t, pvalue, crit_value
+    if y1.ndim < 2:
+        y1 = y1[:, None]
+    nobs, k_vars = y1.shape
+    k_vars += 1   # add 1 for y0
+
+    if trend == 'nc':
+        xx = y1
+    else:
+        xx = add_trend(y1, trend=trend, prepend=False)
+
+    res_co = OLS(y0, xx).fit()
+
+    res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=None,
+                             regression='nc')
+    # no constant or trend, see egranger in Stata and MacKinnon
+    if trend == 'nc':
+        crit = [np.nan] * 3  # 2010 critical values not available
+    else:
+        crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
+        #  nobs - 1, the -1 is to match egranger in Stata, I don't know why.
+        #  TODO: check nobs or df = nobs - k
+
+    pval_asy = mackinnonp(res_adf[0], regression=trend, N=k_vars)
+    return res_adf[0], pval_asy, crit
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
