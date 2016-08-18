@@ -1,9 +1,8 @@
-from statsmodels.base.elastic_net import fit_elasticnet, RegularizedResults
-from statsmodels.stats.regularized_covariance import _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov
+from statsmodels.base.elastic_net import RegularizedResults
+from statsmodels.stats.regularized_covariance import _calc_nodewise_row, \
+    _calc_nodewise_weight, _calc_approx_inv_cov
 from statsmodels.base.model import LikelihoodModelResults
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
-import statsmodels.base.wrapper as wrap
 import numpy as np
 
 """
@@ -71,6 +70,7 @@ debiasing procedure.
 
     formed by node-wise regression.
 """
+
 
 def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
     """estimates the regularized fitted parameters.
@@ -325,7 +325,8 @@ def _join_debiased(results_l, threshold=0):
     return debiased_params
 
 
-def _helper_fit_partition(self, pnum, endog, exog, fit_kwds):
+def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
+                          init_kwds_e={}):
     """handles the model fitting for each machine. NOTE: this
     is primarily handled outside of DistributedModel because
     joblib can't handle class methods.
@@ -342,6 +343,8 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds):
         exogenous data for current partition.
     fit_kwds : dict-like
         Keywords needed for the model fitting.
+    init_kwds_e : dict-like
+        Additional init_kwds to add for each partition.
 
     Returns
     -------
@@ -349,7 +352,10 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds):
     _est_regularized_debiased, a tuple.
     """
 
-    model = self.model_class(endog, exog, **self.init_kwds)
+    temp_init_kwds = self.init_kwds.copy()
+    temp_init_kwds.update(init_kwds_e)
+
+    model = self.model_class(endog, exog, **temp_init_kwds)
     results = self.estimation_method(model, pnum, self.partitions,
                                      fit_kwds=fit_kwds,
                                      **self.estimation_kwds)
@@ -362,10 +368,6 @@ class DistributedModel(object):
 
     Parameters
     ----------
-    data_generator : generator
-        A generator that produces a sequence of tuples where the first
-        element in the tuple corresponds to an endog array and the
-        element corresponds to an exog array.
     partitions : scalar
         The number of partitions that the data will be split into.
     model_class : statsmodels model class
@@ -374,6 +376,10 @@ class DistributedModel(object):
     init_kwds : dict-like or None
         Keywords needed for initializing the model, in addition to
         endog and exog.
+    init_kwds_generator : generator or None
+        Additional keyword generator that produces model init_kwds
+        that may vary based on data partition.  The current usecase
+        is for WLS and GLS
     estimation_method : function or None
         The method that performs the estimation for each partition.
         If None this defaults to _est_regularized_debiased.
@@ -392,25 +398,25 @@ class DistributedModel(object):
 
     Attributes
     ----------
-    data_generator : generator
-        See Parameters.
     partitions : scalar
         See Parameters.
     model_class : statsmodels model class
         See Parameters.
-    init_kwds : dict-like or None
+    init_kwds : dict-like
         See Parameters.
-    estimation_method : function or None
+    init_kwds_generator : generator or None
         See Parameters.
-    estimation_kwds : dict-like or None
+    estimation_method : function
         See Parameters.
-    join_method : function or None
+    estimation_kwds : dict-like
         See Parameters.
-    join_kwds : dict-like or None
+    join_method : function
         See Parameters.
-    results_class : results class or None
+    join_kwds : dict-like
         See Parameters.
-    results_kwds : dict-like or None
+    results_class : results class
+        See Parameters.
+    results_kwds : dict-like
         See Parameters.
 
     Examples
@@ -420,13 +426,11 @@ class DistributedModel(object):
     -----
     """
 
-    def __init__(self, data_generator, partitions, model_class=None,
+    def __init__(self, partitions, model_class=None,
                  init_kwds=None, estimation_method=None,
-                 estimation_kwds=None, join_method=None,
-                 join_kwds=None, results_class=None,
-                 results_kwds=None):
+                 estimation_kwds=None, join_method=None, join_kwds=None,
+                 results_class=None, results_kwds=None):
 
-        self.data_generator = data_generator
         self.partitions = partitions
 
         if model_class is None:
@@ -447,7 +451,7 @@ class DistributedModel(object):
         if estimation_kwds is None:
             self.estimation_kwds = {}
         else:
-            self.estimation_kwds = esitmation_kwds
+            self.estimation_kwds = estimation_kwds
 
         if join_method is None:
             self.join_method = _join_debiased
@@ -464,19 +468,22 @@ class DistributedModel(object):
         else:
             self.results_class = results_class
 
-        if results_kwds  is None:
+        if results_kwds is None:
             self.results_kwds = {}
         else:
             self.results_kwds = results_kwds
 
-
-    def fit(self, fit_kwds=None, parallel_method="sequential",
-            parallel_backend=None):
+    def fit(self, data_generator, fit_kwds=None, parallel_method="sequential",
+            parallel_backend=None, init_kwds_generator=None):
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
         Parameters
         ----------
+        data_generator : generator
+            A generator that produces a sequence of tuples where the first
+            element in the tuple corresponds to an endog array and the
+            element corresponds to an exog array.
         fit_kwds : dict-like or None
             Keywords needed for the model fitting.
         parallel_method : str
@@ -485,6 +492,10 @@ class DistributedModel(object):
         parallel_backend : None or joblib parallel_backend object
             used to allow support for more complicated backends,
             ex: dask.distributed
+        init_kwds_generator : generator or None
+            Additional keyword generator that produces model init_kwds
+            that may vary based on data partition.  The current usecase
+            is for WLS and GLS
 
         Returns
         -------
@@ -495,12 +506,14 @@ class DistributedModel(object):
         if fit_kwds is None:
             fit_kwds = {}
 
-        # TODO handle fit_kwds different from those passed into model
         if parallel_method == "sequential":
-            results_l = self.fit_sequential(fit_kwds)
+            results_l = self.fit_sequential(data_generator, fit_kwds,
+                                            init_kwds_generator)
 
         elif parallel_method == "joblib":
-             results_l = self.fit_joblib(parallel_backend, fit_kwds)
+            results_l = self.fit_joblib(data_generator, fit_kwds,
+                                        parallel_backend,
+                                        init_kwds_generator)
 
         else:
             raise ValueError("parallel_method: %s is currently not supported"
@@ -508,19 +521,32 @@ class DistributedModel(object):
 
         params = self.join_method(results_l, **self.join_kwds)
 
+        # NOTE that currently, the dummy result model that is initialized
+        # here does not use any init_kwds from the init_kwds_generator event
+        # if it is provided.  It is possible to imagine an edge case where
+        # this might be a problem but given that the results model instance
+        # does not correspond to any data partition this seems reasonable.
         res_mod = self.model_class([0], [0], **self.init_kwds)
 
         return self.results_class(res_mod, params, **self.results_kwds)
 
-
-    def fit_sequential(self, fit_kwds):
+    def fit_sequential(self, data_generator, fit_kwds,
+                       init_kwds_generator=None):
         """Sequentially performs the distributed estimation using
         the corresponding DistributedModel
 
         Parameters
         ----------
+        data_generator : generator
+            A generator that produces a sequence of tuples where the first
+            element in the tuple corresponds to an endog array and the
+            element corresponds to an exog array.
         fit_kwds : dict-like
             Keywords needed for the model fitting.
+        init_kwds_generator : generator or None
+            Additional keyword generator that produces model init_kwds
+            that may vary based on data partition.  The current usecase
+            is for WLS and GLS
 
         Returns
         -------
@@ -530,25 +556,46 @@ class DistributedModel(object):
 
         results_l = []
 
-        for pnum, (endog, exog) in enumerate(self.data_generator):
+        if init_kwds_generator is None:
 
-            results = _helper_fit_partition(self, pnum, endog, exog,
-                                            fit_kwds)
-            results_l.append(results)
+            for pnum, (endog, exog) in enumerate(data_generator):
+
+                results = _helper_fit_partition(self, pnum, endog, exog,
+                                                fit_kwds)
+                results_l.append(results)
+
+        else:
+
+            tup_gen = enumerate(zip(data_generator,
+                                    init_kwds_generator))
+
+            for pnum, ((endog, exog), init_kwds_e) in tup_gen:
+
+                results = _helper_fit_partition(self, pnum, endog, exog,
+                                                fit_kwds, init_kwds_e)
+                results_l.append(results)
 
         return results_l
 
-
-    def fit_joblib(self, parallel_backend, fit_kwds):
+    def fit_joblib(self, data_generator, fit_kwds, parallel_backend,
+                   init_kwds_generator=None):
         """Performs the distributed estimation in parallel using joblib
 
         Parameters
         ----------
+        data_generator : generator
+            A generator that produces a sequence of tuples where the first
+            element in the tuple corresponds to an endog array and the
+            element corresponds to an exog array.
+        fit_kwds : dict-like
+            Keywords needed for the model fitting.
         parallel_backend : None or joblib parallel_backend object
             used to allow support for more complicated backends,
             ex: dask.distributed
-        fit_kwds : dict-like
-            Keywords needed for the model fitting.
+        init_kwds_generator : generator or None
+            Additional keyword generator that produces model init_kwds
+            that may vary based on data partition.  The current usecase
+            is for WLS and GLS
 
         Returns
         -------
@@ -560,15 +607,29 @@ class DistributedModel(object):
 
         par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
 
-        if parallel_backend is None:
+        if parallel_backend is None and init_kwds_generator is None:
             results_l = par(f(self, pnum, endog, exog, fit_kwds)
                             for pnum, (endog, exog)
-                            in enumerate(self.data_generator))
-        else:
+                            in enumerate(data_generator))
+
+        elif parallel_backend is not None and init_kwds_generator is None:
             with parallel_backend:
                 results_l = par(f(self, pnum, endog, exog, fit_kwds)
                                 for pnum, (endog, exog)
-                                in enumerate(self.data_generator))
+                                in enumerate(data_generator))
+
+        elif parallel_backend is None and init_kwds_generator is not None:
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds)
+                            for pnum, ((endog, exog), init_kwds)
+                            in tup_gen)
+
+        elif parallel_backend is not None and init_kwds_generator is not None:
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            with parallel_backend:
+                results_l = par(f(self, pnum, endog, exog, fit_kwds, int_kwds)
+                                for pnum, ((endog, exog), init_kwds)
+                                in tup_gen)
 
         return results_l
 
@@ -612,6 +673,5 @@ class DistributedResults(LikelihoodModelResults):
             See self.model.predict
 
         """
-
 
         return self.model.predict(self.params, exog, *args, **kwargs)
