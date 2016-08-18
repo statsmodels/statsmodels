@@ -343,7 +343,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz2(self, orth=False, repl=1000, signif=0.05,
+    def err_band_sz2(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 2.
@@ -412,7 +412,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz3(self, orth=False, repl=1000, signif=0.05,
+    def err_band_sz3(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
