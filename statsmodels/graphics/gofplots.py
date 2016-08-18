@@ -6,10 +6,11 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
                                           cache_writable)
-
-from . import utils
+from statsmodels.distributions import ECDF
+from statsmodels.graphics import utils
 
 __all__ = ['qqplot', 'qqplot_2samples', 'qqline', 'ProbPlot']
+
 
 class ProbPlot(object):
     """
@@ -77,7 +78,8 @@ class ProbPlot(object):
     >>> mod_fit = model.fit()
     >>> res = mod_fit.resid # residuals
     >>> probplot = sm.ProbPlot(res)
-    >>> probplot.qqplot()
+    >>> fig = probplot.qqplot()
+    >>> h = plt.title('Example 1 - qqplot - residuals of OLS fit')
     >>> plt.show()
 
     qqplot of the residuals against quantiles of t-distribution with 4
@@ -87,6 +89,7 @@ class ProbPlot(object):
     >>> import scipy.stats as stats
     >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,))
     >>> fig = probplot.qqplot()
+    >>> h = plt.title('Example 2 - qqplot - residuals against quantiles of t-dist, df=4')
     >>> plt.show()
 
     qqplot against same as above, but with mean 3 and std 10:
@@ -94,6 +97,7 @@ class ProbPlot(object):
     >>> # example 3
     >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,), loc=3, scale=10)
     >>> fig = probplot.qqplot()
+    >>> h = plt.title('Example 3 - qqplot - residuals against quantiles of t-dist, df=4, mean=3, std=10')
     >>> plt.show()
 
     Automatically determine parameters for t distribution including the
@@ -102,6 +106,7 @@ class ProbPlot(object):
     >>> # example 4
     >>> probplot = sm.ProbPlot(res, stats.t, fit=True)
     >>> fig = probplot.qqplot(line='45')
+    >>> h = plt.title('Example 4 - qqplot - residuals against quantiles of fitted t-dist')
     >>> plt.show()
 
     A second `ProbPlot` object can be used to compare two seperate sample
@@ -114,9 +119,45 @@ class ProbPlot(object):
     >>> pp_x = sm.ProbPlot(x, fit=True)
     >>> pp_y = sm.ProbPlot(y, fit=True)
     >>> fig = pp_x.qqplot(line='45', other=pp_y)
+    >>> h = plt.title('Example 5 - qqplot - compare two sample sets')
     >>> plt.show()
 
-    The following plot displays some options, follow the link to see the
+    In qqplot, sample size of `other` can be equal or larger than the first.
+    In case of larger, size of `other` samples will be reduced to match the
+    size of the first by interpolation
+
+    >>> # example 6
+    >>> import numpy as np
+    >>> x = np.random.normal(loc=8.25, scale=2.75, size=37)
+    >>> y = np.random.normal(loc=8.75, scale=3.25, size=57)
+    >>> pp_x = sm.ProbPlot(x, fit=True)
+    >>> pp_y = sm.ProbPlot(y, fit=True)
+    >>> fig = pp_y.qqplot(other=pp_x)
+    Traceback (most recent call last):
+        ...
+    ValueError: Sample size of `other` must be equal or larger than this `ProbPlot` instance
+    >>> fig = pp_x.qqplot(line='45', other=pp_y)
+    >>> h = plt.title('Example 6 - qqplot - compare two sample sets with different sample size')
+    >>> plt.show()
+
+   In ppplot, sample size of `other` and the first can be different. `other` will
+   be used to estimate an empirical cumulative distribution function (ECDF).
+   ECDF(x) will be plotted against p(x)=0.5/n, 1.5/n, ..., (n-0.5)/n where x are
+   sorted samples from the first
+
+    >>> # example 7
+    >>> import numpy as np
+    >>> x = np.random.normal(loc=8.25, scale=2.75, size=37)
+    >>> y = np.random.normal(loc=8.75, scale=3.25, size=57)
+    >>> pp_x = sm.ProbPlot(x, fit=True)
+    >>> pp_y = sm.ProbPlot(y, fit=True)
+    >>> fig = pp_y.ppplot(line='45', other=pp_x)
+    >>> h = plt.title('Example 7A- ppplot - compare two sample sets, other=pp_x')
+    >>> fig = pp_x.ppplot(line='45', other=pp_y)
+    >>> h = plt.title('Example 7B- ppplot - compare two sample sets, other=pp_y')
+    >>> plt.show()
+
+   The following plot displays some options, follow the link to see the
     code.
 
     .. plot:: plots/graphics_gofplots_qqplot.py
@@ -213,11 +254,13 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
 
         other : `ProbPlot` instance, array-like, or None, optional
-            If provided, the sample quantiles of this `ProbPlot` instance are
-            plotted against the sample quantiles of the `other` `ProbPlot`
-            instance. If an array-like object is provided, it will be turned
-            into a `ProbPlot` instance using default parameters. If not provided
-            (default), the theoretical quantiles are used.
+            If provided, ECDF(x) will be plotted against p(x) where x are sorted
+            samples from `self`, ECDF is an empirical cumulative distribution
+            function estimated from `other` and p(x) = 0.5/n, 1.5/n, ..., [n-0.5]/n
+            (n is the number of samples in `self`). If an array-object is provided,
+            it will be turned into a `ProbPlot` instance default parameters. If not
+            provided (default), `self.dist`(x) will be plotted against p(x)
+
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -235,8 +278,11 @@ class ProbPlot(object):
             if not check_other:
                 other = ProbPlot(other)
 
-            fig, ax = _do_plot(other.sample_percentiles,
-                               self.sample_percentiles,
+            p_x = self.theoretical_percentiles
+            ECDF_x= ECDF(other.sample_quantiles)(self.sample_quantiles)
+            
+            fig, ax = _do_plot(p_x,
+                               ECDF_x,
                                self.dist, ax=ax, line=line,
                                **plotkwargs)
 
@@ -288,9 +334,13 @@ class ProbPlot(object):
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
-            instance. If an array-like object is provided, it will be turned
-            into a `ProbPlot` instance using default parameters. If not
-            provided (default), the theoretical quantiles are used.
+            instance. Sample size of `other` must be equal or larger than
+            this `ProbPlot` instance. If the sample size is larger, sample
+            quantiles of `other` will be interporlated to match the sample size
+            of this `ProbPlot` instance. If an array-like object is provided,
+            it will be turned into a `ProbPlot` instance using default
+            parameters. If not provided (default), the theoretical quantiles
+            are used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -307,9 +357,21 @@ class ProbPlot(object):
             check_other = isinstance(other, ProbPlot)
             if not check_other:
                 other = ProbPlot(other)
-
-            fig, ax = _do_plot(other.sample_quantiles,
-                               self.sample_quantiles,
+            
+            s_self = self.sample_quantiles
+            s_other = other.sample_quantiles
+            
+            if len(s_self) > len(s_other):
+                raise ValueError("Sample size of `other` must be equal or " +
+                                 "larger than this `ProbPlot` instance")
+            elif len(s_self) < len(s_other):
+                # Use quantiles of the smaller set and interpolate quantiles of
+                # the larger data set
+                p = plotting_pos(self.nobs, self.a)
+                s_other = stats.mstats.mquantiles(s_other, p)
+                 
+            fig, ax = _do_plot(s_other,
+                               s_self,
                                self.dist, ax=ax, line=line,
                                **plotkwargs)
 
@@ -546,11 +608,12 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
 
     Examples
     --------
+    >>> import statsmodels.api as sm
     >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
     >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
     >>> pp_x = sm.ProbPlot(x)
     >>> pp_y = sm.ProbPlot(y)
-    >>> qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
+    >>> fig = qqplot_2samples(pp_x, pp_y, xlabel=None, ylabel=None, line=None, ax=None)
 
     Notes
     -----
@@ -561,11 +624,10 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
        of the quantiles.
 
     """
-    check_data1 = isinstance(data1, ProbPlot)
-    check_data2 = isinstance(data2, ProbPlot)
-
-    if not check_data1 and not check_data2:
+    if not isinstance(data1, ProbPlot):
         data1 = ProbPlot(data1)
+
+    if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
 
     fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel,

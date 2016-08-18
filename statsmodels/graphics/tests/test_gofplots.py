@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.testing import dec
-
+from nose.tools import assert_raises
 import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqplot, qqline, ProbPlot
 from scipy import stats
@@ -142,6 +142,27 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.prbplt = sm.ProbPlot(self.data, loc=8.25, scale=3.25)
         self.line = '45'
         self.base_setup()
+
+
+class TestCompareSamplesDifferentSize(object):
+    def setup(self):
+        np.random.seed(5)
+        self.data1 = sm.ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=37))
+        self.data2 = sm.ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=55))
+
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot(self):
+        self.data1.qqplot(other=self.data2)
+        assert_raises(ValueError, self.data2.qqplot, other=self.data1)
+
+    @dec.skipif(not have_matplotlib)
+    def test_ppplot(self):
+        self.data1.ppplot(other=self.data2)
+        self.data2.ppplot(other=self.data1)
+
+    def teardown(self):
+        if have_matplotlib:
+            plt.close('all')
 
 
 class TestTopLevel(object):
