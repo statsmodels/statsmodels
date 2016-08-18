@@ -84,4 +84,4 @@ def _get_data():
     ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
     with open(filepath + '/statecrime.csv', 'rb') as f:
         data = np.recfromtxt(f, delimiter=",", names=True, dtype=None)
-        return data
+    return data

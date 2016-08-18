@@ -31,7 +31,7 @@ from statsmodels.datasets import utils
 import os
 
 
-def load():
+def load_pandas():
     """
     Load the China smoking/lung cancer data and return a Dataset class.
 
@@ -44,3 +44,16 @@ def load():
     filepath = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(filepath + '/china_smoking.csv'), index_col="Location")
     return utils.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
+
+
+def load():
+    """
+    Load the China smoking/lung cancer data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    recarray = load_pandas().data.to_records()
+    return utils.Dataset(data=recarray, title="Smoking and lung cancer in Chinese regions")

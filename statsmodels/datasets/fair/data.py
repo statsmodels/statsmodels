@@ -80,4 +80,4 @@ def _get_data():
     ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
     with open(filepath + '/fair.csv', 'rb') as f:
         data = np.recfromtxt(f, delimiter=",", names=True, dtype=float)
-        return data
+    return data
