@@ -34,7 +34,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
          - `agresti_coull` : Agresti-Coull interval
          - `beta` : Clopper-Pearson interval based on Beta distribution
          - `wilson` : Wilson Score interval
-         - `jeffrey` : Jeffrey's Bayesian Interval
+         - `jeffreys` : Jeffreys Bayesian Interval
          - `binom_test` : experimental, inversion of binom_test
 
     Returns
@@ -90,7 +90,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
             ci_upp = optimize.brentq(func, q_, 1. - float_info.epsilon)
 
     elif method == 'beta':
-        ci_low = stats.beta.ppf(alpha_2 , count, nobs - count + 1)
+        ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
         ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
 
     elif method == 'agresti_coull':
@@ -112,13 +112,15 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         ci_low = center - dist
         ci_upp = center + dist
 
-    elif method == 'jeffrey':
-        ci_low, ci_upp = stats.beta.interval(1 - alpha,  count + 0.5,
+    # method adjusted to be more forgiving of misspellings or incorrect option name
+    elif method[:4] == 'jeff':
+        ci_low, ci_upp = stats.beta.interval(1 - alpha, count + 0.5,
                                              nobs - count + 0.5)
 
     else:
         raise NotImplementedError('method "%s" is not available' % method)
     return ci_low, ci_upp
+
 
 def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
     '''Confidence intervals for multinomial proportions.
@@ -777,7 +779,7 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
 
     count = np.asarray(count)
     nobs = np.asarray(nobs)
-    
+
     if nobs.size == 1:
         nobs = nobs * np.ones_like(count)
 
