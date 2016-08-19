@@ -156,7 +156,8 @@ class TestPHReg(object):
         mod1 = PHReg(time, exog, status, entry=entry)
         rslt1 = mod1.fit()
 
-        fml = "time ~ 0 + exog1 + exog2 + exog3 + exog4"
+        # works with "0 +" on RHS but issues warning
+        fml = "time ~ exog1 + exog2 + exog3 + exog4"
         mod2 = PHReg.from_formula(fml, df, status=status,
                                   entry=entry)
         rslt2 = mod2.fit()
@@ -170,6 +171,19 @@ class TestPHReg(object):
         assert_allclose(rslt1.bse, rslt2.bse)
         assert_allclose(rslt1.bse, rslt3.bse)
 
+    def test_formula_cat_interactions(self):
+
+        time = np.r_[1, 2, 3, 4, 5, 6, 7, 8, 9]
+        status = np.r_[1, 1, 0, 0, 1, 0, 1, 1, 1]
+        x1 = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3]
+        x2 = np.r_[1, 2, 3, 1, 2, 3, 1, 2, 3]
+        df = pd.DataFrame({"time": time, "status": status,
+                           "x1": x1, "x2": x2})
+
+        model1 = PHReg.from_formula("time ~ C(x1) + C(x2) + C(x1)*C(x2)", status="status",
+                                    data=df)
+        assert_equal(model1.exog.shape, [9, 8])
+
     def test_predict_formula(self):
 
         n = 100
@@ -181,7 +195,8 @@ class TestPHReg(object):
         df = pd.DataFrame({"time": time, "status": status,
                            "exog1": exog[:, 0], "exog2": exog[:, 1]})
 
-        fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
+        # Works with "0 +" on RHS but issues warning
+        fml = "time ~ exog1 + np.log(exog2) + exog1*exog2"
         model1 = PHReg.from_formula(fml, df, status=status)
         result1 = model1.fit()
 
@@ -203,6 +218,27 @@ class TestPHReg(object):
             for j in range(i):
                 assert_allclose(prl[i].standard_errors, prl[j].standard_errors)
 
+    def test_formula_args(self):
+
+        np.random.seed(34234)
+        n = 200
+        time = 50 * np.random.uniform(size=n)
+        status = np.random.randint(0, 2, size=n).astype(np.float64)
+        exog = np.random.normal(size=(200, 2))
+        offset = np.random.uniform(size=n)
+        entry = np.random.uniform(0, 1, size=n) * time
+
+        df = pd.DataFrame({"time": time, "status": status, "x1": exog[:, 0],
+                           "x2": exog[:, 1], "offset": offset, "entry": entry})
+        model1 = PHReg.from_formula("time ~ x1 + x2", status="status", offset="offset",
+                                    entry="entry", data=df)
+        result1 = model1.fit()
+        model2 = PHReg.from_formula("time ~ x1 + x2", status=df.status, offset=df.offset,
+                                    entry=df.entry, data=df)
+        result2 = model2.fit()
+        assert_allclose(result1.params, result2.params)
+        assert_allclose(result1.bse, result2.bse)
+
     def test_offset(self):
 
         np.random.seed(34234)
@@ -210,15 +246,16 @@ class TestPHReg(object):
         status = np.random.randint(0, 2, 200).astype(np.float64)
         exog = np.random.normal(size=(200,4))
 
-        mod1 = PHReg(time, exog, status)
-        rslt1 = mod1.fit()
-        offset = exog[:,0] * rslt1.params[0]
-        exog = exog[:, 1:]
+        for ties in "breslow", "efron":
+            mod1 = PHReg(time, exog, status)
+            rslt1 = mod1.fit()
+            offset = exog[:,0] * rslt1.params[0]
+            exog = exog[:, 1:]
 
-        mod2 = PHReg(time, exog, status, offset=offset)
-        rslt2 = mod2.fit()
+            mod2 = PHReg(time, exog, status, offset=offset, ties=ties)
+            rslt2 = mod2.fit()
 
-        assert_allclose(rslt2.params, rslt1.params[1:])
+            assert_allclose(rslt2.params, rslt1.params[1:])
 
     def test_post_estimation(self):
         # All regression tests

@@ -7,7 +7,7 @@ import webbrowser
 from statsmodels.compat.python import urlencode
 from statsmodels.version import release
 
-BASE_URL = 'http://statsmodels.sourceforge.net/'
+BASE_URL = 'http://www.statsmodels.org/'
 
 
 def _generate_url(arg, stable):

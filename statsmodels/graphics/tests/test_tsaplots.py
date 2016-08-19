@@ -120,23 +120,27 @@ def test_plot_quarter():
                               dta.quarter.astype(int).apply(str)))
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
+    plt.close('all')
 
     # test with a DatetimeIndex with no freq
     parser = pd.datetools.parse_time_string
     dta.set_index(pd.DatetimeIndex((x[0] for x in map(parser, dates))),
                   inplace=True)
     quarter_plot(dta.unemp)
+    plt.close('all')
 
     # w freq
     # see pandas #6631
     dta.index = pd.DatetimeIndex((x[0] for x in map(parser, dates)),
                                    freq='QS-Oct')
     quarter_plot(dta.unemp)
+    plt.close('all')
 
     # w PeriodIndex
     dta.index = pd.PeriodIndex((x[0] for x in map(parser, dates)),
                                    freq='Q')
     quarter_plot(dta.unemp)
+    plt.close('all')
 
 @dec.skipif(not have_matplotlib)
 def test_seasonal_plot():
@@ -153,3 +157,4 @@ def test_seasonal_plot():
     ax = fig.get_axes()[0]
     output = [tl.get_text() for tl in ax.get_xticklabels()]
     assert_equal(labels, output)
+    plt.close('all')

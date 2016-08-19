@@ -619,7 +619,6 @@ class TestGLMGaussHACPanel(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        import statsmodels.stats.sandwich_covariance as sw
         cls.cov_type = 'hac-panel'
         # time index is just made up to have a test case
         time = np.tile(np.arange(7), 5)[:-1]
@@ -638,6 +637,25 @@ class TestGLMGaussHACPanel(CheckDiscreteGLM):
     def test_kwd(self):
         # test corrected keyword name
         assert_allclose(self.res1b.bse, self.res1.bse, rtol=1e-12)
+
+
+class TestGLMGaussHACPanelGroups(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'hac-panel'
+        # time index is just made up to have a test case
+        groups = np.repeat(np.arange(5), 7)[:-1]
+        mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
+        kwds = dict(groups=groups,
+                    maxlags=2,
+                    kernel=sw.weights_uniform,
+                    use_correction='hac',
+                    df_correction=False)
+        cls.res1 = mod1.fit(cov_type='hac-panel', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='hac-panel', cov_kwds=kwds)
 
 
 class TestGLMGaussHACGroupsum(CheckDiscreteGLM):

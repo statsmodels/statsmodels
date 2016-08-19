@@ -2748,7 +2748,9 @@ class BinaryResults(DiscreteResults):
         model = self.model
         actual = model.endog
         pred = np.array(self.predict() > threshold, dtype=float)
-        return np.histogram2d(actual, pred, bins=2)[0]
+        bins = np.array([0, 0.5, 1])
+        return np.histogram2d(actual, pred, bins=bins)[0]
+
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
@@ -2956,11 +2958,12 @@ class MultinomialResults(DiscreteResults):
         pred_table[i,j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
-        J = self.model.J
+        ju = self.model.J - 1  # highest index
         # these are the actual, predicted indices
-        idx = lzip(self.model.endog, self.predict().argmax(1))
+        #idx = lzip(self.model.endog, self.predict().argmax(1))
+        bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
         return np.histogram2d(self.model.endog, self.predict().argmax(1),
-                              bins=J)[0]
+                              bins=bins)[0]
 
     @cache_readonly
     def bse(self):

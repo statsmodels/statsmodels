@@ -33,24 +33,31 @@ class ResultsStore(object):
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
              fitargs=(), regresults=False):
     """
-    Returns the results for the lag length that maximimizes the info criterion.
+    Returns the results for the lag length that maximizes the info criterion.
 
     Parameters
     ----------
     mod : Model class
-        Model estimator class.
-    modargs : tuple
-        args to pass to model.  See notes.
-    fitargs : tuple
-        args to pass to fit.  See notes.
-    lagstart : int
+        Model estimator class
+    endog : array-like
+        nobs array containing endogenous variable
+    exog : array-like
+        nobs by (startlag + maxlag) array containing lags and possibly other
+        variables
+    startlag : int
         The first zero-indexed column to hold a lag.  See Notes.
     maxlag : int
         The highest lag order for lag length selection.
-    method : str {"aic","bic","t-stat"}
+    method : {'aic', 'bic', 't-stat'}
         aic - Akaike Information Criterion
         bic - Bayes Information Criterion
         t-stat - Based on last lag
+    modargs : tuple, optional
+        args to pass to model.  See notes.
+    fitargs : tuple, optional
+        args to pass to fit.  See notes.
+    regresults : bool, optional
+        Flag indicating to return optional return results
 
     Returns
     -------
@@ -58,7 +65,8 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         Best information criteria.
     bestlag : int
         The lag length that maximizes the information criterion.
-
+    results : dict, optional
+        Dictionary containing all estimation results
 
     Notes
     -----
@@ -109,7 +117,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 #TODO: autolag is untested
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
              store=False, regresults=False):
-    '''
+    """
     Augmented Dickey-Fuller unit root test
 
     The Augmented Dickey-Fuller test can be used to test for a unit root in a
@@ -121,8 +129,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         data series
     maxlag : int
         Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
-    regression : str {'c','ct','ctt','nc'}
+    regression : {'c','ct','ctt','nc'}
         Constant and trend order to include in regression
+
         * 'c' : constant only (default)
         * 'ct' : constant and trend
         * 'ctt' : constant, and linear and quadratic trend
@@ -130,36 +139,34 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     autolag : {'AIC', 'BIC', 't-stat', None}
         * if None, then maxlag lags are used
         * if 'AIC' (default) or 'BIC', then the number of lags is chosen
-          to minimize the corresponding information criterium
+          to minimize the corresponding information criterion
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
-          lag until the t-statistic on the last lag length is significant at
-          the 95 % level.
+          lag until the t-statistic on the last lag length is significant
+          using a 5%-sized test
     store : bool
         If True, then a result instance is returned additionally to
-        the adf statistic (default is False)
-    regresults : bool
-        If True, the full regression results are returned (default is False)
+        the adf statistic. Default is False
+    regresults : bool, optional
+        If True, the full regression results are returned. Default is False
 
     Returns
     -------
     adf : float
         Test statistic
     pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994)
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010)
     usedlag : int
-        Number of lags used.
+        Number of lags used
     nobs : int
         Number of observations used for the ADF regression and calculation of
-        the critical values.
+        the critical values
     critical values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010)
     icbest : float
         The maximized information criterion if autolag is not None.
-    regresults : RegressionResults instance
-        The
-    resstore : (optional) instance of ResultStore
-        an instance of a dummy class with results attached as attributes
+    resstore : ResultStore, optional
+        A dummy class with results attached as attributes
 
     Notes
     -----
@@ -168,33 +175,30 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     above a critical size, then we cannot reject that there is a unit root.
 
     The p-values are obtained through regression surface approximation from
-    MacKinnon 1994, but using the updated 2010 tables.
-    If the p-value is close to significant, then the critical values should be
-    used to judge whether to accept or reject the null.
+    MacKinnon 1994, but using the updated 2010 tables. If the p-value is close
+    to significant, then the critical values should be used to judge whether
+    to reject the null.
 
     The autolag option and maxlag for it are described in Greene.
 
     Examples
     --------
-    see example script
+    See example notebook
 
     References
     ----------
-    Greene
-    Hamilton
+    .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
+    .. [2] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
-    P-Values (regression surface approximation)
-    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-    unit-root and cointegration tests.  `Journal of Business and Economic
-    Statistics` 12, 167-76.
+    .. [3] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+        unit-root and cointegration tests.  `Journal of Business and Economic
+        Statistics` 12, 167-76.
 
-    Critical values
-    MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
-    University, Dept of Economics, Working Papers.  Available at
-    http://ideas.repec.org/p/qed/wpaper/1227.html
-
-    '''
+    .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
+        University, Dept of Economics, Working Papers.  Available at
+        http://ideas.repec.org/p/qed/wpaper/1227.html
+    """
 
     if regresults:
         store = True
@@ -307,7 +311,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     missing : str
         A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
         are to be treated.
-        
+
     Returns
     -------
     acovf : array
@@ -331,7 +335,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     else:
         deal_with_masked = has_missing(x)
     if deal_with_masked:
-        if missing == 'raise': 
+        if missing == 'raise':
             raise MissingDataError("NaNs were encountered in the data")
         notmask_bool = ~np.isnan(x) #bool
         if missing == 'conservative':
@@ -358,7 +362,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         d = np.hstack((xi, xi[:-1][::-1]))
     elif deal_with_masked: #biased and NaNs given and ('drop' or 'conservative')
         d = notmask_int.sum() * np.ones(2*n-1)
-    else: #biased and no NaNs or missing=='none' 
+    else: #biased and no NaNs or missing=='none'
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -917,12 +921,16 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     return resli
 
 
-def coint(y1, y2, regression="c"):
-    """
-    This is a simple cointegration test. Uses unit-root test on residuals to
-    test for cointegrated relationship
+def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
+          return_results=None):
+    """Test for no-cointegration of a univariate equation
 
-    See Hamilton (1994) 19.2
+    The null hypothesis is no cointegration. Variables in y0 and y1 are
+    assumed to be integrated of order 1, I(1).
+
+    This uses the augmented Engle-Granger two-step cointegration test.
+    Constant or trend is included in 1st stage regression, i.e. in
+    cointegrating equation.
 
     Parameters
     ----------
@@ -930,19 +938,36 @@ def coint(y1, y2, regression="c"):
         first element in cointegrating vector
     y2 : array_like
         remaining elements in cointegrating vector
-    c : str {'c'}
-        Included in regression
-        * 'c' : Constant
+    trend : str {'c', 'ct'}
+        trend term included in regression for cointegrating equation
+        * 'c' : constant
+        * 'ct' : constant and linear trend
+        * also available quadratic trend 'ctt', and no constant 'nc'
+
+    method : string
+        currently only 'aeg' for augmented Engle-Granger test is available.
+        default might change.
+    maxlag : None or int
+        keyword for `adfuller`, largest or given number of lags
+    autolag : string
+        keyword for `adfuller`, lag selection criterion.
+    return_results : bool
+        for future compatibility, currently only tuple available.
+        If True, then a results instance is returned. Otherwise, a tuple
+        with the test outcome is returned.
+        Set `return_results=False` to avoid future changes in return.
+
 
     Returns
     -------
     coint_t : float
         t-statistic of unit-root test on residuals
     pvalue : float
-        MacKinnon's approximate p-value based on MacKinnon (1994)
+        MacKinnon's approximate, asymptotic p-value based on MacKinnon (1994)
     crit_value : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels.
+        levels based on regression curve. This depends on the number of
+        observations.
 
     Notes
     -----
@@ -951,30 +976,52 @@ def coint(y1, y2, regression="c"):
     small, below a critical size, then we can reject the hypothesis that there
     is no cointegrating relationship.
 
-    P-values are obtained through regression surface approximation from
-    MacKinnon 1994.
+    P-values and critical values are obtained through regression surface
+    approximation from MacKinnon 1994 and 2010.
+
+    TODO: We could handle gaps in data by dropping rows with nans in the
+    auxiliary regressions. Not implemented yet, currently assumes no nans
+    and no gaps in time series.
 
     References
     ----------
-    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-        unit-root and cointegration tests.  `Journal of Business and Economic
-        Statistics` 12, 167-76.
-
+    MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions for
+        Unit-Root and Cointegration Tests." Journal of Business & Economics
+        Statistics, 12.2, 167-76.
+    MacKinnon, J.G. 2010.  "Critical Values for Cointegration Tests."
+        Queen's University, Dept of Economics Working Papers 1227.
+        http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-    regression = regression.lower()
-    if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood" % regression)
+
+    trend = trend.lower()
+    if trend not in ['c', 'nc', 'ct', 'ctt']:
+        raise ValueError("trend option %s not understood" % trend)
+    y0 = np.asarray(y0)
     y1 = np.asarray(y1)
-    y2 = np.asarray(y2)
-    if regression == 'c':
-        y2 = add_constant(y2, prepend=False)
-    st1_resid = OLS(y1, y2).fit().resid  # stage one residuals
-    lgresid_cons = add_constant(st1_resid[0:-1], prepend=False)
-    uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
-    coint_t = (uroot_reg.params[0] - 1) / uroot_reg.bse[0]
-    pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
-    crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
-    return coint_t, pvalue, crit_value
+    if y1.ndim < 2:
+        y1 = y1[:, None]
+    nobs, k_vars = y1.shape
+    k_vars += 1   # add 1 for y0
+
+    if trend == 'nc':
+        xx = y1
+    else:
+        xx = add_trend(y1, trend=trend, prepend=False)
+
+    res_co = OLS(y0, xx).fit()
+
+    res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=None,
+                             regression='nc')
+    # no constant or trend, see egranger in Stata and MacKinnon
+    if trend == 'nc':
+        crit = [np.nan] * 3  # 2010 critical values not available
+    else:
+        crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
+        #  nobs - 1, the -1 is to match egranger in Stata, I don't know why.
+        #  TODO: check nobs or df = nobs - k
+
+    pval_asy = mackinnonp(res_adf[0], regression=trend, N=k_vars)
+    return res_adf[0], pval_asy, crit
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):

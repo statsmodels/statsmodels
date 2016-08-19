@@ -63,4 +63,4 @@ def _get_data():
     with open(filepath + '/stackloss.csv',"rb") as f:
         data = recfromtxt(f, delimiter=",",
                           names=True, dtype=float)
-        return data
+    return data
