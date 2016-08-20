@@ -26,7 +26,8 @@ class BaseIRAnalysis(object):
     able to handle known and estimated processes
     """
 
-    def __init__(self, model, P=None, periods=10, order=None, svar=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False,
+                 vecm=False):
         self.model = model
         self.periods = periods
         self.neqs, self.lags, self.T = model.neqs, model.k_ar, model.nobs
@@ -62,15 +63,20 @@ class BaseIRAnalysis(object):
         else:
             self.orth_cum_effects = self.orth_irfs.cumsum(axis=0)
 
-        self.lr_effects = model.long_run_effects()
-        if svar:
-            self.svar_lr_effects = np.dot(model.long_run_effects(), P)
-        else:
-            self.orth_lr_effects = np.dot(model.long_run_effects(), P)
+        # long-run effects may be infinite for VECMs.
+        if not vecm:
+            self.lr_effects = model.long_run_effects()
+            if svar:
+                self.svar_lr_effects = np.dot(model.long_run_effects(), P)
+            else:
+                self.orth_lr_effects = np.dot(model.long_run_effects(), P)
 
 
         # auxiliary stuff
-        self._A = util.comp_matrix(model.coefs)
+        if vecm:
+            self._A = util.comp_matrix(model.var_repr)
+        else:
+            self._A = util.comp_matrix(model.coefs)
 
     def cov(self, *args, **kwargs):
         raise NotImplementedError
@@ -233,11 +239,15 @@ class IRAnalysis(BaseIRAnalysis):
     -----
     Using Lutkepohl (2005) notation
     """
-    def __init__(self, model, P=None, periods=10, order=None, svar=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False,
+                 vecm=False):
         BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
-                                order=order, svar=svar)
+                                order=order, svar=svar, vecm=vecm)
 
-        self.cov_a = model._cov_alpha
+        if vecm:
+            self.cov_a = model.cov_var_repr
+        else:
+            self.cov_a = model._cov_alpha
         self.cov_sig = model._cov_sigma
 
         # memoize dict for G matrix function
@@ -277,7 +287,7 @@ class IRAnalysis(BaseIRAnalysis):
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
         else:
-            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
+            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,  # TODO: irf_errband relies on self.intercept --> solve with exog-refactor
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
@@ -318,7 +328,7 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             irfs = self.irfs
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,  # TODO: irf_resim relies on self.intercept --> solve with exog-refactor
                                    burn=100)
         q = util.norm_signif_level(signif)
 
@@ -381,7 +391,7 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             irfs = self.irfs
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,  # TODO: irf_resim relies on self.intercept --> solve with exog-refactor
                                    burn=100)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
@@ -449,7 +459,7 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             irfs = self.irfs
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,  # TODO: irf_resim relies on self.intercept --> solve with exog-refactor
                                    burn=100)
         stack = np.zeros((neqs, repl, periods*neqs))
 
@@ -631,7 +641,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, repl=repl,
+        return model.irf_errband_mc(orth=orth, repl=repl,  # TODO: irf_errband_mc relies on self.intercept --> solve with exog-refactor
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=True)
 
     def lr_effect_cov(self, orth=False):
