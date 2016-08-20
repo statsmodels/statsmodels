@@ -235,13 +235,18 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self.data.dates.__class__(start=dtstart,
                                               end=dtend,
                                               freq=pandas_freq)
-            if not dates[-1] == dtend and pandas_freq == 'N':
-                # TODO: this is a hack because a DatetimeIndex with
-                # nanosecond frequency does not include "end"
-                dtend = Timestamp(dtend.value + 1)
-                dates = self.data.dates.__class__(start=dtstart,
-                                                  end=dtend,
-                                                  freq=pandas_freq)
+
+            if pandas_freq.freqstr == 'N':
+                _dtend = dtend
+                if isinstance(dates[-1], Period):
+                    _dtend = pd.to_datetime(_dtend).to_period(dates.freq)
+                if not dates[-1] == _dtend:
+                    # TODO: this is a hack because a DatetimeIndex with
+                    # nanosecond frequency does not include "end"
+                    dtend = Timestamp(dtend.value + 1)
+                    dates = self.data.dates.__class__(start=dtstart,
+                                                      end=dtend,
+                                                      freq=pandas_freq)
         # handle
         elif freq is None and (isinstance(dtstart, (int, long)) and
                                isinstance(dtend, (int, long))):
