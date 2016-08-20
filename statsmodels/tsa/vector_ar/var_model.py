@@ -384,6 +384,29 @@ def _reordered(self, order):
                       lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
 
+def orth_ma_rep(results, maxn=10, P=None):
+    r"""Compute Orthogonalized MA coefficient matrices using P matrix such
+    that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
+    decomposition of :math:`\Sigma_u`
+
+    Parameters
+    ----------
+    results : VARResults or VECMResults
+    maxn : int
+        Number of coefficient matrices to compute
+    P : ndarray (neqs x neqs), optional
+        Matrix such that Sigma_u = PP', defaults to the Cholesky decomposition.
+
+    Returns
+    -------
+    coefs : ndarray (maxn x neqs x neqs)
+    """
+    if P is None:
+        P = results._chol_sigma_u
+
+    ma_mats = results.ma_rep(maxn=maxn)
+    return mat([np.dot(coefs, P) for coefs in ma_mats])
+
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -674,7 +697,7 @@ class VARProcess(object):
         return ma_rep(self.coefs, maxn=maxn)
 
     def orth_ma_rep(self, maxn=10, P=None):
-        r"""Compute Orthogonalized MA coefficient matrices using P matrix such
+        r"""Compute orthogonalized MA coefficient matrices using P matrix such
         that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
         decomposition of :math:`\Sigma_u`
 
@@ -689,11 +712,7 @@ class VARProcess(object):
         -------
         coefs : ndarray (maxn x k x k)
         """
-        if P is None:
-            P = self._chol_sigma_u
-
-        ma_mats = self.ma_rep(maxn=maxn)
-        return mat([np.dot(coefs, P) for coefs in ma_mats])
+        return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
         r"""Compute long-run effect of unit impulse
@@ -1166,12 +1185,12 @@ class VARResults(VARProcess):
 
         """
         neqs = self.neqs
-        mean = self.mean()
+        # mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
-        df_model = self.df_model
+        # df_model = self.df_model
         nobs = self.nobs
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
@@ -1236,12 +1255,12 @@ class VARResults(VARProcess):
 
         """
         neqs = self.neqs
-        mean = self.mean()
+        # mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
-        df_model = self.df_model
+        # df_model = self.df_model
         nobs = self.nobs
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
