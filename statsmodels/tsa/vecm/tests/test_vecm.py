@@ -22,14 +22,14 @@ coint_rank = 1
 
 debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc"]  # ["nc", "co", "colo", "ci", "cili"] # todo ###############################
-seasonal_list = [0]  # [0, 4] # todo #########################################################################
+deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"] # todo ###############################
+seasonal_list = [0, 4]  # [0, 4] # todo #########################################################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
-             "causality"]
-to_test = all_tests  # ["beta"]
+             "causality", "impulse-response"]
+to_test = ["impulse-response"]  # all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -483,7 +483,7 @@ def test_causality():  # test Granger-causality and instantaneous causality
             # ==> until names are implemented, use the following line:
             v_names = range(len(ds.variable_names))
             for causing in sublists(v_names, 1, len(v_names)):
-                # Now that the potentially causing variables are fixed, find 
+                # Now that the potentially causing variables are fixed, find
                 # all combinations of potentially caused variables.
                 causing_compl = [el for el in v_names if el not in causing]
                 caused_combs = sublists(causing_compl, 1, len(causing_compl))
@@ -520,6 +520,26 @@ def test_causality():  # test Granger-causality and instantaneous causality
                         False, err_msg_i_p
 
 
+def test_impulse_response():
+    if debug_mode:
+        if "impulse-response" not in to_test:
+            return
+        else:
+            print("\n\nIMPULSE-RESPONSE", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+            err_msg = build_err_msg(ds, dt, "IMULSE-RESPONSE")
+            periods = 20
+            obtained_all = results_sm[ds][dt].irf(periods=periods).irfs
+            # flatten inner arrays to make them comparable to parsed results:
+            obtained_all = obtained_all.reshape(periods+1, -1)
+            desired_all = results_ref[ds][dt]["ir"]
+            yield assert_allclose, obtained_all, desired_all, rtol, atol,  \
+                False, err_msg
+
+
 def setup():
     datasets.append(e6)  # TODO: append more data sets for more test cases.
     
@@ -528,5 +548,3 @@ def setup():
         results_ref[ds] = load_results_jmulti(ds, dt_s_list)
         results_sm[ds] = load_results_statsmodels(ds)
         return results_sm[ds], results_ref[ds]
-
-

@@ -330,7 +330,7 @@ def load_results_jmulti(dataset, dt_s_list):
         results["fc"]["upper"] = upper
 
         # ---------------------------------------------------------------------
-        # parse output related to Granger-causality:
+        # parse output related to Granger-causality and instant causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
         results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
         results["granger_caus"]["p"] = dict()
@@ -375,7 +375,43 @@ def load_results_jmulti(dataset, dt_s_list):
                     granger_results[3]
 
         # ---------------------------------------------------------------------
+        # parse output related to impulse-response analysis:
+        ir_file = dataset.__str__() + "_" + source + "_" + dt_string \
+            + "_ir" + ".txt"
+        ir_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                               ir_file)
+        ir_file = open(ir_file, encoding='latin_1')
+        causing = None
+        caused = None
+        data = None
+        regex_vars = re.compile("\w+")
+        regex_vals = re.compile("-?\d+\.\d{4}")
+        line_start_causing = "time"
+        data_line_indicator = "point estimate"
+        data_rows_read = 0
+        for line in ir_file:
+            if causing is None and not line.startswith(line_start_causing):
+                continue  # no relevant info in the header
+            if line.startswith(line_start_causing):
+                line = line[4:]
+                causing = re.findall(regex_vars, line)
+                # 21 periods shown in JMulTi output
+                data = np.empty((21, len(causing)))
+                continue
+            if caused is None:
+                caused = re.findall(regex_vars, line)
+                continue
+            # now start collecting the values:
+            if data_line_indicator not in line:
+                continue
+            start = line.find(data_line_indicator) + len(data_line_indicator)
+            line = line[start:]
+            data[data_rows_read] = re.findall(regex_vals, line)
+            data_rows_read += 1
+        ir_file.close()
+        results["ir"] = data
 
+        # ---------------------------------------------------------------------
         if debug_mode:
             print_debug_output(results, dt_string)
 

@@ -19,7 +19,8 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import output as var_output
 from statsmodels.tsa.vector_ar.util import vech
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
-    VAR
+    VAR, ma_rep, orth_ma_rep
+import statsmodels.tsa.vector_ar.irf as irf
 
 
 def num_det_vars(det_string, seasons=0):
@@ -131,7 +132,7 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         # y_min1_mean = y_min1.mean(1)
         y_min1 = vstack((y_min1,
                          np.ones(T)))
-        # H = vstack((np.identity(K),
+        # H = vstack((np.identity(neqs),
         #             - y_min1_mean))
         # y_min1 = H.T.dot(y_min1)
 
@@ -184,7 +185,7 @@ def _block_matrix_ymin1_deltax(y_min1, delta_x):  # e.g. p.287 (7.2.4)
 
     Returns
     -------
-    result : ndarray (K*p x K*p)
+    result : ndarray (neqs*k_ar x neqs*k_ar)
         (dimensions assuming no deterministic terms are given)
         Inverse of a matrix consisting of four blocks. Each block is consists
         of matrix products of the function's arguments.
@@ -264,7 +265,7 @@ def _sij(delta_x, delta_y_1_T, y_min1):
 class VECM(tsbase.TimeSeriesModel):
     """
     Fit a VECM process
-    .. math:: \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots + \Gamma_{p-1} \Delta y_{t-p+1} + u_t
+    .. math:: \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots + \Gamma_{k_ar-1} \Delta y_{t-k_ar+1} + u_t
     where
     .. math:: \Pi = \alpha \beta'
     as described in chapter 7 of [1]_.
@@ -440,7 +441,7 @@ class VECM(tsbase.TimeSeriesModel):
                            gamma_tilde, sigma_u_tilde,
                            deterministic=deterministic, seasons=seasons,
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
-                           delta_x=delta_x, model=self)
+                           delta_x=delta_x, model=self, names=self.endog_names)
 
     @property
     def lagged_param_names(self):
@@ -590,14 +591,10 @@ class VECMResults(object):
 
     coint_rank : int
 
-    alpha : array (K x coint_rank)
-        ... where K is the number of variables per observation
-    beta : array (K x coint_rank)
-        ... where K is the number of variables per observation
-    gamma : array (K x K*(level_var_lag_order-1))
-        ... where K is the number of variables per observation
-    sigma_u : array (K x K)
-        ... where K is the number of variables per observation
+    alpha : array (neqs x coint_rank)
+    beta : array (neqs x coint_rank)
+    gamma : array (neqs x neqs*(level_var_lag_order-1))
+    sigma_u : array (neqs x neqs)
     deterministic : str {"nc", "co", "ci", "lo", "li"}
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
@@ -624,83 +621,85 @@ class VECMResults(object):
         Estimate of white noise process variance Var[u_t]
 
     deterministic
-    K : int
+    neqs : int
         Number of variables per observation. Number of equations.
-    p : int
+    k_ar : int
         Lags in the VAR representation. This implies: Lags in the VEC
-        representation = p - 1
+        representation = k_ar - 1
     r : int
         Cointegration rank.
     T : int
         Number of observations after the presample
 
-    y_min1 : ndarray (K x T)
+    y_min1 : ndarray (neqs x T)
         Observations at t=0 until t=T-1
-    delta_y_1_T : ndarray (K x T)
+    delta_y_1_T : ndarray (neqs x T)
         Observations at t=1 until t=T minus y_min1
-    delta_x : ndarray ((K * (p-1) + number of deterministic dummy variables
+    delta_x : ndarray ((neqs * (k_ar-1) + number of deterministic dummy variables
         outside the cointegration relation) x T)
 
     llf
 
-    _covar_sigma_u
+    _cov_sigma
     num_det_coef_coint : int
         Number of estimated coefficients for deterministic terms within the
         cointegration relation
 
     cov_params : ndarray (d x d)
-        ... where d equals K * (K+num_det_coef_coint + K*(p-1)+number of
+        ... where d equals neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
         deterministic dummy variables outside the cointegration relation)
     stderr_params : ndarray (d)
         ... where d is defined as for cov_params
-    stderr_coint : ndarray (K+num_det_coef_coint x r)
-    stderr_alpha ndarray (K x r)
-    stderr_beta : ndarray (K x r)
+    stderr_coint : ndarray (neqs+num_det_coef_coint x r)
+    stderr_alpha ndarray (neqs x r)
+    stderr_beta : ndarray (neqs x r)
     stderr_det_coef_coint ndarray (num_det_coef_coint x r)
-    stderr_gamma : ndarray (K x K*(p-1))
-    stderr_det_coef : ndarray (K x number of deterministic dummy variables
+    stderr_gamma : ndarray (neqs x neqs*(k_ar-1))
+    stderr_det_coef : ndarray (neqs x number of deterministic dummy variables
         outside the cointegration relation)
-    tvalues_alpha : ndarray (K x r)
-    tvalues_beta : ndarray (K x r)
+    tvalues_alpha : ndarray (neqs x r)
+    tvalues_beta : ndarray (neqs x r)
     tvalues_det_coef_coint
-    tvalues_gamma : ndarray (K x K*(p-1))
-    tvalues_det_coef : ndarray (K x number of deterministic dummy variables
+    tvalues_gamma : ndarray (neqs x neqs*(k_ar-1))
+    tvalues_det_coef : ndarray (neqs x number of deterministic dummy variables
         outside the cointegration relation)
-    pvalues_alpha : ndarray (K x r)
-    pvalues_beta : ndarray (K x r)
+    pvalues_alpha : ndarray (neqs x r)
+    pvalues_beta : ndarray (neqs x r)
     pvalues_det_coef_coint
-    pvalues_gamma : ndarray (K x K*(p-1))
-    pvalues_det_coef : ndarray (K x number of deterministic dummy variables
+    pvalues_gamma : ndarray (neqs x neqs*(k_ar-1))
+    pvalues_det_coef : ndarray (neqs x number of deterministic dummy variables
         outside the cointegration relation)
-    var_repr : (p x K x K)
+    var_repr : (k_ar x neqs x neqs)
         KxK matrices A_i of the corresponding VAR representation. If the return
         value is assigned to a variable A, these matrices can be accessed via
-        A[i], i=0, ..., p-1.
+        A[i], i=0, ..., k_ar-1.
     """    # todo: aic, bic, bse, df_model, df_resid, fittedvalues, resid
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
                  gamma, sigma_u, deterministic='nc', seasons=0,
-                 delta_y_1_T=None, y_min1=None, delta_x=None, model=None):
+                 delta_y_1_T=None, y_min1=None, delta_x=None, model=None,
+                 names=None):
         self.model = model
         self.y_all = endog_tot
-        self.K = endog_tot.shape[0]
-        self.p = level_var_lag_order
+        self.names = names
+        self.neqs = endog_tot.shape[0]
+        self.k_ar = level_var_lag_order
         self.deterministic = deterministic
         self.seasons = seasons
 
         self.r = coint_rank
         self.alpha = alpha
-        self.beta, self.det_coef_coint = np.vsplit(beta, [self.K])
-        self.gamma, self.det_coef = np.hsplit(gamma, [self.K*(self.p-1)])
+        self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
+        self.gamma, self.det_coef = np.hsplit(gamma, [self.neqs * (self.k_ar - 1)])
 
         if "ci" in deterministic:
             self.const_coint = self.det_coef_coint[:1, :]
         else:
-            self.const_coint = np.zeros(self.K)[:, None]
+            self.const_coint = np.zeros(self.neqs)[:, None]
         if "li" in deterministic:
             self.lin_trend_coint = self.det_coef_coint[-1:, :]
         else:
-            self.lin_trend_coint = np.zeros(self.K)[:, None]
+            self.lin_trend_coint = np.zeros(self.neqs)[:, None]
 
         split_const_season = 1 if "co" in deterministic else 0
         split_season_lin = split_const_season + ((seasons-1) if seasons else 0)
@@ -717,14 +716,14 @@ class VECMResults(object):
             _y_1_T, self.delta_y_1_T, self.y_min1, self.delta_x = \
                 _endog_matrices(endog_tot, level_var_lag_order, deterministic,
                                 seasons)
-        self.T = self.y_min1.shape[1]
+        self.nobs = self.y_min1.shape[1]
 
     @cache_readonly
     def llf(self):  # Lutkepohl p. 295 (7.2.20)
-        """Compute VECM(p) loglikelihood
+        """Compute VECM(k_ar) loglikelihood
         """
-        K = self.K
-        T = self.T
+        K = self.neqs
+        T = self.nobs
         r = self.r
         s00, _, _, _, _, lambd, _ = _sij(self.delta_x, self.delta_y_1_T,
                                          self.y_min1)
@@ -733,11 +732,11 @@ class VECMResults(object):
             - K * T / 2
 
     @cache_readonly
-    def _covar_sigma_u(self):
+    def _cov_sigma(self):
         sigma_u = self.sigma_u
-        K = sigma_u.shape[0]
-        d = duplication_matrix(K)
-        d_K_plus = inv(np.dot(d.T, d)).dot(d.T)
+        d = duplication_matrix(self.neqs)
+        d_K_plus = np.linalg.pinv(d)
+        # compare p. 93, 297 Lutkepohl (2005)
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
 
     @cache_readonly
@@ -748,7 +747,7 @@ class VECMResults(object):
 
     @cache_readonly
     def cov_params(self):  # p.296 (7.2.21)
-        # beta = self.beta
+        # Sigma_co described on p. 287
         beta = self.beta
         if self.det_coef_coint.size > 0:
             beta = vstack((beta, self.det_coef_coint))
@@ -756,12 +755,10 @@ class VECMResults(object):
         num_det = ("co" in dt) + ("lo" in dt)
         num_det += (self.seasons-1) if self.seasons else 0
         b_id = scipy.linalg.block_diag(beta,
-                                       np.identity(self.K * (self.p-1) +
+                                       np.identity(self.neqs * (self.k_ar-1) +
                                                    num_det))
 
         y_min1 = self.y_min1
-        # if self.num_det_coef_coint > 0:
-        #     y_min1 = y_min1[:-self.num_det_coef_coint]
         b_y = beta.T.dot(y_min1)
         omega11 = b_y.dot(b_y.T)
         omega12 = b_y.dot(self.delta_x.T)
@@ -773,6 +770,28 @@ class VECMResults(object):
         mat1 = b_id.dot(inv(omega)).dot(b_id.T)
         return np.kron(mat1, self.sigma_u)
 
+    @cache_readonly
+    def cov_params_wo_det(self):
+        # rows & cols to be dropped (related to deterministic terms inside the
+        # cointegration relation)
+        start_i = self.neqs**2  # first elements belong to alpha @ beta.T
+        end_i = start_i + self.neqs * self.det_coef_coint.shape[0]
+        to_drop_i = np.arange(start_i, end_i)
+
+        # rows & cols to be dropped (related to deterministic terms outside of
+        # the cointegration relation)
+        cov = self.cov_params
+        cov_size = len(cov)
+        to_drop_o = np.arange(cov_size-self.det_coef.size, cov_size)
+
+        to_drop = np.union1d(to_drop_i, to_drop_o)
+
+        mask = np.ones(cov.shape, dtype=bool)
+        mask[to_drop] = False
+        mask[:, to_drop] = False
+        cov_size_new = mask.sum(axis=0)[0]
+        return cov[mask].reshape((cov_size_new, cov_size_new))
+
     # standard errors:
     @cache_readonly
     def stderr_params(self):
@@ -780,17 +799,17 @@ class VECMResults(object):
 
     @cache_readonly
     def stderr_coint(self):
-        _, r1 = _r_matrices(self.T, self.delta_x, self.delta_y_1_T,
+        _, r1 = _r_matrices(self.nobs, self.delta_x, self.delta_y_1_T,
                             self.y_min1)
         r12 = r1[self.r:]
         mat1 = inv(r12.dot(r12.T))
         det = self.det_coef_coint.shape[0]
-        mat2 = np.kron(np.identity(self.K-self.r+det),
+        mat2 = np.kron(np.identity(self.neqs-self.r+det),
                        inv(chain_dot(
                                self.alpha.T, inv(self.sigma_u), self.alpha)))
         first_rows = np.zeros((self.r, self.r))
         last_rows_1d = np.sqrt(np.diag(mat1.dot(mat2)))
-        last_rows = last_rows_1d.reshape((self.K-self.r+det, self.r),
+        last_rows = last_rows_1d.reshape((self.neqs-self.r+det, self.r),
                                          order="F")
         return vstack((first_rows,
                        last_rows))
@@ -911,36 +930,82 @@ class VECMResults(object):
     def var_repr(self):
         pi = self.alpha.dot(self.beta.T)
         gamma = self.gamma
-        K = self.K
-        A = np.zeros((self.p, K, K))
+        K = self.neqs
+        A = np.zeros((self.k_ar, K, K))
         A[0] = pi + np.identity(K) + gamma[:, :K]
-        A[self.p-1] = - gamma[:, K*(self.p-2):]
-        for i in range(1, self.p-1):
+        A[self.k_ar-1] = - gamma[:, K*(self.k_ar-2):]
+        for i in range(1, self.k_ar-1):
             A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
         return A
 
     @cache_readonly
     def cov_var_repr(self):
-        pi = self.alpha.dot(self.beta.T)
-        gamma = self.gamma
-        vecm_vec = vec(hstack((pi, gamma)))
-        # var_vec = np.zeros((self.K**2 * self.p))
-        vecm_var_transformation = np.zeros((self.K**2 * self.p,
-                                            self.K**2 * self.p))
-        eye = np.identity(self.K**2)
+        """
+        Gives the covariance matrix of the vector consisting of the columns of
+        the corresponding VAR coefficient matrices (i.e. vec(self.var_repr)).
+
+        Returns
+        -------
+        cov : array (neqs**2 * k_ar x neqs**2 * k_ar)
+        """
+        # This implementation is using the fact that for a random variable x
+        # with covariance matrix Sigma_x the following holds:
+        # B @ x with B being a suitably sized matrix has the covariance matrix
+        # B @ Sigma_x @ B.T. The arrays called vecm_var_transformation and
+        # self.cov_params_wo_det in the code play the roles of B and Sigma_x
+        # respectively. The elements of the random variable x are the elements
+        # of the estimated matrices Pi (alpha @ beta.T) and Gamma.
+        # Alternatively the following code (commented out) would yield the same
+        # result (following p. 289 in Lutkepohl):
+        # K, p = self.neqs, self.k_ar
+        # w = np.identity(K * p)
+        # w[np.arange(K, len(w)), np.arange(K, len(w))] *= (-1)
+        # w[np.arange(K, len(w)), np.arange(len(w)-K)] = 1
+        #
+        # w_eye = np.kron(w, np.identity(K))
+        #
+        # return chain_dot(w_eye.T, self.cov_params, w_eye)
+        vecm_var_transformation = np.zeros((self.neqs**2 * self.k_ar,
+                                            self.neqs**2 * self.k_ar))
+        eye = np.identity(self.neqs**2)
         # for A_1:
-        vecm_var_transformation[:self.K**2, :2*self.K**2] = hstack(
-                (np.identity(self.K**2), eye))
-        # for A_i, where i = 2, ..., p-1
-        for i in range(2, self.p):
-            start_row = self.K**2 + (i-2) * self.K**2
-            start_col = self.K**2 + (i-2) * self.K**2
-            vecm_var_transformation[start_row:start_row+self.K**2,
-                start_col:start_col+2*self.K**2] = hstack((-eye, eye))
+        vecm_var_transformation[:self.neqs**2, :2*self.neqs**2] = hstack(
+                (eye, eye))
+        # for A_i, where i = 2, ..., k_ar-1
+        for i in range(2, self.k_ar):
+            start_row = self.neqs**2 + (i-2) * self.neqs**2
+            start_col = self.neqs**2 + (i-2) * self.neqs**2
+            vecm_var_transformation[start_row:start_row+self.neqs**2,
+                start_col:start_col+2*self.neqs**2] = hstack((-eye, eye))
         # for A_p:
-        vecm_var_transformation[-self.K**2:, -self.K**2:] = -eye
-        return chain_dot(vecm_var_transformation, self.cov_params,
+        vecm_var_transformation[-self.neqs**2:, -self.neqs**2:] = -eye
+        return chain_dot(vecm_var_transformation, self.cov_params_wo_det,
                          vecm_var_transformation.T)
+
+    def ma_rep(self, maxn=10):
+        return ma_rep(self.var_repr, maxn)
+
+    @cache_readonly
+    def _chol_sigma_u(self):
+        return np.linalg.cholesky(self.sigma_u)
+
+    def orth_ma_rep(self, maxn=10, P=None):
+        r"""Compute orthogonalized MA coefficient matrices using P matrix such
+        that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
+        decomposition of :math:`\Sigma_u`
+
+        Parameters
+        ----------
+        maxn : int
+            Number of coefficient matrices to compute
+        P : ndarray (neqs x neqs), optional
+            Matrix such that Sigma_u = PP', defaults to Cholesky descomp
+
+        Returns
+        -------
+        coefs : ndarray (maxn x neqs x neqs)
+        """
+        return orth_ma_rep(self, maxn, P)
 
     def predict(self, steps=5, confidence_level_for_intervals=None):
         """
@@ -963,7 +1028,7 @@ class VECMResults(object):
             period, the last row (index [steps-1]) is the steps-periods-ahead-
             forecast.
         """
-        last_observations = self.y_all.T[-self.p:]
+        last_observations = self.y_all.T[-self.k_ar:]
         exog = []
         trend_coefs = []
 
@@ -986,7 +1051,7 @@ class VECMResults(object):
             exog.append(exog_seasonal)
             trend_coefs.append(self.seasonal.T)
 
-        nobs_tot = self.T + self.p
+        nobs_tot = self.nobs + self.k_ar
         exog_lin_trend = list(range(nobs_tot + 1, nobs_tot + steps + 1))
         if self.lin_trend.size > 0:
             exog.append(exog_lin_trend)
@@ -1011,7 +1076,8 @@ class VECMResults(object):
             return forecast(last_observations, self.var_repr, trend_coefs,
                             steps, exog)
 
-    def test_granger_causality(self, caused, causing, signif=0.05, verbose=True):
+    def test_granger_causality(self, caused, causing, signif=0.05,
+                               verbose=True):
         """
         Test for Granger-causality as described in chapter 7.6.3 of [1]_.
         Test H0: "causing does not Granger-cause caused" against  H1: "causing
@@ -1058,10 +1124,10 @@ class VECMResults(object):
         """
         if isinstance(causing, (string_types, int, np.integer)):
             causing = [causing]
-        y, k, t, p = self.y_all, self.K, self.T-1, self.p+1
+        y, k, t, p = self.y_all, self.neqs, self.nobs - 1, self.k_ar + 1
         var_results = VAR(y.T).fit(maxlags=p, trend=self.deterministic)
 
-        # TODO: allow for multiple caused variables --> num_restr = (len(causing) + len(caused)) * (p-1) ... thus caused must implement __len__ (==> no int!)
+        # TODO: allow for multiple caused variables --> num_restr = (len(causing) + len(caused)) * (k_ar-1) ... thus caused must implement __len__ (==> no int!)
         num_restr = len(causing) * (p - 1)  # called N in Lutkepohl
 
         num_det_terms = num_det_vars(self.deterministic, self.seasons)
@@ -1089,23 +1155,23 @@ class VECMResults(object):
         Ca = np.dot(C, a)
 
         x_min_p = np.zeros((k * p, t))
-        for i in range(p-1):  # fll first k * p rows of x_min_p
+        for i in range(p-1):  # fll first k * k_ar rows of x_min_p
             x_min_p[i*k:(i+1)*k, :] = y[:, p-1-i:-1-i] - y[:, :-p]
         x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
 
-        x_x = np.dot(x_min_p, x_min_p.T)  # k*p x k*p
-        x_x_11 = inv(x_x)[:k * (p-1), :k * (p-1)]  # k*(p-1) x k*(p-1)
+        x_x = np.dot(x_min_p, x_min_p.T)  # k*k_ar x k*k_ar
+        x_x_11 = inv(x_x)[:k * (p-1), :k * (p-1)]  # k*(k_ar-1) x k*(k_ar-1)
 
-        # For VAR-model with parameter restrictions the denominator in the
-        # calculation of sigma_u is T instead of (t-k*p-num_det_terms). Testing
-        # for Granger-causality means testing for restricted parameters, thus
-        # the former of the two denominators is used. As Lutkepohl states, both
-        # variants of the estimated sigma_u are possible. (see Lutkepohl,
-        # p.198)
+        # For VAR-models with parameter restrictions the denominator in the
+        # calculation of sigma_u is nobs and not (nobs-k*k_ar-num_det_terms).
+        # Testing for Granger-causality means testing for restricted
+        # parameters, thus the former of the two denominators is used. As
+        # Lutkepohl states, both variants of the estimated sigma_u are
+        # possible. (see Lutkepohl, p.198)
         # The choice of the denominator T has also the advantage of getting the
         # same results as the reference software JMulTi.
         sigma_u = var_results.sigma_u * (t-k*p-num_det_terms) / t
-        sig_alpha_min_p = t * np.kron(x_x_11, sigma_u)  # k**2*(p-1) x k**2*(p-1)
+        sig_alpha_min_p = t * np.kron(x_x_11, sigma_u)  # k**2*(p-1)xk**2*(p-1)
         middle = inv(chain_dot(C, sig_alpha_min_p, C.T))
 
         wald_statistic = t * chain_dot(Ca.T, middle, Ca)
@@ -1182,9 +1248,9 @@ class VECMResults(object):
         Notes
         -----
         This method is not returning the same result as JMulTi. This is because
-        the test is based on a VAR(p) model in statsmodels (in accordance to
-        pp. 104, 320-321 in [1]_) whereas JMulTi seems to be using a VAR(p+1)
-        model.
+        the test is based on a VAR(k_ar) model in statsmodels (in accordance to
+        pp. 104, 320-321 in [1]_) whereas JMulTi seems to be using a
+        VAR(k_ar+1) model.
 
         References
         ----------
@@ -1194,9 +1260,9 @@ class VECMResults(object):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        # Note: JMulTi is using p+1 instead of p
-        k, t, p = self.K, self.T, self.p
-        print("p: " + str(p))
+        # Note: JMulTi seems to be using k_ar+1 instead of k_ar
+        k, t, p = self.neqs, self.nobs, self.k_ar
+        print("k_ar: " + str(p))
         var_results = VAR(self.y_all.T).fit(maxlags=p,
                                             trend=self.deterministic)
         if isinstance(causing, (string_types, int, np.integer)):
@@ -1233,7 +1299,10 @@ class VECMResults(object):
         pvalue = dist.sf(wald_statistic)
         crit_value = dist.ppf(1 - signif)
 
-        conclusion = 'fail to reject' if wald_statistic < crit_value else 'reject'
+        if wald_statistic < crit_value:
+            conclusion = 'fail to reject'
+        else:
+            conclusion = 'reject'
         results = {
             'statistic': wald_statistic,
             'crit_value': crit_value,
@@ -1243,6 +1312,9 @@ class VECMResults(object):
             'signif': signif
         }
         return results
+
+    def irf(self, periods=10):
+        return irf.IRAnalysis(self, periods=periods, vecm=True)
 
     def summary(self, alpha=.05):
         from statsmodels.iolib.summary import summary_params
@@ -1284,7 +1356,7 @@ class VECMResults(object):
             upper = conf_int["upper"].flatten(order="F")
             conf_int_lagged_params_components.append(np.column_stack(
                     (lower, upper)))
-        if self.p - 1 > 0:
+        if self.k_ar - 1 > 0:
             lagged_params_components.append(self.gamma.flatten())
             stderr_lagged_params_components.append(self.stderr_gamma.flatten())
             tvalues_lagged_params_components.append(
@@ -1302,26 +1374,26 @@ class VECMResults(object):
         pvalues_lagged_params = hstack(pvalues_lagged_params_components)
         conf_int_lagged_params = vstack(conf_int_lagged_params_components)
 
-        for i in range(self.K):
+        for i in range(self.neqs):
             masks = []
             offset = 0
             # 1. Deterministic terms outside cointegration relation
             if "co" in self.deterministic:
                 masks.append(offset + np.array(i, ndmin=1))
-                offset += self.K
+                offset += self.neqs
             if self.seasons > 0:
                 start = (self.seasons-1) * i
                 masks.append(offset + np.arange(start, start + self.seasons-1))
-                offset += (self.seasons-1) * self.K
+                offset += (self.seasons-1) * self.neqs
             if "lo" in self.deterministic:
                 masks.append(offset + np.array(i, ndmin=1))
-                offset += self.K
+                offset += self.neqs
             # 2. Lagged endogenous terms
-            if self.p - 1 > 0:
-                start = i * self.K * (self.p-1)
-                end = (i+1) * self.K * (self.p-1)
+            if self.k_ar - 1 > 0:
+                start = i * self.neqs * (self.k_ar-1)
+                end = (i+1) * self.neqs * (self.k_ar-1)
                 masks.append(offset + np.arange(start, end))
-                # offset += self.K**2 * (self.p-1)
+                # offset += self.neqs**2 * (self.k_ar-1)
 
             # Create the table
             mask = np.concatenate(masks)
@@ -1346,7 +1418,7 @@ class VECMResults(object):
         ci_a = np.column_stack((lower, upper))
         a_names = self.model.load_coef_param_names
         alpha_masks = []
-        for i in range(self.K):
+        for i in range(self.neqs):
             if self.r > 0:
                 start = i * self.r
                 end = start + self.r
@@ -1403,10 +1475,10 @@ class VECMResults(object):
 
             # 1. Cointegration matrix (beta)
             if self.r > 0:
-                start = i * self.K
-                end = start + self.K
+                start = i * self.neqs
+                end = start + self.neqs
                 masks.append(offset + np.arange(start, end))
-                offset += self.K * self.r
+                offset += self.neqs * self.r
 
             # 2. Deterministic terms inside cointegration relation
             if "ci" in self.deterministic:
