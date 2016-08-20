@@ -25,7 +25,9 @@ def test_pandas_nodates_index():
     else:
         data = [988, 819, 964]
         # index=pd.date_range('1970-01-01', periods=3, freq='QS')
-        s = pd.Series(data)
+        index = pd.to_datetime([100, 101, 102])
+        assert_equal(str(index[0]), '1970-01-01 00:00:00.000000100')
+        s = pd.Series(data, index=index)
         mod = TimeSeriesModel(s)
         start = mod._get_predict_start(0)
         end, out_of_sample = mod._get_predict_end(4)
