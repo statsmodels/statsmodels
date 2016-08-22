@@ -2,6 +2,7 @@ from __future__ import division
 
 import collections
 import math
+from collections import defaultdict
 from math import log
 import numpy as np
 from numpy import hstack, vstack
@@ -9,18 +10,73 @@ from numpy.linalg import inv, svd
 import scipy
 import scipy.stats
 
-from statsmodels.compat.python import range, string_types
+from statsmodels.compat.python import range, string_types, iteritems
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.vector_ar import output as var_output
+from statsmodels.tsa.vector_ar import output as var_output, output
 from statsmodels.tsa.vector_ar.util import vech
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep
 import statsmodels.tsa.vector_ar.irf as irf
+
+
+def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
+    """
+    Compute lag order selections based on each of the available information
+    criteria.
+
+    Parameters
+    ----------
+    data : array (nobs_tot x neqs)
+        The observed data.
+    maxlags : int
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
+        * "nc" - no deterministic terms
+        * "co" - constant outside the cointegration relation
+        * "ci" - constant within the cointegration relation
+        * "lo" - linear trend outside the cointegration relation
+        * "li" - linear trend within the cointegration relation
+
+        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        trend with intercept)
+    seasons : int
+        Number of seasons.
+    verbose : bool, default True
+        If True, print table of info criteria and selected orders
+
+    Returns
+    -------
+    selected_orders : dict
+        Keys: Information criterion as string. {"aic", "bic", "hqic", "fpe"}
+        Values: Number of lagged differences chosen by the corresponding
+        information criterion.
+    """
+    ic = defaultdict(list)
+    for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
+        # exclude some periods to same amount of data used for each lag
+        # order
+        # TODO: pass deterministic and seasons as parameter to VAR() after
+        # VAR-code has been refactored and capable of handling arbitrary
+        # deterministic terms.
+        var_model = VAR(data)
+        var_result = var_model._estimate_var(lags=p, offset=maxlags-p)
+
+        for k, v in iteritems(var_result.info_criteria):
+            ic[k].append(v)
+    # -1+1 in the following line is only here for clarification.
+    # -1 because k_ar_VECM == k_ar_VAR - 1
+    # +1 because p == index +1 (we start with p=1, not p=0)
+    selected_orders = dict((ic_name, np.array(ic_value).argmin() - 1 + 1)
+                           for ic_name, ic_value in iteritems(ic))
+
+    if verbose:
+        output.print_ic_table(ic, selected_orders, vecm=True)
+
+    return selected_orders
 
 
 def num_det_vars(det_string, seasons=0):
@@ -38,7 +94,7 @@ def num_det_vars(det_string, seasons=0):
         Combinations of these are possible (e.g. "cili" or "colo" for linear
         trend with intercept)
     seasons : int
-        Number of seasons
+        Number of seasons.
 
     Returns
     -------

@@ -9,7 +9,7 @@ from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output import \
     sublists
 from .JMulTi_results.parse_jmulti_output import load_results_jmulti
 from .JMulTi_results.parse_jmulti_output import dt_s_tup_to_string
-from statsmodels.tsa.vecm.vecm import VECM
+from statsmodels.tsa.vecm.vecm import VECM, select_order
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
 atol = 0.001  # absolute tolerance
@@ -23,13 +23,13 @@ coint_rank = 1
 debug_mode = True
 dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"] # todo ###############################
-seasonal_list = [0, 4]  # [0, 4] # todo #########################################################################
+seasonal_list = [0]  # [0, 4] # todo #########################################################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
-             "causality", "impulse-response"]
-to_test = ["impulse-response"]  # all_tests  # ["beta"]
+             "causality", "impulse-response", "lag order"]
+to_test = ["lag order"]  # all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -538,6 +538,28 @@ def test_impulse_response():
             desired_all = results_ref[ds][dt]["ir"]
             yield assert_allclose, obtained_all, desired_all, rtol, atol,  \
                 False, err_msg
+
+
+def test_lag_order_selection():
+    if debug_mode:
+        if "lag order" not in to_test:
+            return
+        else:
+            print("\n\nLAG ORDER SELECTION", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+            endog_tot = data[ds]
+            print(endog_tot.shape)
+            obtained_all = select_order(endog_tot, 10, dt, )
+            for ic in ["aic", "fpe", "hqic", "bic"]:
+                err_msg = build_err_msg(ds, dt,
+                                        "LAG ORDER SELECTION - " + ic.upper())
+                obtained = obtained_all[ic]
+                desired = results_ref[ds][dt]["lagorder"][ic]
+                yield assert_allclose, obtained, desired, rtol, atol, False, \
+                    err_msg
 
 
 def setup():

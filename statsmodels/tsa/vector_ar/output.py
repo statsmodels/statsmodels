@@ -206,7 +206,7 @@ def hypothesis_test_table(results, title, null_hyp):
     return buf.getvalue()
 
 
-def print_ic_table(ics, selected_orders):
+def print_ic_table(ics, selected_orders, vecm=False):
     """
     For VAR order selection
 
@@ -228,8 +228,12 @@ def print_ic_table(ics, selected_orders):
                data_fmts=("%s",) * len(cols))
 
     buf = StringIO()
+    if vecm:
+        title = "VECM Order Selection"
+    else:
+        title = "VAR Order Selection"
     table = SimpleTable(data, cols, lrange(len(data)),
-                        title='VAR Order Selection', txt_fmt=fmt)
+                        title=title, txt_fmt=fmt)
     buf.write(str(table) + '\n')
     buf.write('* Minimum' + '\n')
 
