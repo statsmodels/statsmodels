@@ -412,6 +412,29 @@ def load_results_jmulti(dataset, dt_s_list):
         results["ir"] = data
 
         # ---------------------------------------------------------------------
+        # parse output related to lag order selection:
+        lagorder_file = dataset.__str__() + "_" + source + "_" + dt_string \
+            + "_lagorder" + ".txt"
+        lagorder_file = os.path.join(os.path.dirname(
+                os.path.realpath(__file__)), lagorder_file)
+        lagorder_file = open(lagorder_file, encoding='latin_1')
+        results["lagorder"] = dict()
+        aic_start = "Akaike Info Criterion:"
+        fpe_start = "Final Prediction Error:"
+        hqic_start = "Hannan-Quinn Criterion:"
+        bic_start = "Schwarz Criterion:"
+        for line in lagorder_file:
+            if line.startswith(aic_start):
+                results["lagorder"]["aic"] = int(line[len(aic_start):])
+            elif line.startswith(fpe_start):
+                results["lagorder"]["fpe"] = int(line[len(fpe_start):])
+            elif line.startswith(hqic_start):
+                results["lagorder"]["hqic"] = int(line[len(hqic_start):])
+            elif line.startswith(bic_start):
+                results["lagorder"]["bic"] = int(line[len(bic_start):])
+        lagorder_file.close()
+
+        # ---------------------------------------------------------------------
         if debug_mode:
             print_debug_output(results, dt_string)
 
