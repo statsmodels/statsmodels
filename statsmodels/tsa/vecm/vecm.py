@@ -18,10 +18,11 @@ from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import output as var_output, output
+import statsmodels.tsa.vector_ar.irf as irf
+import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.util import vech
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
-    VAR, ma_rep, orth_ma_rep
-import statsmodels.tsa.vector_ar.irf as irf
+    VAR, ma_rep, orth_ma_rep, test_normality
 
 
 def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
@@ -63,7 +64,7 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
         # VAR-code has been refactored and capable of handling arbitrary
         # deterministic terms.
         var_model = VAR(data)
-        var_result = var_model._estimate_var(lags=p, offset=maxlags-p)
+        var_result = var_model._estimate_var(lags=p, offset=maxlags+1-p)
 
         for k, v in iteritems(var_result.info_criteria):
             ic[k].append(v)
@@ -497,7 +498,8 @@ class VECM(tsbase.TimeSeriesModel):
                            gamma_tilde, sigma_u_tilde,
                            deterministic=deterministic, seasons=seasons,
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
-                           delta_x=delta_x, model=self, names=self.endog_names)
+                           delta_x=delta_x, model=self, names=self.endog_names,
+                           dates=self.data.dates)
 
     @property
     def lagged_param_names(self):
@@ -734,10 +736,11 @@ class VECMResults(object):
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
                  gamma, sigma_u, deterministic='nc', seasons=0,
                  delta_y_1_T=None, y_min1=None, delta_x=None, model=None,
-                 names=None):
+                 names=None, dates=None):
         self.model = model
         self.y_all = endog_tot
         self.names = names
+        self.dates = dates
         self.neqs = endog_tot.shape[0]
         self.k_ar = level_var_lag_order
         self.deterministic = deterministic
@@ -1063,14 +1066,14 @@ class VECMResults(object):
         """
         return orth_ma_rep(self, maxn, P)
 
-    def predict(self, steps=5, confidence_level_for_intervals=None):
+    def predict(self, steps=5, alpha=None):
         """
 
         Parameters
         ----------
         steps : int
             Prediction horizon.
-        confidence_level_for_intervals : float between 0 and 1 or None
+        alpha : float between 0 and 1 or None
             If None, compute point forecast only.
             If float, compute confidence intervals too. In this case the
             argument stands for the confidence level.
@@ -1123,14 +1126,36 @@ class VECMResults(object):
         else:
             trend_coefs = None
 
-        if confidence_level_for_intervals is not None:
+        if alpha is not None:
             return forecast_interval(last_observations, self.var_repr,
                                      trend_coefs, self.sigma_u, steps,
-                                     alpha=confidence_level_for_intervals,
+                                     alpha=alpha,
                                      exog=exog)
         else:
             return forecast(last_observations, self.var_repr, trend_coefs,
                             steps, exog)
+
+    def plot_forecast(self, steps, alpha=0.05, plot_conf_int=True,
+                      n_last_obs=None):
+        """
+        Plot the forecast.
+
+        Parameters
+        ----------
+        steps : int
+            Prediction horizon.
+        alpha : float between 0 and 1
+            The confidence level.
+        plot_conf_int : bool, default: True
+            If True, plot bounds of confidence intervals.
+
+        """
+        mid, lower, upper = self.predict(steps, alpha=alpha)
+
+        y = self.y_all.T
+        y = y[self.k_ar:] if n_last_obs is None else y[-n_last_obs:]
+        plot.plot_var_forc(y, mid, lower, upper, names=self.names,
+                           plot_stderr=plot_conf_int)
 
     def test_granger_causality(self, caused, causing, signif=0.05,
                                verbose=True):
@@ -1318,7 +1343,6 @@ class VECMResults(object):
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
-        print("k_ar: " + str(p))
         var_results = VAR(self.y_all.T).fit(maxlags=p,
                                             trend=self.deterministic)
         if isinstance(causing, (string_types, int, np.integer)):
@@ -1367,10 +1391,76 @@ class VECMResults(object):
             'conclusion': conclusion,
             'signif': signif
         }
+
+        if verbose:
+            print(var_output.causality_summary(results, causing, caused,
+                                               "wald", inst_caus=True))
         return results
 
     def irf(self, periods=10):
         return irf.IRAnalysis(self, periods=periods, vecm=True)
+
+    @cache_readonly
+    def fittedvalues(self):
+        """
+        Returns
+        -------
+        fitted : array (nobs x neqs)
+            The predicted in-sample values of the models' endogenous variables.
+        """
+        beta = self.beta
+        if self.det_coef_coint.size > 0:
+            beta = vstack((beta, self.det_coef_coint))
+        pi = np.dot(self.alpha, beta.T)
+
+        gamma = self.gamma
+        if self.det_coef.size > 0:
+            gamma = hstack((gamma, self.det_coef))
+
+        return (np.dot(pi, self.y_min1) + np.dot(gamma, self.delta_x)).T
+
+    @cache_readonly
+    def resid(self):
+        """
+        Returns
+        -------
+        resid : array (nobs x neqs)
+            The residuals.
+        """
+        return self.y_all.T[self.k_ar:] - self.fittedvalues
+
+    def test_normality(self, signif=0.05, verbose=True):
+        """
+        Test assumption of normal-distributed errors using Jarque-Bera-style
+        omnibus Chi^2 test
+
+        Parameters
+        ----------
+        signif : float
+            Test significance threshold
+        verbose : bool
+            If True, print summary with the test's results.
+
+        Notes
+        -----
+        H0 (null) : data are generated by a Gaussian-distributed process
+        """
+        return test_normality(self, signif=signif, verbose=verbose)
+
+    def plot_data(self, with_presample=False):
+        """
+        Plots the input time series.
+
+        Parameters
+        ----------
+        with_presample : bool, default: False
+            If False, the pre-sample data (the first k_ar values) will not be
+            plotted.
+        """
+        y = self.y_all if with_presample else self.y_all[:, self.k_ar:]
+        names = self.names
+        dates = self.dates if with_presample else self.dates[self.k_ar:]
+        plot.plot_mts(y.T, names=names, index=dates)
 
     def summary(self, alpha=.05):
         from statsmodels.iolib.summary import summary_params
