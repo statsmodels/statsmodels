@@ -449,7 +449,7 @@ def test_fc():
             # test predict method with confidence interval calculation
             err_msg = build_err_msg(ds, dt, "FORECAST WITH INTERVALS")
             obtained = results_sm[ds][dt].predict(
-                    confidence_level_for_intervals=0.05)
+                    alpha=0.05)
             obt = obtained[0]  # forecast
             obt_l = obtained[1]  # lower bound
             obt_u = obtained[2]  # upper bound
