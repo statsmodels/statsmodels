@@ -173,9 +173,35 @@ class VARSummary(object):
 
         return buf.getvalue()
 
-def causality_summary(results, variables, equation, kind):
-    title = "Granger causality %s-test" % kind
-    null_hyp = 'H_0: %s do not Granger-cause %s' % (variables, equation)
+def causality_summary(results, variables, equation, kind, inst_caus=False):
+    """
+
+    Parameters
+    ----------
+    results : dict
+        A dict storing the results of the causality test.
+    variables :
+        The potentially causing variable(s).
+    equation :
+        The potentially caused variable.
+    kind : str {"f", "wald"}
+        If "f" an F-test is performed.
+        If "wald" a Wald-test is performed.
+    inst_caus : bool, default: False
+        If True, the strings for the title and H0 are adapted to the test for
+        instantaneous causality instead of Granger-causality.
+
+    Returns
+    -------
+
+    """
+    if inst_caus:
+        title = "Instantaneous causality test"
+        null_hyp = 'H_0: %s do not instantaneously cause %s' % (variables,
+                                                                equation)
+    else:
+        title = "Granger causality %s-test" % kind
+        null_hyp = 'H_0: %s do not Granger-cause %s' % (variables, equation)
     return hypothesis_test_table(results, title, null_hyp)
 
 def normality_summary(results):
