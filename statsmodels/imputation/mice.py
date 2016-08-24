@@ -197,6 +197,9 @@ class MICEData(object):
     def __init__(self, data, perturbation_method='gaussian',
                  k_pmm=20, history_callback=None):
 
+        if data.columns.dtype != np.dtype('O'):
+            raise ValueError("MICEData data column names should be string type")
+
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
         self.data = data.dropna(how='all').reset_index(drop=True)
