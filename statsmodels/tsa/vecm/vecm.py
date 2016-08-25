@@ -1160,8 +1160,9 @@ class VECMResults(object):
     def test_granger_causality(self, causing, signif=0.05, verbose=True):
         """
         Test for Granger-causality as described in chapter 7.6.3 of [1]_.
-        Test H0: "`causing` does not Granger-cause `caused`" against  H1:
-        "`causing` is Granger-causal for `caused`".
+        Test H0: "`causing` does not Granger-cause the remaining variables of
+        the system" against  H1: "`causing` is Granger-causal for the
+        remaining variables".
 
         Parameters
         ----------

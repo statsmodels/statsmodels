@@ -1460,17 +1460,20 @@ class VARResults(VARProcess):
 #-------------------------------------------------------------------------------
 # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.
 
-    def test_causality(self, equation, variables, kind='f', signif=0.05,
-                       verbose=True):
-        """Compute test statistic for null hypothesis of Granger-noncausality,
-        general function to test joint Granger-causality of multiple variables
+    def test_causality(self, causing, kind='f', signif=0.05, verbose=True):
+        """
+        Test for Granger-causality as described in chapter 7.6.3 of [1]_.
+        Test H0: "`causing` does not Granger-cause the remaining variables of
+        the system" against  H1: "`causing` is Granger-causal for the
+        remaining variables".
 
         Parameters
         ----------
-        equation : string or int
-            Equation to test for causality
-        variables : sequence (of strings or ints)
-            List, tuple, etc. of variables to test for Granger-causality
+        causing : int or str or sequence of int or str
+            If int or str, test whether the variable specified via this index
+            (int) or name (str) is Granger-causing the remaining variable(s).
+            If a sequence of int or str, test whether the corresponding
+            variables are Granger-causing the remaining variable(s).
         kind : {'f', 'wald'}
             Perform F-test or Wald (chi-sq) test
         signif : float, default 5%
@@ -1488,44 +1491,52 @@ class VARResults(VARProcess):
         Returns
         -------
         results : dict
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        if isinstance(variables, (string_types, int, np.integer)):
-            variables = [variables]
+        allowed_types = (string_types, int)
+        if isinstance(causing, allowed_types):
+            causing = [causing]
+        if not all(isinstance(c, allowed_types) for c in causing):
+            raise TypeError("causing has to be of type string or int (or a " +
+                            "a sequence of these types).")
+        causing = [self.names[c] if type(c) == int else c for c in causing]
+        causing_ind = [util.get_index(self.names, c) for c in causing]
+
+        caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
+        caused = [self.names[c] for c in caused_ind]
 
         k, p = self.neqs, self.k_ar
 
-        # number of restrictions  # ==> this means variables are the potentially causing variables
-        N = len(variables) * p  # for VECM: (self.k_ar-1) (or: (p-1)) instead of self.k_ar
+        # number of restrictions
+        num_restr = len(causing) * len(caused) * p
+        num_det_terms = 0  # todo: refactor for deterministic terms
 
         # Make restriction matrix
-        # bug: "+ k" should read "+ k * number_of_det_terms"
-        # C = np.zeros((N, k ** 2 * p + k*1), dtype=float) # bug
-        C = np.zeros((N, k**2 * (p) + k*0), dtype=float)  # for VECM: p-1 instead of p
-        eq_index = self.get_eq_index(equation)
-        vinds = mat([self.get_eq_index(v) for v in variables])
-
-        # remember, vec is column order!
-        # bug: "k + k ** 2" should read "k * num_of_det_terms + k ** 2"
-        offsets = np.concatenate([k*0 + k ** 2 * j + k * vinds + eq_index
-                                  for j in range(p)])  # bug # for VECM range(p-1) instead of range(p)
-        print(offsets)
-        C[np.arange(N), offsets] = 1
+        C = np.zeros((num_restr, k * num_det_terms + k**2 * p), dtype=float)
+        cols_det = k * num_det_terms
+        row = 0
+        for j in range(p):
+            for ing_ind in causing_ind:
+                for ed_ind in caused_ind:
+                    C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
+                    row += 1
 
         # Lutkepohl 3.6.5
-        # Cb = np.dot(C, vec(self.params.T))
-        print(self.params.shape)
-        Cb = np.dot(C, vec(self.params.T))  # for VECM: add [:(p-1)*k + 1*0]  # 1 * (1or0)... 1 for "c", 0 for "nc"
-        middle = L.inv(chain_dot(C, self.cov_params, C.T))  # for VECM: add [:-k*k, :-k*k]
+        Cb = np.dot(C, vec(self.params.T))
+        middle = L.inv(chain_dot(C, self.cov_params, C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
 
         if kind.lower() == 'wald':
-            df = N
+            df = num_restr
             dist = stats.chi2(df)
         elif kind.lower() == 'f':
-            statistic = lam_wald / N
-            df = (N, k * self.df_resid)
+            statistic = lam_wald / num_restr
+            df = (num_restr, k * self.df_resid)
             dist = stats.f(*df)
         else:
             raise Exception('kind %s not recognized' % kind)
@@ -1544,8 +1555,7 @@ class VARResults(VARProcess):
         }
 
         if verbose:
-            summ = output.causality_summary(results, variables, equation, kind)
-
+            summ = output.causality_summary(results, causing, caused, kind)
             print(summ)
 
         return results
