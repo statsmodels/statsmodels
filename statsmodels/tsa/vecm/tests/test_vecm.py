@@ -22,14 +22,14 @@ coint_rank = 1
 
 debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"] # todo ###############################
+deterministic_terms_list = ["nc"] # ["nc", "co", "colo", "ci", "cili"] # todo ###############################
 seasonal_list = [0]  # [0, 4] # todo #########################################################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
-             "causality", "impulse-response", "lag order"]
-to_test = ["lag order"]  # all_tests  # ["beta"]
+             "granger", "inst. causality", "impulse-response", "lag order"]
+to_test = ["granger"]  # all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -464,9 +464,83 @@ def test_fc():
                 err_msg
 
 
-def test_causality():  # test Granger-causality and instantaneous causality
+def test_granger_causality():
     if debug_mode:
-        if "causality" not in to_test:
+        if "granger" not in to_test:
+            return
+        else:
+            print("\n\nGRANGER", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
+            err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
+            v_ind = range(len(ds.variable_names))
+            for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
+                print('******************************************************')
+                print("Causing: ")
+                print(causing_ind)
+                print('******************************************************')
+                causing_names = ["y" + str(i+1) for i in causing_ind]
+                causing_key = tuple(ds.variable_names[i] for i in causing_ind)
+
+                caused_ind = [i for i in v_ind if i not in causing_ind]
+                caused_key = tuple(ds.variable_names[i] for i in caused_ind)
+
+                granger_sm_ind = results_sm[ds][
+                    dt].test_granger_causality(causing_ind, verbose=False)
+                granger_sm_str = results_sm[ds][
+                    dt].test_granger_causality(causing_names, verbose=False)
+
+                # test test-statistic for Granger non-causality:
+                g_t_obt = granger_sm_ind["statistic"]
+                g_t_des = results_ref[ds][dt]["granger_caus"][
+                    "test_stat"][(causing_key, caused_key)]
+                yield assert_allclose, g_t_obt, g_t_des, rtol, atol, \
+                    False, err_msg_g_t
+                # check whether string sequences as args work in the same way:
+                g_t_obt_str = granger_sm_str["statistic"]
+                yield assert_allclose, g_t_obt_str, g_t_obt, 1e-07, 0, False, \
+                    err_msg_g_t + " - int and str as arguments".upper() + \
+                    " don't yield the same result!".upper()
+                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # the same result:
+                if len(causing_ind) == 1:
+                    granger_sm_single_ind = results_sm[ds][
+                        dt].test_granger_causality(causing_ind[0],
+                                                   verbose=False)
+                    g_t_obt_single = granger_sm_single_ind["statistic"]
+                    yield assert_allclose, g_t_obt_single, g_t_obt, 1e-07, 0, \
+                        False, \
+                        err_msg_g_t + " - list of int and int as ".upper() + \
+                        "argument don't yield the same result!".upper()
+
+                # test p-value for Granger non-causality:
+                g_p_obt = granger_sm_ind["pvalue"]
+                g_p_des = results_ref[ds][dt]["granger_caus"]["p"][(
+                    causing_key, caused_key)]
+                yield assert_allclose, g_p_obt, g_p_des, rtol, atol, \
+                    False, err_msg_g_p
+                # check whether string sequences as args work in the same way:
+                g_p_obt_str = granger_sm_str["pvalue"]
+                yield assert_allclose, g_p_obt_str, g_p_obt, 1e-07, 0, False, \
+                    err_msg_g_t + " - int and str as arguments".upper() + \
+                    " don't yield the same result!".upper()
+                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # the same result:
+                if len(causing_ind) == 1:
+                    g_p_obt_single = granger_sm_single_ind["pvalue"]
+                    yield assert_allclose, g_p_obt_single, g_p_obt, 1e-07, 0, \
+                        False, \
+                        err_msg_g_t + " - list of int and int as ".upper() + \
+                        "argument don't yield the same result!".upper()
+
+
+def test_inst_causality():  # test instantaneous causality
+    if debug_mode:
+        if "inst. causality" not in to_test:
             return
         else:
             print("\n\nCAUSALITY", end="")
@@ -475,8 +549,6 @@ def test_causality():  # test Granger-causality and instantaneous causality
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
-            err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
-            err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
             err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
             err_msg_i_t = build_err_msg(ds, dt, "INSTANT. CAUS. - TEST STAT.")
             # v_names = ds.variable_names  # todo: implement names in VECM
@@ -490,20 +562,6 @@ def test_causality():  # test Granger-causality and instantaneous causality
                 for caused in caused_combs:
                     caused_key = tuple(ds.variable_names[i] for i in caused)
                     causing_key = tuple(ds.variable_names[i] for i in causing)
-                    granger_sm = results_sm[ds][
-                        dt].test_granger_causality(caused, causing, verbose=False)
-                    # test test-statistic for Granger non-causality
-                    g_t_obt = granger_sm["statistic"]
-                    g_t_des = results_ref[ds][dt]["granger_caus"][
-                        "test_stat"][(causing_key, caused_key)]
-                    yield assert_allclose, g_t_obt, g_t_des, rtol, atol, \
-                        False, err_msg_g_t
-                    # test p-value for Granger non-causality
-                    g_p_obt = granger_sm["pvalue"]
-                    g_p_des = results_ref[ds][dt]["granger_caus"]["p"][(
-                        causing_key, caused_key)]
-                    yield assert_allclose, g_p_obt, g_p_des, rtol, atol, \
-                        False, err_msg_g_p
                     # test test-statistic for instantaneous non-causality
                     i_t_obt = results_sm[ds][dt].test_inst_causality(
                         caused, causing)["statistic"]
