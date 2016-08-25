@@ -20,7 +20,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import output as var_output, output
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
-from statsmodels.tsa.vector_ar.util import vech
+from statsmodels.tsa.vector_ar.util import vech, get_index
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality
 
@@ -1157,28 +1157,22 @@ class VECMResults(object):
         plot.plot_var_forc(y, mid, lower, upper, names=self.names,
                            plot_stderr=plot_conf_int)
 
-    def test_granger_causality(self, caused, causing, signif=0.05,
-                               verbose=True):
+    def test_granger_causality(self, causing, signif=0.05, verbose=True):
         """
         Test for Granger-causality as described in chapter 7.6.3 of [1]_.
-        Test H0: "causing does not Granger-cause caused" against  H1: "causing
-        is Granger-causal for caused".
+        Test H0: "`causing` does not Granger-cause `caused`" against  H1:
+        "`causing` is Granger-causal for `caused`".
 
         Parameters
         ----------
-        caused : int or str or sequence of int or str
-            Test whether the corresponding variable is caused by the
-            variable(s) specified in causing. Note that currently only one
-            variable can be specified in caused, hence sequences passed as
-            argument must have only one element.
         causing : int or str or sequence of int or str
-            If int or str, test whether the corresponding variable is causing
-            the variable specified in caused.
-            If sequence of int or str, test whether the corresponding variables
-            are causing the variable specified in caused.
+            If int or str, test whether the variable specified via this index
+            (int) or name (str) is Granger-causing the remaining variable(s).
+            If a sequence of int or str, test whether the corresponding
+            variables are Granger-causing the remaining variable(s).
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
-            defaulting to standard 0.95 level
+            defaulting to standard 0.95 level.
         verbose : bool
             If True, print a table with the results.
 
@@ -1203,34 +1197,34 @@ class VECMResults(object):
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
 
         """
-        if isinstance(causing, (string_types, int, np.integer)):
+        allowed_types = (string_types, int)
+        if isinstance(causing, allowed_types):
             causing = [causing]
+        if not all(isinstance(c, allowed_types) for c in causing):
+            raise TypeError("causing has to be of type string or int (or a " +
+                            "a sequence of these types).")
+        causing = [self.names[c] if type(c) == int else c for c in causing]
+        causing_ind = [get_index(self.names, c) for c in causing]
+
+        caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
+        caused = [self.names[c] for c in caused_ind]
+
         y, k, t, p = self.y_all, self.neqs, self.nobs - 1, self.k_ar + 1
         var_results = VAR(y.T).fit(maxlags=p, trend=self.deterministic)
 
-        # TODO: allow for multiple caused variables --> num_restr = (len(causing) + len(caused)) * (k_ar-1) ... thus caused must implement __len__ (==> no int!)
-        num_restr = len(causing) * (p - 1)  # called N in Lutkepohl
-
+        # num_restr is called N in Lutkepohl
+        num_restr = len(causing) * len(caused) * (p - 1)
         num_det_terms = num_det_vars(self.deterministic, self.seasons)
-        # todo: make code work with names and comment in again the following:
-        # caused_ind = var_util.get_index(var_results.names, caused)
-        # causing_ind = np.array([var_util.get_index(var_results.names, c)
-        #                        for c in causing])
-        if isinstance(caused, collections.Sequence) \
-                and not isinstance(caused, string_types):
-            caused_ind = caused[0]
-        else:
-            caused_ind = caused
-        causing_ind = causing
 
         # Make restriction matrix
         C = np.zeros((num_restr, k*num_det_terms + k**2 * (p-1)), dtype=float)
         cols_det = k * num_det_terms
         row = 0
         for j in range(p-1):
-            for vind in causing_ind:
-                C[row, cols_det + caused_ind + k * vind + k**2 * j] = 1
-                row += 1
+            for ing_ind in causing_ind:
+                for ed_ind in caused_ind:
+                    C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
+                    row += 1
 
         a = np.vstack(vec(var_results.coefs[i])[:, None] for i in range(p-1))
         Ca = np.dot(C, a)
@@ -1347,18 +1341,17 @@ class VECMResults(object):
                                             trend=self.deterministic)
         if isinstance(causing, (string_types, int, np.integer)):
             causing = [causing]
-        if isinstance(caused, (string_types, int, np.integer)):
-            caused = [caused]
+        # if isinstance(caused, (string_types, int, np.integer)):
+        #     caused = [caused]
 
         num_restr = len(causing) * len(caused)  # called N in Lutkepohl
 
-        # todo: make code work with names and comment in again the following:
-        # caused_ind = var_util.get_index(var_results.names, caused)
-        # causing_ind = np.array([var_util.get_index(var_results.names, c)
-        #                        for c in causing])
-        caused_ind = caused
-        causing_ind = causing
-        inds = sorted([i+j for i in causing_ind for j in caused_ind])
+        caused_ind = get_index(self.names, caused)
+        causing_ind = np.array([get_index(self.names, c) for c in causing])
+        # caused_ind = caused
+        # causing_ind = causing
+        # inds = sorted([i+j for i in causing_ind for j in caused_ind])
+        inds = sorted([i + caused_ind for i in causing_ind])
 
         sigma_u = var_results.sigma_u
         vech_sigma_u = vech(sigma_u)
