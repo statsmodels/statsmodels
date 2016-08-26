@@ -29,7 +29,7 @@ dt_s_list = [(det, s) for det in deterministic_terms_list
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
              "granger", "inst. causality", "impulse-response", "lag order"]
-to_test = ["granger"]  # all_tests  # ["beta"]
+to_test = ["inst. causality"]  # all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -479,10 +479,6 @@ def test_granger_causality():
             err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
             v_ind = range(len(ds.variable_names))
             for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
-                print('******************************************************')
-                print("Causing: ")
-                print(causing_ind)
-                print('******************************************************')
                 causing_names = ["y" + str(i+1) for i in causing_ind]
                 causing_key = tuple(ds.variable_names[i] for i in causing_ind)
 
@@ -503,8 +499,8 @@ def test_granger_causality():
                 # check whether string sequences as args work in the same way:
                 g_t_obt_str = granger_sm_str["statistic"]
                 yield assert_allclose, g_t_obt_str, g_t_obt, 1e-07, 0, False, \
-                    err_msg_g_t + " - int and str as arguments".upper() + \
-                    " don't yield the same result!".upper()
+                    err_msg_g_t + " - sequences of integers and ".upper() + \
+                    "strings as arguments don't yield the same result!".upper()
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
@@ -526,8 +522,8 @@ def test_granger_causality():
                 # check whether string sequences as args work in the same way:
                 g_p_obt_str = granger_sm_str["pvalue"]
                 yield assert_allclose, g_p_obt_str, g_p_obt, 1e-07, 0, False, \
-                    err_msg_g_t + " - int and str as arguments".upper() + \
-                    " don't yield the same result!".upper()
+                    err_msg_g_t + " - sequences of integers and ".upper() + \
+                    "strings as arguments don't yield the same result!".upper()
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
@@ -543,7 +539,7 @@ def test_inst_causality():  # test instantaneous causality
         if "inst. causality" not in to_test:
             return
         else:
-            print("\n\nCAUSALITY", end="")
+            print("\n\nINST. CAUSALITY", end="")
     for ds in datasets:
         for dt in dt_s_list:
             if debug_mode:
@@ -551,31 +547,62 @@ def test_inst_causality():  # test instantaneous causality
 
             err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
             err_msg_i_t = build_err_msg(ds, dt, "INSTANT. CAUS. - TEST STAT.")
-            # v_names = ds.variable_names  # todo: implement names in VECM
-            # ==> until names are implemented, use the following line:
-            v_names = range(len(ds.variable_names))
-            for causing in sublists(v_names, 1, len(v_names)):
-                # Now that the potentially causing variables are fixed, find
-                # all combinations of potentially caused variables.
-                causing_compl = [el for el in v_names if el not in causing]
-                caused_combs = sublists(causing_compl, 1, len(causing_compl))
-                for caused in caused_combs:
-                    caused_key = tuple(ds.variable_names[i] for i in caused)
-                    causing_key = tuple(ds.variable_names[i] for i in causing)
-                    # test test-statistic for instantaneous non-causality
-                    i_t_obt = results_sm[ds][dt].test_inst_causality(
-                        caused, causing)["statistic"]
-                    i_t_des = results_ref[ds][dt]["inst_caus"][
-                        "test_stat"][(causing_key, caused_key)]
-                    yield assert_allclose, i_t_obt, i_t_des, rtol, atol, \
-                        False, err_msg_i_t
-                    # test p-value for instantaneous non-causality
-                    i_p_obt = results_sm[ds][dt].test_inst_causality(
-                        caused, causing)["pvalue"]
-                    i_p_des = results_ref[ds][dt]["inst_caus"]["p"][(
-                        causing_key, caused_key)]
-                    yield assert_allclose, i_p_obt, i_p_des, rtol, atol, \
-                        False, err_msg_i_p
+
+            v_ind = range(len(ds.variable_names))
+            for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
+                causing_names = ["y" + str(i+1) for i in causing_ind]
+                causing_key = tuple(ds.variable_names[i] for i in causing_ind)
+
+                caused_ind = [i for i in v_ind if i not in causing_ind]
+                caused_key = tuple(ds.variable_names[i] for i in caused_ind)
+                inst_sm_ind = results_sm[ds][dt].test_inst_causality(
+                    causing_ind, verbose=False)
+                inst_sm_str = results_sm[ds][dt].test_inst_causality(
+                    causing_names, verbose=False)
+                # test test-statistic for instantaneous non-causality
+                t_obt = inst_sm_ind["statistic"]
+                t_des = results_ref[ds][dt]["inst_caus"][
+                    "test_stat"][(causing_key, caused_key)]
+                yield assert_allclose, t_obt, t_des, rtol, atol, False, \
+                    err_msg_i_t
+                # check whether string sequences as args work in the same way:
+                t_obt_str = inst_sm_str["statistic"]
+                yield assert_allclose, t_obt_str, t_obt, 1e-07, 0, False, \
+                    err_msg_i_t + " - sequences of integers and ".upper() + \
+                    "strings as arguments don't yield the same result!".upper()
+                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # the same result:
+                if len(causing_ind) == 1:
+                    inst_sm_single_ind = results_sm[ds][
+                        dt].test_inst_causality(causing_ind[0], verbose=False)
+                    t_obt_single = inst_sm_single_ind["statistic"]
+                    yield assert_allclose, t_obt_single, t_obt, 1e-07, 0, \
+                        False, \
+                        err_msg_i_t + " - list of int and int as ".upper() + \
+                        "argument don't yield the same result!".upper()
+
+                # test p-value for instantaneous non-causality
+                p_obt = results_sm[ds][dt].test_inst_causality(
+                    causing_ind, verbose=False)["pvalue"]
+                p_des = results_ref[ds][dt]["inst_caus"]["p"][(
+                    causing_key, caused_key)]
+                yield assert_allclose, p_obt, p_des, rtol, atol, False, \
+                    err_msg_i_p
+                # check whether string sequences as args work in the same way:
+                p_obt_str = inst_sm_str["pvalue"]
+                yield assert_allclose, p_obt_str, p_obt, 1e-07, 0, False, \
+                    err_msg_i_p + " - sequences of integers and ".upper() + \
+                    "strings as arguments don't yield the same result!".upper()
+                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # the same result:
+                if len(causing_ind) == 1:
+                    inst_sm_single_ind = results_sm[ds][
+                        dt].test_inst_causality(causing_ind[0], verbose=False)
+                    p_obt_single = inst_sm_single_ind["pvalue"]
+                    yield assert_allclose, p_obt_single, p_obt, 1e-07, 0, \
+                        False, \
+                        err_msg_i_p + " - list of int and int as ".upper() + \
+                        "argument don't yield the same result!".upper()
 
 
 def test_impulse_response():
