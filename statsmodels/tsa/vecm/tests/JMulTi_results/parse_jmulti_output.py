@@ -330,11 +330,43 @@ def load_results_jmulti(dataset, dt_s_list):
         results["fc"]["upper"] = upper
 
         # ---------------------------------------------------------------------
-        # parse output related to Granger-causality and instant causality:
+        # parse output related to Granger-causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
         results["granger_caus"]["p"] = dict()
         results["granger_caus"]["test_stat"] = dict()
+        vn = dataset.variable_names
+        # all possible combinations of potentially causing variables
+        # (at least 1 variable and not all variables together):
+        var_combs = sublists(vn, 1, len(vn)-1)
+        for causing in var_combs:
+            # Now that the potentially causing variables are fixed, find all
+            # combinations of potentially caused variables.
+            caused = tuple(el for el in vn if el not in causing)
+            granger_file = dataset.__str__() + "_" + source + "_" \
+                + dt_string + "_granger_causality_" \
+                + stringify_var_names(causing) + "_" \
+                + stringify_var_names(caused) + ".txt"
+            granger_file = os.path.join(os.path.dirname(
+                    os.path.realpath(__file__)), granger_file)
+            granger_file = open(granger_file)
+            granger_results = []
+            for line in granger_file:
+                str_number = "\d+\.\d{4}"
+                regex_number = re.compile(str_number)
+                number = re.search(regex_number, line)
+                if number is None:
+                    continue
+                number = float(number.group(0))
+                granger_results.append(number)
+            granger_file.close()
+            results["granger_caus"]["test_stat"][(causing, caused)] = \
+                granger_results[0]
+            results["granger_caus"]["p"][(causing, caused)] =\
+                granger_results[1]
+
+        # ---------------------------------------------------------------------
+        # parse output related to Granger-causality and instant causality:
+        results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
         results["inst_caus"]["p"] = dict()
         results["inst_caus"]["test_stat"] = dict()
         vn = dataset.variable_names
@@ -344,35 +376,36 @@ def load_results_jmulti(dataset, dt_s_list):
         for causing in var_combs:
             # Now that the potentially causing variables are fixed, find all
             # combinations of potentially caused variables.
-            causing_compl = [el for el in vn if el not in causing]
-            caused_combs = sublists(causing_compl, 1, len(causing_compl))
-            for caused in caused_combs:
-                granger_file = dataset.__str__() + "_" + source + "_" \
-                    + dt_string + "_granger_causality_" \
-                    + stringify_var_names(causing) + "_" \
-                    + stringify_var_names(caused) + ".txt"
-                granger_file = os.path.join(os.path.dirname(
-                        os.path.realpath(__file__)), granger_file)
-                granger_file = open(granger_file)
-                granger_results = []
-                for line in granger_file:
-                    str_number = "\d+\.\d{4}"
-                    regex_number = re.compile(str_number)
-                    number = re.search(regex_number, line)
-                    if number is None:
-                        continue
-                    number = float(number.group(0))
-                    granger_results.append(number)
-                granger_file.close()
-                results["granger_caus"]["test_stat"][(causing, caused)] = \
-                    granger_results[0]
+            caused = tuple(el for el in vn if el not in causing)
+            # Though Granger- and instantaneous causality results are in the
+            # same file we use two separate files, since JMulTi is basing both
+            # tests on a VAR(p+1) model (where p is the number of lags in
+            # levels). According to Lutkepohl, Granger-causality tests are
+            # based on VAR(p+1) *but* tests for instantaneous causality are
+            # based on VAR(p)! Thus we have this separate file with JMulTi
+            # results for a VECM with the lag order reduced by one.
+            inst_file = dataset.__str__() + "_" + source + "_" \
+                + dt_string + "_inst_causality_" \
+                + stringify_var_names(causing) + "_" \
+                + stringify_var_names(caused) + ".txt"
+            inst_file = os.path.join(os.path.dirname(
+                    os.path.realpath(__file__)), inst_file)
+            inst_file = open(inst_file)
+            inst_results = []
+            for line in inst_file:
+                str_number = "\d+\.\d{4}"
+                regex_number = re.compile(str_number)
+                number = re.search(regex_number, line)
+                if number is None:
+                    continue
+                number = float(number.group(0))
+                inst_results.append(number)
+            inst_file.close()
+            results["inst_caus"]["test_stat"][(causing, caused)] = \
+                inst_results[2]
+            results["inst_caus"]["p"][(causing, caused)] = \
+                inst_results[3]
 
-                results["granger_caus"]["p"][(causing, caused)] =\
-                    granger_results[1]
-                results["inst_caus"]["test_stat"][(causing, caused)] = \
-                    granger_results[2]
-                results["inst_caus"]["p"][(causing, caused)] = \
-                    granger_results[3]
 
         # ---------------------------------------------------------------------
         # parse output related to impulse-response analysis:
