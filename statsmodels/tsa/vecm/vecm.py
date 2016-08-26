@@ -1274,7 +1274,7 @@ class VECMResults(object):
 
         return results
 
-    def test_inst_causality(self, caused, causing, signif=0.05, verbose=True):
+    def test_inst_causality(self, causing, signif=0.05, verbose=True):
         """
         Test for instantaneous causality as described in chapters 3.6.3 and
         7.6.4 of [1]_.
@@ -1289,11 +1289,6 @@ class VECMResults(object):
 
         Parameters
         ----------
-        caused :
-            If int or str, test whether the corresponding variable is caused
-            by the variable(s) specified in causing.
-            If sequence of int or str, test whether the corresponding variables
-            are being caused by the variable(s) specified in causing.
         causing :
             If int or str, test whether the corresponding variable is causing
             the variable(s) specified in caused.
@@ -1336,26 +1331,34 @@ class VECMResults(object):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
+        allowed_types = (string_types, int)
+        if isinstance(causing, allowed_types):
+            causing = [causing]
+        if not all(isinstance(c, allowed_types) for c in causing):
+            raise TypeError("causing has to be of type string or int (or a " +
+                            "a sequence of these types).")
+        causing = [self.names[c] if type(c) == int else c for c in causing]
+        causing_ind = [get_index(self.names, c) for c in causing]
+
+        caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
+        caused = [self.names[c] for c in caused_ind]
+
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
         var_results = VAR(self.y_all.T).fit(maxlags=p,
                                             trend=self.deterministic)
-        if isinstance(causing, (string_types, int, np.integer)):
-            causing = [causing]
-        # if isinstance(caused, (string_types, int, np.integer)):
-        #     caused = [caused]
 
         num_restr = len(causing) * len(caused)  # called N in Lutkepohl
 
-        caused_ind = get_index(self.names, caused)
-        causing_ind = np.array([get_index(self.names, c) for c in causing])
-        # caused_ind = caused
-        # causing_ind = causing
-        # inds = sorted([i+j for i in causing_ind for j in caused_ind])
-        inds = sorted([i + caused_ind for i in causing_ind])
-
         sigma_u = var_results.sigma_u
         vech_sigma_u = vech(sigma_u)
+        sig_mask = np.zeros(sigma_u.shape)
+        # set =1 twice to ensure, that all the ones needed are below the main
+        # diagonal:
+        sig_mask[causing_ind, caused_ind] = 1
+        sig_mask[caused_ind, causing_ind] = 1
+        vech_sig_mask = vech(sig_mask)
+        inds = np.nonzero(vech_sig_mask)[0]
 
         # Make restriction matrix
         C = np.zeros((num_restr, len(vech_sigma_u)), dtype=float)
