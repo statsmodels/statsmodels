@@ -179,33 +179,33 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
     T = y_1_T.shape[1]
     delta_y = np.diff(y)
     delta_y_1_T = delta_y[:, p-1:]
-    y_min1 = y[:, p-1:-1]
-    # if "co" in deterministic and "ci" in deterministic:
-    #     raise ValueError("Both 'co' and 'ci' as deterministic terms given. "
-    #                      + "Please choose one of the two.")
-    # todo: optimize the following with np.row_stack()
 
+    y_min1 = y[:, p-1:-1]
+    if "co" in deterministic and "ci" in deterministic:
+        raise ValueError("Both 'co' and 'ci' as deterministic terms given. " +
+                         "Please choose one of the two.")
+    y_min1_stack = [y_min1]
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
         # y_min1_mean = y_min1.mean(1)
-        y_min1 = vstack((y_min1,
-                         np.ones(T)))
+        y_min1_stack.append(np.ones(T))
         # H = vstack((np.identity(neqs),
         #             - y_min1_mean))
         # y_min1 = H.T.dot(y_min1)
 
     if "li" in deterministic:  # p. 299
-        y_min1 = vstack((y_min1,
-                         np.arange(T)))
+        y_min1_stack.append(np.arange(T))
+    y_min1 = np.row_stack(y_min1_stack)
 
     # p. 286:
     delta_x = np.zeros((diff_lags*K, T))
-    for j in range(delta_x.shape[1]):
-        delta_x[:, j] = (delta_y[:, j+p-2:None if j-1 < 0 else j-1:-1]
-                         .T.reshape(K*(p-1)))
+    if diff_lags > 0:
+        for j in range(delta_x.shape[1]):
+            delta_x[:, j] = (delta_y[:, j+p-2:None if j-1 < 0 else j-1:-1]
+                             .T.reshape(K*(p-1)))
+    delta_x_stack = [delta_x]
     # p. 299, p. 303:
     if "co" in deterministic:
-        delta_x = vstack((delta_x,
-                          np.ones(T)))
+        delta_x_stack.append(np.ones(T))
     if seasons > 0:
         season_dummy = np.zeros((seasons - 1, delta_x.shape[1]))
         for i in range(seasons - 1):
@@ -218,13 +218,10 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
         season_dummy = np.hstack((season_dummy[:, 1:4], season_dummy[:, :-3]))
         # season_dummy[1] = -season_dummy[1]
         season_dummy -= 1 / seasons
-        delta_x = vstack((delta_x,
-                          season_dummy))
-
+        delta_x_stack.append(season_dummy)
     if "lo" in deterministic:
-        delta_x = vstack((delta_x,
-                          np.arange(T)+1))
-
+        delta_x_stack.append(np.arange(T)+1)
+    delta_x = np.row_stack(delta_x_stack)
     return y_1_T, delta_y_1_T, y_min1, delta_x
 
 
@@ -991,10 +988,12 @@ class VECMResults(object):
         gamma = self.gamma
         K = self.neqs
         A = np.zeros((self.k_ar, K, K))
-        A[0] = pi + np.identity(K) + gamma[:, :K]
-        A[self.k_ar-1] = - gamma[:, K*(self.k_ar-2):]
-        for i in range(1, self.k_ar-1):
-            A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
+        A[0] = pi + np.identity(K)
+        if self.gamma.size > 0:
+            A[0] += gamma[:, :K]
+            A[self.k_ar-1] = - gamma[:, K*(self.k_ar-2):]
+            for i in range(1, self.k_ar-1):
+                A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
         return A
 
     @cache_readonly
@@ -1024,6 +1023,10 @@ class VECMResults(object):
         # w_eye = np.kron(w, np.identity(K))
         #
         # return chain_dot(w_eye.T, self.cov_params, w_eye)
+
+        if self.k_ar - 1 == 0:
+            return self.cov_params_wo_det
+
         vecm_var_transformation = np.zeros((self.neqs**2 * self.k_ar,
                                             self.neqs**2 * self.k_ar))
         eye = np.identity(self.neqs**2)
@@ -1511,43 +1514,48 @@ class VECMResults(object):
             upper = conf_int["upper"].flatten()
             conf_int_lagged_params_components.append(np.column_stack(
                     (lower, upper)))
-        lagged_params = hstack(lagged_params_components)
-        stderr_lagged_params = hstack(stderr_lagged_params_components)
-        tvalues_lagged_params = hstack(tvalues_lagged_params_components)
-        pvalues_lagged_params = hstack(pvalues_lagged_params_components)
-        conf_int_lagged_params = vstack(conf_int_lagged_params_components)
 
-        for i in range(self.neqs):
-            masks = []
-            offset = 0
-            # 1. Deterministic terms outside cointegration relation
-            if "co" in self.deterministic:
-                masks.append(offset + np.array(i, ndmin=1))
-                offset += self.neqs
-            if self.seasons > 0:
-                start = (self.seasons-1) * i
-                masks.append(offset + np.arange(start, start + self.seasons-1))
-                offset += (self.seasons-1) * self.neqs
-            if "lo" in self.deterministic:
-                masks.append(offset + np.array(i, ndmin=1))
-                offset += self.neqs
-            # 2. Lagged endogenous terms
-            if self.k_ar - 1 > 0:
-                start = i * self.neqs * (self.k_ar-1)
-                end = (i+1) * self.neqs * (self.k_ar-1)
-                masks.append(offset + np.arange(start, end))
-                # offset += self.neqs**2 * (self.k_ar-1)
+        # if gamma or det_coef exists, then make a summary-table for them:
+        if len(lagged_params_components) != 0:
+            lagged_params = hstack(lagged_params_components)
+            stderr_lagged_params = hstack(stderr_lagged_params_components)
+            tvalues_lagged_params = hstack(tvalues_lagged_params_components)
+            pvalues_lagged_params = hstack(pvalues_lagged_params_components)
+            conf_int_lagged_params = vstack(conf_int_lagged_params_components)
 
-            # Create the table
-            mask = np.concatenate(masks)
-            eq_name = self.model.endog_names[i]
-            title = "Det. terms outside coint. relation " + \
-                    "& lagged endog. parameters for equation %s" % eq_name
-            table = make_table(self, lagged_params, stderr_lagged_params,
-                               tvalues_lagged_params, pvalues_lagged_params,
-                               conf_int_lagged_params, mask,
-                               self.model.lagged_param_names, title)
-            summary.tables.append(table)
+            for i in range(self.neqs):
+                masks = []
+                offset = 0
+                # 1. Deterministic terms outside cointegration relation
+                if "co" in self.deterministic:
+                    masks.append(offset + np.array(i, ndmin=1))
+                    offset += self.neqs
+                if self.seasons > 0:
+                    start = (self.seasons-1) * i
+                    masks.append(offset + np.arange(start,
+                                                    start + self.seasons-1))
+                    offset += (self.seasons-1) * self.neqs
+                if "lo" in self.deterministic:
+                    masks.append(offset + np.array(i, ndmin=1))
+                    offset += self.neqs
+                # 2. Lagged endogenous terms
+                if self.k_ar - 1 > 0:
+                    start = i * self.neqs * (self.k_ar-1)
+                    end = (i+1) * self.neqs * (self.k_ar-1)
+                    masks.append(offset + np.arange(start, end))
+                    # offset += self.neqs**2 * (self.k_ar-1)
+
+                # Create the table
+                mask = np.concatenate(masks)
+                eq_name = self.model.endog_names[i]
+                title = "Det. terms outside coint. relation " + \
+                        "& lagged endog. parameters for equation %s" % eq_name
+                table = make_table(self, lagged_params, stderr_lagged_params,
+                                   tvalues_lagged_params,
+                                   pvalues_lagged_params,
+                                   conf_int_lagged_params, mask,
+                                   self.model.lagged_param_names, title)
+                summary.tables.append(table)
 
         # ---------------------------------------------------------------------
         # Loading coefficients (alpha):
