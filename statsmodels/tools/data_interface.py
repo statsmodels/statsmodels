@@ -70,13 +70,13 @@ class DataInterface(object):
             to_return = data
 
         elif self.internal_type == np.ndarray:
-            to_return = self.to_numpy_array(data)
+            to_return = to_numpy_array(data)
 
         elif self.internal_type in PANDAS_TYPES:
-            to_return = self.to_pandas(data)
+            to_return = to_pandas(data, name=self.name, columns=self.columns)
 
         elif self.internal_type == list:
-            to_return = self.to_list(data)
+            to_return = to_list(data)
 
         else:
             raise TypeError('Type conversion to {} from {} is not possible.'.format(self.internal_type, type(data)))
@@ -102,13 +102,14 @@ class DataInterface(object):
         self.index = getattr(data, 'index', None)
 
         if from_type in NUMPY_TYPES:
-            data_to_return = self.from_numpy_array(data)
+            data_to_return = from_numpy_array(data, self.external_type, index=self.index, name=self.name,
+                                              columns=self.columns, from_ndim=self.ndim)
 
         elif from_type in PANDAS_TYPES:
-            data_to_return = self.from_pandas(data)
+            data_to_return = from_pandas(data, self.external_type)
 
         elif from_type == list:
-            data_to_return = self.from_list(data)
+            data_to_return = from_list(data, self.external_type, index=self.index, name=self.name, columns=self.columns)
 
         else:
             raise TypeError('Type conversion from {} to {} is not possible.'.format(from_type, self.external_type))
@@ -125,157 +126,214 @@ class DataInterface(object):
         else:
             return data_to_return
 
-    def to_numpy_array(self, data):
-
-        from_type = type(data)
-
-        if from_type in NUMPY_TYPES:
-            return data
-
-        elif from_type == list:
-            return np.array(data)
-
-        elif from_type == np.recarray:
-            return data.view(np.ndarray)
-
-        elif from_type == pd.Series:
-
-            return data.values
-
-        elif from_type == pd.DataFrame:
-            return data.values
-
-        else:
-            try:
-                return np.asarray(data)
-
-            except TypeError:
-                raise TypeError('Type conversion to numpy from {} is not possible.'.format(from_type))
-
-    def to_pandas(self, data):
-
-        from_type = type(data)
-
-        if from_type in PANDAS_TYPES:
-            return data
-
-        else:
-            np_data = self.to_numpy_array(data)
-
-            if np_data.ndim == 1:
-                return pd.Series(np_data, name=self.name)
-
-            else:
-                return pd.DataFrame(np_data, columns=self.columns)
-
-    def to_list(self, data):
-
-        from_type = type(data)
-
-        if from_type == list:
-            return data
-
-        else:
-            return self.to_numpy_array(data).tolist()
-
-    def from_numpy_array(self, data):
-
-        from_type = type(data)
-
-        if from_type == self.external_type:
-            return data
-
-        elif self.external_type == list:
-            return data.tolist()
-
-        elif self.external_type == np.recarray:
-            return data.view(np.recarray)
-
-        elif self.external_type == pd.Series:
-            index = getattr(data, 'index', None)
-            return pd.Series(data=data, index=index)
-
-        elif self.external_type == pd.DataFrame:
-            ndim = getattr(data, 'ndim', None)
-
-            if ndim in [1, None]:
-                return pd.Series(data=data, index=self.index)
-
-            elif self.ndim == ndim:
-                return pd.DataFrame(data=data, columns=self.columns, index=self.index)
-
-            else:
-                return pd.DataFrame(data=data, index=self.index)
-
-        else:
-            raise TypeError('Cannot convert from numpy array to {}'.format(self.external_type))
-
-    def from_pandas(self, data):
-
-        from_type = type(data)
-
-        if from_type == self.external_type:
-            return data
-
-        elif self.external_type == np.ndarray:
-            return data.values
-
-        elif from_type == pd.Series and self.external_type == pd.DataFrame:
-            return data
-
-        elif from_type == pd.DataFrame and self.external_type == pd.Series:
-            if data.ndim == 1:
-                return pd.Series(data.values, index=data.index, name=data.columns[0])
-            else:
-                raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
-
-        elif self.external_type == list:
-            return data.values.tolist()
-
-        else:
-            raise TypeError('Cannot convert from {} to {}'.format(from_type, self.external_type))
-
-    def from_list(self, data):
-
-        from_type = type(data)
-
-        if from_type == self.external_type:
-            return data
-
-        elif self.external_type == np.ndarray:
-            return np.asarray(data)
-
-        elif self.external_type == pd.DataFrame:
-            return pd.DataFrame(data, index=self.index, columns=self.columns)
-
-        elif self.external_type == pd.Series:
-            if data.ndim == 1:
-                return pd.Series(data, index=self.index, name=self.name)
-            else:
-                raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
-
-        else:
-            raise TypeError('Cannot convert from list to {}'.format(self.external_type))
-
 
 NumPyInterface = partial(DataInterface, [np.ndarray])
 SeriesInterface = partial(DataInterface, [pd.Series], pd.Series)
 DataFrameInterface = partial(DataInterface, [pd.DataFrame], pd.DataFrame)
+PandasInterface = partial(DataInterface, PANDAS_TYPES, pd.DataFrame)
 ListInterface = partial(DataInterface, [list], list)
+
+
+def to_categorical(data, col=None, dictnames=False, drop=False):
+
+    ndim = get_ndim(data)
+
+    if is_recarray(data):
+
+        to_type = np.recarray
+        name=None
+
+        if ndim > 1:
+            if col is None:
+                raise ValueError('Col must not be None for multi dimentional recarray')
+            else:
+                if type(col) == int:
+                    col = data.dtype.names[col]
+
+                rec_column = data[col]
+                data = transpose(rec_column)
+        else:
+            if data.dtype.names is not None:
+                name = data.dtype.names[0]
+                data = data[name]
+
+            if is_col_vector(data):
+                data = transpose(data)
+
+        if name is not None:
+            data = pd.Series(data, name=name)
+        else:
+            data = pd.Series(data)
+
+    else:
+        to_type = type(data)
+        data = to_pandas(data)
+
+        if ndim > 1:
+            if isinstance(col, int):
+                data = data.iloc[:, col]
+            elif isinstance(col, str):
+                data = data.loc[:, col]
+
+    dummies = pd.get_dummies(data)
+
+    interface = NumPyInterface(external_type=to_type)
+    return interface.from_statsmodels(dummies)
+
+
+def to_numpy_array(data):
+    from_type = type(data)
+
+    if from_type in NUMPY_TYPES:
+        return data
+
+    elif from_type == list:
+        return np.array(data)
+
+    elif from_type == np.recarray:
+        return data.view(np.ndarray)
+
+    elif from_type == pd.Series:
+
+        return data.values
+
+    elif from_type == pd.DataFrame:
+        return data.values
+
+    else:
+        try:
+            return np.asarray(data)
+
+        except TypeError:
+            raise TypeError('Type conversion to numpy from {} is not possible.'.format(from_type))
+
+
+def to_list(data):
+    from_type = type(data)
+
+    if from_type == list:
+        return data
+
+    else:
+        return to_numpy_array(data).tolist()
+
+
+def to_pandas(data, name=None, columns=None):
+    from_type = type(data)
+
+    if from_type in PANDAS_TYPES:
+        return data
+
+    else:
+        np_data = to_numpy_array(data)
+
+        if np_data.ndim == 1:
+            return pd.Series(np_data, name=name)
+
+        else:
+            return pd.DataFrame(np_data, columns=columns)
+
+
+def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_ndim=None):
+    from_type = type(data)
+
+    if from_type == to_type:
+        return data
+
+    elif to_type == list:
+        return data.tolist()
+
+    elif to_type == np.recarray:
+        return data.view(np.recarray)
+
+    elif to_type == pd.Series:
+        index = getattr(data, 'index', None)
+        return pd.Series(data=data, index=index, name=name)
+
+    elif to_type == pd.DataFrame:
+        ndim = getattr(data, 'ndim', None)
+
+        if ndim in [1, None]:
+            return pd.Series(data=data, index=index, name=name)
+
+        elif from_ndim == ndim:
+            return pd.DataFrame(data=data, columns=columns, index=index)
+
+        else:
+            return pd.DataFrame(data=data, index=index)
+
+    else:
+        raise TypeError('Cannot convert from numpy array to {}'.format(to_type))
+
+
+def from_pandas(data, to_type):
+    from_type = type(data)
+
+    if from_type == to_type:
+        return data
+
+    elif to_type == np.ndarray:
+        return data.values
+
+    elif from_type == pd.Series and to_type == pd.DataFrame:
+        return data
+
+    elif from_type == pd.DataFrame and to_type == pd.Series:
+        if data.ndim == 1:
+            return pd.Series(data.values, index=data.index, name=data.columns[0])
+        else:
+            raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
+
+    elif to_type == list:
+        return data.values.tolist()
+
+    elif to_type == np.recarray:
+        return data.to_records(index=False)
+
+    else:
+        raise TypeError('Cannot convert from {} to {}'.format(from_type, to_type))
+
+
+def from_list(data, to_type, index=None, name=None, columns=None):
+    from_type = type(data)
+
+    if from_type == to_type:
+        return data
+
+    elif to_type == np.ndarray:
+        return np.asarray(data)
+
+    elif to_type == pd.DataFrame:
+        return pd.DataFrame(data, index=index, columns=columns)
+
+    elif to_type == pd.Series:
+        if data.ndim == 1:
+            return pd.Series(data, index=index, name=name)
+        else:
+            raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
+
+    else:
+        raise TypeError('Cannot convert from list to {}'.format(to_type))
 
 
 def get_ndim(data):
 
-    if type(data) == pd.Series:
+    data_type = type(data)
+
+    if is_recarray(data):
+        # if there is only one dtype, a len of 0 will be returned.
+        return max(len(data.dtype), 1)
+
+    if data_type == pd.Series:
         return 1
 
-    if type(data) != pd.DataFrame:
+    if data_type != pd.DataFrame:
 
         try:
             data = np.asarray(data)
 
         except TypeError:
-            raise TypeError('Cannot find dimension of {}'.format(type(data)))
+            raise TypeError('Cannot find dimension of {}'.format(data_type))
 
     if get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
         return 1
@@ -352,7 +410,7 @@ def transpose(data):
 
     if is_col_vector(data):
 
-        if transpose_type == np.ndarray:
+        if transpose_type in [np.ndarray, np.recarray]:
             return data.squeeze()
 
         elif transpose_type == pd.DataFrame:
@@ -370,7 +428,7 @@ def transpose(data):
             data_col = data.values[np.newaxis].T
             return pd.DataFrame(data_col, index=data.index)
 
-        elif transpose_type == np.ndarray:
+        elif transpose_type in [np.ndarray, np.recarray]:
 
             if get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:
                 data = data[0]
@@ -399,3 +457,16 @@ def get_shape_dim(data, index):
 
     except IndexError:
         return 0
+
+
+def is_recarray(data):
+
+    if isinstance(data, np.recarray):
+        return True
+    elif hasattr(data, 'dtype'):
+        if data.dtype.names is not None:
+            return True
+        else:
+            return False
+    else:
+        return False
