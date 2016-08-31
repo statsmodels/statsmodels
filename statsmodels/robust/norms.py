@@ -824,6 +824,106 @@ class TukeyBiweight(RobustNorm):
                          - (4*z**2/self.c**2) * (1-(z/self.c)**2))
 
 
+class MQuantileNorm(RobustNorm):
+    """M-quantiles objective function based on a base norm
+
+    This norm has the same asymmetric structure as the objective function
+    in QuantileRegression but replaces the L1, absolute value by a chosen
+    base norm.
+
+    rho_q(u) = |q - I(q < 0)| * rho_base(u)
+    or
+    rho_q(u) = q * rho_base(u)  if u >= 0
+    rho_q(u) = (1 - q) * rho_base(u)  if u < 0
+
+
+    Parameters
+    ----------
+    q : float
+        M-quantile, must be between 0 and 1
+    base_norm : RobustNorm instance
+        basic norm that is transformed into an asymmetric M-quantile norm
+
+    Note:
+    This is mainly for base norms that are not redescending, like HuberT or
+    LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
+    in the case of non-redescending Norms.)
+
+    References
+    ----------
+    Newey Powell
+    Jones
+    Bianchi Salvati
+    ...
+
+    """
+
+    def __init__(self, q, base_norm):
+        self.q = q
+        self.base_norm = base_norm
+
+    def _get_q(self, z):
+
+        nobs = len(z)
+        mask_neg = (z < 0)  # if self.q < 0.5 else (z <= 0)  # maybe symmetric
+        qq = np.empty(nobs)
+        qq[mask_neg] = 1 - self.q
+        qq[~mask_neg] = self.q
+        return qq
+
+    def rho(self, z):
+        """
+        The robust criterion estimator function.
+
+        Abstract method:
+
+        -2 loglike used in M-estimator
+        """
+        qq = self._get_q(z)
+        return qq * self.base_norm.rho(z)
+
+    def psi(self, z):
+        """
+        Derivative of rho.  Sometimes referred to as the influence function.
+
+        Abstract method:
+
+        psi = rho'
+        """
+        qq = self._get_q(z)
+        return qq * self.base_norm.psi(z)
+
+    def weights(self, z):
+        """
+        Returns the value of psi(z) / z
+
+        Abstract method:
+
+        psi(z) / z
+        """
+        qq = self._get_q(z)
+        return qq * self.base_norm.weights(z)
+
+    def psi_deriv(self, z):
+        '''
+        Deriative of psi.  Used to obtain robust covariance matrix.
+
+        See statsmodels.rlm for more information.
+
+        Abstract method:
+
+        psi_derive = psi'
+        '''
+        qq = self._get_q(z)
+        return qq * self.base_norm.psi_deriv(z)
+
+    def __call__(self, z):
+        """
+        Returns the value of estimator rho applied to an input
+        """
+        return self.rho(z)
+
+
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
     """
