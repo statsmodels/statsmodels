@@ -22,14 +22,15 @@ coint_rank = 1
 
 debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc"] # ["nc", "co", "colo", "ci", "cili"] # todo ###############################
-seasonal_list = [0]  # [0, 4] # todo #########################################################################
+deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"] # todo ###############################
+seasonal_list = [0, 4]  # [0, 4] # todo #########################################################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
-             "granger", "inst. causality", "impulse-response", "lag order"]
-to_test = ["inst. causality"]  # all_tests  # ["beta"]
+             "granger", "inst. causality", "impulse-response", "lag order",
+             "test_norm"]
+to_test = ["test_norm"]  # all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -636,7 +637,6 @@ def test_lag_order_selection():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             endog_tot = data[ds]
-            print(endog_tot.shape)
             obtained_all = select_order(endog_tot, 10, dt, )
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(ds, dt,
@@ -645,6 +645,32 @@ def test_lag_order_selection():
                 desired = results_ref[ds][dt]["lagorder"][ic]
                 yield assert_allclose, obtained, desired, rtol, atol, False, \
                     err_msg
+
+
+def test_lag_order_selection():
+    if debug_mode:
+        if "test_norm" not in to_test:
+            return
+        else:
+            print("\n\nTEST NON-NORMALITY", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            obtained = results_sm[ds][dt].test_normality(signif=0.05,
+                                                         verbose=False)
+            err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
+            obt_statistic = obtained["statistic"]
+            des_statistic = results_ref[ds][dt]["test_norm"][
+                "joint_test_statistic"]
+            yield assert_allclose, obt_statistic, des_statistic, rtol, atol, \
+                False, err_msg
+            err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - P-VALUE")
+            obt_pvalue = obtained["pvalue"]
+            des_pvalue =results_ref[ds][dt]["test_norm"]["joint_pvalue"]
+            yield assert_allclose, obt_pvalue, des_pvalue, rtol, atol, \
+                False, err_msg
 
 
 def setup():
