@@ -1416,8 +1416,8 @@ class VECMResults(object):
         gamma = self.gamma
         if self.det_coef.size > 0:
             gamma = hstack((gamma, self.det_coef))
-
-        return (np.dot(pi, self.y_min1) + np.dot(gamma, self.delta_x)).T
+        delta_y = np.dot(pi, self.y_min1) + np.dot(gamma, self.delta_x)
+        return (delta_y + self.y_min1[:self.neqs]).T
 
     @cache_readonly
     def resid(self):
