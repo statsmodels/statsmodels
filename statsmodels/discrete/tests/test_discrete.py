@@ -36,6 +36,12 @@ try:
 except ImportError:
     has_basinhopping = False
 
+try:
+    from scipy.optimize._trustregion_dogleg import  _minimize_dogleg
+    has_dogleg = True
+except ImportError:
+    has_dogleg = False
+
 DECIMAL_14 = 14
 DECIMAL_10 = 10
 DECIMAL_9 = 9
@@ -417,6 +423,44 @@ class TestProbitBasinhopping(CheckBinaryResults):
         fit = Probit(data.endog, data.exog).fit
         cls.res1 = fit(method="basinhopping", disp=0, niter=5,
                         minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
+
+class TestProbitMinimizeDefault(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        fit = Probit(data.endog, data.exog).fit
+        cls.res1 = fit(method="minimize", disp=0, niter=5, tol = 1e-8)
+
+class TestProbitMinimizeDogleg(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        if not has_dogleg:
+            raise SkipTest("Skipped TestProbitMinimizeDogleg since "
+                           "dogleg method is not available")
+
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        fit = Probit(data.endog, data.exog).fit
+        cls.res1 = fit(method="minimize", disp=0, niter=5, tol = 1e-8, min_method = 'dogleg')
+
+class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        cls.res1 = Probit(data.endog, data.exog).fit(method="minimize", disp=0,
+                                                     maxiter=500, min_method='Nelder-Mead',
+                                                     xtol=1e-4, ftol=1e-4)
 
 class CheckLikelihoodModelL1(object):
     """

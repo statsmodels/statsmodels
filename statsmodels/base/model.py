@@ -273,6 +273,7 @@ class LikelihoodModel(Model):
             - 'cg' for conjugate gradient
             - 'ncg' for Newton-conjugate gradient
             - 'basinhopping' for global basin-hopping solver
+            - 'minimize' for generic wrapper of scipy minimize (BFGS by default)
 
             The explicit arguments in `fit` are passed to the solver,
             with the exception of the basin-hopping solver. Each
@@ -408,6 +409,13 @@ class LikelihoodModel(Model):
                       - `args` <- `fargs`
                       - `jac` <- `score`
                       - `hess` <- `hess`
+            'minimize'
+                min_method : str, optional
+                    Name of minimization method to use.
+                    Any method specific arguments can be passed directly.
+                    For a list of methods and their arguments, see
+                    documentation of `scipy.optimize.minimize`.
+                    If no method is specified, then BFGS is used.
         """
         Hinv = None  # JP error if full_output=0, Hinv not defined
 
