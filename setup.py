@@ -70,12 +70,23 @@ from distutils.command.build_ext import build_ext as _build_ext
 
 class build_ext(_build_ext):
     def build_extensions(self):
-        numpy_incl = pkg_resources.resource_filename('numpy', 'core/include')
+        # Delay numpy imports to allow pip to install numpy during build
+        from numpy.distutils.misc_util import get_info
+        from numpy import get_include
+        numpy_incl = get_include()
+        npymath_info = get_info("npymath")
 
         for ext in self.extensions:
-            if (hasattr(ext, 'include_dirs') and
-                    not numpy_incl in ext.include_dirs):
+            if not hasattr(ext, 'include_dirs'):
+                continue
+            if not numpy_incl in ext.include_dirs:
                 ext.include_dirs.append(numpy_incl)
+            if not ext.name in EXTS_NEEDING_NPYMATH:
+                continue
+            ext.include_dirs += npymath_info['include_dirs']
+            ext.libraries += npymath_info['libraries']
+            ext.library_dirs += npymath_info['library_dirs']
+
         _build_ext.build_extensions(self)
 
 
@@ -343,12 +354,9 @@ cmdclass["build_ext"] = CheckingBuildExt
 #NOTE: we are not currently using this but add it to Extension, if needed.
 # libraries = ['m'] if 'win32' not in sys.platform else []
 
-from numpy.distutils.misc_util import get_info
-
 # Reset the cython exclusions file
 init_cython_exclusion(CYTHON_EXCLUSION_FILE)
 
-npymath_info = get_info("npymath")
 ext_data = dict(
     kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
               "depends" : ["statsmodels/src/capsule.h"],
@@ -362,11 +370,12 @@ ext_data = dict(
               "depends" : [],
               "include_dirs": [],
               "sources" : []},
+    # statespace also needs npymath include / libs - see below
     _statespace = {"name" : "statsmodels/tsa/statespace/_statespace.c",
               "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
+              "include_dirs": ["statsmodels/src"],
+              "libraries": [],
+              "library_dirs": [],
               "sources" : []},
     linbin = {"name" : "statsmodels/nonparametric/linbin.c",
              "depends" : [],
@@ -451,6 +460,10 @@ except ImportError:
     for name, data in statespace_ext_data.items():
         path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
         append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
+
+# Statespace also requires the npymath configuration. We add this at build time
+# in the custom build_ext command below
+EXTS_NEEDING_NPYMATH = [ext_data['_statespace']['name']]
 
 extensions = []
 for name, data in ext_data.items():
