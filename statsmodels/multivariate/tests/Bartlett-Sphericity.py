@@ -22,6 +22,46 @@ It Outputs the test result, degrees of freedom and p-value
 
 def Bartlett_Sphericity(dataset, corr_method="pearson"):
     
+    r"""
+    
+    Parameters
+    ----------
+    dataset : dataframe, mandatory (numerical or ordinal variables)
+        
+    corr_method : {'pearson', 'spearman'}, optional
+        
+    Returns
+    -------
+    out : str
+        The function outputs the test value (chi2), the degrees of freedom (ddl)
+        and the p-value.
+        It also delivers the n_p_ratio if the number of instances divided 
+        by the numbers of variables is more than 5
+        
+        Ex:
+        chi2:  410.27280642443156
+        ddl:  45.0
+        p-value:  8.73359410503e-61
+        n_p_ratio:    20.00
+    
+    References
+    ----------
+    [1] R. Sarmento and V. Costa,
+    "Comparative Approaches to Using R and Python for Statistical Data Analysis"
+    in press, Cybertech Publishing, 2016.
+    
+    Examples
+    --------
+    illustration how to use the function.
+    
+    >>> Bartlett_Sphericity(survey_data, corr_method="spearman")
+    chi2:  410.27280642443156
+    ddl:  45.0
+    p-value:  8.73359410503e-61
+    n_p_ratio:    20.00
+    Warning: we advise  to  use  this  test  only  if  the number of instances divided by the number of variables is lower than 5. Please try the KMO test, for example.
+    """
+    
     import numpy as np
     import math as math
     import scipy.stats as stats
