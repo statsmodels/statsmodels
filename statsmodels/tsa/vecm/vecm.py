@@ -20,7 +20,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import output as var_output, output
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
-from statsmodels.tsa.vector_ar.util import vech, get_index
+from statsmodels.tsa.vector_ar.util import vech, get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality
 
@@ -112,6 +112,21 @@ def num_det_vars(det_string, seasons=0):
         num += seasons - 1
     return num
 
+
+def deterministic_to_exog(deterministic, seasons, len_data,
+                          first_season=0, seasons_centered=False):
+            exog = []
+            if "co" in deterministic or "ci" in deterministic:
+                exog.append(np.ones(len_data))
+            if "lo" in deterministic or "li" in deterministic:
+                exog.append(np.arange(len_data))
+            if seasons > 0:
+                exog.append(seasonal_dummies(seasons, len_data,
+                                             first_period=first_season,
+                                             centered=seasons_centered))
+            return np.column_stack(exog) if exog else None
+
+
 def mat_sqrt(_2darray):
     """Calculates the square root of a matrix.
 
@@ -130,7 +145,8 @@ def mat_sqrt(_2darray):
     return chain_dot(u_, np.diag(s_), v_)
 
 
-def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
+def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0,
+                    first_season=0):
     """Returns different matrices needed for parameter estimation (compare p.
     186 in [1]_). These matrices consist of elements of the data as well as
     elements representing deterministic terms. A tuple of consisting of these
@@ -151,8 +167,11 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
         trend with intercept)
-    seasons : int
+    seasons : int, default: 0
         Number of seasons. 0 (default) means no seasons.
+    first_season : int, default: 0
+        The season of the first observation. `0` means first season, `1` means
+        second season, ..., `seasons-1` means the last season.
 
     Returns
     -------
@@ -207,18 +226,9 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0):
     if "co" in deterministic:
         delta_x_stack.append(np.ones(T))
     if seasons > 0:
-        season_dummy = np.zeros((seasons - 1, delta_x.shape[1]))
-        for i in range(seasons - 1):
-            season_dummy[i, i::seasons] = 1
-        # season_dummy = season_dummy[:, ::-1]
-        # season_dummy = np.hstack((season_dummy[:, 3:4],
-        #   season_dummy[:, :-1]))
-        # season_dummy = np.hstack((season_dummy[:, 2:4],
-        #   season_dummy[:, :-2]))
-        season_dummy = np.hstack((season_dummy[:, 1:4], season_dummy[:, :-3]))
-        # season_dummy[1] = -season_dummy[1]
-        season_dummy -= 1 / seasons
-        delta_x_stack.append(season_dummy)
+        delta_x_stack.append(seasonal_dummies(seasons, delta_x.shape[1],
+                                              first_period=first_season,
+                                              centered=True).T)
     if "lo" in deterministic:
         delta_x_stack.append(np.arange(T)+1)
     delta_x = np.row_stack(delta_x_stack)
@@ -350,7 +360,8 @@ class VECM(tsbase.TimeSeriesModel):
     """
 
     def __init__(self, endog_tot, dates=None, freq=None, missing="none",
-                 diff_lags=1, coint_rank=1, deterministic="nc", seasons=0):
+                 diff_lags=1, coint_rank=1, deterministic="nc", seasons=0,
+                 first_season=0):
         super(VECM, self).__init__(endog_tot, None, dates, freq,
                                    missing=missing)
         if self.endog.ndim == 1:
@@ -362,6 +373,7 @@ class VECM(tsbase.TimeSeriesModel):
         self.coint_rank = coint_rank
         self.deterministic = deterministic
         self.seasons = seasons
+        self.first_season = first_season
         self.load_coef_repr = "ec"  # name for loading coef. (alpha) in summary
 
     def fit(self, method="ml"):
@@ -387,13 +399,15 @@ class VECM(tsbase.TimeSeriesModel):
         """
         if method == "ls":
             return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
-                                          self.seasons)
+                                          self.seasons, self.first_season)
         elif method == "egls":
             return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
-                                            self.seasons, self.coint_rank)
+                                            self.seasons, self.coint_rank,
+                                            self.first_season)
         elif method == "ml":
             return self._estimate_vecm_ml(self.diff_lags, self.deterministic,
-                                          self.seasons, self.coint_rank)
+                                          self.seasons, self.coint_rank,
+                                          self.first_season)
         else:
             raise ValueError("%s not recognized, must be among %s"
                              % (method, ("ls", "egls", "ml")))
@@ -420,11 +434,12 @@ class VECM(tsbase.TimeSeriesModel):
 
         return pi_hat, gamma_hat, sigma_u_hat
 
-    def _estimate_vecm_ls(self, diff_lags, deterministic="nc", seasons=0):
+    def _estimate_vecm_ls(self, diff_lags, deterministic="nc", seasons=0,
+                          first_season=0):
         # deterministic \in \{"c", "lo", \}, where
         # c=constant, lt=linear trend, s=seasonal terms
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic, seasons)
+                self.y, diff_lags, deterministic, seasons, first_season)
 
         pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
                                                            delta_x, diff_lags,
@@ -433,9 +448,9 @@ class VECM(tsbase.TimeSeriesModel):
                 "Sigma_u_hat": sigma_u_hat}
     
     def _estimate_vecm_egls(self, diff_lags, deterministic="nc", seasons=0,
-                            r=1):
+                            r=1, first_season=0):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic, seasons)
+                self.y, diff_lags, deterministic, seasons, first_season)
         T = y_1_T.shape[1]
         
         pi_hat, _gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T,
@@ -464,27 +479,19 @@ class VECM(tsbase.TimeSeriesModel):
         return {"alpha": alpha_hat, "beta": beta_hhat, 
                 "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
     
-    def _estimate_vecm_ml(self, diff_lags, deterministic="nc", seasons=0, r=1):
+    def _estimate_vecm_ml(self, diff_lags, deterministic="nc", seasons=0, r=1,
+                          first_season=0):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic, seasons)
+                self.y, diff_lags, deterministic, seasons, first_season)
         T = y_1_T.shape[1]
 
         s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_min1)
-
-        # print("s00 shape: " + str(s00.shape))
-        # print("s01 shape: " + str(s01.shape))
-        # print("s10 shape: " + str(s10.shape))
-        # print("s11 shape: " + str(s11.shape))
-        # print("s11_ shape: " + str(s11_.shape))
 
         beta_tilde = (v[:, :r].T.dot(s11_)).T
         # normalize beta tilde such that eye(r) forms the first r rows of it:
         beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:r]))
         alpha_tilde = s01.dot(beta_tilde).dot(
                 inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
-        # print("alpha shape: " + str(alpha_tilde.shape))
-        # print("beta shape: " + str(beta_tilde.shape))
-        # print("y_min1 shape: " + str(y_min1.shape))
         gamma_tilde = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1)
                        ).dot(delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
         temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1) -
@@ -496,7 +503,8 @@ class VECM(tsbase.TimeSeriesModel):
                            deterministic=deterministic, seasons=seasons,
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
                            delta_x=delta_x, model=self, names=self.endog_names,
-                           dates=self.data.dates)
+                           dates=self.data.dates,
+                           first_season=self.first_season)
 
     @property
     def lagged_param_names(self):
@@ -731,7 +739,7 @@ class VECMResults(object):
     """    # todo: aic, bic, bse, df_model, df_resid, fittedvalues, resid
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic='nc', seasons=0,
+                 gamma, sigma_u, deterministic='nc', seasons=0, first_season=0,
                  delta_y_1_T=None, y_min1=None, delta_x=None, model=None,
                  names=None, dates=None):
         self.model = model
@@ -742,6 +750,7 @@ class VECMResults(object):
         self.k_ar = level_var_lag_order
         self.deterministic = deterministic
         self.seasons = seasons
+        self.first_season = first_season
 
         self.r = coint_rank
         self.alpha = alpha
@@ -1095,6 +1104,7 @@ class VECMResults(object):
         trend_coefs = []
 
         exog_const = np.ones(steps)
+        nobs_tot = self.nobs + self.k_ar
         if self.const.size > 0:
             exog.append(exog_const)
             trend_coefs.append(self.const.T)
@@ -1102,18 +1112,12 @@ class VECMResults(object):
             exog.append(exog_const)
             trend_coefs.append(self.alpha.dot(self.const_coint).T)
         if self.seasons > 0:
-            exog_seasonal = np.pad(np.identity(self.seasons-1),   # identity &
-                                   ((0, 1), (0, 0)), "constant")  # 0-row below
-            exog_seasonal -= 1 / self.seasons
-            if steps < self.seasons:
-                exog_seasonal = exog_seasonal[:steps]
-            if steps > self.seasons:  # repeat matrix pattern until #rows=steps
-                exog_seasonal = np.pad(exog_seasonal, ((0, steps-self.seasons),
-                                                       (0, 0)), "wrap")
+            first_future_season = (self.first_season + nobs_tot) % self.seasons
+            exog_seasonal = seasonal_dummies(self.seasons, steps,
+                                             first_future_season, True)
             exog.append(exog_seasonal)
             trend_coefs.append(self.seasonal.T)
 
-        nobs_tot = self.nobs + self.k_ar
         exog_lin_trend = list(range(nobs_tot + 1, nobs_tot + steps + 1))
         if self.lin_trend.size > 0:
             exog.append(exog_lin_trend)
@@ -1160,7 +1164,8 @@ class VECMResults(object):
         plot.plot_var_forc(y, mid, lower, upper, names=self.names,
                            plot_stderr=plot_conf_int)
 
-    def test_granger_causality(self, causing, signif=0.05, verbose=True):
+    def test_granger_causality(self, caused, causing=None, signif=0.05,
+                               verbose=True):
         """
         Test for Granger-causality as described in chapter 7.6.3 of [1]_.
         Test H0: "`causing` does not Granger-cause the remaining variables of
@@ -1169,11 +1174,21 @@ class VECMResults(object):
 
         Parameters
         ----------
-        causing : int or str or sequence of int or str
+        caused : int or str or sequence of int or str
             If int or str, test whether the variable specified via this index
-            (int) or name (str) is Granger-causing the remaining variable(s).
+            (int) or name (str) is Granger-caused by the variable(s) specified
+            by `causing`.
             If a sequence of int or str, test whether the corresponding
-            variables are Granger-causing the remaining variable(s).
+            variables are Granger-caused by the variable(s) specified
+            by `causing`.
+        causing : int or str or sequence of int or str or None, default: None
+            If int or str, test whether the variable specified via this index
+            (int) or name (str) is Granger-causing the variable(s) specified by
+            `caused`.
+            If a sequence of int or str, test whether the corresponding
+            variables are Granger-causing the variable(s) specified by
+            `caused`.
+            If None, `causing` is assumed to be the complement of `caused`.
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.95 level.
@@ -1201,20 +1216,38 @@ class VECMResults(object):
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
 
         """
-        allowed_types = (string_types, int)
-        if isinstance(causing, allowed_types):
-            causing = [causing]
-        if not all(isinstance(c, allowed_types) for c in causing):
-            raise TypeError("causing has to be of type string or int (or a " +
-                            "a sequence of these types).")
-        causing = [self.names[c] if type(c) == int else c for c in causing]
-        causing_ind = [get_index(self.names, c) for c in causing]
+        if not (0 < signif < 1):
+            raise ValueError("signif has to be between 0 and 1")
 
-        caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
-        caused = [self.names[c] for c in caused_ind]
+        allowed_types = (string_types, int)
+
+        if isinstance(caused, allowed_types):
+            caused = [caused]
+        if not all(isinstance(c, allowed_types) for c in caused):
+            raise TypeError("caused has to be of type string or int (or a "
+                            "sequence of these types).")
+        caused_ind = [get_index(self.names, c) for c in caused]
+
+        if causing is not None:
+
+            if isinstance(causing, allowed_types):
+                causing = [causing]
+            if not all(isinstance(c, allowed_types) for c in causing):
+                raise TypeError("causing has to be of type string or int (or "
+                                "a sequence of these types) or None.")
+            causing = [self.names[c] if type(c) == int else c for c in causing]
+            causing_ind = [get_index(self.names, c) for c in causing]
+
+        if causing is None:
+            causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
+            causing = [self.names[c] for c in caused_ind]
 
         y, k, t, p = self.y_all, self.neqs, self.nobs - 1, self.k_ar + 1
-        var_results = VAR(y.T).fit(maxlags=p, trend=self.deterministic)
+        exog = deterministic_to_exog(self.deterministic, self.seasons,
+                                     len_data=self.nobs + self.k_ar,
+                                     first_season=self.first_season,
+                                     seasons_centered=True)
+        var_results = VAR(y.T, exog).fit(maxlags=p, trend="nc")
 
         # num_restr is called N in Lutkepohl
         num_restr = len(causing) * len(caused) * (p - 1)
@@ -1229,18 +1262,31 @@ class VECMResults(object):
                 for ed_ind in caused_ind:
                     C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
                     row += 1
+        # print(C.shape)
+        # print(var_results.params[:-k].shape)
+        # a = np.vstack(vec(var_results.coefs[i])[:, None] for i in range(p-1))
+        # Ca = np.dot(C, a)
+        Ca = np.dot(C, vec(var_results.params[:-k].T))
 
-        a = np.vstack(vec(var_results.coefs[i])[:, None] for i in range(p-1))
-        Ca = np.dot(C, a)
-
+        x_min_p_components = []
+        if exog is not None:
+            x_min_p_components.append(exog[-t:].T)
+        # if "co" in self.deterministic or "ci" in self.deterministic:
+        #     x_min_p_components.append(np.ones(t))
+        # if "lo" in self.deterministic or "li" in self.deterministic:
+        #     x_min_p_components.append(np.arange(t))
+        # if self.seasons > 0:
+        #     x_min_p_components.append(seasonal_dummies(self.seasons, t,
+        #                                                first_period=1,
+        #                                                centered=False).T)
         x_min_p = np.zeros((k * p, t))
         for i in range(p-1):  # fll first k * k_ar rows of x_min_p
             x_min_p[i*k:(i+1)*k, :] = y[:, p-1-i:-1-i] - y[:, :-p]
         x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
-
+        x_min_p_components.append(x_min_p)
+        x_min_p = np.row_stack(x_min_p_components)
         x_x = np.dot(x_min_p, x_min_p.T)  # k*k_ar x k*k_ar
-        x_x_11 = inv(x_x)[:k * (p-1), :k * (p-1)]  # k*(k_ar-1) x k*(k_ar-1)
-
+        x_x_11 = inv(x_x)[:k * (p-1) + num_det_terms, :k * (p-1) + num_det_terms]  # k*(k_ar-1) x k*(k_ar-1)
         # For VAR-models with parameter restrictions the denominator in the
         # calculation of sigma_u is nobs and not (nobs-k*k_ar-num_det_terms).
         # Testing for Granger-causality means testing for restricted
@@ -1330,72 +1376,17 @@ class VECMResults(object):
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-
-        if not (0 < signif < 1):
-            raise ValueError("signif has to be between 0 and 1")
-
-        allowed_types = (string_types, int)
-        if isinstance(causing, allowed_types):
-            causing = [causing]
-        if not all(isinstance(c, allowed_types) for c in causing):
-            raise TypeError("causing has to be of type string or int (or a " +
-                            "a sequence of these types).")
-        causing = [self.names[c] if type(c) == int else c for c in causing]
-        causing_ind = [get_index(self.names, c) for c in causing]
-
-        caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
-        caused = [self.names[c] for c in caused_ind]
+        exog = deterministic_to_exog(self.deterministic, self.seasons,
+                                     len_data=self.nobs + self.k_ar,
+                                     first_season=self.first_season,
+                                     seasons_centered=True)
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
-        var_results = VAR(self.y_all.T).fit(maxlags=p,
-                                            trend=self.deterministic)
-
-        num_restr = len(causing) * len(caused)  # called N in Lutkepohl
-
-        sigma_u = var_results.sigma_u
-        vech_sigma_u = vech(sigma_u)
-        sig_mask = np.zeros(sigma_u.shape)
-        # set =1 twice to ensure, that all the ones needed are below the main
-        # diagonal:
-        sig_mask[causing_ind, caused_ind] = 1
-        sig_mask[caused_ind, causing_ind] = 1
-        vech_sig_mask = vech(sig_mask)
-        inds = np.nonzero(vech_sig_mask)[0]
-
-        # Make restriction matrix
-        C = np.zeros((num_restr, len(vech_sigma_u)), dtype=float)
-        for row in range(num_restr):
-            C[row, inds[row]] = 1
-        Cs = np.dot(C, vech_sigma_u)
-        d = np.linalg.pinv(duplication_matrix(k))
-        Cd = np.dot(C, d)
-        middle = inv(chain_dot(Cd, np.kron(sigma_u, sigma_u), Cd.T)) / 2
-
-        wald_statistic = t * chain_dot(Cs.T, middle, Cs)
-        df = num_restr
-        dist = scipy.stats.chi2(df)
-
-        pvalue = dist.sf(wald_statistic)
-        crit_value = dist.ppf(1 - signif)
-
-        if wald_statistic < crit_value:
-            conclusion = 'fail to reject'
-        else:
-            conclusion = 'reject'
-        results = {
-            'statistic': wald_statistic,
-            'crit_value': crit_value,
-            'pvalue': pvalue,
-            'df': df,
-            'conclusion': conclusion,
-            'signif': signif
-        }
-
-        if verbose:
-            print(var_output.causality_summary(results, causing, caused,
-                                               "wald", inst_caus=True))
-        return results
+        # fit with trend "nc" because all trend information is already in exog
+        var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="nc")
+        return var_results.test_inst_causality(causing=causing, signif=signif,
+                                               verbose=verbose)
 
     def irf(self, periods=10):
         return irf.IRAnalysis(self, periods=periods, vecm=True)

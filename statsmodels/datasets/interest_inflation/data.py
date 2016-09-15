@@ -36,6 +36,7 @@ NOTE = """::
 
 
 variable_names = ["Dp", "R"]
+first_season = 1  # 1 stands for: first observation in Q2 (0 would mean Q1)
 
 
 def load():
@@ -71,7 +72,7 @@ def _get_data():
                           names=True, dtype=float)
         return data
 
-        
+
 def __str__():
     return "e6"
 
