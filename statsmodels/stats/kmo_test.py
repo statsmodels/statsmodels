@@ -17,15 +17,19 @@ It Outputs the test result, and the results per variable
           Vera Costa
 """
 
-#KMO Test
+import numpy as np
+import math as math
+import collections
 
+#KMO Test
 def kmo_test(dataset_corr):
     
     r"""
     
     Parameters
     ----------
-    dataset_corr : correlation matrix
+    dataset_corr : ndarray
+        Array containing dataset correlation
         
     Returns
     -------
@@ -47,8 +51,7 @@ def kmo_test(dataset_corr):
         dtype: float64)
     
     References
-    ----------
-    
+    ----------    
     [1] Kaiser, H. F. (1970). A second generation little jiffy. Psychometrika, 35(4), 401-415.
     [2] Kaiser, H. F. (1974). An index of factorial simplicity. Psychometrika, 39(1), 31-36.
     [3] R. Sarmento and V. Costa, (2016)
@@ -59,8 +62,8 @@ def kmo_test(dataset_corr):
     --------
     illustration how to use the function.
     
-    >>>kmo_test(survey_data.corr(method="spearman"))
-        Out[30]: 
+    >>> kmo_test(survey_data.corr(method="spearman"))
+         
         KMO_Test_Results(value=0.85649724257367099, per_variable=Q1     1.275049
         Q2     1.250335
         Q3     1.252462
@@ -74,46 +77,39 @@ def kmo_test(dataset_corr):
         dtype: float64) 
 """
     
-    import numpy as np
-    import math as math
-    import collections
+    
 
     #KMO Test
     #inverse of the correlation matrix
     invR = np.linalg.inv(dataset_corr)
-    nrow_invR = dataset_corr.shape[0]
-    ncol_invR = dataset_corr.shape[1]
+    nrow_invR, ncol_invR = dataset_corr.shape
     
     #partial correlation matrix
-    A = np.matrix(np.ones((nrow_invR,ncol_invR)))
+    A = np.ones((nrow_invR,ncol_invR))
     for i in range(0,nrow_invR,1):
         for j in range(i,ncol_invR,1):
             #above the diagonal
-            A.itemset((i,j),round(-(invR[i,j]) / (math.sqrt(invR[i,i]*invR[j,j])),9)) 
+            A[i,j] = round(-(invR[i,j]) / (math.sqrt(invR[i,i]*invR[j,j])),9) 
             #below the diagonal
-            A.itemset((j,i),A[i,j])
+            A[j,i] = A[i,j]
     
     
     #KMO value
     kmo_num = np.sum(np.square(dataset_corr))-(np.sum(np.diagonal(np.square(dataset_corr))))
     kmo_denom = kmo_num + np.sum(np.square(A))-(np.sum(np.diagonal(np.square(A))))
     kmo_value = kmo_num/kmo_denom
-    #print(kmo_value)
     
     #transform to an array of arrays ("matrix" with Python)
-    dataset_corr = np.matrix(dataset_corr)
+    dataset_corr = np.asarray(dataset_corr)
     
     #KMO per variable (diagonal of the spss anti-image matrix)
-    for j in range(0, dataset_corr.shape[1],1):
-        kmo_j_num = np.sum(np.square(dataset_corr[:,[j]]))-dataset_corr[j,j]**2
-        kmo_j_denom = kmo_j_num + (np.sum(np.square(A[:,[j]]))-A[j,j]**2)
+    for j in range(0, dataset_corr.shape[1]):
+        kmo_j_num = np.sum((dataset_corr[:,[j]])**2)-dataset_corr[j,j]**2
+        kmo_j_denom = kmo_j_num + (np.sum((A[:,[j]])**2)-A[j,j]**2)
         kmo_j = kmo_j_num / kmo_j_denom
-        #print(kmo_j)
 
     
-    Result = collections.namedtuple("KMO_Test_Results", ["value", "per_variable"], verbose=False, rename=False)   
+    Result = collections.namedtuple("KMO_Test_Results", ["value", "per_variable"])   
     
-    #Output of the results - named tuple
-    result = Result(value=kmo_j,per_variable=kmo_value)
-    
-    return result
+    #Output of the results - named tuple    
+    return Result(value=kmo_j,per_variable=kmo_value)
