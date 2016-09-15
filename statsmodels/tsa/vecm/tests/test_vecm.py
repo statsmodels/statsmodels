@@ -21,16 +21,16 @@ results_sm = {}
 coint_rank = 1
 
 debug_mode = True
-dont_test_se_t_p = False
+dont_test_se_t_p = True
 deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"] # todo ###############################
-seasonal_list = [0, 4]  # [0, 4] # todo #########################################################################
+seasonal_list = [0, 4] # todo #########################################################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
              "granger", "inst. causality", "impulse-response", "lag order",
              "test_norm"]
-to_test = ["test_norm"]  # all_tests  # ["beta"]
+to_test = all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -44,7 +44,8 @@ def load_results_statsmodels(dataset):
     results_per_deterministic_terms = dict.fromkeys(dt_s_list)
     for dt_s_tup in dt_s_list:
         model = VECM(data[dataset], diff_lags=3, coint_rank=coint_rank,
-                     deterministic=dt_s_tup[0], seasons=dt_s_tup[1])
+                     deterministic=dt_s_tup[0], seasons=dt_s_tup[1],
+                     first_season=dataset.first_season)  # todo: make first_season retrievable from data.py and remove hardcoded 1.
         results_per_deterministic_terms[dt_s_tup] = model.fit(
                 method="ml")
     return results_per_deterministic_terms
@@ -484,12 +485,15 @@ def test_granger_causality():
                 causing_key = tuple(ds.variable_names[i] for i in causing_ind)
 
                 caused_ind = [i for i in v_ind if i not in causing_ind]
+                caused_names = ["y" + str(i+1) for i in caused_ind]
                 caused_key = tuple(ds.variable_names[i] for i in caused_ind)
 
                 granger_sm_ind = results_sm[ds][
-                    dt].test_granger_causality(causing_ind, verbose=False)
+                    dt].test_granger_causality(caused_ind, causing_ind,
+                                               verbose=False)
                 granger_sm_str = results_sm[ds][
-                    dt].test_granger_causality(causing_names, verbose=False)
+                    dt].test_granger_causality(caused_names,
+                                               causing_names, verbose=False)
 
                 # test test-statistic for Granger non-causality:
                 g_t_obt = granger_sm_ind["statistic"]
@@ -504,10 +508,11 @@ def test_granger_causality():
                     "strings as arguments don't yield the same result!".upper()
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
-                if len(causing_ind) == 1:
+                if len(causing_ind) == 1 or len(caused_ind) == 1:
+                    ci = causing_ind[0] if len(causing_ind)==1 else causing_ind
+                    ce = caused_ind[0] if len(caused_ind) == 1 else caused_ind
                     granger_sm_single_ind = results_sm[ds][
-                        dt].test_granger_causality(causing_ind[0],
-                                                   verbose=False)
+                        dt].test_granger_causality(ce, ci, verbose=False)
                     g_t_obt_single = granger_sm_single_ind["statistic"]
                     yield assert_allclose, g_t_obt_single, g_t_obt, 1e-07, 0, \
                         False, \

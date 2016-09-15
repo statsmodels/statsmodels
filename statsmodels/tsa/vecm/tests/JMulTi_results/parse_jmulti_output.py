@@ -83,7 +83,7 @@ def sublists(lst, min_elmts=0, max_elmts=None):
     return result
 
 
-def stringify_var_names(var_list):
+def stringify_var_names(var_list, delimiter=""):
     """
 
     Parameters
@@ -96,9 +96,9 @@ def stringify_var_names(var_list):
     result : string
         Concatenated variable names.
     """
-    result = ""
-    for var_name in var_list:
-        result += var_name
+    result = var_list[0]
+    for var_name in var_list[1:]:
+        result += delimiter + var_name
     return result.lower()
 
 
@@ -339,8 +339,6 @@ def load_results_jmulti(dataset, dt_s_list):
         # (at least 1 variable and not all variables together):
         var_combs = sublists(vn, 1, len(vn)-1)
         for causing in var_combs:
-            # Now that the potentially causing variables are fixed, find all
-            # combinations of potentially caused variables.
             caused = tuple(el for el in vn if el not in causing)
             granger_file = dataset.__str__() + "_" + source + "_" \
                 + dt_string + "_granger_causality_" \
@@ -365,7 +363,7 @@ def load_results_jmulti(dataset, dt_s_list):
                 granger_results[1]
 
         # ---------------------------------------------------------------------
-        # parse output related to Granger-causality and instant causality:
+        # parse output related to instant causality:
         results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
         results["inst_caus"]["p"] = dict()
         results["inst_caus"]["test_stat"] = dict()
@@ -374,8 +372,6 @@ def load_results_jmulti(dataset, dt_s_list):
         # (at least 1 variable and not all variables together):
         var_combs = sublists(vn, 1, len(vn)-1)
         for causing in var_combs:
-            # Now that the potentially causing variables are fixed, find all
-            # combinations of potentially caused variables.
             caused = tuple(el for el in vn if el not in causing)
             # Though Granger- and instantaneous causality results are in the
             # same file we use two separate files, since JMulTi is basing both
