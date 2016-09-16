@@ -71,6 +71,14 @@ class TimeSeriesModel(base.LikelihoodModel):
         self.data.dates = dates
         self.data.freq = freq
 
+        # Test for nanoseconds in early pandas versions
+        if freq is not None and _freq_to_pandas[freq].freqstr == 'N':
+            from pandas import version
+            if version.version < '0.14':
+                raise NotImplementedError('Nanosecond index not available in'
+                                          ' Pandas < 0.14')
+
+
     def _get_exog_names(self):
         return self.data.xnames
 
