@@ -18,15 +18,22 @@ def test_pandas_nodates_index():
     # can be coerced into a nanosecond DatetimeIndex
     # (This test doesn't make sense for Numpy < 1.7 since they don't have
     # nanosecond support)
+    # (This test also doesn't make sense for Pandas < 0.14 since we don't
+    # support nanosecond index in Pandas < 0.14)
     try:
         _freq_to_pandas['N']
+        from pandas import version
+        if version.version < '0.14':
+            raise NotImplementedError
     except:
         pass
     else:
         data = [988, 819, 964]
         # index=pd.date_range('1970-01-01', periods=3, freq='QS')
         index = pd.to_datetime([100, 101, 102])
-        assert_equal(str(index[0]), '1970-01-01 00:00:00.000000100')
+        actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
+                      str(index[0].value))
+        assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
         s = pd.Series(data, index=index)
         mod = TimeSeriesModel(s)
         start = mod._get_predict_start(0)
