@@ -212,8 +212,8 @@ class TestCategoricalNumerical(object):
         self.recdes = structdes.view(np.recarray)
 
     def test_array2d(self):
-        des = np.column_stack((self.des, self.instr, self.des))
-        des = tools.categorical(des, col=2)
+        des1 = np.column_stack((self.des, self.instr, self.des))
+        des = tools.categorical(des1, col=2)
         assert_array_equal(des[:,-5:], self.dummy)
         assert_equal(des.shape[1],10)
 

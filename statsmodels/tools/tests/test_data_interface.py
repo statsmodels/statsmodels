@@ -274,16 +274,12 @@ class TestCategoricalNumerical(TestCategorical):
     # TODO: use assert_raises to check that bad inputs are taken care of
 
     def test_array2d(self):
-        set_trace()
-
         des = np.column_stack((self.des, self.instr, self.des))
         des = to_categorical(des, col=2)
         assert_array_equal(des[:, -5:], self.dummy)
         assert_equal(des.shape[1], 10)
 
     def test_array1d(self):
-        set_trace()
-
         des = to_categorical(self.instr)
         assert_array_equal(des[:, -5:], self.dummy)
         assert_equal(des.shape[1], 6)
@@ -295,6 +291,8 @@ class TestCategoricalNumerical(TestCategorical):
         assert_equal(des.shape[1], 9)
 
     def test_array1d_drop(self):
+        set_trace()
+
         des = to_categorical(self.instr, drop=True)
         assert_array_equal(des, self.dummy)
         assert_equal(des.shape[1], 5)
