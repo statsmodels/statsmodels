@@ -7,8 +7,6 @@ from numpy.testing import assert_equal, assert_array_equal
 import pandas as pd
 import numpy as np
 
-from pdb import set_trace
-
 
 def test_list_numpy():
     data_list = [1, 2, 3]
@@ -388,22 +386,22 @@ class TestCategoricalNumerical(TestCategorical):
 
 class TestCategoricalString(TestCategorical):
     # comment out until we have type coercion
-    #    def test_array2d(self):
-    #        des = np.column_stack((self.des, self.instr, self.des))
-    #        des = to_categorical(des, col=2)
-    #        assert_array_equal(des[:,-5:], self.dummy)
-    #        assert_equal(des.shape[1],10)
+    def test_array2d(self):
+        des = np.column_stack((self.des, self.instr, self.des))
+        des = to_categorical(des, col=2)
+        assert_array_equal(des[:,-5:], self.dummy)
+        assert_equal(des.shape[1],10)
 
-    #    def test_array1d(self):
-    #        des = to_categorical(self.instr)
-    #        assert_array_equal(des[:,-5:], self.dummy)
-    #        assert_equal(des.shape[1],6)
+    def test_array1d(self):
+        des = to_categorical(self.instr)
+        assert_array_equal(des[:,-5:], self.dummy)
+        assert_equal(des.shape[1],6)
 
-    #    def test_array2d_drop(self):
-    #        des = np.column_stack((self.des, self.instr, self.des))
-    #        des = to_categorical(des, col=2, drop=True)
-    #        assert_array_equal(des[:,-5:], self.dummy)
-    #        assert_equal(des.shape[1],9)
+    def test_array2d_drop(self):
+        des = np.column_stack((self.des, self.instr, self.des))
+        des = to_categorical(des, col=2, drop=True)
+        assert_array_equal(des[:,-5:], self.dummy)
+        assert_equal(des.shape[1],9)
 
     def test_array1d_drop(self):
         des = to_categorical(self.string_var, drop=True)
