@@ -8,6 +8,12 @@ from statsmodels.stats.knockoff import (KnockoffCorrelation,
 from numpy.testing import assert_allclose, assert_array_equal
 from numpy.testing.decorators import slow
 
+try:
+    import cvxopt
+    has_cvxopt = True
+except:
+    has_cvxopt = False
+
 
 def test_equi():
     # Test the structure of the equivariant knockoff construction.
@@ -31,6 +37,9 @@ def test_equi():
 
 def test_sdp():
     # Test the structure of the SDP knockoff construction.
+
+    if not has_cvxopt:
+        return
 
     np.random.seed(2342)
     exog = np.random.normal(size=(10, 4))
@@ -66,6 +75,10 @@ def test_testers():
                [KnockoffOLS, {}]]
 
     for method in "equi", "sdp":
+
+        if method == "sdp" and not has_cvxopt:
+            continue
+
         for tv in testers:
             klass = tv[0]
             init_args = tv[1]
@@ -89,6 +102,10 @@ def test_sim():
                [KnockoffOLS, {}, 3000, 200, 3.5]]
 
     for method in "equi", "sdp":
+
+        if method == "sdp" and not has_cvxopt:
+            continue
+
         for tester_info in testers:
 
             fdr = 0
