@@ -1573,14 +1573,24 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 ' information matrix.')
 
         # References of filter and smoother output
-        for name in ['filtered_state', 'filtered_state_cov', 'predicted_state',
-                     'predicted_state_cov', 'forecasts', 'forecasts_error',
-                     'forecasts_error_cov', 'smoothed_state',
-                     'smoothed_state_cov', 'smoothed_measurement_disturbance',
-                     'smoothed_state_disturbance',
-                     'smoothed_measurement_disturbance_cov',
-                     'smoothed_state_disturbance_cov']:
+        extra_arrays = [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'smoothed_state',
+            'smoothed_state_cov', 'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']
+        for name in extra_arrays:
             setattr(self, name, getattr(self.filter_results, name, None))
+
+        # Handle removing data
+        self._data_attr_model = getattr(self, '_data_attr_model', [])
+        self._data_attr_model.extend(['ssm'])
+        self._data_attr.extend(extra_arrays)
+        self._data_attr.extend(['filter_results', 'smoother_results'])
+        self.data_in_cache = getattr(self, 'data_in_cache', [])
+        self.data_in_cache.extend([])
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
