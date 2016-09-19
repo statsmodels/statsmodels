@@ -73,8 +73,8 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Test for nanoseconds in early pandas versions
         if freq is not None and _freq_to_pandas[freq].freqstr == 'N':
-            from pandas import version
-            if version.version < '0.14':
+            from pandas import __version__ as pd_version
+            if pd_version < '0.14':
                 raise NotImplementedError('Nanosecond index not available in'
                                           ' Pandas < 0.14')
 
