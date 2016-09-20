@@ -1773,6 +1773,9 @@ class SARIMAXResults(MLEResults):
             setattr(self, '_params_%s' % name, self.params[start:end])
             start += self.model_orders[name]
 
+        # Handle removing data
+        self._data_attr_model.extend(['orig_endog', 'orig_exog'])
+
     @cache_readonly
     def arroots(self):
         """
