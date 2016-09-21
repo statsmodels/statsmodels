@@ -31,54 +31,92 @@ cdef int FORTRAN = 1
 {{py:cython_type, dtype, typenum = types}}
 
 def {{prefix}}hamilton_filter(int nobs, int k_regimes, int order,
-                              {{cython_type}} [:,:,:] transition,
+                              {{cython_type}} [:,:,:] regime_transition,
                               {{cython_type}} [:,:] conditional_likelihoods,
                               {{cython_type}} [:] joint_likelihoods,
                               {{cython_type}} [:,:] predicted_joint_probabilities,
                               {{cython_type}} [:,:] filtered_joint_probabilities):
-    cdef int t, i, j, k, ix, transition_t = 0, time_varying_transition
+    cdef int t, i, j, k, ix, regime_transition_t = 0, time_varying_regime_transition
     cdef:
         int k_regimes_order_m1 = k_regimes**(order - 1)
         int k_regimes_order = k_regimes**order
         int k_regimes_order_p1 = k_regimes**(order + 1)
-        {{cython_type}} [:] likelihoods, tmp
+        {{cython_type}} [:] weighted_likelihoods, tmp_filtered_marginalized_probabilities
 
-    time_varying_transition = transition.shape[2] > 1
-    likelihoods = np.zeros(k_regimes_order_p1, dtype={{dtype}})
-    tmp = np.zeros(k_regimes_order, dtype={{dtype}})
+    time_varying_regime_transition = regime_transition.shape[2] > 1
+    weighted_likelihoods = np.zeros(k_regimes_order_p1, dtype={{dtype}})
+    tmp_filtered_marginalized_probabilities = np.zeros(k_regimes_order, dtype={{dtype}})
 
     for t in range(nobs):
-        if time_varying_transition:
-            transition_t = t
+        if time_varying_regime_transition:
+            regime_transition_t = t
 
+        # Collapse filtered joint probabilities over the last dimension
+        # Pr[S_{t-1}, ..., S_{t-r} | t-1] = \sum_{ S_{t-r-1} } Pr[S_{t-1}, ..., S_{t-r}, S_{t-r-1} | t-1]
         ix = 0
-        tmp[:] = 0
+        tmp_filtered_marginalized_probabilities[:] = 0
         for j in range(k_regimes_order):
             for i in range(k_regimes):
-                tmp[j] = tmp[j] + filtered_joint_probabilities[ix, t]
+                tmp_filtered_marginalized_probabilities[j] = (
+                    tmp_filtered_marginalized_probabilities[j] +
+                    filtered_joint_probabilities[ix, t])
                 ix = ix + 1
 
-        ix = 0
-        for i in range(k_regimes):
-            for j in range(k_regimes):
-                for k in range(k_regimes_order_m1):
-                    predicted_joint_probabilities[ix, t] = (
-                        tmp[j * k_regimes_order_m1 + k] *
-                        transition[i, j, transition_t])
-                    ix += 1
+        {{prefix}}hamilton_filter_iteration(t, k_regimes, order,
+                                  regime_transition[:, :, regime_transition_t],
+                                  weighted_likelihoods,
+                                  tmp_filtered_marginalized_probabilities,
+                                  conditional_likelihoods[:, t],
+                                  joint_likelihoods,
+                                  predicted_joint_probabilities[:, t],
+                                  filtered_joint_probabilities[:, t],
+                                  filtered_joint_probabilities[:, t+1])
 
-        for i in range(k_regimes_order_p1):
-            likelihoods[i] = (
-                predicted_joint_probabilities[i, t] *
-                conditional_likelihoods[i, t])
-            joint_likelihoods[t] = joint_likelihoods[t] + likelihoods[i]
 
-        for i in range(k_regimes_order_p1):
-            if joint_likelihoods[t] == 0:
-                filtered_joint_probabilities[i, t+1] = np.inf
-            else:
-                filtered_joint_probabilities[i, t+1] = (
-                    likelihoods[i] / joint_likelihoods[t])
+cdef {{prefix}}hamilton_filter_iteration(int t, int k_regimes, int order,
+                              {{cython_type}} [:,:] regime_transition,
+                              {{cython_type}} [:] weighted_likelihoods,
+                              {{cython_type}} [:] prev_filtered_marginalized_probabilities,
+                              {{cython_type}} [:] conditional_likelihoods,
+                              {{cython_type}} [:] joint_likelihoods,
+                              {{cython_type}} [:] curr_predicted_joint_probabilities,
+                              {{cython_type}} [:] prev_filtered_joint_probabilities,
+                              {{cython_type}} [:] curr_filtered_joint_probabilities):
+    cdef int i, j, k, ix
+    cdef:
+        int k_regimes_order_m1 = k_regimes**(order - 1)
+        int k_regimes_order = k_regimes**order
+        int k_regimes_order_p1 = k_regimes**(order + 1)
 
+    # Compute predicted joint probabilities
+    # Pr[S_t, S_{t-1}, ..., S_{t-r} | t-1] = Pr[S_t | S_{t-1}] * Pr[S_{t-1}, ..., S_{t-r} | t-1]
+    ix = 0
+    for i in range(k_regimes):
+        for j in range(k_regimes):
+            for k in range(k_regimes_order_m1):
+                curr_predicted_joint_probabilities[ix] = (
+                    prev_filtered_marginalized_probabilities[j * k_regimes_order_m1 + k] *
+                    regime_transition[i, j])
+                ix += 1
+
+    # Compute weighted likelihoods f(y_t | S_t, S_{t-1}, ..., S_{t-r}, t-1) * Pr[S_t, S_{t-1}, ..., S_{t-r} | t-1]
+    # and the joint likelihood f(y_t | t-1)
+    for i in range(k_regimes_order_p1):
+        weighted_likelihoods[i] = (
+            curr_predicted_joint_probabilities[i] *
+            conditional_likelihoods[i])
+        joint_likelihoods[t] = joint_likelihoods[t] + weighted_likelihoods[i]
+
+    # Compute filtered joint probabilities
+    # Pr[S_t, S_{t-1}, ..., S_{t-r} | t] = (
+    #     f(y_t | S_t, S_{t-1}, ..., S_{t-r}, t-1) *
+    #     Pr[S_t, S_{t-1}, ..., S_{t-r} | t-1] /
+    #     f(y_t | t-1))
+    for i in range(k_regimes_order_p1):
+        if joint_likelihoods[t] == 0:
+            curr_filtered_joint_probabilities[i] = np.inf
+        else:
+            curr_filtered_joint_probabilities[i] = (
+                weighted_likelihoods[i] / joint_likelihoods[t])
 
 {{endfor}}
