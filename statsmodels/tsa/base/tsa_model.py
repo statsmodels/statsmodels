@@ -3,7 +3,7 @@ from statsmodels.compat.pandas import is_numeric_dtype
 
 import datetime
 
-from pandas import to_datetime, DatetimeIndex, Period, PeriodIndex
+from pandas import to_datetime, DatetimeIndex, Period, PeriodIndex, Timestamp
 
 from statsmodels.base import data
 import statsmodels.base.model as base
@@ -70,6 +70,15 @@ class TimeSeriesModel(base.LikelihoodModel):
                 dates = PeriodIndex(dates)
         self.data.dates = dates
         self.data.freq = freq
+
+        # Test for nanoseconds in early pandas versions
+        if freq is not None and _freq_to_pandas[freq].freqstr == 'N':
+            from distutils.version import LooseVersion
+            from pandas import __version__ as pd_version
+            if LooseVersion(pd_version) < '0.14':
+                raise NotImplementedError('Nanosecond index not available in'
+                                          ' Pandas < 0.14')
+
 
     def _get_exog_names(self):
         return self.data.xnames
@@ -235,6 +244,18 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self.data.dates.__class__(start=dtstart,
                                               end=dtend,
                                               freq=pandas_freq)
+
+            if pandas_freq.freqstr == 'N':
+                _dtend = dtend
+                if isinstance(dates[-1], Period):
+                    _dtend = pd.to_datetime(_dtend).to_period(dates.freq)
+                if not dates[-1] == _dtend:
+                    # TODO: this is a hack because a DatetimeIndex with
+                    # nanosecond frequency does not include "end"
+                    dtend = Timestamp(dtend.value + 1)
+                    dates = self.data.dates.__class__(start=dtstart,
+                                                      end=dtend,
+                                                      freq=pandas_freq)
         # handle
         elif freq is None and (isinstance(dtstart, (int, long)) and
                                isinstance(dtend, (int, long))):
