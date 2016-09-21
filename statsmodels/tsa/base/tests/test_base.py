@@ -32,8 +32,9 @@ def test_pandas_nodates_index():
         s = pd.Series(data, index=index)
 
         # Alternate test for Pandas < 0.14
+        from distutils.version import LooseVersion
         from pandas import __version__ as pd_version
-        if pd_version < '0.14':
+        if LooseVersion(pd_version) < '0.14':
             assert_raises(NotImplementedError, TimeSeriesModel, s)
         else:
             actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
