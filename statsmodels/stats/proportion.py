@@ -31,11 +31,11 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         currently available methods :
 
          - `normal` : asymptotic normal approximation, or Wald method
-		 - `normal_cc` : asymptotic normal approximation with continuity correction
+         - `normal_cc` : asymptotic normal approximation with continuity correction (cc)
          - `agresti_coull` : Agresti-Coull interval
          - `beta` : Clopper-Pearson interval based on Beta distribution, or Exact method
          - `wilson` : Wilson Score interval
-		 - `wilson_cc` : Wilson Score interval with continuity correction
+         - `wilson_cc` : Wilson Score interval with continuity correction
          - `jeffreys` : Jeffreys Bayesian Interval
          - `binom_test` : experimental, inversion of binom_test
 
@@ -61,9 +61,9 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     References
     ----------
     http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
-	
-	Newcombe R.G., Two-sided confidence intervals for the single proportion:
-	    comparison of seven methods, Statistics in Medicine, (1998) 17, 857-872
+ 
+    Newcombe R.G., Two-sided confidence intervals for the single proportion:
+        comparison of seven methods, Statistics in Medicine, (1998) 17, 857-872
 
     Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001). "Interval
         Estimation for a Binomial Proportion",
@@ -77,15 +77,15 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     if method == 'normal':
         se = np.sqrt(q_ * (1 - q_) / nobs)      #standard error
-		z = stats.norm.isf(alpha_2)             #z score
+        z = stats.norm.isf(alpha_2)             #z score
         dist = z * se
         ci_low = q_ - dist
         ci_upp = q_ + dist
-		
-	if method == 'normal_cc':
+
+    if method == 'normal_cc':
         se = np.sqrt(q_ * (1 - q_) / nobs)      #standard error
-		z = stats.norm.isf(alpha_2)             #z score
-		cc = 1. / (2. * nobs);                  #continuity correction
+        z = stats.norm.isf(alpha_2)             #z score
+        cc = 1. / (2. * nobs);                  #continuity correction
         dist = z * se + cc
         ci_low = q_ - dist
         ci_upp = q_ + dist
@@ -125,13 +125,13 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         dist /= denom
         ci_low = center - dist
         ci_upp = center + dist
-		
-	elif method == 'wilson_cc':
-		z = stats.norm.isf(alpha_2)             #z score
-		n1 = 2 * count + z**2
-		n12 = z * np.sqrt(z**2 - 2- 1 / nobs + 4 * q_ *(nobs * (1 - q_) + 1))
-		n22 = z * np.sqrt(z**2 + 2- 1 / nobs + 4 * q_ *(nobs * (1 - q_) - 1))
-		d= 2 * (nobs + z**2)
+
+    elif method == 'wilson_cc':
+        z = stats.norm.isf(alpha_2)             #z score
+        n1 = 2 * count + z**2
+        n12 = z * np.sqrt(z**2 - 2- 1 / nobs + 4 * q_ *(nobs * (1 - q_) + 1))
+        n22 = z * np.sqrt(z**2 + 2- 1 / nobs + 4 * q_ *(nobs * (1 - q_) - 1))
+        d= 2 * (nobs + z**2)
 
         ci_low = ( n1 - 1 - n12) / d
         ci_upp = ( n1 + 1 + n22) / d
