@@ -337,7 +337,7 @@ class DensityOrthoPoly(object):
         xeval = self._transform(xeval)
         if order is None:
             order = len(self.polys)
-        res = sum(c*p(xeval) for c, p in zip(self.coeffs, self.polys)[:order])
+        res = sum(c*p(xeval) for c, p in list(zip(self.coeffs, self.polys))[:order])
         res = self._correction(res)
         return res
 
@@ -429,7 +429,7 @@ if __name__ == '__main__':
     nobs = 10000
 
     import matplotlib.pyplot as plt
-    from statsmodels.sandbox.distributions.mixture_rvs import (
+    from statsmodels.distributions.mixture_rvs import (
                                                 mixture_rvs, MixtureDistribution)
 
     #np.random.seed(12345)
