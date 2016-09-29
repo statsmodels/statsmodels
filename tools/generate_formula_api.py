@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 """
 This will generate an API file for formula. in dir/statsmodels/formula/api.py
 
