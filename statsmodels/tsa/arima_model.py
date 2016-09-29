@@ -986,7 +986,6 @@ class ARMA(tsbase.TimeSeriesModel):
 #so model methods are not the same on unfit models as fit ones
 #starting to think that order of model should be put in instantiation...
 class ARIMA(ARMA):
-
     __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
                                  "params" : _arima_params, "extra_params" : "",
                                  "extra_sections" : _armax_notes %
@@ -1001,6 +1000,9 @@ class ARIMA(ARMA):
             mod = super(ARIMA, cls).__new__(cls)
             mod.__init__(endog, order, exog, dates, freq, missing)
             return mod
+
+    def __getnewargs__(self):
+        return ((self.endog),(self.k_lags, self.k_diff, self.k_ma))
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
