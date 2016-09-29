@@ -1,9 +1,8 @@
-from statsmodels.base.elastic_net import fit_elasticnet, RegularizedResults
-from statsmodels.stats.regularized_covariance import _calc_nodewise_row, _calc_nodewise_weight, _calc_approx_inv_cov
+from statsmodels.base.elastic_net import RegularizedResults
+from statsmodels.stats.regularized_covariance import _calc_nodewise_row, \
+    _calc_nodewise_weight, _calc_approx_inv_cov
 from statsmodels.base.model import LikelihoodModelResults
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
-import statsmodels.base.wrapper as wrap
 import numpy as np
 
 """
@@ -71,6 +70,7 @@ debiasing procedure.
 
     formed by node-wise regression.
 """
+
 
 def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
     """estimates the regularized fitted parameters.
@@ -468,11 +468,10 @@ class DistributedModel(object):
         else:
             self.results_class = results_class
 
-        if results_kwds  is None:
+        if results_kwds is None:
             self.results_kwds = {}
         else:
             self.results_kwds = results_kwds
-
 
     def fit(self, data_generator, fit_kwds=None, parallel_method="sequential",
             parallel_backend=None, init_kwds_generator=None):
@@ -512,9 +511,9 @@ class DistributedModel(object):
                                             init_kwds_generator)
 
         elif parallel_method == "joblib":
-             results_l = self.fit_joblib(data_generator, fit_kwds,
-                                         parallel_backend,
-                                         init_kwds_generator)
+            results_l = self.fit_joblib(data_generator, fit_kwds,
+                                        parallel_backend,
+                                        init_kwds_generator)
 
         else:
             raise ValueError("parallel_method: %s is currently not supported"
@@ -530,7 +529,6 @@ class DistributedModel(object):
         res_mod = self.model_class([0], [0], **self.init_kwds)
 
         return self.results_class(res_mod, params, **self.results_kwds)
-
 
     def fit_sequential(self, data_generator, fit_kwds,
                        init_kwds_generator=None):
@@ -579,7 +577,6 @@ class DistributedModel(object):
 
         return results_l
 
-
     def fit_joblib(self, data_generator, fit_kwds, parallel_backend,
                    init_kwds_generator=None):
         """Performs the distributed estimation in parallel using joblib
@@ -623,15 +620,15 @@ class DistributedModel(object):
 
         elif parallel_backend is None and init_kwds_generator is not None:
             tup_gen = enumerate(zip(data_generator, init_kwds_generator))
-            results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds_e)
-                            for pnum, ((endog, exog), init_kwds_e)
+            results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds)
+                            for pnum, ((endog, exog), init_kwds)
                             in tup_gen)
 
         elif parallel_backend is not None and init_kwds_generator is not None:
             tup_gen = enumerate(zip(data_generator, init_kwds_generator))
             with parallel_backend:
-                results_l = par(f(self, pnum, endog, exog, fit_kwds, int_kwds_e)
-                                for pnum, ((endog, exog), init_kwds_e)
+                results_l = par(f(self, pnum, endog, exog, fit_kwds, int_kwds)
+                                for pnum, ((endog, exog), init_kwds)
                                 in tup_gen)
 
         return results_l
@@ -676,6 +673,5 @@ class DistributedResults(LikelihoodModelResults):
             See self.model.predict
 
         """
-
 
         return self.model.predict(self.params, exog, *args, **kwargs)
