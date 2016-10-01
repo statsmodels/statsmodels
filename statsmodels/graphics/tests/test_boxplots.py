@@ -41,3 +41,37 @@ def test_violinplot_beanplot():
                         'label_rotation':30})
 
     plt.close(fig)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    beanplot(age, ax=ax, labels=labels, jitter=True,
+             plot_opts={'cutoff_val': 5, 'cutoff_type': 'abs',
+                        'label_fontsize': 'small',
+                        'label_rotation': 30})
+
+    plt.close(fig)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    beanplot(age, ax=ax, labels=labels, jitter=True, side='right',
+             plot_opts={'cutoff_val': 5, 'cutoff_type': 'abs',
+                        'label_fontsize': 'small',
+                        'label_rotation': 30})
+
+    plt.close(fig)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    beanplot(age, ax=ax, labels=labels, jitter=True, side='left',
+             plot_opts={'cutoff_val': 5, 'cutoff_type': 'abs',
+                        'label_fontsize': 'small',
+                        'label_rotation': 30})
+
+    plt.close(fig)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    beanplot(age, ax=ax, labels=labels,
+             plot_opts={'bean_legend_text': 'text'})
+
+    plt.close(fig)

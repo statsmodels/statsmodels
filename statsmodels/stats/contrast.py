@@ -148,7 +148,7 @@ class ContrastResults(object):
             summ = summary_params((self, self.effect, self.sd, self.statistic,
                                    pvalues, self.conf_int(alpha)),
                                   yname=yname, xname=xname, use_t=use_t,
-                                  title=title)
+                                  title=title, alpha=alpha)
             return summ
         elif hasattr(self, 'fvalue'):
             # TODO: create something nicer for these casee
@@ -175,7 +175,8 @@ class ContrastResults(object):
             summ = summary_params_frame((self, self.effect, self.sd,
                                          self.statistic,self.pvalue,
                                          self.conf_int(alpha)), yname=yname,
-                                         xname=xname, use_t=use_t)
+                                         xname=xname, use_t=use_t,
+                                         alpha=alpha)
             return summ
         else:
             # TODO: create something nicer

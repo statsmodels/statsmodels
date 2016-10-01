@@ -22,7 +22,7 @@ def t_est_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result as res2
     #base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
-    base_gh = "http://statsmodels.sourceforge.net/devel/_static/"
+    base_gh = "http://www.statsmodels.org/devel/_static/"
     res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
     assert_array_equal(res1 == res2, True)
 

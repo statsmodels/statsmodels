@@ -1407,6 +1407,22 @@ def test_formula_missing_exposure():
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
 
+
+def test_binary_pred_table_zeros():
+    # see 2968
+    nobs = 10
+    y = np.zeros(nobs)
+    y[[1,3]] = 1
+
+    res = Logit(y, np.ones(nobs)).fit(disp=0)
+    expected = np.array([[ 8.,  0.], [ 2.,  0.]])
+    assert_equal(res.pred_table(), expected)
+
+    res = MNLogit(y, np.ones(nobs)).fit(disp=0)
+    expected = np.array([[ 8.,  0.], [ 2.,  0.]])
+    assert_equal(res.pred_table(), expected)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],

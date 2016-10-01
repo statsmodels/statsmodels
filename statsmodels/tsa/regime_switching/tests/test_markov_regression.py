@@ -958,6 +958,28 @@ class TestFedFundsConstShort(MarkovRegression):
         for i in range(3):
             assert_allclose(actual[i], desired[i])
 
+    def test_py_kim_smoother(self):
+        mod = self.model
+        params = self.true['params']
+
+        regime_transition = mod.regime_transition_matrix(params)
+        initial_probabilities = mod.initial_probabilities(
+            params, regime_transition)
+        conditional_likelihoods = mod._conditional_likelihoods(params)
+
+        # Hamilton filter
+        filter_output = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+
+        # Kim smoother
+        actual = markov_switching.py_kim_smoother(
+            regime_transition, filter_output[1], filter_output[3])
+        desired = markov_switching.cy_kim_smoother(
+            regime_transition, filter_output[1], filter_output[3])
+
+        for i in range(2):
+            assert_allclose(actual[i], desired[i])
+
 
 class TestFedFundsConstL1(MarkovRegression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf

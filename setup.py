@@ -53,11 +53,11 @@ curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(pjoin(curdir, "README.rst")).read()
 
 DISTNAME = 'statsmodels'
-DESCRIPTION = 'Statistical computations and models for use with SciPy'
+DESCRIPTION = 'Statistical computations and models for Python'
 LONG_DESCRIPTION = README
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
 MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
-URL = 'http://statsmodels.sourceforge.net/'
+URL = 'http://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
@@ -162,16 +162,21 @@ REV = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
-classifiers = [ 'Development Status :: 4 - Beta',
-              'Environment :: Console',
-              'Programming Language :: Python :: 2.6',
-              'Programming Language :: Python :: 2.7',
-              'Programming Language :: Python :: 3.2',
-              'Operating System :: OS Independent',
-              'Intended Audience :: Developers',
-              'Intended Audience :: Science/Research',
-              'License :: OSI Approved :: BSD License',
-              'Topic :: Scientific/Engineering']
+classifiers = ['Development Status :: 4 - Beta',
+               'Environment :: Console',
+               'Programming Language :: Cython',
+               'Programming Language :: Python :: 2.6',
+               'Programming Language :: Python :: 2.7',
+               'Programming Language :: Python :: 3.3',
+               'Programming Language :: Python :: 3.4',
+               'Programming Language :: Python :: 3.5',
+               'Operating System :: OS Independent',
+               'Intended Audience :: End Users/Desktop',
+               'Intended Audience :: Developers',
+               'Intended Audience :: Science/Research',
+               'Natural Language :: English',
+               'License :: OSI Approved :: BSD License',
+               'Topic :: Scientific/Engineering']
 
 # Return the git revision as a string
 def git_version():
@@ -339,6 +344,10 @@ ext_data = dict(
                   "depends" : [],
                   "include_dirs": [],
                   "sources" : []},
+        _kim_smoother = {"name" : "statsmodels/tsa/regime_switching/_kim_smoother.c",
+              "depends" : [],
+              "include_dirs": [],
+              "sources" : []},
         _statespace = {"name" : "statsmodels/tsa/statespace/_statespace.c",
                   "depends" : ["statsmodels/src/capsule.h"],
                   "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
@@ -393,14 +402,14 @@ if __name__ == "__main__":
         os.unlink('MANIFEST')
 
     min_versions = {
-        'numpy' : '1.4.0',
-        'scipy' : '0.7.0',
-        'pandas' : '0.7.1',
-        'patsy' : '0.1.0',
+        'numpy' : '1.6.2',
+        'scipy' : '0.11',
+        'pandas' : '0.13',
+        'patsy' : '0.2.1',
                    }
     if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
         # 3.3 needs numpy 1.7+
-        min_versions.update({"numpy" : "1.7.0b2"})
+        min_versions.update({"numpy" : "1.7.0"})
 
     (setup_requires,
      install_requires) = check_dependency_versions(min_versions)

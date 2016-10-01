@@ -10,8 +10,8 @@ import statsmodels.graphics.utils as utils
 
 
 def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
-                     xlabel=None, ylabel=None, colors=[], markers=[],
-                     linestyles=[], legendloc='best', legendtitle=None,
+                     xlabel=None, ylabel=None, colors=None, markers=None,
+                     linestyles=None, legendloc='best', legendtitle=None,
                      **kwargs):
     """
     Interaction plot for factor level statistics.
@@ -112,28 +112,16 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     # check plot args
     n_trace = len(plot_data['trace'].unique())
 
-    if linestyles:
-        try:
-            assert len(linestyles) == n_trace
-        except AssertionError as err:
-            raise ValueError("Must be a linestyle for each trace level")
-    else:  # set a default
-        linestyles = ['-'] * n_trace
-    if markers:
-        try:
-            assert len(markers) == n_trace
-        except AssertionError as err:
-            raise ValueError("Must be a linestyle for each trace level")
-    else:  # set a default
-        markers = ['.'] * n_trace
-    if colors:
-        try:
-            assert len(colors) == n_trace
-        except AssertionError as err:
-            raise ValueError("Must be a linestyle for each trace level")
-    else:  # set a default
-        #TODO: how to get n_trace different colors?
-        colors = rainbow(n_trace)
+    linestyles = ['-'] * n_trace if linestyles is None else linestyles
+    markers = ['.'] * n_trace  if markers is None else markers
+    colors = rainbow(n_trace) if colors is None else colors
+
+    if len(linestyles) != n_trace:
+        raise ValueError("Must be a linestyle for each trace level")
+    if len(markers) != n_trace:
+        raise ValueError("Must be a marker for each trace level")
+    if len(colors) != n_trace:
+        raise ValueError("Must be a color for each trace level")
 
     if plottype == 'both' or plottype == 'b':
         for i, (values, group) in enumerate(plot_data.groupby(['trace'])):

@@ -485,6 +485,14 @@ def test_summary():
     # Test res.summary when `model_name` was not provided
     assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
 
+    # Smoke test that summary still works when diagnostic tests fail
+    res.filter_results._standardized_forecasts_error[:] = np.nan
+    res.summary()
+    res.filter_results._standardized_forecasts_error = 1
+    res.summary()
+    res.filter_results._standardized_forecasts_error = 'a'
+    res.summary()
+
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
@@ -642,6 +650,7 @@ def test_pandas_endog():
     # Example (failure): pandas.Series, no dates
     endog = pd.Series([1., 2.])
     # raises error due to no dates
+    warnings.simplefilter('always')
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
     # Example : pandas.Series
