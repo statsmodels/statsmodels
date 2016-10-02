@@ -81,31 +81,31 @@ def kmo_test(dataset_corr):
 
     #KMO Test
     #inverse of the correlation matrix
-    invR = np.linalg.inv(dataset_corr)
-    nrow_invR, ncol_invR = dataset_corr.shape
+    corr_inv = np.linalg.inv(dataset_corr)
+    nrow_inv_corr, ncol_inv_corr = dataset_corr.shape
     
     #partial correlation matrix
-    A = np.ones((nrow_invR,ncol_invR))
-    for i in range(0,nrow_invR,1):
-        for j in range(i,ncol_invR,1):
+    A = np.ones((nrow_inv_corr,ncol_inv_corr))
+    for i in range(0,nrow_inv_corr,1):
+        for j in range(i,ncol_inv_corr,1):
             #above the diagonal
-            A[i,j] = round(-(invR[i,j]) / (math.sqrt(invR[i,i]*invR[j,j])),9) 
+            A[i,j] = - (corr_inv[i,j]) / (math.sqrt(corr_inv[i,i] * corr_inv[j,j]))
             #below the diagonal
             A[j,i] = A[i,j]
     
     
     #KMO value
-    kmo_num = np.sum(np.square(dataset_corr))-(np.sum(np.diagonal(np.square(dataset_corr))))
-    kmo_denom = kmo_num + np.sum(np.square(A))-(np.sum(np.diagonal(np.square(A))))
-    kmo_value = kmo_num/kmo_denom
+    kmo_num = np.sum(np.square(dataset_corr)) - (np.sum(np.diagonal(np.square(dataset_corr))))
+    kmo_denom = kmo_num + np.sum(np.square(A)) - (np.sum(np.square(np.diagonal(A))))
+    kmo_value = kmo_num / kmo_denom
     
     #transform to an array of arrays ("matrix" with Python)
     dataset_corr = np.asarray(dataset_corr)
     
     #KMO per variable (diagonal of the spss anti-image matrix)
     for j in range(0, dataset_corr.shape[1]):
-        kmo_j_num = np.sum((dataset_corr[:,[j]])**2)-dataset_corr[j,j]**2
-        kmo_j_denom = kmo_j_num + (np.sum((A[:,[j]])**2)-A[j,j]**2)
+        kmo_j_num = np.sum((dataset_corr[:,[j]]) ** 2) - dataset_corr[j,j] ** 2
+        kmo_j_denom = kmo_j_num + (np.sum((A[:,[j]]) ** 2) - A[j,j] ** 2)
         kmo_j = kmo_j_num / kmo_j_denom
 
     
