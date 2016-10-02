@@ -291,8 +291,6 @@ class TestCategoricalNumerical(TestCategorical):
         assert_equal(des.shape[1], 9)
 
     def test_array1d_drop(self):
-        set_trace()
-
         des = to_categorical(self.instr, drop=True)
         assert_array_equal(des, self.dummy)
         assert_equal(des.shape[1], 5)

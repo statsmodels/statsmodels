@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from functools import partial
-from copy import copy
 from patsy import dmatrix
 from patsy.design_info import DesignMatrix
 
@@ -168,7 +167,6 @@ def to_categorical(data, col=None, dictnames=False, drop=False):
                 to_dummies = transpose(to_dummies)
 
         to_dummies = pd.Series(to_dummies)
-
 
     else:
         to_type = type(data)
@@ -490,6 +488,7 @@ def is_recarray(data):
             return False
     else:
         return False
+
 
 def recarray_to_pandas(data):
 

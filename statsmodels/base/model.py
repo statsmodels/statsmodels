@@ -765,10 +765,9 @@ class Results(object):
         """
         from statsmodels.tools.data_interface import NumPyInterface, get_ndim
 
-<<<<<<< HEAD
         at_least_2d = False
         require_col_vector = False
-=======
+
         exog_index = exog.index if _is_using_pandas(exog, None) else None
 
         if transform and hasattr(self.model, 'formula') and exog is not None:
@@ -782,7 +781,6 @@ class Results(object):
                 else:
                     import warnings
                     warnings.warn("nan rows have been dropped", ValueWarning)
->>>>>>> upstream/master
 
         if exog is not None:
             at_least_2d = True # needed in count model shape[1]
