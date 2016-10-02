@@ -82,7 +82,7 @@ def bartlett_sphericity(dataset, corr_method="pearson"):
     n_p_ratio = n / p
     
     #Several Calculations
-    chi2 = - (n - 1 - (2 * p + 5) / 6)*math.log(np.linalg.det(dataset.corr(method=corr_method)))
+    chi2 = - (n - 1 - (2 * p + 5) / 6) * math.log(np.linalg.det(dataset.corr(method=corr_method)))
     #Freedom Degree
     ddl = p * (p - 1) / 2
     #p-value
