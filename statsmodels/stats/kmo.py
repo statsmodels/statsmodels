@@ -22,7 +22,7 @@ import math as math
 import collections
 
 #KMO Test
-def kmo_test(dataset_corr):
+def kmo(dataset_corr):
     
     r"""
     
@@ -93,23 +93,24 @@ def kmo_test(dataset_corr):
             #below the diagonal
             A[j,i] = A[i,j]
     
-    
-    #KMO value
-    kmo_num = np.sum(np.square(dataset_corr)) - (np.sum(np.diagonal(np.square(dataset_corr))))
-    kmo_denom = kmo_num + np.sum(np.square(A)) - (np.sum(np.square(np.diagonal(A))))
-    kmo_value = kmo_num / kmo_denom
-    
     #transform to an array of arrays ("matrix" with Python)
     dataset_corr = np.asarray(dataset_corr)
+        
+    #KMO value
+    kmo_num = np.sum(np.square(dataset_corr)) - np.sum(np.square(np.diagonal(dataset_corr)))
+    kmo_denom = kmo_num + np.sum(np.square(A)) - np.sum(np.square(np.diagonal(A)))
+    kmo_value = kmo_num / kmo_denom
     
+    
+    kmo_j = [None]*dataset_corr.shape[1]
     #KMO per variable (diagonal of the spss anti-image matrix)
     for j in range(0, dataset_corr.shape[1]):
-        kmo_j_num = np.sum((dataset_corr[:,[j]]) ** 2) - dataset_corr[j,j] ** 2
-        kmo_j_denom = kmo_j_num + (np.sum((A[:,[j]]) ** 2) - A[j,j] ** 2)
-        kmo_j = kmo_j_num / kmo_j_denom
+        kmo_j_num = np.sum(dataset_corr[:,[j]] ** 2) - dataset_corr[j,j] ** 2
+        kmo_j_denom = kmo_j_num + np.sum(A[:,[j]] ** 2) - A[j,j] ** 2
+        kmo_j[j] = kmo_j_num / kmo_j_denom
 
     
     Result = collections.namedtuple("KMO_Test_Results", ["value", "per_variable"])   
     
     #Output of the results - named tuple    
-    return Result(value=kmo_j,per_variable=kmo_value)
+    return Result(value=kmo_value,per_variable=kmo_j)
