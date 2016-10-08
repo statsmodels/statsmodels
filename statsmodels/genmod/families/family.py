@@ -893,9 +893,9 @@ class Binomial(Family):
 
         else:
             return 2 * np.sum(self.n * freq_weights *
-                              (endog * np.log(endog/mu + 1e-200) +
+                              (endog * np.log(endog/(mu + 1e-200) + 1e-200) +
                                (1 - endog) * np.log((1 - endog) /
-                               (1 - mu) + 1e-200)))
+                               (1 - mu + 1e-200) + 1e-200)))
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -949,8 +949,8 @@ class Binomial(Family):
         else:
             return (np.sign(endog - mu) *
                     np.sqrt(2 * self.n *
-                            (endog * np.log(endog/mu + 1e-200) +
-                             (1 - endog) * np.log((1 - endog)/(1 - mu) +
+                            (endog * np.log(endog/(mu + 1e-200) + 1e-200) +
+                             (1 - endog) * np.log((1 - endog)/(1 - mu + 1e-200) +
                                                   1e-200)))/scale)
 
     def loglike(self, endog, mu, freq_weights=1, scale=1.):
@@ -997,15 +997,15 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale * np.sum((endog * np.log(mu/(1 - mu) + 1e-200) +
-                                   np.log(1 - mu)) * freq_weights)
+            return scale * np.sum((endog * np.log(mu/(1 - mu + 1e-200) + 1e-200) +
+                                   np.log(1 - mu + 1e-200)) * freq_weights)
         else:
             y = endog * self.n  # convert back to successes
             return scale * np.sum((special.gammaln(self.n + 1) -
                                    special.gammaln(y + 1) -
                                    special.gammaln(self.n - y + 1) + y *
-                                   np.log(mu/(1 - mu)) + self.n *
-                                   np.log(1 - mu)) * freq_weights)
+                                   np.log(mu/(1 - mu + 1e-200) + 1e-200) + self.n *
+                                   np.log(1 - mu + 1e-200)) * freq_weights)
 
     def resid_anscombe(self, endog, mu):
         '''
