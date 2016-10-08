@@ -5,7 +5,7 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import integrate
+from scipy import integrate, stats
 
 pi2 = np.pi**2
 pi2i = 1. / pi2
@@ -137,3 +137,60 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
     else:
         return corr_n
 
+
+
+def corr_normal_scores(data):
+    """Gaussian rank (normal scores) correlation
+
+    Status: unverified, subject to change
+
+    Parameters
+    ----------
+    data : array_like
+        2-D data with observations in rows and variables in columns
+
+    Returns
+    -------
+    corr : ndarray
+        correlation matrix
+
+    """
+    # TODO: a full version should be same as scipy spearmanr
+    # needs verification for the p-value calculation
+    x = np.asarray(data)
+    nobs, k_vars = x.shape
+    axisout = 0
+    ar = np.apply_along_axis(stats.rankdata, axisout, x)
+    ar = stats.norm.ppf(ar / (nobs + 1))
+    corr = np.corrcoef(ar, rowvar=axisout)
+    return corr
+
+def corr_quadrant(data, transform=np.sign, normalize=False):
+    """Quadrant correlation
+
+    Status: unverified, subject to change
+
+    Parameters
+    ----------
+    data : array_like
+        2-D data with observations in rows and variables in columns
+
+    Returns
+    -------
+    corr : ndarray
+        correlation matrix
+
+    """
+
+    # try also with tanh transform, a starting corr for DetXXX
+    # tanh produces a cov not a corr
+    x = np.asarray(data)
+    nobs, k_vars = x.shape
+    med = np.median(x, 0)
+    x_dm = transform(x - med)
+    corr = x_dm.T.dot(x_dm) / nobs
+    if normalize:
+        std = np.sqrt(np.diag(corr))
+        corr /= std
+        corr /= std[:, None]
+    return corr
