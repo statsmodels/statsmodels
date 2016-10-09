@@ -7,6 +7,7 @@ Created on Mon Oct  3 11:32:42 2016
 
 from statsmodels.stats.descriptivestats import sign_test
 from numpy.testing import assert_almost_equal, assert_equal
+import pandas as pd
 
 def test_kmo():
     dataset = pd.DataFrame([[5,5,5,3,3,2,5,4,5,4]
