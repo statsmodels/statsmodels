@@ -102,8 +102,8 @@ def kmo(dataset_corr):
     kmo_value = kmo_num / kmo_denom
     
     
-    kmo_j = [None]*dataset_corr.shape[1]
-    #KMO per variable (diagonal of the spss anti-image matrix)
+    kmo_j = [None] * dataset_corr.shape[1]
+    #KMO per variable
     for j in range(0, dataset_corr.shape[1]):
         kmo_j_num = np.sum(dataset_corr[:,[j]] ** 2) - dataset_corr[j,j] ** 2
         kmo_j_denom = kmo_j_num + np.sum(A[:,[j]] ** 2) - A[j,j] ** 2
