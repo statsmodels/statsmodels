@@ -36,3 +36,11 @@ def test_robcov_SMOKE():
                                 start_cov=np.diag(robust.mad(x)**2),
                                 shrinkage_factor=0.1,
                                 nobs=x.shape[0], k_vars=x.shape[1])
+
+    # others, M-, ...
+
+    # estimation for multivariate t
+    r = robcov._cov_iter(x, robcov.weights_mvt, weights_args=(3, k_vars))
+    # trimmed sample covariance
+    r = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.50, ),
+                         rescale=True)

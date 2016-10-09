@@ -493,3 +493,115 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
             break
 
     return c, i, shrinkage_factor#, corr
+
+
+### iterative, M-estimators and related
+
+def cov_weighted(data, weights, center=None):
+    wsum = weights.sum()
+    if center is None:
+        wmean = weights.dot(data) / wsum
+    xdm = data - wmean
+    wcov = (weights * xdm.T).dot(xdm) / wsum
+    return wcov, wmean
+
+
+def weights_mvt(distance, df, k_vars):
+    """weight function based on multivariate t distribution
+
+    Parameters
+    ----------
+    distance : ndarray
+        mahalanobis distance
+    df : int or float
+        degrees of freedom of the t distribution
+    k_vars : int
+        number of variables in the multivariate sample
+
+    Returns
+    -------
+    weights : ndarray
+        weights calculated for the given distances.
+
+    References
+    ----------
+
+    Finegold, Michael A., and Mathias Drton. 2014. “Robust Graphical
+    Modeling with T-Distributions.” arXiv:1408.2033 [Cs, Stat], August.
+    http://arxiv.org/abs/1408.2033.
+
+    Finegold, Michael, and Mathias Drton. 2011. “ROBUST GRAPHICAL
+    MODELING OF GENE NETWORKS USING CLASSICAL AND ALTERNATIVE
+    T-DISTRIBUTIONS.” The Annals of Applied Statistics 5 (2A): 1057–80.
+
+
+    """
+    w = (df + k_vars) / (df + distance)
+    return w
+
+
+def weights_quantile(distance, frac=0.5, rescale=True):
+    cutoff = np.percentile(distance, frac * 100)
+    w = (distance < cutoff).astype(int)
+    return w
+
+
+def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
+             rescale=False, maxiter=3, atol=1e-14, rtol=1e-6):
+    """iterative robust covariance estimation using weights
+
+    This is in the style of M-estimators for given weight function.
+
+    Note: ??? Whether this is normalized to be consistent with the
+    multivariate normal case depends on the weight function.
+    maybe it is consistent, it's just a weighted cov.
+
+    Parameters
+    ----------
+    data : array_like
+    weights_func : callable
+        function to calculate weights from the distances and weights_args
+    weights_args : tuple
+        extra arguments for the weights_func
+    cov_init : ndarray, square 2-D
+        initial covariance matrix
+    rescale : bool
+        If true then the resulting covariance matrix is normalized so it is
+        approximately consistent with the normal distribution. Rescaling is
+        based on the median of the distances and of the chisquare distribution.
+
+    Returns
+    -------
+    this will still change
+    cov, mean, w, dist, it, converged
+
+    Notes
+    -----
+    This iterates over calculating the mahalanobis distance and weighted
+    covariance. See Feingold and Drton 2014 for the motivation using weights
+    based on the multivariate t distribution. Note that this does not calculate
+    their alternative t distribution which requires numerical or Monte Carlo
+    integration.
+
+    """
+    data = np.asarray(data)
+    nobs, k_vars = data.shape
+
+    if cov_init is None:
+        cov_init = np.cov(data.T)
+
+    converged = False
+    cov = cov_old = cov_init
+    for it in range(maxiter):
+        dist = mahalanobis(data, cov=cov)
+        w = weights_func(dist, *weights_args)
+        cov, mean = cov_weighted(data, w)
+        if np.allclose(cov, cov_old, atol=atol, rtol=rtol):
+            converged = True
+            break
+
+    if rescale:
+        s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
+        cov *= s
+
+    return cov, mean, w, dist, it, converged
