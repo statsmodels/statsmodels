@@ -234,3 +234,35 @@ class HuberScale(object):
         return scalehist[-1]
 
 hubers_scale = HuberScale()
+
+debug = 0
+def _scale_iter(data, scale0='mad', maxiter=10, rtol=1e-6, atol=1e-8,
+              meef_scale=None, scale_bias=None):
+    """iterative scale estimate base on "rho" function
+
+    """
+    x = np.asarray(data)
+    if scale0 == 'mad':
+        scale0 = mad(x)
+
+    scale = scale0
+    scale_old = scale
+    for i in range(maxiter):
+        x_scaled = x / scale
+        weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
+        if debug:
+            print('weights sum', weights_scale.sum(), end=" ")
+        scale_old = scale
+        scale2 = (weights_scale * x**2).mean()
+        if debug:
+            print(scale2, end=" ")
+        scale2 /= scale_bias
+        scale = np.sqrt(scale2)
+        if debug:
+            print(scale)
+        if np.allclose(scale, scale_old, atol=atol, rtol=rtol):
+            break
+        scale_old = scale
+
+
+    return scale
