@@ -214,10 +214,8 @@ def test_kmo():
     dataset_corr = dataset.corr(method="spearman")
      
     value,per_variable = kmo(dataset_corr)
-    # from R cortest.bartlett(correlation, n=nrow(data))
-    # from psych package
     
-    # from R
+    # from R    
     assert_almost_equal(value, 0.8, 1)
     # from R
     assert_almost_equal(per_variable, [0.81,0.77,0.79,0.77,0.80,0.84,0.79,0.86,0.71,0.86],2)
