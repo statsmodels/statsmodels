@@ -5,6 +5,8 @@ Test functions for models.robust.scale
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from scipy import stats
+
 # Example from Section 5.5, Venables & Ripley (2002)
 
 import statsmodels.robust.scale as scale
@@ -135,6 +137,28 @@ def test_scale_iter():
     s = scale._scale_iter(x, meef_scale=meef_scale, scale_bias=scale_bias)
     assert_allclose(s, v, rtol=1e-1)
     assert_allclose(s, 1.0683298, rtol=1e-6)  # regression test number
+
+
+def test_scale_trimmed_approx():
+    scale_trimmed = scale.scale_trimmed # shorthand
+    nobs = 500
+    np.random.seed(965578)
+    x = 2*np.random.randn(nobs)
+    x[:10] = 60
+
+    alpha = 0.2
+    res = scale_trimmed(x, alpha)
+    s = scale_trimmed(np.column_stack((x, 2*x)), alpha).scale
+    assert_allclose(s, [2, 4], rtol=1e-1)
+    s = scale_trimmed(np.column_stack((x, 2*x)).T, alpha, axis=1).scale
+    assert_allclose(s, [2, 4], rtol=1e-1)
+    s = scale_trimmed(np.column_stack((x, x)).T, alpha, axis=None).scale
+    assert_allclose(s, [2], rtol=1e-1)
+    s2 = scale_trimmed(np.column_stack((x, x)).ravel(), alpha).scale
+    assert_allclose(s2, [2], rtol=1e-1)
+    assert_allclose(s2, s, rtol=1e-1)
+    s = scale_trimmed(x, alpha, distr=stats.t, distargs=(100,)).scale
+    assert_allclose(s, [2], rtol=1e-1)
 
 
 if __name__=="__main__":

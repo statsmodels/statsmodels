@@ -10,9 +10,16 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 """
 from statsmodels.compat.python import callable, range
 import numpy as np
+from scipy import stats
 from scipy.stats import norm as Gaussian
 from . import norms
 from statsmodels.tools import tools
+
+
+class Holder():
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     # c \approx .6745
@@ -234,6 +241,125 @@ class HuberScale(object):
         return scalehist[-1]
 
 hubers_scale = HuberScale()
+
+
+
+def scale_trimmed(data, alpha, center='median', axis=0, distr=None, distargs=None):
+    """scale estimate based on symmetrically trimmed sample
+
+    The scale estimate is robust to a fraction alpha of outliers on each
+    tail.
+    The scale is normalized to correspond to a reference distribution, which
+    is the normal distribution by default.
+
+    Parameters
+    ----------
+    data : array_like
+        dataset, by default (axis=0) observations are assumed to be in rows
+        and variables in columns.
+    alpha : float in interval (0, 1)
+        Trimming fraction in each tail. The floor(nobs * alpha) smallest
+        observations are trimmed, and the same number of the largest
+        observations are trimmed. scale estimate is base on a fraction
+        (1 - 2 * alpha) of observations.
+    center : 'median', 'mean', 'tmean' or number
+        `center` defines how the trimmed sample is centered. 'median' and
+        'mean' are calculated on the full sample. `tmean` is the trimmed
+        mean, calculated with the trimmed sample. If `center` is array_like
+        then it needs to be scalar or correspond to the shape of the data
+        reduced by axis.
+    axis : int, default is 0
+        axis along which scale is estimated.
+    distr : None, 'raw' or a distribution instance
+        Default if distr is None is the normal distribution, `scipy.stats.norm`.
+        This is the reference distribution to normalize the scale.
+        Note: This cannot be a frozen instance, since it does not have an
+        `expect` method.
+        If distr is 'raw', then the scale is not normalized.
+    distargs :
+        Arguments for the distribution.
+
+    Returns
+    -------
+    scale : float or array
+        the estimated scale normalized for the reference distribution.
+
+    Examples
+    --------
+    for normal distribution
+
+    >>> np.random.seed(1)
+    >>> x = 2 * np.random.randn(100)
+    >>> scale_trimmed(x, 0.1)
+    1.7479516739879672
+
+    for t distribution
+    >>> xt = stats.t.rvs(3, size=1000, scale=2)
+    >>> print scale_trimmed(xt, alpha, distr=stats.t, distargs=(3,))
+    2.06574778599
+
+    compare to standard deviation of sample
+    >>> xt.std()
+    3.1457788359130481
+
+    """
+
+    if distr is None:
+        distr = stats.norm
+        if distargs is None:
+            distargs = ()
+
+
+    x = np.array(data)  # make copy for inplace sort
+    if axis is None:
+        x = x.ravel()
+        axis = 0
+
+    # TODO: latest numpy has partial sort
+    x.sort(axis)
+    nobs = x.shape[axis]
+
+    if distr == 'raw':
+        c_inv = 1
+    else:
+        bound = distr.ppf(1 - alpha, *distargs)
+        c_inv = distr.expect(lambda x: x*x, lb=-bound, ub=bound, args=distargs)
+
+    cut_idx = np.floor(nobs * alpha).astype(int)
+    sl = [slice(None, None, None)] * x.ndim
+    sl[axis] = slice(cut_idx, -cut_idx)
+    #x_trimmed = x[cut_idx:-cut_idx]
+    # cut in axis
+    x_trimmed = x[sl]
+
+    center_type = center
+    if center in ['med', 'median']:
+        center = np.median(x, axis=axis)
+    elif center == 'mean':
+        center = np.mean(x, axis=axis)
+    elif center == 'tmean':
+        center = np.mean(x_trimmed, axis=axis)
+    else:
+        # assume number
+        center_type = 'user'
+
+    center_ndim = np.ndim(center)
+    if (center_ndim > 0) and (center_ndim < x.ndim):
+        center = np.expand_dims(center, axis)
+
+
+    s_raw = ((x_trimmed - center)**2).sum(axis)
+    scale = np.sqrt(s_raw / nobs / c_inv)
+
+    res = Holder(scale = scale,
+                 center = center,
+                 center_type = center_type,
+                 trim_idx = cut_idx,
+                 nobs = nobs,
+                 distr = distr,
+                 scale_correction = 1. / c_inv)
+    return res
+
 
 debug = 0
 def _scale_iter(data, scale0='mad', maxiter=10, rtol=1e-6, atol=1e-8,
