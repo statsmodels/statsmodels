@@ -58,7 +58,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
           - 'label_fontsize', MPL fontsize.  Adjusts fontsize only if given.
           - 'label_rotation', scalar.  Adjusts label rotation only if given.
                 Specify in degrees.
-          - 'factor', Adjusts the scipy gaussian_kde kernel. default: None. 
+          - 'bw_factor', Adjusts the scipy gaussian_kde kernel. default: None. 
                 Options for scalar or callable.
 
     Returns
@@ -178,7 +178,7 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
     pos_data = np.asarray(pos_data)
     # Kernel density estimate for data at this position.
     # MOD: add option for the kernel
-    kde = gaussian_kde(pos_data,bw_method=factor)
+    kde = gaussian_kde(pos_data, bw_method=bw_factor)
 
     # Create violin for pos, scaled to the available space.
     xvals = _violin_range(pos_data, plot_opts)
