@@ -369,14 +369,14 @@ class TestCategoricalNumerical(TestCategorical):
         instr = self.structdes['instrument'].tolist()
         dum = to_categorical(instr)
         dum = np.array(dum)
-        test_dum = dum[:,-5:].astype(float)
+        test_dum = dum[:, -5:].astype(float)
         assert_array_equal(test_dum, self.dummy)
         assert_equal(dum.shape[1], 6)
 
     def test_arraylike2d_drop(self):
         des = to_categorical(self.structdes.tolist(), col=2, drop=True)
         des = np.array(des)
-        test_des = des[:,-5:].astype(float)
+        test_des = des[:, -5:].astype(float)
         assert_array_equal(test_des, self.dummy)
         assert_equal(des.shape[1], 8)
 
@@ -393,19 +393,19 @@ class TestCategoricalString(TestCategorical):
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = to_categorical(des, col=2)
-        assert_array_equal(des[:,-5:], self.dummy)
-        assert_equal(des.shape[1],10)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 10)
 
     def test_array1d(self):
         des = to_categorical(self.instr)
-        assert_array_equal(des[:,-5:], self.dummy)
-        assert_equal(des.shape[1],6)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 6)
 
     def test_array2d_drop(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = to_categorical(des, col=2, drop=True)
-        assert_array_equal(des[:,-5:], self.dummy)
-        assert_equal(des.shape[1],9)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 9)
 
     def test_array1d_drop(self):
         des = to_categorical(self.string_var, drop=True)
@@ -478,13 +478,27 @@ class TestCategoricalString(TestCategorical):
         assert_equal(len(dum.dtype.names), 5)
 
     def test_arraylike2d(self):
-        pass
+        des = np.column_stack((self.des, self.instr, self.des)).tolist()
+        des = to_categorical(des, col=2)
+        des = np.array(des)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 10)
 
     def test_arraylike1d(self):
-        pass
+        des = to_categorical(self.instr.tolist())
+        des = np.array(des)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 6)
 
     def test_arraylike2d_drop(self):
-        pass
+        des = np.column_stack((self.des, self.instr, self.des))
+        des = to_categorical(des.tolist(), col=2, drop=True)
+        des = np.array(des)
+        assert_array_equal(des[:, -5:], self.dummy)
+        assert_equal(des.shape[1], 9)
 
     def test_arraylike1d_drop(self):
-        pass
+        des = to_categorical(self.string_var.tolist(), drop=True)
+        des = np.array(des)
+        assert_array_equal(des, self.dummy)
+        assert_equal(des.shape[1], 5)
