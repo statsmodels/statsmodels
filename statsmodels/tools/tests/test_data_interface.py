@@ -358,34 +358,38 @@ class TestCategoricalNumerical(TestCategorical):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(len(dum.dtype.names), 5)
 
-# def test_arraylike2d(self):
-#        des = to_categorical(self.structdes.tolist(), col=2)
-#        test_des = des[:,-5:]
-#        assert_array_equal(test_des, self.dummy)
-#        assert_equal(des.shape[1], 9)
+    def test_arraylike2d(self):
+        des = to_categorical(self.structdes.tolist(), col=2)
+        des = np.array(des)
+        test_des = des[:, -5:].astype(float)
+        assert_array_equal(test_des, self.dummy)
+        assert_equal(des.shape[1], 9)
 
-#    def test_arraylike1d(self):
-#        instr = self.structdes['instrument'].tolist()
-#        dum = to_categorical(instr)
-#        test_dum = dum[:,-5:]
-#        assert_array_equal(test_dum, self.dummy)
-#        assert_equal(dum.shape[1], 6)
+    def test_arraylike1d(self):
+        instr = self.structdes['instrument'].tolist()
+        dum = to_categorical(instr)
+        dum = np.array(dum)
+        test_dum = dum[:,-5:].astype(float)
+        assert_array_equal(test_dum, self.dummy)
+        assert_equal(dum.shape[1], 6)
 
-#    def test_arraylike2d_drop(self):
-#        des = to_categorical(self.structdes.tolist(), col=2, drop=True)
-#        test_des = des[:,-5:]
-#        assert_array_equal(test__des, self.dummy)
-#        assert_equal(des.shape[1], 8)
+    def test_arraylike2d_drop(self):
+        des = to_categorical(self.structdes.tolist(), col=2, drop=True)
+        des = np.array(des)
+        test_des = des[:,-5:].astype(float)
+        assert_array_equal(test_des, self.dummy)
+        assert_equal(des.shape[1], 8)
 
-#    def test_arraylike1d_drop(self):
-#        instr = self.structdes['instrument'].tolist()
-#        dum = to_categorical(instr, drop=True)
-#        assert_array_equal(dum, self.dummy)
-#        assert_equal(dum.shape[1], 5)
+    def test_arraylike1d_drop(self):
+        instr = self.structdes['instrument'].tolist()
+        dum = to_categorical(instr, drop=True)
+        dum = np.array(dum)
+        assert_array_equal(dum, self.dummy)
+        assert_equal(dum.shape[1], 5)
 
 
 class TestCategoricalString(TestCategorical):
-    # comment out until we have type coercion
+
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = to_categorical(des, col=2)

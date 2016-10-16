@@ -4,7 +4,7 @@ from functools import partial
 from patsy import dmatrix
 from patsy.design_info import DesignMatrix
 
-NUMPY_TYPES = [np.ndarray, np.float64]
+NUMPY_TYPES = [np.ndarray, np.float64, np.recarray]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
 DEFAULT_EXTERNAL_TYPE = np.ndarray
 
@@ -139,6 +139,9 @@ def to_categorical(data, col=None, dictnames=False, drop=False):
     ndim = get_ndim(data)
     to_type = np.recarray
 
+    if type(data) == list:
+        data = flatten_list(data)
+
     if is_recarray(data):
 
         if ndim > 1:
@@ -253,6 +256,9 @@ def to_pandas(data, name=None, columns=None):
 
 
 def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_ndim=None):
+
+    assert type(data) in [np.ndarray, np.recarray]
+
     from_type = type(data)
 
     if from_type == to_type:
@@ -285,6 +291,9 @@ def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_nd
 
 
 def from_pandas(data, to_type):
+
+    assert type(data) in [pd.DataFrame, pd.Series]
+
     from_type = type(data)
 
     if from_type == to_type:
@@ -313,9 +322,10 @@ def from_pandas(data, to_type):
 
 
 def from_list(data, to_type, index=None, name=None, columns=None):
-    from_type = type(data)
 
-    if from_type == to_type:
+    assert type(data) == list
+
+    if to_type == list:
         return data
 
     elif to_type == np.ndarray:
@@ -353,7 +363,15 @@ def get_ndim(data):
         except TypeError:
             raise TypeError('Cannot find dimension of {}'.format(data_type))
 
-    if get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
+    if len(data.shape) > 2:
+        dims = sum(1 for elem in data.shape if elem > 1)
+
+        if dims > 2:
+            raise ValueError('Data must have no more than two dimensions')
+        else:
+            return dims
+
+    elif get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
         return 1
 
     elif get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:
@@ -524,3 +542,51 @@ def drop_recarray_column(rec, name):
     result = rec[names]
 
     return result
+
+
+def slice_2d(shape):
+
+    s = []
+
+    for index in shape:
+        if index > 1:
+            s.append(slice(None))
+        else:
+            s.append(0)
+
+    return tuple(s)
+
+
+def flatten_list(data):
+
+    assert type(data) == list
+
+    np_data = np.asarray(data)
+    shape = np_data.shape
+
+    dims = sum(1 for elem in shape if elem > 1)
+
+    if dims > 2:
+        raise ValueError('Data must have no more than two dimensions')
+    else:
+        slicer = slice_2d(shape)
+        data = np_data[slicer].tolist()
+
+    return data
+
+
+def flatten_array(data):
+
+    assert type(data) in [np.ndarray, np.recarray]
+
+    shape = data.shape
+
+    dims = sum(1 for elem in shape if elem > 1)
+
+    if dims > 2:
+        raise ValueError('Data must have no more than two dimensions')
+    else:
+        slicer = slice_2d(shape)
+        data = data[slicer]
+
+    return data
