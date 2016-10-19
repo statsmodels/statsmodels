@@ -40,9 +40,11 @@ MEMORY_NO_FILTERED = 0x04
 MEMORY_NO_LIKELIHOOD = 0x08
 MEMORY_NO_GAIN = 0x10
 MEMORY_NO_SMOOTHING = 0x20
+MEMORY_NO_STD_FORECAST = 0x40
 MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
+    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
+    MEMORY_NO_STD_FORECAST
 )
 
 TIMING_INIT_PREDICTED = 0
@@ -206,7 +208,7 @@ class KalmanFilter(Representation):
     memory_options = [
         'memory_store_all', 'memory_no_forecast', 'memory_no_predicted',
         'memory_no_filtered', 'memory_no_likelihood', 'memory_no_gain',
-        'memory_no_smoothing', 'memory_conserve'
+        'memory_no_smoothing', 'memory_no_std_forecast', 'memory_conserve'
     ]
 
     memory_store_all = OptionWrapper('conserve_memory', MEMORY_STORE_ALL)
@@ -238,6 +240,11 @@ class KalmanFilter(Representation):
     memory_no_smoothing = OptionWrapper('conserve_memory', MEMORY_NO_SMOOTHING)
     """
     (bool) Flag to prevent storing likelihood values for each observation.
+    """
+    memory_no_std_forecast = (
+        OptionWrapper('conserve_memory', MEMORY_NO_STD_FORECAST))
+    """
+    (bool) Flag to prevent storing standardized forecast errors.
     """
     memory_conserve = OptionWrapper('conserve_memory', MEMORY_CONSERVE)
     """
@@ -647,11 +654,14 @@ class KalmanFilter(Representation):
         MEMORY_NO_SMOOTHING = 0x20
             Do not store temporary variables related to Klaman smoothing. If
             this option is used, smoothing is unavailable.
+        MEMORY_NO_SMOOTHING = 0x20
+            Do not store standardized forecast errors.
         MEMORY_CONSERVE
             Do not store any intermediate matrices.
 
         Note that if using a Scipy version less than 0.16, the options
-        MEMORY_NO_GAIN and MEMORY_NO_SMOOTHING have no effect.
+        MEMORY_NO_GAIN, MEMORY_NO_SMOOTHING, and MEMORY_NO_STD_FORECAST
+        have no effect.
 
         If the bitmask is set directly via the `conserve_memory` argument,
         then the full method must be provided.
@@ -1358,9 +1368,23 @@ class FilterResults(FrozenRepresentation):
         )
 
         # Reset caches
-        self._standardized_forecasts_error = None
+        has_missing = np.sum(self.nmissing) > 0
+        if not self._compatibility_mode and not (self.memory_no_std_forecast or
+                                                 self.invert_lu or
+                                                 self.solve_lu or
+                                                 self.filter_collapsed):
+            if has_missing:
+                self._standardized_forecasts_error = np.array(
+                    reorder_missing_vector(
+                        kalman_filter.standardized_forecast_error,
+                        self.missing, prefix=self.prefix))
+            else:
+                self._standardized_forecasts_error = np.array(
+                    kalman_filter.standardized_forecast_error, copy=True)
+        else:
+            self._standardized_forecasts_error = None
+
         if not self._compatibility_mode:
-            has_missing = np.sum(self.nmissing) > 0
             # In the partially missing data case, all entries will
             # be in the upper left submatrix rather than the correct placement
             # Re-ordering does not make sense in the collapsed case.
@@ -1549,24 +1573,51 @@ class FilterResults(FrozenRepresentation):
     def standardized_forecasts_error(self):
         """
         Standardized forecast errors
+
+        Notes
+        -----
+        The forecast errors produced by the Kalman filter are
+
+        .. math::
+
+            v_t \sim N(0, F_t)
+
+        Hypothesis tests are usually applied to the standardized residuals
+
+        .. math::
+
+            v_t^s = B_t v_t \sim N(0, I)
+
+        where :math:`B_t = L_t^{-1}` and :math:`F_t = L_t L_t'`; then
+        :math:`F_t^{-1} = (L_t')^{-1} L_t^{-1} = B_t' B_t`; :math:`B_t`
+        and :math:`L_t` are lower triangular. Finally,
+        :math:`B_t v_t \sim N(0, B_t F_t B_t')` and
+        :math:`B_t F_t B_t' = L_t^{-1} L_t L_t' (L_t')^{-1} = I`.
+
+        Thus we can rewrite :math:`v_t^s = L_t^{-1} v_t` or
+        :math:`L_t v_t^s = v_t`; the latter equation is the form required to
+        use a linear solver to recover :math:`v_t^s`. Since :math:`L_t` is
+        lower triangular, we can use a triangular solver (?TRTRS).
         """
         if self._standardized_forecasts_error is None:
-            from scipy import linalg
-            self._standardized_forecasts_error = np.zeros(
-                self.forecasts_error.shape, dtype=self.dtype)
-
-            for t in range(self.forecasts_error_cov.shape[2]):
-                if self.nmissing[t] > 0:
-                    self._standardized_forecasts_error[:, t] = np.nan
-                if self.nmissing[t] < self.k_endog:
-                    mask = ~self.missing[:, t].astype(bool)
-                    F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
-                    upper, _ = linalg.cho_factor(F[:, :, 0])
-                    self._standardized_forecasts_error[mask, t] = (
-                        linalg.solve_triangular(
-                            upper, self.forecasts_error[mask, t]
-                        )
-                    )
+            if self.k_endog == 1:
+                self._standardized_forecasts_error = (
+                    self.forecasts_error /
+                    self.forecasts_error_cov[0, 0, :]**0.5)
+            else:
+                from scipy import linalg
+                self._standardized_forecasts_error = np.zeros(
+                    self.forecasts_error.shape, dtype=self.dtype)
+                for t in range(self.forecasts_error_cov.shape[2]):
+                    if self.nmissing[t] > 0:
+                        self._standardized_forecasts_error[:, t] = np.nan
+                    if self.nmissing[t] < self.k_endog:
+                        mask = ~self.missing[:, t].astype(bool)
+                        F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
+                        upper, _ = linalg.cho_factor(F[:, :, 0])
+                        self._standardized_forecasts_error[mask, t] = (
+                            linalg.solve_triangular(
+                                upper, self.forecasts_error[mask, t], trans=1))
 
         return self._standardized_forecasts_error
 

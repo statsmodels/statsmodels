@@ -25,7 +25,8 @@ from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
-from statsmodels.tsa.statespace._kalman_filter cimport MEMORY_NO_SMOOTHING
+from statsmodels.tsa.statespace._kalman_filter cimport (
+    MEMORY_NO_SMOOTHING, MEMORY_NO_STD_FORECAST)
 
 {{for prefix, types in TYPES.items()}}
 {{py:cython_type, dtype, typenum = types}}
@@ -77,6 +78,9 @@ cdef {{cython_type}} {{prefix}}inverse_univariate({{prefix}}KalmanFilter kfilter
     blas.{{prefix}}copy(&model._k_endogstates, model._design, &inc, kfilter._tmp3, &inc)
     blas.{{prefix}}scal(&model._k_endogstates, &scalar, kfilter._tmp3, &inc)
 
+    if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
+        kfilter._standardized_forecast_error[0] = kfilter._forecast_error[0] * scalar**0.5
+
     if not (kfilter.conserve_memory & MEMORY_NO_SMOOTHING > 0):
         kfilter._tmp4[0] = scalar * model._obs_cov[0]
 
@@ -99,7 +103,7 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
         int info
         int i
 
-    if not kfilter.converged:
+    if not kfilter.converged or not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
         blas.{{prefix}}copy(&kfilter.k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
         lapack.{{prefix}}potrf("U", &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, &info)
 
@@ -180,9 +184,18 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
 
-    if not kfilter.converged:
+    if not kfilter.converged or not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
         # Perform the Cholesky decomposition and get the determinant
         determinant = {{prefix}}factorize_cholesky(kfilter, model, determinant)
+
+        # Use the Cholesky factor to get standardized forecast errors, if desired
+        # (in the notation of DK, kfilter._forecast_error_fac holds L_t', and
+        # we want to solve the equation L_t' v_t^s = v_t)
+        if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
+            blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
+            lapack.{{prefix}}trtrs("U", "T", "N", &kfilter.k_endog, &inc,
+                                   kfilter._forecast_error_fac, &kfilter.k_endog,
+                                   kfilter._standardized_forecast_error, &kfilter.k_endog, &info)
 
         # Continue taking the inverse
         lapack.{{prefix}}potri("U", &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, &info)
@@ -293,6 +306,15 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
     if not kfilter.converged:
         # Perform the Cholesky decomposition and get the determinant
         determinant = {{prefix}}factorize_cholesky(kfilter, model, determinant)
+
+    # Use the Cholesky factor to get standardized forecast errors, if desired
+    # (in the notation of DK, kfilter._forecast_error_fac holds L_t', and
+    # we want to solve the equation L_t' v_t^s = v_t)
+    if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
+        blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
+        lapack.{{prefix}}trtrs("U", "T", "N", &kfilter.k_endog, &inc,
+                               kfilter._forecast_error_fac, &kfilter.k_endog,
+                               kfilter._standardized_forecast_error, &kfilter.k_endog, &info)
 
     # Solve the linear systems  
     # `tmp2` array used here, dimension $(p \times 1)$  

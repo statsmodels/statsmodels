@@ -56,9 +56,11 @@ cdef int MEMORY_NO_FILTERED = 0x04
 cdef int MEMORY_NO_LIKELIHOOD = 0x08
 cdef int MEMORY_NO_GAIN = 0x10
 cdef int MEMORY_NO_SMOOTHING = 0x20
+cdef int MEMORY_NO_STD_FORECAST = 0x40
 cdef int MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING
+    MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
+    MEMORY_NO_STD_FORECAST
 )
 
 # ### Timing options
@@ -409,6 +411,13 @@ cdef class {{prefix}}KalmanFilter(object):
         self.forecast_error = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         dim3[0] = self.k_endog; dim3[1] = self.k_endog; dim3[2] = storage;
         self.forecast_error_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+        # Standardized forecast errors
+        if self.conserve_memory & MEMORY_NO_STD_FORECAST > 0:
+            storage = 1
+        else:
+            storage = self.model.nobs
+        dim2[0] = self.k_endog; dim2[1] = storage;
+        self.standardized_forecast_error = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # Filtered
         if self.conserve_memory & MEMORY_NO_FILTERED > 0:
@@ -759,6 +768,7 @@ cdef class {{prefix}}KalmanFilter(object):
             int gain_t = t
             int smoothing_t = t
             int loglikelihood_t = t
+            int std_forecast_t = t
         if self.conserve_memory & MEMORY_NO_FORECAST > 0:
             forecast_t = 1
         if self.conserve_memory & MEMORY_NO_FILTERED > 0:
@@ -771,6 +781,8 @@ cdef class {{prefix}}KalmanFilter(object):
             smoothing_t = 0
         if self.conserve_memory & MEMORY_NO_LIKELIHOOD > 0:
             loglikelihood_t = 0
+        if self.conserve_memory & MEMORY_NO_STD_FORECAST > 0:
+            std_forecast_t = 0
 
         # Initialize object-level pointers to input arrays
         self._input_state = &self.predicted_state[0, predicted_t]
@@ -799,6 +811,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self._forecast = &self.forecast[0, forecast_t]
         self._forecast_error = &self.forecast_error[0, forecast_t]
         self._forecast_error_cov = &self.forecast_error_cov[0, 0, forecast_t]
+        self._standardized_forecast_error = &self.standardized_forecast_error[0, std_forecast_t]
 
         self._filtered_state = &self.filtered_state[0, filtered_t]
         self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_t]

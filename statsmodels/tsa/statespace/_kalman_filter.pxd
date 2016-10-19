@@ -43,6 +43,7 @@ cdef int MEMORY_NO_FILTERED
 cdef int MEMORY_NO_LIKELIHOOD
 cdef int MEMORY_NO_GAIN
 cdef int MEMORY_NO_SMOOTHING
+cdef int MEMORY_NO_STD_FORECAST
 cdef int MEMORY_CONSERVE
 
 # ### Timing options
@@ -76,7 +77,7 @@ cdef class sKalmanFilter(object):
 
     # ### Kalman filter properties
     cdef readonly np.float32_t [:] loglikelihood
-    cdef readonly np.float32_t [::1,:] filtered_state, predicted_state, forecast, forecast_error
+    cdef readonly np.float32_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
     cdef readonly np.float32_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
     cdef readonly np.float32_t [::1,:,:] kalman_gain
 
@@ -118,6 +119,7 @@ cdef class sKalmanFilter(object):
 
     cdef np.float32_t * _forecast
     cdef np.float32_t * _forecast_error
+    cdef np.float32_t * _standardized_forecast_error
     cdef np.float32_t * _forecast_error_cov
     cdef np.float32_t * _filtered_state
     cdef np.float32_t * _filtered_state_cov
@@ -203,7 +205,7 @@ cdef class dKalmanFilter(object):
 
     # ### Kalman filter properties
     cdef readonly np.float64_t [:] loglikelihood
-    cdef readonly np.float64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error
+    cdef readonly np.float64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
     cdef readonly np.float64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
     cdef readonly np.float64_t [::1,:,:] kalman_gain
 
@@ -245,6 +247,7 @@ cdef class dKalmanFilter(object):
 
     cdef np.float64_t * _forecast
     cdef np.float64_t * _forecast_error
+    cdef np.float64_t * _standardized_forecast_error
     cdef np.float64_t * _forecast_error_cov
     cdef np.float64_t * _filtered_state
     cdef np.float64_t * _filtered_state_cov
@@ -330,7 +333,7 @@ cdef class cKalmanFilter(object):
 
     # ### Kalman filter properties
     cdef readonly np.complex64_t [:] loglikelihood
-    cdef readonly np.complex64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error
+    cdef readonly np.complex64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
     cdef readonly np.complex64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
     cdef readonly np.complex64_t [::1,:,:] kalman_gain
 
@@ -372,6 +375,7 @@ cdef class cKalmanFilter(object):
 
     cdef np.complex64_t * _forecast
     cdef np.complex64_t * _forecast_error
+    cdef np.complex64_t * _standardized_forecast_error
     cdef np.complex64_t * _forecast_error_cov
     cdef np.complex64_t * _filtered_state
     cdef np.complex64_t * _filtered_state_cov
@@ -457,7 +461,7 @@ cdef class zKalmanFilter(object):
 
     # ### Kalman filter properties
     cdef readonly np.complex128_t [:] loglikelihood
-    cdef readonly np.complex128_t [::1,:] filtered_state, predicted_state, forecast, forecast_error
+    cdef readonly np.complex128_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
     cdef readonly np.complex128_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
     cdef readonly np.complex128_t [::1,:,:] kalman_gain
 
@@ -499,6 +503,7 @@ cdef class zKalmanFilter(object):
 
     cdef np.complex128_t * _forecast
     cdef np.complex128_t * _forecast_error
+    cdef np.complex128_t * _standardized_forecast_error
     cdef np.complex128_t * _forecast_error_cov
     cdef np.complex128_t * _filtered_state
     cdef np.complex128_t * _filtered_state_cov
