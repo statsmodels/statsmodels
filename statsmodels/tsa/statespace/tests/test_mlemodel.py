@@ -14,6 +14,7 @@ import re
 import warnings
 from statsmodels.tsa.statespace import sarimax, kalman_filter, kalman_smoother
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
+from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from nose.exc import SkipTest
@@ -137,13 +138,17 @@ def test_wrapping():
     # transferring)
 
     # Change the attributes in the model class
-    mod.set_filter_method(100)
+    if compatibility_mode:
+        assert_raises(NotImplementedError, mod.set_filter_method, 100)
+    else:
+        mod.set_filter_method(100)
     mod.set_stability_method(101)
     mod.set_conserve_memory(102)
     mod.set_smoother_output(103)
 
     # Assert that the changes have occurred in the ssm class
-    assert_equal(mod.ssm.filter_method, 100)
+    if not compatibility_mode:
+        assert_equal(mod.ssm.filter_method, 100)
     assert_equal(mod.ssm.stability_method, 101)
     assert_equal(mod.ssm.conserve_memory, 102)
     assert_equal(mod.ssm.smoother_output, 103)
@@ -157,7 +162,10 @@ def test_wrapping():
     # loglike, filter, etc. were called)
     # In this case, an error will be raised since filter_method=100 is not
     # valid
-    assert_raises(NotImplementedError, mod.ssm._initialize_filter)
+    # Note: this error is only raised in the compatibility case, since the
+    # newer filter logic checks for a valid filter mode at a different point
+    if compatibility_mode:
+        assert_raises(NotImplementedError, mod.ssm._initialize_filter)
 
     # Now, test the setting of the other two methods by resetting the
     # filter method to a valid value
@@ -183,7 +191,6 @@ def test_fit_misc():
         warnings.simplefilter("ignore")
         res1 = mod.fit(method='ncg', disp=0, optim_hessian='opg', optim_complex_step=False)
         res2 = mod.fit(method='ncg', disp=0, optim_hessian='oim', optim_complex_step=False)
-        assert_raises(NotImplementedError, mod.fit, method='ncg', disp=False, optim_hessian='a')
     # Check that the Hessians broadly result in the same optimum
     assert_allclose(res1.llf, res2.llf, rtol=1e-2)
 
@@ -712,13 +719,24 @@ def test_diagnostics():
     desired = res.test_normality(method='jarquebera')
     assert_allclose(actual, desired)
 
+    assert_raises(NotImplementedError, res.test_normality, method='invalid')
+
     actual = res.test_heteroskedasticity(method=None)
     desired = res.test_heteroskedasticity(method='breakvar')
     assert_allclose(actual, desired)
 
+    assert_raises(ValueError, res.test_heteroskedasticity, method=None, alternative='invalid')
+    assert_raises(NotImplementedError, res.test_heteroskedasticity, method='invalid')
+
     actual = res.test_serial_correlation(method=None)
     desired = res.test_serial_correlation(method='ljungbox')
     assert_allclose(actual, desired)
+
+    assert_raises(NotImplementedError, res.test_serial_correlation, method='invalid')
+
+    # Smoke tests for other options
+    actual = res.test_heteroskedasticity(method=None, alternative='d', use_f=False)
+    desired = res.test_serial_correlation(method='boxpierce')
 
 def test_diagnostics_nile_eviews():
     # Test the diagnostic tests using the Nile dataset. Results are from 
@@ -782,3 +800,11 @@ def test_diagnostics_nile_durbinkoopman():
     # Note: only 2 digits provided in the book
     actual = res.test_heteroskedasticity(method='breakvar')[0, 0]
     assert_allclose(actual, [0.61], atol=1e-2)
+
+def test_prediction_results():
+    # Just smoke tests for the PredictionResults class, which is copied from
+    # elsewhere in Statsmodels
+
+    mod, res = get_dummy_mod()
+    predict = res.get_prediction()
+    summary_frame = predict.summary_frame()

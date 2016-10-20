@@ -115,6 +115,12 @@ class CheckVARMAX(object):
             self.true['dynamic_predict'],
             atol=atol)
 
+    def test_standardized_forecasts_error(self):
+        cython_sfe = self.results.standardized_forecasts_error
+        self.results._standardized_forecasts_error = None
+        python_sfe = self.results.standardized_forecasts_error
+        assert_allclose(cython_sfe, python_sfe)
+
 
 class CheckLutkepohl(CheckVARMAX):
     @classmethod

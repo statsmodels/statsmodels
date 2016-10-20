@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import KalmanSmoother, SmootherResults
 from .kalman_filter import (KalmanFilter, FilterResults, INVERT_UNIVARIATE,
                             SOLVE_LU)
@@ -127,7 +128,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         endog = self.endog.T
 
         # Instantiate the state space object
-        self.ssm = KalmanSmoother(endog.shape[0], self.k_states, **kwargs)
+        self.ssm = SimulationSmoother(endog.shape[0], self.k_states, **kwargs)
         # Bind the data to the model
         self.ssm.bind(endog)
 
@@ -297,7 +298,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
             optim_score=None, optim_complex_step=None, optim_hessian=None,
-            **kwargs):
+            flags=None, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -409,14 +410,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             kwargs.setdefault('epsilon', 1e-5)
         elif optim_score is None:
             optim_score = 'approx'
-        elif optim_score not in ['harvey', 'approx']:
-            raise NotImplementedError('Invalid method for calculating the'
-                                      ' score.')
-
-        # Update the hessian method
-        if optim_hessian not in [None, 'opg', 'oim', 'approx']:
-            raise NotImplementedError('Invalid method for calculating the'
-                                      ' Hessian.')
 
         # Check for complex step differentiation
         if optim_complex_step is None:
@@ -430,11 +423,13 @@ class MLEModel(tsbase.TimeSeriesModel):
             start_params = self.untransform_params(np.array(start_params))
 
         # Maximum likelihood estimation
-        flags = {
+        if flags is None:
+            flags = {}
+        flags.update({
             'transformed': False,
             'score_method': optim_score,
             'approx_complex_step': optim_complex_step
-        }
+        })
         if optim_hessian is not None:
             flags['hessian_method'] = optim_hessian
         fargs = (flags,)
@@ -688,6 +683,26 @@ class MLEModel(tsbase.TimeSeriesModel):
         self.update(params, transformed=True, complex_step=complex_step)
 
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
+
+    def simulation_smoother(self, simulation_output=None, **kwargs):
+        r"""
+        Retrieve a simulation smoother for the state space model.
+
+        Parameters
+        ----------
+        simulation_output : int, optional
+            Determines which simulation smoother output is calculated.
+            Default is all (including state and disturbances).
+        **kwargs
+            Additional keyword arguments, used to set the simulation output.
+            See `set_simulation_output` for more details.
+
+        Returns
+        -------
+        SimulationSmoothResults
+        """
+        return self.ssm.simulation_smoother(
+            simulation_output=simulation_output, **kwargs)
 
     def _forecasts_error_partial_derivatives(self, params, transformed=True,
                                              approx_complex_step=None,
@@ -1571,13 +1586,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.cov_kwds['cov_type'] = (
                 'Covariance matrix could not be calculated: singular.'
                 ' information matrix.')
+        self.model.update(self.params)
 
         # References of filter and smoother output
         extra_arrays = [
             'filtered_state', 'filtered_state_cov', 'predicted_state',
             'predicted_state_cov', 'forecasts', 'forecasts_error',
-            'forecasts_error_cov', 'smoothed_state',
-            'smoothed_state_cov', 'smoothed_measurement_disturbance',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
             'smoothed_state_disturbance',
             'smoothed_measurement_disturbance_cov',
             'smoothed_state_disturbance_cov']
@@ -2007,7 +2027,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Tests whether the sum-of-squares in the first third of the sample is
         significantly different than the sum-of-squares in the last third
-        of the sample. Analogous to a Goldfeld-Quandt test.
+        of the sample. Analogous to a Goldfeld-Quandt test. The null hypothesis
+        is of no heteroskedasticity.
 
         Parameters
         ----------
@@ -2104,13 +2125,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 denom_dof = len(denom_resid)
 
                 if numer_dof < 2:
-                    raise RuntimeError('Early subset of data has too few'
-                                       ' non-missing observations to'
-                                       ' calculate test statistic.')
+                    warnings.warn('Early subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    numer_resid = np.nan
                 if denom_dof < 2:
-                    raise RuntimeError('Later subset of data has too few'
-                                       ' non-missing observations to'
-                                       ' calculate test statistic.')
+                    warnings.warn('Later subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    denom_resid = np.nan
 
                 test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
 
@@ -2548,7 +2571,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Bottom-left: QQ plot
         ax = fig.add_subplot(223)
         from statsmodels.graphics.gofplots import qqplot
-        qqplot(resid, line='s', ax=ax)
+        qqplot(resid_nonmissing, line='s', ax=ax)
         ax.set_title('Normal Q-Q')
 
         # Bottom-right: Correlogram

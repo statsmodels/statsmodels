@@ -157,6 +157,12 @@ class SARIMAXStataTests(object):
             hqic, 3
         )
 
+    def test_standardized_forecasts_error(self):
+        cython_sfe = self.result.standardized_forecasts_error
+        self.result._standardized_forecasts_error = None
+        python_sfe = self.result.standardized_forecasts_error
+        assert_allclose(cython_sfe, python_sfe)
+
 
 class ARIMA(SARIMAXStataTests):
     """
