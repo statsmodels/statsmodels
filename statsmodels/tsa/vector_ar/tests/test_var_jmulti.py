@@ -410,6 +410,27 @@ def test_causality():  # test Granger- and instantaneous causality
                         err_msg_i_p + " - list of int and int as ".upper() + \
                         "argument don't yield the same result!".upper()
 
+
+def test_impulse_response():
+    if debug_mode:
+        if "impulse-response" not in to_test:
+            return
+        else:
+            print("\n\nIMPULSE-RESPONSE", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+            err_msg = build_err_msg(ds, dt, "IMULSE-RESPONSE")
+            periods = 20
+            obtained_all = results_sm[ds][dt].irf(periods=periods).irfs
+            # flatten inner arrays to make them comparable to parsed results:
+            obtained_all = obtained_all.reshape(periods+1, -1)
+            desired_all = results_ref[ds][dt]["ir"]
+            yield assert_allclose, obtained_all, desired_all, rtol, atol,  \
+                False, err_msg
+
+
 def setup():
     datasets.append(macro)  # TODO: append more data sets for more test cases.
 
