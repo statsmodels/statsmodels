@@ -1819,6 +1819,77 @@ class VARResults(VARProcess):
                                            "wald", inst_caus=True))
         return results
 
+    def test_whiteness_new(self, nlags=10, signif=0.05, adjusted=False):
+        """
+        Test the whiteness of the residuals using the Portmanteau test as
+        described in [1]_, chapter 4.4.3.
+
+        Parameters
+        ----------
+        nlags : int > 0
+        signif : float, between 0 and 1
+        adjusted : bool, default False
+
+        Returns
+        -------
+        results : dict
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        """
+        def cov(lag):
+            """
+            Parameters
+            ----------
+            lag : int >= 0
+
+            Returns
+            -------
+            result : ndarray (neqs, neqs)
+                The estimated autocovariance matrix of :math:`u_t` for lag
+                `lag`.
+            """
+            u = np.asarray(self.resid).T
+            # the following line is unnecessary in case of OLS-estimation
+            # (mean of residuals =0) but in case other estimation methods are
+            # added we leave here.
+            u -= np.mean(u, axis=1).reshape((u.shape[0], 1))
+            result = np.zeros((self.neqs, self.neqs))
+            for t in range(lag, self.nobs):
+                result += u[:, t:t+1].dot(u[:, t-lag:t-lag+1].T)
+            result /= self.nobs
+            return result
+
+        statistic = 0
+        c0_inv = L.inv(cov(0))
+        for t in range(1, nlags+1):
+            ct = cov(t)
+            to_add = np.trace(chain_dot(ct.T, c0_inv, ct, c0_inv))
+            if adjusted:
+                to_add /= (self.nobs - t)
+            statistic += to_add
+        statistic *= self.nobs**2 if adjusted else self.nobs
+        df = self.neqs**2 * (nlags - self.k_ar)
+        dist = stats.chi2(df)
+        pvalue = dist.sf(statistic)
+        crit_value = dist.ppf(1 - signif)
+
+        if statistic < crit_value:
+            conclusion = 'fail to reject'
+        else:
+            conclusion = 'reject'
+        results = {
+            'statistic': statistic,
+            'crit_value': crit_value,
+            'pvalue': pvalue,
+            'df': df,
+            'conclusion': conclusion,
+            'signif': signif
+        }
+
+        return results
+
     def test_whiteness(self, nlags=10, plot=True, linewidth=8):
         r"""
         Test white noise assumption. Sample (Y) autocorrelations are compared

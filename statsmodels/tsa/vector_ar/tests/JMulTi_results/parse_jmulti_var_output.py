@@ -368,6 +368,51 @@ def load_results_jmulti(dataset, dt_s_list):
         test_norm_file.close()
 
         # ---------------------------------------------------------------------
+        # parse output related to testing the whiteness of the residuals:
+        whiteness_file = dataset.__str__() + "_" + source + "_" + dt_string \
+            + "_diag" + ".txt"
+        whiteness_file = os.path.join(os.path.dirname(
+            os.path.realpath(__file__)), whiteness_file)
+        whiteness_file = open(whiteness_file, encoding='latin_1')
+        results["whiteness"] = dict()
+        section_start_marker = "PORTMANTEAU TEST"
+        order_start = "tested order:"
+        statistic_start = "test statistic:"
+        p_start = " p-value:"
+        adj_statistic_start = "adjusted test statistic:"
+        unadjusted_finished = False
+
+        in_section = False
+        for line in whiteness_file:
+            if not in_section and section_start_marker not in line:
+                continue
+            if not in_section and section_start_marker in line:
+                in_section = True
+                continue
+            if line.startswith(order_start):
+                results["whiteness"]["tested order"] = int(
+                        line[len(order_start):])
+                continue
+            if line.startswith(statistic_start):
+                results["whiteness"]["test statistic"] = float(
+                        line[len(statistic_start):])
+                continue
+            if line.startswith(adj_statistic_start):
+                results["whiteness"]["test statistic adj."] = float(
+                        line[len(adj_statistic_start):])
+                continue
+            if line.startswith(p_start):  # same for unadjusted and adjusted
+                if not unadjusted_finished:
+                    results["whiteness"]["p-value"] = \
+                        float(line[len(p_start):])
+                    unadjusted_finished = True
+                else:
+                    results["whiteness"]["p-value adjusted"] = \
+                        float(line[len(p_start):])
+                    break
+        whiteness_file.close()
+
+        # ---------------------------------------------------------------------
         if debug_mode:
             print_debug_output(results, dt_string)
 

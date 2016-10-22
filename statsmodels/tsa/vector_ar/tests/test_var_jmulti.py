@@ -25,7 +25,7 @@ seasonal_list = [0, 4]  # [0, 4]  # todo #######################################
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["coefs", "det", "Sigma_u", "log_like", "fc", "causality",
-             "impulse-response", "lag order", "test normality"]
+             "impulse-response", "lag order", "test normality", "whiteness"]
 to_test = all_tests  #["coefs", "det", "Sigma_u", "log_like", "fc", "causality"]  # all_tests
 
 
@@ -500,6 +500,48 @@ def test_normality():
             des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
             yield assert_allclose, obt_pvalue, des_pvalue, rtol, atol, \
                 False, err_msg
+
+
+def test_whiteness():
+    if debug_mode:
+        if "whiteness" not in to_test:
+            return
+        else:
+            print("\n\nTEST WHITENESS OF RESIDUALS", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+            lags = results_ref[ds][dt]["whiteness"]["tested order"]
+
+            obtained = results_sm[ds][dt].test_whiteness_new(nlags=lags)
+            # test statistic
+            err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
+                                            "TEST STATISTIC")
+            desired = results_ref[ds][dt]["whiteness"]["test statistic"]
+            yield assert_allclose, obtained["statistic"], desired, \
+                rtol, atol, False, err_msg
+            # p-value
+            err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
+                                            "P-VALUE")
+            desired = results_ref[ds][dt]["whiteness"]["p-value"]
+            yield assert_allclose, obtained["pvalue"], desired, \
+                rtol, atol, False, err_msg
+
+            obtained = results_sm[ds][dt].test_whiteness_new(nlags=lags,
+                                                             adjusted=True)
+            # test statistic (adjusted Portmanteau test)
+            err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
+                                            "TEST STATISTIC (ADJUSTED TEST)")
+            desired = results_ref[ds][dt]["whiteness"]["test statistic adj."]
+            yield assert_allclose, obtained["statistic"], desired, \
+                rtol, atol, False, err_msg
+            # p-value (adjusted Portmanteau test)
+            err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
+                                            "P-VALUE (ADJUSTED TEST)")
+            desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
+            yield assert_allclose, obtained["pvalue"], desired, \
+                rtol, atol, False, err_msg
 
 
 def setup():
