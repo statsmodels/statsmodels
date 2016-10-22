@@ -70,32 +70,54 @@ def reorder_jmultis_det_terms(jmulti_output, constant, seasons):
                       season_columns))
 
 
+def generate_exog_from_season(seasons, endog_len):
+    """
+    Translate seasons to exog matrix.
+
+    Parameters
+    ----------
+    seasons : int
+        Number of seasons.
+    endog_len : int
+        Number of observations.
+
+    Returns
+    -------
+    exog : ndarray or None
+        If seasonal deterministic terms exist, the corresponding exog-matrix is
+        returned.
+        Otherwise, None is returned.
+    """
+
+    exog_stack = []
+    if seasons > 0:
+        season_exog = np.zeros((seasons - 1, endog_len))
+        for i in range(seasons - 1):
+            season_exog[i, i::seasons] = 1
+        # season_exog = season_exog[:, ::-1]
+        # season_exog = np.hstack((season_exog[:, 3:4],
+        #   season_exog[:, :-1]))
+        # season_exog = np.hstack((season_exog[:, 2:4],
+        #                          season_exog[:, :-2]))
+        # season_exog = np.hstack((season_exog[:, 1:4], season_exog[:, :-3]))
+        # season_exog[1] = -season_exog[1]
+        # the following line is commented out because seasonal terms are
+        # *not* centered in JMulTi's VAR-framework (in contrast to VECM)
+        # season_exog -= 1 / seasons
+        season_exog = season_exog.T
+        exog_stack.append(season_exog)
+    if exog_stack != []:
+        exog = np.column_stack(exog_stack)
+    else:
+        exog = None
+    return exog
+
+
 def load_results_statsmodels(dataset):
     results_per_deterministic_terms = dict.fromkeys(dt_s_list)
     for dt_s_tup in dt_s_list:
         endog = data[dataset]
-        exog_stack = []
-        seasons = dt_s_tup[1]
-        if seasons > 0:
-            season_exog = np.zeros((seasons - 1, len(endog)))
-            for i in range(seasons - 1):
-                season_exog[i, i::seasons] = 1
-            # season_exog = season_exog[:, ::-1]
-            # season_exog = np.hstack((season_exog[:, 3:4],
-            #   season_exog[:, :-1]))
-            # season_exog = np.hstack((season_exog[:, 2:4],
-            #                          season_exog[:, :-2]))
-            # season_exog = np.hstack((season_exog[:, 1:4], season_exog[:, :-3]))
-            # season_exog[1] = -season_exog[1]
-            # the following line is commented out because seasonal terms are
-            # *not* centered in JMulTi's VAR-framework (in contrast to VECM)
-            # season_exog -= 1 / seasons
-            season_exog = season_exog.T
-            exog_stack.append(season_exog)
-        if exog_stack != []:
-            exog = np.column_stack(exog_stack)
-        else:
-            exog = None
+        exog = generate_exog_from_season(dt_s_tup[1], len(endog))
         model = VAR(endog, exog)
         results_per_deterministic_terms[dt_s_tup] = model.fit(
                 maxlags=4, trend=dt_s_tup[0], method="ols")
@@ -429,6 +451,29 @@ def test_impulse_response():
             desired_all = results_ref[ds][dt]["ir"]
             yield assert_allclose, obtained_all, desired_all, rtol, atol,  \
                 False, err_msg
+
+
+def test_lag_order_selection():
+    if debug_mode:
+        if "lag order" not in to_test:
+            return
+        else:
+            print("\n\nLAG ORDER SELECTION", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+            endog_tot = data[ds]
+            exog = generate_exog_from_season(dt[1], len(endog_tot))
+            model = VAR(endog_tot, exog)
+            obtained_all = model.select_order(10, trend=dt[0], verbose=False)
+            for ic in ["aic", "fpe", "hqic", "bic"]:
+                err_msg = build_err_msg(ds, dt,
+                                        "LAG ORDER SELECTION - " + ic.upper())
+                obtained = obtained_all[ic]
+                desired = results_ref[ds][dt]["lagorder"][ic]
+                yield assert_allclose, obtained, desired, rtol, atol, False, \
+                    err_msg
 
 
 def setup():

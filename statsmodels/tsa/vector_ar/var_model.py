@@ -648,6 +648,7 @@ class VAR(tsbase.TimeSeriesModel):
         if offset < 0: # pragma: no cover
             raise ValueError('offset must be >= 0')
 
+        nobs = self.n_totobs - lags - offset
         endog = self.endog[offset:]
         exog = None if self.exog is None else self.exog[offset:]
         z = util.get_var_endog(endog, lags, trend=trend,
@@ -655,9 +656,9 @@ class VAR(tsbase.TimeSeriesModel):
         if exog is not None:
             # todo: currently only deterministic terms supported (exoglags==0)
             # and since exoglags==0, x will be an array of size 0.
-            x = util.get_var_endog(exog[-self.nobs:], 0, trend="nc",
+            x = util.get_var_endog(exog[-nobs:], 0, trend="nc",
                                    has_constant="raise")
-            x_inst = exog[-self.nobs:]
+            x_inst = exog[-nobs:]
             x = np.column_stack((x, x_inst))
             del x_inst  # free memory
             temp_z = z
@@ -698,7 +699,7 @@ class VAR(tsbase.TimeSeriesModel):
                             dates=self.data.dates, model=self, exog=self.exog)
         return VARResultsWrapper(varfit)
 
-    def select_order(self, maxlags=None, verbose=True):
+    def select_order(self, maxlags=None, verbose=True, trend="c"):
         """
         Compute lag order selections based on each of the available information
         criteria
@@ -709,6 +710,11 @@ class VAR(tsbase.TimeSeriesModel):
             if None, defaults to 12 * (nobs/100.)**(1./4)
         verbose : bool, default True
             If True, print table of info criteria and selected orders
+        trend : str {"nc", "c", "ct", "ctt"}
+            * "nc" - no deterministic terms
+            * "c" - constant term
+            * "ct" - constant and linear term
+            * "ctt" - constant, linear, and quadratic term
 
         Returns
         -------
@@ -718,15 +724,16 @@ class VAR(tsbase.TimeSeriesModel):
             maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
 
         ics = defaultdict(list)
-        for p in range(maxlags + 1):
+        p_min = 0 if self.exog is not None or trend != "nc" else 1
+        for p in range(p_min, maxlags + 1):
             # exclude some periods to same amount of data used for each lag
             # order
-            result = self._estimate_var(p, offset=maxlags-p)
+            result = self._estimate_var(p, offset=maxlags-p, trend=trend)
 
             for k, v in iteritems(result.info_criteria):
                 ics[k].append(v)
 
-        selected_orders = dict((k, mat(v).argmin())
+        selected_orders = dict((k, mat(v).argmin() + p_min)
                                for k, v in iteritems(ics))
 
         if verbose:
