@@ -335,6 +335,39 @@ def load_results_jmulti(dataset, dt_s_list):
         lagorder_file.close()
 
         # ---------------------------------------------------------------------
+        # parse output related to non-normality-test:
+        test_norm_file = dataset.__str__() + "_" + source + "_" + dt_string \
+            + "_diag" + ".txt"
+        test_norm_file = os.path.join(os.path.dirname(
+            os.path.realpath(__file__)), test_norm_file)
+        test_norm_file = open(test_norm_file, encoding='latin_1')
+        results["test_norm"] = dict()
+        section_start_marker = "TESTS FOR NONNORMALITY"
+        section_reached = False
+        subsection_start_marker = "Introduction to Multiple Time Series A"
+        subsection_reached = False
+        line_start_statistic = "joint test statistic:"
+        line_start_pvalue = " p-value:"
+        for line in test_norm_file:
+            if not section_reached:
+                if section_start_marker in line:
+                    section_reached = True  # section w/ relevant results found
+                continue
+            if not subsection_reached:
+                if subsection_start_marker in line:
+                    subsection_reached = True
+                continue
+            if "joint_pvalue" in results["test_norm"].keys():
+                break
+            if line.startswith(line_start_statistic):
+                line_end = line[len(line_start_statistic):]
+                results["test_norm"]["joint_test_statistic"] = float(line_end)
+            if line.startswith(line_start_pvalue):
+                line_end = line[len(line_start_pvalue):]
+                results["test_norm"]["joint_pvalue"] = float(line_end)
+        test_norm_file.close()
+
+        # ---------------------------------------------------------------------
         if debug_mode:
             print_debug_output(results, dt_string)
 
