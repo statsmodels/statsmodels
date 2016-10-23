@@ -1444,6 +1444,81 @@ class VECMResults(object):
         """
         return test_normality(self, signif=signif, verbose=verbose)
 
+    def test_whiteness(self, nlags=10, signif=0.05, adjusted=False):
+        """
+        Test the whiteness of the residuals using the Portmanteau test as
+        described in [1]_, chapter 8.4.1.
+
+        Parameters
+        ----------
+        nlags : int > 0
+        signif : float, between 0 and 1
+        adjusted : bool, default False
+
+        Returns
+        -------
+        results : dict
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        """
+        def cov(lag):
+            """
+            Parameters
+            ----------
+            lag : int >= 0
+
+            Returns
+            -------
+            result : ndarray (neqs, neqs)
+                The estimated autocovariance matrix of :math:`u_t` for lag
+                `lag`.
+            """
+            u = np.asarray(self.resid).T
+            u -= np.mean(u, axis=1).reshape((u.shape[0], 1))
+            result = np.zeros((self.neqs, self.neqs))
+            for t in range(lag, self.nobs):
+                result += u[:, t:t+1].dot(u[:, t-lag:t-lag+1].T)
+            result /= self.nobs
+            return result
+
+        statistic = 0
+        # self.sigma_u instead of cov(0) is necessary to get the same
+        # result as JMulTi. The difference between the two is that sigma_u is
+        # calculated with the usual residuals while in cov(0) the
+        # residuals are demeaned. To me JMulTi's behaviour seems a bit strange
+        # because it uses the usual residuals here but demeaned residuals in
+        # the calculation of autocovariances with lag > 0. (used in the
+        # argument of trace() four rows below this comment.)
+        c0_inv = inv(self.sigma_u)  # instead of inv(cov(0))
+        for t in range(1, nlags+1):
+            ct = cov(t)
+            to_add = np.trace(chain_dot(ct.T, c0_inv, ct, c0_inv))
+            if adjusted:
+                to_add /= (self.nobs - t)
+            statistic += to_add
+        statistic *= self.nobs**2 if adjusted else self.nobs
+
+        df = self.neqs**2 * (nlags - self.k_ar + 1) - self.neqs * self.r
+        dist = scipy.stats.chi2(df)
+        pvalue = dist.sf(statistic)
+        crit_value = dist.ppf(1 - signif)
+
+        if statistic < crit_value:
+            conclusion = 'fail to reject'
+        else:
+            conclusion = 'reject'
+        results = {
+            'statistic': statistic,
+            'crit_value': crit_value,
+            'pvalue': pvalue,
+            'df': df,
+            'conclusion': conclusion,
+            'signif': signif
+        }
+        return results
+
     def plot_data(self, with_presample=False):
         """
         Plots the input time series.
