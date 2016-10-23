@@ -212,7 +212,7 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0,
         # y_min1 = H.T.dot(y_min1)
 
     if "li" in deterministic:  # p. 299
-        y_min1_stack.append(np.arange(T))
+        y_min1_stack.append(np.arange(T) + p)
     y_min1 = np.row_stack(y_min1_stack)
 
     # p. 286:
