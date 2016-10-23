@@ -642,7 +642,8 @@ def test_lag_order_selection():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             endog_tot = data[ds]
-            obtained_all = select_order(endog_tot, 10, dt, )
+            obtained_all = select_order(endog_tot, 10, dt[0], dt[1],
+                                        verbose=False)
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(ds, dt,
                                         "LAG ORDER SELECTION - " + ic.upper())
@@ -652,7 +653,7 @@ def test_lag_order_selection():
                     err_msg
 
 
-def test_lag_order_selection():
+def test_normality():
     if debug_mode:
         if "test_norm" not in to_test:
             return

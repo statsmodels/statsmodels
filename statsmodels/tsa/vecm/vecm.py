@@ -60,10 +60,16 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
         # exclude some periods to same amount of data used for each lag
         # order
-        # TODO: pass deterministic and seasons as parameter to VAR() after
-        # VAR-code has been refactored and capable of handling arbitrary
-        # deterministic terms.
-        var_model = VAR(data)
+        # TODO: pass deterministic and seasons as parameter to VAR()
+        exog = []
+        if "co" in deterministic or "ci" in deterministic:
+            exog.append(np.ones(len(data)).reshape(-1, 1))
+        if "lo" in deterministic or "li" in deterministic:
+            exog.append(np.arange(len(data)).reshape(-1, 1))
+        if seasons > 0:
+            exog.append(seasonal_dummies(seasons, len(data)).reshape(-1, seasons-1))
+        exog = hstack(exog) if exog else None
+        var_model = VAR(data, exog)
         var_result = var_model._estimate_var(lags=p, offset=maxlags+1-p)
 
         for k, v in iteritems(var_result.info_criteria):
@@ -736,7 +742,7 @@ class VECMResults(object):
         KxK matrices A_i of the corresponding VAR representation. If the return
         value is assigned to a variable A, these matrices can be accessed via
         A[i], i=0, ..., k_ar-1.
-    """    # todo: aic, bic, bse, df_model, df_resid, fittedvalues, resid
+    """
 
     def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
                  gamma, sigma_u, deterministic='nc', seasons=0, first_season=0,
