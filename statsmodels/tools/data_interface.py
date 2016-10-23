@@ -193,10 +193,10 @@ def to_categorical(data, col=None, dictnames=False, drop=False):
 
     if not drop:
         result = pd.concat([source_data, dummies], axis=1)
-        return interface.from_statsmodels(result)
     else:
         result = pd.concat([to_drop, dummies], axis=1)
-        return interface.from_statsmodels(result)
+
+    return interface.from_statsmodels(result)
 
 
 def to_numpy_array(data):
@@ -211,11 +211,7 @@ def to_numpy_array(data):
     elif from_type == np.recarray:
         return data.view(np.ndarray)
 
-    elif from_type == pd.Series:
-
-        return data.values
-
-    elif from_type == pd.DataFrame:
+    elif from_type in [pd.Series, pd.DataFrame]:
         return data.values
 
     else:
@@ -227,9 +223,8 @@ def to_numpy_array(data):
 
 
 def to_list(data):
-    from_type = type(data)
 
-    if from_type == list:
+    if type(data) == list:
         return data
 
     else:
@@ -237,9 +232,8 @@ def to_list(data):
 
 
 def to_pandas(data, name=None, columns=None):
-    from_type = type(data)
 
-    if from_type in PANDAS_TYPES:
+    if type(data) in PANDAS_TYPES:
         return data
 
     elif is_recarray(data):
@@ -259,9 +253,7 @@ def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_nd
 
     assert type(data) in [np.ndarray, np.recarray]
 
-    from_type = type(data)
-
-    if from_type == to_type:
+    if type(data) == to_type:
         return data
 
     elif to_type == list:
