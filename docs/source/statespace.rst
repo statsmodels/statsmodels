@@ -304,7 +304,7 @@ estimated using only the following code:
    import statsmodels.api as sm
 
    # True model parameters
-   nobs = 1e3
+   nobs = int(1e3)
    true_phi = np.r_[0.5, -0.2]
    true_sigma = 1**0.5
 
@@ -327,8 +327,8 @@ estimated using only the following code:
            self['selection', 0, 0] = 1
 
        # Describe how parameters enter the model
-       def update(self, params, transformed=True):
-           params = super(AR2, self).update(params, transformed)
+       def update(self, params, transformed=True, **kwargs):
+           params = super(AR2, self).update(params, transformed, **kwargs)
 
            self['transition', 0, :] = params[:2]
            self['state_cov', 0, 0] = params[2]
@@ -349,15 +349,15 @@ This results in the following summary table::
    ==============================================================================
    Dep. Variable:                      y   No. Observations:                 1000
    Model:                            AR2   Log Likelihood               -1389.437
-   Date:                Sat, 13 Feb 2016   AIC                           2784.874
-   Time:                        00:25:30   BIC                           2799.598
+   Date:                Wed, 26 Oct 2016   AIC                           2784.874
+   Time:                        00:42:03   BIC                           2799.598
    Sample:                             0   HQIC                          2790.470
                                   - 1000                                         
    Covariance Type:                  opg                                         
    ==============================================================================
                     coef    std err          z      P>|z|      [0.025      0.975]
    ------------------------------------------------------------------------------
-   param.0        0.4395      0.030     14.729      0.000       0.381       0.498
+   param.0        0.4395      0.030     14.730      0.000       0.381       0.498
    param.1       -0.2055      0.032     -6.523      0.000      -0.267      -0.144
    param.2        0.9425      0.042     22.413      0.000       0.860       1.025
    ===================================================================================
@@ -368,7 +368,7 @@ This results in the following summary table::
    ===================================================================================
    
    Warnings:
-   [1] Covariance matrix calculated using the outer product of gradients.
+   [1] Covariance matrix calculated using the outer product of gradients (complex-step).
 
 The results object has many of the attributes and methods you would expect from
 other Statsmodels results objects, including standard errors, z-statistics,
