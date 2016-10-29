@@ -43,4 +43,4 @@ def test_robcov_SMOKE():
     r = robcov._cov_iter(x, robcov.weights_mvt, weights_args=(3, k_vars))
     # trimmed sample covariance
     r = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.50, ),
-                         rescale=True)
+                         rescale="med")
