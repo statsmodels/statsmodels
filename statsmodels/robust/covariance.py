@@ -50,26 +50,27 @@ class Holder(object):
 # from scikit-learn
 # https://github.com/scikit-learn/scikit-learn/blob/6a7eae5a97b6eba270abaaf17bc82ad56db4290e/sklearn/covariance/tests/test_covariance.py#L190
 # Note: this is only intended for internal use
-def _naive_ledoit_wolf_shrinkage(X):
+def _naive_ledoit_wolf_shrinkage(x, center):
     # A simple implementation of the formulas from Ledoit & Wolf
 
     # The computation below achieves the following computations of the
     # "O. Ledoit and M. Wolf, A Well-Conditioned Estimator for
     # Large-Dimensional Covariance Matrices"
     # beta and delta are given in the beginning of section 3.2
-    n_samples, n_features = X.shape
-    emp_cov = empirical_covariance(X, assume_centered=False)
+    n_samples, n_features = x.shape
+    xdm = x - center
+    emp_cov = xdm.T.dot(xdm) / n_samples
     mu = np.trace(emp_cov) / n_features
     delta_ = emp_cov.copy()
     delta_.flat[::n_features + 1] -= mu
     delta = (delta_ ** 2).sum() / n_features
-    X2 = X ** 2
+    x2 = x ** 2
     beta_ = 1. / (n_features * n_samples) \
-        * np.sum(np.dot(X2.T, X2) / n_samples - emp_cov ** 2)
+        * np.sum(np.dot(x2.T, x2) / n_samples - emp_cov ** 2)
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
-    return shrinkage
+    return shrinkage * emp_cov
 
 
 ### GK and OGK ###
