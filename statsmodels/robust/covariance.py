@@ -618,7 +618,7 @@ def weights_quantile(distance, frac=0.5, rescale=True):
 
 
 def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
-             rescale=False, maxiter=3, atol=1e-14, rtol=1e-6):
+             rescale='med', maxiter=3, atol=1e-14, rtol=1e-6):
     """iterative robust covariance estimation using weights
 
     This is in the style of M-estimators for given weight function.
@@ -626,6 +626,8 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     Note: ??? Whether this is normalized to be consistent with the
     multivariate normal case depends on the weight function.
     maybe it is consistent, it's just a weighted cov.
+
+    TODO: options for rescale instead of just median
 
     Parameters
     ----------
@@ -636,10 +638,11 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
         extra arguments for the weights_func
     cov_init : ndarray, square 2-D
         initial covariance matrix
-    rescale : bool
-        If true then the resulting covariance matrix is normalized so it is
+    rescale : "med"
+        If "med" then the resulting covariance matrix is normalized so it is
         approximately consistent with the normal distribution. Rescaling is
         based on the median of the distances and of the chisquare distribution.
+        Other options are not yet available.
 
     Returns
     -------
@@ -671,8 +674,12 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
             converged = True
             break
 
-    if rescale:
+    if rescale == 'med':
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
+    else:
+        raise NotImplementedError('only rescale="med" is currently available')
 
-    return cov, mean, w, dist, it, converged
+    res = Holder(cov=cov, mean=mean, weights=w, mahalanobis=dist,
+                 n_iter=it, converged=converged)
+    return res
