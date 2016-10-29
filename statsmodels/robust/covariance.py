@@ -15,9 +15,9 @@ License: BSD-3
 
 based on iteration in equ. (14) in Soloveychik and Wiesel
 
-Soloveychik, I., and A. Wiesel. 2014. “Tyler’s Covariance Matrix Estimator in
-Elliptical Models With Convex Structure.”
-IEEE Transactions on Signal Processing 62 (20): 5251–59.
+Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix Estimator in
+Elliptical Models With Convex Structure.
+IEEE Transactions on Signal Processing 62 (20): 5251-59.
 doi:10.1109/TSP.2014.2348951.
 
 see also related articles by Frahm (which are not easy to read,
@@ -25,9 +25,9 @@ too little explanation, too many strange font letters)
 
 shrinkage version is based on article
 
-Chen, Yilun, A. Wiesel, and A.O. Hero. 2011. “Robust Shrinkage Estimation of
-High-Dimensional Covariance Matrices.”
-IEEE Transactions on Signal Processing 59 (9): 4097–4107.
+Chen, Yilun, A. Wiesel, and A.O. Hero. 2011. Robust Shrinkage Estimation of
+High-Dimensional Covariance Matrices.
+IEEE Transactions on Signal Processing 59 (9): 4097-4107.
 doi:10.1109/TSP.2011.2138698.
 
 
@@ -497,12 +497,83 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
 
 ### iterative, M-estimators and related
 
-def cov_weighted(data, weights, center=None):
+def cov_weighted(data, weights, center=None, weights_cov=None,
+                 weights_cov_denom=None, ddof=1):
+    """weighted mean and covariance (for M-estimators)
+
+    wmean = sum (weights * data) / sum(weights)
+    wcov = sum (weights_cov * data_i data_i') / weights_cov_denom
+
+    The options for weights_cov_denom are described in Parameters.
+    By default both mean and cov are averages based on the same
+    weights.
+
+    Parameters
+    ----------
+    data : array_like, 2-D
+        observations in rows, variables in columns
+        no missing value handling
+    weights : ndarray, 1-D
+        weights array with length equal to the number of observations
+    center : None or ndarray (optional)
+        If None, then the weighted mean is subtracted from the data
+        If center is provided, then it is used instead of the
+        weighted mean.
+    weights_cov : None, ndarray or "det" (optional)
+        If None, then the same weights as for the mean are used.
+    weights_cov_denom : None, float or "det" (optional)
+        specified the denominator for the weighted covariance
+        If None, then the sum of weights are used and the covariance is
+        an average cross product
+        If "det", then the weighted covariance is normalized such that
+        det(wcov) is 1.
+        If float, then it is used directly as denominator.
+    ddof : int or float
+        covariance degrees of freedom correction, only used if
+        weights_cov_denom is None or a float.
+
+    Notes
+    -----
+    The extra options are available to cover the general M-estimator
+    for location and scatter with estimating equations (using data x):
+
+    sum (weights * (x - m)) = 0
+    sum (weights_cov * (x_i - m) * (x_i - m)') - weights_cov_denom * cov = 0
+
+    where the weights are functions of the mahalonibis distance of the
+    residuals, and m is the mean.
+
+    In the default case
+    wmean = ave (w_i x)i)
+    wcov = ave (w_i (x_i - m) (x_i - m)')
+
+    """
+
     wsum = weights.sum()
+    if weights_cov is None:
+        weights_cov = weights
+        wsum_cov = wsum
+    else:
+        wsum_cov = None  # calculate below only if needed
+
     if center is None:
         wmean = weights.dot(data) / wsum
+    else:
+        wmean = center
+
     xdm = data - wmean
-    wcov = (weights * xdm.T).dot(xdm) / wsum
+    wcov = (weights_cov * xdm.T).dot(xdm)
+    if weights_cov_denom is None:
+        if wsum_cov is None:
+            wsum_cov = weights_cov.sum()
+        wcov /= (wsum_cov - ddof)
+    elif weights_cov_denom == "det":
+        wcov /= np.linalg.det(wcov)**(1 / wcov.shape[0])
+    elif weights_cov_denom == 1:
+        pass
+    else:
+        wcov /= (weights_cov_denom - ddof)
+
     return wcov, wmean
 
 
@@ -526,13 +597,13 @@ def weights_mvt(distance, df, k_vars):
     References
     ----------
 
-    Finegold, Michael A., and Mathias Drton. 2014. “Robust Graphical
-    Modeling with T-Distributions.” arXiv:1408.2033 [Cs, Stat], August.
+    Finegold, Michael A., and Mathias Drton. 2014. Robust Graphical
+    Modeling with T-Distributions. arXiv:1408.2033 [Cs, Stat], August.
     http://arxiv.org/abs/1408.2033.
 
-    Finegold, Michael, and Mathias Drton. 2011. “ROBUST GRAPHICAL
+    Finegold, Michael, and Mathias Drton. 2011. ROBUST GRAPHICAL
     MODELING OF GENE NETWORKS USING CLASSICAL AND ALTERNATIVE
-    T-DISTRIBUTIONS.” The Annals of Applied Statistics 5 (2A): 1057–80.
+    T-DISTRIBUTIONS.â€� The Annals of Applied Statistics 5 (2A): 1057-80.
 
 
     """
