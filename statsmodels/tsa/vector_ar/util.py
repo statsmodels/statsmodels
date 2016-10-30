@@ -1,6 +1,8 @@
 """
 Miscellaneous utility code for VAR estimation
 """
+from __future__ import division
+
 from statsmodels.compat.python import range, string_types, asbytes, long
 from statsmodels.compat.pandas import frequencies
 import numpy as np
