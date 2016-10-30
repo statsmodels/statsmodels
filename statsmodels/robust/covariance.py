@@ -73,6 +73,23 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     return shrinkage * emp_cov
 
 
+# reweight adapted from OGK reweight step
+def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
+    beta = trim_frac
+    nobs, k_vars = x.shape
+    #d = (((z - loc_z) / scale_z)**2).sum(1) # for orthogonal
+    d = mahalanobis(x - loc, cov)
+    # only hard thresholding right now
+    dmed = np.median(d)
+    cutoff = dmed * stats.chi2.isf(1-beta, k_vars) / stats.chi2.ppf(0.5, k_vars)
+    mask = d <= cutoff
+    sample = x[mask]
+    loc = sample.mean(0)
+    cov = np.cov(sample.T, ddof=ddof)
+    return cov, loc
+
+
+
 ### GK and OGK ###
 
 def _weight_mean(x, c):
@@ -150,7 +167,7 @@ def mahalanobis(data, cov=None, cov_inv=None):
     """
     x = np.asarray(data)
     if cov_inv is not None:
-        d = (x * cov_inv.dot(x)).sum(1)
+        d = (x * cov_inv.dot(x.T).T).sum(1)
     elif cov is not None:
         d = (x * np.linalg.solve(cov, x.T).T).sum(1)
     else:
@@ -265,7 +282,8 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         loc = sample.mean(0)
         cov = np.cov(sample.T, ddof=ddof)
 
-    res = Holder(cov=cov, loc=loc, mask=mask, mahalanobis=d,
+    # duplicate name loc mean center, choose consistent naming
+    res = Holder(cov=cov, loc=loc, mean=loc, mask=mask, mahalanobis=d,
                  cov_ogk_raw=cov_ogk_raw, loc_ogk_raw=loc_ogk_raw,
                  transf0=transf0)
 
@@ -573,6 +591,13 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     wmean = ave (w_i x)i)
     wcov = ave (w_i (x_i - m) (x_i - m)')
 
+    References
+    ----------
+    Rocke, D. M., and D. L. Woodruff. 1993. “Computation of Robust Estimates
+    of Multivariate Location and Shape.” Statistica Neerlandica 47 (1): 27–42.
+    doi:10.1111/j.1467-9574.1993.tb01404.x.
+
+
     """
 
     wsum = weights.sum()
@@ -709,3 +734,46 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     res = Holder(cov=cov, mean=mean, weights=w, mahalanobis=dist,
                  n_iter=it, converged=converged)
     return res
+
+
+def _cov_starting(data, is_standardized=True, quantile=0.5):
+    """compute some robust starting covariances
+
+    The returned covariance matrices are intended as starting values
+    for further processing. The main purpose is for DetXXX algorithms.
+    The quality as standalone covariance matrices varies and might not
+    be very good.
+
+
+    """
+    x = np.asarray(data)
+    nobs, k_vars = x.shape
+    if not is_standardized:
+        # there should be a helper function/class
+        center = np.median(data, axis=0)
+        xs = (x - center)
+        std = mad0(data)
+        xs /= std
+    else:
+        xs = x - np.median(data, axis=0)
+
+    cov_all = []
+    d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
+    cutoffs = np.percentile(d, [(k_vars+2) / nobs * 100, 25, 50])
+    for cutoff in cutoffs:
+        xsp = xs[d<cutoff]
+        c0 = np.cov(xsp.T)
+        c01 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
+                        rescale="med", cov_init=c0, maxiter=100)
+
+        c02 = _naive_ledoit_wolf_shrinkage(xsp, 0)
+        c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
+                        rescale="med", cov_init=c02, maxiter=100)
+
+        cov_all.extend([c0, c01, c02, c03])
+
+    c2 = cov_ogk(xs)
+    cov_all.append(c2)
+
+    # TODO: rescale back to original space using center and std
+    return cov_all

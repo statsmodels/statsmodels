@@ -1,10 +1,25 @@
 
 import numpy as np
 from scipy import linalg
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_
 
 from statsmodels import robust
 import statsmodels.robust.covariance as robcov
+
+
+def test_mahalanobis():
+    x = np.random.randn(10, 3)
+
+    d1 = (x**2).sum(1)
+    d0 = robcov.mahalanobis(x, np.eye(3))
+    assert_allclose(d0, d1, rtol=1e-10)
+    d2 = robcov.mahalanobis(x, cov_inv=np.eye(3))
+    assert_allclose(d2, d1, rtol=1e-10)
+
+    d3 = robcov.mahalanobis(x, 2*np.eye(3))
+    assert_allclose(d3, 0.5 * d1, rtol=1e-10)
+    d4 = robcov.mahalanobis(x, cov_inv=2*np.eye(3))
+    assert_allclose(d4, 2 * d1, rtol=1e-10)
 
 
 def test_robcov_SMOKE():
@@ -16,10 +31,12 @@ def test_robcov_SMOKE():
 
     np.random.seed(187649)
     x = np.random.multivariate_normal(mean, cov, size=nobs)
+    n_outliers = 1
     x[0,:2] = 50
 
     xtx = x.T.dot(x)
     cov_emp = np.cov(x.T)
+    cov_clean = np.cov(x[n_outliers:].T)
 
     # GK, OGK
     robcov.cov_gk1(x[:, 0], x[:,2])
@@ -44,3 +61,20 @@ def test_robcov_SMOKE():
     # trimmed sample covariance
     r = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.50, ),
                          rescale="med")
+
+    # We use 0.75 quantile for truncation to get better efficiency
+    # at q=0.5, cov is pretty noisy at nobs=100 and passes at rtol=1
+    res_li = robcov._cov_starting(x, is_standardized=False, quantile=0.75)
+    for i, res in enumerate(res_li):
+        # note: basic cov are not properly scaled
+        # check only those with _cov_iter rescaling
+        if hasattr(res, 'cov'):
+            # inconsistent returns, redundant for now b/c no arrays
+            c = getattr(res, 'cov', res)
+            # rough comparison with DGP cov
+            assert_allclose(c, cov, rtol=0.5)
+            # check average scaling
+            assert_allclose(np.diag(c).sum(), np.diag(cov).sum(), rtol=0.25)
+            c1, m1 = robcov._reweight(x, res.mean, res.cov)
+            assert_allclose(c1, cov, rtol=0.5)
+            assert_allclose(c1, cov_clean, rtol=0.25) # oracle, w/o outliers
