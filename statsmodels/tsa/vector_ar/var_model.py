@@ -1701,7 +1701,8 @@ class VARResults(VARProcess):
 
         return results
 
-    def test_inst_causality(self, causing, signif=0.05, verbose=True):
+    def test_inst_causality(self, causing, signif=0.05, verbose=True,
+                            names=None):
         """
         Test for instantaneous causality as described in chapters 3.6.3 and
         7.6.4 of [1]_.
@@ -1764,11 +1765,12 @@ class VARResults(VARProcess):
         if not all(isinstance(c, allowed_types) for c in causing):
             raise TypeError("causing has to be of type string or int (or a " +
                             "a sequence of these types).")
-        causing = [self.names[c] if type(c) == int else c for c in causing]
-        causing_ind = [util.get_index(self.names, c) for c in causing]
+        names = names if names is not None else self.names
+        causing = [names[c] if type(c) == int else c for c in causing]
+        causing_ind = [util.get_index(names, c) for c in causing]
 
         caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
-        caused = [self.names[c] for c in caused_ind]
+        caused = [names[c] for c in caused_ind]
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar

@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 
 import collections
 import math
@@ -1392,7 +1392,8 @@ class VECMResults(object):
         # fit with trend "nc" because all trend information is already in exog
         var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="nc")
         return var_results.test_inst_causality(causing=causing, signif=signif,
-                                               verbose=verbose)
+                                               verbose=verbose,
+                                               names=self.names)
 
     def irf(self, periods=10):
         return irf.IRAnalysis(self, periods=periods, vecm=True)
