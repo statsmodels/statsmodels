@@ -479,6 +479,11 @@ def test_granger_causality():
 
             err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
             err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
+
+            # produce output to increase test coverage (but only in a few
+            # cases to avoid cluttered test output)
+            verbose = (dt[0] == "nc" and dt[1] == 0)
+
             v_ind = range(len(ds.variable_names))
             for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
                 causing_names = ["y" + str(i+1) for i in causing_ind]
@@ -490,7 +495,7 @@ def test_granger_causality():
 
                 granger_sm_ind = results_sm[ds][
                     dt].test_granger_causality(caused_ind, causing_ind,
-                                               verbose=False)
+                                               verbose=verbose)
                 granger_sm_str = results_sm[ds][
                     dt].test_granger_causality(caused_names,
                                                causing_names, verbose=False)
@@ -554,6 +559,10 @@ def test_inst_causality():  # test instantaneous causality
             err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
             err_msg_i_t = build_err_msg(ds, dt, "INSTANT. CAUS. - TEST STAT.")
 
+            # produce output to increase test coverage (but only in a few
+            # cases to avoid cluttered test output)
+            verbose = (dt[0] == "nc" and dt[1] == 0)
+
             v_ind = range(len(ds.variable_names))
             for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
                 causing_names = ["y" + str(i+1) for i in causing_ind]
@@ -562,7 +571,7 @@ def test_inst_causality():  # test instantaneous causality
                 caused_ind = [i for i in v_ind if i not in causing_ind]
                 caused_key = tuple(ds.variable_names[i] for i in caused_ind)
                 inst_sm_ind = results_sm[ds][dt].test_inst_causality(
-                    causing_ind, verbose=False)
+                    causing_ind, verbose=verbose)
                 inst_sm_str = results_sm[ds][dt].test_inst_causality(
                     causing_names, verbose=False)
                 # test test-statistic for instantaneous non-causality
@@ -642,8 +651,11 @@ def test_lag_order_selection():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             endog_tot = data[ds]
+            # produce output to increase test coverage (but only in a few
+            # cases to avoid cluttered test output)
+            verbose = (dt[0] == "nc" and dt[1] == 0)
             obtained_all = select_order(endog_tot, 10, dt[0], dt[1],
-                                        verbose=False)
+                                        verbose=verbose)
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(ds, dt,
                                         "LAG ORDER SELECTION - " + ic.upper())
@@ -664,8 +676,11 @@ def test_normality():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            # produce output to increase test coverage (but only in a few
+            # cases to avoid cluttered test output)
+            verbose = (dt[0] == "nc" and dt[1] == 0)
             obtained = results_sm[ds][dt].test_normality(signif=0.05,
-                                                         verbose=False)
+                                                         verbose=verbose)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
             obt_statistic = obtained["statistic"]
             des_statistic = results_ref[ds][dt]["test_norm"][

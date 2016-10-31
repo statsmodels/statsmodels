@@ -20,8 +20,8 @@ results_sm = {}
 
 debug_mode = True
 dont_test_se_t_p = False
-deterministic_terms_list = ["nc", "c", "ct"]#["nc", "c", "ct"]  # todo ###############################
-seasonal_list = [0, 4]  # [0, 4]  # todo #########################################################################
+deterministic_terms_list = ["nc", "c", "ct"]
+seasonal_list = [0, 4]
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["coefs", "det", "Sigma_u", "log_like", "fc", "causality",
