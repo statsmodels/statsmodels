@@ -236,33 +236,33 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0,
                                               first_period=first_season,
                                               centered=True).T)
     if "lo" in deterministic:
-        delta_x_stack.append(np.arange(T)+1)
+        delta_x_stack.append(np.arange(T) + p + 1)
     delta_x = np.row_stack(delta_x_stack)
     return y_1_T, delta_y_1_T, y_min1, delta_x
 
 
-def _block_matrix_ymin1_deltax(y_min1, delta_x):  # e.g. p.287 (7.2.4)
-    """Returns an ndarray needed for parameter estimation as well as the
-    calculation of standard errors.
-
-    Parameters
-    ----------
-    y_min1 : ndarray (neqs x nobs)
-        (dimensions assuming no deterministic terms are given)
-        .. math:: (y_0, \ldots, y_{T-1}
-    delta_x : ndarray (diff_lags*neqs x nobs)
-        (dimensions assuming no deterministic terms are given)
-
-    Returns
-    -------
-    result : ndarray (neqs*k_ar x neqs*k_ar)
-        (dimensions assuming no deterministic terms are given)
-        Inverse of a matrix consisting of four blocks. Each block is consists
-        of matrix products of the function's arguments.
-    """
-    b = y_min1.dot(delta_x.T)
-    return inv(vstack((hstack((y_min1.dot(y_min1.T), b)),
-                       hstack((b.T, delta_x.dot(delta_x.T))))))
+# def _block_matrix_ymin1_deltax(y_min1, delta_x):  # e.g. p.287 (7.2.4)
+#     """Returns an ndarray needed for parameter estimation as well as the
+#     calculation of standard errors.
+#
+#     Parameters
+#     ----------
+#     y_min1 : ndarray (neqs x nobs)
+#         (dimensions assuming no deterministic terms are given)
+#         .. math:: (y_0, \ldots, y_{T-1}
+#     delta_x : ndarray (diff_lags*neqs x nobs)
+#         (dimensions assuming no deterministic terms are given)
+#
+#     Returns
+#     -------
+#     result : ndarray (neqs*k_ar x neqs*k_ar)
+#         (dimensions assuming no deterministic terms are given)
+#         Inverse of a matrix consisting of four blocks. Each block is consists
+#         of matrix products of the function's arguments.
+#     """
+#     b = y_min1.dot(delta_x.T)
+#     return inv(vstack((hstack((y_min1.dot(y_min1.T), b)),
+#                        hstack((b.T, delta_x.dot(delta_x.T))))))
 
 
 def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
@@ -389,7 +389,7 @@ class VECM(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        method : {"ls", "egls", "ml"}
+        method : {"ml"}
             Estimation method to use.
         coint_rank : int
             Cointegration rank, equals the rank of the matrix \Pi and the
@@ -403,87 +403,87 @@ class VECM(tsbase.TimeSeriesModel):
         -----
         [1]_ pp. 269-304
         """
-        if method == "ls":
-            return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
-                                          self.seasons, self.first_season)
-        elif method == "egls":
-            return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
-                                            self.seasons, self.coint_rank,
-                                            self.first_season)
-        elif method == "ml":
+        # if method == "ls":
+        #     return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
+        #                                   self.seasons, self.first_season)
+        # elif method == "egls":
+        #     return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
+        #                                     self.seasons, self.coint_rank,
+        #                                     self.first_season)
+        if method == "ml":
             return self._estimate_vecm_ml(self.diff_lags, self.deterministic,
                                           self.seasons, self.coint_rank,
                                           self.first_season)
         else:
             raise ValueError("%s not recognized, must be among %s"
-                             % (method, ("ls", "egls", "ml")))
+                             % (method, "ml"))
 
-    def _ls_pi_gamma(self, delta_y_1_T, y_min1, delta_x, diff_lags,
-                     deterministic):
-        K = delta_y_1_T.shape[0]
-        T = delta_y_1_T.shape[1]
+    # def _ls_pi_gamma(self, delta_y_1_T, y_min1, delta_x, diff_lags,
+    #                  deterministic):
+    #     K = delta_y_1_T.shape[0]
+    #     T = delta_y_1_T.shape[1]
+    #
+    #     mat1 = hstack((delta_y_1_T.dot(y_min1.T), delta_y_1_T.dot(delta_x.T)))
+    #     mat2 = _block_matrix_ymin1_deltax(y_min1, delta_x)
+    #     est_pi_gamma = mat1.dot(mat2)  # p. 287 (equation (7.2.4))
+    #
+    #     pi_cols = K
+    #     if "ci" in deterministic:
+    #         pi_cols += 1
+    #     if "li" in deterministic:
+    #         pi_cols += 1
+    #     pi_hat, gamma_hat = np.hsplit(est_pi_gamma, [pi_cols])
+    #
+    #     _A = delta_y_1_T - pi_hat.dot(y_min1) - gamma_hat.dot(delta_x)
+    #     p = diff_lags+1
+    #     sigma_u_hat = 1/(T-K*p) * np.dot(_A, _A.T)  # p. 287 (equation (7.2.5))
+    #
+    #     return pi_hat, gamma_hat, sigma_u_hat
 
-        mat1 = hstack((delta_y_1_T.dot(y_min1.T), delta_y_1_T.dot(delta_x.T)))
-        mat2 = _block_matrix_ymin1_deltax(y_min1, delta_x)
-        est_pi_gamma = mat1.dot(mat2)  # p. 287 (equation (7.2.4))
-
-        pi_cols = K
-        if "ci" in deterministic:
-            pi_cols += 1
-        if "li" in deterministic:
-            pi_cols += 1
-        pi_hat, gamma_hat = np.hsplit(est_pi_gamma, [pi_cols])
-
-        _A = delta_y_1_T - pi_hat.dot(y_min1) - gamma_hat.dot(delta_x)
-        p = diff_lags+1
-        sigma_u_hat = 1/(T-K*p) * np.dot(_A, _A.T)  # p. 287 (equation (7.2.5))
-
-        return pi_hat, gamma_hat, sigma_u_hat
-
-    def _estimate_vecm_ls(self, diff_lags, deterministic="nc", seasons=0,
-                          first_season=0):
-        # deterministic \in \{"c", "lo", \}, where
-        # c=constant, lt=linear trend, s=seasonal terms
-        y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic, seasons, first_season)
-
-        pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
-                                                           delta_x, diff_lags,
-                                                           deterministic)
-        return {"Pi_hat": pi_hat, "Gamma_hat": gamma_hat,
-                "Sigma_u_hat": sigma_u_hat}
+    # def _estimate_vecm_ls(self, diff_lags, deterministic="nc", seasons=0,
+    #                       first_season=0):
+    #     # deterministic \in \{"c", "lo", \}, where
+    #     # c=constant, lt=linear trend, s=seasonal terms
+    #     y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+    #             self.y, diff_lags, deterministic, seasons, first_season)
+    #
+    #     pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
+    #                                                        delta_x, diff_lags,
+    #                                                        deterministic)
+    #     return {"Pi_hat": pi_hat, "Gamma_hat": gamma_hat,
+    #             "Sigma_u_hat": sigma_u_hat}
     
-    def _estimate_vecm_egls(self, diff_lags, deterministic="nc", seasons=0,
-                            r=1, first_season=0):
-        y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic, seasons, first_season)
-        T = y_1_T.shape[1]
-        
-        pi_hat, _gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T,
-                                                            y_min1, delta_x,
-                                                            diff_lags,
-                                                            deterministic)
-        alpha_hat = pi_hat[:, :r]
-
-        r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
-        r11 = r1[:r]
-        r12 = r1[r:]
-        _alpha_Sigma = alpha_hat.T.dot(inv(sigma_u_hat))
-        # p. 292:
-        beta_hhat = inv(_alpha_Sigma.dot(alpha_hat)).dot(_alpha_Sigma).dot(
-                r0-alpha_hat.dot(r11)).dot(r12.T).dot(inv(r12.dot(r12.T))).T
-        beta_hhat = vstack((np.identity(r),
-                            beta_hhat))
-
-        # ? Gamma_hhat necessary / computed via
-        # (delta_y_1_T - alpha_hat.dot(beta_hhat.T).dot(y_min1)).dot(
-        #     delta_x.dot(inv(np.dot(delta_x,delta_x.T))))
-        
-        # Gamma_hhat = 
-        # TODO: Gamma?
-        
-        return {"alpha": alpha_hat, "beta": beta_hhat, 
-                "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
+    # def _estimate_vecm_egls(self, diff_lags, deterministic="nc", seasons=0,
+    #                         r=1, first_season=0):
+    #     y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+    #             self.y, diff_lags, deterministic, seasons, first_season)
+    #     T = y_1_T.shape[1]
+    #
+    #     pi_hat, _gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T,
+    #                                                         y_min1, delta_x,
+    #                                                         diff_lags,
+    #                                                         deterministic)
+    #     alpha_hat = pi_hat[:, :r]
+    #
+    #     r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
+    #     r11 = r1[:r]
+    #     r12 = r1[r:]
+    #     _alpha_Sigma = alpha_hat.T.dot(inv(sigma_u_hat))
+    #     # p. 292:
+    #     beta_hhat = inv(_alpha_Sigma.dot(alpha_hat)).dot(_alpha_Sigma).dot(
+    #             r0-alpha_hat.dot(r11)).dot(r12.T).dot(inv(r12.dot(r12.T))).T
+    #     beta_hhat = vstack((np.identity(r),
+    #                         beta_hhat))
+    #
+    #     # ? Gamma_hhat necessary / computed via
+    #     # (delta_y_1_T - alpha_hat.dot(beta_hhat.T).dot(y_min1)).dot(
+    #     #     delta_x.dot(inv(np.dot(delta_x,delta_x.T))))
+    #
+    #     # Gamma_hhat =
+    #     # TODO: Gamma?
+    #
+    #     return {"alpha": alpha_hat, "beta": beta_hhat,
+    #             "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
     
     def _estimate_vecm_ml(self, diff_lags, deterministic="nc", seasons=0, r=1,
                           first_season=0):
@@ -609,41 +609,41 @@ class VECM(tsbase.TimeSeriesModel):
                             for i in range(self.coint_rank)]
 
         return param_names
-
-    @property
-    def sigma2_param_names(self, error_cov_type="unstructured"):
-        """
-
-        Parameters
-        ----------
-        error_cov_type : str {"diagonal", "unstructured"}
-            If "diagonal", the variance of each variable is returned.
-            If "unstructured", the covariance of each combination of variables
-            is returned.
-
-        Returns
-        -------
-        param_names : list of str
-            Returns a list of parameter names.
-        """
-        param_names = []
-
-        if self.error_cov_type == 'diagonal':
-            param_names += [
-                'sigma2.%s' % self.endog_names[i]
-                for i in range(self.neqs)
-            ]
-        elif self.error_cov_type == 'unstructured':
-            param_names += [
-                ('sqrt.var.%s' % self.endog_names[i] if i == j else
-                 'sqrt.cov.%s.%s' % (self.endog_names[j], self.endog_names[i]))
-                for i in range(self.neqs)
-                for j in range(i+1)
-            ]
-        else:
-            raise ValueError("error_cov_type has to be either \"diagonal\" " +
-                             "or \"unstructured\".")
-        return param_names
+    #
+    # @property
+    # def sigma2_param_names(self, error_cov_type="unstructured"):
+    #     """
+    #
+    #     Parameters
+    #     ----------
+    #     error_cov_type : str {"diagonal", "unstructured"}
+    #         If "diagonal", the variance of each variable is returned.
+    #         If "unstructured", the covariance of each combination of variables
+    #         is returned.
+    #
+    #     Returns
+    #     -------
+    #     param_names : list of str
+    #         Returns a list of parameter names.
+    #     """
+    #     param_names = []
+    #
+    #     if self.error_cov_type == 'diagonal':
+    #         param_names += [
+    #             'sigma2.%s' % self.endog_names[i]
+    #             for i in range(self.neqs)
+    #         ]
+    #     elif self.error_cov_type == 'unstructured':
+    #         param_names += [
+    #             ('sqrt.var.%s' % self.endog_names[i] if i == j else
+    #              'sqrt.cov.%s.%s' % (self.endog_names[j], self.endog_names[i]))
+    #             for i in range(self.neqs)
+    #             for j in range(i+1)
+    #         ]
+    #     else:
+    #         raise ValueError("error_cov_type has to be either \"diagonal\" " +
+    #                          "or \"unstructured\".")
+    #     return param_names
 
 # -----------------------------------------------------------------------------
 # VECMResults class

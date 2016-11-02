@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_, assert_allclose, assert_raises
 
 from statsmodels.compat.python import range
 import statsmodels.datasets.macrodata.data as macro
@@ -25,7 +25,8 @@ seasonal_list = [0, 4]
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["coefs", "det", "Sigma_u", "log_like", "fc", "causality",
-             "impulse-response", "lag order", "test normality", "whiteness"]
+             "impulse-response", "lag order", "test normality", "whiteness",
+             "exceptions"]
 to_test = all_tests  #["coefs", "det", "Sigma_u", "log_like", "fc", "causality"]  # all_tests
 
 
@@ -542,6 +543,27 @@ def test_whiteness():
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
             yield assert_allclose, obtained["pvalue"], desired, \
                 rtol, atol, False, err_msg
+
+
+def test_exceptions():
+    if debug_mode:
+        if "exceptions" not in to_test:
+            return
+        else:
+            print("\n\nEXCEPTIONS\n", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            # instant causality:
+            ### 0<signif<1
+            yield assert_raises, ValueError,\
+                results_sm[ds][dt].test_inst_causality, \
+                0, 0  # this means signif=0
+            ### causing must be int, str or iterable of int or str
+            yield assert_raises, TypeError,\
+                results_sm[ds][dt].test_inst_causality, [0.5]  # 0.5 not an int
 
 
 def setup():

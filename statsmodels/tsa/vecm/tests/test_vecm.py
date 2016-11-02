@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_, assert_allclose, assert_raises
 from statsmodels.compat.python import range
 
 import statsmodels.datasets.interest_inflation.data as e6
@@ -21,15 +21,15 @@ results_sm = {}
 coint_rank = 1
 
 debug_mode = True
-dont_test_se_t_p = True
-deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"] # todo ###############################
-seasonal_list = [0, 4] # todo #########################################################################
+dont_test_se_t_p = False
+deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
+seasonal_list = [0, 4]
 dt_s_list = [(det, s) for det in deterministic_terms_list
              for s in seasonal_list]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
              "granger", "inst. causality", "impulse-response", "lag order",
-             "test_norm", "whiteness"]
+             "test_norm", "whiteness", "summary", "exceptions"]
 to_test = all_tests  # ["beta"]
 
 
@@ -45,7 +45,7 @@ def load_results_statsmodels(dataset):
     for dt_s_tup in dt_s_list:
         model = VECM(data[dataset], diff_lags=3, coint_rank=coint_rank,
                      deterministic=dt_s_tup[0], seasons=dt_s_tup[1],
-                     first_season=dataset.first_season)  # todo: make first_season retrievable from data.py and remove hardcoded 1.
+                     first_season=dataset.first_season)
         results_per_deterministic_terms[dt_s_tup] = model.fit(
                 method="ml")
     return results_per_deterministic_terms
@@ -734,6 +734,53 @@ def test_whiteness():
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
             yield assert_allclose, obtained["pvalue"], desired, \
                 rtol, atol, False, err_msg
+
+
+def test_summary():
+    if debug_mode:
+        if "summary" not in to_test:
+            return
+        else:
+            print("\n\nSUMMARY", end="")
+    for ds in datasets:
+        for dt in dt_s_list:
+            if debug_mode:
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            results_sm[ds][dt].summary(alpha=0.05)
+
+
+def test_exceptions():
+    if debug_mode:
+        if "exceptions" not in to_test:
+            return
+        else:
+            print("\n\nEXCEPTIONS\n", end="")
+    ds = datasets[0]
+    dt = dt_s_list[0]
+
+    # Granger_causality:
+    ### 0<signif<1
+    yield assert_raises, ValueError,\
+        results_sm[ds][dt].test_granger_causality, \
+        0, None, 0  # this means signif=0
+    ### caused must be int, str or iterable of int or str
+    yield assert_raises, TypeError,\
+        results_sm[ds][dt].test_granger_causality, [0.5]  # 0.5 not int
+    ### causing must be None, int, str or iterable of int or str
+    yield assert_raises, TypeError,\
+        results_sm[ds][dt].test_granger_causality, 0, .5  # .5 not int
+
+    # exceptions in VECM class
+    ### choose only one of the two: "co" and "ci"
+    model = VECM(data[datasets[0]], diff_lags=1, deterministic="cico")
+    yield assert_raises, ValueError, model.fit
+    ### we analyze multiple time series
+    univariate_data = data[datasets[0]][0]
+    yield assert_raises, ValueError, VECM, univariate_data
+    ### fit only allowed with known method
+    model = VECM(data[datasets[0]], diff_lags=1, deterministic="nc")
+    yield assert_raises, ValueError, model.fit, "abc"  # no "abc" estim.-method
 
 
 def setup():
