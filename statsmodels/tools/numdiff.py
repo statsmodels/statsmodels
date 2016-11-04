@@ -349,7 +349,7 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
             hess[i, j] = (f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
                           - f(*((x + ee[i, :] - ee[j, :],) + args), **kwargs)
                           - (f(*((x - ee[i, :] + ee[j, :],) + args), **kwargs)
-                          - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs),)
+                          - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs))
                           )/(4.*hess[i, j])
             hess[j, i] = hess[i, j]
     return hess
