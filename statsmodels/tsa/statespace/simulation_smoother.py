@@ -140,7 +140,7 @@ class SimulationSmoother(KalmanSmoother):
 
         # Create the simulator if necessary
         if (prefix not in self._simulators or
-                nsimulations > self._simulators[prefix].nobs):
+                not nsimulations == self._simulators[prefix].nobs):
 
             # Make sure we have the required Statespace representation
             prefix, dtype, create_statespace = (
