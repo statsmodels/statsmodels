@@ -89,6 +89,84 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     return cov, loc
 
 
+def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
+    """determine outlier fraction given reference distribution
+
+    This implements the outlier cutoff of Gervini and Yohai 2002
+    for use in efficient reweighting.
+
+    Parameters
+    ----------
+    d : array_like, 1-D
+        array of squared standardized residuals or Mahalanobis distance
+    distr : None or distribution instance
+        reference distribution of d, needs cdf and ppf methods.
+        If None, then chisquare with k_endog degrees of freedom is
+        used. Otherwise, it should be a callable that provides the
+        cdf function
+    k_endog : int or float
+        used only if cdf is None. In that case, it provides the degrees
+        of freedom for the chisquare distribution.
+    trim_prob : float in (0.5, 1)
+        threshold for the tail probability at which the search for
+        trimming or outlier fraction starts.
+
+    Returns
+    -------
+    frac : float
+        fraction of outliers
+    cutoff : float
+        cutoff value, values with `d > cutoff` are considered outliers
+    ntail : int
+        number of outliers
+    ntail0 : int
+        initial number of outliers based on trim tail probability.
+    cutoff0 : float
+        initial cutoff value based on trim tail probability.
+
+    Notes
+    -----
+    This does not fully correct for multiple testing and does not
+    maintain a familywise error rate or false discovery rate.
+    The error rate goes to zero asymptotically under the null model,
+    i.e. if there are no outliers.
+
+    This might not handle threshold points correctly with discrete
+    distribution.
+    TODO: check weak versus strict inequalities (e.g. in isf)
+
+    This only checks the upper tail of the distribution and of `d`.
+
+    """
+    d = np.asarray(d)
+    nobs = d.shape[0]
+    if distr is None:
+        distr = stats.chi2(k_endog)
+
+    threshold = distr.isf(1 - trim_prob)
+
+    # get sorted array, we only need upper tail
+    dtail = np.sort(d[d >= threshold])
+    ntail0 = len(dtail)
+    if ntail0 == 0:
+        # no values above threshold
+        return 0, threshold, 0, 0, threshold
+
+    # using (n-1) / n as in GY2002
+    ranks = np.arange(nobs - ntail0, nobs) / nobs
+
+    frac = np.maximum(0, distr.cdf(dtail) - ranks).max()
+    ntail = int(nobs * frac)  # rounding down
+    if ntail > 0:
+        cutoff = dtail[-ntail - 1]
+    else:
+        cutoff = dtail[-1] + 1e-15  # not sure, check inequality
+    if (dtail > cutoff).sum() < ntail:
+        import warnings
+        warnings.warn('ties at cutoff, cutoff rule produces fewer'
+                      'outliers than `ntail`')
+    return frac, cutoff, ntail, ntail0, threshold
+
 
 ### GK and OGK ###
 
