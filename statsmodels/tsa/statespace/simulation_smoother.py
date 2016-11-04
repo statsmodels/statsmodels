@@ -172,16 +172,16 @@ class SimulationSmoother(KalmanSmoother):
         simulator = self._simulators[prefix]
 
         # Set the disturbance variates
-        disturbance_variates = np.array(
+        disturbance_variates = np.atleast_1d(np.array(
             np.r_[measurement_shocks.ravel(), state_shocks.ravel()],
             dtype=self.dtype
-        ).squeeze()
+        ).squeeze())
         simulator.set_disturbance_variates(disturbance_variates)
 
         # Set the intial state vector
-        initial_state_variates = np.array(
+        initial_state_variates = np.atleast_1d(np.array(
             initial_state, dtype=self.dtype
-        ).squeeze()
+        ).squeeze())
         simulator.set_initial_state_variates(initial_state_variates)
 
         # Perform simulation smoothing
