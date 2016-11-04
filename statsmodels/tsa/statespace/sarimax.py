@@ -510,6 +510,10 @@ class SARIMAX(MLEModel):
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Set as time-varying model if we have time-trend or exog
+        if self.k_exog > 0 or len(self.polynomial_trend) > 1:
+            self.ssm._time_invariant = False
+
         # Handle kwargs specified initialization
         if self.ssm.initialization is not None:
             self._manual_initialization = True
