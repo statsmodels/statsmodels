@@ -58,8 +58,8 @@ class UnobservedComponents(MLEModel):
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
-    seasonal_period : int or None, optional
-        The period of the seasonal component. Default is None.
+    seasonal : int or None, optional
+        The period of the seasonal component, if any. Default is None.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
     ar : int or None, optional
