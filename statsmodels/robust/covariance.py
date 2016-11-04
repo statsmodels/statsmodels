@@ -393,7 +393,8 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
 
     Returns
     -------
-    scatter : ndarray
+    result instance with the following attributes
+    cov : ndarray
         estimate of the scatter matrix
     iter : int
         number of iterations used in finding a solution. If iter is less than
@@ -420,7 +421,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     if normalize:
         c /= np.trace(c) / k_vars
 
-    return c, i
+    return Holder(cov=c, n_iter=i)
 
 
 def cov_tyler_regularized(data, start_cov=None, normalize=False,
@@ -451,7 +452,8 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
 
     Returns
     -------
-    scatter : ndarray
+    result instance with the following attributes
+    cov : ndarray
         estimate of the scatter matrix
     iter : int
         number of iterations used in finding a solution. If iter is less than
@@ -514,7 +516,9 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
         if diff < eps:
             break
 
-    return c, i, shrinkage_factor, corr
+    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor,
+                 corr=corr)
+    return res
 
 
 def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
@@ -571,7 +575,7 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
 
     # calculate MAD only once if needed
     if start_cov is None or shrinkage_factor is None:
-        scale_mad = sm.robust.mad(x, center=0)
+        scale_mad = mad(x, center=0)
 
     corr = None
     if shrinkage_factor is None:
@@ -614,7 +618,9 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         if diff < eps:
             break
 
-    return c, i, shrinkage_factor#, corr
+    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor,
+                 corr=corr)
+    return res
 
 
 ### iterative, M-estimators and related
