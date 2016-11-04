@@ -21,6 +21,53 @@ def test_mahalanobis():
     d4 = robcov.mahalanobis(x, cov_inv=2*np.eye(3))
     assert_allclose(d4, 2 * d1, rtol=1e-10)
 
+def test_outliers_gy():
+    # regression test and basic properties
+    # no test for tie warnings
+    seed = 567812 #123
+    np.random.seed(seed)
+
+    nobs = 1000
+    x = np.random.randn(nobs)
+    d = x**2
+    d2 = d.copy()
+    n_outl = 10
+    d2[:n_outl] += 10
+    res = robcov._outlier_gy(d2, distr=None, k_endog=1, trim_prob=0.975)
+    # next is regression test
+    res1 = [0.017865444296085831, 8.4163674239050081, 17.0, 42.0,
+            5.0238861873148881]
+    assert_allclose(res, res1, rtol=1e-13)
+    reject_thr = (d2 > res[1]).sum()
+    reject_float = nobs * res[0]
+    assert_equal(reject_thr, res[2])
+    assert_equal(int(reject_float), res[2])
+    # tests for fixed cutoff at 0.975
+    assert_equal((d2 > res[4]).sum(), res[3])
+    assert_allclose(res[3], nobs * 0.025  + n_outl, rtol=0.5)
+    # + n_outl because not under Null
+
+    x3 = x[:-1].reshape(-1, 3)
+    # standardize, otherwise the sample wouldn't be close enough to distr
+    x3 = (x3 - x3.mean(0)) / x3.std(0)
+    d3 = (x3**2).sum(1)
+    nobs = len(d3)
+    n_outl = 0
+
+    res = robcov._outlier_gy(d3, distr=None, k_endog=3, trim_prob=0.975)
+    # next is regression test
+    res1 = [0.0085980695527445583, 12.605802816238732, 2.0, 9.0,
+            9.3484036044961485]
+    assert_allclose(res, res1, rtol=1e-13)
+    reject_thr = (d3 > res[1]).sum()
+    reject_float = nobs * res[0]
+    assert_equal(reject_thr, res[2])
+    assert_equal(int(reject_float), res[2])
+    # tests for fixed cutoff at 0.975
+    assert_equal((d3 > res[4]).sum(), res[3])
+    assert_allclose(res[3], nobs * 0.025  + n_outl, rtol=0.5)
+    # fixed cutoff at 0.975, + n_outl because not under Null
+
 
 def test_robcov_SMOKE():
     # currently only smoke test
