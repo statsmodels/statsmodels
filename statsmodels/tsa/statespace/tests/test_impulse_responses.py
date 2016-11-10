@@ -26,14 +26,14 @@ def test_sarimax():
     phi = 0.5
     actual = mod.impulse_responses([phi, 1], steps=10)
     desired = np.r_[[phi**i for i in range(11)]]
-    assert_allclose(actual[:, 0], desired)
+    assert_allclose(actual, desired)
 
     # MA(1)
     mod = sarimax.SARIMAX([0], order=(0, 0, 1))
     theta = 0.5
     actual = mod.impulse_responses([theta, 1], steps=10)
     desired = np.r_[1, theta, [0]*9]
-    assert_allclose(actual[:, 0], desired)
+    assert_allclose(actual, desired)
 
     # ARMA(2, 2) + constant
     # Stata:
@@ -47,7 +47,7 @@ def test_sarimax():
     actual = mod.impulse_responses(params, steps=10)
     desired = [1, .234141, .021055, .17692, .00951, .133917, .002321, .101544,
                -.001951, .077133, -.004301]
-    assert_allclose(actual[:, 0], desired, atol=1e-6)
+    assert_allclose(actual, desired, atol=1e-6)
 
     # SARIMAX(1,1,1)x(1,0,1,4) + constant + exog
     # Stata:
@@ -65,7 +65,7 @@ def test_sarimax():
     actual = mod.impulse_responses(params, steps=10)
     desired = [1, .149215, .128899, .111349, -.038417, .063007, .054429,
                .047018, -.069598, .018641, .016103]
-    assert_allclose(actual[:, 0], desired, atol=1e-6)
+    assert_allclose(actual, desired, atol=1e-6)
 
 
 def test_structural():
@@ -76,7 +76,7 @@ def test_structural():
     phi = 0.5
     actual = mod.impulse_responses([1, phi], steps)
     desired = np.r_[[phi**i for i in range(steps + 1)]]
-    assert_allclose(actual[:, 0], desired)
+    assert_allclose(actual, desired)
 
     # ARX(1)
     # This is adequately tested in test_simulate.py, since in the time-varying
@@ -143,17 +143,17 @@ def test_structural():
     assert_allclose(actual, 1)
     # - shock the trend
     actual = mod.impulse_responses([1., 1., 1.], steps, impulse=1)
-    assert_allclose(actual[:, 0], np.arange(steps + 1))
+    assert_allclose(actual, np.arange(steps + 1))
 
     # Smooth trend
     mod = structural.UnobservedComponents([0], 'smooth trend')
     actual = mod.impulse_responses([1., 1.], steps)
-    assert_allclose(actual[:, 0], np.arange(steps + 1))
+    assert_allclose(actual, np.arange(steps + 1))
 
     # Random trend
     mod = structural.UnobservedComponents([0], 'random trend')
     actual = mod.impulse_responses([1., 1.], steps)
-    assert_allclose(actual[:, 0], np.arange(steps + 1))
+    assert_allclose(actual, np.arange(steps + 1))
 
     # Seasonal (deterministic)
     mod = structural.UnobservedComponents([0], 'irregular', seasonal=2,
@@ -165,7 +165,7 @@ def test_structural():
     mod = structural.UnobservedComponents([0], 'irregular', seasonal=2)
     actual = mod.impulse_responses([1., 1.], steps)
     desired = np.r_[1, np.tile([-1, 1], steps // 2)]
-    assert_allclose(actual[:, 0], desired)
+    assert_allclose(actual, desired)
 
     # Cycle (deterministic)
     mod = structural.UnobservedComponents([0], 'irregular', cycle=True)
@@ -184,7 +184,7 @@ def test_structural():
     for i in range(steps + 1):
         desired[i] += states[0]
         states = np.dot(T, states)
-    assert_allclose(actual[:, 0], desired)
+    assert_allclose(actual, desired)
 
 
 def test_varmax():
@@ -275,7 +275,8 @@ def test_varmax():
         warnings.simplefilter("ignore")
         mod = varmax.VARMAX(
             np.random.normal(size=(steps, 2)), order=(2, 2), trend='c',
-            exog=np.ones(steps), enforce_stationarity=False)
+            exog=np.ones(steps), enforce_stationarity=False,
+            enforce_invertibility=False)
     mod.impulse_responses(mod.start_params, steps)
 
 
@@ -288,8 +289,8 @@ def test_dynamic_factor():
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.impulse_responses([-0.9, 0.8, 1., 1., 0.5, 0.2], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 1], steps)
-    assert_allclose(actual[:, 0], -0.9 * desired[:, 0])
-    assert_allclose(actual[:, 1], 0.8 * desired[:, 0])
+    assert_allclose(actual[:, 0], -0.9 * desired)
+    assert_allclose(actual[:, 1], 0.8 * desired)
 
     # DFM: 2 series, AR(2) factor, exog
     mod1 = dynamic_factor.DynamicFactor(np.zeros((steps, 2)), k_factors=1,
@@ -298,8 +299,8 @@ def test_dynamic_factor():
     actual = mod1.impulse_responses(
         [-0.9, 0.8, 5, -2, 1., 1., 0.5, 0.2], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 1], steps)
-    assert_allclose(actual[:, 0], -0.9 * desired[:, 0])
-    assert_allclose(actual[:, 1], 0.8 * desired[:, 0])
+    assert_allclose(actual[:, 0], -0.9 * desired)
+    assert_allclose(actual[:, 1], 0.8 * desired)
 
     # DFM, 3 series, VAR(2) factor, exog, error VAR
     # TODO: This is just a smoke test
