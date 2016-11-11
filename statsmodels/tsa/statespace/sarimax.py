@@ -964,7 +964,7 @@ class SARIMAX(MLEModel):
         params_exog = []
         if self.k_exog > 0:
             params_exog = np.linalg.pinv(exog).dot(endog)
-            endog -= np.dot(exog, params_exog)
+            endog = endog - np.dot(exog, params_exog)
         if self.state_regression:
             params_exog = []
 
