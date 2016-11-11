@@ -8,10 +8,12 @@ Author: Josef Perktold
 
 import numpy as np
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.sandbox.regression import gmm
 
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.robust_linear_model as rlm
+from nltk.corpus.reader.rte import norm
 
 
 class MEstimator(GenericLikelihoodModel):
@@ -258,6 +260,64 @@ class RLMIterative(rlm.RLM):
 
         # TODO return Results
         return res_loc, scale, converged
+
+
+class _RobustGMM(gmm.GMM):
+    """Experimental class for robust M-estimation using estimating equations
+
+    API will change, needs computational improvements
+
+    The residuals are transformed using the norm.psi function. The estimating
+    equation for the scale needs to be provided in a callable meef_scale.
+
+    The scale parameter is exp transformed to keep it positive.
+
+    This uses an instrumental variable definition of the moment conditions.
+    `instruments` are used in the moment conditions and can be set to exog.
+
+    """
+
+    def __init__(self, endog, exog, instrument, norm=None, meef_scale=None):
+        super(_RobustGMM, self).__init__(endog, exog, instrument)
+
+        if norm is None:
+            norm = rnorms.HuberT()
+            #norm = rnorms.TukeyBiweight(1)
+        if meef_scale is None:
+            #stats.norm.expect(lambda x, *args: rnorms.TukeyBiweight(1).rho(x))
+            scale_bias = 0.10903642477287441
+            # TODO: still the bug in TukeyBiweight  + 0.16666667 in this branch
+            meef_scale = lambda x: rnorms.TukeyBiweight(1).rho(x)-scale_bias + 0.16666667
+
+        self.norm = norm
+        self.meef_scale = meef_scale
+
+
+    def momcond(self, params):
+        #params_loc = params[:-1]
+        scale = np.exp(params[-1])
+        fitted_values = self.predict(params, self.exog)
+        resid_pearson = (self.endog - fitted_values) / scale
+
+        mom_loc = self.norm.psi(resid_pearson)[:,None] * self.instrument
+        mom_scale = self.meef_scale(resid_pearson)
+
+        return np.column_stack((mom_loc, mom_scale))
+
+
+    def predict(self, params, exog=None):
+        params_loc = params[:-1]
+        fittedvalues = np.dot(self.exog, params_loc)
+        return fittedvalues
+
+
+class _ExpRobustGMM(_RobustGMM):
+
+    def predict(self, params, exog=None):
+        params_loc = params[:-1]
+        fittedvalues = np.exp(np.dot(self.exog, params_loc))
+        return fittedvalues
+
 
 
 # examples: special cases of non-linear functions
