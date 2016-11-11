@@ -197,6 +197,10 @@ class VARMAX(MLEModel):
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Set as time-varying model if we have time-trend or exog
+        if self.k_exog > 0 or self.k_trend > 1:
+            self.ssm._time_invariant = False
+
         # Initialize the parameters
         self.parameters = OrderedDict()
         self.parameters['trend'] = self.k_endog * self.k_trend

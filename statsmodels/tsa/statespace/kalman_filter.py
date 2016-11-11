@@ -1011,12 +1011,16 @@ class KalmanFilter(Representation):
 
             # Get the impulse response function via simulation of the state
             # space model, but with other shocks set to zero
+            # Since simulate returns the zero-th period, we need to simulate
+            # steps + 1 periods and exclude the zero-th observation.
+            steps += 1
             measurement_shocks = np.zeros((steps, self.k_endog))
             state_shocks = np.zeros((steps, self.k_posdef))
             state_shocks[0] = impulse
             irf, _ = model.simulate(
                 steps, measurement_shocks=measurement_shocks,
                 state_shocks=state_shocks)
+            irf = irf[1:]
 
         # Get the cumulative response if requested
         if cumulative:

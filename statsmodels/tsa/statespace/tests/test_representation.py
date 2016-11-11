@@ -1052,7 +1052,7 @@ def test_simulate():
 
     actual = res.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
-        state_shocks=state_shocks)[0].squeeze()
+        state_shocks=state_shocks)
     desired = lfilter(
         res.polynomial_reduced_ma, res.polynomial_reduced_ar,
         np.r_[0, state_shocks[:-1]])
@@ -1226,11 +1226,11 @@ def test_impulse_responses():
     phi = 0.5
     mod.update([phi, 1])
 
-    desired = np.cumprod(np.r_[1, [phi]*10])[:, np.newaxis]
+    desired = np.cumprod(np.r_[1, [phi]*10])
     
     # Test going through the model directly
     actual = mod.ssm.impulse_responses(steps=10)
-    assert_allclose(actual, desired)
+    assert_allclose(actual[:, 0], desired)
 
     # Test going through the results object
     res = mod.filter([phi, 1.])

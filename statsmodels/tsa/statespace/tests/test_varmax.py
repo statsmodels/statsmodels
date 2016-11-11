@@ -745,6 +745,9 @@ def test_specifications():
 
 
 def test_misspecifications():
+    # Clear warnings
+    varmax.__warningregistry__ = {}
+
     # Tests for model specification and misspecification exceptions
     endog = np.arange(20).reshape(10,2)
 
