@@ -223,6 +223,10 @@ class DynamicFactor(MLEModel):
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Set as time-varying model if we have exog
+        if self.k_exog > 0:
+            self.ssm._time_invariant = False
+
         # Initialize the components
         self.parameters = OrderedDict()
         self._initialize_loadings()

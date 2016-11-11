@@ -490,6 +490,10 @@ class UnobservedComponents(MLEModel):
         )
         self.setup()
 
+        # Set as time-varying model if we have exog
+        if self.k_exog > 0:
+            self.ssm._time_invariant = False
+
         # Initialize the model
         self.ssm.loglikelihood_burn = loglikelihood_burn
 

@@ -1446,12 +1446,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         simulated_obs, simulated_states = self.ssm.simulate(
             nsimulations, measurement_shocks, state_shocks, initial_state)
 
-        # Simulated obs is (k_endog x nobs); don't want to squeeze in
-        # case of npredictions = 1
-        if simulated_obs.shape[0] == 1:
-            simulated_obs = simulated_obs[0, :]
-        else:
-            simulated_obs = simulated_obs.T
+        # Simulated obs is (nobs x k_endog); don't want to squeeze in
+        # case of nsimulations = 1
+        if simulated_obs.shape[1] == 1:
+            simulated_obs = simulated_obs[:, 0]
         return simulated_obs
 
     def impulse_responses(self, params, steps=1, impulse=0,
@@ -1500,8 +1498,14 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         """
         self.update(params)
-        return self.ssm.impulse_responses(
+        irfs = self.ssm.impulse_responses(
             steps, impulse, orthogonalized, cumulative, **kwargs)
+
+        # IRF is (nobs x k_endog); don't want to squeeze in case of steps = 1
+        if irfs.shape[1] == 1:
+            irfs = irfs[:, 0]
+
+        return irfs
 
     @classmethod
     def from_formula(cls, formula, data, subset=None):

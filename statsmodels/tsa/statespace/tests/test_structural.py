@@ -30,6 +30,7 @@ except ImportError:
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
+
 def run_ucm(name):
     true = getattr(results_structural, name)
 
@@ -115,7 +116,9 @@ def test_irregular():
 
 
 def test_fixed_intercept():
-    warnings.simplefilter("always")
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_intercept')
         message = ("Specified model does not contain a stochastic element;"
@@ -140,7 +143,9 @@ def test_fixed_slope():
 
 
 def test_fixed_slope():
-    warnings.simplefilter("always")
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_slope')
         message = ("Specified model does not contain a stochastic element;"
@@ -211,11 +216,13 @@ def test_mle_reg():
 
 
 def test_specifications():
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     endog = [1, 2]
 
     # Test that when nothing specified, a warning is issued and the model that
     # is fit is one with irregular=True and nothing else.
-    warnings.simplefilter("always")
     with warnings.catch_warnings(record=True) as w:
         mod = UnobservedComponents(endog)
 

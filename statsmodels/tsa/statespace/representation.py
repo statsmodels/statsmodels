@@ -350,6 +350,9 @@ class Representation(object):
         # Setup the underlying statespace object storage
         self._statespaces = {}
 
+        # Caches
+        self._time_invariant = None
+
     def __getitem__(self, key):
         _type = type(key)
         # If only a string is given then we must be getting an entire matrix
@@ -456,12 +459,15 @@ class Representation(object):
         (bool) Whether or not currently active representation matrices are
         time-invariant
         """
-        return (
-            self._design.shape[2] == self._obs_intercept.shape[1] ==
-            self._obs_cov.shape[2] == self._transition.shape[2] ==
-            self._state_intercept.shape[1] == self._selection.shape[2] ==
-            self._state_cov.shape[2]
-        )
+        if self._time_invariant is None:
+            return (
+                self._design.shape[2] == self._obs_intercept.shape[1] ==
+                self._obs_cov.shape[2] == self._transition.shape[2] ==
+                self._state_intercept.shape[1] == self._selection.shape[2] ==
+                self._state_cov.shape[2]
+            )
+        else:
+            return self._time_invariant
 
     @property
     def _statespace(self):
