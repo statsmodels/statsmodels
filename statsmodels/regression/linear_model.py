@@ -471,7 +471,7 @@ class WLS(RegressionModel):
     weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
-        is 1 and WLS reults are the same as OLS.
+        is 1 and WLS results are the same as OLS.
     %(extra_params)s
 
     Attributes
@@ -1105,11 +1105,11 @@ class RegressionResults(base.LikelihoodModelResults):
     **Attributes**
 
     aic
-        Aikake's information criteria. For a model with a constant
+        Akaike's information criteria. For a model with a constant
         :math:`-2llf + 2(df_model + 1)`. For a model without a constant
         :math:`-2llf + 2(df_model)`.
     bic
-        Bayes' information criteria For a model with a constant
+        Bayes' information criteria. For a model with a constant
         :math:`-2llf + \log(n)(df_model+1)`. For a model without a constant
         :math:`-2llf + \log(n)(df_model)`
     bse
@@ -1380,7 +1380,7 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
-            # TODO: What if model includes implcit constant, e.g. all dummies but no constant regressor?
+            # TODO: What if model includes implicit constant, e.g. all dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing to constant?
             if self.model.data.k_constant == 1:
                 # if constant is implicit, return nan see #2444
@@ -1866,9 +1866,9 @@ class RegressionResults(base.LikelihoodModelResults):
             - `groups` array_like, integer (required) :
                   index of clusters or groups
             - `use_correction` bool (optional) :
-                  If True the sandwich covariance is calulated with a small
+                  If True the sandwich covariance is calculated with a small
                   sample correction.
-                  If False the the sandwich covariance is calulated without
+                  If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
                   If True (default), then the degrees of freedom for the
@@ -1901,9 +1901,9 @@ class RegressionResults(base.LikelihoodModelResults):
             errors in panel data.
             The data needs to be sorted in this case, the time series for
             each panel unit or cluster need to be stacked. The membership to
-            a timeseries of an individual or group can be either specified by 
+            a timeseries of an individual or group can be either specified by
             group indicators or by increasing time periods.
-            
+
             keywords
 
             - either `groups` or `time` : array_like (required)
@@ -1912,7 +1912,7 @@ class RegressionResults(base.LikelihoodModelResults):
             - `maxlag` integer (required) : number of lags to use
             - `kernel` string (optional) : kernel, default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-                  If False the the sandwich covariance is calulated without
+                  If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
                   adjustment to df_resid, see cov_type 'cluster' above
