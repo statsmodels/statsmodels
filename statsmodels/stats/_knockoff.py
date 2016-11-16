@@ -8,9 +8,9 @@ not smooth functions of the data.  For example, the knockoff approach
 can be used to do inference for parameter estimates obtained from the
 LASSO, of from stepwise variable selection.
 
-In addition, the knockoff approach controls FDR for parameter
-estimates that may be dependent, such as coefficient estimates in a
-multiple regression model.
+The knockoff approach controls FDR for parameter estimates that may be
+dependent, such as coefficient estimates in a multiple regression
+model.
 
 The knockoff approach is applicable whenever the test statistic can be
 computed entirely from x'y and x'x, where x is the design matrix and y
@@ -43,8 +43,6 @@ class RegressionFDR(object):
     method : string
         The approach used to asssess and control FDR, currently
         must be 'knockoff'.
-    design_method: string
-        The method used to construct the knockoff design matrix.
 
     Returns
     -------
@@ -63,6 +61,12 @@ class RegressionFDR(object):
     statsmodels.stats.multitest module.  Methods provided in that
     module use Z-scores or p-values, and therefore require standard
     errors for the coefficient estimates to be available.
+
+    The default method for constructing the augmented design matrix is
+    the 'equivariant' approach, set `design_method='sdp'` to use an
+    alternative approach involving semidefinite programming.  See
+    Barber and Candes for more information about both approaches.  The
+    sdp approach requires that cvxopt be installed.
     """
 
     def __init__(self, endog, exog, regeffects, method="knockoff",
