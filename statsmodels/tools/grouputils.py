@@ -403,6 +403,7 @@ class Grouping(object):
         """
         # TODO: refactor this
         groups = self.index.get_level_values(level).unique()
+        groups = np.array(groups)
         groups.sort()
         if isinstance(self.index, MultiIndex):
             self.slices = [self.index.get_loc_level(x, level=level)[0]
