@@ -66,7 +66,7 @@ debiasing procedure.
     along with the average gradient.  For the OLS case,
     approx_inv_cov is an approximation for
 
-        (1 / n X^T X)^{-1}
+        n * (X^T X)^{-1}
 
     formed by node-wise regression.
 """
@@ -182,12 +182,12 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
 
     where k corresponds to the index of the partition
 
-    For the simple linear case:
+    For OLS:
 
     X^T(y - X^T params)
     """
 
-    grad = -mod.score(np.r_[params], **score_kwds)
+    grad = -mod.score(np.asarray(params), **score_kwds)
     grad += alpha * (1 - L1_wt)
     return grad
 
@@ -627,7 +627,7 @@ class DistributedModel(object):
         elif parallel_backend is not None and init_kwds_generator is not None:
             tup_gen = enumerate(zip(data_generator, init_kwds_generator))
             with parallel_backend:
-                results_l = par(f(self, pnum, endog, exog, fit_kwds, int_kwds)
+                results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds)
                                 for pnum, ((endog, exog), init_kwds)
                                 in tup_gen)
 

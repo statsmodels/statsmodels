@@ -195,24 +195,28 @@ class TestPHReg(object):
         df = pd.DataFrame({"time": time, "status": status,
                            "exog1": exog[:, 0], "exog2": exog[:, 1]})
 
-        fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
+        # Works with "0 +" on RHS but issues warning
+        fml = "time ~ exog1 + np.log(exog2) + exog1*exog2"
         model1 = PHReg.from_formula(fml, df, status=status)
         result1 = model1.fit()
 
         from patsy import dmatrix
         dfp = dmatrix(model1.data.design_info.builder, df)
 
-        pr1 = result1.get_prediction()
-        pr2 = result1.get_prediction(exog=df)
+        pr1 = result1.predict()
+        pr2 = result1.predict(exog=df)
+        pr3 = model1.predict(result1.params, exog=dfp) # No standard errors
+        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp)
 
-        prl = (pr1, pr2)
-        for i in range(2):
+        prl = (pr1, pr2, pr3, pr4)
+        for i in range(4):
             for j in range(i):
-                assert_allclose(prl[i].predicted_mean, prl[j].predicted_mean)
+                assert_allclose(prl[i].predicted_values, prl[j].predicted_values)
 
-        for i in range(2):
+        prl = (pr1, pr2, pr4)
+        for i in range(3):
             for j in range(i):
-                assert_allclose(prl[i].se_mean, prl[j].se_mean)
+                assert_allclose(prl[i].standard_errors, prl[j].standard_errors)
 
     def test_formula_args(self):
 
