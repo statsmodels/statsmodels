@@ -594,7 +594,7 @@ class CheckFREDManufacturing(CheckVARMAX):
         # 1960:Q1 - 1982:Q4
         with open(current_path + os.sep + 'results' + os.sep + 'manufac.dta', 'rb') as test_data:
             dta = pd.read_stata(test_data)
-        dta.index = dta.month
+        dta.index = pd.DatetimeIndex(dta.month, freq='MS')
         dta['dlncaputil'] = dta['lncaputil'].diff()
         dta['dlnhours'] = dta['lnhours'].diff()
 

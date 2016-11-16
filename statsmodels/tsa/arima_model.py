@@ -30,7 +30,6 @@ from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
-from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = """
@@ -371,17 +370,6 @@ def _arma_predict_in_sample(start, end, endog, resid, k_ar, method):
     return fittedvalues[fv_start:fv_end]
 
 
-def _validate(start, k_ar, k_diff, dates, method):
-    if isinstance(start, (string_types, datetime)):
-        start = _index_date(start, dates)
-        start -= k_diff
-    if 'mle' not in method and start < k_ar - k_diff:
-        raise ValueError("Start must be >= k_ar for conditional "
-                         "MLE or dynamic forecast. Got %s" % start)
-
-    return start
-
-
 def _unpack_params(params, order, k_trend, k_exog, reverse=False):
     p, q = order
     k = k_trend + k_exog
@@ -650,30 +638,29 @@ class ARMA(tsbase.TimeSeriesModel):
             newparams[k+k_ar:k+k_ar+k_ma] = _ma_invtransparams(macoefs)
         return newparams
 
-    def _get_predict_start(self, start, dynamic):
-        # do some defaults
+    def _get_prediction_index(self, start, end, dynamic, index=None):
         method = getattr(self, 'method', 'mle')
         k_ar = getattr(self, 'k_ar', 0)
         k_diff = getattr(self, 'k_diff', 0)
+
         if start is None:
             if 'mle' in method and not dynamic:
                 start = 0
             else:
                 start = k_ar
-            self._set_predict_start_date(start)  # else it's done in super
-        elif isinstance(start, (int, long)):
-            start = super(ARMA, self)._get_predict_start(start)
-        else:  # should be on a date
-            #elif 'mle' not in method or dynamic: # should be on a date
-            start = _validate(start, k_ar, k_diff, self.data.dates,
-                              method)
-            start = super(ARMA, self)._get_predict_start(start)
-        _check_arima_start(start, k_ar, k_diff, method, dynamic)
-        return start
+            start = self._index[start]
 
-    def _get_predict_end(self, end, dynamic=False):
-        # pass through so predict works for ARIMA and ARMA
-        return super(ARMA, self)._get_predict_end(end)
+        start, end, out_of_sample, prediction_index = (
+            super(ARMA, self)._get_prediction_index(start, end, index))
+
+        # This replaces the _validate() call
+        if 'mle' not in method and start < k_ar - k_diff:
+            raise ValueError("Start must be >= k_ar for conditional "
+                             "MLE or dynamic forecast. Got %s" % start)
+        # Other validation
+        _check_arima_start(start, k_ar, k_diff, method, dynamic)
+
+        return start, end, out_of_sample, prediction_index
 
     def geterrors(self, params):
         """
@@ -688,8 +675,8 @@ class ARMA(tsbase.TimeSeriesModel):
             parameters, including the trend
         """
 
-        #start = self._get_predict_start(start) # will be an index of a date
-        #end, out_of_sample = self._get_predict_end(end)
+        # start, end, out_of_sample, prediction_index = (
+        #     self._get_prediction_index(start, end, index))
         params = np.asarray(params)
         k_ar, k_ma = self.k_ar, self.k_ma
         k = self.k_exog + self.k_trend
@@ -731,8 +718,9 @@ class ARMA(tsbase.TimeSeriesModel):
         #params = np.asarray(params)
 
         # will return an index of a date
-        start = self._get_predict_start(start, dynamic)
-        end, out_of_sample = self._get_predict_end(end, dynamic)
+        start, end, out_of_sample, _ = (
+            self._get_prediction_index(start, end, dynamic))
+
         if out_of_sample and (exog is None and self.k_exog > 0):
             raise ValueError("You must provide exog for ARMAX")
 
@@ -1024,45 +1012,48 @@ class ARIMA(ARMA):
         # what about exog, should we difference it automatically before
         # super call?
 
-    def _get_predict_start(self, start, dynamic):
-        """
-        """
-        #TODO: remove all these getattr and move order specification to
-        # class constructor
-        k_diff = getattr(self, 'k_diff', 0)
+        # Reset index
+        if self._index is not None:
+            orig_length = len(self._index)
+            new_length = self.endog.shape[0]
+            if self._index_increment:
+                self._index = self._index[:-(orig_length - new_length)]
+            else:
+                self._index = self._index[orig_length - new_length:]
+
+    def _get_prediction_index(self, start, end, dynamic, index=None):
         method = getattr(self, 'method', 'mle')
         k_ar = getattr(self, 'k_ar', 0)
+        k_diff = getattr(self, 'k_diff', 0)
         if start is None:
             if 'mle' in method and not dynamic:
                 start = 0
             else:
                 start = k_ar
+            start = self._index[start]
         elif isinstance(start, (int, long)):
-                start -= k_diff
-                try:  # catch when given an integer outside of dates index
-                    start = super(ARIMA, self)._get_predict_start(start,
-                                                                  dynamic)
-                except IndexError:
-                    raise ValueError("start must be in series. "
-                                     "got %d" % (start + k_diff))
-        else:  # received a date
-            start = _validate(start, k_ar, k_diff, self.data.dates,
-                              method)
-            start = super(ARIMA, self)._get_predict_start(start, dynamic)
-        # reset date for k_diff adjustment
-        self._set_predict_start_date(start + k_diff)
-        return start
+            start -= k_diff
+            if start < 0:
+                raise ValueError('The start index %d of the original series '
+                                 ' has been differenced away' % start)
+        if isinstance(end, (int, long)):
+            end -= k_diff
 
-    def _get_predict_end(self, end, dynamic=False):
-        """
-        Returns last index to be forecast of the differenced array.
-        Handling of inclusiveness should be done in the predict function.
-        """
-        end, out_of_sample = super(ARIMA, self)._get_predict_end(end, dynamic)
+        start, end, out_of_sample, prediction_index = (
+            super(ARIMA, self)._get_prediction_index(start, end, index))
+
+        # From _get_predict_end
         if 'mle' not in self.method and not dynamic:
-            end -= self.k_ar
+            end -= k_ar
 
-        return end - self.k_diff, out_of_sample
+        # This replaces the _validate() call
+        if 'mle' not in method and start < k_ar - k_diff:
+            raise ValueError("Start must be >= k_ar for conditional "
+                             "MLE or dynamic forecast. Got %s" % start)
+        # Other validation
+        _check_arima_start(start, k_ar, k_diff, method, dynamic)
+
+        return start, end, out_of_sample, prediction_index
 
     def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
@@ -1160,7 +1151,13 @@ class ARIMA(ARMA):
                 dynamic=False):
         # go ahead and convert to an index for easier checking
         if isinstance(start, (string_types, datetime)):
-            start = _index_date(start, self.data.dates)
+            # start = _index_date(start, self.data.dates)
+            start, _, _ = self._get_index_loc(start)
+            if isinstance(start, slice):
+                start = start.start
+            # Adjustment since _index was already changed to fit the
+            # differenced endog.
+            start += self.k_diff
         if typ == 'linear':
             if not dynamic or (start != self.k_ar + self.k_diff and
                                start is not None):
@@ -1182,8 +1179,9 @@ class ARIMA(ARMA):
                 predict = super(ARIMA, self).predict(params, start, end, exog,
                                                      dynamic)
 
-                start = self._get_predict_start(start, dynamic)
-                end, out_of_sample = self._get_predict_end(end)
+                start, end, out_of_sample, _ = (
+                    self._get_prediction_index(start, end, dynamic))
+
                 d = self.k_diff
                 if 'mle' in self.method:
                     start += d - 1  # for case where d == 2
@@ -1237,7 +1235,8 @@ class ARIMA(ARMA):
                     predict = super(ARIMA, self).predict(params, start, end,
                                                          exog, dynamic)
                     if not start:
-                        start = self._get_predict_start(start, dynamic)
+                        start, _, _, _ = self._get_prediction_index(
+                            start, end, dynamic)
                         start += k_diff
                     self.k_ma = q
                     return endog[start-1] + np.cumsum(predict)
@@ -1758,8 +1757,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         # use predict so you set dates
         forecast = self.predict(start, end, exog, dynamic)
         # doing this twice. just add a plot keyword to predict?
-        start = self.model._get_predict_start(start, dynamic=False)
-        end, out_of_sample = self.model._get_predict_end(end, dynamic=False)
+        start, end, out_of_sample, _ = (
+            self.model._get_prediction_index(start, end, dynamic=False))
 
         if out_of_sample:
             steps = out_of_sample
@@ -1883,8 +1882,8 @@ class ARIMAResults(ARMAResults):
         # use predict so you set dates
         forecast = self.predict(start, end, exog, 'levels', dynamic)
         # doing this twice. just add a plot keyword to predict?
-        start = self.model._get_predict_start(start, dynamic=dynamic)
-        end, out_of_sample = self.model._get_predict_end(end, dynamic=dynamic)
+        start, end, out_of_sample, _ = (
+            self.model._get_prediction_index(start, end, dynamic))
 
         if out_of_sample:
             steps = out_of_sample

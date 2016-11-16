@@ -3,14 +3,16 @@ from statsmodels.compat.pandas import is_numeric_dtype
 
 import datetime
 
-from pandas import to_datetime, DatetimeIndex, Period, PeriodIndex, Timestamp
+import warnings
+import numpy as np
+from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
+                    PeriodIndex, Timestamp)
 
 from statsmodels.base import data
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.base import datetools
-
-_freq_to_pandas = datetools._freq_to_pandas
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 _tsa_doc = """
     %(model)s
@@ -33,52 +35,176 @@ _model_doc = "Timeseries model base class"
 _generic_params = base._model_params_doc
 _missing_param_doc = base._missing_param_doc
 
+
 class TimeSeriesModel(base.LikelihoodModel):
 
-    __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
-                          "extra_params" : _missing_param_doc,
-                          "extra_sections" : ""}
+    __doc__ = _tsa_doc % {"model": _model_doc, "params": _generic_params,
+                          "extra_params": _missing_param_doc,
+                          "extra_sections": ""}
 
-    def __init__(self, endog, exog=None, dates=None, freq=None, missing='none'):
-        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing)
+    def __init__(self, endog, exog=None, dates=None, freq=None,
+                 missing='none', **kwargs):
+        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing,
+                                              **kwargs)
+
+        # Date handling in indexes
+        self.data.dates = None
+        self.data.freq = None
         self._init_dates(dates, freq)
 
-    def _init_dates(self, dates, freq):
+    def _init_dates(self, dates=None, freq=None):
+        # Figure out what kind of index was given, if any
         if dates is None:
-            dates = self.data.row_labels
+            index = self.data.row_labels
+        else:
+            index = dates
+
+        if index is None and freq is not None:
+            raise ValueError('Frequency provided without associated index.')
 
         if dates is not None:
-            if (not datetools._is_datetime_index(dates) and
-                    isinstance(self.data, data.PandasData)):
+            if not isinstance(index, (DatetimeIndex, PeriodIndex)):
                 try:
                     if is_numeric_dtype(dates):
                         raise ValueError
-                    dates = to_datetime(dates)
-                except ValueError:
-                    raise ValueError("Given a pandas object and the index does "
-                                     "not contain dates")
-            if not freq:
-                try:
-                    freq = datetools._infer_freq(dates)
+                    index = to_datetime(dates)
                 except:
-                    raise ValueError("Frequency inference failed. Use `freq` "
-                                     "keyword.")
+                    raise ValueError('Non-date-time index provided as dates')
+            if index.freq is None and freq is None:
+                raise ValueError('No frequency information provided with date'
+                                 ' index.')
+            if index.freq is None:
+                index = dates.resample(freq)
 
-            if isinstance(dates[0], datetime.datetime):
-                dates = DatetimeIndex(dates)
-            else: # preserve PeriodIndex
-                dates = PeriodIndex(dates)
-        self.data.dates = dates
-        self.data.freq = freq
+        # Get attributes of the index
+        has_index = index is not None
+        date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
+        int_index = isinstance(index, Int64Index)
+        has_freq = index.freq is not None if date_index else None
+        increment = np.arange(self.endog.shape[0])
+        is_increment = np.all(index.values == increment) if int_index else None
 
-        # Test for nanoseconds in early pandas versions
-        if freq is not None and _freq_to_pandas[freq].freqstr == 'N':
-            from distutils.version import LooseVersion
-            from pandas import __version__ as pd_version
-            if LooseVersion(pd_version) < '0.14':
-                raise NotImplementedError('Nanosecond index not available in'
-                                          ' Pandas < 0.14')
+        # Validate
+        if has_index and not date_index:
+            warnings.warn('An non-date index was provided and will be'
+                          ' ignored.', ValueWarning)
+            # raise ValueError('If Pandas data is provided for time series'
+            #                  ' models, a DatetimeIndex or PeriodIndex must'
+            #                  ' be used.')
+            pass
+        if date_index and not has_freq:
+            warnings.warn('A date index has been provided, but it has no'
+                          ' associated frequency information and so will be'
+                          ' ignored', ValueWarning)
+            # raise ValueError('If Pandas data with a DatetimeIndex or'
+            #                  ' PeriodIndex is provided for time series'
+            #                  ' models, the index must have an associated'
+            #                  ' frequency value.')
+            pass
 
+        # Construct the internal index
+        index_increment = False
+
+        if (date_index and has_freq) or (int_index and is_increment):
+            _index = index.copy()
+        else:
+            _index = Int64Index(increment)
+            index_increment = True
+        self._index = _index
+        self._index_increment = index_increment
+        self._index_none = index is None
+        self._index_dates = date_index and not index_increment
+        self._index_freq = index.freqstr if self._index_dates else None
+
+        # For backwards compatibility, set data.dates, data.freq
+        if self._index_dates:
+            self.data.dates = self._index
+            self.data.freq = self._index_freq
+
+    def _get_index_loc(self, key, index=None):
+        if index is None:
+            index = self._index
+        return datetools._get_index_loc(key, index)
+
+    def _get_prediction_index(self, start, end, index=None):
+        # Convert index keys (start, end) to index locations and get associated
+        # indexes.
+        try:
+            start, start_index, start_oos = self._get_index_loc(start)
+        except KeyError as e:
+            try:
+                if not isinstance(start, (int, long)):
+                    start = self.data.row_labels.get_loc(start)
+                start_index = self.data.row_labels[:start + 1]
+                start_oos = False
+            except:
+                raise e
+        if end is None:
+            end = max(start, len(self._index) - 1)
+        try:
+            end, end_index, end_oos = self._get_index_loc(end)
+        except KeyError as e:
+            try:
+                if not isinstance(end, (int, long)):
+                    end = self.data.row_labels.get_loc(end)
+                end_index = self.data.row_labels[:end + 1]
+                end_oos = False
+            except:
+                raise e
+
+        # Handle slices (if the given index keys cover more than one date)
+        if isinstance(start, slice):
+            start = start.start
+        if isinstance(end, slice):
+            end = end.stop - 1
+
+        # Get the actual index for the prediction
+        prediction_index = end_index[start:]
+
+        # Validate prediction options
+        if end < start:
+            raise ValueError('Prediction must have `end` after `start`.')
+
+        # Handle custom prediction index
+        if (index is None and not (start_oos or end_oos or self._index_none)
+                and self.data.row_labels is not None):
+            prediction_index = self.data.row_labels[start:end + 1]
+        elif not self._index_none and self._index_increment:
+            if index is None:
+                warnings.warn('`index` argument was not provided in prediction'
+                              ' but the model does not have an associated'
+                              ' index. Prediction results will have integer'
+                              ' index beginning at `start`.', ValueWarning)
+            elif not len(prediction_index) == len(index):
+                raise ValueError('Invalid `index` provided in prediction.'
+                                 ' Must have length consistent with `start`'
+                                 ' and `end` arguments.')
+            else:
+                prediction_index = pd.Index(index)
+        elif index is not None:
+            warnings.warn('`index` argument provided in prediction'
+                          ' but the model already has an associated'
+                          ' index. The `index` argument will be'
+                          ' ignored.', ValueWarning)
+        elif self._index_none:
+            prediction_index = None
+
+        # For backwards compatibility, set `predict_*` values
+        if prediction_index is not None:
+            self.data.predict_start = prediction_index[0]
+            self.data.predict_end = prediction_index[-1]
+            self.data.predict_dates = prediction_index
+        else:
+            self.data.predict_start = None
+            self.data.predict_end = None
+            self.data.predict_dates = None
+
+        # Compute out-of-sample observations
+        nobs = len(self.endog)
+        out_of_sample = max(end - (nobs - 1), 0)
+        end -= out_of_sample
+
+        return start, end, out_of_sample, prediction_index
 
     def _get_exog_names(self):
         return self.data.xnames
@@ -88,187 +214,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             vals = [vals]
         self.data.xnames = vals
 
-    #overwrite with writable property for (V)AR models
+    # overwrite with writable property for (V)AR models
     exog_names = property(_get_exog_names, _set_exog_names)
 
-    def _get_dates_loc(self, dates, date):
-        date = dates.get_loc(date)
-        return date
-
-    def _str_to_date(self, date):
-        """
-        Takes a string and returns a datetime object
-        """
-        if isinstance(self.data.dates, PeriodIndex):
-            return Period(date)
-        else:
-            return datetools.date_parser(date)
-
-    def _set_predict_start_date(self, start):
-        dates = self.data.dates
-        if dates is None:
-            return
-        if start > len(dates):
-            raise ValueError("Start must be <= len(endog)")
-        if start == len(dates):
-            self.data.predict_start = datetools._date_from_idx(dates[-1],
-                                                    1, self.data.freq)
-        elif start < len(dates):
-            self.data.predict_start = dates[start]
-        else:
-            raise ValueError("Start must be <= len(dates)")
-
-    def _get_predict_start(self, start):
-        """
-        Returns the index of the given start date. Subclasses should define
-        default behavior for start = None. That isn't handled here.
-
-        Start can be a string or an integer if self.data.dates is None.
-        """
-        dates = self.data.dates
-        if not isinstance(start, (int, long)):
-            start = str(start)
-            if dates is None:
-                raise ValueError("Got a string for start and dates is None")
-            dtstart = self._str_to_date(start)
-            self.data.predict_start = dtstart
-            try:
-                start = self._get_dates_loc(dates, dtstart)
-            except KeyError:
-                raise ValueError("Start must be in dates. Got %s | %s" %
-                        (str(start), str(dtstart)))
-
-        self._set_predict_start_date(start)
-        return start
-
-
-    def _get_predict_end(self, end):
-        """
-        See _get_predict_start for more information. Subclasses do not
-        need to define anything for this.
-        """
-
-        out_of_sample = 0 # will be overwritten if needed
-        if end is None: # use data for ARIMA - endog changes
-            end = len(self.data.endog) - 1
-
-        dates = self.data.dates
-        freq = self.data.freq
-
-        if isinstance(end, str) or (dates is not None
-                                    and isinstance(end, type(dates[0]))):
-            if dates is None:
-                raise ValueError("Got a string or date for `end` and `dates` is None")
-
-            if isinstance(end, str):
-                dtend = self._str_to_date(end)
-            else:
-                dtend = end  # end could be a pandas TimeStamp not a datetime
-
-            self.data.predict_end = dtend
-            try:
-                end = self._get_dates_loc(dates, dtend)
-            except KeyError as err: # end is greater than dates[-1]...probably
-                if dtend > self.data.dates[-1]:
-                    end = len(self.data.endog) - 1
-                    freq = self.data.freq
-                    out_of_sample = datetools._idx_from_dates(dates[-1], dtend,
-                                            freq)
-                else:
-                    if freq is None:
-                        raise ValueError("There is no frequency for these "
-                                         "dates and date %s is not in dates "
-                                         "index. Try giving a date that is in "
-                                         "the dates index or use an integer."
-                                         % dtend)
-                    else: #pragma: no cover
-                        raise err # should never get here
-            self._make_predict_dates() # attaches self.data.predict_dates
-
-        elif isinstance(end, (int, long)) and dates is not None:
-            try:
-                self.data.predict_end = dates[end]
-            except IndexError as err:
-                nobs = len(self.data.endog) - 1 # as an index
-                out_of_sample = end - nobs
-                end = nobs
-                if freq is not None:
-                    self.data.predict_end = datetools._date_from_idx(dates[-1],
-                            out_of_sample, freq)
-                elif out_of_sample <= 0: # have no frequency but are in sample
-                    #TODO: what error to catch here to make sure dates is
-                    #on the index?
-                    try:
-                        self.data.predict_end = self._get_dates_loc(dates, end)
-                    except KeyError:
-                        raise
-                else:
-                    self.data.predict_end = end + out_of_sample
-                    self.data.predict_start = self._get_dates_loc(dates,
-                                                self.data.predict_start)
-
-            self._make_predict_dates()
-
-        elif isinstance(end, (int, long)):
-            nobs = len(self.data.endog) - 1 # is an index
-            if end > nobs:
-                out_of_sample = end - nobs
-                end = nobs
-
-        elif freq is None: # should have a date with freq = None
-            print('#'*80)
-            print(freq)
-            print(type(freq))
-            print('#'*80)
-            raise ValueError("When freq is None, you must give an integer "
-                             "index for end.")
-
-        else:
-            print('#'*80)
-            print(freq)
-            print(type(freq))
-            print('#'*80)
-            raise ValueError("no rule for interpreting end")
-
-        return end, out_of_sample
-
-    def _make_predict_dates(self):
-        data = self.data
-        dtstart = data.predict_start
-        dtend = data.predict_end
-        freq = data.freq
-
-        if freq is not None:
-            pandas_freq = _freq_to_pandas[freq]
-            # preserve PeriodIndex or DatetimeIndex
-            dates = self.data.dates.__class__(start=dtstart,
-                                              end=dtend,
-                                              freq=pandas_freq)
-
-            if pandas_freq.freqstr == 'N':
-                _dtend = dtend
-                if isinstance(dates[-1], Period):
-                    _dtend = pd.to_datetime(_dtend).to_period(dates.freq)
-                if not dates[-1] == _dtend:
-                    # TODO: this is a hack because a DatetimeIndex with
-                    # nanosecond frequency does not include "end"
-                    dtend = Timestamp(dtend.value + 1)
-                    dates = self.data.dates.__class__(start=dtstart,
-                                                      end=dtend,
-                                                      freq=pandas_freq)
-        # handle
-        elif freq is None and (isinstance(dtstart, (int, long)) and
-                               isinstance(dtend, (int, long))):
-            from pandas import Index
-            dates = Index(lrange(dtstart, dtend+1))
-        # if freq is None and dtstart and dtend aren't integers, we're
-        # in sample
-        else:
-            dates = self.data.dates
-            start = self._get_dates_loc(dates, dtstart)
-            end = self._get_dates_loc(dates, dtend)
-            dates = dates[start:end+1] # is this index inclusive?
-        self.data.predict_dates = dates
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):

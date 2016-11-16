@@ -1175,11 +1175,11 @@ class DynamicFactorResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-                start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end))
 
         # Handle exogenous parameters
         if _out_of_sample and self.model.k_exog > 0:

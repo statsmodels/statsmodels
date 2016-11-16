@@ -561,14 +561,20 @@ class SARIMAX(MLEModel):
                 exog = diff(exog.copy(), self.orig_k_diff,
                             self.orig_k_seasonal_diff, self.k_seasons)
 
-            # Reset the ModelData datasets
+            # Reset the ModelData datasets and cache
             self.data.endog, self.data.exog = (
                 self.data._convert_endog_exog(endog, exog))
 
-            # Reset dates, if provided
-            if self.data.dates is not None:
-                new_length = self.data.endog.shape[0]
-                self.data.dates = self.data.dates[orig_length - new_length:]
+            # Reset indexes, if provided
+            new_length = self.data.endog.shape[0]
+            if self.data.row_labels is not None:
+                self.data._cache['row_labels'] = (
+                    self.data.row_labels[orig_length - new_length:])
+            if self._index is not None:
+                if self._index_increment:
+                    self._index = self._index[:-(orig_length - new_length)]
+                else:
+                    self._index = self._index[orig_length - new_length:]
 
         # Reset the nobs
         self.nobs = endog.shape[0]
@@ -1833,7 +1839,7 @@ class SARIMAXResults(MLEResults):
         return self._params_ma
 
     def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
-                **kwargs):
+                       **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1876,11 +1882,11 @@ class SARIMAXResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-            start = 0
+            start = self.model._index[0]
 
-        # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        # Handle start, end, dynamic
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end))
 
         # Handle exogenous parameters
         if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):

@@ -868,11 +868,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             forecasts.
         """
         if start is None:
-            start = 0
+            start = self._index[0]
 
-        # Handle start and end (e.g. dates)
-        start = self._get_predict_start(start)
-        end, out_of_sample = self._get_predict_end(end)
+        # Handle start, end
+        start, end, out_of_sample, prediction_index = (
+            self._get_prediction_index(start, end))
+
+        if out_of_sample > 0:
+            raise NotImplementedError
 
         # Perform in-sample prediction
         predict = self.predict_conditional(params)
@@ -898,7 +901,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         else:
             predict = squeezed
 
-        return predict[start:end + 1]
+        return predict[start:end + out_of_sample + 1]
 
     def predict_conditional(self, params):
         """

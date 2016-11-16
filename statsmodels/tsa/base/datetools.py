@@ -1,103 +1,14 @@
-from statsmodels.compat.python import (lrange, lzip, lmap, string_types, callable,
-                                asstr, reduce, zip, map)
+"""
+Tools for working with dates
+"""
+from statsmodels.compat.python import (lrange, lzip, lmap, string_types,
+                                       callable, asstr, reduce, zip, map)
 import re
 import datetime
 
 from pandas import datetools as pandas_datetools
-from pandas import Period, DatetimeIndex
+from pandas import Int64Index, Period, PeriodIndex, Timestamp, DatetimeIndex
 import numpy as np
-
-#NOTE: All of these frequencies assume end of period (except wrt time)
-from pandas.tseries.frequencies import to_offset
-class _freq_to_pandas_class(object):
-    # being lazy, don't want to replace dictionary below
-    def __getitem__(self, key):
-        return to_offset(key)
-_freq_to_pandas = _freq_to_pandas_class()
-
-
-def _maybe_convert_period(d, how='end'):
-    # we usually assume timestamp -> end. maybe make configurable sometime
-    # see pandas #6779 and #6780
-    if hasattr(d, 'to_timestamp'):
-        return d.to_timestamp(how=how)
-    return d
-
-
-def _is_datetime_index(dates):
-    if isinstance(dates[0], (datetime.datetime, Period)):
-        return True  # TimeStamp is a datetime subclass
-    else:
-        return False
-
-
-def _index_date(date, dates):
-    """
-    Gets the index number of a date in a date index.
-
-    Works in-sample and will return one past the end of the dates since
-    prediction can start one out.
-
-    Currently used to validate prediction start dates.
-
-    If there dates are not of a fixed-frequency and date is not on the
-    existing dates, then a ValueError is raised.
-    """
-    if isinstance(date, string_types):
-        date = date_parser(date)
-    try:
-        date = dates.get_loc(date)
-        return date
-    except KeyError:
-        freq = _infer_freq(dates)
-        if freq is None:
-            #TODO: try to intelligently roll forward onto a date in the
-            # index. Waiting to drop pandas 0.7.x support so this is
-            # cleaner to do.
-            raise ValueError("There is no frequency for these dates and "
-                             "date %s is not in dates index. Try giving a "
-                             "date that is in the dates index or use "
-                             "an integer" % date)
-
-        # we can start prediction at the end of endog
-        if _idx_from_dates(dates[-1], date, freq) == 1:
-            return len(dates)
-
-        raise ValueError("date %s not in date index. Try giving a "
-                         "date that is in the dates index or use an integer"
-                         % date)
-
-
-def _date_from_idx(d1, idx, freq):
-    """
-    Returns the date from an index beyond the end of a date series.
-    d1 is the datetime of the last date in the series. idx is the
-    index distance of how far the next date should be from d1. Ie., 1 gives
-    the next date from d1 at freq.
-
-    Notes
-    -----
-    This does not do any rounding to make sure that d1 is actually on the
-    offset. For now, this needs to be taken care of before you get here.
-    """
-    return _maybe_convert_period(d1) + idx * _freq_to_pandas[freq]
-
-
-def _idx_from_dates(d1, d2, freq):
-    """
-    Returns an index offset from datetimes d1 and d2. d1 is expected to be the
-    last date in a date series and d2 is the out of sample date.
-
-    Notes
-    -----
-    Rounds down the index if the end date is before the next date at freq.
-    Does not check the start date to see whether it is on the offest but
-    assumes that it is.
-    """
-    return len(DatetimeIndex(start=_maybe_convert_period(d1),
-                             end=_maybe_convert_period(d2),
-                             freq=_freq_to_pandas[freq])) - 1
-
 
 _quarter_to_day = {
         "1" : (3, 31),
@@ -276,18 +187,73 @@ def dates_from_range(start, end=None, length=None):
     dates = date_range_str(start, end, length)
     return dates_from_str(dates)
 
-def _add_datetimes(dates):
-    return reduce(lambda x, y: y+x, dates)
 
-def _infer_freq(dates):
-    maybe_freqstr = getattr(dates, 'freqstr', None)
-    if maybe_freqstr is not None:
-        return maybe_freqstr
+def _get_index_loc(key, base_index):
+    index = base_index
+    date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
+    index_class = type(base_index)
+    element_class = type(base_index[0])
+    nobs = len(index)
 
-    # might be a DatetimeIndex
-    elif hasattr(dates, "inferred_freq"):  # see pandas/6637 and others
-        return dates.inferred_freq
-    # try to infer from a regular index or something
-    from pandas.tseries.api import infer_freq
-    freq = infer_freq(dates)
-    return freq
+    # Special handling for Int64Index
+    if not date_index and isinstance(key, (int, long)):
+        # Negative indices (that lie in the Index)
+        if key < 0 and -key < nobs:
+            key = nobs + key
+        # Out-of-sample (note that we include key itself in the new index)
+        elif key > base_index[-1]:
+            index = Int64Index(np.arange(base_index[0], key + 1))
+
+    # Special handling for date indexes
+    if date_index:
+        # Integer key (i.e. already given a location)
+        if isinstance(key, (int, long)):
+            # Negative indices (that lie in the Index)
+            if key < 0 and -key < nobs:
+                key = index[nobs + key]
+            # Out-of-sample (note that we include key itself in the new
+            # index)
+            elif key > len(base_index) - 1:
+                index = index_class(start=base_index[0], periods=key + 1,
+                                    freq=base_index.freq)
+                key = index[-1]
+            else:
+                key = index[key]
+        # Other key types (i.e. string date or some datetime-like object)
+        else:
+            # Covert the key to the appropriate date-like object
+            if index_class is PeriodIndex:
+                date_key = Period(key, freq=base_index.freq)
+            else:
+                date_key = Timestamp(key)
+
+            # Out-of-sample
+            if date_key > base_index[-1]:
+                # First create an index that does *not* include `key`
+                index = index_class(start=base_index[0], end=date_key,
+                                    freq=base_index.freq)
+                # Now we know the number of periods we need to make the new
+                # index so that it does include `key`
+                # (this method is to avoid relying on `TimeDelta` objects)
+                index = index_class(start=base_index[0],
+                                    periods=len(index) + 1,
+                                    freq=base_index.freq)
+
+    # Get the location (note that get_loc will throw a key error if key is
+    # invalid)
+    loc = index.get_loc(key)
+
+    # Check if we now have a modified index
+    modified_index = index is not base_index
+
+    # (Never return the actual index object)
+    if not modified_index:
+        index = index.copy()
+
+    # Return the index through the end of the loc / slice
+    if isinstance(loc, slice):
+        end = loc.stop
+    else:
+        end = loc
+
+    return loc, index[:end + 1], modified_index
