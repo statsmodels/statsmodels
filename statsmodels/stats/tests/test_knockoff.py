@@ -1,10 +1,8 @@
 import numpy as np
-from statsmodels.stats.knockoff import (KnockoffCorrelation,
-                                        KnockoffOLS,
-                                        KnockoffForward,
-                                        Knockoff,
-                                        _design_knockoff_equi,
-                                        _design_knockoff_sdp)
+from statsmodels.stats import knockoff_regeffects as kr
+from statsmodels.stats._knockoff import (RegressionFDR,
+                                         _design_knockoff_equi,
+                                         _design_knockoff_sdp)
 from numpy.testing import assert_allclose, assert_array_equal
 from numpy.testing.decorators import slow
 
@@ -69,10 +67,10 @@ def test_testers():
     y = np.random.normal(size=n)
     x = np.random.normal(size=(n, p))
 
-    testers = [[KnockoffCorrelation, {}],
-               [KnockoffForward, {"pursuit": False}],
-               [KnockoffForward, {"pursuit": True}],
-               [KnockoffOLS, {}]]
+    testers = [kr.Correlation(),
+               kr.Forward(pursuit=False),
+               kr.Forward(pursuit=True),
+               kr.OLS()]
 
     for method in "equi", "sdp":
 
@@ -80,10 +78,7 @@ def test_testers():
             continue
 
         for tv in testers:
-            klass = tv[0]
-            init_args = tv[1]
-            tester = klass(y, x, **init_args)
-            Knockoff(tester, design_method=method)
+            RegressionFDR(y, x, tv, design_method=method)
 
 
 @slow
@@ -96,10 +91,10 @@ def test_sim():
     target_fdr = 0.2
     nrep = 10
 
-    testers = [[KnockoffCorrelation, {}, 300, 100, 6],
-               [KnockoffForward, {"pursuit": False}, 300, 100, 3.5],
-               [KnockoffForward, {"pursuit": True}, 300, 100, 3.5],
-               [KnockoffOLS, {}, 3000, 200, 3.5]]
+    testers = [[kr.Correlation(), 300, 100, 6],
+               [kr.Forward(pursuit=False), 300, 100, 3.5],
+               [kr.Forward(pursuit=True), 300, 100, 3.5],
+               [kr.OLS(), 3000, 200, 3.5]]
 
     for method in "equi", "sdp":
 
@@ -110,11 +105,10 @@ def test_sim():
 
             fdr = 0
             power = 0
-            klass = tester_info[0]
-            init_args = tester_info[1]
-            n = tester_info[2]
-            p = tester_info[3]
-            es = tester_info[4]
+            tester = tester_info[0]
+            n = tester_info[1]
+            p = tester_info[2]
+            es = tester_info[3]
 
             for k in range(nrep):
 
@@ -124,8 +118,7 @@ def test_sim():
                 coeff = es * (-1)**np.arange(npos)
                 y = np.dot(x[:, 0:npos], coeff) + np.random.normal(size=n)
 
-                tester = klass(y, x, **init_args)
-                kn = Knockoff(tester)
+                kn = RegressionFDR(y, x, tester)
 
                 tr = kn.threshold(target_fdr)
                 cp = np.sum(kn.stats >= tr)
