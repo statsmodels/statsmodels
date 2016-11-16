@@ -54,7 +54,7 @@ def run_ucm(name):
             # Also allow a check with a 1-dim numpy array
             if kwargs['exog'] == 'numpy':
                 exog = exog.values.squeeze()
-            
+
             kwargs['exog'] = exog
 
         # Create the model

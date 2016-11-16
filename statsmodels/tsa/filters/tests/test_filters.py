@@ -4,7 +4,6 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_raises, assert_)
 from numpy import array, column_stack
 from statsmodels.datasets import macrodata
-from statsmodels.tsa.base.datetools import dates_from_range
 from pandas import Index, DataFrame, DatetimeIndex, concat
 from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
                                          convolution_filter, recursive_filter)
@@ -551,7 +550,7 @@ def test_cfitz_filter():
 def test_bking_pandas():
     # 1d
     dta = macrodata.load_pandas().data
-    index = Index(dates_from_range('1959Q1', '2009Q3'))
+    index = DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     dta.index = index
     filtered = bkfilter(dta["infl"])
     nd_filtered = bkfilter(dta['infl'].values)
@@ -571,7 +570,7 @@ def test_bking_pandas():
 def test_cfitz_pandas():
     # 1d
     dta = macrodata.load_pandas().data
-    index = Index(dates_from_range('1959Q1', '2009Q3'))
+    index = DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     dta.index = index
     cycle, trend = cffilter(dta["infl"])
     ndcycle, ndtrend = cffilter(dta['infl'].values)
@@ -590,7 +589,7 @@ def test_cfitz_pandas():
 
 def test_hpfilter_pandas():
     dta = macrodata.load_pandas().data
-    index = Index(dates_from_range('1959Q1', '2009Q3'))
+    index = DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     dta.index = index
     cycle, trend = hpfilter(dta["realgdp"])
     ndcycle, ndtrend = hpfilter(dta['realgdp'].values)

@@ -260,18 +260,17 @@ class TestAutolagAR(object):
 def test_ar_dates():
     # just make sure they work
     data = sm.datasets.sunspots.load()
-    dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
+    dates = DatetimeIndex(start='1700', periods=len(data.endog), freq='A')
     endog = Series(data.endog, index=dates)
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
-    predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
-    predict_dates = DatetimeIndex(predict_dates, freq='infer')
+    predict_dates = DatetimeIndex(start='2005', end='2016', freq='A')
 
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 
 def test_ar_named_series():
-    dates = sm.tsa.datetools.dates_from_range("2011m1", length=72)
+    dates = DatetimeIndex(start="2011", periods=72, freq='M')
     y = Series(np.random.randn(72), name="foobar", index=dates)
     results = sm.tsa.AR(y).fit(2)
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
@@ -287,7 +286,7 @@ def test_ar_start_params():
 def test_ar_series():
     # smoke test for 773
     dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
-    dates = sm.tsa.datetools.dates_from_range("1959Q1", length=len(dta))
+    dates = DatetimeIndex(start='1959Q1', periods=len(dta), freq='QS')
     dta.index = dates
     ar = AR(dta).fit(maxlags=15)
     ar.bse

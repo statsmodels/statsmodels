@@ -504,7 +504,7 @@ class UnobservedComponents(MLEModel):
         # Get bounds for the frequency of the cycle, if we know the frequency
         # of the data.
         if cycle_period_bounds is None:
-            freq = self.data.freq[0] if self.data.freq is not None else ''
+            freq = self._index_freq[0] if self._index_freq is not None else ''
             if freq == 'A':
                 cycle_period_bounds = (1.5, 12)
             elif freq == 'Q':
@@ -1479,11 +1479,11 @@ class UnobservedComponentsResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-            start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end))
 
         # Handle exogenous parameters
         if _out_of_sample and self.model.k_exog > 0:

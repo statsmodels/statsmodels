@@ -22,7 +22,7 @@ from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended, Bunch
-from statsmodels.tools.sm_exceptions import PrecisionWarning
+from statsmodels.tools.sm_exceptions import PrecisionWarning, ValueWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 import warnings
@@ -2252,7 +2252,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                       ' method.')
         return output
 
-    def get_prediction(self, start=None, end=None, dynamic=False, **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False,
+                       index=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -2288,40 +2289,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             forecasts. An (npredict x k_endog) array.
         """
         if start is None:
-            start = 0
+            start = self.model._index[0]
 
-        # Handle start and end (e.g. dates)
-        start = self.model._get_predict_start(start)
-        end, out_of_sample = self.model._get_predict_end(end)
+        # Handle start, end, dynamic
+        start, end, out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end))
 
-        # Handle string dynamic
-        dates = self.data.dates
+        # Handle `dynamic`
         if isinstance(dynamic, str):
-            if dates is None:
-                raise ValueError("Got a string for dynamic and dates is None")
-            dtdynamic = self.model._str_to_date(dynamic)
-            try:
-                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
-
-                dynamic = dynamic_start - start
-            except KeyError:
-                raise ValueError("Dynamic must be in dates. Got %s | %s" %
-                                 (str(dynamic), str(dtdynamic)))
+            dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction
         # This is a (k_endog x npredictions) array; don't want to squeeze in
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
-            start, end+out_of_sample+1, dynamic, **kwargs
-        )
+            start, end + out_of_sample + 1, dynamic, **kwargs)
 
         # Return a new mlemodel.PredictionResults object
-        if self.data.dates is None:
-            row_labels = self.data.row_labels
-        else:
-            row_labels = self.data.predict_dates
-        return PredictionResultsWrapper(
-            PredictionResults(self, prediction_results, row_labels=row_labels))
+        return PredictionResultsWrapper(PredictionResults(
+            self, prediction_results, row_labels=prediction_index))
 
     def get_forecast(self, steps=1, **kwargs):
         """
@@ -2344,7 +2330,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
         if isinstance(steps, (int, long)):
-            end = self.nobs+steps-1
+            end = self.nobs + steps - 1
         else:
             end = steps
         return self.get_prediction(start=self.nobs, end=end, **kwargs)
@@ -2621,11 +2607,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if start is None:
             start = 0
-        if self.data.dates is not None:
-            dates = self.data.dates
-            d = dates[start]
+        if self.model._index_dates:
+            ix = self.model._index
+            d = ix[start]
             sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
-            d = dates[-1]
+            d = ix[-1]
             sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
         else:
             sample = [str(start), ' - ' + str(self.model.nobs)]
@@ -2762,9 +2748,7 @@ class PredictionResults(pred.PredictionResults):
             endog = pd.DataFrame(prediction_results.endog.T,
                                  columns=model.model.endog_names)
         self.model = Bunch(data=model.data.__class__(
-            endog=endog,
-            predict_dates=getattr(model.data, 'predict_dates', None)),
-        )
+            endog=endog, predict_dates=row_labels))
         self.prediction_results = prediction_results
 
         # Get required values
@@ -2802,19 +2786,16 @@ class PredictionResults(pred.PredictionResults):
             method, alpha, **kwds)
 
         # Create a dataframe
-        if self.model.data.predict_dates is not None:
-            conf_int = pd.DataFrame(conf_int,
-                                    index=self.model.data.predict_dates)
-        else:
-            conf_int = pd.DataFrame(conf_int)
+        if self.row_labels is not None:
+            conf_int = pd.DataFrame(conf_int, index=self.row_labels)
 
-        # Attach the endog names
-        ynames = self.model.data.ynames
-        if not type(ynames) == list:
-            ynames = [ynames]
-        names = (['lower %s' % name for name in ynames] +
-                 ['upper %s' % name for name in ynames])
-        conf_int.columns = names
+            # Attach the endog names
+            ynames = self.model.data.ynames
+            if not type(ynames) == list:
+                ynames = [ynames]
+            names = (['lower %s' % name for name in ynames] +
+                     ['upper %s' % name for name in ynames])
+            conf_int.columns = names
 
         return conf_int
 
@@ -2823,7 +2804,7 @@ class PredictionResults(pred.PredictionResults):
         # import pandas as pd
         from statsmodels.compat.collections import OrderedDict
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
-        ci_mean = self.conf_int(alpha=alpha).values
+        ci_mean = np.asarray(self.conf_int(alpha=alpha))
         to_include = OrderedDict()
         if self.predicted_mean.ndim == 1:
             yname = self.model.data.ynames
