@@ -81,7 +81,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
         int_index = isinstance(index, Int64Index)
         has_freq = index.freq is not None if date_index else None
-        increment = np.arange(self.endog.shape[0])
+        increment = Int64Index(np.arange(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
 
         # Validate
@@ -108,7 +108,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         if (date_index and has_freq) or (int_index and is_increment):
             _index = index.copy()
         else:
-            _index = Int64Index(increment)
+            _index = increment
             index_increment = True
         self._index = _index
         self._index_increment = index_increment
