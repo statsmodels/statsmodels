@@ -11,7 +11,7 @@ def _check_period_index(x, freq="M"):
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
-    if x.index.freqstr is not None:
+    if x.index.freq is not None:
         inferred_freq = x.index.freqstr
     else:
         inferred_freq = pd.infer_freq(x.index)
