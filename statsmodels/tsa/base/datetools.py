@@ -1,7 +1,7 @@
 """
 Tools for working with dates
 """
-from statsmodels.compat.python import (lrange, lzip, lmap, string_types,
+from statsmodels.compat.python import (lrange, lzip, lmap, string_types, long,
                                        callable, asstr, reduce, zip, map)
 import re
 import datetime
