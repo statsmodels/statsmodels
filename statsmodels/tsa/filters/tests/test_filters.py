@@ -550,7 +550,7 @@ def test_cfitz_filter():
 def test_bking_pandas():
     # 1d
     dta = macrodata.load_pandas().data
-    index = DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
+    index = DatetimeIndex(start='1959-01-01', end='2009-10-01', freq='Q')
     dta.index = index
     filtered = bkfilter(dta["infl"])
     nd_filtered = bkfilter(dta['infl'].values)
@@ -570,7 +570,7 @@ def test_bking_pandas():
 def test_cfitz_pandas():
     # 1d
     dta = macrodata.load_pandas().data
-    index = DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
+    index = DatetimeIndex(start='1959-01-01', end='2009-10-01', freq='Q')
     dta.index = index
     cycle, trend = cffilter(dta["infl"])
     ndcycle, ndtrend = cffilter(dta['infl'].values)
@@ -589,7 +589,7 @@ def test_cfitz_pandas():
 
 def test_hpfilter_pandas():
     dta = macrodata.load_pandas().data
-    index = DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
+    index = DatetimeIndex(start='1959-01-01', end='2009-10-01', freq='Q')
     dta.index = index
     cycle, trend = hpfilter(dta["realgdp"])
     ndcycle, ndtrend = hpfilter(dta['realgdp'].values)

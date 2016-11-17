@@ -2116,7 +2116,7 @@ def test_ARIMA_exog_predict():
 
     dta = load_macrodata_pandas().data
     dates = pd.date_range("1959", periods=len(dta), freq='Q')
-    cpi_dates = pd.date_range(start='1959Q1', end='2009Q4', freq='Q')
+    cpi_dates = PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
     dta.index = cpi_dates
 
     data = dta
@@ -2124,7 +2124,7 @@ def test_ARIMA_exog_predict():
     data['loggdp'] = np.log(data['realgdp'])
     data['logcons'] = np.log(data['realcons'])
 
-    forecast_period = pd.date_range(start='2008Q2', end='2009Q4', freq='Q')
+    forecast_period = PeriodIndex(start='2008Q2', end='2009Q4', freq='Q')
     end = forecast_period[0]
     data_sample = data.ix[dta.index < end]
 
