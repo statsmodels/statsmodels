@@ -9,7 +9,7 @@ from statsmodels.tools.testing import assert_equal
 from .results import results_ar
 import numpy as np
 import numpy.testing as npt
-from pandas import Series, Index, DatetimeIndex
+from pandas import Series, Index, DatetimeIndex, PeriodIndex
 
 
 DECIMAL_6 = 6
@@ -270,7 +270,7 @@ def test_ar_dates():
     assert_equal(pred.index, predict_dates)
 
 def test_ar_named_series():
-    dates = DatetimeIndex(start="2011", periods=72, freq='M')
+    dates = PeriodIndex(start="2011-1", periods=72, freq='M')
     y = Series(np.random.randn(72), name="foobar", index=dates)
     results = sm.tsa.AR(y).fit(2)
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
@@ -286,7 +286,7 @@ def test_ar_start_params():
 def test_ar_series():
     # smoke test for 773
     dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
-    dates = DatetimeIndex(start='1959Q1', periods=len(dta), freq='QS')
+    dates = PeriodIndex(start='1959Q1', periods=len(dta), freq='Q')
     dta.index = dates
     ar = AR(dta).fit(maxlags=15)
     ar.bse
