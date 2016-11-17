@@ -282,8 +282,8 @@ def test_single_partition():
     ols_mod = OLS(y, X)
     fitOLS = ols_mod.fit(alpha=0)
 
-    assert_(fitOLSdb.params == fitOLS.params)
-    assert_(fitOLSnv.params == fitOLS.params)
+    assert_equal(fitOLSdb.params, fitOLS.params)
+    assert_equal(fitOLSnv.params, fitOLS.params)
 
     # test regularized
     nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
@@ -293,7 +293,7 @@ def test_single_partition():
     ols_mod = OLS(y, X)
     fitOLS = ols_mod.fit(alpha=0.1)
 
-    assert_(fitOLSnv.params == fitOLS.params)
+    assert_equal(fitOLSnv.params, fitOLS.params)
 
 
 def test_repeat_partition():
@@ -327,7 +327,7 @@ def test_repeat_partition():
     ols_mod = OLS(y, X)
     fitOLS = ols_mod.fit(alpha=0.1)
 
-    assert_(fitOLSnv.params == fitOLS.params)
+    assert_equal(fitOLSnv.params, fitOLS.params)
 
 
 def test_debiased_v_average():
