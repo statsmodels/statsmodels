@@ -259,6 +259,77 @@ def test_fit_joblib():
     assert_equal(fit.params.shape, beta.shape)
 
 
+def test_single_partition():
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 1
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    # test regularized OLS v. naive
+    db_mod = DistributedModel(m)
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0})
+
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0})
+
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit(alpha=0)
+
+    assert_(fitOLSdb.params == fitOLS.params)
+    assert_(fitOLSnv.params == fitOLS.params)
+
+    # test regularized
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit(alpha=0.1)
+
+    assert_(fitOLSnv.params == fitOLS.params)
+
+
+def test_repeat_partition()
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 1
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    def _rep_data_gen(endog, exog, partitions):
+        """partitions data"""
+
+        n_exog = exog.shape[0]
+        n_part = np.ceil(n_exog / partitions)
+
+        ii = 0
+        while ii < n_exog:
+            jj = int(min(ii + n_part, n_exog))
+            yield endog, exog
+            ii += int(n_part)
+
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_rep_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit(alpha=0.1)
+
+    assert_(fitOLSnv.params == fitOLS.params)
+
+
 def test_debiased_v_average():
 
     np.random.seed(435265)
