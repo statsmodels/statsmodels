@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_equal, assert_
+from numpy.testing import assert_equal, assert_, assert_allclose
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import Binomial
@@ -282,8 +282,8 @@ def test_single_partition():
     ols_mod = OLS(y, X)
     fitOLS = ols_mod.fit(alpha=0)
 
-    assert_equal(fitOLSdb.params, fitOLS.params)
-    assert_equal(fitOLSnv.params, fitOLS.params)
+    assert_allclose(fitOLSdb.params, fitOLS.params)
+    assert_allclose(fitOLSnv.params, fitOLS.params)
 
     # test regularized
     nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
@@ -291,9 +291,9 @@ def test_single_partition():
     fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
 
     ols_mod = OLS(y, X)
-    fitOLS = ols_mod.fit(alpha=0.1)
+    fitOLS = ols_mod.fit_regularized(alpha=0.1)
 
-    assert_equal(fitOLSnv.params, fitOLS.params)
+    assert_allclose(fitOLSnv.params, fitOLS.params)
 
 
 def test_repeat_partition():
@@ -325,9 +325,9 @@ def test_repeat_partition():
     fitOLSnv = nv_mod.fit(_rep_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
 
     ols_mod = OLS(y, X)
-    fitOLS = ols_mod.fit(alpha=0.1)
+    fitOLS = ols_mod.fit_regularized(alpha=0.1)
 
-    assert_equal(fitOLSnv.params, fitOLS.params)
+    assert_allclose(fitOLSnv.params, fitOLS.params)
 
 
 def test_debiased_v_average():
