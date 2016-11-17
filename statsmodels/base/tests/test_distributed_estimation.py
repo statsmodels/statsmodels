@@ -296,7 +296,7 @@ def test_single_partition():
     assert_(fitOLSnv.params == fitOLS.params)
 
 
-def test_repeat_partition()
+def test_repeat_partition():
 
     np.random.seed(435265)
     N = 200
