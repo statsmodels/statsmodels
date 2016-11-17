@@ -133,7 +133,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             start, start_index, start_oos = self._get_index_loc(start)
         except KeyError as e:
             try:
-                if not isinstance(start, (int, long)):
+                if not isinstance(start, (int, long, np.integer)):
                     start = self.data.row_labels.get_loc(start)
                 else:
                     raise
@@ -148,7 +148,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             end, end_index, end_oos = self._get_index_loc(end)
         except KeyError as e:
             try:
-                if not isinstance(end, (int, long)):
+                if not isinstance(end, (int, long, np.integer)):
                     end = self.data.row_labels.get_loc(end)
                 else:
                     raise

@@ -196,7 +196,7 @@ def _get_index_loc(key, base_index):
     nobs = len(index)
 
     # Special handling for Int64Index
-    if not date_index and isinstance(key, (int, long)):
+    if not date_index and isinstance(key, (int, long, np.integer)):
         # Negative indices (that lie in the Index)
         if key < 0 and -key < nobs:
             key = nobs + key
@@ -207,7 +207,7 @@ def _get_index_loc(key, base_index):
     # Special handling for date indexes
     if date_index:
         # Integer key (i.e. already given a location)
-        if isinstance(key, (int, long)):
+        if isinstance(key, (int, long, np.integer)):
             # Negative indices (that lie in the Index)
             if key < 0 and -key < nobs:
                 key = index[nobs + key]
