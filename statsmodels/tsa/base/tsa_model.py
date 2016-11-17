@@ -135,10 +135,13 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 if not isinstance(start, (int, long)):
                     start = self.data.row_labels.get_loc(start)
+                else:
+                    raise
                 start_index = self.data.row_labels[:start + 1]
                 start_oos = False
             except:
                 raise e
+
         if end is None:
             end = max(start, len(self._index) - 1)
         try:
@@ -147,6 +150,8 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 if not isinstance(end, (int, long)):
                     end = self.data.row_labels.get_loc(end)
+                else:
+                    raise
                 end_index = self.data.row_labels[:end + 1]
                 end_oos = False
             except:
