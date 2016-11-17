@@ -82,7 +82,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         int_index = isinstance(index, Int64Index)
         has_freq = index.freq is not None if date_index else None
         increment = np.arange(self.endog.shape[0])
-        is_increment = np.all(index.values == increment) if int_index else None
+        is_increment = index.equals(increment) if int_index else None
 
         # Validate
         if has_index and not date_index:
