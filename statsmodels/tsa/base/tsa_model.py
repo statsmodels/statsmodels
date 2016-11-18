@@ -54,6 +54,46 @@ class TimeSeriesModel(base.LikelihoodModel):
         self._init_dates(dates, freq)
 
     def _init_dates(self, dates=None, freq=None):
+        """
+        Initialize dates
+
+        Parameters
+        ----------
+        dates : array_like, optional
+            An array like object containing dates.
+        freq : str, tuple, datetime.timedelta, DateOffset or None, optional
+            A frequency specification for either `dates` or the row labels from
+            the endog / exog data.
+
+        Notes
+        -----
+        Creates `self._index` and related attributes. `self._index` is always
+        a Pandas index, and it is always Int64Index, DatetimeIndex, or
+        PeriodIndex.
+
+        If Pandas objects, endog / exog may have any type of index. If it is
+        an Int64Index with values 0, 1, ..., nobs-1 or if it is (coerceable to)
+        a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
+        is called a "supported" index. Otherwise it is called an "unsupported"
+        index.
+
+        Supported indexes are standardized (i.e. a list of date strings is
+        converted to a DatetimeIndex) and the result is put in `self._index`.
+
+        Unsupported indexes are ignored, and a supported Int64Index is
+        generated and put in `self._index`. Warnings are issued in this case
+        to alert the user if the returned index from some operation (e.g.
+        forecasting) is different from the original data's index. However,
+        whenever possible (e.g. purely in-sample prediction), the original
+        index is returned.
+
+        The benefit of supported indexes is that they allow *forecasting*, i.e.
+        it is possible to extend them in a reasonable way. Thus every model
+        must have an underlying supported index, even if it is just a generated
+        Int64Index.
+
+        """
+
         # Get our index from `dates` if available, otherwise from whatever
         # Pandas index we might have retrieved from endog, exog
         if dates is not None:
@@ -165,27 +205,198 @@ class TimeSeriesModel(base.LikelihoodModel):
             self.data.dates = self._index if self._index_dates else None
             self.data.freq = self._index.freqstr if self._index_dates else None
 
-    def _get_index_loc(self, key, index=None):
-        if index is None:
-            index = self._index
-        return datetools._get_index_loc(key, index)
+    def _get_index_loc(self, key, base_index=None):
+        """
+        Get the location of a specific key in an index
 
-    def _get_index_label_loc(self, key, index=None):
+        Parameters
+        ----------
+        key : label
+            The key for which to find the location
+        base_index : pd.Index, optional
+            Optionally the base index to search. If None, the model's index is
+            searched.
+
+        Returns
+        -------
+        loc : int
+            The location of the key
+        index : pd.Index
+            The index including the key; this is a copy of the original index
+            unless the index had to be expanded to accomodate `key`.
+        index_was_expanded : bool
+            Whether or not the index was expanded to accomodate `key`.
+
+        Notes
+        -----
+        If `key` is past the end of of the given index, and the index is either
+        an Int64Index or a date index, this function extends the index up to
+        and including key, and then returns the location in the new index.
+
+        """
+        if base_index is None:
+            base_index = self._index
+
+        index = base_index
+        date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
+        index_class = type(base_index)
+        nobs = len(index)
+
+        # Special handling for Int64Index
+        if (index_class == Int64Index and
+                isinstance(key, (int, long, np.integer))):
+            # Negative indices (that lie in the Index)
+            if key < 0 and -key <= nobs:
+                key = nobs + key
+            # Out-of-sample (note that we include key itself in the new index)
+            elif key > base_index[-1]:
+                index = Int64Index(np.arange(base_index[0], key + 1))
+
+        # Special handling for date indexes
+        if date_index:
+            # Integer key (i.e. already given a location)
+            if isinstance(key, (int, long, np.integer)):
+                # Negative indices (that lie in the Index)
+                if key < 0 and -key < nobs:
+                    key = index[nobs + key]
+                # Out-of-sample (note that we include key itself in the new
+                # index)
+                elif key > len(base_index) - 1:
+                    index = index_class(start=base_index[0], periods=key + 1,
+                                        freq=base_index.freq)
+                    key = index[-1]
+                else:
+                    key = index[key]
+            # Other key types (i.e. string date or some datetime-like object)
+            else:
+                # Covert the key to the appropriate date-like object
+                if index_class is PeriodIndex:
+                    date_key = Period(key, freq=base_index.freq)
+                else:
+                    date_key = Timestamp(key)
+
+                # Out-of-sample
+                if date_key > base_index[-1]:
+                    # First create an index that does *not* include `key`
+                    index = index_class(start=base_index[0], end=date_key,
+                                        freq=base_index.freq)
+                    # Now we know the number of periods we need to make the new
+                    # index so that it does include `key`
+                    # (this method is to avoid relying on `TimeDelta` objects)
+                    index = index_class(start=base_index[0],
+                                        periods=len(index) + 1,
+                                        freq=base_index.freq)
+
+        # Get the location (note that get_loc will throw a KeyError if key is
+        # invalid)
+        loc = index.get_loc(key)
+
+        # Check if we now have a modified index
+        index_was_expanded = index is not base_index
+
+        # (Never return the actual index object)
+        if not index_was_expanded:
+            index = index.copy()
+
+        # Return the index through the end of the loc / slice
+        if isinstance(loc, slice):
+            end = loc.stop
+        else:
+            end = loc
+
+        return loc, index[:end + 1], index_was_expanded
+
+    def _get_index_label_loc(self, key, base_index=None):
+        """
+        Get the location of a specific key in an index or model row labels
+
+        Parameters
+        ----------
+        key : label
+            The key for which to find the location
+        base_index : pd.Index, optional
+            Optionally the base index to search. If None, the model's index is
+            searched.
+
+        Returns
+        -------
+        loc : int
+            The location of the key
+        index : pd.Index
+            The index including the key; this is a copy of the original index
+            unless the index had to be expanded to accomodate `key`.
+        index_was_expanded : bool
+            Whether or not the index was expanded to accomodate `key`.
+
+        Notes
+        -----
+        This method expands on `_get_index_loc` by first trying the given
+        base index (or the model's index if the base index was not given) and
+        then falling back to try again with the model row labels as the base
+        index.
+
+        """
         try:
-            loc, _index, oos = self._get_index_loc(key, index)
+            loc, index, index_was_expanded = (
+                self._get_index_loc(key, base_index))
         except KeyError as e:
             try:
                 if not isinstance(key, (int, long, np.integer)):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise
-                _index = self.data.row_labels[:loc + 1]
-                oos = False
+                index = self.data.row_labels[:loc + 1]
+                index_was_expanded = False
             except:
                 raise e
-        return loc, _index, oos
+        return loc, index, index_was_expanded
 
     def _get_prediction_index(self, start, end, index=None):
+        """
+        Get the location of a specific key in an index or model row labels
+
+        Parameters
+        ----------
+        start : label
+            The key at which to start prediction. Depending on the underlying
+            model's index, may be an integer, a date (string, datetime object,
+            pd.Timestamp, or pd.Period object), or some other object in the
+            model's row labels.
+        end : label
+            The key at which to end prediction (note that this key will be
+            *included* in prediction). Depending on the underlying
+            model's index, may be an integer, a date (string, datetime object,
+            pd.Timestamp, or pd.Period object), or some other object in the
+            model's row labels.
+        index : pd.Index, optional
+            Optionally an index to associate the predicted results to. If None,
+            an attempt is made to create an index for the predicted results
+            from the model's index or model's row labels.
+
+        Returns
+        -------
+        start : int
+            The index / observation location at which to begin prediction.
+        end : int
+            The index / observation location at which to end in-sample
+            prediction. The maximum value for this is nobs-1.
+        out_of_sample : int
+            The number of observations to forecast after the end of the sample.
+        prediction_index : pd.Index or None
+            The index associated with the prediction results. This index covers
+            the range [start, end + out_of_sample]. If the model has no given
+            index and no given row labels (i.e. endog/exog is not Pandas), then
+            this will be None.
+
+        Notes
+        -----
+        This method expands on `_get_index_loc` by first trying the given
+        base index (or the model's index if the base index was not given) and
+        then falling back to try again with the model row labels as the base
+        index.
+
+        """
+
         # Convert index keys (start, end) to index locations and get associated
         # indexes.
         start, start_index, start_oos = self._get_index_label_loc(start)
