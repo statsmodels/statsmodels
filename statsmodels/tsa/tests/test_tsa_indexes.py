@@ -204,7 +204,7 @@ def test_instantiation_valid():
             for ix, freq in date_indexes + period_indexes:
                 mod = tsa_model.TimeSeriesModel(endog, dates=ix)
                 if freq is None:
-                    freq = ix.freq.freqstr
+                    freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
                 assert_equal(
@@ -224,7 +224,7 @@ def test_instantiation_valid():
             for ix, freq in date_indexes + period_indexes:
                 mod = tsa_model.TimeSeriesModel(endog, dates=ix, freq=freq)
                 if freq is None:
-                    freq = ix.freq.freqstr
+                    freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
                 assert_equal(
@@ -244,7 +244,7 @@ def test_instantiation_valid():
             for ix, freq in supported_date_indexes:
                 mod = tsa_model.TimeSeriesModel(endog, dates=ix, freq=freq)
                 if freq is None:
-                    freq = ix.freq.freqstr
+                    freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
                 assert_equal(
@@ -275,7 +275,7 @@ def test_instantiation_valid():
 
                 mod = tsa_model.TimeSeriesModel(endog)
                 if freq is None:
-                    freq = ix.freq.freqstr
+                    freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
                 assert_equal(
@@ -312,7 +312,7 @@ def test_instantiation_valid():
 
                 mod = tsa_model.TimeSeriesModel(endog, freq=freq)
                 if freq is None:
-                    freq = ix.freq.freqstr
+                    freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
                 assert_equal(
@@ -336,7 +336,7 @@ def test_instantiation_valid():
 
                 mod = tsa_model.TimeSeriesModel(endog, dates=ix, freq=freq)
                 if freq is None:
-                    freq = ix.freq.freqstr
+                    freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
                 assert_equal(
