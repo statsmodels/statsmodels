@@ -1155,7 +1155,7 @@ class ARIMA(ARMA):
         # go ahead and convert to an index for easier checking
         if isinstance(start, (string_types, datetime)):
             # start = _index_date(start, self.data.dates)
-            start, _, _ = self._get_index_loc(start)
+            start, _, _ = self._get_index_label_loc(start)
             if isinstance(start, slice):
                 start = start.start
             # Adjustment since _index was already changed to fit the
