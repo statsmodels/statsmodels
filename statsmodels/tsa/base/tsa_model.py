@@ -168,36 +168,28 @@ class TimeSeriesModel(base.LikelihoodModel):
             index = self._index
         return datetools._get_index_loc(key, index)
 
+    def _get_index_label_loc(self, key, index=None):
+        try:
+            loc, _index, oos = self._get_index_loc(key, index)
+        except KeyError as e:
+            try:
+                if not isinstance(key, (int, long, np.integer)):
+                    loc = self.data.row_labels.get_loc(key)
+                else:
+                    raise
+                _index = self.data.row_labels[:loc + 1]
+                oos = False
+            except:
+                raise e
+        return loc, _index, oos
+
     def _get_prediction_index(self, start, end, index=None):
         # Convert index keys (start, end) to index locations and get associated
         # indexes.
-        try:
-            start, start_index, start_oos = self._get_index_loc(start)
-        except KeyError as e:
-            try:
-                if not isinstance(start, (int, long, np.integer)):
-                    start = self.data.row_labels.get_loc(start)
-                else:
-                    raise
-                start_index = self.data.row_labels[:start + 1]
-                start_oos = False
-            except:
-                raise e
-
+        start, start_index, start_oos = self._get_index_label_loc(start)
         if end is None:
             end = max(start, len(self._index) - 1)
-        try:
-            end, end_index, end_oos = self._get_index_loc(end)
-        except KeyError as e:
-            try:
-                if not isinstance(end, (int, long, np.integer)):
-                    end = self.data.row_labels.get_loc(end)
-                else:
-                    raise
-                end_index = self.data.row_labels[:end + 1]
-                end_oos = False
-            except:
-                raise e
+        end, end_index, end_oos = self._get_index_label_loc(end)
 
         # Handle slices (if the given index keys cover more than one date)
         if isinstance(start, slice):
