@@ -1013,9 +1013,12 @@ class ARIMA(ARMA):
         # super call?
 
         # Reset index
+        orig_length = len(self._index)
+        new_length = self.endog.shape[0]
+        if self.data.row_labels is not None:
+            self.data._cache['row_labels'] = (
+                self.data.row_labels[orig_length - new_length:])
         if self._index is not None:
-            orig_length = len(self._index)
-            new_length = self.endog.shape[0]
             if self._index_increment:
                 self._index = self._index[:-(orig_length - new_length)]
             else:
