@@ -6,7 +6,7 @@ import datetime
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, Timestamp, Series)
+                    PeriodIndex, Timestamp, Series, Index)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
@@ -114,8 +114,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                 try:
                     # Only try to coerce non-numeric index types (string,
                     # list of date-times, etc.)
-                    if is_numeric_dtype(index):
-                        raise ValueError
+                    if is_numeric_dtype(np.asarray(index)):
+                        raise ValueError('Numeric index given')
                     # If a non-index Pandas series was given, only keep its
                     # values (because we must have a pd.Index type, below, and
                     # pd.to_datetime will return a Series when passed
@@ -125,7 +125,12 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # All coercion is done via pd.to_datetime
                     # Note: date coercion via pd.to_datetime does not handle
                     # string versions of PeriodIndex objects most of the time.
-                    index = to_datetime(index)
+                    _index = to_datetime(index)
+                    # Older versions of Pandas can sometimes fail here and
+                    # return a numpy array - check to make sure it's an index
+                    if not isinstance(_index, Index):
+                        raise ValueError('Could not coerce to date index')
+                    index = _index
                 except:
                     # Only want to actually raise an exception if `dates` was
                     # provided but can't be coerced. If we got the index from
