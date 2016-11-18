@@ -142,7 +142,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             self.data._cache['row_labels'] = (
                 self.data.row_labels[self.order:])
         if self._index is not None:
-            if self._index_increment:
+            if self._index_generated:
                 self._index = self._index[:-self.order]
             else:
                 self._index = self._index[self.order:]

@@ -6,7 +6,8 @@ import datetime
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, Timestamp)
+                    PeriodIndex, Timestamp, Series)
+from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
 import statsmodels.base.model as base
@@ -94,32 +95,37 @@ class TimeSeriesModel(base.LikelihoodModel):
             # Now, if we were given, or coerced, a date-based index, make sure
             # it has an associated frequency
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
+                # Convert the passed freq to a pandas offset object
+                if freq is not None:
+                    freq = to_offset(freq)
                 # If no frequency information is available from the index
                 # itself or from the `freq` argument, raise an exception
-                if index.freq is None and freq is None:
+                if freq is None and index.freq is None:
                     # But again, only want to raise the exception if `dates`
-                    # was provided. If the index came from row labels, just
-                    # reset it to whatever it was before and ignore it below
+                    # was provided.
                     if dates is not None:
                         raise ValueError('No frequency information provided'
                                          ' with date index.')
+                    # If the index came from row labels, just
+                    # reset it to whatever it was before and we will ignore it
+                    # below
                     else:
                         index = self.data.row_labels
                 # If the index itself has no frequency information but the
                 # `freq` argument is available, construct a new index with an
                 # associated frequency
-                elif index.freq is None and freq is not None:
+                elif freq is not None and index.freq is None:
                     resampled_index = type(index)(
                         start=index[0], end=index[-1], freq=freq)
                     if not resampled_index.equals(index):
-                        raise ValueError('Given index could not be matched to'
-                                         ' given frequency.')
+                        raise ValueError('The given frequency argument could'
+                                         ' not be matched to the given index.')
                     index = resampled_index
                 # If the index itself has a frequency and there was a
                 # given frequency raise an exception if they are not equal
                 elif freq is not None and not (index.freq == freq):
-                    raise ValueError('Given index frequency different from'
-                                     ' given frequency argument.')
+                    raise ValueError('The given frequency argument is'
+                                     ' incompatible with the given index.')
             # Finally, raise an exception if we could not coerce to date-based
             # but we were given a frequency argument
             elif freq is not None:
@@ -134,40 +140,33 @@ class TimeSeriesModel(base.LikelihoodModel):
         increment = Int64Index(np.arange(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
 
-        # Validate
+        # Issue warnings for unsupported indexes
         if has_index and not (date_index or is_increment):
             warnings.warn('An unsupported index was provided and will be'
                           ' ignored when e.g. forecasting.', ValueWarning)
-            # raise ValueError('If Pandas data is provided for time series'
-            #                  ' models, a DatetimeIndex or PeriodIndex must'
-            #                  ' be used.')
         if date_index and not has_freq:
             warnings.warn('A date index has been provided, but it has no'
                           ' associated frequency information and so will be'
-                          ' ignored', ValueWarning)
-            # raise ValueError('If Pandas data with a DatetimeIndex or'
-            #                  ' PeriodIndex is provided for time series'
-            #                  ' models, the index must have an associated'
-            #                  ' frequency value.')
+                          ' ignored when e.g. forecasting.', ValueWarning)
 
         # Construct the internal index
-        index_increment = False
+        index_generated = False
 
         if (date_index and has_freq) or (int_index and is_increment):
             _index = index.copy()
         else:
             _index = increment
-            index_increment = True
+            index_generated = True
         self._index = _index
-        self._index_increment = index_increment
+        self._index_generated = index_generated
         self._index_none = index is None
-        self._index_dates = date_index and not index_increment
-        self._index_freq = index.freqstr if self._index_dates else None
+        self._index_dates = date_index and not index_generated
+        self._index_freq = self._index.freq if self._index_dates else None
 
         # For backwards compatibility, set data.dates, data.freq
         if self._index_dates:
-            self.data.dates = self._index
-            self.data.freq = self._index_freq
+            self.data.dates = self._index if self._index_dates else None
+            self.data.freq = self._index.freqstr if self._index_dates else None
 
     def _get_index_loc(self, key, index=None):
         if index is None:
@@ -214,7 +213,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         if (not (start_oos or end_oos or self._index_none or self._index_dates)
                 and index is None and self.data.row_labels is not None):
             prediction_index = self.data.row_labels[start:end + 1]
-        elif not self._index_none and self._index_increment:
+        elif not self._index_none and self._index_generated:
             if index is None:
                 warnings.warn('The model does not have an associated supported'
                               ' index, and `index` argument was not provided'
