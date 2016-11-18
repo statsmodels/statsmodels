@@ -218,10 +218,11 @@ class TimeSeriesModel(base.LikelihoodModel):
             prediction_index = self.data.row_labels[start:end + 1]
         elif not self._index_none and self._index_increment:
             if index is None:
-                warnings.warn('`index` argument was not provided in prediction'
-                              ' but the model does not have an associated'
-                              ' supported index. Prediction results will have'
-                              ' integer index beginning at `start`.',
+                warnings.warn('The model does not have an associated supported'
+                              ' index, and `index` argument was not provided'
+                              ' in prediction. Prediction results will be'
+                              ' given with an integer index beginning at'
+                              ' `start`.',
                               ValueWarning)
             elif not len(prediction_index) == len(index):
                 raise ValueError('Invalid `index` provided in prediction.'
