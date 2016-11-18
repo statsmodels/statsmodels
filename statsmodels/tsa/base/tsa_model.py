@@ -111,7 +111,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     index = resampled_index
                 # If the index itself has a frequency and there was a
                 # given frequency raise an exception if they are not equal
-                elif not (index.freq == freq):
+                elif freq is not None and not (index.freq == freq):
                     raise ValueError('Given index frequency different from'
                                      ' given frequency argument.')
             # Finally, raise an exception if we could not coerce to date-based
