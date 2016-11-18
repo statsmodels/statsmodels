@@ -198,7 +198,7 @@ def _get_index_loc(key, base_index):
     # Special handling for Int64Index
     if not date_index and isinstance(key, (int, long, np.integer)):
         # Negative indices (that lie in the Index)
-        if key < 0 and -key < nobs:
+        if key < 0 and -key <= nobs:
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
@@ -239,7 +239,7 @@ def _get_index_loc(key, base_index):
                                     periods=len(index) + 1,
                                     freq=base_index.freq)
 
-    # Get the location (note that get_loc will throw a key error if key is
+    # Get the location (note that get_loc will throw a KeyError if key is
     # invalid)
     loc = index.get_loc(key)
 
