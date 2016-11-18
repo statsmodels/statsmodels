@@ -52,10 +52,15 @@ base_period_indexes = [
     pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='W'),
     pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='M'),
     pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='Q'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='A'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='2Q'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='5s'),
-    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='1D10min')]
+    pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='A')]
+try:
+    # Only later versions of pandas support these
+    base_period_indexes += [
+        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='2Q'),
+        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='5s'),
+        pd.PeriodIndex(start='1950-01-01', periods=nobs, freq='1D10min')]
+except:
+    pass
 
 date_indexes = [
     (x, None) for x in base_date_indexes]
