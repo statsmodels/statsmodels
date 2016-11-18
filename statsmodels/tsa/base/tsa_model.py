@@ -399,10 +399,18 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Convert index keys (start, end) to index locations and get associated
         # indexes.
-        start, start_index, start_oos = self._get_index_label_loc(start)
+        try:
+            start, start_index, start_oos = self._get_index_label_loc(start)
+        except KeyError:
+            raise KeyError('The `start` argument could not be matched to a'
+                           ' location related to the index of the data.')
         if end is None:
             end = max(start, len(self._index) - 1)
-        end, end_index, end_oos = self._get_index_label_loc(end)
+        try:
+            end, end_index, end_oos = self._get_index_label_loc(end)
+        except KeyError:
+            raise KeyError('The `end` argument could not be matched to a'
+                           ' location related to the index of the data.')
 
         # Handle slices (if the given index keys cover more than one date)
         if isinstance(start, slice):
