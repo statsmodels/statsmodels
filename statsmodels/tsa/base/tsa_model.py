@@ -108,11 +108,6 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if dates is not None:
                         raise ValueError('No frequency information provided'
                                          ' with date index.')
-                    # If the index came from row labels, just
-                    # reset it to whatever it was before and we will ignore it
-                    # below
-                    else:
-                        index = self.data.row_labels
                 # If the index itself has no frequency information but the
                 # `freq` argument is available, construct a new index with an
                 # associated frequency
