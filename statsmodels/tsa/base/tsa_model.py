@@ -82,7 +82,9 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # non-list-like objects)
                     if isinstance(index, Series):
                         index = index.values
-                    # All coercion is done via pandas.to_datetime
+                    # All coercion is done via pd.to_datetime
+                    # Note: date coercion via pd.to_datetime does not handle
+                    # string versions of PeriodIndex objects most of the time.
                     index = to_datetime(index)
                 except:
                     # Only want to actually raise an exception if `dates` was
