@@ -75,6 +75,12 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # list of date-times, etc.)
                     if is_numeric_dtype(index):
                         raise ValueError
+                    # If a non-index Pandas series was given, only keep its
+                    # values (because we must have a pd.Index type, below, and
+                    # pd.to_datetime will return a Series when passed
+                    # non-list-like objects)
+                    if isinstance(index, Series):
+                        index = index.values
                     # All coercion is done via pandas.to_datetime
                     index = to_datetime(index)
                 except:
