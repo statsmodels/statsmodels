@@ -467,7 +467,7 @@ def test_prediction_increment_unsupported():
     assert_equal(start, 1)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
-    assert_equal(prediction_index.equals(pd.Series(np.arange(1, 6))), True)
+    assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
 
 
 def test_prediction_increment_nonpandas():
@@ -552,7 +552,7 @@ def test_prediction_increment_pandas_noindex():
     assert_equal(start, 1)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 1)
-    assert_equal(prediction_index.equals(pd.Series(np.arange(1, 6))), True)
+    assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
 
 
 def test_prediction_increment_pandas_dates():
