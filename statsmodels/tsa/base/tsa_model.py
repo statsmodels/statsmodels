@@ -243,7 +243,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         nobs = len(index)
 
         # Special handling for Int64Index
-        if (index_class == Int64Index and
+        if (isinstance(index, Int64Index) and not date_index and
                 isinstance(key, (int, long, np.integer))):
             # Negative indices (that lie in the Index)
             if key < 0 and -key <= nobs:
