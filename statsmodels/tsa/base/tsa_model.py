@@ -143,7 +143,6 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # the row_labels, we'll just ignore it and use the integer
                     # index below
                     if dates is not None:
-                        raise
                         raise ValueError('Non-date index index provided to'
                                          ' `dates` argument.')
             # Now, if we were given, or coerced, a date-based index, make sure
