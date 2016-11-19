@@ -210,6 +210,14 @@ class TimeSeriesModel(base.LikelihoodModel):
             self.data.dates = self._index if self._index_dates else None
             self.data.freq = self._index.freqstr if self._index_dates else None
 
+        # Test for nanoseconds in early pandas versions
+        if self._index_freq is not None and self._index_freq == 'N':
+            from distutils.version import LooseVersion
+            from pandas import __version__ as pd_version
+            if LooseVersion(pd_version) < '0.14':
+                raise NotImplementedError('Nanosecond index not available in'
+                                          ' Pandas < 0.14')
+
     def _get_index_loc(self, key, base_index=None):
         """
         Get the location of a specific key in an index
@@ -282,15 +290,16 @@ class TimeSeriesModel(base.LikelihoodModel):
 
                 # Out-of-sample
                 if date_key > base_index[-1]:
-                    # First create an index that does *not* include `key`
+                    # First create an index that includes `key`
                     index = index_class(start=base_index[0], end=date_key,
                                         freq=base_index.freq)
-                    # Now we know the number of periods we need to make the new
-                    # index so that it does include `key`
-                    # (this method is to avoid relying on `TimeDelta` objects)
-                    index = index_class(start=base_index[0],
-                                        periods=len(index) + 1,
-                                        freq=base_index.freq)
+
+                    # Hack to handle nanosecond case in Pandas < 0.19 where the
+                    # creation would not include the endpoint
+                    if index.freqstr == 'N' and not index[-1] == date_key:
+                        index = index_class(start=base_index[0],
+                                            periods=len(index) + 1,
+                                            freq=base_index.freq)
 
         # Get the location (note that get_loc will throw a KeyError if key is
         # invalid)
