@@ -608,3 +608,65 @@ def test_prediction_increment_pandas_dates():
     assert_equal(out_of_sample, 3)
     desired_index = pd.DatetimeIndex(start='1950-01-01', periods=8, freq='D')
     assert_equal(prediction_index.equals(desired_index), True)
+
+
+def test_prediction_increment_pandas_dates_nanosecond():
+    # This test is only valid if the version of Pandas has nanosecond support
+    # and is > 0.14
+    try:
+        # Date-based index
+        endog = dta[2].copy()
+        endog.index = pd.DatetimeIndex(start='1970-01-01', periods=len(endog),
+                                       freq='N')
+        mod = tsa_model.TimeSeriesModel(endog)
+    except:
+        raise SkipTest
+
+    # Basic prediction: [0, end]; the index is the date index
+    start_key = 0
+    end_key = None
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, nobs-1)
+    assert_equal(out_of_sample, 0)
+    assert_equal(type(prediction_index) == type(endog.index), True)
+    assert_equal(prediction_index.equals(mod._index), True)
+
+    # Negative index: [-2, end]
+    start_key = -2
+    end_key = -1
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 3)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 0)
+    assert_equal(type(prediction_index) == type(endog.index), True)
+    assert_equal(prediction_index.equals(mod._index[3:]), True)
+
+    # Forecasting: [1, 5]; the index is an extended version of the date index
+    start_key = 1
+    end_key = nobs
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 1)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 1)
+    desired_index = pd.DatetimeIndex(start='1970-01-01',
+                                     periods=6, freq='N')[1:]
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Date-based keys
+    start_key = pd.Timestamp('1970-01-01')
+    end_key = pd.Timestamp(start_key.value + 7)
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 3)
+    desired_index = pd.DatetimeIndex(start='1970-01-01', periods=8, freq='N')
+    assert_equal(prediction_index.equals(desired_index), True)
