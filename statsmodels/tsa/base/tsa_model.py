@@ -160,7 +160,8 @@ class TimeSeriesModel(base.LikelihoodModel):
 
                 # Test for nanoseconds in early pandas versions
                 if ((freq is not None and str(freq) == 'N') or
-                        (index.freqstr is not None and index.freqstr == 'N')):
+                        (index is not None and index.freqstr is not None and
+                         index.freqstr == 'N')):
                     from distutils.version import LooseVersion
                     from pandas import __version__ as pd_version
                     if LooseVersion(pd_version) < '0.14':
