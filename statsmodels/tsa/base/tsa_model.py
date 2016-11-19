@@ -211,7 +211,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             self.data.freq = self._index.freqstr if self._index_dates else None
 
         # Test for nanoseconds in early pandas versions
-        if self._index_freq is not None and self._index_freq == 'N':
+        if self._index_freq is not None and self.data.freq == 'N':
             from distutils.version import LooseVersion
             from pandas import __version__ as pd_version
             if LooseVersion(pd_version) < '0.14':
