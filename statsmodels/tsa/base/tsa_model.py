@@ -114,11 +114,17 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # Only try to coerce non-numeric index types (string,
                     # list of date-times, etc.)
                     # Note that np.asarray(Float64Index([...])) yields an
-                    # object dtype array in earlier versions of Pandas, so
-                    # explicitly check for it here.
+                    # object dtype array in earlier versions of Pandas (and so
+                    # will not have is_numeric_dtype == True), so explicitly
+                    # check for it here. But note also that in very early
+                    # Pandas (~0.12), Float64Index doesn't exist (and so the
+                    # Statsmodels compat makes it an empty tuple, so in that
+                    # case also check if the first element is a float.
                     _index = np.asarray(index)
                     if (is_numeric_dtype(_index) or
-                            isinstance(index, Float64Index)):
+                            isinstance(index, Float64Index) or
+                            (Float64Index == tuple() and
+                             isinstance(_index[0], float))):
                         raise ValueError('Numeric index given')
                     # If a non-index Pandas series was given, only keep its
                     # values (because we must have a pd.Index type, below, and
