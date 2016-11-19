@@ -108,8 +108,13 @@ unsupported_indexes = [
     ([x for x in 'abcde'], None),
     # Non-date-object indexes
     ([str, 1, 'a', -30.1, {}], None),
-    # Date string indexes that don't have a freq
-    (['1950', '1952', '1941', '1954', '1991'], None)
+]
+
+# Unsupported date indexes (i.e. those without inferrable frequency)
+unsupported_date_indexes = [
+    (['1950', '1952', '1941', '1954', '1991'], None),
+    (['1950-01-01', '1950-01-02', '1950-01-03',
+      '1950-01-04', '1950-01-06'], None)
 ]
 
 
@@ -349,6 +354,40 @@ def test_instantiation_valid():
                 assert_equal(mod.data.dates.equals(mod._index), True)
                 assert_equal(mod.data.freq, freq)
 
+        # Date indexes with inferrable freq, but no given freq, should all give
+        # warnings
+        message = ('No frequency information was provided,'
+                   ' so inferred frequency %s will be used.')
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+
+            for ix, freq in supported_date_indexes:
+                endog = base_endog.copy()
+                endog.index = ix
+                mod = tsa_model.TimeSeriesModel(endog)
+                if freq is None:
+                    freq = ix.freq
+                if not isinstance(freq, str):
+                    freq = freq.freqstr
+                assert_equal(type(mod._index) == pd.DatetimeIndex, True)
+                assert_equal(mod._index_none, False)
+                assert_equal(mod._index_dates, True)
+                assert_equal(mod._index_generated, False)
+                assert_equal(mod._index.freq, mod._index_freq)
+                assert_equal(mod.data.dates.equals(mod._index), True)
+
+                # Note: here, we need to hedge the test a little bit because
+                # inferred frequencies aren't always the same as the original
+                # frequency. From the examples above, when the actual freq is
+                # 2QS-OCT, the inferred freq is 2QS-JAN. This is an issue with
+                # inferred frequencies, but since we are warning the user, it's
+                # not a failure of the code. Thus we only test the "major" part
+                # of the freq, and just test that the right message is given
+                # (even though it won't have the actual freq of the data in
+                # it).
+                assert_equal(mod.data.freq.split('-')[0], freq.split('-')[0])
+                assert_equal(str(w[-1].message), message % mod.data.freq)
+
         # Unsupported (but valid) indexes, should all give warnings
         message = ('An unsupported index was provided and will be'
                    ' ignored when e.g. forecasting.')
@@ -358,6 +397,8 @@ def test_instantiation_valid():
             for ix, freq in unsupported_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
+                print('-----')
+                print(ix)
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(type(mod._index) == pd.Int64Index, True)
                 assert_equal(mod._index_none, False)
@@ -369,14 +410,15 @@ def test_instantiation_valid():
 
                 assert_equal(str(w[0].message), message)
 
-        # Unsupported (but valid) date indexes, should all give warnings
+        # Date indexes without inferrable freq, and with no given freq, should
+        # all give warnings
         message = ('A date index has been provided, but it has no'
                    ' associated frequency information and so will be'
                    ' ignored when e.g. forecasting.')
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
 
-            for ix, freq in supported_date_indexes:
+            for ix, freq in unsupported_date_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)

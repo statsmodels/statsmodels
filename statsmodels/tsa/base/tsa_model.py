@@ -1,5 +1,5 @@
 from statsmodels.compat.python import lrange, long
-from statsmodels.compat.pandas import is_numeric_dtype
+from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
 
 import datetime
 
@@ -108,13 +108,19 @@ class TimeSeriesModel(base.LikelihoodModel):
         # If an index is available, see if it is a date-based index or if it
         # can be coerced to one. (If it can't we'll fall back, below, to an
         # internal, 0, 1, ... nobs-1 integer index for modeling purposes)
+        inferred_freq = False
         if index is not None:
             # Try to coerce to date-based index
             if not isinstance(index, (DatetimeIndex, PeriodIndex)):
                 try:
                     # Only try to coerce non-numeric index types (string,
                     # list of date-times, etc.)
-                    if is_numeric_dtype(np.asarray(index)):
+                    # Note that np.asarray(Float64Index([...])) yields an
+                    # object dtype array in earlier versions of Pandas, so
+                    # explicitly check for it here.
+                    _index = np.asarray(index)
+                    if (is_numeric_dtype(_index) or
+                            isinstance(index, Float64Index)):
                         raise ValueError('Numeric index given')
                     # If a non-index Pandas series was given, only keep its
                     # values (because we must have a pd.Index type, below, and
@@ -137,15 +143,27 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # the row_labels, we'll just ignore it and use the integer
                     # index below
                     if dates is not None:
+                        raise
                         raise ValueError('Non-date index index provided to'
                                          ' `dates` argument.')
             # Now, if we were given, or coerced, a date-based index, make sure
             # it has an associated frequency
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
+                # If no frequency, try to get an inferred frequency
+                if freq is None and index.freq is None:
+                    freq = index.inferred_freq
+                    inferred_freq = True
+                    # If we got an inferred frequncy, alert the user
+                    if freq is not None:
+                        warnings.warn('No frequency information was provided,'
+                                      ' so inferred frequency %s will be used.'
+                                      % freq, ValueWarning)
+
                 # Convert the passed freq to a pandas offset object
                 if freq is not None:
                     freq = to_offset(freq)
-                # If no frequency information is available from the index
+
+                # Now, if no frequency information is available from the index
                 # itself or from the `freq` argument, raise an exception
                 if freq is None and index.freq is None:
                     # But again, only want to raise the exception if `dates`
@@ -153,18 +171,19 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if dates is not None:
                         raise ValueError('No frequency information provided'
                                          ' with date index.')
-                # If the index itself has no frequency information but the
-                # `freq` argument is available, construct a new index with an
-                # associated frequency
+                # However, if the index itself has no frequency information but
+                # the `freq` argument is available (or was inferred), construct
+                # a new index with an associated frequency
                 elif freq is not None and index.freq is None:
                     resampled_index = type(index)(
                         start=index[0], end=index[-1], freq=freq)
-                    if not resampled_index.equals(index):
+                    if not inferred_freq and not resampled_index.equals(index):
                         raise ValueError('The given frequency argument could'
                                          ' not be matched to the given index.')
                     index = resampled_index
-                # If the index itself has a frequency and there was a
-                # given frequency raise an exception if they are not equal
+                # Finally, if the index itself has a frequency and there was
+                # also a given frequency, raise an exception if they are not
+                # equal
                 elif freq is not None and not (index.freq == freq):
                     raise ValueError('The given frequency argument is'
                                      ' incompatible with the given index.')
@@ -204,6 +223,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self._index_none = index is None
         self._index_dates = date_index and not index_generated
         self._index_freq = self._index.freq if self._index_dates else None
+        self._index_inferred_freq = inferred_freq
 
         # For backwards compatibility, set data.dates, data.freq
         if self._index_dates:
