@@ -158,6 +158,15 @@ class TimeSeriesModel(base.LikelihoodModel):
                                           ' will be used.'
                                           % freq, ValueWarning)
 
+                # Test for nanoseconds in early pandas versions
+                if freq is not None and str(freq) == 'N':
+                    from distutils.version import LooseVersion
+                    from pandas import __version__ as pd_version
+                    if LooseVersion(pd_version) < '0.14':
+                        raise NotImplementedError('Nanosecond index not'
+                                                  ' available in Pandas'
+                                                  ' < 0.14')
+
                 # Convert the passed freq to a pandas offset object
                 if freq is not None:
                     freq = to_offset(freq)
@@ -229,14 +238,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         # For backwards compatibility, set data.dates, data.freq
         self.data.dates = self._index if self._index_dates else None
         self.data.freq = self._index.freqstr if self._index_dates else None
-
-        # Test for nanoseconds in early pandas versions
-        if self._index_freq is not None and self.data.freq == 'N':
-            from distutils.version import LooseVersion
-            from pandas import __version__ as pd_version
-            if LooseVersion(pd_version) < '0.14':
-                raise NotImplementedError('Nanosecond index not available in'
-                                          ' Pandas < 0.14')
 
     def _get_index_loc(self, key, base_index=None):
         """
