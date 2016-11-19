@@ -33,6 +33,12 @@ try:
 except ImportError:
     RangeIndex = tuple()
 
+# Float64Index introduced in Pandas 0.13.0
+try:
+    from pandas import Float64Index
+except:
+    Float64Index = tuple()
+
 try:
     from pandas.api.types import is_numeric_dtype
 except ImportError:
