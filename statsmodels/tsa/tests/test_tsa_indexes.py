@@ -397,8 +397,6 @@ def test_instantiation_valid():
             for ix, freq in unsupported_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
-                print('-----')
-                print(ix)
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(type(mod._index) == pd.Int64Index, True)
                 assert_equal(mod._index_none, False)
