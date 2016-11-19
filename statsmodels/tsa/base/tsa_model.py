@@ -49,8 +49,6 @@ class TimeSeriesModel(base.LikelihoodModel):
                                               **kwargs)
 
         # Date handling in indexes
-        self.data.dates = None
-        self.data.freq = None
         self._init_dates(dates, freq)
 
     def _init_dates(self, dates=None, freq=None):
@@ -151,12 +149,14 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # If no frequency, try to get an inferred frequency
                 if freq is None and index.freq is None:
                     freq = index.inferred_freq
-                    inferred_freq = True
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
-                        warnings.warn('No frequency information was provided,'
-                                      ' so inferred frequency %s will be used.'
-                                      % freq, ValueWarning)
+                        inferred_freq = True
+                        if freq is not None:
+                            warnings.warn('No frequency information was'
+                                          ' provided, so inferred frequency %s'
+                                          ' will be used.'
+                                          % freq, ValueWarning)
 
                 # Convert the passed freq to a pandas offset object
                 if freq is not None:
@@ -168,8 +168,9 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # But again, only want to raise the exception if `dates`
                     # was provided.
                     if dates is not None:
-                        raise ValueError('No frequency information provided'
-                                         ' with date index.')
+                        raise ValueError('No frequency information was'
+                                         ' provided with date index and no'
+                                         ' frequency could be inferred.')
                 # However, if the index itself has no frequency information but
                 # the `freq` argument is available (or was inferred), construct
                 # a new index with an associated frequency
@@ -183,7 +184,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # Finally, if the index itself has a frequency and there was
                 # also a given frequency, raise an exception if they are not
                 # equal
-                elif freq is not None and not (index.freq == freq):
+                elif (freq is not None and not inferred_freq and
+                        not (index.freq == freq)):
                     raise ValueError('The given frequency argument is'
                                      ' incompatible with the given index.')
             # Finally, raise an exception if we could not coerce to date-based
@@ -225,9 +227,8 @@ class TimeSeriesModel(base.LikelihoodModel):
         self._index_inferred_freq = inferred_freq
 
         # For backwards compatibility, set data.dates, data.freq
-        if self._index_dates:
-            self.data.dates = self._index if self._index_dates else None
-            self.data.freq = self._index.freqstr if self._index_dates else None
+        self.data.dates = self._index if self._index_dates else None
+        self.data.freq = self._index.freqstr if self._index_dates else None
 
         # Test for nanoseconds in early pandas versions
         if self._index_freq is not None and self.data.freq == 'N':
