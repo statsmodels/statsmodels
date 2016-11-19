@@ -290,13 +290,12 @@ class TimeSeriesModel(base.LikelihoodModel):
 
                 # Out-of-sample
                 if date_key > base_index[-1]:
-                    # First create an index that includes `key`
+                    # First create an index that may not always include `key`
                     index = index_class(start=base_index[0], end=date_key,
                                         freq=base_index.freq)
 
-                    # Hack to handle nanosecond case in Pandas < 0.19 where the
-                    # creation would not include the endpoint
-                    if index.freqstr == 'N' and not index[-1] == date_key:
+                    # Now make sure we include `key`
+                    if not index[-1] == date_key:
                         index = index_class(start=base_index[0],
                                             periods=len(index) + 1,
                                             freq=base_index.freq)
