@@ -477,6 +477,15 @@ class TimeSeriesModel(base.LikelihoodModel):
                 raise ValueError('Invalid `index` provided in prediction.'
                                  ' Must have length consistent with `start`'
                                  ' and `end` arguments.')
+            # But if we weren't given Pandas input, this index will not be
+            # used because the data will not be wrapped; in that case, issue
+            # a warning
+            if not isinstance(self.data, data.PandasData) and not silent:
+                warnings.warn('Because the model data (`endog`, `exog`) were'
+                              ' not given as Pandas objects, the prediction'
+                              ' output will be Numpy arrays, and the given'
+                              ' `index` argument will only be used'
+                              ' internally.', ValueWarning)
             prediction_index = Index(index)
         # Now, if we *do not* have a supported index, but we were given some
         # kind of index...
