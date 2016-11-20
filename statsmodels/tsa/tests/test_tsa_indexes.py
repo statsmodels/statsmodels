@@ -491,11 +491,9 @@ def test_prediction_increment_unsupported():
     # a warning will be issued
     start_key = 1
     end_key = nobs
-    message = ('The model does not have an associated supported'
-               ' index, and `index` argument was not provided'
-               ' in prediction. Prediction results will be'
-               ' given with an integer index beginning at'
-               ' `start`.')
+    message = ('No supported index is available.'
+               ' Prediction results will be given with'
+               ' an integer index beginning at `start`.')
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
 
@@ -740,11 +738,9 @@ def test_custom_index():
     # Test out-of-sample
     start_key = 4
     end_key = 5
-    message = ('The model does not have an associated supported'
-               ' index, and `index` argument was not provided'
-               ' in prediction. Prediction results will be'
-               ' given with an integer index beginning at'
-               ' `start`.')
+    message = ('No supported index is available.'
+               ' Prediction results will be given with'
+               ' an integer index beginning at `start`.')
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
 

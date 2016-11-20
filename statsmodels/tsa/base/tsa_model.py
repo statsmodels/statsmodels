@@ -393,7 +393,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 raise e
         return loc, index, index_was_expanded
 
-    def _get_prediction_index(self, start, end, index=None):
+    def _get_prediction_index(self, start, end, index=None, silent=False):
         """
         Get the location of a specific key in an index or model row labels
 
@@ -414,6 +414,8 @@ class TimeSeriesModel(base.LikelihoodModel):
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
+        silent : bool, optional
+            Argument to silence warnings.
 
         Returns
         -------
@@ -483,12 +485,10 @@ class TimeSeriesModel(base.LikelihoodModel):
             if self.data.row_labels is not None and not (start_oos or end_oos):
                 prediction_index = self.data.row_labels[start:end + 1]
             # Otherwise, warn the user that they will get an Int64Index
-            else:
-                warnings.warn('The model does not have an associated supported'
-                              ' index, and `index` argument was not provided'
-                              ' in prediction. Prediction results will be'
-                              ' given with an integer index beginning at'
-                              ' `start`.',
+            elif not silent:
+                warnings.warn('No supported index is available.'
+                              ' Prediction results will be given with'
+                              ' an integer index beginning at `start`.',
                               ValueWarning)
         elif self._index_none:
             prediction_index = None
