@@ -710,3 +710,54 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(out_of_sample, 3)
     desired_index = pd.DatetimeIndex(start='1970-01-01', periods=8, freq='N')
     assert_equal(prediction_index.equals(desired_index), True)
+
+
+def test_custom_index():
+    tsa_model.__warningregistry__ = {}
+
+    endog = pd.Series(np.random.normal(size=5),
+                      index=['a', 'b', 'c', 'd', 'e'])
+    message = ('An unsupported index was provided and will be ignored when'
+               ' e.g. forecasting.')
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+
+        mod = tsa_model.TimeSeriesModel(endog)
+        assert_equal(str(w[0].message), message)
+    start_key = -2
+    end_key = -1
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    # Test the default output index
+    assert_equal(prediction_index.equals(pd.Index(['d', 'e'])), True)
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key, index=['f', 'g']))
+
+    # Test custom output index
+    assert_equal(prediction_index.equals(pd.Index(['f', 'g'])), True)
+
+    # Test out-of-sample
+    start_key = 4
+    end_key = 5
+    message = ('The model does not have an associated supported'
+               ' index, and `index` argument was not provided'
+               ' in prediction. Prediction results will be'
+               ' given with an integer index beginning at'
+               ' `start`.')
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+
+        start, end, out_of_sample, prediction_index = (
+            mod._get_prediction_index(start_key, end_key))
+        assert_equal(prediction_index.equals(pd.Index([4, 5])), True)
+        assert_equal(str(w[0].message), message)
+
+    # Test out-of-sample custom index
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key, index=['f', 'g']))
+    assert_equal(prediction_index.equals(pd.Index(['f', 'g'])), True)
+
+    # Test invalid custom index
+    assert_raises(ValueError, mod._get_prediction_index, start_key, end_key,
+                  index=['f', 'g', 'h'])

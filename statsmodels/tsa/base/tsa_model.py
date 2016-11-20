@@ -468,28 +468,28 @@ class TimeSeriesModel(base.LikelihoodModel):
             raise ValueError('Prediction must have `end` after `start`.')
 
         # Handle custom prediction index
-        if (not (start_oos or end_oos or self._index_none or self._index_dates)
-                and index is None and self.data.row_labels is not None):
-            prediction_index = self.data.row_labels[start:end + 1]
-        elif not self._index_none and self._index_generated:
-            if index is None:
+        # First, if we were given an index, check that it's the right size and
+        # use it if so
+        if index is not None:
+            if not len(prediction_index) == len(index):
+                raise ValueError('Invalid `index` provided in prediction.'
+                                 ' Must have length consistent with `start`'
+                                 ' and `end` arguments.')
+            prediction_index = Index(index)
+        # Now, if we *do not* have a supported index, but we were given some
+        # kind of index...
+        elif self._index_generated and not self._index_none:
+            # If we are in sample, and have row labels, use them
+            if self.data.row_labels is not None and not (start_oos or end_oos):
+                prediction_index = self.data.row_labels[start:end + 1]
+            # Otherwise, warn the user that they will get an Int64Index
+            else:
                 warnings.warn('The model does not have an associated supported'
                               ' index, and `index` argument was not provided'
                               ' in prediction. Prediction results will be'
                               ' given with an integer index beginning at'
                               ' `start`.',
                               ValueWarning)
-            elif not len(prediction_index) == len(index):
-                raise ValueError('Invalid `index` provided in prediction.'
-                                 ' Must have length consistent with `start`'
-                                 ' and `end` arguments.')
-            else:
-                prediction_index = pd.Index(index)
-        elif index is not None:
-            warnings.warn('`index` argument provided in prediction'
-                          ' but the model already has an associated supported'
-                          ' index. The `index` argument will be'
-                          ' ignored.', ValueWarning)
         elif self._index_none:
             prediction_index = None
 

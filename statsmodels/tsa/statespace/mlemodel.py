@@ -2293,7 +2293,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Handle start, end, dynamic
         start, end, out_of_sample, prediction_index = (
-            self.model._get_prediction_index(start, end))
+            self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
         if isinstance(dynamic, str):
