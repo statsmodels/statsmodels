@@ -778,7 +778,7 @@ class VARMAXResults(MLEResults):
 
         # Handle end (e.g. date)
         _start, _end, _out_of_sample, prediction_index = (
-            self.model._get_prediction_index(start, end, index))
+            self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
         if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
