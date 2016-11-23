@@ -627,7 +627,7 @@ class DistributedModel(object):
         elif parallel_backend is not None and init_kwds_generator is not None:
             tup_gen = enumerate(zip(data_generator, init_kwds_generator))
             with parallel_backend:
-                results_l = par(f(self, pnum, endog, exog, fit_kwds, int_kwds)
+                results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds)
                                 for pnum, ((endog, exog), init_kwds)
                                 in tup_gen)
 

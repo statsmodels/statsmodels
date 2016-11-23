@@ -296,6 +296,53 @@ def test_single_partition():
     assert_allclose(fitOLSnv.params, fitOLS.params)
 
 
+def test_larger_p():
+
+    np.random.seed(435265)
+    N = 40
+    p = 40
+    m = 5
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    # test if anything breaks with p > N / m
+    db_mod = DistributedModel(m)
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+    assert_equal(np.sum(np.isnan(fitOLSdb.params)), 0)
+
+    nv_mod = DistributedModel(m, estimation_method=_est_regularized_naive,
+                              join_method=_join_naive)
+    fitOLSnv = nv_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+    assert_equal(np.sum(np.isnan(fitOLSnv.params)), 0)
+
+
+def test_non_zero_params():
+
+    np.random.seed(435265)
+    N = 200
+    p = 10
+    m = 5
+
+    beta = np.random.normal(size=p)
+    beta = beta * np.random.randint(0, 2, p)
+    X = np.random.normal(size=(N, p))
+    y = X.dot(beta) + np.random.normal(size=N)
+
+    # test if anything breaks with the thresholding
+    db_mod = DistributedModel(m, join_kwds={"threshold": 0.13})
+    fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
+    ols_mod = OLS(y, X)
+    fitOLS = ols_mod.fit_regularized(alpha=0.1)
+
+    nz_params_db = 1 * (fitOLSdb.params != 0)
+    nz_params_ols = 1 * (fitOLS.params != 0)
+
+    assert_allclose(nz_params_db, nz_params_ols)
+
+
 def test_repeat_partition():
 
     np.random.seed(435265)
@@ -316,7 +363,6 @@ def test_repeat_partition():
 
         ii = 0
         while ii < n_exog:
-            jj = int(min(ii + n_part, n_exog))
             yield endog, exog
             ii += int(n_part)
 
