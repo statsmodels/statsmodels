@@ -27,6 +27,11 @@ def fit_manova(X, Y, is_intercept):
 
     """
     n_sample, n_y_vars = Y.shape
+    n_sample_x, n_x_vars = X.shape
+    if n_sample != n_sample_x:
+        raise ValueError('X(n=%d) and Y(n=%d) should have the same number of '
+                         'rows!' % (n_sample_x, n_sample))
+
     if is_intercept:
         X = np.concatenate([np.ones([n_sample, 1]), X], axis=1)
 
