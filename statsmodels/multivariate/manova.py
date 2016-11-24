@@ -22,40 +22,60 @@ default/viewer.htm#statug_introreg_sect012.htm
 
     Parameters
     ----------
-    X : array-like, n by m_x
-        Independent variables (IV). Variables in columns, observations in rows
-    Y : array-like, n by m_y
-        Dependent variables (DV). Variables in columns, observations in rows
-    L : array-like, at least 1 row (1 by m_x+1)
-        Hypothesis to be tested. IV in columns, sub-hypothesis in rows. First
-        column is intercept
-    M : array-like
-        Transform matrix. Default to be m_y by m_y identity matrix
+    X : array-like, n by m_x_vars
+        Independent variables (IV). Variables in columns, observations in rows.
+    Y : array-like, n by m_y_vars
+        Dependent variables (DV). Variables in columns, observations in rows.
 
     """
-    def __init__(self, X, Y, L, M=None):
-        n_sample, n_iv = X.shape
-        n_sample1, n_dv = Y.shape
-        if M is None:
-            M = np.eye(n_dv)
+    def __init__(self, X, Y):
+        n_sample, m_x_vars = X.shape
+        n_sample1, m_y_vars = Y.shape
+        self.n_sample_ = n_sample
+        self.m_x_vars_ = m_x_vars
+        self.m_y_vars_ = m_y_vars
+
         # Add intercept
         X = np.concatenate([np.ones([n_sample, 1]), X], axis=1)
-        # H = M'(LB)'(L(X'X)^L')^(LB)M   (`^` denotes inverse)
-        v = X.shape[0] - X.shape[1]
-        B = pinv(X).dot(Y)
 
+        # Calculate the matrices necessary for hypothesis testing
+        self.error_df_ = X.shape[0] - X.shape[1]
+        self.B_ = pinv(X).dot(Y)
+        self.inv_cov_ = inv(X.T.dot(X))
+        t = X.dot(self.B_)
+        self.YYBXXB_ = np.subtract(Y.T.dot(Y), t.T.dot(t))
+
+    def test(self, L, M=None):
+        """
+        Testing hypothesis L * B * M = 0
+
+        Parameters
+        ----------
+        L : array-like, at least 1 row (1 by m_x_vars+1)
+            Hypothesis to be tested. IV in columns, sub-hypothesis in rows.
+            First column is intercept.
+        M : array-like
+            Transform matrix. Default to be m_y_vars by m_y_vars identity
+            matrix.
+
+        Returns
+        -------
+
+        """
+        # H = M'(LB)'(L(X'X)^L')^(LB)M   (`^` denotes inverse)
+        if M is None:
+            M = np.eye(self.m_y_vars_)
+        v = self.error_df_
         # t1 = (LB)M
-        t1 = L.dot(B).dot(M)
+        t1 = L.dot(self.B_).dot(M)
 
         # H = t1'L(X'X)^L't1
-        t2 = L.dot(inv(X.T.dot(X))).dot(L.T)
+        t2 = L.dot(self.inv_cov_).dot(L.T)
         q = matrix_rank(t2)
         H = t1.T.dot(inv(t2)).dot(t1)
 
         # E = M'(Y'Y - B'(X'X)B)M
-        E = X.dot(B)
-        E = np.subtract(Y.T.dot(Y), E.T.dot(E))
-        E = M.T.dot(E).dot(M)
+        E = M.T.dot(self.YYBXXB_).dot(M)
 
         EH = np.add(E, H)
         p = matrix_rank(EH)
@@ -139,4 +159,4 @@ default/viewer.htm#statug_introreg_sect012.htm
 
     @property
     def stats(self):
-        print(self.results_)
+        return self.results_
