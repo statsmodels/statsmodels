@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """Multivariate analysis of variance
 
 author: Yichuan Liu
@@ -120,6 +122,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     n = (v - p - 1) / 2
 
     results = {}
+
     results["Wilks’ lambda"] = np.prod(1 - eigv2)
 
     results["Pillai’s trace"] = eigv2.sum()
