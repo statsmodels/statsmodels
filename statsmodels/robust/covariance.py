@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """robust location, scatter and covariance estimators
 
 Author: Josef Perktold
@@ -677,8 +678,8 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
 
     References
     ----------
-    Rocke, D. M., and D. L. Woodruff. 1993. “Computation of Robust Estimates
-    of Multivariate Location and Shape.” Statistica Neerlandica 47 (1): 27–42.
+    Rocke, D. M., and D. L. Woodruff. 1993. Computation of Robust Estimates
+    of Multivariate Location and Shape. Statistica Neerlandica 47 (1): 27-42.
     doi:10.1111/j.1467-9574.1993.tb01404.x.
 
 
@@ -738,7 +739,7 @@ def weights_mvt(distance, df, k_vars):
 
     Finegold, Michael, and Mathias Drton. 2011. ROBUST GRAPHICAL
     MODELING OF GENE NETWORKS USING CLASSICAL AND ALTERNATIVE
-    T-DISTRIBUTIONS.â€� The Annals of Applied Statistics 5 (2A): 1057-80.
+    T-DISTRIBUTIONS. The Annals of Applied Statistics 5 (2A): 1057-80.
 
 
     """
@@ -773,11 +774,12 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
         extra arguments for the weights_func
     cov_init : ndarray, square 2-D
         initial covariance matrix
-    rescale : "med"
+    rescale : "med" or "none"
         If "med" then the resulting covariance matrix is normalized so it is
         approximately consistent with the normal distribution. Rescaling is
         based on the median of the distances and of the chisquare distribution.
         Other options are not yet available.
+        If rescale is the string "none", then no rescaling is performed.
 
     Returns
     -------
@@ -809,6 +811,8 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
             converged = True
             break
 
+    if rescale == 'none':
+        s = 1
     if rescale == 'med':
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
@@ -816,7 +820,7 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
         raise NotImplementedError('only rescale="med" is currently available')
 
     res = Holder(cov=cov, mean=mean, weights=w, mahalanobis=dist,
-                 n_iter=it, converged=converged)
+                 scale_factor=s, n_iter=it, converged=converged)
     return res
 
 
