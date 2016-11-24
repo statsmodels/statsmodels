@@ -585,7 +585,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         self._smoothed_state_autocov = &self.smoothed_state_autocov[0, 0, t]
 
     cdef void initialize_function_pointers(self) except *:
-        # Multivariate modified Bryson–Frazier smoother
+        # Multivariate modified Bryson-Frazier smoother
         if self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_alternative
             self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_alternative
