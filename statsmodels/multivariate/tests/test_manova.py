@@ -23,13 +23,13 @@ X = pd.DataFrame([[0, 0, 0, 2.068, 2.070, 1.580],
 
 def test_manova_sas_example():
     m = MANOVA(X=X.iloc[:, [0, 1]], Y=X.iloc[:, [3, 4, 5]])
-    m.test(L=np.array([[0, 1, 0], [0, 0, 1]]))
-    assert_almost_equal(m.stats.loc["Wilks’ lambda", 'Pr > F'],
+    r = m.test([('effect1', np.array([[0, 1, 0], [0, 0, 1]]), None)])
+    r = dict(r)
+    assert_almost_equal(r['effect1'].loc["Wilks’ lambda", 'Pr > F'],
                         0.6032, decimal=4)
-    assert_almost_equal(m.stats.loc["Pillai’s trace", 'Pr > F'],
+    assert_almost_equal(r['effect1'].loc["Pillai’s trace", 'Pr > F'],
                         0.5397, decimal=4)
-    assert_almost_equal(m.stats.loc["Hotelling-Lawley trace", 'Pr > F'],
+    assert_almost_equal(r['effect1'].loc["Hotelling-Lawley trace", 'Pr > F'],
                         0.6272, decimal=4)
-    assert_almost_equal(m.stats.loc["Roy’s greatest root", 'Pr > F'],
+    assert_almost_equal(r['effect1'].loc["Roy’s greatest root", 'Pr > F'],
                         0.4109, decimal=4)
-    print(m.stats)
