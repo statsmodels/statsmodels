@@ -20,6 +20,7 @@ X = pd.DataFrame([[0, 0, 0, 2.068, 2.070, 1.580],
                   [0, 1, 1, 2.100, 2.106, 1.623],
                   [0, 1, 1, 2.104, 2.101, 1.653]])
 
+
 def test_manova_sas_example():
     m = MANOVA(X=X.iloc[:, [0, 1]], Y=X.iloc[:, [3, 4, 5]],
                L=np.array([[0, 1, 0], [0, 0, 1]]))
@@ -31,5 +32,3 @@ def test_manova_sas_example():
                         0.6272, decimal=4)
     assert_almost_equal(m.results_.loc["Roy’s greatest root", 'Pr > F'],
                         0.4109, decimal=4)
-
-

@@ -5,12 +5,9 @@ author: Yichuan Liu
 from __future__ import print_function, division
 
 import numpy as np
-from numpy.linalg import eigvals, inv, det, pinv, matrix_rank
+from numpy.linalg import eigvals, inv, pinv, matrix_rank
 from scipy import stats
 import pandas as pd
-
-from statsmodels.compat.python import range
-from statsmodels.compat.numpy import nanmean
 
 
 class MANOVA(object):
@@ -19,6 +16,9 @@ class MANOVA(object):
 
     For Y = B * X
     Testing L * B * M = 0
+
+    Based on https://support.sas.com/documentation/cdl/en/statug/63033/HTML/
+default/viewer.htm#statug_introreg_sect012.htm
 
     Parameters
     ----------
@@ -66,13 +66,12 @@ class MANOVA(object):
         # eigenvalues of (E+H)^H
         eigv1 = np.array([i / (1 - i) for i in eigv2])
 
-
         s = np.min([p, q])
         m = (np.abs(p - q) - 1) / 2
         n = (v - p - 1) / 2
 
         results = {}
-        results["Wilks’ lambda"] =  np.prod(1 - eigv2)
+        results["Wilks’ lambda"] = np.prod(1 - eigv2)
 
         results["Pillai’s trace"] = eigv2.sum()
 
@@ -99,7 +98,6 @@ class MANOVA(object):
         pval = stats.f.sf(F, df1, df2)
         results.loc["Wilks’ lambda", 'Pr > F'] = pval
 
-
         V = results.loc["Pillai’s trace", 'value']
         df1 = s * (2*m + s + 1)
         df2 = s * (2*n + s + 1)
@@ -123,9 +121,9 @@ class MANOVA(object):
             F = df2 / df1 / s * U
         results.loc["Hotelling-Lawley trace", 'Num DF'] = df1
         results.loc["Hotelling-Lawley trace", 'Den DF'] = df2
-        results.loc["Hotelling-Lawley trace", 'F Value'] =  F
+        results.loc["Hotelling-Lawley trace", 'F Value'] = F
         pval = stats.f.sf(F, df1, df2)
-        results.loc["Hotelling-Lawley trace", 'Pr > F'] =  pval
+        results.loc["Hotelling-Lawley trace", 'Pr > F'] = pval
 
         sigma = results.loc["Roy’s greatest root", 'value']
         r = np.max([p, q])
@@ -142,10 +140,3 @@ class MANOVA(object):
     @property
     def stats(self):
         print(self.results_)
-
-
-
-
-
-
-
