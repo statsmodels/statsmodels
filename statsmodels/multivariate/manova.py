@@ -6,13 +6,14 @@ author: Yichuan Liu
 """
 from __future__ import print_function, division
 
+from statsmodels.base.model import Model
 import numpy as np
 from numpy.linalg import eigvals, inv, pinv, matrix_rank
 from scipy import stats
 import pandas as pd
 
 
-def fit_manova(X, Y, is_intercept):
+def fit_manova(X, Y):
     """
     MANOVA fitting Y = B * X
     where Y is dependent variables, X is independent variables
@@ -21,7 +22,6 @@ def fit_manova(X, Y, is_intercept):
     ----------
     Y : array-like, each column is a dependent variable
     X : array-like, each column is a independent variable
-    is_intercept : True or False, whether to add the intercept term
 
     Returns
     -------
@@ -33,9 +33,6 @@ def fit_manova(X, Y, is_intercept):
     if n_sample != n_sample_x:
         raise ValueError('X(n=%d) and Y(n=%d) should have the same number of '
                          'rows!' % (n_sample_x, n_sample))
-
-    if is_intercept:
-        X = np.concatenate([np.ones([n_sample, 1]), X], axis=1)
 
     # Calculate the matrices necessary for hypothesis testing
     df_resid = X.shape[0] - X.shape[1]
@@ -121,17 +118,19 @@ default/viewer.htm#statug_introreg_sect012.htm
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
-    results = {}
+    results = pd.DataFrame({'value': [], 'F Value': [], 'Num DF': [],
+                            'Den DF': [], 'Pr > F': []})
 
-    results["Wilks’ lambda"] = np.prod(1 - eigv2)
+    def fn(x):
+        return np.real([x])[0]
 
-    results["Pillai’s trace"] = eigv2.sum()
+    results.loc["Wilks’ lambda", 'value'] = fn(np.prod(1 - eigv2))
 
-    results["Hotelling-Lawley trace"] = eigv1.sum()
+    results.loc["Pillai’s trace", 'value'] = fn(eigv2.sum())
 
-    results["Roy’s greatest root"] = eigv1.max()
+    results.loc["Hotelling-Lawley trace", 'value'] = fn(eigv1.sum())
 
-    results = pd.DataFrame(pd.Series(results), columns=['value'])
+    results.loc["Roy’s greatest root", 'value'] = fn(eigv1.max())
 
     r = v - (p - q + 1)/2
     u = (p*q - 2) / 4
@@ -187,39 +186,72 @@ default/viewer.htm#statug_introreg_sect012.htm
     results.loc["Roy’s greatest root", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
     results.loc["Roy’s greatest root", 'Pr > F'] = pval
-    return results.iloc[:, [0, 3, 1, 2, 4]]
+    return results.iloc[:, [4, 2, 0, 1, 3]]
 
 
-class MANOVA(object):
+class MANOVA(Model):
     """
     Multivariate analysis of variance
 
-    For Y = B * X
-    Testing L * B * M = 0
-    where L is the contast matrix for hypothesis testing and M is the
-    transformation matrix for transforming the dependent variables in Y.
+    option 1: specify `X` and `formula`
+        The effect of each term on right hand side of `formula` will be tested.
 
+    option 2: specify 'X', `Y`, `effect`
+        For variables in X, automatically include in the model the main effect
+        and/or interaction terms as specified in `effect` and testing them.
 
     Parameters
     ----------
-    X : array-like, n by m_x_vars
+    X : array-like (n_sample by m_x_vars) or DataFrame
         Independent variables (IV). Variables in columns, observations in rows.
-    Y : array-like, n by m_y_vars
+        For DataFrame, string columns will be treated as categorical variables.
+
+    Y : array-like (n_sample by m_y_vars)
         Dependent variables (DV). Variables in columns, observations in rows.
 
+    formula : string, default to None
+        Model formula.
+
+    effect : tuple, default to (0, 1) (only main effects and intercept)
+        Specifies which terms will be included in the model automatically.
+        Values:
+        0 - intercept
+        1 - main effects
+        2 - two-way interactions
+        3 - three-way interactions
+        etc.
+
     """
-    def __init__(self, X, Y, is_intercept=True):
+    def __init__(self, endog, exog, design_info=None, **kwargs):
+        Y, X = endog, exog
         n_sample, m_x_vars = X.shape
         n_sample1, m_y_vars = Y.shape
         self.n_sample_ = n_sample
         self.m_x_vars_ = m_x_vars
         self.m_y_vars_ = m_y_vars
-        self.is_intercept = is_intercept
-
-        out = fit_manova(X, Y, is_intercept)
+        self.design_info = design_info
+        out = fit_manova(X, Y)
         self.reg_coeffs, self.df_resid, self.inv_cov_, self.YYBXXB_ = out
+        super(MANOVA, self).__init__(endog, exog)
 
-    def test(self, H):
+    @classmethod
+    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+                     tests=None, *args, **kwargs):
+        mod = super(MANOVA, cls).from_formula(formula, data,
+                                              subset=subset,
+                                              drop_cols=drop_cols,
+                                              tests=tests,
+                                              *args, **kwargs)
+        terms = mod.design_info.term_name_slices
+        hypothesis = []
+        for key in terms:
+            L_contrast = np.eye(mod.exog.shape[1])[terms[key], :]
+            hypothesis.append((key, L_contrast, None))
+        mod.hypothesis = hypothesis
+        mod.hypothesis_testing = mod.test(hypothesis)
+        return mod
+
+    def test(self, H=None):
         """
         Testing the genernal hypothesis L * B * M = 0
         for each tuple (name, L, M) in H
