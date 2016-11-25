@@ -28,8 +28,8 @@ def test_manova_sas_example():
     # Results should be the same as figure 4.5 of
     # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
     # viewer.htm#statug_introreg_sect012.htm
-    mod, hypothesis = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
-    r = mod.test(hypothesis)
+    mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
+    r = mod.test()
     assert_almost_equal(r[1][1].loc["Wilks’ lambda", 'Pr > F'],
                         0.6032, decimal=4)
     assert_almost_equal(r[1][1].loc["Pillai’s trace", 'Pr > F'],
@@ -40,8 +40,8 @@ def test_manova_sas_example():
                         0.4109, decimal=4)
 
 def test_manova_interaction_term():
-    mod, hypothesis = MANOVA.from_formula('Basal + Occ ~ Loc * Max', data=X)
-    r = mod.test(hypothesis)
+    mod = MANOVA.from_formula('Basal + Occ ~ Loc * Max', data=X)
+    r = mod.test()
     assert_almost_equal(r[3][1].loc["Wilks’ lambda", 'Pr > F'],
                         0.1083267, decimal=7)
     assert_almost_equal(r[3][1].loc["Pillai’s trace", 'Pr > F'],
@@ -51,7 +51,7 @@ def test_manova_interaction_term():
                         0.0472659, decimal=7)
 
 def test_manova_test_input_validation():
-    mod, hypothesis = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
+    mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
     hypothesis = [('test', np.array([[1, 1, 1]]), None)]
     mod.test(hypothesis)
     hypothesis = [('test', np.array([[1, 1]]), None)]

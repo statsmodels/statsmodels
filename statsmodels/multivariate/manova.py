@@ -239,12 +239,7 @@ class MANOVA(Model):
                                               drop_cols=drop_cols,
                                               tests=tests,
                                               *args, **kwargs)
-        terms = mod.design_info.term_name_slices
-        hypothesis = []
-        for key in terms:
-            L_contrast = np.eye(mod.exog.shape[1])[terms[key], :]
-            hypothesis.append((key, L_contrast, None))
-        return mod, hypothesis
+        return mod
 
     def test(self, H=None):
         """
@@ -261,8 +256,12 @@ class MANOVA(Model):
            matrix M for transforming dependent variables, respectively. If M is
            `None`, it would be set to an identity matrix (i.e. no dependent
            variable transformation).
-           If `H` is None, the effect of each independent variable on the
-           dependent variables will be tested.
+           If `H` is None: 1) the effect of each independent variable on the
+           dependent variables will be tested. Or 2) if model is created using
+           `from_formula`,  H will be created according to `design_info`. 1)
+           and 2) is equivalent if there is no categorical variables (i.e. no
+           dummy variable is created by `from_formula`)
+
 
         Returns
         -------
@@ -271,12 +270,19 @@ class MANOVA(Model):
 
         """
         if H is None:
-            H = []
-            for i in range(self.exog.shape[1]):
-                name = 'x%d' % (i)
-                L = np.zeros([1, self.exog.shape[1]])
-                L[i] = 1
-                H.append([name, L, None])
+            if self.design_info is not None:
+                terms = self.design_info.term_name_slices
+                H = []
+                for key in terms:
+                    L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
+                    H.append((key, L_contrast, None))
+            else:
+                H = []
+                for i in range(self.exog.shape[1]):
+                    name = 'x%d' % (i)
+                    L = np.zeros([1, self.exog.shape[1]])
+                    L[i] = 1
+                    H.append([name, L, None])
 
         results = []
         for name, L, M in H:
