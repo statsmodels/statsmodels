@@ -24,8 +24,8 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580],
 
 
 def test_manova_sas_example():
-    mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
-    r = mod.hypothesis_testing
+    mod, hypothesis = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
+    r = mod.test(hypothesis)
     assert_almost_equal(r[1][1].loc["Wilks’ lambda", 'Pr > F'],
                         0.6032, decimal=4)
     assert_almost_equal(r[1][1].loc["Pillai’s trace", 'Pr > F'],
@@ -34,4 +34,5 @@ def test_manova_sas_example():
                         0.6272, decimal=4)
     assert_almost_equal(r[1][1].loc["Roy’s greatest root", 'Pr > F'],
                         0.4109, decimal=4)
-    mod = MANOVA.from_formula('Basal + Max ~ Loc*Occ', data=X)
+    mod, hypothesis = MANOVA.from_formula('Basal + Max ~ Loc*Occ', data=X)
+    r = mod.test(hypothesis)
