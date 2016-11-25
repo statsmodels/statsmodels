@@ -280,6 +280,20 @@ class MANOVA(Model):
 
         results = []
         for name, L, M in H:
+            if len(L.shape) != 2:
+                raise ValueError('Contrast matrix L must be a 2-d array!')
+            if L.shape[1] != self.exog.shape[1]:
+                raise ValueError('Contrast matrix L should have the same '
+                                 'number of columns as exog! %d != %d' %
+                                 (L.shape[1], self.exog.shape[1]))
+            if M is not None:
+                if len(M.shape) != 2:
+                    raise ValueError('Transform matrix M must be a 2-d array!')
+                if M.shape[0] != self.endog.shape[1]:
+                    raise ValueError('Transform matrix M should have the same '
+                                     'number of rows as the number of columns '
+                                     'of endog! %d != %d' %
+                                     (M.shape[0], self.exog.shape[1]))
             fit_output = (self.reg_coeffs, self.df_resid, self.inv_cov_,
                           self.YYBXXB_)
             manova_table = test_manova(fit_output, L, M)

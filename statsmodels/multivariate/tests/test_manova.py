@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
 import pandas as pd
 from statsmodels.multivariate.manova import MANOVA
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_raises_regex
 
 # Example data
 # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
@@ -24,6 +25,9 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580],
 
 
 def test_manova_sas_example():
+    # Results should be the same as figure 4.5 of
+    # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
+    # viewer.htm#statug_introreg_sect012.htm
     mod, hypothesis = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
     r = mod.test(hypothesis)
     assert_almost_equal(r[1][1].loc["Wilks’ lambda", 'Pr > F'],
@@ -34,5 +38,21 @@ def test_manova_sas_example():
                         0.6272, decimal=4)
     assert_almost_equal(r[1][1].loc["Roy’s greatest root", 'Pr > F'],
                         0.4109, decimal=4)
-    mod, hypothesis = MANOVA.from_formula('Basal + Max ~ Loc*Occ', data=X)
-    r = mod.test(hypothesis)
+
+
+def test_manova_test_input_validation():
+    mod, hypothesis = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
+    hypothesis = [('test', np.array([[1, 1, 1]]), None)]
+    mod.test(hypothesis)
+    hypothesis = [('test', np.array([[1, 1]]), None)]
+    assert_raises_regex(ValueError,
+                        ('Contrast matrix L should have the same number of '
+                         'columns as exog! 2 != 3'),
+                        mod.test, hypothesis)
+    hypothesis = [('test', np.array([[1, 1, 1]]), np.array([[1], [1], [1]]))]
+    mod.test(hypothesis)
+    hypothesis = [('test', np.array([[1, 1, 1]]), np.array([[1], [1]]))]
+    assert_raises_regex(ValueError,
+                        ('Transform matrix M should have the same number of '
+                         'rows as the number of columns of endog! 2 != 3'),
+                        mod.test, hypothesis)
