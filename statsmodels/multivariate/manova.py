@@ -15,7 +15,7 @@ import pandas as pd
 
 def fit_manova(X, Y):
     """
-    MANOVA fitting Y = B * X
+    MANOVA fitting Y = X * B
     where Y is dependent variables, X is independent variables
 
     Parameters
@@ -49,11 +49,11 @@ def fit_manova(X, Y):
     return (B, df_resid, inv_cov, YYBXXB)
 
 
-def test_manova(fit_output, contrast_L, transform_M):
+def test_manova(fit_output, contrast_L, transform_M=None):
     """
     MANOVA hypothesis testing
 
-    For Y = B * X, where Y is dependent variables, X is independent variables
+    For Y = X * B, where Y is dependent variables, X is independent variables
     testing L * B * M = 0 where L is the contast matrix for hypothesis testing
     and M is the transformation matrix for transforming the dependent variables
     in Y.
@@ -92,6 +92,8 @@ default/viewer.htm#statug_introreg_sect012.htm
     # E = M'(Y'Y - B'(X'X)B)M
     B, df_resid, inv_cov, YYBXXB = fit_output
     M = transform_M
+    if M is None:
+        M = np.eye(B.shape[1])
     L = contrast_L
     v = df_resid
     # t1 = (LB)M
@@ -193,42 +195,37 @@ class MANOVA(Model):
     """
     Multivariate analysis of variance
 
-    option 1: specify `X` and `formula`
-        The effect of each term on right hand side of `formula` will be tested.
-
-    option 2: specify 'X', `Y`, `effect`
-        For variables in X, automatically include in the model the main effect
-        and/or interaction terms as specified in `effect` and testing them.
 
     Parameters
     ----------
-    X : array-like (n_sample by m_x_vars) or DataFrame
-        Independent variables (IV). Variables in columns, observations in rows.
-        For DataFrame, string columns will be treated as categorical variables.
+    endog : array-like
+        Dependent variables (DV). A n_sample x n_y_var array where n_sample is
+        the number of observations and n_y_var is the number of DV.
 
-    Y : array-like (n_sample by m_y_vars)
-        Dependent variables (DV). Variables in columns, observations in rows.
+    exog : array-like
+        Independent variables (IV). A n_sample x n_x_var array where n is the
+        number of observations and n_x_var is the number of IV. An intercept is
+        not included by default and should be added by the user (models
+        specified using a formula include an intercept by default)
 
-    formula : string, default to None
-        Model formula.
+    Attributes
+    -----------
+    df_resid : float
+        The number of observation `n` minus the number of IV `q`.
 
-    effect : tuple, default to (0, 1) (only main effects and intercept)
-        Specifies which terms will be included in the model automatically.
-        Values:
-        0 - intercept
-        1 - main effects
-        2 - two-way interactions
-        3 - three-way interactions
-        etc.
+    endog : array
+        See Parameters.
+
+    exog : array
+        See Parameters.
+
+    design_info : patsy.DesignInfo
+        Contain design info for the independent variables if model is
+        constructed using `from_formula`
 
     """
     def __init__(self, endog, exog, design_info=None, **kwargs):
         Y, X = endog, exog
-        n_sample, m_x_vars = X.shape
-        n_sample1, m_y_vars = Y.shape
-        self.n_sample_ = n_sample
-        self.m_x_vars_ = m_x_vars
-        self.m_y_vars_ = m_y_vars
         self.design_info = design_info
         out = fit_manova(X, Y)
         self.reg_coeffs, self.df_resid, self.inv_cov_, self.YYBXXB_ = out
@@ -247,20 +244,25 @@ class MANOVA(Model):
         for key in terms:
             L_contrast = np.eye(mod.exog.shape[1])[terms[key], :]
             hypothesis.append((key, L_contrast, None))
-        mod.hypothesis = hypothesis
-        mod.hypothesis_testing = mod.test(hypothesis)
-        return mod
+        return mod, hypothesis
 
     def test(self, H=None):
         """
-        Testing the genernal hypothesis L * B * M = 0
-        for each tuple (name, L, M) in H
+        Testing the genernal hypothesis
+            L * B * M = 0
+        for each tuple (name, L, M) in `H` where B is the coefficient matrix
+        for the linear model Y = X * B
 
         Parameters
         ----------
-        H: array-like
-           Each element is a tuple (name, L, M) containing a string `name`,
-           the hypothesis matrix L and the transform matrix M, respectively
+        H: A list of tuples
+           Hypothesis to be tested. Each element is a tuple (name, L, M)
+           containing a string `name`, the contrast matrix L and the transform
+           matrix M for transforming dependent variables, respectively. If M is
+           `None`, it would be set to an identity matrix (i.e. no dependent
+           variable transformation).
+           If `H` is None, the effect of each independent variable on the
+           dependent variables will be tested.
 
         Returns
         -------
@@ -268,10 +270,16 @@ class MANOVA(Model):
             MANOVA results
 
         """
+        if H is None:
+            H = []
+            for i in range(self.exog.shape[1]):
+                name = 'x%d' % (i)
+                L = np.zeros([1, self.exog.shape[1]])
+                L[i] = 1
+                H.append([name, L, None])
+
         results = []
         for name, L, M in H:
-            if M is None:
-                M = np.eye(self.m_y_vars_)
             fit_output = (self.reg_coeffs, self.df_resid, self.inv_cov_,
                           self.YYBXXB_)
             manova_table = test_manova(fit_output, L, M)
