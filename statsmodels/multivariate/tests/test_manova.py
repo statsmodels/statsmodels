@@ -39,6 +39,16 @@ def test_manova_sas_example():
     assert_almost_equal(r[1][1].loc["Roy’s greatest root", 'Pr > F'],
                         0.4109, decimal=4)
 
+def test_manova_interaction_term():
+    mod, hypothesis = MANOVA.from_formula('Basal + Occ ~ Loc * Max', data=X)
+    r = mod.test(hypothesis)
+    assert_almost_equal(r[3][1].loc["Wilks’ lambda", 'Pr > F'],
+                        0.1083267, decimal=7)
+    assert_almost_equal(r[3][1].loc["Pillai’s trace", 'Pr > F'],
+                        0.0859654, decimal=7)
+    # H-L race R ouput is different compared to SAS
+    assert_almost_equal(r[3][1].loc["Roy’s greatest root", 'Pr > F'],
+                        0.0472659, decimal=7)
 
 def test_manova_test_input_validation():
     mod, hypothesis = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
