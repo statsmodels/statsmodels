@@ -13,54 +13,55 @@ from scipy import stats
 import pandas as pd
 from statsmodels.iolib import summary2
 
-def fit_manova(X, Y):
+def fit_manova(x, y):
     """
-    MANOVA fitting Y = X * B
-    where Y is dependent variables, X is independent variables
+    MANOVA fitting y = x * params
+    where y is dependent variables, x is independent variables
 
     Parameters
     ----------
-    Y : array-like, each column is a dependent variable
-    X : array-like, each column is a independent variable
+    x : array-like, each column is a independent variable
+    y : array-like, each column is a dependent variable
 
     Returns
     -------
     a tuple of matrices or values necessary for hypothesis testing
 
     """
-    n_sample, n_y_vars = Y.shape
-    n_sample_x, n_x_vars = X.shape
-    if n_sample != n_sample_x:
-        raise ValueError('X(n=%d) and Y(n=%d) should have the same number of '
-                         'rows!' % (n_sample_x, n_sample))
+    nobs, k_endog = y.shape
+    nobs1, k_exog= x.shape
+    if nobs != nobs1:
+        raise ValueError('x(n=%d) and y(n=%d) should have the same number of '
+                         'rows!' % (nobs1, nobs))
 
     # Calculate the matrices necessary for hypothesis testing
-    df_resid = X.shape[0] - X.shape[1]
+    df_resid = nobs - k_exog
 
-    # Regression coefficients
-    B = pinv(X).dot(Y)
+    # Regression coefficients matrix
+    params = pinv(x).dot(y)
 
-    # inverse of X'X
-    inv_cov = inv(X.T.dot(X))
+    # inverse of x'x
+    inv_cov = inv(x.T.dot(x))
 
-    # Y'Y - (XB)'XB
-    t = X.dot(B)
-    YYBXXB = np.subtract(Y.T.dot(Y), t.T.dot(t))
-    return (B, df_resid, inv_cov, YYBXXB)
+    # Sums of squares and cross-products of residuals
+    # Y'Y - (X * params)'B * params
+    t = x.dot(params)
+    sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
+    return (params, df_resid, inv_cov, sscpr)
 
 
 def test_manova(fit_output, contrast_L, transform_M=None):
     """
     MANOVA hypothesis testing
 
-    For Y = X * B, where Y is dependent variables, X is independent variables
-    testing L * B * M = 0 where L is the contast matrix for hypothesis testing
-    and M is the transformation matrix for transforming the dependent variables
-    in Y.
+    For y = x * params, where y is dependent variables, x is independent
+    variables testing L * params * M = 0 where L is the contast matrix for
+    hypothesis testing and M is the transformation matrix for transforming the
+    dependent variables in y.
 
     Testing is based on forming the following matrices:
-        H = M'(LB)'(L(X'X)^L')^(LB)M   (`^` denotes inverse)
-        E = M'(Y'Y - B'(X'X)B)M
+        H = M'(L * params)'(L * inv_cov * L')^(L * params)M   (`^` denotes inverse)
+        E = M' * sscpr * M
     And then solving the eigenvalues of (E + H)^ * H
 
     .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/
@@ -70,34 +71,27 @@ default/viewer.htm#statug_introreg_sect012.htm
     ----------
     fit_output : tuple
         Output of ``fit_manova``
-
-    contrast_L : array-like, at least 1 row (1 by n_x_vars+1 or 1 by n_x_vars)
-        Hypothesis to be tested. IV in columns, sub-hypothesis in rows.
-        First column is intercept if .
+    contrast_L : array-like
+        Contrast matrix for hypothesis testing. Each row is an hypothesis and
+        each column is an independent variable.
+        At least 1 row (1 by k_exog, the number of independent variables)
     transform_M : array-like
-        Transform matrix. Default to be n_y_vars by n_y_vars identity
-        matrix (i.e. do not transform Y matrix).
-    contrast_L: array
-
-    transform_M: 2-D array of size n_y_vars by n_y_vars
-        th
+        Transform matrix. Default to be k_endog by k_endog identity
+        matrix (i.e. do not transform y matrix).
 
     Returns
     -------
-    results : DataFrame
-        MANOVA table
+    results : MANOVAResults
 
     """
-    # H = M'(LB)'(L(X'X)^L')^(LB)M   (`^` denotes inverse)
-    # E = M'(Y'Y - B'(X'X)B)M
-    B, df_resid, inv_cov, YYBXXB = fit_output
+    params, df_resid, inv_cov, sscpr = fit_output
     M = transform_M
     if M is None:
-        M = np.eye(B.shape[1])
+        M = np.eye(params.shape[1])
     L = contrast_L
     v = df_resid
-    # t1 = (LB)M
-    t1 = L.dot(B).dot(M)
+    # t1 = (L * params)M
+    t1 = L.dot(params).dot(M)
 
     # H = t1'L(X'X)^L't1
     t2 = L.dot(inv_cov).dot(L.T)
@@ -105,7 +99,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     H = t1.T.dot(inv(t2)).dot(t1)
 
     # E = M'(Y'Y - B'(X'X)B)M
-    E = M.T.dot(YYBXXB).dot(M)
+    E = M.T.dot(sscpr).dot(M)
 
     EH = np.add(E, H)
     p = matrix_rank(EH)
@@ -212,80 +206,76 @@ class MANOVA(Model):
     -----------
     df_resid : float
         The number of observation `n` minus the number of IV `q`.
-
+    sscpr : array
+        Sums of squares and cross-products of residuals
     endog : array
         See Parameters.
-
     exog : array
         See Parameters.
-
     design_info : patsy.DesignInfo
         Contain design info for the independent variables if model is
         constructed using `from_formula`
 
     """
     def __init__(self, endog, exog, design_info=None, **kwargs):
-        Y, X = endog, exog
         self.design_info = design_info
-        out = fit_manova(X, Y)
-        self.reg_coeffs, self.df_resid, self.inv_cov_, self.YYBXXB_ = out
+        out = fit_manova(exog, endog)
+        self.reg_coeffs, self.df_resid, self.inv_cov_, self.sscpr = out
         super(MANOVA, self).__init__(endog, exog)
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None,
-                     tests=None, *args, **kwargs):
+                     *args, **kwargs):
         mod = super(MANOVA, cls).from_formula(formula, data,
                                               subset=subset,
                                               drop_cols=drop_cols,
-                                              tests=tests,
                                               *args, **kwargs)
         return mod
 
-    def test(self, H=None):
+    def test(self, hypothesis=None):
         """
         Testing the genernal hypothesis
-            L * B * M = 0
-        for each tuple (name, L, M) in `H` where B is the coefficient matrix
-        for the linear model Y = X * B
+            L * params * M = 0
+        for each tuple (name, L, M) in `H` where `params` is the regression
+        coefficient matrix for the linear model y = x * params
 
         Parameters
         ----------
-        H: A list of tuples
+        hypothesis: A list of tuples
            Hypothesis to be tested. Each element is a tuple (name, L, M)
            containing a string `name`, the contrast matrix L and the transform
            matrix M for transforming dependent variables, respectively. If M is
-           `None`, it would be set to an identity matrix (i.e. no dependent
+           `None`, it is set to an identity matrix (i.e. no dependent
            variable transformation).
-           If `H` is None: 1) the effect of each independent variable on the
-           dependent variables will be tested. Or 2) if model is created using
-           `from_formula`,  H will be created according to `design_info`. 1)
-           and 2) is equivalent if there is no categorical variables (i.e. no
-           dummy variable is created by `from_formula`)
-
+           If `hypothesis` is None: 1) the effect of each independent variable
+           on the dependent variables will be tested. Or 2) if model is created
+           using a formula,  `hypothesis` will be created according to
+           `design_info`. 1) and 2) is equivalent if no additional variables
+           are created by the formula (e.g. dummy variables for categorical
+           variables and interaction terms)
 
         Returns
         -------
-        results: a list of tuples (name, manova_table) for each tuple in `H`
-            MANOVA results
+        results: MANOVAResults
 
         """
-        if H is None:
+        if hypothesis is None:
             if self.design_info is not None:
                 terms = self.design_info.term_name_slices
-                H = []
+                hypothesis = []
                 for key in terms:
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                    H.append((key, L_contrast, None))
+                    hypothesis.append((key, L_contrast, None))
             else:
-                H = []
+                hypothesis = []
                 for i in range(self.exog.shape[1]):
                     name = 'x%d' % (i)
                     L = np.zeros([1, self.exog.shape[1]])
                     L[i] = 1
-                    H.append([name, L, None])
+                    hypothesis.append([name, L, None])
 
         results = []
-        for name, L, M in H:
+        for name, L, M in hypothesis:
             if len(L.shape) != 2:
                 raise ValueError('Contrast matrix L must be a 2-d array!')
             if L.shape[1] != self.exog.shape[1]:
@@ -301,7 +291,7 @@ class MANOVA(Model):
                                      'of endog! %d != %d' %
                                      (M.shape[0], self.exog.shape[1]))
             fit_output = (self.reg_coeffs, self.df_resid, self.inv_cov_,
-                          self.YYBXXB_)
+                          self.sscpr)
             manova_table = test_manova(fit_output, L, M)
             results.append((name, manova_table))
         return MANOVAResults(results)
