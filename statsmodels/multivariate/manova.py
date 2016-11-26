@@ -120,19 +120,19 @@ default/viewer.htm#statug_introreg_sect012.htm
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
-    results = pd.DataFrame({'value': [], 'F Value': [], 'Num DF': [],
+    results = pd.DataFrame({'Value': [], 'F Value': [], 'Num DF': [],
                             'Den DF': [], 'Pr > F': []})
 
     def fn(x):
         return np.real([x])[0]
 
-    results.loc["Wilks’ lambda", 'value'] = fn(np.prod(1 - eigv2))
+    results.loc["Wilks’ lambda", 'Value'] = fn(np.prod(1 - eigv2))
 
-    results.loc["Pillai’s trace", 'value'] = fn(eigv2.sum())
+    results.loc["Pillai’s trace", 'Value'] = fn(eigv2.sum())
 
-    results.loc["Hotelling-Lawley trace", 'value'] = fn(eigv1.sum())
+    results.loc["Hotelling-Lawley trace", 'Value'] = fn(eigv1.sum())
 
-    results.loc["Roy’s greatest root", 'value'] = fn(eigv1.max())
+    results.loc["Roy’s greatest root", 'Value'] = fn(eigv1.max())
 
     r = v - (p - q + 1)/2
     u = (p*q - 2) / 4
@@ -142,7 +142,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     else:
         t = 1
     df2 = r*t - 2*u
-    lmd = results.loc["Wilks’ lambda", 'value']
+    lmd = results.loc["Wilks’ lambda", 'Value']
     lmd = np.power(lmd, 1 / t)
     F = (1 - lmd) / lmd * df2 / df1
     results.loc["Wilks’ lambda", 'Num DF'] = df1
@@ -151,7 +151,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     pval = stats.f.sf(F, df1, df2)
     results.loc["Wilks’ lambda", 'Pr > F'] = pval
 
-    V = results.loc["Pillai’s trace", 'value']
+    V = results.loc["Pillai’s trace", 'Value']
     df1 = s * (2*m + s + 1)
     df2 = s * (2*n + s + 1)
     F = df2 / df1 * V / (s - V)
@@ -161,7 +161,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     pval = stats.f.sf(F, df1, df2)
     results.loc["Pillai’s trace", 'Pr > F'] = pval
 
-    U = results.loc["Hotelling-Lawley trace", 'value']
+    U = results.loc["Hotelling-Lawley trace", 'Value']
     if n > 0:
         b = (p + 2*n) * (q + 2*n) / 2 / (2*n + 1) / (n - 1)
         df1 = p * q
@@ -178,7 +178,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     pval = stats.f.sf(F, df1, df2)
     results.loc["Hotelling-Lawley trace", 'Pr > F'] = pval
 
-    sigma = results.loc["Roy’s greatest root", 'value']
+    sigma = results.loc["Roy’s greatest root", 'Value']
     r = np.max([p, q])
     df1 = r
     df2 = v - r + q
