@@ -11,7 +11,7 @@ import numpy as np
 from numpy.linalg import eigvals, inv, pinv, matrix_rank
 from scipy import stats
 import pandas as pd
-
+from statsmodels.iolib import summary2
 
 def fit_manova(X, Y):
     """
@@ -304,4 +304,31 @@ class MANOVA(Model):
                           self.YYBXXB_)
             manova_table = test_manova(fit_output, L, M)
             results.append((name, manova_table))
-        return results
+        return MANOVAResults(results)
+
+
+class MANOVAResults(object):
+    """
+    MANOVA results class
+
+    Can be accessed as a list, each element containing a tuple (name, df) where
+    `name` is the effect (i.e. term in model) name and `df` is a DataFrame
+    containing the MANOVA test statistics
+
+    """
+    def __init__(self, results):
+        self.results = results
+
+    def __str__(self):
+        return self.summary().__str__()
+
+    def __getitem__(self, item):
+        return self.results[item]
+
+    def summary(self):
+        summ = summary2.Summary()
+        summ.add_title('MANOVA results')
+        for h in self.results:
+            summ.add_dict({'Effect':h[0]})
+            summ.add_df(h[1])
+        return summ
