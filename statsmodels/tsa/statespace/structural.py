@@ -65,7 +65,7 @@ class UnobservedComponents(MLEModel):
     ar : int or None, optional
         The order of the autoregressive component. Default is None.
     exog : array_like or None, optional
-        Exoenous variables.
+        Exogenous variables.
     irregular : bool, optional
         Whether or not to include an irregular component. Default is False.
     stochastic_level : bool, optional
@@ -92,7 +92,7 @@ class UnobservedComponents(MLEModel):
     Notes
     -----
 
-    Thse models take the general form (see [1]_ Chapter 3.2 for all details)
+    These models take the general form (see [1]_ Chapter 3.2 for all details)
 
     .. math::
 
