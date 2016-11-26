@@ -50,7 +50,7 @@ def fit_manova(x, y):
     return (params, df_resid, inv_cov, sscpr)
 
 
-def test_manova(fit_output, contrast_L, transform_M=None):
+def test_manova(results, contrast_L, transform_M=None):
     """
     MANOVA hypothesis testing
 
@@ -84,7 +84,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     results : MANOVAResults
 
     """
-    params, df_resid, inv_cov, sscpr = fit_output
+    params, df_resid, inv_cov, sscpr = results
     M = transform_M
     if M is None:
         M = np.eye(params.shape[1])
