@@ -12,6 +12,11 @@ from statsmodels.iolib import summary2
 class Factor(Model):
     def __init__(self, endog, n_factor, exog=None, **kwargs):
         self.n_factor = n_factor
+        self.rotation = None
+        self.loadings = None
+        self.loadings_no_rot = None
+        self.communality = None
+        self.eigenvals = None
         super(Factor, self).__init__(endog, exog)
 
     def fit(self, n_max_iter=50, tolerance=1e-6, rotation=None,
@@ -71,7 +76,7 @@ class Factor(Model):
             if norm(c_last - c) < tolerance:
                 break
         self.eigenvals = eigenvals
-
+        self.communality = c
         # Perform rotation of the loadings
         self.loadings_no_rot = np.array(A)
         if rotation in ['varimax', 'quartimax', 'biquartimax', 'equamax',
@@ -83,9 +88,9 @@ class Factor(Model):
             A, T = promax(A)
         if rotation is not None:  # Rotated
             c = np.power(A, 2).sum(axis=1)
-        self.communality = c
         self.loadings = A
         self.rotation = rotation
+        return FactorResults(self)
 
     def plot_scree(self, ncomp=None):
         """
@@ -207,3 +212,49 @@ class Factor(Model):
             ax.set_ylim(ylim)
             fig.tight_layout()
         return figs
+
+
+class FactorResults(object):
+    def __init__(self, factor):
+        self.endog_names = factor.endog_names
+        self.loadings = factor.loadings
+        self.loadings_no_rot = factor.loadings_no_rot
+        self.eigenvals = factor.eigenvals
+        self.communality = factor.communality
+        self.rotation = factor.rotation
+
+    def __str__(self):
+        return self.summary().__str__()
+
+    def summary(self):
+        summ = summary2.Summary()
+        summ.add_title('Factor analysis results')
+        loadings_no_rot = pd.DataFrame(
+            self.loadings_no_rot,
+            columns=["factor %d" % (i)
+                     for i in range(self.loadings_no_rot.shape[1])],
+            index=self.endog_names
+        )
+        eigenvals = pd.DataFrame([self.eigenvals], columns=self.endog_names,
+                                 index=[''])
+        summ.add_dict({'': 'Eigenvalues'})
+        summ.add_df(eigenvals)
+        communality = pd.DataFrame([self.communality],
+                                   columns=self.endog_names, index=[''])
+        summ.add_dict({'': ''})
+        summ.add_dict({'': 'Communality'})
+        summ.add_df(communality)
+        summ.add_dict({'': ''})
+        summ.add_dict({'': 'Pre-rotated loadings'})
+        summ.add_df(loadings_no_rot)
+        summ.add_dict({'': ''})
+        if self.rotation is not None:
+            loadings = pd.DataFrame(
+                self.loadings,
+                columns=["factor %d" % (i)
+                         for i in range(self.loadings.shape[1])],
+                index=self.endog_names
+            )
+            summ.add_dict({'': '%s rotated loadings' % (self.rotation)})
+            summ.add_df(loadings)
+        return summ
