@@ -4,6 +4,13 @@ import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_array_almost_equal, assert_raises_regex
+from numpy.testing.decorators import skipif
+
+try:
+    import matplotlib.pyplot as plt
+    missing_matplotlib = False
+except ImportError:
+    missing_matplotlib = True
 
 # Example data
 # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
@@ -22,11 +29,10 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580, 1],
                   ['Santa Cruz', 2.100, 2.106, 1.623, 12],
                   ['Santa Cruz', 2.104, 2.101, 1.653, 13]],
                  columns=['Loc', 'Basal', 'Occ', 'Max', 'id'])
-
+mod = Factor(X.iloc[:, 1:], 2)
+mod.fit()
 
 def test_example_compare_to_R_output():
-    mod = Factor(X.iloc[:, 1:], 2)
-    mod.fit()
     # No rotation produce same results as in R fa
     a = np.array([[0.97541115, 0.20280987],
                   [0.97113975, 0.17207499],
@@ -59,3 +65,9 @@ def test_example_compare_to_R_output():
                    -0.00013510048],
                   [0.06563421, 0.03096076, -0.39658839, -0.59261944]])
     assert_array_almost_equal(mod.loadings, a.T, decimal=8)
+
+
+@skipif(missing_matplotlib)
+def test_plots():
+    fig = mod.plot_scree()
+    #plt.close('all')
