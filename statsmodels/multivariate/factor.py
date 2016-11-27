@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from statsmodels.base.model import Model
+from .factor_rotation import rotate_factors, promax
 import numpy as np
 from numpy.linalg import eig, inv, norm
 import pandas as pd
@@ -57,5 +58,14 @@ class Factor(Model):
             c = np.power(A, 2).sum(axis=1)
             if norm(c_last - c) < tolerance:
                 break
+        if rotation in ['varimax', 'quartimax', 'biquartimax', 'equamax',
+                        'parsimax', 'parsimony', 'biquartimin']:
+            A, T = rotate_factors(A, rotation)
+        elif rotation == 'oblimin':
+            A, T = rotate_factors(A, 'quartimin')
+        elif rotation == 'promax':
+            A, T = promax(A)
+        if rotation is not None:  # Rotated
+            c = np.power(A, 2).sum(axis=1)
         self.communality = c
         self.loadings = A
