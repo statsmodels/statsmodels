@@ -13,12 +13,14 @@ class Factor(Model):
     """
     Principle axis factor analysis
 
-    .. [1] http://www.real-statistics.com/multivariate-statistics/factor-analysis/principal-axis-method/
+    .. [1] http://www.real-statistics.com/multivariate-statistics/
+    factor-analysis/principal-axis-method/
 
-    .. [2] http://stats.stackexchange.com/questions/102882/steps-done-in-factor-analysis-compared-to-steps-done-in-pca/102999#102999
+    .. [2] http://stats.stackexchange.com/questions/102882/
+    steps-done-in-factor-analysis-compared-to-steps-done-in-pca/102999#102999
 
     Supported rotations:
-        'none', 'varimax', 'quartimax', 'biquartimax', 'equamax', 'oblimin',
+        'varimax', 'quartimax', 'biquartimax', 'equamax', 'oblimin',
         'parsimax', 'parsimony', 'biquartimin', 'promax'
 
     Parameters
@@ -31,6 +33,13 @@ class Factor(Model):
 
     """
     def __init__(self, endog, n_factor, exog=None, **kwargs):
+        if n_factor <= 0:
+            raise ValueError('n_factor must be larger than 0! %d < 0' %
+                             (n_factor))
+        if n_factor > endog.shape[1]:
+            raise ValueError('n_factor must be smaller or equal to the number'
+                             ' of columns of endog! %d > %d' %
+                             (n_factor, endog.shape[1]))
         self.n_factor = n_factor
         self.rotation = None
         self.loadings = None
@@ -59,9 +68,22 @@ class Factor(Model):
         -------
 
         """
+        if rotation not in [None, 'varimax', 'quartimax', 'biquartimax',
+                            'equamax', 'oblimin', 'parsimax', 'parsimony',
+                            'biquartimin', 'promax']:
+            raise ValueError('Unknown rotation method %s' % (rotation))
         R = pd.DataFrame(self.endog).corr().values
         self.n_comp = matrix_rank(R)
-
+        if self.n_factor > self.n_comp:
+            raise ValueError('n_factor must be smaller or equal to the rank'
+                             ' of endog! %d > %d' %
+                             (self.n_factor, self.n_comp))
+        if n_max_iter <= 0:
+            raise ValueError('n_max_iter must be larger than 0! %d < 0' %
+                             (n_max_iter))
+        if tolerance <= 0 or tolerance > 0.01:
+            raise ValueError('tolerance must be larger than 0 and smaller than'
+                             ' 0.01! Got %f instead' % (tolerance))
         #  Initial communality estimation
         if SMC:
             c = 1 - 1 / np.diag(inv(R))
@@ -106,6 +128,7 @@ class Factor(Model):
             A, T = rotate_factors(A, 'quartimin')
         elif rotation == 'promax':
             A, T = promax(A)
+
         if rotation is not None:  # Rotated
             c = np.power(A, 2).sum(axis=1)
         self.loadings = A
@@ -245,6 +268,9 @@ class FactorResults(object):
 
     """
     def __init__(self, factor):
+        if not isinstance(factor, Factor):
+            raise ValueError('Input must be a `Factor` class. Got %s instead'
+                             % (factor.__str__))
         self.endog_names = factor.endog_names
         self.loadings = factor.loadings
         self.loadings_no_rot = factor.loadings_no_rot
