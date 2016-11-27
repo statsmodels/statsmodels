@@ -5,6 +5,7 @@ from .factor_rotation import rotate_factors, promax
 import numpy as np
 from numpy.linalg import eig, inv, norm, matrix_rank
 import pandas as pd
+import matplotlib.pyplot as plt
 from statsmodels.iolib import summary2
 
 
@@ -35,7 +36,6 @@ class Factor(Model):
         """
         R = pd.DataFrame(self.endog).corr().values
         self.n_comp = matrix_rank(R)
-
 
         #  Initial communality estimation
         if SMC:
@@ -73,8 +73,7 @@ class Factor(Model):
         self.eigenvals = eigenvals
 
         # Perform rotation of the loadings
-        if rotation is not None:
-            self.loadings_no_rot = np.array(A)
+        self.loadings_no_rot = np.array(A)
         if rotation in ['varimax', 'quartimax', 'biquartimax', 'equamax',
                         'parsimax', 'parsimony', 'biquartimin']:
             A, T = rotate_factors(A, rotation)
@@ -86,6 +85,7 @@ class Factor(Model):
             c = np.power(A, 2).sum(axis=1)
         self.communality = c
         self.loadings = A
+        self.rotation = rotation
 
     def plot_scree(self, ncomp=None):
         """
@@ -94,23 +94,14 @@ class Factor(Model):
         Parameters
         ----------
         ncomp : int, optional
-            Number of components ot include in the plot.  If None, will
-            included the same as the number of components computed
-        log_scale : boot, optional
-            Flag indicating whether ot use a log scale for the y-axis
-        cumulative : bool, optional
-            Flag indicating whether to plot the eigenvalues or cumulative
-            eigenvalues
-        ax : Matplotlib axes instance, optional
-            An axes on which to draw the graph.  If omitted, new a figure
-            is created
+            Number of loadings to include in the plot.  If None, will
+            included the same as the number of maximum possible loadings
 
         Returns
         -------
         fig : figure
             Handle to the figure
         """
-        import matplotlib.pyplot as plt
         fig = plt.figure()
         ncomp = self.n_comp if ncomp is None else ncomp
         vals = np.asarray(self.eigenvals)
@@ -160,4 +151,59 @@ class Factor(Model):
         fig.tight_layout()
         return fig
 
+    def plot_loadings(self, loading_pairs=None, plot_prerotated=False):
+        """
+        Plot factor loadings in 2-d plots
 
+        Parameters
+        ----------
+        loading_pairs : None or a list of tuples
+            Specify plots. Each tuple (i, j) represent one figure, i and j is
+            the loading number for x-axis and y-axis, respectively. If `None`,
+            all combinations of the loadings will be plotted.
+        plot_prerotated : True or False
+            If True, the loadings before rotation applied will be plotted. If
+            False, rotated loadings will be plotted.
+
+        Returns
+        -------
+        figs : a list of figure handles
+
+        """
+        if self.rotation is None:
+            plot_prerotated = True
+        loadings = self.loadings_no_rot if plot_prerotated else self.loadings
+        if loading_pairs is None:
+            loading_pairs = []
+            for i in range(self.n_factor):
+                for j in range(i+1, self.n_factor):
+                    loading_pairs.append([i, j])
+        figs = []
+        for item in loading_pairs:
+            i = item[0]
+            j = item[1]
+            fig = plt.figure(figsize=(7, 7))
+            figs.append(fig)
+            ax = fig.add_subplot(111)
+            for k in range(loadings.shape[0]):
+                plt.text(loadings[k, i], loadings[k, j],
+                         self.endog_names[k], fontsize=12)
+            ax.plot(loadings[:, i], loadings[:, j], 'bo')
+            if plot_prerotated:
+                ax.set_title('Prerotated Factor Pattern')
+            else:
+                ax.set_title('%s Rotated Factor Pattern' % (self.rotation))
+            ax.set_xlabel('Factor %d (%.1f%%)' %
+                          (i, self.eigenvals[i]/self.n_comp * 100))
+            ax.set_ylabel('Factor %d (%.1f%%)' %
+                          (j, self.eigenvals[j]/self.n_comp * 100))
+            v = 1.05
+            xlim = np.array([-v, v])
+            ylim = np.array([-v, v])
+            ax.plot(xlim, [0, 0], 'k--')
+            ax.plot([0, 0], ylim, 'k--')
+            ax.set_aspect('equal', 'datalim')
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            fig.tight_layout()
+        return figs
