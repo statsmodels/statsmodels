@@ -8,8 +8,6 @@ from __future__ import print_function
 
 import numpy as np
 import scipy as sp
-import scipy.linalg
-import unittest
 
 
 def target_rotation(A, H, full_rank=False):
