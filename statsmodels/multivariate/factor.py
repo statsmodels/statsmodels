@@ -10,6 +10,26 @@ from statsmodels.iolib import summary2
 
 
 class Factor(Model):
+    """
+    Principle axis factor analysis
+
+    .. [1] http://www.real-statistics.com/multivariate-statistics/factor-analysis/principal-axis-method/
+
+    .. [2] http://stats.stackexchange.com/questions/102882/steps-done-in-factor-analysis-compared-to-steps-done-in-pca/102999#102999
+
+    Supported rotations:
+        'none', 'varimax', 'quartimax', 'biquartimax', 'equamax', 'oblimin',
+        'parsimax', 'parsimony', 'biquartimin', 'promax'
+
+    Parameters
+    ----------
+    endog : array-like
+        Variables in columns, observations in rows
+
+    n_factor : int
+        The number of factors to extract
+
+    """
     def __init__(self, endog, n_factor, exog=None, **kwargs):
         self.n_factor = n_factor
         self.rotation = None
@@ -215,6 +235,15 @@ class Factor(Model):
 
 
 class FactorResults(object):
+    """
+    Factor results class
+
+    Parameters
+    ----------
+    factor : Factor
+        Fitted Factor class
+
+    """
     def __init__(self, factor):
         self.endog_names = factor.endog_names
         self.loadings = factor.loadings
