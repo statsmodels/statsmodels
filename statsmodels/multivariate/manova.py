@@ -50,65 +50,30 @@ def fit_manova(x, y):
     return (params, df_resid, inv_cov, sscpr)
 
 
-def test_manova(results, contrast_L, transform_M=None):
+def test_stat(eigenvals, p, q, df_resid):
     """
-    MANOVA hypothesis testing
-
-    For y = x * params, where y is dependent variables, x is independent
-    variables testing L * params * M = 0 where L is the contast matrix for
-    hypothesis testing and M is the transformation matrix for transforming the
-    dependent variables in y.
-
-    Testing is based on forming the following matrices:
-        H = M'(L * params)'(L * inv_cov * L')^(L * params)M   (`^` denotes inverse)
-        E = M' * sscpr * M
-    And then solving the eigenvalues of (E + H)^ * H
-
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/
-default/viewer.htm#statug_introreg_sect012.htm
+    Testing MANOVA statistics, see:
+    https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
+    viewer.htm#statug_introreg_sect012.htm
 
     Parameters
     ----------
-    fit_output : tuple
-        Output of ``fit_manova``
-    contrast_L : array-like
-        Contrast matrix for hypothesis testing. Each row is an hypothesis and
-        each column is an independent variable.
-        At least 1 row (1 by k_exog, the number of independent variables)
-    transform_M : array-like
-        Transform matrix. Default to be k_endog by k_endog identity
-        matrix (i.e. do not transform y matrix).
+    eigenvals : array
+        The eigenvalues of (E + H)^H matrix where `^` denote inverse
+    p : int
+        Rank of E + H
+    q : int
+        Rank of X
+    df_resid
+        Residual degree of freedom (n_samples minus n_variables of X)
 
     Returns
     -------
-    results : MANOVAResults
 
     """
-    params, df_resid, inv_cov, sscpr = results
-    M = transform_M
-    if M is None:
-        M = np.eye(params.shape[1])
-    L = contrast_L
-    v = df_resid
-    # t1 = (L * params)M
-    t1 = L.dot(params).dot(M)
-
-    # H = t1'L(X'X)^L't1
-    t2 = L.dot(inv_cov).dot(L.T)
-    q = matrix_rank(t2)
-    H = t1.T.dot(inv(t2)).dot(t1)
-
-    # E = M'(Y'Y - B'(X'X)B)M
-    E = M.T.dot(sscpr).dot(M)
-
-    EH = np.add(E, H)
-    p = matrix_rank(EH)
-
-    # eigenvalues of (E + H)^H
-    eigv2 = np.sort(eigvals(inv(EH).dot(H)))
-
-    # eigenvalues of (E+H)^H
+    eigv2 = eigenvals
     eigv1 = np.array([i / (1 - i) for i in eigv2])
+    v = df_resid
 
     s = np.min([p, q])
     m = (np.abs(p - q) - 1) / 2
@@ -183,6 +148,64 @@ default/viewer.htm#statug_introreg_sect012.htm
     pval = stats.f.sf(F, df1, df2)
     results.loc["Roy’s greatest root", 'Pr > F'] = pval
     return results.iloc[:, [4, 2, 0, 1, 3]]
+
+
+def test_manova(results, contrast_L, transform_M=None):
+    """
+    MANOVA hypothesis testing
+
+    For y = x * params, where y is dependent variables, x is independent
+    variables testing L * params * M = 0 where L is the contast matrix for
+    hypothesis testing and M is the transformation matrix for transforming the
+    dependent variables in y.
+
+    Testing is based on forming the following matrices:
+        H = M'(L * params)'(L * inv_cov * L')^(L * params)M   (`^` denotes inverse)
+        E = M' * sscpr * M
+    And then solving the eigenvalues of (E + H)^ * H
+
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/
+default/viewer.htm#statug_introreg_sect012.htm
+
+    Parameters
+    ----------
+    fit_output : tuple
+        Output of ``fit_manova``
+    contrast_L : array-like
+        Contrast matrix for hypothesis testing. Each row is an hypothesis and
+        each column is an independent variable.
+        At least 1 row (1 by k_exog, the number of independent variables)
+    transform_M : array-like
+        Transform matrix. Default to be k_endog by k_endog identity
+        matrix (i.e. do not transform y matrix).
+
+    Returns
+    -------
+    results : MANOVAResults
+
+    """
+    params, df_resid, inv_cov, sscpr = results
+    M = transform_M
+    if M is None:
+        M = np.eye(params.shape[1])
+    L = contrast_L
+    # t1 = (L * params)M
+    t1 = L.dot(params).dot(M)
+
+    # H = t1'L(X'X)^L't1
+    t2 = L.dot(inv_cov).dot(L.T)
+    q = matrix_rank(t2)
+    H = t1.T.dot(inv(t2)).dot(t1)
+
+    # E = M'(Y'Y - B'(X'X)B)M
+    E = M.T.dot(sscpr).dot(M)
+
+    EH = np.add(E, H)
+    p = matrix_rank(EH)
+
+    # eigenvalues of (E + H)^H
+    eigv2 = np.sort(eigvals(inv(EH).dot(H)))
+    return test_stat(eigv2, p, q, df_resid)
 
 
 class MANOVA(Model):
