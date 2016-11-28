@@ -357,6 +357,26 @@ class Cancorr(Model):
         y1 = y * y_cancoef, y1' * y1 is identity matrix
     and the correlation between x1 and y1 is maximized.
 
+    Attributes
+    -----------
+    endog : array
+        See Parameters.
+    exog : array
+        See Parameters.
+    design_info : patsy.DesignInfo
+        Contain design info for the independent variables if model is
+        constructed using `from_formula`
+    stats : DataFrame
+        Contain statistical tests results for each canonical correlation
+    multi_stats : DataFrame
+        Contain the multivariate statistical tests results
+    cancorr : array
+        The canonical correlations
+    x_cancoeff: array
+        The canonical coefficients for exog
+    y_cancoeff: array
+        The canonical coeefficients for endog
+
     .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
     .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
     .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
@@ -446,6 +466,11 @@ class Cancorr(Model):
 class CancorrResults(object):
     """
     Canonical correlation results class
+
+    Parameters
+    ----------
+
+    cancorr_obj : Cancorr class
 
     """
     def __init__(self, cancorr_obj):
