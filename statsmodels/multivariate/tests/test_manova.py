@@ -146,6 +146,9 @@ def test_manova_test_input_validation():
 
 
 def test_cancorr():
+    # Compare results to SAS example:
+    # https://support.sas.com/documentation/cdl/en/statug/63347/HTML/default/
+    # viewer.htm#statug_cancorr_sect020.htm
     X1 = data_fit.iloc[:, :3]
     Y1 = data_fit.iloc[:, 3:]
     mod = Cancorr(Y1, X1).fit()
