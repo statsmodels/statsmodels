@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.multivariate.manova import MANOVA
 from numpy.testing import assert_almost_equal, assert_raises_regex
+from numpy.testing import assert_array_almost_equal
 
 # Example data
 # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
@@ -70,6 +71,64 @@ def test_manova_sas_example():
                         0.6272, decimal=4)
     assert_almost_equal(r[1][1].loc["Roy’s greatest root", 'Pr > F'],
                         0.4109, decimal=4)
+
+
+def test_compare_spss_output_dogs_data():
+    ''' Testing within-subject effect interact with 2 between-subject effect
+    Compares with SPSS MANOVA output
+    '''
+    data = pd.DataFrame([['Morphine',      'N',  .04,  .20,  .10,  .08],
+                         ['Morphine',      'N',  .02,  .06,  .02,  .02],
+                         ['Morphine',      'N',  .07, 1.40,  .48,  .24],
+                         ['Morphine',      'N',  .17,  .57,  .35,  .24],
+                         ['Morphine',      'Y',  .10,  .09,  .13,  .14],
+                         ['Morphine',      'Y',  .07,  .07,  .06,  .07],
+                         ['Morphine',      'Y',  .05,  .07,  .06,  .07],
+                         ['Trimethaphan',  'N',  .03,  .62,  .31,  .22],
+                         ['Trimethaphan',  'N',  .03, 1.05,  .73,  .60],
+                         ['Trimethaphan',  'N',  .07,  .83, 1.07,  .80],
+                         ['Trimethaphan',  'N',  .09, 3.13, 2.06, 1.23],
+                         ['Trimethaphan',  'Y',  .10,  .09,  .09,  .08],
+                         ['Trimethaphan',  'Y',  .08,  .09,  .09,  .10],
+                         ['Trimethaphan',  'Y',  .13,  .10,  .12,  .12],
+                         ['Trimethaphan',  'Y',  .06,  .05,  .05,  .05]],
+                        columns = ['Drug', 'Depleted', 'Histamine0', 'Histamine1',
+                                   'Histamine3', 'Histamine5'])
+
+    for i in range(2,6):
+        data.iloc[:, i] = np.log(data.iloc[:, i])
+
+    # Repeated measures with orthogonal polynomial contrasts coding
+    from patsy.contrasts import Poly, Sum
+    contrast = Poly([0, 1, 3, 5]).code_without_intercept([0, 1, 3, 5])
+    data['p1'] = 0
+    data['p2'] = 0
+    data['p3'] = 0
+    data[['p1', 'p2', 'p3']] = data.iloc[:, 2:6].values.dot(contrast.matrix)
+    mod = MANOVA.from_formula(
+        'p1 + p2 + p3 ~ Drug * Depleted',
+        data)
+    r = mod.test()
+    a = [[1.00382414e-01, 3, 9, 2.68857128e+01, 7.97286681e-05],
+         [8.99617586e-01, 3, 9, 2.68857128e+01, 7.97286681e-05],
+         [8.96190427e+00, 3, 9, 2.68857128e+01, 7.97286681e-05],
+         [8.96190427e+00, 3, 9, 2.68857128e+01, 7.97286681e-05]]
+    assert_array_almost_equal(r[0][1].values, a, decimal=6)
+    a = [[0.32804105, 3, 9, 6.14519685, 0.01466738],
+         [0.67195895, 3, 9, 6.14519685, 0.01466738],
+         [2.04839895, 3, 9, 6.14519685, 0.01466738],
+         [2.04839895, 3, 9, 6.14519685, 0.01466738]]
+    assert_array_almost_equal(r[1][1].values, a, decimal=6)
+    a = [[1.15524129e-01, 3, 9, 2.29686009e+01, 1.49013694e-04],
+         [8.84475871e-01, 3, 9, 2.29686009e+01, 1.49013694e-04],
+         [7.65620029e+00, 3, 9, 2.29686009e+01, 1.49013694e-04],
+         [7.65620029e+00, 3, 9, 2.29686009e+01, 1.49013694e-04]]
+    assert_array_almost_equal(r[2][1].values, a, decimal=6)
+    a = [[1.93830104e-01, 3, 9, 1.24774720e+01, 1.47439758e-03],
+         [8.06169896e-01, 3, 9, 1.24774720e+01, 1.47439758e-03],
+         [4.15915732e+00, 3, 9, 1.24774720e+01, 1.47439758e-03],
+         [4.15915732e+00, 3, 9, 1.24774720e+01, 1.47439758e-03]]
+    assert_array_almost_equal(r[3][1].values, a, decimal=6)
 
 
 def test_manova_interaction_term():
