@@ -8,7 +8,7 @@ from __future__ import print_function, division
 
 from statsmodels.base.model import Model
 import numpy as np
-from numpy.linalg import eigvals, inv, pinv, matrix_rank
+from numpy.linalg import eigvals, inv, solve, matrix_rank, qr
 from scipy import stats
 import pandas as pd
 from statsmodels.iolib import summary2
@@ -16,8 +16,13 @@ from statsmodels.iolib import summary2
 
 def fit_manova(x, y):
     """
-    MANOVA fitting y = x * params
+    For a MANOVA problem y = x * params
     where y is dependent variables, x is independent variables
+    Perform QR decomposition of x to calculate the sums of squares
+    and cross-products (SSCP) of residuals
+    These are necessary for performing MANOVA hypothesis tests
+
+    No acture
 
     Parameters
     ----------
@@ -27,6 +32,9 @@ def fit_manova(x, y):
     Returns
     -------
     a tuple of matrices or values necessary for hypothesis testing
+
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [2] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
 
     """
     nobs, k_endog = y.shape
@@ -38,24 +46,15 @@ def fit_manova(x, y):
     # Calculate the matrices necessary for hypothesis testing
     df_resid = nobs - k_exog
 
-    # Regression coefficients matrix
-    params = pinv(x).dot(y)
-
-    # inverse of x'x
-    inv_cov = inv(x.T.dot(x))
-
-    # Sums of squares and cross-products of residuals
-    # Y'Y - (X * params)'B * params
-    t = x.dot(params)
-    sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
-    return (params, df_resid, inv_cov, sscpr)
+    q, r = qr(x)
+    u = q.T.dot(y)
+    sscpr = np.subtract(y.T.dot(y), u.T.dot(u))
+    return (df_resid, u, sscpr)
 
 
 def multivariate_stats(eigenvals, p, q, df_resid):
     """
-    Testing MANOVA statistics, see:
-    https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
-    viewer.htm#statug_introreg_sect012.htm
+    Testing MANOVA statistics
 
     Parameters
     ----------
@@ -71,6 +70,8 @@ def multivariate_stats(eigenvals, p, q, df_resid):
     Returns
     -------
 
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [2] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
     eigv2 = eigenvals
     eigv1 = np.array([i / (1 - i) for i in eigv2])
@@ -155,22 +156,23 @@ def test_manova(results, contrast_L, transform_M=None):
     """
     MANOVA hypothesis testing
 
-    For y = x * params, where y is dependent variables, x is independent
-    variables testing L * params * M = 0 where L is the contast matrix for
+    For y = x * params, where y is dependent variables and x is independent
+    variables, testing L * params * M = 0 where L is the contast matrix for
     hypothesis testing and M is the transformation matrix for transforming the
     dependent variables in y.
 
-    Testing is based on forming the following matrices:
-        H = M'(L * params)'(L * inv_cov * L')^(L * params)M   (`^` denotes inverse)
+    Algorithm:
+        H = (L * u * M)' * (L * u * M)
         E = M' * sscpr * M
-    And then solving the eigenvalues of (E + H)^ * H
+        solve (H + E) * T = H
+    And then solving the eigenvalues of T * H
 
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/
-default/viewer.htm#statug_introreg_sect012.htm
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [2] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
 
     Parameters
     ----------
-    fit_output : tuple
+    results : tuple
         Output of ``fit_manova``
     contrast_L : array-like
         Contrast matrix for hypothesis testing. Each row is an hypothesis and
@@ -185,18 +187,15 @@ default/viewer.htm#statug_introreg_sect012.htm
     results : MANOVAResults
 
     """
-    params, df_resid, inv_cov, sscpr = results
+    df_resid, u, sscpr = results
     M = transform_M
     if M is None:
-        M = np.eye(params.shape[1])
+        M = np.eye(u.shape[1])
     L = contrast_L
-    # t1 = (L * params)M
-    t1 = L.dot(params).dot(M)
-
-    # H = t1'L(X'X)^L't1
-    t2 = L.dot(inv_cov).dot(L.T)
-    q = matrix_rank(t2)
-    H = t1.T.dot(inv(t2)).dot(t1)
+    t1 = L .dot(u)
+    q = matrix_rank(t1)
+    t1 = t1.dot(M)
+    H = t1.T.dot(t1)
 
     # E = M'(Y'Y - B'(X'X)B)M
     E = M.T.dot(sscpr).dot(M)
@@ -205,7 +204,7 @@ default/viewer.htm#statug_introreg_sect012.htm
     p = matrix_rank(EH)
 
     # eigenvalues of (E + H)^H
-    eigv2 = np.sort(eigvals(inv(EH).dot(H)))
+    eigv2 = np.sort(eigvals(solve(EH, H)))
     return multivariate_stats(eigv2, p, q, df_resid)
 
 
@@ -244,7 +243,7 @@ class MANOVA(Model):
     def __init__(self, endog, exog, design_info=None, **kwargs):
         self.design_info = design_info
         out = fit_manova(exog, endog)
-        self.reg_coeffs, self.df_resid, self.inv_cov_, self.sscpr = out
+        self.df_resid, self.u_, self.sscpr = out
         super(MANOVA, self).__init__(endog, exog)
 
     @classmethod
@@ -260,13 +259,13 @@ class MANOVA(Model):
         """
         Testing the genernal hypothesis
             L * params * M = 0
-        for each tuple (name, L, M) in `H` where `params` is the regression
-        coefficient matrix for the linear model y = x * params
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params
 
         Parameters
         ----------
-        hypothesis: A list of tuples
-           Hypothesis to be tested. Each element is a tuple (name, L, M)
+        hypothesis: A list of array-like
+           Hypothesis to be tested. Each element is an array-like [name, L, M]
            containing a string `name`, the contrast matrix L and the transform
            matrix M for transforming dependent variables, respectively. If M is
            `None`, it is set to an identity matrix (i.e. no dependent
@@ -289,7 +288,7 @@ class MANOVA(Model):
                 hypothesis = []
                 for key in terms:
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                    hypothesis.append((key, L_contrast, None))
+                    hypothesis.append([key, L_contrast, None])
             else:
                 hypothesis = []
                 for i in range(self.exog.shape[1]):
@@ -299,6 +298,7 @@ class MANOVA(Model):
                     hypothesis.append([name, L, None])
 
         results = []
+        self.hypothesis = hypothesis
         for name, L, M in hypothesis:
             if len(L.shape) != 2:
                 raise ValueError('Contrast matrix L must be a 2-d array!')
@@ -314,8 +314,7 @@ class MANOVA(Model):
                                      'number of rows as the number of columns '
                                      'of endog! %d != %d' %
                                      (M.shape[0], self.exog.shape[1]))
-            fit_output = (self.reg_coeffs, self.df_resid, self.inv_cov_,
-                          self.sscpr)
+            fit_output = (self.df_resid, self.u_, self.sscpr)
             manova_table = test_manova(fit_output, L, M)
             results.append((name, manova_table))
         return MANOVAResults(results)
