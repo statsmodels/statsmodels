@@ -8,7 +8,7 @@ from __future__ import print_function, division
 
 from statsmodels.base.model import Model
 import numpy as np
-from numpy.linalg import eigvals, inv, solve, matrix_rank, qr
+from numpy.linalg import eigvals, inv, solve, matrix_rank, qr, pinv
 from scipy import stats
 import pandas as pd
 from statsmodels.iolib import summary2
@@ -52,6 +52,18 @@ def fit_manova(x, y, method='qr'):
         sscpr = np.subtract(y.T.dot(y), u.T.dot(u))
         fittedvalues = u
         return (df_resid, fittedvalues, sscpr)
+    elif method =='pinv':
+        # Regression coefficients matrix
+        params = pinv(x).dot(y)
+
+        # inverse of x'x
+        inv_cov = inv(x.T.dot(x))
+
+        # Sums of squares and cross-products of residuals
+        # Y'Y - (X * params)'B * params
+        t = x.dot(params)
+        sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
+        return (params, df_resid, inv_cov, sscpr)
     else:
         raise ValueError('%s is not a supported method!')
 
@@ -77,11 +89,11 @@ def multivariate_stats(eigenvals, p, q, df_resid):
     .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     .. [2] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
-    eigv2 = eigenvals
-    eigv1 = np.array([i / (1 - i) for i in eigv2])
     v = df_resid
 
     s = np.min([p, q])
+    eigv2 = eigenvals[-s:]
+    eigv1 = np.array([i / (1 - i) for i in eigv2])
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
@@ -201,6 +213,21 @@ def test_manova(results, contrast_L, transform_M=None, method='qr'):
         q = matrix_rank(t1)
         t1 = t1.dot(M)
         H = t1.T.dot(t1)
+
+        # E = M'(Y'Y - B'(X'X)B)M
+        E = M.T.dot(sscpr).dot(M)
+    elif method == 'pinv':
+        params, df_resid, inv_cov, sscpr = results
+        if M is None:
+            M = np.eye(params.shape[1])
+        L = contrast_L
+        # t1 = (L * params)M
+        t1 = L.dot(params).dot(M)
+
+        # H = t1'L(X'X)^L't1
+        t2 = L.dot(inv_cov).dot(L.T)
+        q = matrix_rank(t2)
+        H = t1.T.dot(inv(t2)).dot(t1)
 
         # E = M'(Y'Y - B'(X'X)B)M
         E = M.T.dot(sscpr).dot(M)

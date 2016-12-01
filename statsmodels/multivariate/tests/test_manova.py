@@ -29,7 +29,7 @@ def test_manova_sas_example():
     # Results should be the same as figure 4.5 of
     # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
     # viewer.htm#statug_introreg_sect012.htm
-    mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
+    mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X, method='qr')
     r = mod.test()
     assert_almost_equal(r[1][1].loc["Wilks’ lambda", 'Value'],
                         0.60143661, decimal=8)
@@ -107,7 +107,7 @@ def test_compare_spss_output_dogs_data():
     data[['p1', 'p2', 'p3']] = data.iloc[:, 2:6].values.dot(contrast.matrix)
     mod = MANOVA.from_formula(
         'p1 + p2 + p3 ~ Drug * Depleted',
-        data)
+        data, method='qr')
     r = mod.test()
     a = [[1.00382414e-01, 3, 9, 2.68857128e+01, 7.97286681e-05],
          [8.99617586e-01, 3, 9, 2.68857128e+01, 7.97286681e-05],
@@ -132,7 +132,7 @@ def test_compare_spss_output_dogs_data():
 
 
 def test_manova_interaction_term():
-    mod = MANOVA.from_formula('Basal + Occ ~ Loc * Max', data=X)
+    mod = MANOVA.from_formula('Basal + Occ ~ Loc * Max', data=X, method='qr')
     r = mod.test()
     # H-L race R ouput is different compared to SAS
     assert_almost_equal(r[3][1].loc["Wilks’ lambda", 'Value'],
