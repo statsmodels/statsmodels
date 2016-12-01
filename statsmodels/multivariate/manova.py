@@ -14,7 +14,7 @@ import pandas as pd
 from statsmodels.iolib import summary2
 
 
-def fit_manova(x, y):
+def fit_manova(x, y, method='qr'):
     """
     For a MANOVA problem y = x * params
     where y is dependent variables, x is independent variables
@@ -46,11 +46,14 @@ def fit_manova(x, y):
     # Calculate the matrices necessary for hypothesis testing
     df_resid = nobs - k_exog
 
-    q, r = qr(x)
-    u = q.T.dot(y)
-    sscpr = np.subtract(y.T.dot(y), u.T.dot(u))
-    fittedvalues = u
-    return (df_resid, fittedvalues, sscpr)
+    if method == 'qr':
+        q, r = qr(x)
+        u = q.T.dot(y)
+        sscpr = np.subtract(y.T.dot(y), u.T.dot(u))
+        fittedvalues = u
+        return (df_resid, fittedvalues, sscpr)
+    else:
+        raise ValueError('%s is not a supported method!')
 
 
 def multivariate_stats(eigenvals, p, q, df_resid):
@@ -153,7 +156,7 @@ def multivariate_stats(eigenvals, p, q, df_resid):
     return results.iloc[:, [4, 2, 0, 1, 3]]
 
 
-def test_manova(results, contrast_L, transform_M=None):
+def test_manova(results, contrast_L, transform_M=None, method='qr'):
     """
     MANOVA hypothesis testing
 
@@ -188,18 +191,21 @@ def test_manova(results, contrast_L, transform_M=None):
     results : MANOVAResults
 
     """
-    df_resid, u, sscpr = results
     M = transform_M
-    if M is None:
-        M = np.eye(u.shape[1])
     L = contrast_L
-    t1 = L .dot(u)
-    q = matrix_rank(t1)
-    t1 = t1.dot(M)
-    H = t1.T.dot(t1)
+    if method == 'qr':
+        df_resid, u, sscpr = results
+        if M is None:
+            M = np.eye(u.shape[1])
+        t1 = L .dot(u)
+        q = matrix_rank(t1)
+        t1 = t1.dot(M)
+        H = t1.T.dot(t1)
 
-    # E = M'(Y'Y - B'(X'X)B)M
-    E = M.T.dot(sscpr).dot(M)
+        # E = M'(Y'Y - B'(X'X)B)M
+        E = M.T.dot(sscpr).dot(M)
+    else:
+        raise ValueError('%s is not a supported method!')
 
     EH = np.add(E, H)
     p = matrix_rank(EH)
@@ -241,15 +247,17 @@ class MANOVA(Model):
         constructed using `from_formula`
 
     """
-    def __init__(self, endog, exog, design_info=None, **kwargs):
+    def __init__(self, endog, exog, method='qr', design_info=None, **kwargs):
         self.design_info = design_info
-        self.fittedmod = fit_manova(exog, endog)
+        self.method = method
+        self.fittedmod = fit_manova(exog, endog, method=method)
         super(MANOVA, self).__init__(endog, exog)
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+    def from_formula(cls, formula, data, method='qr', subset=None, drop_cols=None,
                      *args, **kwargs):
         mod = super(MANOVA, cls).from_formula(formula, data,
+                                              method=method,
                                               subset=subset,
                                               drop_cols=drop_cols,
                                               *args, **kwargs)
@@ -314,7 +322,8 @@ class MANOVA(Model):
                                      'number of rows as the number of columns '
                                      'of endog! %d != %d' %
                                      (M.shape[0], self.exog.shape[1]))
-            manova_table = test_manova(self.fittedmod, L, M)
+            manova_table = test_manova(self.fittedmod, L, M,
+                                       method=self.method)
             results.append((name, manova_table))
         return MANOVAResults(results)
 
