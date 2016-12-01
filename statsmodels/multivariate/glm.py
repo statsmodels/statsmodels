@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Multivariate analysis of variance
+"""General linear model
 
 author: Yichuan Liu
 """
@@ -8,19 +8,16 @@ from __future__ import print_function, division
 
 from statsmodels.base.model import Model
 import numpy as np
-from numpy.linalg import eigvals, solve, matrix_rank, qr
+from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
 from scipy import stats
 import pandas as pd
 from statsmodels.iolib import summary2
 
 
-def fit_manova(x, y):
+def fit_glm(x, y, method='svd'):
     """
-    For a MANOVA problem y = x * params
+    Solve general linear model y = x * params
     where y is dependent variables, x is independent variables
-    Perform QR decomposition of x to calculate the sums of squares
-    and cross-products (SSCP) of residuals
-    These are necessary for performing MANOVA hypothesis tests
 
     No acture
 
@@ -33,7 +30,7 @@ def fit_manova(x, y):
     -------
     a tuple of matrices or values necessary for hypothesis testing
 
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
 
     """
     nobs, k_endog = y.shape
@@ -44,15 +41,38 @@ def fit_manova(x, y):
 
     # Calculate the matrices necessary for hypothesis testing
     df_resid = nobs - k_exog
+    tolerance = 1e-8
+    if method == 'pinv':
+        # Regression coefficients matrix
+        params = pinv(x).dot(y)
 
-    q, r = qr(x)
-    u = q.T.dot(y)
-    sscpr = np.subtract(y.T.dot(y), u.T.dot(u))
-    fittedvalues = u
-    return (df_resid, fittedvalues, sscpr)
+        # inverse of x'x
+        inv_cov = inv(x.T.dot(x))
+
+        # Sums of squares and cross-products of residuals
+        # Y'Y - (X * params)'B * params
+        t = x.dot(params)
+        sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
+        return (params, df_resid, inv_cov, sscpr)
+    elif method == 'svd':
+        u, s, v = svd(x, 0)
+        invs = np.array(s)
+        for i in range(len(s)):
+            if invs[i] > tolerance:
+                invs[i] = 1. / invs[i]
+            else:
+                raise ValueError('Covariance of x singular!')
+
+        params = v.T.dot(np.diag(invs)).dot(u.T).dot(y)
+        inv_cov = v.T.dot(np.diag(np.power(invs, 2))).dot(v)
+        t = np.diag(s).dot(v).dot(params)
+        sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
+        return (params, df_resid, inv_cov, sscpr)
+    else:
+        raise ValueError('%s is not a supported method!' % method)
 
 
-def multivariate_stats(eigenvals, p, q, df_resid):
+def multivariate_stats(eigenvals, p, q, df_resid, tolerance=1e-8):
     """
     Testing MANOVA statistics
 
@@ -64,19 +84,23 @@ def multivariate_stats(eigenvals, p, q, df_resid):
         Rank of E + H
     q : int
         Rank of X
-    df_resid
+    df_resid : int
         Residual degree of freedom (n_samples minus n_variables of X)
+    tolerance : float
+        smaller than which eigenvalue is considered 0
 
     Returns
     -------
 
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     """
-    eigv2 = eigenvals
-    eigv1 = np.array([i / (1 - i) for i in eigv2])
     v = df_resid
 
     s = np.min([p, q])
+    ind = eigenvals > tolerance
+    n_e = ind.sum()
+    eigv2 = eigenvals[ind]
+    eigv1 = np.array([i / (1 - i) for i in eigv2])
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
@@ -151,9 +175,9 @@ def multivariate_stats(eigenvals, p, q, df_resid):
     return results.iloc[:, [4, 2, 0, 1, 3]]
 
 
-def test_manova(results, contrast_L, transform_M=None):
+def test_glm(results, contrast_L, transform_M=None):
     """
-    MANOVA hypothesis testing
+    General linear model hypothesis testing
 
     For y = x * params, where y is dependent variables and x is independent
     variables, testing L * params * M = 0 where L is the contast matrix for
@@ -161,12 +185,14 @@ def test_manova(results, contrast_L, transform_M=None):
     dependent variables in y.
 
     Algorithm:
-        H = (L * u * M)' * (L * u * M)
+        H = M'B'L'(L * inv_cov * L')^LBM
+          = M'B'L'(L(X'X)^L')^LBM
         E = M' * sscpr * M
+          = M'(Y'Y - B'X'XB)M
         solve (H + E) * T = H
     And then solving the eigenvalues of T * H
 
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
 
     Parameters
     ----------
@@ -185,15 +211,19 @@ def test_manova(results, contrast_L, transform_M=None):
     results : MANOVAResults
 
     """
-    df_resid, u, sscpr = results
     M = transform_M
-    if M is None:
-        M = np.eye(u.shape[1])
     L = contrast_L
-    t1 = L .dot(u)
-    q = matrix_rank(t1)
-    t1 = t1.dot(M)
-    H = t1.T.dot(t1)
+    params, df_resid, inv_cov, sscpr = results
+    if M is None:
+        M = np.eye(params.shape[1])
+    L = contrast_L
+    # t1 = (L * params)M
+    t1 = L.dot(params).dot(M)
+
+    # H = t1'L(X'X)^L't1
+    t2 = L.dot(inv_cov).dot(L.T)
+    q = matrix_rank(t2)
+    H = t1.T.dot(inv(t2)).dot(t1)
 
     # E = M'(Y'Y - B'(X'X)B)M
     E = M.T.dot(sscpr).dot(M)
@@ -203,12 +233,12 @@ def test_manova(results, contrast_L, transform_M=None):
 
     # eigenvalues of (E + H)^H
     eigv2 = np.sort(eigvals(solve(EH, H)))
-    return multivariate_stats(eigv2, p, q, df_resid)
+    return multivariate_stats(eigv2, p, q, df_resid), M
 
 
-class MANOVA(Model):
+class GLM(Model):
     """
-    Multivariate analysis of variance
+    General linear model
 
 
     Parameters
@@ -222,8 +252,6 @@ class MANOVA(Model):
         number of observations and n_x_var is the number of IV. An intercept is
         not included by default and should be added by the user (models
         specified using a formula include an intercept by default)
-
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
 
     Attributes
     -----------
@@ -240,15 +268,18 @@ class MANOVA(Model):
         constructed using `from_formula`
 
     """
-    def __init__(self, endog, exog, design_info=None, **kwargs):
+    def __init__(self, endog, exog, method='svd',
+                 design_info=None, **kwargs):
         self.design_info = design_info
-        self.fittedmod = fit_manova(exog, endog)
-        super(MANOVA, self).__init__(endog, exog)
+        self.method = method
+        self.fittedmod = fit_glm(exog, endog, method=method)
+        super(GLM, self).__init__(endog, exog)
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None,
-                     *args, **kwargs):
-        mod = super(MANOVA, cls).from_formula(formula, data,
+    def from_formula(cls, formula, data, method='manova-qr', subset=None,
+                     drop_cols=None, *args, **kwargs):
+        mod = super(GLM, cls).from_formula(formula, data,
+                                              method=method,
                                               subset=subset,
                                               drop_cols=drop_cols,
                                               *args, **kwargs)
@@ -256,10 +287,11 @@ class MANOVA(Model):
 
     def test(self, hypothesis=None):
         """
-        Testing the genernal hypothesis
+        Testing the linear hypothesis
             L * params * M = 0
         where `params` is the regression coefficient matrix for the
-        linear model y = x * params
+        linear model y = x * params, `M` is a dependent variable transform
+        matrix.
 
         Parameters
         ----------
@@ -278,7 +310,7 @@ class MANOVA(Model):
 
         Returns
         -------
-        results: MANOVAResults
+        results: GLMResults
 
         """
         if hypothesis is None:
@@ -313,22 +345,25 @@ class MANOVA(Model):
                                      'number of rows as the number of columns '
                                      'of endog! %d != %d' %
                                      (M.shape[0], self.exog.shape[1]))
-            manova_table = test_manova(self.fittedmod, L, M)
-            results.append((name, manova_table))
-        return MANOVAResults(results)
+            stat_table, M1 = test_glm(self.fittedmod, L, M)
+            results.append((name, L, M1, stat_table))
+        self.test_results = results
+        return GLMResults(self)
 
 
-class MANOVAResults(object):
+class GLMResults(object):
     """
-    MANOVA results class
+    GLM results class
 
     Can be accessed as a list, each element containing a tuple (name, df) where
     `name` is the effect (i.e. term in model) name and `df` is a DataFrame
-    containing the MANOVA test statistics
+    containing the test statistics
 
     """
-    def __init__(self, results):
-        self.results = results
+    def __init__(self, glm):
+        self.results = glm.test_results
+        self.exog_names = glm.exog_names
+        self.endog_names = glm.endog_names
 
     def __str__(self):
         return self.summary().__str__()
@@ -336,11 +371,25 @@ class MANOVAResults(object):
     def __getitem__(self, item):
         return self.results[item]
 
-    def summary(self):
+    def summary(self, contrast_L=False, transform_M=False):
         summ = summary2.Summary()
-        summ.add_title('MANOVA results')
+        summ.add_title('General linear model')
         for h in self.results:
-            summ.add_dict({'Effect':h[0]})
-            summ.add_df(h[1])
+            summ.add_dict({'':''})
+            df = h[3].copy()
+            df = df.reset_index()
+            c = df.columns.values
+            c[0] = h[0]
+            df.columns = c
+            df.index = ['', '', '', '']
+            summ.add_df(df)
+            if contrast_L:
+                summ.add_dict({h[0]:' contrast L='})
+                df = pd.DataFrame(h[1], columns=self.exog_names)
+                summ.add_df(df)
+            if transform_M:
+                summ.add_dict({h[0]:' transform M='})
+                df = pd.DataFrame(h[2], index=self.endog_names)
+                print(df)
+                summ.add_df(df)
         return summ
-

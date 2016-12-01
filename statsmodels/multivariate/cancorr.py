@@ -12,7 +12,7 @@ from numpy.linalg import svd
 from scipy import stats
 import pandas as pd
 from statsmodels.iolib import summary2
-from .manova import multivariate_stats
+from .glm import multivariate_stats
 
 class Cancorr(Model):
     """
