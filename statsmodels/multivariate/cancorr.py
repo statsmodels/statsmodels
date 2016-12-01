@@ -104,6 +104,7 @@ class Cancorr(Model):
             df2 = r*t - 2*u
             lmd = np.power(prod,  1 / t)
             F = (1 - lmd) / lmd * df2 / df1
+            self.stats.loc[i, 'Canonical Correlation'] = self.cancorr[i]
             self.stats.loc[i, "Wilks' lambda"] = prod
             self.stats.loc[i, 'Num DF'] = df1
             self.stats.loc[i, 'Den DF'] = df2
