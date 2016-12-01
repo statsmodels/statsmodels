@@ -243,8 +243,7 @@ class MANOVA(Model):
     """
     def __init__(self, endog, exog, design_info=None, **kwargs):
         self.design_info = design_info
-        out = fit_manova(exog, endog)
-        self.df_resid, self.u_, self.sscpr = out
+        self.fittedmod = fit_manova(exog, endog)
         super(MANOVA, self).__init__(endog, exog)
 
     @classmethod
@@ -315,8 +314,7 @@ class MANOVA(Model):
                                      'number of rows as the number of columns '
                                      'of endog! %d != %d' %
                                      (M.shape[0], self.exog.shape[1]))
-            fit_output = (self.df_resid, self.u_, self.sscpr)
-            manova_table = test_manova(fit_output, L, M)
+            manova_table = test_manova(self.fittedmod, L, M)
             results.append((name, manova_table))
         return MANOVAResults(results)
 
