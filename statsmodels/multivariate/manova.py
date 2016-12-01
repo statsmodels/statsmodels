@@ -49,7 +49,8 @@ def fit_manova(x, y):
     q, r = qr(x)
     u = q.T.dot(y)
     sscpr = np.subtract(y.T.dot(y), u.T.dot(u))
-    return (df_resid, u, sscpr)
+    fittedvalues = u
+    return (df_resid, fittedvalues, sscpr)
 
 
 def multivariate_stats(eigenvals, p, q, df_resid):
