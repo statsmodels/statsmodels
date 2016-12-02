@@ -44,7 +44,7 @@ class ANOVA(object):
 
     The full model regression residual sum of squared is
     used to compared with reduced model for calculating the
-    within subject effect sum of squared
+    within subject effect sum of squared [1]
 
     Between subject effect is not yet supported
 
@@ -63,6 +63,8 @@ class ANOVA(object):
     Returns
     -------
     ANOVAResults
+
+    .. [1] Rutherford, Andrew. ANOVA and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
 
     """
 
