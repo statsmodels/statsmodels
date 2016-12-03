@@ -10,34 +10,6 @@ import patsy
 from statsmodels.iolib import summary2
 
 
-def _ols_exclude_term(y, x, terms):
-    """
-    Linear regression excluding terms in x
-
-    Parameters
-    ----------
-    y : array
-        Dependent variable
-    x : patsy.DesignMatrix
-        Independent variables
-    terms : a list of strings
-
-    Returns
-    -------
-    residual sum of squares and degree of freedom
-
-    """
-    term_slices = x.design_info.term_name_slices
-    ind = np.array([True]*x.shape[1])
-    for term in terms:
-        s = term_slices[term]
-        ind[s] = False
-    x = x[:, ind]
-    model = OLS(y, x)
-    results = model.fit()
-    return (results.ssr, results.df_resid)
-
-
 class ANOVA(object):
     """
     ANOVA using least square regression
@@ -84,13 +56,7 @@ class ANOVA(object):
         self.subject = subject
 
     def fit(self):
-        factors = self.within + [self.subject]
-        factors = ['C(%s, Sum)' % i for i in factors]
         y = self.data[self.dv].values
-        x = patsy.dmatrix('*'.join(factors), data=self.data)
-
-        term_last = [':'.join(factors)]
-        term_slices = x.design_info.term_name_slices
 
         def _not_slice(slices, slices_to_exclude, n):
             ind = np.array([True]*n)
@@ -98,17 +64,6 @@ class ANOVA(object):
                 s = slices[term]
                 ind[s] = False
             return ind
-
-        x = x[:, _not_slice(term_slices, term_last, x.shape[1])]
-        model = OLS(y, x)
-        results = model.fit()
-        term_slices.pop(term_last[0])
-        params = results.params
-        df_resid = results.df_resid
-        ssr = results.ssr
-
-        anova_table = pd.DataFrame(
-            {'F Value':[], 'Num DF':[], 'Den DF':[], 'Pr > F':[]})
 
         def _ssr_reduced_model(y, x, term_slices, params, keys):
             ind = _not_slice(term_slices, keys, x.shape[1])
@@ -118,6 +73,31 @@ class ANOVA(object):
             df_resid = len(y) - len(params1)
             return ssr, df_resid
 
+        within = ['C(%s, Sum)' % i for i in self.within]
+        subject = 'C(%s, Sum)' % self.subject
+        factors = within + [subject]
+        x = patsy.dmatrix('*'.join(factors), data=self.data)
+        term_slices = x.design_info.term_name_slices
+        for key in term_slices:
+            ind = np.array([False]*x.shape[1])
+            ind[term_slices[key]] = True
+            term_slices[key] = np.array(ind)
+        term_exclude = [':'.join(factors)]
+        ind = _not_slice(term_slices, term_exclude, x.shape[1])
+        x = x[:, ind]
+        model = OLS(y, x)
+        results = model.fit()
+        for i in term_exclude:
+            term_slices.pop(i)
+        for key in term_slices:
+            term_slices[key] = term_slices[key][ind]
+        params = results.params
+        df_resid = results.df_resid
+        ssr = results.ssr
+
+        anova_table = pd.DataFrame(
+            {'F Value':[], 'Num DF':[], 'Den DF':[], 'Pr > F':[]})
+
         for key in term_slices:
             if self.subject not in key and key != 'Intercept':
                 #  Independen variables are orthogonal
@@ -125,17 +105,17 @@ class ANOVA(object):
                     y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
-                if key == ':'.join(factors[:-1]):
-                    msr = ssr / df_resid
+                if key == ':'.join(factors[:-1]) or (key + ':' +
+                                                     subject not in term_slices):
+                    mse = ssr / df_resid
                     df2 = df_resid
                 else:
                     ssr1, df_resid1 = _ssr_reduced_model(
                         y, x, term_slices, params,
-                        [key+ ':C(%s, Sum)' % self.subject])
+                        [key+ ':' + subject])
                     df2 = df_resid1 - df_resid
-                    msr = (ssr1 - ssr) / df2
-
-                F = msm / msr
+                    mse = (ssr1 - ssr) / df2
+                F = msm / mse
                 p = stats.f.sf(F, df1, df2)
                 term = key.replace('C(', '').replace(', Sum)', '')
                 anova_table.loc[term, 'F Value'] = F
