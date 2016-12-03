@@ -88,25 +88,50 @@ class ANOVA(object):
         factors = ['C(%s, Sum)' % i for i in factors]
         y = self.data[self.dv].values
         x = patsy.dmatrix('*'.join(factors), data=self.data)
+
         term_last = [':'.join(factors)]
         term_slices = x.design_info.term_name_slices
-        ssr, df_resid = _ols_exclude_term(y, x, term_last)
+
+        def _not_slice(slices, slices_to_exclude, n):
+            ind = np.array([True]*n)
+            for term in slices_to_exclude:
+                s = slices[term]
+                ind[s] = False
+            return ind
+
+        x = x[:, _not_slice(term_slices, term_last, x.shape[1])]
+        model = OLS(y, x)
+        results = model.fit()
+        term_slices.pop(term_last[0])
+        params = results.params
+        df_resid = results.df_resid
+        ssr = results.ssr
 
         anova_table = pd.DataFrame(
             {'F Value':[], 'Num DF':[], 'Den DF':[], 'Pr > F':[]})
+
+        def _ssr_reduced_model(y, x, term_slices, params, keys):
+            ind = _not_slice(term_slices, keys, x.shape[1])
+            params1 = params[ind]
+            ssr = np.subtract(y, x[:, ind].dot(params1))
+            ssr = ssr.T.dot(ssr)
+            df_resid = len(y) - len(params1)
+            return ssr, df_resid
+
         for key in term_slices:
             if self.subject not in key and key != 'Intercept':
-                ssr1, df_resid1 = _ols_exclude_term(
-                    y, x, term_last + [key])
+                #  Independen variables are orthogonal
+                ssr1, df_resid1 = _ssr_reduced_model(
+                    y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
                 if key == ':'.join(factors[:-1]):
                     msr = ssr / df_resid
                     df2 = df_resid
                 else:
-                    ssr1, df_resid1 = _ols_exclude_term(
-                        y, x, term_last + [key +
-                                           ':C(%s, Sum)' % self.subject])
+                    ssr1, df_resid1 = _ssr_reduced_model(
+                        y, x, term_slices, params,
+                        [key+ ':C(%s, Sum)' % self.subject])
                     df2 = df_resid1 - df_resid
                     msr = (ssr1 - ssr) / df2
 
