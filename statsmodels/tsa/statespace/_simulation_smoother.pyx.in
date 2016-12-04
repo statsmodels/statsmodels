@@ -205,6 +205,12 @@ cdef class {{prefix}}SimulationSmoother(object):
             self.secondary_simulated_smoother = {{prefix}}KalmanSmoother(
                 self.secondary_simulated_model, self.secondary_simulated_kfilter, smoother_output
             )
+        # In the case of non-missing data, the Kalman filter will actually
+        # be run over y_t^* = y_t - y_t^+, which means the observation equation
+        # intercept should be zero; make sure that it is
+        else:
+            dim2[0] = self.model.k_endog; dim2[1] = self.model.obs_intercept.shape[1];
+            self.simulated_model.obs_intercept = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
 
         # Initialize the simulated model memoryviews
@@ -268,7 +274,8 @@ cdef class {{prefix}}SimulationSmoother(object):
 
     cpdef set_initial_state_variates(self, {{cython_type}} [:] variates):
         # TODO allow variates to be an iterator or callback
-        tools.validate_vector_shape('disturbance variates', &variates.shape[0],
+        tools.validate_vector_shape('initial state variates',
+                                    &variates.shape[0],
                                     self.n_initial_state_variates)
         self.initial_state_variates = variates
 
