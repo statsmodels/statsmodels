@@ -54,7 +54,7 @@ def run_ucm(name):
             # Also allow a check with a 1-dim numpy array
             if kwargs['exog'] == 'numpy':
                 exog = exog.values.squeeze()
-            
+
             kwargs['exog'] = exog
 
         # Create the model
@@ -347,3 +347,12 @@ def test_misc_exog():
     # Test invalid model specifications
     assert_raises(ValueError, UnobservedComponents, endog, 'llevel',
                   exog=np.zeros((10, 4)))
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = structural.UnobservedComponents(endog, 'llevel')
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

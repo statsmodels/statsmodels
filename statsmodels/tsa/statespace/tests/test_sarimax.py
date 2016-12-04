@@ -2005,3 +2005,12 @@ def test_datasets():
     exog = np.random.binomial(1, 0.5, size=100)
     mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
     res = mod.fit()
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

@@ -3,13 +3,12 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
                                                coint, acovf, kpss, ResultsStore,
                                                arma_order_select_ic)
-from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
                            assert_raises, dec, assert_, assert_allclose)
 from numpy import genfromtxt
 from statsmodels.datasets import macrodata, sunspots
-from pandas import Series, Index, DataFrame
+from pandas import Series, Index, DatetimeIndex, DataFrame
 import os
 import warnings
 from statsmodels.tools.sm_exceptions import MissingDataError
@@ -434,7 +433,7 @@ def test_pandasacovf():
 
 def test_acovf2d():
     dta = sunspots.load_pandas().data
-    dta.index = Index(dates_from_range('1700', '2008'))
+    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')
     del dta["YEAR"]
     res = acovf(dta)
     assert_equal(res, acovf(dta.values))
