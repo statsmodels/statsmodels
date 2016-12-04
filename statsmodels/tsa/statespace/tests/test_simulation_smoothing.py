@@ -11,7 +11,7 @@ import pandas as pd
 import os
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import mlemodel, sarimax
+from statsmodels.tsa.statespace import mlemodel, sarimax, structural
 from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.tsa.statespace.kalman_filter import (
     FILTER_CONVENTIONAL, FILTER_COLLAPSED, FILTER_UNIVARIATE)
@@ -611,3 +611,15 @@ def test_misc():
     assert_equal(sim.simulation_output, SIMULATION_ALL)
     sim.simulate_all = False
     assert_equal(sim.simulation_output, 0)
+
+
+def test_simulation_smoothing_obs_intercept():
+    nobs = 10
+    intercept = 100
+    endog = np.ones(nobs) * intercept
+    mod = structural.UnobservedComponents(endog, 'rwalk', exog=np.ones(nobs))
+    mod.update([1, intercept])
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], 0)
