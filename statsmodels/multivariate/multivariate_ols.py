@@ -12,6 +12,7 @@ from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
 from scipy import stats
 import pandas as pd
 from patsy import DesignInfo
+from statsmodels.compat import string_types
 
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
@@ -19,7 +20,7 @@ from statsmodels.iolib import summary2
 
 def _multivariate_ols_fit(x, y, method='svd', tolerance=1e-8):
     """
-    Solve general linear model y = x * params
+    Solve multivariate linear model y = x * params
     where y is dependent variables, x is independent variables
 
     No acture
@@ -38,7 +39,7 @@ def _multivariate_ols_fit(x, y, method='svd', tolerance=1e-8):
         zero.
     Returns
     -------
-    a tuple of matrices or values necessary for hypothesis testing
+    a tuple of matrices or values necessary for hypotheses testing
 
     .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
 
@@ -49,7 +50,7 @@ def _multivariate_ols_fit(x, y, method='svd', tolerance=1e-8):
         raise ValueError('x(n=%d) and y(n=%d) should have the same number of '
                          'rows!' % (nobs1, nobs))
 
-    # Calculate the matrices necessary for hypothesis testing
+    # Calculate the matrices necessary for hypotheses testing
     df_resid = nobs - k_exog
     if method == 'pinv':
         # Regression coefficients matrix
@@ -86,7 +87,7 @@ def multivariate_stats(eigenvals,
                        r_contrast, df_resid, tolerance=1e-8):
     """
     For multivariate linear model Y = X * B
-    Testing hypothesis
+    Testing hypotheses
         L*B*M = 0
     where L is contrast matrix, B is the parameters of the
     multivariate linear model and M is dependent variable transform matrix.
@@ -97,7 +98,7 @@ def multivariate_stats(eigenvals,
     Parameters
     ----------
     eigenvals : array
-        The eigenvalues of (E + H)^H matrix where `^` denote inverse
+        The eigenvalues of inv(E + H)*H
     r_err_sscp : int
         Rank of E + H
     r_contrast : int
@@ -194,11 +195,11 @@ def multivariate_stats(eigenvals,
     return results.iloc[:, [4, 2, 0, 1, 3]]
 
 
-def _multivariate_ols_htest(hypothesis, fittedvalues, exog_names,
+def _multivariate_ols_test(hypotheses, fit_results, exog_names,
                             endog_names):
     def fn(L, M):
         # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
-        params, df_resid, inv_cov, sscpr = fittedvalues
+        params, df_resid, inv_cov, sscpr = fit_results
         # t1 = (L * params)M
         t1 = L.dot(params).dot(M)
         # H = t1'L(X'X)^L't1
@@ -210,17 +211,17 @@ def _multivariate_ols_htest(hypothesis, fittedvalues, exog_names,
         E = M.T.dot(sscpr).dot(M)
         return E, H, q, df_resid
 
-    return _multivariate_htest(hypothesis, exog_names, endog_names, fn)
+    return _multivariate_test(hypotheses, exog_names, endog_names, fn)
 
 
-def _multivariate_htest(hypothesis, exog_names, endog_names, fn):
+def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     """
-    Multivaraite linear model hypothesis testing
+    Multivariate linear model hypotheses testing
 
-    For y = x * params, where y is dependent variables and x is independent
-    variables, testing L * params * M = 0 where L is the contast matrix for
-    hypothesis testing and M is the transformation matrix for transforming the
-    dependent variables in y.
+    For y = x * params, where y are the dependent variables and x are the
+    independent variables, testing L * params * M = 0 where L is the contrast
+    matrix for hypotheses testing and M is the transformation matrix for
+    transforming the dependent variables in y.
 
     Algorithm:
         T = L*inv(X'X)*L'
@@ -232,14 +233,14 @@ def _multivariate_htest(hypothesis, exog_names, endog_names, fn):
 
     Parameters
     ----------
-    hypothesis: A list of array-like
+    hypotheses: A list of tuples
         Hypothesis to be tested. Each element is an array-like
-                            [name, contrast_L, transform_M]
+                            (name, contrast_L, transform_M)
         containing a string `name`, the contrast matrix L and the transform
         matrix M (for transforming dependent variables), respectively.
         contrast_L : array-like or an array of strings
-           Contrast matrix for hypothesis testing.
-           If array-like, each row is an hypothesis and each column is an
+           Contrast matrix for hypotheses testing.
+           If array-like, each row is an hypotheses and each column is an
            independent variable. At least 1 row
            (1 by k_exog, the number of independent variables) is required.
            If an array of strings, it will be passed to
@@ -250,9 +251,9 @@ def _multivariate_htest(hypothesis, exog_names, endog_names, fn):
             (i.e. do not transform y matrix).
            If an array of strings, it will be passed to
            patsy.DesignInfo().linear_constraint.
-        If `hypothesis` is None: 1) the effect of each independent variable
+        If `hypotheses` is None: 1) the effect of each independent variable
         on the dependent variables will be tested. Or 2) if model is created
-        using a formula,  `hypothesis` will be created according to
+        using a formula,  `hypotheses` will be created according to
         `design_info`. 1) and 2) is equivalent if no additional variables
         are created by the formula (e.g. dummy variables for categorical
         variables and interaction terms)
@@ -273,7 +274,7 @@ def _multivariate_htest(hypothesis, exog_names, endog_names, fn):
     k_xvar = len(exog_names)
     k_yvar = len(endog_names)
     results = {}
-    for name, L, M in hypothesis:
+    for name, L, M in hypotheses:
         if any(isinstance(i, six.string_types) for i in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
@@ -285,7 +286,7 @@ def _multivariate_htest(hypothesis, exog_names, endog_names, fn):
                                  (L.shape[1], k_xvar))
         if M is None:
             M = np.eye(k_yvar)
-        elif any(isinstance(i, six.string_types) for i in M):
+        elif any(isinstance(i, string_types) for i in M):
             M = DesignInfo(endog_names).linear_constraint(M).coefs.T
         else:
             if M is not None:
@@ -311,7 +312,7 @@ def _multivariate_htest(hypothesis, exog_names, endog_names, fn):
 
 class _MultivariateOLS(Model):
     """
-    General linear model
+    Multivariate linear model via least squares
 
 
     Parameters
@@ -341,25 +342,22 @@ class _MultivariateOLS(Model):
         constructed using `from_formula`
 
     """
-    def __init__(self, endog, exog, method='svd',
-                 design_info=None, **kwargs):
+    def __init__(self, endog, exog, design_info=None, **kwargs):
         self.design_info = design_info
-        self.method = method
         super(_MultivariateOLS, self).__init__(endog, exog)
 
     @classmethod
-    def from_formula(cls, formula, data, method='manova-qr', subset=None,
-                     drop_cols=None, *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+                     *args, **kwargs):
         mod = super(_MultivariateOLS, cls).from_formula(formula, data,
-                                              method=method,
                                               subset=subset,
                                               drop_cols=drop_cols,
                                               *args, **kwargs)
         return mod
 
-    def fit(self):
+    def fit(self, method='svd'):
         self.fittedmod = _multivariate_ols_fit(
-            self.exog, self.endog, method=self.method)
+            self.exog, self.endog, method=method)
         return _MultivariateOLSResults(self)
 
 
@@ -384,9 +382,9 @@ class _MultivariateOLSResults(object):
     def __getitem__(self, item):
         return self.results[item]
 
-    def f_test(self, hypothesis=None):
+    def mv_test(self, hypotheses=None):
         """
-        Testing the linear hypothesis
+        Testing the linear hypotheses
             L * params * M = 0
         where `params` is the regression coefficient matrix for the
         linear model y = x * params, `M` is a dependent variable transform
@@ -394,14 +392,14 @@ class _MultivariateOLSResults(object):
 
         Parameters
         ----------
-        hypothesis: A list of array-like
-            Hypothesis to be tested. Each element is an array-like
+        hypotheses: A list of array-like
+            Hypotheses to be tested. Each element is an array-like
                                 [name, contrast_L, transform_M]
             containing a string `name`, the contrast matrix L and the transform
             matrix M (for transforming dependent variables), respectively.
             contrast_L : array-like or an array of strings
-               Contrast matrix for hypothesis testing.
-               If array-like, each row is an hypothesis and each column is an
+               Contrast matrix for hypotheses testing.
+               If array-like, each row is an hypotheses and each column is an
                independent variable. At least 1 row
                (1 by k_exog, the number of independent variables) is required.
                If an array of strings, it will be passed to
@@ -412,9 +410,9 @@ class _MultivariateOLSResults(object):
                 (i.e. do not transform y matrix).
                If an array of strings, it will be passed to
                patsy.DesignInfo().linear_constraint.
-            If `hypothesis` is None: 1) the effect of each independent variable
+            If `hypotheses` is None: 1) the effect of each independent variable
             on the dependent variables will be tested. Or 2) if model is
-            created using a formula,  `hypothesis` will be created according to
+            created using a formula,  `hypotheses` will be created according to
             `design_info`. 1) and 2) is equivalent if no additional variables
             are created by the formula (e.g. dummy variables for categorical
             variables and interaction terms)
@@ -425,30 +423,43 @@ class _MultivariateOLSResults(object):
 
         """
         k_xvar = len(self.exog_names)
-        k_yvar = len(self.endog_names)
-        if hypothesis is None:
+        if hypotheses is None:
             if self.design_info is not None:
                 terms = self.design_info.term_name_slices
-                hypothesis = []
+                hypotheses = []
                 for key in terms:
                     L_contrast = np.eye(k_xvar)[terms[key], :]
-                    hypothesis.append([key, L_contrast, None])
+                    hypotheses.append([key, L_contrast, None])
             else:
-                hypothesis = []
+                hypotheses = []
                 for i in range(k_xvar):
                     name = 'x%d' % (i)
                     L = np.zeros([1, k_xvar])
                     L[i] = 1
-                    hypothesis.append([name, L, None])
+                    hypotheses.append([name, L, None])
 
-        results = _multivariate_ols_htest(hypothesis, self.fittedmod,
+        results = _multivariate_ols_test(hypotheses, self.fittedmod,
                                           self.exog_names, self.endog_names)
 
-        self.results = results
+        return _MultivariateTestResults(results)
+
+    def summary(self):
+        raise NotImplementedError
+
+
+class _MultivariateTestResults(object):
+    def __init__(self, mv_test_df):
+        self.results = mv_test_df
+
+    def __str__(self):
+        return self.summary().__str__()
+
+    def __getitem__(self, item):
+        return self.results[item]
 
     def summary(self, contrast_L=False, transform_M=False):
         summ = summary2.Summary()
-        summ.add_title('General linear model')
+        summ.add_title('Multivariate linear model')
         for key in self.results:
             summ.add_dict({'':''})
             df = self.results[key]['stat'].copy()
