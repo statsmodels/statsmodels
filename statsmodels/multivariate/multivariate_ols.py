@@ -344,15 +344,6 @@ class _MultivariateOLS(Model):
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         super(_MultivariateOLS, self).__init__(endog, exog, **kwargs)
 
-    @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None,
-                     *args, **kwargs):
-        mod = super(_MultivariateOLS, cls).from_formula(formula, data,
-                                              subset=subset,
-                                              drop_cols=drop_cols,
-                                              *args, **kwargs)
-        return mod
-
     def fit(self, method='svd'):
         self.fittedmod = _multivariate_ols_fit(
             self.exog, self.endog, method=method)
