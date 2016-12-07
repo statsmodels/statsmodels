@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import pandas as pd
-from ..cancorr import Cancorr
+from ..cancorr import CanCorr
 from numpy.testing import assert_almost_equal
 
 data_fit = pd.DataFrame([[191, 36, 50,  5, 162,  60],
@@ -31,50 +33,51 @@ def test_cancorr():
     # viewer.htm#statug_cancorr_sect020.htm
     X1 = data_fit.iloc[:, :3]
     Y1 = data_fit.iloc[:, 3:]
-    mod = Cancorr(Y1, X1).fit()
-    assert_almost_equal(mod.multi_stats.loc["Wilks’ lambda", 'Value'],
+    mod = CanCorr(Y1, X1).fit()
+    mod.f_test()
+    assert_almost_equal(mod.stats_mv.loc["Wilks’ lambda", 'Value'],
                         0.35039053, decimal=8)
-    assert_almost_equal(mod.multi_stats.loc["Pillai’s trace", 'Value'],
+    assert_almost_equal(mod.stats_mv.loc["Pillai’s trace", 'Value'],
                         0.67848151, decimal=8)
-    assert_almost_equal(mod.multi_stats.loc["Hotelling-Lawley trace", 'Value'],
+    assert_almost_equal(mod.stats_mv.loc["Hotelling-Lawley trace", 'Value'],
                         1.77194146, decimal=8)
-    assert_almost_equal(mod.multi_stats.loc["Roy’s greatest root", 'Value'],
+    assert_almost_equal(mod.stats_mv.loc["Roy’s greatest root", 'Value'],
                         1.72473874, decimal=8)
-    assert_almost_equal(mod.multi_stats.loc["Wilks’ lambda", 'F Value'],
+    assert_almost_equal(mod.stats_mv.loc["Wilks’ lambda", 'F Value'],
                         2.05, decimal=2)
-    assert_almost_equal(mod.multi_stats.loc["Pillai’s trace", 'F Value'],
+    assert_almost_equal(mod.stats_mv.loc["Pillai’s trace", 'F Value'],
                         1.56, decimal=2)
-    assert_almost_equal(mod.multi_stats.loc["Hotelling-Lawley trace",
+    assert_almost_equal(mod.stats_mv.loc["Hotelling-Lawley trace",
                                             'F Value'],
                         2.64, decimal=2)
-    assert_almost_equal(mod.multi_stats.loc["Roy’s greatest root", 'F Value'],
+    assert_almost_equal(mod.stats_mv.loc["Roy’s greatest root", 'F Value'],
                         9.20, decimal=2)
-    assert_almost_equal(mod.multi_stats.loc["Wilks’ lambda", 'Num DF'],
+    assert_almost_equal(mod.stats_mv.loc["Wilks’ lambda", 'Num DF'],
                         9, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Pillai’s trace", 'Num DF'],
+    assert_almost_equal(mod.stats_mv.loc["Pillai’s trace", 'Num DF'],
                         9, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Hotelling-Lawley trace",
+    assert_almost_equal(mod.stats_mv.loc["Hotelling-Lawley trace",
                                             'Num DF'],
                         9, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Roy’s greatest root", 'Num DF'],
+    assert_almost_equal(mod.stats_mv.loc["Roy’s greatest root", 'Num DF'],
                         3, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Wilks’ lambda", 'Den DF'],
+    assert_almost_equal(mod.stats_mv.loc["Wilks’ lambda", 'Den DF'],
                         34.223, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Pillai’s trace", 'Den DF'],
+    assert_almost_equal(mod.stats_mv.loc["Pillai’s trace", 'Den DF'],
                         48, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Hotelling-Lawley trace",
+    assert_almost_equal(mod.stats_mv.loc["Hotelling-Lawley trace",
                                             'Den DF'],
                         19.053, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Roy’s greatest root", 'Den DF'],
+    assert_almost_equal(mod.stats_mv.loc["Roy’s greatest root", 'Den DF'],
                         16, decimal=3)
-    assert_almost_equal(mod.multi_stats.loc["Wilks’ lambda", 'Pr > F'],
+    assert_almost_equal(mod.stats_mv.loc["Wilks’ lambda", 'Pr > F'],
                         0.0635, decimal=4)
-    assert_almost_equal(mod.multi_stats.loc["Pillai’s trace", 'Pr > F'],
+    assert_almost_equal(mod.stats_mv.loc["Pillai’s trace", 'Pr > F'],
                         0.1551, decimal=4)
-    assert_almost_equal(mod.multi_stats.loc["Hotelling-Lawley trace",
+    assert_almost_equal(mod.stats_mv.loc["Hotelling-Lawley trace",
                                             'Pr > F'],
                         0.0357, decimal=4)
-    assert_almost_equal(mod.multi_stats.loc["Roy’s greatest root", 'Pr > F'],
+    assert_almost_equal(mod.stats_mv.loc["Roy’s greatest root", 'Pr > F'],
                         0.0009, decimal=4)
     assert_almost_equal(mod.stats.loc[0, "Wilks' lambda"],
                         0.35039053, decimal=8)
