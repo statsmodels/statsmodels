@@ -6,7 +6,6 @@ author: Yichuan Liu
 """
 from __future__ import print_function, division
 
-import six
 import numpy as np
 from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
 from scipy import stats
