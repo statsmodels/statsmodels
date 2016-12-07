@@ -274,7 +274,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     k_yvar = len(endog_names)
     results = {}
     for name, L, M in hypotheses:
-        if any(isinstance(i, six.string_types) for i in L):
+        if any(isinstance(i, string_types) for i in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
             if len(L.shape) != 2:
@@ -341,9 +341,8 @@ class _MultivariateOLS(Model):
         constructed using `from_formula`
 
     """
-    def __init__(self, endog, exog, design_info=None, **kwargs):
-        self.design_info = design_info
-        super(_MultivariateOLS, self).__init__(endog, exog)
+    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+        super(_MultivariateOLS, self).__init__(endog, exog, **kwargs)
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None,
@@ -370,7 +369,7 @@ class _MultivariateOLSResults(object):
 
     """
     def __init__(self, fitted_mv_ols):
-        self.design_info = fitted_mv_ols.design_info
+        self.design_info = fitted_mv_ols.data.design_info
         self.exog_names = fitted_mv_ols.exog_names
         self.endog_names = fitted_mv_ols.endog_names
         self.fittedmod = fitted_mv_ols.fittedmod
