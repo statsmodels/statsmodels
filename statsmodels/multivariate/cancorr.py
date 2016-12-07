@@ -44,9 +44,8 @@ class CanCorr(Model):
     .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
     .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """
-    def __init__(self, endog, exog, design_info=None, **kwargs):
-        self.design_info = design_info
-        super(CanCorr, self).__init__(endog, exog)
+    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+        super(CanCorr, self).__init__(endog, exog, **kwargs)
 
     def fit(self, tolerance=1e-8):
         """Fit the model
