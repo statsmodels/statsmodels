@@ -45,9 +45,9 @@ def compare_spss_output_dogs_data(method):
     # Repeated measures with orthogonal polynomial contrasts coding
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
-        data, method=method)
-    r = mod.fit()
-    r.f_test()
+        data)
+    r = mod.fit(method=method)
+    r = r.mv_test()
     a = [[2.68607660e-02, 4, 6, 5.43435304e+01, 7.59585610e-05],
          [9.73139234e-01, 4, 6, 5.43435304e+01, 7.59585610e-05],
          [3.62290202e+01, 4, 6, 5.43435304e+01, 7.59585610e-05],
@@ -80,23 +80,23 @@ def test_specify_L_M_by_string():
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data, method='svd')
     r = mod.fit()
-    r.f_test(hypothesis=[['Intercept', ['Intercept'], None]])
+    r1 = r.mv_test(hypotheses=[['Intercept', ['Intercept'], None]])
     a = [[2.68607660e-02, 4, 6, 5.43435304e+01, 7.59585610e-05],
          [9.73139234e-01, 4, 6, 5.43435304e+01, 7.59585610e-05],
          [3.62290202e+01, 4, 6, 5.43435304e+01, 7.59585610e-05],
          [3.62290202e+01, 4, 6, 5.43435304e+01, 7.59585610e-05]]
-    assert_array_almost_equal(r['Intercept']['stat'].values, a, decimal=6)
+    assert_array_almost_equal(r1['Intercept']['stat'].values, a, decimal=6)
     L = ['Intercept', 'Drug[T.Trimethaphan]', 'Drug[T.placebo]']
     M = ['Histamine1', 'Histamine3', 'Histamine5']
-    r.f_test(hypothesis=[['a', L, M]])
+    r1 = r.mv_test(hypotheses=[['a', L, M]])
     a = [[1, 0, 0, 0, 0, 0],
          [0, 1, 0, 0, 0, 0],
          [0, 0, 1, 0, 0, 0]]
-    assert_array_almost_equal(r['a']['contrast_L'], a, decimal=10)
+    assert_array_almost_equal(r1['a']['contrast_L'], a, decimal=10)
     a = [[0, 1, 0, 0],
          [0, 0, 1, 0],
          [0, 0, 0, 1]]
-    assert_array_almost_equal(r['a']['transform_M'].T, a, decimal=10)
+    assert_array_almost_equal(r1['a']['transform_M'].T, a, decimal=10)
 
 
 def test_independent_variable_singular():
