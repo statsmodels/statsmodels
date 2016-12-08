@@ -10,7 +10,8 @@ from statsmodels.base.model import Model
 import numpy as np
 from numpy.linalg import matrix_rank, qr
 from statsmodels.iolib import summary2
-from .multivariate_ols import _multivariate_test
+from .multivariate_ols import _multivariate_test, _hypotheses_doc
+__docformat__ = 'restructuredtext en'
 
 
 def _manova_fit(x, y):
@@ -51,8 +52,21 @@ def _manova_fit(x, y):
     return (df_resid, fittedvalues, sscpr)
 
 
-def _manova_test(hypotheses, fit_results, exog_names,
-                            endog_names):
+def _manova_test(hypotheses, fit_results, exog_names, endog_names):
+    def fn(L, M):
+        df_resid, u, sscpr = fit_results
+        t1 = L.dot(u)
+        q = matrix_rank(t1)
+        t1 = t1.dot(M)
+        H = t1.T.dot(t1)
+
+        # E = M'(Y'Y - B'(X'X)B)M
+        E = M.T.dot(sscpr).dot(M)
+        return E, H, q, df_resid
+
+    return _multivariate_test(hypotheses, exog_names, endog_names, fn)
+
+_manova_test.__doc__ = (
     """
     MANOVA hypotheses testing
 
@@ -69,30 +83,8 @@ def _manova_test(hypotheses, fit_results, exog_names,
 
     Parameters
     ----------
-    hypotheses: A list of array-like
-        Hypotheses to be tested. Each element is an array-like
-                            [name, contrast_L, transform_M]
-        containing a string `name`, the contrast matrix L and the transform
-        matrix M (for transforming dependent variables), respectively.
-        contrast_L : array-like or an array of strings
-           Contrast matrix for hypotheses testing.
-           If array-like, each row is an hypotheses and each column is an
-           independent variable. At least 1 row
-           (1 by k_exog, the number of independent variables) is required.
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
-        transform_M : array-like or an array of strings
-            Transform matrix.
-            Default to be k_endog by k_endog identity matrix
-            (i.e. do not transform y matrix).
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
-        If `hypotheses` is None: 1) the effect of each independent variable
-        on the dependent variables will be tested. Or 2) if model is
-        created using a formula,  `hypotheses` will be created according to
-        `design_info`. 1) and 2) is equivalent if no additional variables
-        are created by the formula (e.g. dummy variables for categorical
-        variables and interaction terms)
+    """ + _hypotheses_doc +
+    """
     fittedvalues : tuple
         Output of ``fit_manova``
     exog_names : a list of string
@@ -101,19 +93,7 @@ def _manova_test(hypotheses, fit_results, exog_names,
     Returns
     -------
     a dict of manova tables
-    """
-    def fn(L, M):
-        df_resid, u, sscpr = fit_results
-        t1 = L.dot(u)
-        q = matrix_rank(t1)
-        t1 = t1.dot(M)
-        H = t1.T.dot(t1)
-
-        # E = M'(Y'Y - B'(X'X)B)M
-        E = M.T.dot(sscpr).dot(M)
-        return E, H, q, df_resid
-
-    return _multivariate_test(hypotheses, exog_names, endog_names, fn)
+    """)
 
 
 class MANOVA(Model):
@@ -150,53 +130,33 @@ class MANOVA(Model):
         constructed using `from_formula`
 
     """
-    def __init__(self, endog, exog, missing='none', hasconst=None,**kwargs):
+    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         super(MANOVA, self).__init__(endog, exog, **kwargs)
         self.fittedmod = _manova_fit(self.exog, self.endog)
 
-    def test(self, hypotheses=None):
+    def mv_test(self):
         """
-        Testing the linear hypotheses
-            L * params * M = 0
-        where `params` is the regression coefficient matrix for the
-        linear model y = x * params
-
-        Parameters
-        ----------
-        hypotheses: A list of array-like
-           Hypothesis to be tested. Each element is an array-like [name, L, M]
-           containing a string `name`, the contrast matrix L and the transform
-           matrix M for transforming dependent variables, respectively. If M is
-           `None`, it is set to an identity matrix (i.e. no dependent
-           variable transformation).
-           If `hypotheses` is None: 1) the effect of each independent variable
-           on the dependent variables will be tested. Or 2) if model is created
-           using a formula,  `hypotheses` will be created according to
-           `design_info`. 1) and 2) is equivalent if no additional variables
-           are created by the formula (e.g. dummy variables for categorical
-           variables and interaction terms)
+        MANOVA statistical testing
 
         Returns
         -------
         results: MANOVAResults
 
         """
-        if hypotheses is None:
-            if (hasattr(self, 'data') and self.data is not None and
-                        self.data.design_info is not None):
-                terms = self.data.design_info.term_name_slices
-                hypotheses = []
-                for key in terms:
-                    L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
-            else:
-                hypotheses = []
-                for i in range(self.exog.shape[1]):
-                    name = 'x%d' % (i)
-                    L = np.zeros([1, self.exog.shape[1]])
-                    L[i] = 1
-                    hypotheses.append([name, L, None])
-
+        if (hasattr(self, 'data') and self.data is not None and
+                    self.data.design_info is not None):
+            terms = self.data.design_info.term_name_slices
+            hypotheses = []
+            for key in terms:
+                L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
+                hypotheses.append([key, L_contrast, None])
+        else:
+            hypotheses = []
+            for i in range(self.exog.shape[1]):
+                name = 'x%d' % (i)
+                L = np.zeros([1, self.exog.shape[1]])
+                L[i] = 1
+                hypotheses.append([name, L, None])
         results = _manova_test(hypotheses, self.fittedmod,self.exog_names,
                                self.endog_names)
 

@@ -30,7 +30,7 @@ def test_manova_sas_example():
     # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
     # viewer.htm#statug_introreg_sect012.htm
     mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
-    r = mod.test()
+    r = mod.mv_test()
     assert_almost_equal(r['Loc'].loc["Wilks’ lambda", 'Value'],
                         0.60143661, decimal=8)
     assert_almost_equal(r['Loc'].loc["Pillai’s trace", 'Value'],
@@ -102,7 +102,7 @@ def test_compare_r_lm_anova_output_dogs_data():
     mod = MANOVA.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
-    r = mod.test()
+    r = mod.mv_test()
     a = [[6.63472514e-03, 4, 6, 2.24583217e+02, 1.16241802e-06],
          [9.93365275e-01, 4, 6, 2.24583217e+02, 1.16241802e-06],
          [1.49722144e+02, 4, 6, 2.24583217e+02, 1.16241802e-06],
@@ -123,24 +123,3 @@ def test_compare_r_lm_anova_output_dogs_data():
          [3.70989596,  8., 6.63157895, 2.65594824, 0.11370285],
          [3.1145597,   4., 7.,         5.45047947, 0.02582767]]
     assert_array_almost_equal(r['Drug:Depleted'].values, a, decimal=6)
-
-
-def test_manova_test_input_validation():
-    mod = MANOVA.from_formula('Basal + Occ + Max ~ Loc', data=X)
-    hypothesis = [('test', np.array([[1, 1, 1]]), None)]
-    mod.test(hypothesis)
-    hypothesis = [('test', np.array([[1, 1]]), None)]
-    assert_raises_regex(ValueError,
-                        ('Contrast matrix L should have the same number of '
-                         'columns as exog! 2 != 3'),
-                        mod.test, hypothesis)
-    hypothesis = [('test', np.array([[1, 1, 1]]), np.array([[1], [1], [1]]))]
-    mod.test(hypothesis)
-    hypothesis = [('test', np.array([[1, 1, 1]]), np.array([[1], [1]]))]
-    assert_raises_regex(ValueError,
-                        ('Transform matrix M should have the same number of '
-                         'rows as the number of columns of endog! 2 != 3'),
-                        mod.test, hypothesis)
-
-
-

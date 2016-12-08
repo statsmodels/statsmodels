@@ -15,6 +15,34 @@ from statsmodels.compat import string_types
 
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
+__docformat__ = 'restructuredtext en'
+
+_hypotheses_doc = """
+    hypotheses: A list of tuples
+        Hypothesis to be tested. Each element is an array-like
+                            (name, contrast_L, transform_M)
+        containing a string `name`, the contrast matrix L and the transform
+        matrix M (for transforming dependent variables), respectively.
+        contrast_L : array-like or an array of strings
+           Contrast matrix for hypotheses testing.
+           If array-like, each row is an hypotheses and each column is an
+           independent variable. At least 1 row
+           (1 by k_exog, the number of independent variables) is required.
+           If an array of strings, it will be passed to
+           patsy.DesignInfo().linear_constraint.
+        transform_M : array-like or an array of strings
+            Transform matrix.
+            Default to be k_endog by k_endog identity matrix
+            (i.e. do not transform y matrix).
+           If an array of strings, it will be passed to
+           patsy.DesignInfo().linear_constraint.
+        If `hypotheses` is None: 1) the effect of each independent variable
+        on the dependent variables will be tested. Or 2) if model is created
+        using a formula,  `hypotheses` will be created according to
+        `design_info`. 1) and 2) is equivalent if no additional variables
+        are created by the formula (e.g. dummy variables for categorical
+        variables and interaction terms)
+"""
 
 
 def _multivariate_ols_fit(x, y, method='svd', tolerance=1e-8):
@@ -214,62 +242,6 @@ def _multivariate_ols_test(hypotheses, fit_results, exog_names,
 
 
 def _multivariate_test(hypotheses, exog_names, endog_names, fn):
-    """
-    Multivariate linear model hypotheses testing
-
-    For y = x * params, where y are the dependent variables and x are the
-    independent variables, testing L * params * M = 0 where L is the contrast
-    matrix for hypotheses testing and M is the transformation matrix for
-    transforming the dependent variables in y.
-
-    Algorithm:
-        T = L*inv(X'X)*L'
-        H = M'B'L'*inv(T)*LBM
-        E =  M'(Y'Y - B'X'XB)M
-    And then finding the eigenvalues of inv(H + E)*H
-
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
-
-    Parameters
-    ----------
-    hypotheses: A list of tuples
-        Hypothesis to be tested. Each element is an array-like
-                            (name, contrast_L, transform_M)
-        containing a string `name`, the contrast matrix L and the transform
-        matrix M (for transforming dependent variables), respectively.
-        contrast_L : array-like or an array of strings
-           Contrast matrix for hypotheses testing.
-           If array-like, each row is an hypotheses and each column is an
-           independent variable. At least 1 row
-           (1 by k_exog, the number of independent variables) is required.
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
-        transform_M : array-like or an array of strings
-            Transform matrix.
-            Default to be k_endog by k_endog identity matrix
-            (i.e. do not transform y matrix).
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
-        If `hypotheses` is None: 1) the effect of each independent variable
-        on the dependent variables will be tested. Or 2) if model is created
-        using a formula,  `hypotheses` will be created according to
-        `design_info`. 1) and 2) is equivalent if no additional variables
-        are created by the formula (e.g. dummy variables for categorical
-        variables and interaction terms)
-    k_xvar : int
-        The number of independent variables
-    k_yvar : int
-        The number of dependent variables
-    fn : function
-        a function fn(contrast_L, transform_M) that returns E, H, q, df_resid
-        where q is the rank of T matrix
-
-
-    Returns
-    -------
-    results : MANOVAResults
-
-    """
     k_xvar = len(exog_names)
     k_yvar = len(endog_names)
     results = {}
@@ -308,6 +280,40 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                          'transform_M':M}
     return results
 
+_multivariate_test.__doc__ = (
+        """
+        Multivariate linear model hypotheses testing
+
+        For y = x * params, where y are the dependent variables and x are the
+        independent variables, testing L * params * M = 0 where L is the contrast
+        matrix for hypotheses testing and M is the transformation matrix for
+        transforming the dependent variables in y.
+
+        Algorithm:
+            T = L*inv(X'X)*L'
+            H = M'B'L'*inv(T)*LBM
+            E =  M'(Y'Y - B'X'XB)M
+        And then finding the eigenvalues of inv(H + E)*H
+
+        .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+
+        Parameters
+        ----------
+        """ + _hypotheses_doc +
+        """
+        k_xvar : int
+            The number of independent variables
+        k_yvar : int
+            The number of dependent variables
+        fn : function
+            a function fn(contrast_L, transform_M) that returns E, H, q, df_resid
+            where q is the rank of T matrix
+
+        Returns
+        -------
+        results : MANOVAResults
+
+        """)
 
 class _MultivariateOLS(Model):
     """
@@ -372,45 +378,7 @@ class _MultivariateOLSResults(object):
         return self.results[item]
 
     def mv_test(self, hypotheses=None):
-        """
-        Testing the linear hypotheses
-            L * params * M = 0
-        where `params` is the regression coefficient matrix for the
-        linear model y = x * params, `M` is a dependent variable transform
-        matrix.
 
-        Parameters
-        ----------
-        hypotheses: A list of array-like
-            Hypotheses to be tested. Each element is an array-like
-                                [name, contrast_L, transform_M]
-            containing a string `name`, the contrast matrix L and the transform
-            matrix M (for transforming dependent variables), respectively.
-            contrast_L : array-like or an array of strings
-               Contrast matrix for hypotheses testing.
-               If array-like, each row is an hypotheses and each column is an
-               independent variable. At least 1 row
-               (1 by k_exog, the number of independent variables) is required.
-               If an array of strings, it will be passed to
-               patsy.DesignInfo().linear_constraint.
-            transform_M : array-like or an array of strings
-                Transform matrix.
-                Default to be k_endog by k_endog identity matrix
-                (i.e. do not transform y matrix).
-               If an array of strings, it will be passed to
-               patsy.DesignInfo().linear_constraint.
-            If `hypotheses` is None: 1) the effect of each independent variable
-            on the dependent variables will be tested. Or 2) if model is
-            created using a formula,  `hypotheses` will be created according to
-            `design_info`. 1) and 2) is equivalent if no additional variables
-            are created by the formula (e.g. dummy variables for categorical
-            variables and interaction terms)
-
-        Returns
-        -------
-        results: _MultivariateOLSResults
-
-        """
         k_xvar = len(self.exog_names)
         if hypotheses is None:
             if self.design_info is not None:
@@ -431,7 +399,23 @@ class _MultivariateOLSResults(object):
                                           self.exog_names, self.endog_names)
 
         return _MultivariateTestResults(results)
+    mv_test.__doc__=(
+        """
+        Testing the linear hypotheses
+            L * params * M = 0
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params, `M` is a dependent variable transform
+        matrix.
 
+        Parameters
+        ----------
+        """ + _hypotheses_doc +
+        """
+        Returns
+        -------
+        results: _MultivariateOLSResults
+
+        """)
     def summary(self):
         raise NotImplementedError
 
