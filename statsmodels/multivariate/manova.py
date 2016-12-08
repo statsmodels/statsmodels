@@ -134,33 +134,45 @@ class MANOVA(Model):
         super(MANOVA, self).__init__(endog, exog, **kwargs)
         self.fittedmod = _manova_fit(self.exog, self.endog)
 
-    def mv_test(self):
+    def mv_test(self, hypotheses=None):
+        if hypotheses is None:
+            if (hasattr(self, 'data') and self.data is not None and
+                        self.data.design_info is not None):
+                terms = self.data.design_info.term_name_slices
+                hypotheses = []
+                for key in terms:
+                    L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
+                    hypotheses.append([key, L_contrast, None])
+            else:
+                hypotheses = []
+                for i in range(self.exog.shape[1]):
+                    name = 'x%d' % (i)
+                    L = np.zeros([1, self.exog.shape[1]])
+                    L[i] = 1
+                    hypotheses.append([name, L, None])
+
+        results = _manova_test(hypotheses, self.fittedmod,self.exog_names,
+                               self.endog_names)
+
+        return MANOVAResults(results)
+    mv_test.__doc__ = (
         """
-        MANOVA statistical testing
+        Testing the linear hypotheses
+            L * params * M = 0
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params
+
+        Parameters
+        ----------
+        """ + _hypotheses_doc +
+        """
 
         Returns
         -------
         results: MANOVAResults
 
         """
-        if (hasattr(self, 'data') and self.data is not None and
-                    self.data.design_info is not None):
-            terms = self.data.design_info.term_name_slices
-            hypotheses = []
-            for key in terms:
-                L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                hypotheses.append([key, L_contrast, None])
-        else:
-            hypotheses = []
-            for i in range(self.exog.shape[1]):
-                name = 'x%d' % (i)
-                L = np.zeros([1, self.exog.shape[1]])
-                L[i] = 1
-                hypotheses.append([name, L, None])
-        results = _manova_test(hypotheses, self.fittedmod,self.exog_names,
-                               self.endog_names)
-
-        return MANOVAResults(results)
+    )
 
 
 class MANOVAResults(object):
