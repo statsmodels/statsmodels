@@ -398,7 +398,7 @@ class _MultivariateOLSResults(object):
         results = _multivariate_ols_test(hypotheses, self.fittedmod,
                                           self.exog_names, self.endog_names)
 
-        return _MultivariateTestResults(results)
+        return MultivariateTestResults(results)
     mv_test.__doc__=(
         """
         Testing the linear hypotheses
@@ -420,7 +420,7 @@ class _MultivariateOLSResults(object):
         raise NotImplementedError
 
 
-class _MultivariateTestResults(object):
+class MultivariateTestResults(object):
     def __init__(self, mv_test_df):
         self.results = mv_test_df
 

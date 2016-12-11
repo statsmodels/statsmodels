@@ -11,7 +11,7 @@ import numpy as np
 from numpy.linalg import matrix_rank, qr
 from statsmodels.iolib import summary2
 from .multivariate_ols import _multivariate_test, _hypotheses_doc
-from .multivariate_ols import _MultivariateTestResults
+from .multivariate_ols import MultivariateTestResults
 __docformat__ = 'restructuredtext en'
 
 
@@ -155,7 +155,7 @@ class MANOVA(Model):
         results = _manova_test(hypotheses, self.fittedmod,self.exog_names,
                                self.endog_names)
 
-        return _MultivariateTestResults(results)
+        return MultivariateTestResults(results)
     mv_test.__doc__ = (
         """
         Testing the linear hypotheses
