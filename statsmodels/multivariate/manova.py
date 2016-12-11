@@ -11,6 +11,7 @@ import numpy as np
 from numpy.linalg import matrix_rank, qr
 from statsmodels.iolib import summary2
 from .multivariate_ols import _multivariate_test, _hypotheses_doc
+from .multivariate_ols import _MultivariateTestResults
 __docformat__ = 'restructuredtext en'
 
 
@@ -154,7 +155,7 @@ class MANOVA(Model):
         results = _manova_test(hypotheses, self.fittedmod,self.exog_names,
                                self.endog_names)
 
-        return MANOVAResults(results)
+        return _MultivariateTestResults(results)
     mv_test.__doc__ = (
         """
         Testing the linear hypotheses
@@ -173,31 +174,3 @@ class MANOVA(Model):
 
         """
     )
-
-
-class MANOVAResults(object):
-    """
-    MANOVA results class
-
-    Can be accessed as a list, each element containing a tuple (name, df) where
-    `name` is the effect (i.e. term in model) name and `df` is a DataFrame
-    containing the MANOVA test statistics
-
-    """
-    def __init__(self, results):
-        self.results = results
-
-    def __str__(self):
-        return self.summary().__str__()
-
-    def __getitem__(self, item):
-        return self.results[item]['stat']
-
-    def summary(self):
-        summ = summary2.Summary()
-        summ.add_title('MANOVA results')
-        for key in self.results:
-            summ.add_dict({'Effect':key})
-            summ.add_df(self.results[key]['stat'])
-        return summ
-

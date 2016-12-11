@@ -430,7 +430,31 @@ class _MultivariateTestResults(object):
     def __getitem__(self, item):
         return self.results[item]
 
+    @property
+    def summary_frame(self):
+        """
+        Return results as a multiindex dataframe
+        """
+        df = []
+        for key in self.results:
+            tmp = self.results[key]['stat'].copy()
+            tmp.loc[:, 'Effect'] = key
+            df.append(tmp.reset_index())
+        df = pd.concat(df, axis=0)
+        df = df.set_index(['Effect', 'index'])
+        df.index.set_names(['Effect', 'Statistic'], inplace=True)
+        return df
+
     def summary(self, contrast_L=False, transform_M=False):
+        """
+
+        Parameters
+        ----------
+        contrast_L : True or False
+            Whether to show contrast_L matrix
+        transform_M : True or False
+            Whether to show transform_M matrix
+        """
         summ = summary2.Summary()
         summ.add_title('Multivariate linear model')
         for key in self.results:
