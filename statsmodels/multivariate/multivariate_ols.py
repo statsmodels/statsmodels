@@ -45,19 +45,17 @@ _hypotheses_doc = """
 """
 
 
-def _multivariate_ols_fit(x, y, method='svd', tolerance=1e-8):
+def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
     """
     Solve multivariate linear model y = x * params
     where y is dependent variables, x is independent variables
 
-    No acture
-
     Parameters
     ----------
-    x : array-like
-        each column is a independent variable
-    y : array-like
+    endog : array-like
         each column is a dependent variable
+    exog : array-like
+        each column is a independent variable
     method : string
         'svd' - Singular value decomposition
         'pinv' - Moore-Penrose pseudoinverse
@@ -69,8 +67,13 @@ def _multivariate_ols_fit(x, y, method='svd', tolerance=1e-8):
     a tuple of matrices or values necessary for hypotheses testing
 
     .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    Notes
+    -----
+    Status: experimental and incomplete
 
     """
+    y = endog
+    x = exog
     nobs, k_endog = y.shape
     nobs1, k_exog= x.shape
     if nobs != nobs1:
@@ -323,36 +326,29 @@ class _MultivariateOLS(Model):
     Parameters
     ----------
     endog : array-like
-        Dependent variables (DV). A n_sample x n_y_var array where n_sample is
-        the number of observations and n_y_var is the number of DV.
-
+        Dependent variables. A nobs x k_endog array where nobs is
+        the number of observations and k_endog is the number of dependent
+        variables
     exog : array-like
-        Independent variables (IV). A n_sample x n_x_var array where n is the
-        number of observations and n_x_var is the number of IV. An intercept is
-        not included by default and should be added by the user (models
-        specified using a formula include an intercept by default)
+        Independent variables. A nobs x k_exog array where nobs is the
+        number of observations and k_exog is the number of independent
+        variables. An intercept is not included by default and should be added
+        by the user (models specified using a formula include an intercept by
+        default)
 
     Attributes
     -----------
-    df_resid : float
-        The number of observation `n` minus the number of IV `q`.
-    sscpr : array
-        Sums of squares and cross-products of residuals
     endog : array
         See Parameters.
     exog : array
         See Parameters.
-    design_info : patsy.DesignInfo
-        Contain design info for the independent variables if model is
-        constructed using `from_formula`
-
     """
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         super(_MultivariateOLS, self).__init__(endog, exog, **kwargs)
 
     def fit(self, method='svd'):
-        self.fittedmod = _multivariate_ols_fit(
-            self.exog, self.endog, method=method)
+        self._fittedmod = _multivariate_ols_fit(
+            self.endog, self.exog, method=method)
         return _MultivariateOLSResults(self)
 
 
@@ -369,7 +365,7 @@ class _MultivariateOLSResults(object):
         self.design_info = fitted_mv_ols.data.design_info
         self.exog_names = fitted_mv_ols.exog_names
         self.endog_names = fitted_mv_ols.endog_names
-        self.fittedmod = fitted_mv_ols.fittedmod
+        self._fittedmod = fitted_mv_ols._fittedmod
 
     def __str__(self):
         return self.summary().__str__()
@@ -395,7 +391,7 @@ class _MultivariateOLSResults(object):
                     L[i] = 1
                     hypotheses.append([name, L, None])
 
-        results = _multivariate_ols_test(hypotheses, self.fittedmod,
+        results = _multivariate_ols_test(hypotheses, self._fittedmod,
                                           self.exog_names, self.endog_names)
 
         return MultivariateTestResults(results)

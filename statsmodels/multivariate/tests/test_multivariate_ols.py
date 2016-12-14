@@ -29,7 +29,7 @@ for i in range(2, 6):
     data.iloc[:, i] = np.log(data.iloc[:, i])
 
 
-def compare_spss_output_dogs_data(method):
+def compare_r_output_dogs_data(method):
     ''' Testing within-subject effect interact with 2 between-subject effect
     Compares with R car library linearHypothesis output
 
@@ -71,8 +71,8 @@ def compare_spss_output_dogs_data(method):
 
 
 def test_glm_dogs_example():
-    compare_spss_output_dogs_data(method='svd')
-    compare_spss_output_dogs_data(method='pinv')
+    compare_r_output_dogs_data(method='svd')
+    compare_r_output_dogs_data(method='pinv')
 
 
 def test_specify_L_M_by_string():
