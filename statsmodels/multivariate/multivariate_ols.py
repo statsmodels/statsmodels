@@ -344,6 +344,9 @@ class _MultivariateOLS(Model):
         See Parameters.
     """
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+        if len(endog.shape) == 1 or endog.shape[1] == 1:
+            raise ValueError('There must be more than one dependent variable'
+                             ' to fit multivariate OLS!')
         super(_MultivariateOLS, self).__init__(endog, exog, **kwargs)
 
     def fit(self, method='svd'):
@@ -362,7 +365,11 @@ class _MultivariateOLSResults(object):
 
     """
     def __init__(self, fitted_mv_ols):
-        self.design_info = fitted_mv_ols.data.design_info
+        if (hasattr(fitted_mv_ols, 'data') and
+                hasattr(fitted_mv_ols.data, 'design_info')):
+            self.design_info = fitted_mv_ols.data.design_info
+        else:
+            self.design_info = None
         self.exog_names = fitted_mv_ols.exog_names
         self.endog_names = fitted_mv_ols.endog_names
         self._fittedmod = fitted_mv_ols._fittedmod

@@ -8,8 +8,6 @@ from __future__ import print_function, division
 
 from statsmodels.base.model import Model
 import numpy as np
-from numpy.linalg import matrix_rank, qr
-from statsmodels.iolib import summary2
 from .multivariate_ols import _multivariate_ols_test, _hypotheses_doc
 from .multivariate_ols import MultivariateTestResults
 from .multivariate_ols import _multivariate_ols_fit
@@ -27,7 +25,6 @@ class MANOVA(Model):
         Dependent variables. A nobs x k_endog array where nobs is
         the number of observations and k_endog is the number of dependent
          variables.
-
     exog : array-like
         Independent variables. A nobs x k_exog array where nobs is the
         number of observations and k_exog is the number of independent
@@ -46,6 +43,9 @@ class MANOVA(Model):
 
     """
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+        if len(endog.shape) == 1 or endog.shape[1] == 1:
+            raise ValueError('There must be more than one dependent variable'
+                             ' to fit MANOVA!')
         super(MANOVA, self).__init__(endog, exog, **kwargs)
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 

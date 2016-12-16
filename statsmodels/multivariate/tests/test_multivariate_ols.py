@@ -3,8 +3,8 @@
 import numpy as np
 import pandas as pd
 from statsmodels.multivariate.multivariate_ols import _MultivariateOLS
-from numpy.testing import assert_array_almost_equal, assert_raises_regex
-
+from numpy.testing import assert_array_almost_equal, assert_raises
+import patsy
 
 data = pd.DataFrame([['Morphine', 'N', .04, .20, .10, .08],
                      ['Morphine', 'N', .02, .06, .02, .02],
@@ -31,7 +31,7 @@ for i in range(2, 6):
 
 def compare_r_output_dogs_data(method):
     ''' Testing within-subject effect interact with 2 between-subject effect
-    Compares with R car library linearHypothesis output
+    Compares with R car library Anova(, type=3) output
 
     Note: The test statistis Phillai, Wilks, Hotelling-Lawley
           and Roy are the same as R output but the approximate F and degree
@@ -105,8 +105,73 @@ def test_independent_variable_singular():
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * dup',
         data1, method='svd')
-    assert_raises_regex(ValueError, 'Covariance of x singular!', mod.fit)
+    assert_raises(ValueError, mod.fit)
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * dup',
         data1, method='pinv')
-    assert_raises_regex(ValueError, 'Covariance of x singular!', mod.fit)
+    assert_raises(ValueError,  mod.fit)
+
+
+def test_from_formula_vs_no_formula():
+    mod = _MultivariateOLS.from_formula(
+        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
+        data)
+    r = mod.fit(method='svd')
+    r0 = r.mv_test()
+    endog, exog = patsy.dmatrices(
+        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
+        data, return_type="dataframe")
+    L = np.array([[1, 0, 0, 0, 0, 0]])
+    # DataFrame input
+    r = _MultivariateOLS(endog, exog).fit(method='svd')
+    r1 = r.mv_test(hypotheses=[['Intercept', L, None]])
+    assert_array_almost_equal(r1['Intercept']['stat'].values,
+                              r0['Intercept']['stat'].values, decimal=6)
+    # Numpy array input
+    r = _MultivariateOLS(endog.values, exog.values).fit(method='svd')
+    r1 = r.mv_test(hypotheses=[['Intercept', L, None]])
+    assert_array_almost_equal(r1['Intercept']['stat'].values,
+                              r0['Intercept']['stat'].values, decimal=6)
+    L = np.array([[0, 1, 0, 0, 0, 0],
+                  [0, 0, 1, 0, 0, 0],
+                  ])
+    r1 = r.mv_test(hypotheses=[['Drug', L, None]])
+    # DataFrame input
+    r = _MultivariateOLS(endog, exog).fit(method='svd')
+    r1 = r.mv_test(hypotheses=[['Drug', L, None]])
+    assert_array_almost_equal(r1['Drug']['stat'].values,
+                              r0['Drug']['stat'].values, decimal=6)
+    # Numpy array input
+    r = _MultivariateOLS(endog.values, exog.values).fit(method='svd')
+    r1 = r.mv_test(hypotheses=[['Drug', L, None]])
+    assert_array_almost_equal(r1['Drug']['stat'].values,
+                              r0['Drug']['stat'].values, decimal=6)
+
+def test_L_M_matrices_1D_array():
+    mod = _MultivariateOLS.from_formula(
+        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
+        data)
+    r = mod.fit(method='svd')
+    L = np.array([1, 0, 0, 0, 0, 0])
+    assert_raises(ValueError, r.mv_test, hypotheses=[['Drug', L, None]])
+    L = np.array([[1, 0, 0, 0, 0, 0]])
+    M = np.array([1, 0, 0, 0, 0, 0])
+    assert_raises(ValueError, r.mv_test, hypotheses=[['Drug', L, M]])
+
+
+def test_exog_1D_array():
+    mod = _MultivariateOLS.from_formula(
+        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ 0 + Depleted',
+        data)
+    r = mod.fit(method='svd')
+    r0 = r.mv_test()
+    a = [[0.0019, 8.0000, 20.0000, 55.0013, 0.0000],
+         [1.8112, 8.0000, 22.0000, 26.3796, 0.0000],
+         [97.8858, 8.0000, 12.1818, 117.1133, 0.0000],
+         [93.2742, 4.0000, 11.0000, 256.5041, 0.0000]]
+    assert_array_almost_equal(r0['Depleted']['stat'].values, a, decimal=4)
+
+
+def test_endog_1D_array():
+    assert_raises(ValueError, _MultivariateOLS.from_formula,
+        'Histamine0 ~ 0 + Depleted', data)

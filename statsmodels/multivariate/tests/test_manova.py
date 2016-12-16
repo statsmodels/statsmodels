@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.multivariate.manova import MANOVA
 from numpy.testing import assert_almost_equal, assert_raises_regex
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_raises
 
 # Example data
 # https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
@@ -91,4 +91,5 @@ def test_manova_test_input_validation():
                         mod.mv_test, hypothesis)
 
 
-
+def test_endog_1D_array():
+    assert_raises(ValueError, MANOVA.from_formula, 'Basal ~ Loc', X)
