@@ -20,22 +20,29 @@ __docformat__ = 'restructuredtext en'
 _hypotheses_doc = """
     hypotheses: A list of tuples
         Hypothesis to be tested. Each element is an array-like
-                            (name, contrast_L, transform_M)
-        containing a string `name`, the contrast matrix L and the transform
-        matrix M (for transforming dependent variables), respectively.
+                       (name, contrast_L, transform_M)
+                                    or
+                       (name, contrast_L, transform_M, constant_C)
+        containing a string `name`, the contrast matrix L, the transform
+        matrix M (for transforming dependent variables), and right-hand side
+        constant matrix constant_C, respectively.
         contrast_L : array-like or an array of strings
-           Contrast matrix for hypotheses testing.
+           Left-hand side contrast matrix for hypotheses testing.
            If array-like, each row is an hypotheses and each column is an
            independent variable. At least 1 row
            (1 by k_exog, the number of independent variables) is required.
            If an array of strings, it will be passed to
            patsy.DesignInfo().linear_constraint.
         transform_M : array-like or an array of strings
-            Transform matrix.
+            Left hand side transform matrix.
             Default to be k_endog by k_endog identity matrix
             (i.e. do not transform y matrix).
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
+            If an array of strings, it will be passed to
+            patsy.DesignInfo().linear_constraint.
+        constant_C : array-like
+            Right-hand side constant matrix.
+            Must has the same number of rows as contrast_L and the same
+            number of columns as transform_M
         If `hypotheses` is None: 1) the effect of each independent variable
         on the dependent variables will be tested. Or 2) if model is created
         using a formula,  `hypotheses` will be created according to
@@ -227,11 +234,11 @@ def multivariate_stats(eigenvals,
 
 def _multivariate_ols_test(hypotheses, fit_results, exog_names,
                             endog_names):
-    def fn(L, M):
+    def fn(L, M, C):
         # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
         params, df_resid, inv_cov, sscpr = fit_results
         # t1 = (L * params)M
-        t1 = L.dot(params).dot(M)
+        t1 = L.dot(params).dot(M) - C
         # H = t1'L(X'X)^L't1
         t2 = L.dot(inv_cov).dot(L.T)
         q = matrix_rank(t2)
@@ -248,7 +255,15 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     k_xvar = len(exog_names)
     k_yvar = len(endog_names)
     results = {}
-    for name, L, M in hypotheses:
+    for i in hypotheses:
+        if len(i) == 3:
+            name, L, M = i
+            C = None
+        elif len(i) == 4:
+            name, L, M, C = i
+        else:
+            raise ValueError('hypotheses must be a tuple of length 3 or 4.'
+                             ' len(hypotheses)=%d' % len(i))
         if any(isinstance(i, string_types) for i in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
@@ -271,11 +286,21 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                                      'number of rows as the number of columns '
                                      'of endog! %d != %d' %
                                      (M.shape[0], k_yvar))
-        E, H, q, df_resid = fn(L, M)
+        if C is None:
+            C = np.zeros([L.shape[0], M.shape[1]])
+        if C.shape[0] != L.shape[0]:
+            raise ValueError('contrast L and constant C must have the same '
+                             'number of rows! %d!=%d'
+                             % (L.shape[0], C.shape[0]))
+        if C.shape[1] != M.shape[1]:
+            raise ValueError('transform M and constant C must have the same '
+                             'number of columns! %d!=%d'
+                             % (M.shape[1], C.shape[1]))
+        E, H, q, df_resid = fn(L, M, C)
         EH = np.add(E, H)
         p = matrix_rank(EH)
 
-        # eigenvalues of (E + H)^H
+        # eigenvalues of inv(E + H)H
         eigv2 = np.sort(eigvals(solve(EH, H)))
         stat_table = multivariate_stats(eigv2, p, q, df_resid)
 
@@ -405,10 +430,10 @@ class _MultivariateOLSResults(object):
     mv_test.__doc__=(
         """
         Testing the linear hypotheses
-            L * params * M = 0
+            L * params * M = C
         where `params` is the regression coefficient matrix for the
-        linear model y = x * params, `M` is a dependent variable transform
-        matrix.
+        linear model y = x * params, `L` is the contrast matrix, `M` is the
+         dependent variable transform matrix and C is the constant matrix.
 
         Parameters
         ----------

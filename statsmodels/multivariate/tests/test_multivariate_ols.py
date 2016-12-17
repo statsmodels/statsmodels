@@ -175,3 +175,26 @@ def test_exog_1D_array():
 def test_endog_1D_array():
     assert_raises(ValueError, _MultivariateOLS.from_formula,
         'Histamine0 ~ 0 + Depleted', data)
+
+def test_affine_hypothesis():
+    """ Testing affine hypothesis, compared with R car linearHypothesis
+    Note: The test statistis Phillai, Wilks, Hotelling-Lawley
+    and Roy are the same as R output but the approximate F and degree
+    of freedoms can be different. This is due to the fact that this
+    implementation is based on SAS formula [1]
+    """
+    mod = _MultivariateOLS.from_formula(
+        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
+        data)
+    r = mod.fit(method='svd')
+    L = np.array([[0, 1.2, 1.1, 1.3, 1.5, 1.4],
+                  [0, 3.2, 2.1, 3.3, 5.5, 4.4]])
+    M = None
+    C = np.array([[1, 2, 3, 4],
+                  [5, 6, 7, 8]])
+    r0 = r.mv_test(hypotheses=[('test1', L, M, C)])
+    a = [[0.0269, 8.0000, 12.0000, 7.6441, 0.0010],
+         [1.4277, 8.0000, 14.0000, 4.3657, 0.0080],
+         [19.2678, 8.0000, 6.6316, 13.7940, 0.0016],
+         [18.3470, 4.0000, 7.0000, 32.1072, 0.0001]]
+    assert_array_almost_equal(r0['test1']['stat'].values, a, decimal=4)
