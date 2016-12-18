@@ -19,28 +19,30 @@ __docformat__ = 'restructuredtext en'
 
 _hypotheses_doc = """
     hypotheses: A list of tuples
-        Hypothesis to be tested. Each element is an array-like
+        Hypothesis `L*B*M = C` to be tested where B is the parameters in
+        regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
+                       (name, contrast_L)
                        (name, contrast_L, transform_M)
-                                    or
                        (name, contrast_L, transform_M, constant_C)
         containing a string `name`, the contrast matrix L, the transform
         matrix M (for transforming dependent variables), and right-hand side
         constant matrix constant_C, respectively.
-        contrast_L : array-like or an array of strings
+        contrast_L : 2D array or an array of strings
            Left-hand side contrast matrix for hypotheses testing.
            If array-like, each row is an hypotheses and each column is an
            independent variable. At least 1 row
            (1 by k_exog, the number of independent variables) is required.
            If an array of strings, it will be passed to
            patsy.DesignInfo().linear_constraint.
-        transform_M : array-like or an array of strings
+        transform_M : 2D array or an array of strings or None, optional
             Left hand side transform matrix.
-            Default to be k_endog by k_endog identity matrix
-            (i.e. do not transform y matrix).
+            If `None` or left out, it is set to a k_endog by k_endog
+            identity matrix (i.e. do not transform y matrix).
             If an array of strings, it will be passed to
             patsy.DesignInfo().linear_constraint.
-        constant_C : array-like
+        constant_C : 2D array or None, optional
             Right-hand side constant matrix.
+            if `None` or left out it is set to a matrix of zeros
             Must has the same number of rows as contrast_L and the same
             number of columns as transform_M
         If `hypotheses` is None: 1) the effect of each independent variable
@@ -256,18 +258,22 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     k_yvar = len(endog_names)
     results = {}
     for i in hypotheses:
-        if len(i) == 3:
+        if len(i) ==2:
+            name, L = i
+            M = None
+            C = None
+        elif len(i) == 3:
             name, L, M = i
             C = None
         elif len(i) == 4:
             name, L, M, C = i
         else:
-            raise ValueError('hypotheses must be a tuple of length 3 or 4.'
+            raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
                              ' len(hypotheses)=%d' % len(i))
-        if any(isinstance(i, string_types) for i in L):
+        if any(isinstance(j, string_types) for j in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
-            if len(L.shape) != 2:
+            if not isinstance(L, np.ndarray) or len(L.shape) != 2:
                 raise ValueError('Contrast matrix L must be a 2-d array!')
             if L.shape[1] != k_xvar:
                 raise ValueError('Contrast matrix L should have the same '
@@ -275,11 +281,11 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                                  (L.shape[1], k_xvar))
         if M is None:
             M = np.eye(k_yvar)
-        elif any(isinstance(i, string_types) for i in M):
+        elif any(isinstance(j, string_types) for j in M):
             M = DesignInfo(endog_names).linear_constraint(M).coefs.T
         else:
             if M is not None:
-                if len(M.shape) != 2:
+                if not isinstance(M, np.ndarray) or len(M.shape) != 2:
                     raise ValueError('Transform matrix M must be a 2-d array!')
                 if M.shape[0] != k_yvar:
                     raise ValueError('Transform matrix M should have the same '
@@ -288,6 +294,9 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                                      (M.shape[0], k_yvar))
         if C is None:
             C = np.zeros([L.shape[0], M.shape[1]])
+        elif not isinstance(C, np.ndarray):
+            raise ValueError('Constant matrix C must be a 2-d array!')
+
         if C.shape[0] != L.shape[0]:
             raise ValueError('contrast L and constant C must have the same '
                              'number of rows! %d!=%d'
