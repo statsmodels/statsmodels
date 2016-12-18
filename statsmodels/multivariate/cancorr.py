@@ -71,11 +71,15 @@ class CanCorr(Model):
         # vx_ds = vx.T divided by sx
         vx_ds = vx.T
         mask = sx > tolerance
+        if mask.sum() < len(mask):
+            raise ValueError('exog is collinearity!')
         vx_ds[:, mask] /= sx[mask]
         uy, sy, vy = svd(y, 0)
         # vy_ds = vy.T divided by sy
         vy_ds = vy.T
         mask = sy > tolerance
+        if mask.sum() < len(mask):
+            raise ValueError('endog is collinearity!')
         vy_ds[:, mask] /= sy[mask]
         u, s, v = svd(ux.T.dot(uy), 0)
 
