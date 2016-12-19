@@ -149,7 +149,10 @@ def multivariate_stats(eigenvals,
 
     Returns
     -------
+    A DataFrame
 
+    References
+    ----------
     .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     """
     v = df_resid

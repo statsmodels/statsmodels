@@ -39,6 +39,8 @@ class CanCorr(Model):
     x_cancoeff: array
         The canonical coefficients for exog
 
+    References
+    ----------
     .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
     .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
     .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
@@ -57,10 +59,6 @@ class CanCorr(Model):
         ----------
         tolerance : float
             eigenvalue tolerance, values smaller than which is considered 0
-        Returns
-        -------
-        CanCorrResults instance
-
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
@@ -103,6 +101,7 @@ class CanCorr(Model):
 
         Returns
         -------
+        CanCorrTestResults instance
 
         """
         nobs, k_yvar = self.endog.shape
