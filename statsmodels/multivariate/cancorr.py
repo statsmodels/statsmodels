@@ -4,13 +4,14 @@
 
 author: Yichuan Liu
 """
-from __future__ import print_function, division
+from __future__ import division
 
-from statsmodels.base.model import Model
 import numpy as np
 from numpy.linalg import svd
 from scipy import stats
 import pandas as pd
+
+from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
 from .multivariate_ols import multivariate_stats
 
@@ -19,7 +20,8 @@ class CanCorr(Model):
     """
     Canonical correlation analysis using singluar value decomposition
 
-    For matrices x and y, find projections x_cancoef and y_cancoef such that:
+    For matrices exog=x and endog=y, find projections x_cancoef and y_cancoef
+    such that:
         x1 = x * x_cancoef, x1' * x1 is identity matrix
         y1 = y * y_cancoef, y1' * y1 is identity matrix
     and the correlation between x1 and y1 is maximized.
@@ -30,15 +32,12 @@ class CanCorr(Model):
         See Parameters.
     exog : array
         See Parameters.
-    design_info : patsy.DesignInfo
-        Contain design info for the independent variables if model is
-        constructed using `from_formula`
     corr_values : array
         The canonical correlation values
-    x_cancoeff: array
-        The canonical coefficients for exog
     y_cancoeff: array
         The canonical coeefficients for endog
+    x_cancoeff: array
+        The canonical coefficients for exog
 
     .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
     .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
@@ -50,12 +49,16 @@ class CanCorr(Model):
     def fit(self, tolerance=1e-8):
         """Fit the model
 
+        A ValueError is raised if there are singular values smaller than the
+        tolerance. The treatment of singular arrays might change in future.
+
         Parameters
         ----------
         tolerance : float
             eigenvalue tolerance, values smaller than which is considered 0
         Returns
         -------
+        CanCorrResults instance
 
         """
         nobs, k_yvar = self.endog.shape
@@ -72,14 +75,14 @@ class CanCorr(Model):
         vx_ds = vx.T
         mask = sx > tolerance
         if mask.sum() < len(mask):
-            raise ValueError('exog is collinearity!')
+            raise ValueError('exog is collinear.')
         vx_ds[:, mask] /= sx[mask]
         uy, sy, vy = svd(y, 0)
         # vy_ds = vy.T divided by sy
         vy_ds = vy.T
         mask = sy > tolerance
         if mask.sum() < len(mask):
-            raise ValueError('endog is collinearity!')
+            raise ValueError('endog is collinear.')
         vy_ds[:, mask] /= sy[mask]
         u, s, v = svd(ux.T.dot(uy), 0)
 
@@ -116,7 +119,16 @@ class CanCorrResults(object):
         nobs, self.k_xvar = fitted_cancorr.exog.shape
 
     def f_test(self):
-        # Approximate F test using Wilk's lambda and other statistics
+        """Approximate F test
+        Perform multivariate statistical tests of the hypothesis that
+        there is no canonical correlation between endog and exog.
+        For each canonical correlation, testing its significance based on
+        Wilks' lambda.
+
+        Returns
+        -------
+
+        """
         k_yvar = self.k_yvar
         k_xvar = self.k_xvar
         nobs = self.nobs

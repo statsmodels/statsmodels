@@ -4,35 +4,35 @@
 
 author: Yichuan Liu
 """
-from __future__ import print_function, division
+from __future__ import division
 
-from statsmodels.base.model import Model
 import numpy as np
+from statsmodels.base.model import Model
 from .multivariate_ols import _multivariate_ols_test, _hypotheses_doc
-from .multivariate_ols import MultivariateTestResults
 from .multivariate_ols import _multivariate_ols_fit
+from .multivariate_ols import MultivariateTestResults
 __docformat__ = 'restructuredtext en'
 
 
 class MANOVA(Model):
     """
     Multivariate analysis of variance
-
+    The implementation of MANOVA is based on multivariate regression and does
+    not assume that the explanatory variables are categorical. Any type of
+    variables as in regression is allowed.
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Dependent variables. A nobs x k_endog array where nobs is
         the number of observations and k_endog is the number of dependent
          variables.
-    exog : array-like
+    exog : array_like
         Independent variables. A nobs x k_exog array where nobs is the
         number of observations and k_exog is the number of independent
         variables. An intercept is not included by default and should be added
-        by the user (models specified using a formula include an intercept by
-        default)
-
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+        by the user. Models specified using a formula include an intercept by
+        default.
 
     Attributes
     -----------
@@ -41,6 +41,9 @@ class MANOVA(Model):
     exog : array
         See Parameters.
 
+    References
+    ----------
+    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
@@ -69,7 +72,8 @@ class MANOVA(Model):
         results = _multivariate_ols_test(hypotheses, self._fittedmod,
                                          self.exog_names, self.endog_names)
 
-        return MultivariateTestResults(results)
+        return MultivariateTestResults(results, self.endog_names,
+                                       self.exog_names)
     mv_test.__doc__ = (
         """
         Testing the linear hypotheses

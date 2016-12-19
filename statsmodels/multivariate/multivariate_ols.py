@@ -4,15 +4,15 @@
 
 author: Yichuan Liu
 """
-from __future__ import print_function, division
+from __future__ import division
 
 import numpy as np
 from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
 from scipy import stats
 import pandas as pd
 from patsy import DesignInfo
-from statsmodels.compat import string_types
 
+from statsmodels.compat import string_types
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
 __docformat__ = 'restructuredtext en'
@@ -29,7 +29,7 @@ _hypotheses_doc = """
         constant matrix constant_C, respectively.
         contrast_L : 2D array or an array of strings
            Left-hand side contrast matrix for hypotheses testing.
-           If array-like, each row is an hypotheses and each column is an
+           If 2D array, each row is an hypotheses and each column is an
            independent variable. At least 1 row
            (1 by k_exog, the number of independent variables) is required.
            If an array of strings, it will be passed to
@@ -61,9 +61,9 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         each column is a dependent variable
-    exog : array-like
+    exog : array_like
         each column is a independent variable
     method : string
         'svd' - Singular value decomposition
@@ -257,19 +257,19 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     k_xvar = len(exog_names)
     k_yvar = len(endog_names)
     results = {}
-    for i in hypotheses:
-        if len(i) ==2:
-            name, L = i
+    for hypo in hypotheses:
+        if len(hypo) ==2:
+            name, L = hypo
             M = None
             C = None
-        elif len(i) == 3:
-            name, L, M = i
+        elif len(hypo) == 3:
+            name, L, M = hypo
             C = None
-        elif len(i) == 4:
-            name, L, M, C = i
+        elif len(hypo) == 4:
+            name, L, M, C = hypo
         else:
             raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
-                             ' len(hypotheses)=%d' % len(i))
+                             ' len(hypotheses)=%d' % len(hypo))
         if any(isinstance(j, string_types) for j in L):
             L = DesignInfo(exog_names).linear_constraint(L).coefs
         else:
@@ -314,7 +314,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         stat_table = multivariate_stats(eigv2, p, q, df_resid)
 
         results[name] = {'stat':stat_table, 'contrast_L':L,
-                         'transform_M':M}
+                         'transform_M':M, 'constant_C':C}
     return results
 
 _multivariate_test.__doc__ = (
@@ -359,11 +359,11 @@ class _MultivariateOLS(Model):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Dependent variables. A nobs x k_endog array where nobs is
         the number of observations and k_endog is the number of dependent
         variables
-    exog : array-like
+    exog : array_like
         Independent variables. A nobs x k_exog array where nobs is the
         number of observations and k_exog is the number of independent
         variables. An intercept is not included by default and should be added
@@ -393,10 +393,6 @@ class _MultivariateOLSResults(object):
     """
     _MultivariateOLS results class
 
-    Can be accessed as a list, each element containing a tuple (name, df) where
-    `name` is the effect (i.e. term in model) name and `df` is a DataFrame
-    containing the test statistics
-
     """
     def __init__(self, fitted_mv_ols):
         if (hasattr(fitted_mv_ols, 'data') and
@@ -410,9 +406,6 @@ class _MultivariateOLSResults(object):
 
     def __str__(self):
         return self.summary().__str__()
-
-    def __getitem__(self, item):
-        return self.results[item]
 
     def mv_test(self, hypotheses=None):
 
@@ -435,7 +428,9 @@ class _MultivariateOLSResults(object):
         results = _multivariate_ols_test(hypotheses, self._fittedmod,
                                           self.exog_names, self.endog_names)
 
-        return MultivariateTestResults(results)
+        return MultivariateTestResults(results,
+                                       self.endog_names,
+                                       self.exog_names)
     mv_test.__doc__=(
         """
         Testing the linear hypotheses
@@ -458,8 +453,26 @@ class _MultivariateOLSResults(object):
 
 
 class MultivariateTestResults(object):
-    def __init__(self, mv_test_df):
+    """ Multivariate test results class
+    Returned by `mv_test` method of `_MultivariateOLSResults` class
+
+    Attributes
+    -----------
+    results : dict
+       For hypothesis name `key`:
+           results[key]['stat'] contains the multivaraite test results
+           results[key]['contrast_L'] contains the contrast_L matrix
+           results[key]['transform_M'] contains the transform_M matrix
+           results[key]['constant_C'] contains the constant_C matrix
+    endog_names : string
+    exog_names : string
+    summary_frame : multiindex dataframe
+        Returns results as a multiindex dataframe
+    """
+    def __init__(self, mv_test_df, endog_names, exog_names):
         self.results = mv_test_df
+        self.endog_names = endog_names
+        self.exog_names = exog_names
 
     def __str__(self):
         return self.summary().__str__()
@@ -482,7 +495,8 @@ class MultivariateTestResults(object):
         df.index.set_names(['Effect', 'Statistic'], inplace=True)
         return df
 
-    def summary(self, contrast_L=False, transform_M=False):
+    def summary(self, show_contrast_L=False, show_transform_M=False,
+                show_constant_C=False):
         """
 
         Parameters
@@ -503,15 +517,18 @@ class MultivariateTestResults(object):
             df.columns = c
             df.index = ['', '', '', '']
             summ.add_df(df)
-            if contrast_L:
+            if show_contrast_L:
                 summ.add_dict({key:' contrast L='})
                 df = pd.DataFrame(self.results[key]['contrast_L'],
                                   columns=self.exog_names)
                 summ.add_df(df)
-            if transform_M:
+            if show_transform_M:
                 summ.add_dict({key:' transform M='})
                 df = pd.DataFrame(self.results[key]['transform_M'],
                                   index=self.endog_names)
-                print(df)
+                summ.add_df(df)
+            if show_constant_C:
+                summ.add_dict({key:' constant C='})
+                df = pd.DataFrame(self.results[key]['constant_C'])
                 summ.add_df(df)
         return summ
