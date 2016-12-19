@@ -198,5 +198,5 @@ def test_affine_hypothesis():
          [19.2678, 8.0000, 6.6316, 13.7940, 0.0016],
          [18.3470, 4.0000, 7.0000, 32.1072, 0.0001]]
     assert_array_almost_equal(r0['test1']['stat'].values, a, decimal=4)
-    print(r0.summary(show_contrast_L=True, show_transform_M=True,
-                    show_constant_C=True))
+    r0.summary(show_contrast_L=True, show_transform_M=True,
+               show_constant_C=True)
