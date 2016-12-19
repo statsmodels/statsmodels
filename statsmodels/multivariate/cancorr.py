@@ -8,7 +8,7 @@ from __future__ import division
 
 import numpy as np
 from numpy.linalg import svd
-from scipy import stats
+import scipy
 import pandas as pd
 
 from statsmodels.base.model import Model
@@ -43,10 +43,11 @@ class CanCorr(Model):
     .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
     .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """
-    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+    def __init__(self, endog, exog, tolerance=1e-8, missing='none', hasconst=None, **kwargs):
         super(CanCorr, self).__init__(endog, exog, **kwargs)
+        self._fit(tolerance)
 
-    def fit(self, tolerance=1e-8):
+    def _fit(self, tolerance=1e-8):
         """Fit the model
 
         A ValueError is raised if there are singular values smaller than the
@@ -93,32 +94,7 @@ class CanCorr(Model):
         self.x_cancoef = vx_ds.dot(u[:, :k])
         self.y_cancoef = vy_ds.dot(v.T[:, :k])
 
-        return CanCorrResults(self)
-
-
-class CanCorrResults(object):
-    """
-    Canonical correlation results class
-
-    Parameters
-    ----------
-    fitted_cancorr : fitted CanCorr object
-
-    Attributes
-    -----------
-    stats : DataFrame
-        Contain statistical tests results for each canonical correlation
-    stats_mv : DataFrame
-        Contain the multivariate statistical tests results
-    """
-    def __init__(self, fitted_cancorr):
-        self.cor_values = fitted_cancorr.cor_values
-        self.x_cancoef = fitted_cancorr.x_cancoef
-        self.y_cancoef = fitted_cancorr.y_cancoef
-        self.nobs, self.k_yvar = fitted_cancorr.endog.shape
-        nobs, self.k_xvar = fitted_cancorr.exog.shape
-
-    def f_test(self):
+    def corr_test(self):
         """Approximate F test
         Perform multivariate statistical tests of the hypothesis that
         there is no canonical correlation between endog and exog.
@@ -129,10 +105,9 @@ class CanCorrResults(object):
         -------
 
         """
-        k_yvar = self.k_yvar
-        k_xvar = self.k_xvar
-        nobs = self.nobs
-        self.stats = pd.DataFrame()
+        nobs, k_yvar = self.endog.shape
+        nobs, k_xvar = self.exog.shape
+        stats = pd.DataFrame()
         eigenvals = np.power(self.cor_values, 2)
         prod = 1
         for i in range(len(eigenvals) - 1, -1, -1):
@@ -142,36 +117,54 @@ class CanCorrResults(object):
             r = (nobs - k_yvar - 1) - (p - q + 1) / 2
             u = (p * q - 2) / 4
             df1 = p * q
-            if p**2 + q**2 - 5 > 0:
-                t = np.sqrt(((p*q)**2 - 4) / (p**2 + q**2 - 5))
+            if p ** 2 + q ** 2 - 5 > 0:
+                t = np.sqrt(((p * q) ** 2 - 4) / (p ** 2 + q ** 2 - 5))
             else:
                 t = 1
             df2 = r * t - 2 * u
             lmd = np.power(prod, 1 / t)
             F = (1 - lmd) / lmd * df2 / df1
-            self.stats.loc[i, 'Canonical Correlation'] = self.cor_values[i]
-            self.stats.loc[i, "Wilks' lambda"] = prod
-            self.stats.loc[i, 'Num DF'] = df1
-            self.stats.loc[i, 'Den DF'] = df2
-            self.stats.loc[i, 'F Value'] = F
-            pval = stats.f.sf(F, df1, df2)
-            self.stats.loc[i, 'Pr > F'] = pval
+            stats.loc[i, 'Canonical Correlation'] = self.cor_values[i]
+            stats.loc[i, "Wilks' lambda"] = prod
+            stats.loc[i, 'Num DF'] = df1
+            stats.loc[i, 'Den DF'] = df2
+            stats.loc[i, 'F Value'] = F
+            pval = scipy.stats.f.sf(F, df1, df2)
+            stats.loc[i, 'Pr > F'] = pval
             '''
             # Wilk's Chi square test of each canonical correlation
             df = (p - i + 1) * (q - i + 1)
             chi2 = a * np.log(prod)
             pval = stats.chi2.sf(chi2, df)
-            self.stats.loc[i, 'Canonical correlation'] = self.cancorr[i]
-            self.stats.loc[i, 'Chi-square'] = chi2
-            self.stats.loc[i, 'DF'] = df
-            self.stats.loc[i, 'Pr > ChiSq'] = pval
+            stats.loc[i, 'Canonical correlation'] = self.cancorr[i]
+            stats.loc[i, 'Chi-square'] = chi2
+            stats.loc[i, 'DF'] = df
+            stats.loc[i, 'Pr > ChiSq'] = pval
             '''
-        ind = self.stats.index.values[::-1]
-        self.stats = self.stats.loc[ind, :]
+        ind = stats.index.values[::-1]
+        stats = stats.loc[ind, :]
 
         # Multivariate tests (remember x has mean removed)
-        self.stats_mv = multivariate_stats(eigenvals,
-                                           k_yvar, k_xvar, nobs - k_xvar - 1)
+        stats_mv = multivariate_stats(eigenvals,
+                                      k_yvar, k_xvar, nobs - k_xvar - 1)
+        return CanCorrTestResults(stats, stats_mv)
+
+
+class CanCorrTestResults(object):
+    """
+    Canonical correlation results class
+
+    Attributes
+    -----------
+    stats : DataFrame
+        Contain statistical tests results for each canonical correlation
+    stats_mv : DataFrame
+        Contain the multivariate statistical tests results
+    """
+    def __init__(self, stats, stats_mv):
+        self.stats = stats
+        self.stats_mv = stats_mv
+
     def __str__(self):
         return self.summary().__str__()
 
