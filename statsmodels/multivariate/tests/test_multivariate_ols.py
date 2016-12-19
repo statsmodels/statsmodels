@@ -78,7 +78,7 @@ def test_glm_dogs_example():
 def test_specify_L_M_by_string():
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
-        data, method='svd')
+        data)
     r = mod.fit()
     r1 = r.mv_test(hypotheses=[['Intercept', ['Intercept'], None]])
     a = [[2.68607660e-02, 4, 6, 5.43435304e+01, 7.59585610e-05],
@@ -104,11 +104,11 @@ def test_independent_variable_singular():
     data1['dup'] = data1['Drug']
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * dup',
-        data1, method='svd')
+        data1)
     assert_raises(ValueError, mod.fit)
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * dup',
-        data1, method='pinv')
+        data1)
     assert_raises(ValueError,  mod.fit)
 
 

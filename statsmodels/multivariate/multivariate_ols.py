@@ -384,7 +384,8 @@ class _MultivariateOLS(Model):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
             raise ValueError('There must be more than one dependent variable'
                              ' to fit multivariate OLS!')
-        super(_MultivariateOLS, self).__init__(endog, exog, **kwargs)
+        super(_MultivariateOLS, self).__init__(endog, exog, missing=missing,
+                                               hasconst=hasconst, **kwargs)
 
     def fit(self, method='svd'):
         self._fittedmod = _multivariate_ols_fit(

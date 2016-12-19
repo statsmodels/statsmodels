@@ -32,7 +32,7 @@ class CanCorr(Model):
         See Parameters.
     exog : array
         See Parameters.
-    corr_values : array
+    cancorr : array
         The canonical correlation values
     y_cancoeff: array
         The canonical coeefficients for endog
@@ -46,7 +46,8 @@ class CanCorr(Model):
     .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """
     def __init__(self, endog, exog, tolerance=1e-8, missing='none', hasconst=None, **kwargs):
-        super(CanCorr, self).__init__(endog, exog, **kwargs)
+        super(CanCorr, self).__init__(endog, exog, missing=missing,
+                                      hasconst=hasconst, **kwargs)
         self._fit(tolerance)
 
     def _fit(self, tolerance=1e-8):
@@ -86,8 +87,7 @@ class CanCorr(Model):
         u, s, v = svd(ux.T.dot(uy), 0)
 
         # Correct any roundoff
-        self.cor_values= np.array([max(0, min(s[i], 1))
-                                   for i in range(len(s))])
+        self.cancorr = np.array([max(0, min(s[i], 1)) for i in range(len(s))])
 
         self.x_cancoef = vx_ds.dot(u[:, :k])
         self.y_cancoef = vy_ds.dot(v.T[:, :k])
@@ -107,7 +107,7 @@ class CanCorr(Model):
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
         stats = pd.DataFrame()
-        eigenvals = np.power(self.cor_values, 2)
+        eigenvals = np.power(self.cancorr, 2)
         prod = 1
         for i in range(len(eigenvals) - 1, -1, -1):
             prod *= 1 - eigenvals[i]
@@ -123,7 +123,7 @@ class CanCorr(Model):
             df2 = r * t - 2 * u
             lmd = np.power(prod, 1 / t)
             F = (1 - lmd) / lmd * df2 / df1
-            stats.loc[i, 'Canonical Correlation'] = self.cor_values[i]
+            stats.loc[i, 'Canonical Correlation'] = self.cancorr[i]
             stats.loc[i, "Wilks' lambda"] = prod
             stats.loc[i, 'Num DF'] = df1
             stats.loc[i, 'Den DF'] = df2

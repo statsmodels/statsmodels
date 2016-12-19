@@ -49,7 +49,8 @@ class MANOVA(Model):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
             raise ValueError('There must be more than one dependent variable'
                              ' to fit MANOVA!')
-        super(MANOVA, self).__init__(endog, exog, **kwargs)
+        super(MANOVA, self).__init__(endog, exog, missing=missing,
+                                     hasconst=hasconst, **kwargs)
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 
     def mv_test(self, hypotheses=None):
