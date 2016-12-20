@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from ..anova import AnovaRM
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_raises
 
 
 DV = [7, 3, 6, 6, 5, 8, 6, 7,
@@ -79,7 +79,7 @@ def test_single_factor_repeated_measures_anova():
     Testing single factor repeated measures anova
     Results reproduces R `ezANOVA` function from library ez
     """
-    df = AnovaRM(data.iloc[:16, :], 'DV', within=['B'], subject='id').fit()
+    df = AnovaRM(data.iloc[:16, :], 'DV', 'id', within=['B']).fit()
     a = [[1, 7, 22.4, 0.002125452]]
     assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values,
                               a, decimal=5)
@@ -90,7 +90,7 @@ def test_two_factors_repeated_measures_anova():
     Testing two factors repeated measures anova
     Results reproduces R `ezANOVA` function from library ez
     """
-    df = AnovaRM(data.iloc[:48, :], 'DV', within=['A', 'B'], subject='id').fit()
+    df = AnovaRM(data.iloc[:48, :], 'DV', 'id', within=['A', 'B']).fit()
     a = [[1, 7, 40.14159, 3.905263e-04],
          [2, 14, 29.21739, 1.007549e-05],
          [2, 14, 17.10545, 1.741322e-04]]
@@ -103,7 +103,7 @@ def test_three_factors_repeated_measures_anova():
     Testing three factors repeated measures anova
     Results reproduces R `ezANOVA` function from library ez
     """
-    df = AnovaRM(data, 'DV', within=['A', 'B', 'D'], subject='id').fit()
+    df = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
     a = [[1,  7,  8.7650709, 0.021087505],
          [2, 14,  8.4985785, 0.003833921],
          [1,  7, 20.5076546, 0.002704428],
@@ -115,9 +115,20 @@ def test_three_factors_repeated_measures_anova():
                               a, decimal=5)
 
 
-def test_invalid_factor_name():
+def test_repeated_measures_invalid_factor_name():
     """
     Test with a factor name of 'C', which conflicts with patsy.
     """
-    with pytest.raises(ValueError):
-        AnovaRM(data.iloc[:16, :], 'DV', within=['C'], subject='id').fit()
+    assert_raises(ValueError, AnovaRM, data.iloc[:16, :], 'DV', 'id',
+                  within=['C'])
+
+
+def test_repeated_measures_collinearity():
+    data1 = data.iloc[:48, :].copy()
+    data1['E'] = data1['A']
+    assert_raises(ValueError, AnovaRM, data1, 'DV', 'id', within=['A', 'E'])
+
+
+def test_repeated_measures_unbalanced_data():
+    assert_raises(ValueError, AnovaRM, data.iloc[1:48, :], 'DV', 'id',
+                  within=['A', 'B'])
