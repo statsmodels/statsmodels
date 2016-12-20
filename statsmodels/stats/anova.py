@@ -383,6 +383,8 @@ class AnovaRM(object):
     data : DataFrame
     dv : string
         The dependent variable in `data`
+    subject : string
+        Specify the subject id
     within : a list of string(s)
         The within-subject factors
     between : a list of string(s)
@@ -400,7 +402,7 @@ class AnovaRM(object):
 
     """
 
-    def __init__(self, data, dv, within=None, between=None, subject=None):
+    def __init__(self, data, dv, subject, within=None, between=None):
         self.data = data
         self.dv = dv
         self.within = within
@@ -412,6 +414,34 @@ class AnovaRM(object):
             raise NotImplementedError('Between subject effect not '
                                       'yet supported!')
         self.subject = subject
+        self._check_data_balanced()
+
+    def _check_data_balanced(self):
+        factor_levels = 1
+        for wi in self.within:
+            factor_levels *= len(self.data[wi].unique())
+
+        cell_count = {}
+        for index in range(self.data.shape[0]):
+            key = []
+            for col in self.within:
+                key.append(self.data[col].iloc[index])
+            key = tuple(key)
+            if key in cell_count:
+                cell_count[key] = cell_count[key] + 1
+            else:
+                cell_count[key] = 1
+        error_message = "Data is unbalanced."
+        if len(cell_count) != factor_levels:
+            raise ValueError(error_message)
+        count = cell_count[key]
+        for key in cell_count:
+            if count != cell_count[key]:
+                raise ValueError(error_message)
+        if self.data.shape[0] > count * factor_levels:
+            raise ValueError('There are more than 1 element in a cell! Missing'
+                             ' factors?')
+
 
     def fit(self):
         y = self.data[self.dv].values
