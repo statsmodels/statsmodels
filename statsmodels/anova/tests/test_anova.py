@@ -119,7 +119,5 @@ def test_invalid_factor_name():
     """
     Test with a factor name of 'C', which conflicts with patsy.
     """
-    C = B
-
     with pytest.raises(ValueError):
-        ANOVA(data.iloc[:48, :], 'DV', within=['A', 'C'], subject='id').fit()
+        ANOVA(data.iloc[:16, :], 'DV', within=['C'], subject='id').fit()
