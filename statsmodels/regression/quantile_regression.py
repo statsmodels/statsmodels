@@ -185,8 +185,8 @@ class QuantReg(RegressionModel):
                 for ii in range(2, 10):
                     if np.all(beta == history['params'][-ii]):
                         cycle = True
+                        warnings.warn("Convergence cycle detected", ConvergenceWarning)
                         break
-                warnings.warn("Convergence cycle detected", ConvergenceWarning)
 
         if n_iter == max_iter:
             warnings.warn("Maximum number of iterations (" + str(max_iter) + 
