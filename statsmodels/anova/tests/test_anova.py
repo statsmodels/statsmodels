@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from ..anova import ANOVA
 from numpy.testing import assert_array_almost_equal
 
@@ -103,3 +104,12 @@ def test_three_factors_repeated_measures_anova():
          [2, 14,  5.4253359, 0.018010647]]
     assert_array_almost_equal(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
                               a, decimal=5)
+
+def test_invalid_factor_name():
+    """
+    Test with a factor name of 'C', which conflicts with patsy.
+    """
+    C = B
+
+    with pytest.raises(ValueError):
+        ANOVA(data.iloc[:48, :], 'DV', within=['A', 'C'], subject='id').fit()
