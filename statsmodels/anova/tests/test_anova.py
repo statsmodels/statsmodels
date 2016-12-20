@@ -3,6 +3,7 @@ import pytest
 from ..anova import ANOVA
 from numpy.testing import assert_array_almost_equal
 
+
 DV = [7, 3, 6, 6, 5, 8, 6, 7,
       7, 11, 9, 11, 10, 10, 11, 11,
       8, 14, 10, 11, 12, 10, 11, 12,
@@ -15,6 +16,7 @@ DV = [7, 3, 6, 6, 5, 8, 6, 7,
       12, 7, 12, 3, 19, 1, 4, 13,
       13, 14, 3, 4, 8, 19, 21, 2,
       4, 9, 12, 2, 5, 8, 2, 4]
+
 id = [1, 2, 3, 4, 5, 6, 7, 8,
       1, 2, 3, 4, 5, 6, 7, 8,
       1, 2, 3, 4, 5, 6, 7, 8,
@@ -27,43 +29,48 @@ id = [1, 2, 3, 4, 5, 6, 7, 8,
       1, 2, 3, 4, 5, 6, 7, 8,
       1, 2, 3, 4, 5, 6, 7, 8,
       1, 2, 3, 4, 5, 6, 7, 8]
+
 id = ['%d' % i for i in id]
-A =  ['a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b']
-B =  ['a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'c','c','c','c','c','c','c','c',
-      'a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'c','c','c','c','c','c','c','c',
-      'a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'c','c','c','c','c','c','c','c',
-      'a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'c','c','c','c','c','c','c','c']
-D =  ['a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'a','a','a','a','a','a','a','a',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b',
-      'b','b','b','b','b','b','b','b']
+
+A = ['a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b']
+
+B = ['a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'c','c','c','c','c','c','c','c',
+     'a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'c','c','c','c','c','c','c','c',
+     'a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'c','c','c','c','c','c','c','c',
+     'a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'c','c','c','c','c','c','c','c']
+
+D = ['a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'a','a','a','a','a','a','a','a',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b',
+     'b','b','b','b','b','b','b','b']
+
 data = pd.DataFrame([id, A, B, D, DV], index=['id', 'A', 'B', 'D', 'DV']).T
 
 
@@ -77,6 +84,7 @@ def test_single_factor_repeated_measures_anova():
     assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values,
                               a, decimal=5)
 
+
 def test_two_factors_repeated_measures_anova():
     """
     Testing two factors repeated measures anova
@@ -88,6 +96,7 @@ def test_two_factors_repeated_measures_anova():
          [2, 14, 17.10545, 1.741322e-04]]
     assert_array_almost_equal(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
                               a, decimal=5)
+
 
 def test_three_factors_repeated_measures_anova():
     """
@@ -104,6 +113,7 @@ def test_three_factors_repeated_measures_anova():
          [2, 14,  5.4253359, 0.018010647]]
     assert_array_almost_equal(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
                               a, decimal=5)
+
 
 def test_invalid_factor_name():
     """
