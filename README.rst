@@ -47,7 +47,7 @@ Main Features
 
   - Logit and Probit
   - Multinomial logit (MNLogit)
-  - Poisson regresion
+  - Poisson regression
   - Negative Binomial regression
 
 * RLM: Robust linear models with support for several M-estimators.
@@ -86,11 +86,11 @@ Main Features
 * I/O
 
   - Tools for reading Stata .dta files into numpy arrays.
-  - Table output to ascii, latex, and html
+  - Table output to ASCII, LaTeX, and HTML
 
 * Miscellaneous models
 * Sandbox: statsmodels contains a sandbox folder with code in various stages of
-  developement and testing which is not considered "production ready".   This covers
+  development and testing which is not considered "production ready".   This covers
   among others
 
   - Generalized method of moments (GMM) estimators
