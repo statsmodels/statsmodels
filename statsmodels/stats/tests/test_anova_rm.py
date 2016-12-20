@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 from ..anova import AnovaRM
 from numpy.testing import assert_array_almost_equal, assert_raises
 
