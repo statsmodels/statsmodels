@@ -2392,7 +2392,7 @@ class NominalGEEResults(GEEResults):
         exog_names = [x.split("[")[0] for x in exog_names]
 
         params = np.reshape(self.params,
-                            (ncut, len(self.params) / ncut))
+                            (ncut, len(self.params) // ncut))
 
         for ev in exog_values:
 
