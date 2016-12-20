@@ -44,11 +44,9 @@ class ANOVA(object):
         self.data = data
         self.dv = dv
         self.within = within
-        for factor in within:
-            if factor == 'C':
-                raise ValueError('Factor name cannot be "C"! This is '
-                                 'conflict with patsy contrast function '
-                                 'name')
+        if 'C' in within:
+            raise ValueError("Factor name cannot be 'C'! This is in  conflict "
+                             "with patsy's contrast function name.")
         self.between = between
         if between is not None:
             raise NotImplementedError('Between subject effect not '
