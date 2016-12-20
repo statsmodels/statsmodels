@@ -382,7 +382,7 @@ class AnovaRM(object):
     ----------
     data : DataFrame
     dv : string
-        Dependent variable
+        The dependent variable in `data`
     within : a list of string(s)
         The within-subject factors
     between : a list of string(s)
@@ -424,6 +424,25 @@ class AnovaRM(object):
             return ind
 
         def _ssr_reduced_model(y, x, term_slices, params, keys):
+            """
+            Residual sum of squared of OLS model excluding factors in `keys`
+            Assumes x matrix is orthogonal
+
+            Parameters
+            ----------
+            y : dependent variables
+            x : independent variables
+            term_slices : a dict of slices
+                term_slices[key] is a boolean array specifies the parameters
+                associated with the factor `key`
+            params : OLS solution of y = x * params
+            keys : factors to be excluded
+
+            Returns
+            -------
+            residual sum of squared and degree of freedom
+
+            """
             ind = _not_slice(term_slices, keys, x.shape[1])
             params1 = params[ind]
             ssr = np.subtract(y, x[:, ind].dot(params1))
@@ -431,6 +450,7 @@ class AnovaRM(object):
             df_resid = len(y) - len(params1)
             return ssr, df_resid
 
+        # Construct OLS endog and exog from string using patsy
         within = ['C(%s, Sum)' % i for i in self.within]
         subject = 'C(%s, Sum)' % self.subject
         factors = within + [subject]
@@ -443,8 +463,12 @@ class AnovaRM(object):
         term_exclude = [':'.join(factors)]
         ind = _not_slice(term_slices, term_exclude, x.shape[1])
         x = x[:, ind]
+
+        # Fit OLS
         model = OLS(y, x)
         results = model.fit()
+        if model.rank < x.shape[1]:
+            raise ValueError('Independent variables are collinear.')
         for i in term_exclude:
             term_slices.pop(i)
         for key in term_slices:
