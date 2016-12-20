@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from ..anova import ANOVA
+from ..anova import AnovaRM
 from numpy.testing import assert_array_almost_equal
 
 
@@ -79,7 +79,7 @@ def test_single_factor_repeated_measures_anova():
     Testing single factor repeated measures anova
     Results reproduces R `ezANOVA` function from library ez
     """
-    df = ANOVA(data.iloc[:16, :], 'DV', within=['B'], subject='id').fit()
+    df = AnovaRM(data.iloc[:16, :], 'DV', within=['B'], subject='id').fit()
     a = [[1, 7, 22.4, 0.002125452]]
     assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values,
                               a, decimal=5)
@@ -90,7 +90,7 @@ def test_two_factors_repeated_measures_anova():
     Testing two factors repeated measures anova
     Results reproduces R `ezANOVA` function from library ez
     """
-    df = ANOVA(data.iloc[:48, :], 'DV', within=['A', 'B'], subject='id').fit()
+    df = AnovaRM(data.iloc[:48, :], 'DV', within=['A', 'B'], subject='id').fit()
     a = [[1, 7, 40.14159, 3.905263e-04],
          [2, 14, 29.21739, 1.007549e-05],
          [2, 14, 17.10545, 1.741322e-04]]
@@ -103,7 +103,7 @@ def test_three_factors_repeated_measures_anova():
     Testing three factors repeated measures anova
     Results reproduces R `ezANOVA` function from library ez
     """
-    df = ANOVA(data, 'DV', within=['A', 'B', 'D'], subject='id').fit()
+    df = AnovaRM(data, 'DV', within=['A', 'B', 'D'], subject='id').fit()
     a = [[1,  7,  8.7650709, 0.021087505],
          [2, 14,  8.4985785, 0.003833921],
          [1,  7, 20.5076546, 0.002704428],
@@ -120,4 +120,4 @@ def test_invalid_factor_name():
     Test with a factor name of 'C', which conflicts with patsy.
     """
     with pytest.raises(ValueError):
-        ANOVA(data.iloc[:16, :], 'DV', within=['C'], subject='id').fit()
+        AnovaRM(data.iloc[:16, :], 'DV', within=['C'], subject='id').fit()
