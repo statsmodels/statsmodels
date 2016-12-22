@@ -26,13 +26,19 @@ identically distributed.
 """
 
 from __future__ import division
+
+from functools import partial
+
+import itertools
+from numpy import linalg
+from scipy.stats import chi2_contingency, chi2
+
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import numpy as np
 from scipy import stats
 import pandas as pd
 from statsmodels import iolib
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
-
 
 
 def _make_df_square(table):
@@ -162,6 +168,7 @@ class Table(object):
             table = pd.crosstab(data.iloc[:, 0], data.iloc[:, 1])
         else:
             table = pd.crosstab(data[:, 0], data[:, 1])
+            pd.melt
 
         return cls(table, shift_zeros)
 
@@ -1402,3 +1409,280 @@ def cochrans_q(x, return_object=True):
         return b
 
     return q_stat, pvalue, df
+
+
+import pandas as pd
+import numpy as np
+
+
+class MRCVTable(object):
+    """
+    Analyses that can be performed on a two-way contingency table that contains
+    'multiple response' categorical variables (e.g. 'choose all that apply' questions).
+
+    Parameters
+    ----------
+    table : array-like
+        A contingency table.
+    shift_zeros : boolean
+        If True and any cell count is zero, add 0.5 to all values
+        in the table.
+
+    Attributes
+    ----------
+    table_orig : array-like
+        The original table is cached as `table_orig`.
+    marginal_probabilities : tuple of two ndarrays
+        The estimated row and column marginal distributions.
+    independence_probabilities : ndarray
+        Estimated cell probabilities under row/column independence.
+
+    See also
+    --------
+    statsmodels.graphics.mosaicplot.mosaic
+    scipy.stats.chi2_contingency
+
+    Notes
+    -----
+
+
+    References
+    ----------
+    Definitions of residuals:
+        https://onlinecourses.science.psu.edu/stat504/node/86
+
+    Bilder and Loughlin (2004)
+    """
+
+    def __init__(self, table, rows_factor, columns_factor, shift_zeros=True):
+
+        self.rows_factor = rows_factor
+        self.columns_factor = columns_factor
+        self.table = table
+
+        if shift_zeros and (self.table.min() == 0):
+            self.table = self.table + 0.5
+
+    def __unicode__(self):
+        template = "Contingency Table With Multi-Response Categorical Variables (MRCV's).\nData:\n{table}"
+        return template.format(table=self.table)
+
+    def __repr__(self):
+        return self.__unicode__()
+
+    @classmethod
+    def from_data(cls, data, I, J,
+                  rows_factor_name="factor_0", columns_factor_name="factor_1",
+                  shift_zeros=True):
+        """
+        Construct a Table object from data.
+
+        Parameters
+        ----------
+        data : array-like
+            The raw data, from which a contingency table is constructed
+            using the first two columns.
+        shift_zeros : boolean
+            If True and any cell count is zero, add 0.5 to all values
+            in the table.
+        I: The number of columns in the dataframe corresponding to the first factor
+        J: The number of columns in the dataframe corresponding to the second factor
+
+        Returns
+        -------
+        An MRCVTable instance.
+        """
+
+        if isinstance(data, pd.DataFrame):
+            rows_data = data.iloc[:, 0:I]
+            columns_data = data.iloc[:, I:I + J]
+            rows_labels = rows_data.columns
+            columns_labels = columns_data.columns
+        else:
+            rows_data = data[:, 0:I]
+            columns_data = data[:, I:I + J]
+            rows_labels = ["level_{}".format(i) for i in range(0, I)]
+            columns_labels = ["level_{}".format(i) for i in range(I, I + J)]
+
+        rows_factor = Factor(rows_data, labels=rows_labels, name=rows_factor_name, orientation="wide")
+        columns_factor = Factor(columns_data, labels=columns_labels, name=columns_factor_name, orientation="wide")
+        table = cls.table_from_factors(columns_factor, rows_factor)
+        return cls(table, rows_factor, columns_factor, shift_zeros)
+
+    @classmethod
+    def table_from_factors(cls, columns_factor, rows_factor):
+        row_reshaped = rows_factor.reshape_for_contingency_table()
+        col_reshaped = columns_factor.reshape_for_contingency_table()
+        joint_dataframe = pd.merge(row_reshaped, col_reshaped, how="inner",
+                                   on='observation_number', suffixes=("_row", "_col"))
+        # without bool cast, '&' sometimes doesn't know how to compare types
+        joint_response = joint_dataframe['value_row'].astype(bool) & joint_dataframe['value_col'].astype(bool)
+        joint_dataframe['_joint_response'] = joint_response
+        table = pd.pivot_table(joint_dataframe,
+                               values='_joint_response',
+                               fill_value=0,
+                               index=['variable_row'],
+                               columns=['variable_col'],
+                               aggfunc=np.sum,)
+        return table
+
+    def _spmi_stat(self):
+        rows_data = self.rows_factor.data
+        columns_data = self.columns_factor.data
+        rows_levels = self.rows_factor.labels
+        columns_levels = self.columns_factor.labels
+        chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
+        for i in range(0, len(rows_levels)):
+            for j in range(0, len(columns_levels)):
+                rows = np.array(rows_data[:, i])
+                columns = np.array(columns_data[:, j])
+                row_name = rows_levels[i]
+                col_name = columns_levels[j]
+                crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
+                chi2_results = chi2_contingency(crosstab, correction=False)
+                chi_squared_statistic, _, _, _ = chi2_results
+                chis_spmi.loc[row_name, col_name] = chi_squared_statistic
+        return chis_spmi
+
+    def _test_for_single_pairwise_mutual_independence_using_bonferroni(self, observed):
+        chi2_survival_with_1_dof = partial(chi2.sf, df=1)
+        p_value_ij = observed.applymap(chi2_survival_with_1_dof)
+        p_value_min = p_value_ij.min().min()
+        bonferroni_correction_factor = self.rows_factor.level_count * self.columns_factor.level_count
+        table_p_value_bonferroni_corrected = bonferroni_correction_factor * p_value_min
+        cap = lambda x: min(x, 1)
+        pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).applymap(cap)
+        return table_p_value_bonferroni_corrected, pairwise_bonferroni_corrected_p_values
+
+    def _test_for_single_pairwise_mutual_independence_using_bootstrap(self, observed):
+        W = self.rows_factor.as_dataframe()
+        Y = self.columns_factor.as_dataframe()
+        I = self.rows_factor.level_count
+        J = self.columns_factor.level_count
+        spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
+        chi2_survival_with_1_dof = partial(chi2.sf, df=1)
+
+        b_max = 1000
+        n = len(spmi_df)
+        q1 = spmi_df.iloc[:, :I + 1]
+        q2 = spmi_df.iloc[:, I + 1:I + J]
+        X_sq_S_star = []
+        X_sq_S_ij_star = pd.DataFrame(index=range(0, I * J), columns=range(0, b_max))
+        p_value_b_min = []
+        p_value_b_prod = []
+        for i in range(0, b_max):
+            # pd.concat requires unique indexes...sampling with replacement produces duplicates
+            q1_sample = q1.sample(n, replace=True).reset_index(drop=True)
+            q2_sample = q2.sample(n, replace=True).reset_index(drop=True)
+            sampled = pd.concat([q1_sample, q2_sample], axis=1)
+            stat_star = self._spmi_stat(sampled, I, J)
+            X_sq_S = stat_star.sum().sum()
+            X_sq_S_star.append(X_sq_S)
+            X_sq_S_ij_star.append(stat_star)
+            p_value_ij = stat_star.applymap(chi2_survival_with_1_dof)
+            p_value_min = p_value_ij.min().min()
+            p_value_prod = p_value_ij.prod().prod()
+            p_value_b_min.append(p_value_min)
+            p_value_b_prod.append(p_value_prod)
+
+        observed = self.spmi_stat(spmi_df, I, J)
+        observed_X_sq_S = observed.sum().sum()
+        p_value_ij = observed.applymap(chi2_survival_with_1_dof)
+        p_value_min = p_value_ij.min().min()
+
+        p_value_boot = np.mean(X_sq_S_star >= observed_X_sq_S)
+        print(p_value_boot)
+
+        p_value_boot_min_overall = np.mean(p_value_b_min <= p_value_min)
+        print(p_value_boot_min_overall)
+
+    def _test_for_single_pairwise_mutual_independence_using_rao_scott_2(self, observed):
+        W = self.rows_factor.as_dataframe()
+        Y = self.columns_factor.as_dataframe()
+        I = self.rows_factor.level_count
+        J = self.columns_factor.level_count
+        spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
+
+        def count_level_combinations(data, number_of_variables):
+            data = data.copy()  # don't modify original dataframe
+            level_arguments = [[0, 1] for i in range(0, number_of_variables)]
+            variables = data.columns
+            level_combinations = list(itertools.product(*level_arguments))
+            full_combinations = pd.DataFrame(level_combinations, columns=variables)
+            full_combinations["_dummy"] = 0
+            data['_dummy'] = 1
+            data = pd.concat([data, full_combinations]).reset_index(drop=True)
+            grouped = data.groupby(list(variables))
+            return grouped.sum().reset_index()
+
+        W_count_ordered = count_level_combinations(W, I)
+        Y_count_ordered = count_level_combinations(Y, J)
+        n_count_ordered = count_level_combinations(spmi_df, I+J)
+
+        n = len(spmi_df)
+        G = (W_count_ordered.iloc[:, :-1]).T
+        H = (Y_count_ordered.iloc[:, :-1]).T
+        combined_counts = n_count_ordered.iloc[:, -1]
+        tau = combined_counts / n
+        m_row = G.dot(W_count_ordered.iloc[:, -1])
+        m_col = H.dot(Y_count_ordered.iloc[:, -1])
+        GH = np.kron(G, H)
+        m = GH.dot(combined_counts)
+
+        pi = m / n
+        pi_row = m_row / n
+        pi_col = m_col / n
+        j_2r = np.ones((2 ** I, 1))
+        i_2r = np.eye(2 ** I)
+        j_2c = np.ones((2 ** J, 1))
+        i_2c = np.eye(2 ** J)
+
+        G_ij = G.dot(np.kron(i_2r, j_2c.T))
+        H_ji = H.dot(np.kron(j_2r.T, i_2c))
+
+        H_kron = np.kron(pi_row, H_ji.T).T  # extra .T's b/c Python handles vector/matrix kronecker differently than R
+        G_kron = np.kron(G_ij.T, pi_col).T  # extra .T's b/c Python handles vector/matrix kronecker differently than R
+        F = GH - H_kron - G_kron
+
+        mult_cov = np.diag(tau) - np.outer(tau, tau.T)
+        sigma = F.dot(mult_cov.dot(F.T))
+
+        D = np.diag(np.kron(pi_row, pi_col) * np.kron(1 - pi_row, 1 - pi_col))
+        Di_sigma = np.diag(1 / np.diag(D)).dot(sigma)
+        eigenvalues, eigenvectors = linalg.eig(Di_sigma)
+        Di_sigma_eigen = np.real(eigenvalues)
+        sum_Di_sigma_eigen_sq = (Di_sigma_eigen ** 2).sum()
+
+        observed_X_sq_S = observed.sum().sum()
+        X_sq_S_rs2 = I * J * observed_X_sq_S / sum_Di_sigma_eigen_sq
+        df_rs2 = (I ** 2) * (J ** 2) / sum_Di_sigma_eigen_sq
+        X_sq_S_p_value_rs2 = chi2.sf(X_sq_S_rs2, df=df_rs2)
+        return X_sq_S_p_value_rs2
+
+
+class Factor(object):
+    def __init__(self, data, labels, name, orientation="wide"):
+        self.name = name
+        self.labels = labels
+        self.data = np.asarray(data, dtype=np.float64)
+        self.orientation = orientation
+
+    def __unicode__(self):
+        return "Factor: {name}\nColumns:{columns}\nData:\n{data}".format(name=self.name, columns=self.labels,
+                                                                         data=self.data)
+
+    def __repr__(self):
+        return self.__unicode__()
+
+    def reshape_for_contingency_table(self):
+        frame = self.as_dataframe()
+        frame['observation_number'] = frame.index
+        return pd.melt(frame, id_vars="observation_number")
+
+    @property
+    def level_count(self):
+        return len(self.labels)
+
+    def as_dataframe(self):
+        return pd.DataFrame(self.data, columns=self.labels)
+

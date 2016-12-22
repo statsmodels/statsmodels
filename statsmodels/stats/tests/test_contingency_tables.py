@@ -499,7 +499,6 @@ class Check2x2Mixin(object):
                      self.tbl_data_obj.summary().as_text())
 
 
-
 class Test2x2_1(Check2x2Mixin):
 
     def __init__(self):
@@ -525,3 +524,41 @@ class Test2x2_1(Check2x2Mixin):
                                   3.9984381579173824]
         self.log_riskratio_confint = [-1.3859038243496782,
                                       1.3859038243496782]
+
+
+def test_multiple_mutual_independence_true():
+    assert False
+
+
+def test_test_multiple_mutual_independence_false():
+    assert False
+
+
+def test_single_pairwise_mutual_independence_true():
+    assert False
+
+
+def test_single_pairwise_mutual_independence_false():
+    assert False
+
+
+def test_MRCV_table_from_data():
+    assert False
+
+
+def test_MRCV_table_from_factors():
+    assert False
+
+
+def test_Factor_from_wide_data():
+    assert False
+
+
+def test_Factor_from_narrow_data():
+    assert False
+
+
+if __name__ == "__main__":
+    import nose
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
+            exit=False)
